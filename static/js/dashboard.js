@@ -362,13 +362,19 @@ function loadDashboardData(filterParams = {}) {
     const params = new URLSearchParams(filterParams);
     
     fetch('/api/chart-data?' + params.toString())
-        .then(response => response.json())
+        .then(response => {
+            console.log('API response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('API response data:', data);
             if (data.error) {
+                console.error('API returned error:', data.error);
                 showError(data.error);
                 return;
             }
             currentData = data;
+            console.log('About to call generateAllCharts...');
             generateAllCharts();
         })
         .catch(error => {
@@ -420,25 +426,33 @@ function generateAllCharts() {
 }
 
 function generateLiveOccupancy(data) {
-    const currentHour = new Date().getHours();
-    const currentData = data.filter(d => new Date(d.timestamp).getHours() === currentHour);
-    
-    const occupancyData = [{
-        x: ['Current Hour'],
-        y: [currentData.length],
-        type: 'bar',
-        marker: { color: '#0d6efd' }
-    }];
-    
-    const layout = {
-        title: 'Live Occupancy (Current Hour)',
-        xaxis: { title: 'Time Period' },
-        yaxis: { title: 'Number of People' },
-        margin: { t: 40, b: 40, l: 60, r: 20 }
-    };
-    
-    Plotly.newPlot('liveOccupancy', occupancyData, layout, {responsive: true});
-    chartInstances['liveOccupancy'] = { data: occupancyData, layout: layout };
+    console.log('generateLiveOccupancy called with data length:', data.length);
+    try {
+        const currentHour = new Date().getHours();
+        const currentData = data.filter(d => new Date(d.timestamp).getHours() === currentHour);
+        
+        const occupancyData = [{
+            x: ['Current Hour'],
+            y: [currentData.length],
+            type: 'bar',
+            marker: { color: '#0d6efd' }
+        }];
+        
+        const layout = {
+            title: 'Live Occupancy (Current Hour)',
+            xaxis: { title: 'Time Period' },
+            yaxis: { title: 'Number of People' },
+            margin: { t: 40, b: 40, l: 60, r: 20 }
+        };
+        
+        console.log('About to create Plotly chart for liveOccupancy');
+        Plotly.newPlot('liveOccupancy', occupancyData, layout, {responsive: true});
+        chartInstances['liveOccupancy'] = { data: occupancyData, layout: layout };
+        console.log('Successfully created liveOccupancy chart');
+    } catch (error) {
+        console.error('Error in generateLiveOccupancy:', error);
+        throw error;
+    }
 }
 
 function generateFootTraffic(data) {
