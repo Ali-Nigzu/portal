@@ -41,6 +41,10 @@ class FilterBuilder {
             ]}
         };
         this.collapsed = false;
+        this.eventsInitialized = false;
+        this.conditionChangeHandler = null;
+        this.conditionInputHandler = null;
+        this.clickHandler = null;
         this.init();
     }
 
@@ -66,22 +70,22 @@ class FilterBuilder {
             this.addConditionGroup();
         });
 
-        // Add condition buttons (delegated)
-        document.addEventListener('click', (e) => {
+        // Create bound click handler to avoid duplicates
+        this.clickHandler = (e) => {
             if (e.target.matches('.add-condition')) {
                 const groupIndex = e.target.dataset.group === 'primary' ? 0 : 1;
                 this.addCondition(groupIndex);
-            }
-        });
-
-        // Remove condition buttons (delegated)
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('.remove-condition')) {
+            } else if (e.target.matches('.remove-condition')) {
                 const groupIndex = parseInt(e.target.dataset.group);
                 const conditionIndex = parseInt(e.target.dataset.condition);
                 this.removeCondition(groupIndex, conditionIndex);
+            } else if (e.target.matches('.group-toggle') || e.target.closest('.group-toggle')) {
+                this.toggleGroup(e);
             }
-        });
+        };
+
+        // Bind click handler once
+        document.addEventListener('click', this.clickHandler);
     }
 
     addDefaultCondition() {
@@ -224,45 +228,71 @@ class FilterBuilder {
             }
         }
 
-        // Bind change events for dynamic updates
-        this.bindConditionEvents();
+        // Only bind events once during initialization
+        if (!this.eventsInitialized) {
+            this.bindConditionEvents();
+            this.eventsInitialized = true;
+        }
+    }
+
+    toggleGroup(e) {
+        e.preventDefault();
+        const groupElement = e.target.closest('.condition-group');
+        const conditionsContainer = groupElement.querySelector('.conditions-container');
+        const addButton = groupElement.querySelector('.add-condition');
+        const toggleIcon = e.target.querySelector('.toggle-icon') || e.target.closest('.group-toggle').querySelector('.toggle-icon');
+        
+        if (conditionsContainer.style.display === 'none') {
+            conditionsContainer.style.display = 'block';
+            addButton.style.display = 'block';
+            toggleIcon.style.transform = 'rotate(0deg)';
+        } else {
+            conditionsContainer.style.display = 'none';
+            addButton.style.display = 'none';
+            toggleIcon.style.transform = 'rotate(-90deg)';
+        }
     }
 
     bindConditionEvents() {
-        // Field change events
-        document.addEventListener('change', (e) => {
+        // Remove existing listeners to prevent duplicates
+        if (this.conditionChangeHandler) {
+            document.removeEventListener('change', this.conditionChangeHandler);
+        }
+        if (this.conditionInputHandler) {
+            document.removeEventListener('input', this.conditionInputHandler);
+        }
+
+        // Create bound handlers to avoid duplicates
+        this.conditionChangeHandler = (e) => {
             if (e.target.matches('.condition-field')) {
                 const groupIndex = parseInt(e.target.dataset.group);
                 const conditionIndex = parseInt(e.target.dataset.condition);
                 this.conditionGroups[groupIndex].conditions[conditionIndex].field = e.target.value;
                 this.conditionGroups[groupIndex].conditions[conditionIndex].operator = 'equals';
                 this.render();
-            }
-        });
-
-        // Operator change events
-        document.addEventListener('change', (e) => {
-            if (e.target.matches('.condition-operator')) {
+            } else if (e.target.matches('.condition-operator')) {
                 const groupIndex = parseInt(e.target.dataset.group);
                 const conditionIndex = parseInt(e.target.dataset.condition);
                 this.conditionGroups[groupIndex].conditions[conditionIndex].operator = e.target.value;
                 this.render();
             }
-        });
+        };
 
-        // Value change events
-        document.addEventListener('input', (e) => {
+        this.conditionInputHandler = (e) => {
             if (e.target.matches('.condition-value')) {
                 const groupIndex = parseInt(e.target.dataset.group);
                 const conditionIndex = parseInt(e.target.dataset.condition);
                 this.conditionGroups[groupIndex].conditions[conditionIndex].value = e.target.value;
-            }
-            if (e.target.matches('.condition-value2')) {
+            } else if (e.target.matches('.condition-value2')) {
                 const groupIndex = parseInt(e.target.dataset.group);
                 const conditionIndex = parseInt(e.target.dataset.condition);
                 this.conditionGroups[groupIndex].conditions[conditionIndex].value2 = e.target.value;
             }
-        });
+        };
+
+        // Bind the handlers once
+        document.addEventListener('change', this.conditionChangeHandler);
+        document.addEventListener('input', this.conditionInputHandler);
     }
 
     applyFilters() {
