@@ -2,28 +2,312 @@
 
 let currentData = null;
 let chartInstances = {};
+let filterBuilder = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
+    initializeFilterBuilder();
     loadDashboardData();
     setupEventListeners();
 });
 
-function setupEventListeners() {
-    // Filter form submission
-    document.getElementById('filterForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        loadDashboardData();
-    });
+// Advanced Filter Builder Class
+class FilterBuilder {
+    constructor() {
+        this.conditionGroups = [
+            { logic: 'AND', conditions: [] }
+        ];
+        this.conditionTypes = {
+            'timestamp': { label: 'Time', type: 'date-range' },
+            'sex': { label: 'Gender', type: 'select', options: [{ value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }] },
+            'age_estimate': { label: 'Age Group', type: 'select', options: [
+                { value: '(0,8)', label: '0-8 years' },
+                { value: '(9,16)', label: '9-16 years' },
+                { value: '(17,25)', label: '17-25 years' },
+                { value: '(25,40)', label: '25-40 years' },
+                { value: '(40,60)', label: '40-60 years' },
+                { value: '(60+)', label: '60+ years' }
+            ]},
+            'event': { label: 'Event Type', type: 'select', options: [{ value: 'entry', label: 'Entry' }, { value: 'exit', label: 'Exit' }] },
+            'hour': { label: 'Hour', type: 'number-range' },
+            'day_of_week': { label: 'Day of Week', type: 'select', options: [
+                { value: 'Monday', label: 'Monday' },
+                { value: 'Tuesday', label: 'Tuesday' },
+                { value: 'Wednesday', label: 'Wednesday' },
+                { value: 'Thursday', label: 'Thursday' },
+                { value: 'Friday', label: 'Friday' },
+                { value: 'Saturday', label: 'Saturday' },
+                { value: 'Sunday', label: 'Sunday' }
+            ]}
+        };
+        this.collapsed = false;
+        this.init();
+    }
 
-    // CSV upload functionality
+    init() {
+        this.bindEvents();
+        this.addDefaultCondition();
+        this.render();
+    }
+
+    bindEvents() {
+        // Apply filters button
+        document.getElementById('applyFilters').addEventListener('click', () => {
+            this.applyFilters();
+        });
+
+        // Collapse/expand toggle
+        document.getElementById('collapseFilters').addEventListener('click', () => {
+            this.toggleCollapse();
+        });
+
+        // Add condition group
+        document.getElementById('addConditionGroup').addEventListener('click', () => {
+            this.addConditionGroup();
+        });
+
+        // Add condition buttons (delegated)
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.add-condition')) {
+                const groupIndex = e.target.dataset.group === 'primary' ? 0 : 1;
+                this.addCondition(groupIndex);
+            }
+        });
+
+        // Remove condition buttons (delegated)
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.remove-condition')) {
+                const groupIndex = parseInt(e.target.dataset.group);
+                const conditionIndex = parseInt(e.target.dataset.condition);
+                this.removeCondition(groupIndex, conditionIndex);
+            }
+        });
+    }
+
+    addDefaultCondition() {
+        this.conditionGroups[0].conditions.push({
+            field: 'timestamp',
+            operator: 'between',
+            value: '',
+            value2: ''
+        });
+    }
+
+    addCondition(groupIndex = 0) {
+        this.conditionGroups[groupIndex].conditions.push({
+            field: 'sex',
+            operator: 'equals',
+            value: ''
+        });
+        this.render();
+    }
+
+    removeCondition(groupIndex, conditionIndex) {
+        this.conditionGroups[groupIndex].conditions.splice(conditionIndex, 1);
+        this.render();
+    }
+
+    addConditionGroup() {
+        if (this.conditionGroups.length < 2) {
+            this.conditionGroups.push({ logic: 'OR', conditions: [] });
+            document.querySelector('.secondary-group').style.display = 'block';
+            this.render();
+        }
+    }
+
+    toggleCollapse() {
+        this.collapsed = !this.collapsed;
+        const content = document.getElementById('filterBuilderContent');
+        const button = document.getElementById('collapseFilters');
+        
+        if (this.collapsed) {
+            content.style.display = 'none';
+            button.innerHTML = '<i class="expand-icon"></i> Expand';
+        } else {
+            content.style.display = 'block';
+            button.innerHTML = '<i class="collapse-icon"></i> Collapse';
+        }
+    }
+
+    renderCondition(condition, groupIndex, conditionIndex) {
+        const fieldConfig = this.conditionTypes[condition.field];
+        let operatorOptions = '';
+        let valueInputs = '';
+
+        // Generate operator options based on field type
+        if (fieldConfig.type === 'select') {
+            operatorOptions = `
+                <option value="equals" ${condition.operator === 'equals' ? 'selected' : ''}>is</option>
+                <option value="not_equals" ${condition.operator === 'not_equals' ? 'selected' : ''}>is not</option>
+            `;
+        } else if (fieldConfig.type === 'date-range') {
+            operatorOptions = `
+                <option value="between" ${condition.operator === 'between' ? 'selected' : ''}>is between</option>
+                <option value="after" ${condition.operator === 'after' ? 'selected' : ''}>is after</option>
+                <option value="before" ${condition.operator === 'before' ? 'selected' : ''}>is before</option>
+            `;
+        } else if (fieldConfig.type === 'number-range') {
+            operatorOptions = `
+                <option value="equals" ${condition.operator === 'equals' ? 'selected' : ''}>equals</option>
+                <option value="between" ${condition.operator === 'between' ? 'selected' : ''}>is between</option>
+                <option value="greater" ${condition.operator === 'greater' ? 'selected' : ''}>greater than</option>
+                <option value="less" ${condition.operator === 'less' ? 'selected' : ''}>less than</option>
+            `;
+        }
+
+        // Generate value inputs based on field type and operator
+        if (fieldConfig.type === 'select') {
+            const options = fieldConfig.options.map(opt => 
+                `<option value="${opt.value}" ${condition.value === opt.value ? 'selected' : ''}>${opt.label}</option>`
+            ).join('');
+            valueInputs = `<select class="form-select condition-value" data-group="${groupIndex}" data-condition="${conditionIndex}">
+                <option value="">Select...</option>${options}</select>`;
+        } else if (fieldConfig.type === 'date-range') {
+            if (condition.operator === 'between') {
+                valueInputs = `
+                    <input type="date" class="form-control condition-value" data-group="${groupIndex}" data-condition="${conditionIndex}" value="${condition.value || ''}">
+                    <span class="range-separator">and</span>
+                    <input type="date" class="form-control condition-value2" data-group="${groupIndex}" data-condition="${conditionIndex}" value="${condition.value2 || ''}">
+                `;
+            } else {
+                valueInputs = `<input type="date" class="form-control condition-value" data-group="${groupIndex}" data-condition="${conditionIndex}" value="${condition.value || ''}">`;
+            }
+        } else if (fieldConfig.type === 'number-range') {
+            if (condition.operator === 'between') {
+                valueInputs = `
+                    <input type="number" class="form-control condition-value" data-group="${groupIndex}" data-condition="${conditionIndex}" value="${condition.value || ''}" min="0" max="23">
+                    <span class="range-separator">and</span>
+                    <input type="number" class="form-control condition-value2" data-group="${groupIndex}" data-condition="${conditionIndex}" value="${condition.value2 || ''}" min="0" max="23">
+                `;
+            } else {
+                valueInputs = `<input type="number" class="form-control condition-value" data-group="${groupIndex}" data-condition="${conditionIndex}" value="${condition.value || ''}" min="0" max="23">`;
+            }
+        }
+
+        return `
+            <div class="condition-row" data-group="${groupIndex}" data-condition="${conditionIndex}">
+                <div class="condition-logic">${conditionIndex > 0 ? 'AND' : 'WHERE'}</div>
+                <select class="form-select condition-field" data-group="${groupIndex}" data-condition="${conditionIndex}">
+                    ${Object.entries(this.conditionTypes).map(([key, config]) => 
+                        `<option value="${key}" ${condition.field === key ? 'selected' : ''}>${config.label}</option>`
+                    ).join('')}
+                </select>
+                <select class="form-select condition-operator" data-group="${groupIndex}" data-condition="${conditionIndex}">
+                    ${operatorOptions}
+                </select>
+                <div class="condition-values">
+                    ${valueInputs}
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-condition" data-group="${groupIndex}" data-condition="${conditionIndex}">
+                    <i class="delete-icon"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    render() {
+        // Render primary conditions
+        const primaryContainer = document.getElementById('primaryConditions');
+        if (primaryContainer) {
+            primaryContainer.innerHTML = this.conditionGroups[0].conditions
+                .map((condition, index) => this.renderCondition(condition, 0, index))
+                .join('');
+        }
+
+        // Render secondary conditions if they exist
+        if (this.conditionGroups.length > 1) {
+            const secondaryContainer = document.getElementById('secondaryConditions');
+            if (secondaryContainer) {
+                secondaryContainer.innerHTML = this.conditionGroups[1].conditions
+                    .map((condition, index) => this.renderCondition(condition, 1, index))
+                    .join('');
+            }
+        }
+
+        // Bind change events for dynamic updates
+        this.bindConditionEvents();
+    }
+
+    bindConditionEvents() {
+        // Field change events
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('.condition-field')) {
+                const groupIndex = parseInt(e.target.dataset.group);
+                const conditionIndex = parseInt(e.target.dataset.condition);
+                this.conditionGroups[groupIndex].conditions[conditionIndex].field = e.target.value;
+                this.conditionGroups[groupIndex].conditions[conditionIndex].operator = 'equals';
+                this.render();
+            }
+        });
+
+        // Operator change events
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('.condition-operator')) {
+                const groupIndex = parseInt(e.target.dataset.group);
+                const conditionIndex = parseInt(e.target.dataset.condition);
+                this.conditionGroups[groupIndex].conditions[conditionIndex].operator = e.target.value;
+                this.render();
+            }
+        });
+
+        // Value change events
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('.condition-value')) {
+                const groupIndex = parseInt(e.target.dataset.group);
+                const conditionIndex = parseInt(e.target.dataset.condition);
+                this.conditionGroups[groupIndex].conditions[conditionIndex].value = e.target.value;
+            }
+            if (e.target.matches('.condition-value2')) {
+                const groupIndex = parseInt(e.target.dataset.group);
+                const conditionIndex = parseInt(e.target.dataset.condition);
+                this.conditionGroups[groupIndex].conditions[conditionIndex].value2 = e.target.value;
+            }
+        });
+    }
+
+    applyFilters() {
+        const filterData = this.buildFilterQuery();
+        console.log('Applying filters:', filterData);
+        loadDashboardData(filterData);
+    }
+
+    buildFilterQuery() {
+        const query = {};
+        
+        // Process primary AND conditions
+        this.conditionGroups[0].conditions.forEach(condition => {
+            if (condition.value) {
+                if (condition.field === 'timestamp' && condition.operator === 'between') {
+                    if (condition.value) query.start_date = condition.value;
+                    if (condition.value2) query.end_date = condition.value2;
+                } else if (condition.field === 'sex') {
+                    query.gender = condition.value;
+                } else if (condition.field === 'age_estimate') {
+                    query.age_group = condition.value;
+                }
+                // Add more field mappings as needed
+            }
+        });
+
+        return query;
+    }
+}
+
+function initializeFilterBuilder() {
+    filterBuilder = new FilterBuilder();
+}
+
+function setupEventListeners() {
+    // CSV upload functionality (if upload area exists)
     const uploadArea = document.getElementById('uploadArea');
     const csvUpload = document.getElementById('csvUpload');
 
-    uploadArea.addEventListener('click', () => csvUpload.click());
-    uploadArea.addEventListener('dragover', handleDragOver);
-    uploadArea.addEventListener('drop', handleDrop);
-    csvUpload.addEventListener('change', handleFileSelect);
+    if (uploadArea && csvUpload) {
+        uploadArea.addEventListener('click', () => csvUpload.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('drop', handleDrop);
+        csvUpload.addEventListener('change', handleFileSelect);
+    }
 
     // Tab switching
     document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
@@ -34,11 +318,10 @@ function setupEventListeners() {
     });
 }
 
-function loadDashboardData() {
+function loadDashboardData(filterParams = {}) {
     showLoading();
     
-    const formData = new FormData(document.getElementById('filterForm'));
-    const params = new URLSearchParams(formData);
+    const params = new URLSearchParams(filterParams);
     
     fetch('/api/chart-data?' + params.toString())
         .then(response => response.json())

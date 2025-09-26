@@ -70,6 +70,308 @@ body {
     border-bottom: 1px solid #495057;
 }
 
+/* Advanced Filter Builder Styles */
+.filter-hub {
+    background: #343a40;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    padding: 0;
+    border: 1px solid #495057;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.filter-builder-container {
+    background: #343a40;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.filter-builder-header {
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+    padding: 20px 24px;
+    border-bottom: 1px solid #495057;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filter-title {
+    color: #e9ecef;
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-builder-content {
+    padding: 24px;
+}
+
+.condition-group {
+    background: #2c2c2c;
+    border: 1px solid #495057;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.condition-group:last-child {
+    margin-bottom: 0;
+}
+
+.group-header {
+    background: #495057;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #495057;
+}
+
+.logic-label {
+    color: #e9ecef;
+    font-weight: 500;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.group-toggle {
+    color: #adb5bd !important;
+    text-decoration: none !important;
+    padding: 4px 8px;
+}
+
+.group-toggle:hover {
+    color: #e9ecef !important;
+}
+
+.conditions-container {
+    padding: 16px;
+}
+
+.condition-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 2fr 40px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #495057;
+}
+
+.condition-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.condition-logic {
+    background: #495057;
+    color: #adb5bd;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.condition-field, .condition-operator, .condition-value {
+    background: #2c2c2c !important;
+    border: 1px solid #495057 !important;
+    color: #e9ecef !important;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+.condition-field:focus, .condition-operator:focus, .condition-value:focus {
+    border-color: #0066cc !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25) !important;
+}
+
+.condition-values {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.range-separator {
+    color: #adb5bd;
+    font-weight: 500;
+    padding: 0 4px;
+    font-size: 0.85rem;
+}
+
+.remove-condition {
+    background: transparent !important;
+    border: 1px solid #dc3545 !important;
+    color: #dc3545 !important;
+    border-radius: 4px;
+    padding: 6px 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-condition:hover {
+    background: #dc3545 !important;
+    color: white !important;
+}
+
+.add-condition {
+    background: transparent !important;
+    border: 1px solid #0066cc !important;
+    color: #0066cc !important;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.add-condition:hover {
+    background: #0066cc !important;
+    color: white !important;
+}
+
+.group-controls {
+    padding: 16px 24px;
+    border-top: 1px solid #495057;
+    background: rgba(52, 58, 64, 0.5);
+}
+
+.secondary-group {
+    border-top: 2px solid #28a745;
+}
+
+.secondary-group .group-header {
+    background: #1e5d2b;
+}
+
+.saved-filters-panel {
+    background: #2c2c2c;
+    border-radius: 12px;
+    border: 1px solid #495057;
+    padding: 20px;
+    height: fit-content;
+}
+
+.panel-title {
+    color: #e9ecef;
+    font-weight: 600;
+    margin-bottom: 16px;
+    font-size: 1rem;
+}
+
+.saved-filters-list {
+    space-y: 8px;
+}
+
+.saved-filter-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #343a40;
+    border: 1px solid #495057;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saved-filter-item:hover {
+    background: #495057;
+    border-color: #6c757d;
+}
+
+.saved-filter-item.active {
+    background: #0066cc;
+    border-color: #0066cc;
+    color: white;
+}
+
+.filter-name {
+    color: #e9ecef;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.saved-filter-item.active .filter-name {
+    color: white;
+}
+
+.filter-count {
+    background: #495057;
+    color: #adb5bd;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.saved-filter-item.active .filter-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* Responsive Design for Filter Builder */
+@media (max-width: 1200px) {
+    .condition-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .condition-logic {
+        justify-self: start;
+        width: fit-content;
+    }
+    
+    .condition-values {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-hub .row {
+        flex-direction: column;
+    }
+    
+    .saved-filters-panel {
+        margin-top: 20px;
+    }
+    
+    .filter-builder-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .filter-actions {
+        justify-content: center;
+    }
+}
+
+/* Icon placeholders (using CSS pseudo-elements) */
+.filter-icon::before { content: "🔍"; }
+.collapse-icon::before { content: "📁"; }
+.expand-icon::before { content: "📂"; }
+.plus-icon::before { content: "+"; }
+.delete-icon::before { content: "✖"; }
+.toggle-icon::before { content: "▼"; }
+
 .chart-container {
     background: #ffffff;
     border-radius: 8px;
