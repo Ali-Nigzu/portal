@@ -11,45 +11,91 @@
 </div>
 
 <div class="container-fluid">
-    <!-- Filter Section -->
-    <div class="filter-section">
-        <h5>Data Filters</h5>
-        <form id="filterForm">
-            <div class="row">
-                <div class="col-md-3">
-                    <label for="startDate" class="form-label">Start Date</label>
-                    <input type="date" class="form-control" id="startDate" name="start_date">
-                </div>
-                <div class="col-md-3">
-                    <label for="endDate" class="form-label">End Date</label>
-                    <input type="date" class="form-control" id="endDate" name="end_date">
-                </div>
-                <div class="col-md-2">
-                    <label for="gender" class="form-label">Gender</label>
-                    <select class="form-select" id="gender" name="gender">
-                        <option value="">All</option>
-                        <option value="M">Male</option>
-                        <option value="F">Female</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="ageGroup" class="form-label">Age Group</label>
-                    <select class="form-select" id="ageGroup" name="age_group">
-                        <option value="">All</option>
-                        <option value="(0,8)">(0,8)</option>
-                        <option value="(9,16)">(9,16)</option>
-                        <option value="(17,25)">(17,25)</option>
-                        <option value="(25,40)">(25,40)</option>
-                        <option value="(40,60)">(40,60)</option>
-                        <option value="(60+)">(60+)</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary d-block w-100">Apply</button>
+    <!-- Advanced Filter Builder Section -->
+    <div class="filter-hub">
+        <div class="row">
+            <div class="col-lg-9">
+                <div class="filter-builder-container">
+                    <div class="filter-builder-header">
+                        <h5 class="filter-title">
+                            <i class="filter-icon"></i>
+                            Advanced Data Filters
+                        </h5>
+                        <div class="filter-actions">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="collapseFilters">
+                                <i class="collapse-icon"></i> Collapse
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary" id="applyFilters">
+                                Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-builder-content" id="filterBuilderContent">
+                        <!-- Primary Condition Group (Match ALL) -->
+                        <div class="condition-group" data-logic="AND">
+                            <div class="group-header">
+                                <span class="logic-label">Match ALL of these conditions</span>
+                                <button type="button" class="btn btn-sm btn-link group-toggle" aria-label="Toggle group">
+                                    <i class="toggle-icon"></i>
+                                </button>
+                            </div>
+                            <div class="conditions-container" id="primaryConditions">
+                                <!-- Default condition will be added by JS -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary add-condition" data-group="primary">
+                                <i class="plus-icon"></i> Add condition
+                            </button>
+                        </div>
+
+                        <!-- Secondary Condition Group (Match ANY) -->
+                        <div class="condition-group secondary-group" data-logic="OR" style="display: none;">
+                            <div class="group-header">
+                                <span class="logic-label">And match ANY of these conditions</span>
+                                <button type="button" class="btn btn-sm btn-link group-toggle" aria-label="Toggle group">
+                                    <i class="toggle-icon"></i>
+                                </button>
+                            </div>
+                            <div class="conditions-container" id="secondaryConditions">
+                                <!-- Conditions will be added by JS -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary add-condition" data-group="secondary">
+                                <i class="plus-icon"></i> Add condition
+                            </button>
+                        </div>
+
+                        <div class="group-controls">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="addConditionGroup">
+                                <i class="plus-icon"></i> Add OR condition group
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </form>
+            
+            <div class="col-lg-3">
+                <div class="saved-filters-panel">
+                    <h6 class="panel-title">Saved Views</h6>
+                    <div class="saved-filters-list" id="savedFiltersList">
+                        <div class="saved-filter-item active">
+                            <span class="filter-name">All Data</span>
+                            <span class="filter-count">1.8k</span>
+                        </div>
+                        <div class="saved-filter-item">
+                            <span class="filter-name">Today's Traffic</span>
+                            <span class="filter-count">247</span>
+                        </div>
+                        <div class="saved-filter-item">
+                            <span class="filter-name">Peak Hours</span>
+                            <span class="filter-count">89</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2" id="saveCurrentFilter">
+                        Save current filter
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Dashboard Tabs -->
