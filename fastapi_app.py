@@ -7,6 +7,8 @@ import os
 import json
 import pandas as pd
 import numpy as np
+import hashlib
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any
 from fastapi import FastAPI, HTTPException, Depends, status, Request
@@ -27,13 +29,26 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS middleware for React frontend
+# Secure CORS middleware - only allow specific origins
+REPLIT_DOMAIN = os.environ.get("REPLIT_DOMAINS", "")
+ALLOWED_ORIGINS = [
+    "http://localhost:5000",
+    "http://127.0.0.1:5000", 
+    "http://0.0.0.0:5000",
+    # Add Replit deployment domain 
+    f"https://{REPLIT_DOMAIN}" if REPLIT_DOMAIN else "",
+    f"http://{REPLIT_DOMAIN}" if REPLIT_DOMAIN else "",
+]
+
+# Filter out empty strings  
+ALLOWED_ORIGINS = [origin for origin in ALLOWED_ORIGINS if origin]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],  # Only needed methods
+    allow_headers=["Content-Type", "Authorization"],  # Only needed headers
 )
 
 # Configuration
@@ -43,6 +58,14 @@ USERS_FILE = 'users.json'
 security = HTTPBasic()
 
 # Data Models
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    user: Dict[str, Any]
+    message: str
+
 class ChartDataResponse(BaseModel):
     data: List[Dict[str, Any]]
     summary: Dict[str, Any]
@@ -59,24 +82,42 @@ class DataIntelligence(BaseModel):
     temporal_patterns: Dict[str, Any]
 
 # User Management (keeping compatible with existing)
+def hash_password(password: str) -> str:
+    """Hash password using SHA-256 with salt"""
+    salt = secrets.token_hex(16)
+    password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+    return f"{salt}:{password_hash}"
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    """Verify password against stored hash"""
+    try:
+        if ':' not in stored_hash:
+            # Legacy plaintext password - verify directly but should be migrated
+            return password == stored_hash
+        salt, hash_part = stored_hash.split(':', 1)
+        password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+        return password_hash == hash_part
+    except:
+        return False
+
 def load_users():
     """Load user credentials from JSON file"""
     if not os.path.exists(USERS_FILE):
-        # Initialize with default users if file doesn't exist
+        # Initialize with default users with hashed passwords
         users_data = {
             "admin": {
-                "password": "admin123",
+                "password": hash_password("admin123"),
                 "role": "admin",
                 "name": "System Administrator"
             },
             "client1": {
-                "password": "client123",
+                "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
                 "csv_url": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client0/testdata.csv"
             },
             "client2": {
-                "password": "client456", 
+                "password": hash_password("client456"), 
                 "role": "client",
                 "name": "Test Client 2",
                 "csv_url": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client1/testdata0.csv"
@@ -90,12 +131,12 @@ def load_users():
         return json.load(f)
 
 def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
-    """Authenticate user and return user info"""
+    """Authenticate user and return user info using secure password verification"""
     users = load_users()
     username = credentials.username
     password = credentials.password
     
-    if username not in users or users[username]['password'] != password:
+    if username not in users or not verify_password(password, users[username]['password']):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -266,6 +307,40 @@ class DataProcessor:
 async def root():
     """API health check"""
     return {"message": "Nigzsu Analytics API v2.0", "status": "healthy"}
+
+@app.post("/api/login", response_model=LoginResponse)
+async def login(login_request: LoginRequest):
+    """Authentication endpoint for user login"""
+    try:
+        users = load_users()
+        username = login_request.username
+        password = login_request.password
+        
+        if username not in users:
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        
+        user_data = users[username]
+        if not verify_password(password, user_data['password']):
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        
+        # Return user info without password
+        safe_user = {
+            'username': username,
+            'role': user_data['role'],
+            'name': user_data['name'],
+            'csv_url': user_data.get('csv_url', '')
+        }
+        
+        return LoginResponse(
+            user=safe_user,
+            message="Login successful"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/chart-data", response_model=ChartDataResponse)
 async def get_chart_data(
