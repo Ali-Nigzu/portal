@@ -152,8 +152,11 @@ def get_chart_data():
         if 'age_group' in filters and filters['age_group']:
             df = df[df['age_estimate'] == filters['age_group']]
         
+        # Convert DataFrame to records safely
+        data_records = df.to_dict('records') if hasattr(df, 'to_dict') else []
+        
         return jsonify({
-            'data': df.to_dict(orient='records'),
+            'data': data_records,
             'summary': {
                 'total_records': len(df),
                 'date_range': {
@@ -162,6 +165,131 @@ def get_chart_data():
                 }
             }
         })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Admin API endpoints
+@app.route('/api/admin/users', methods=['GET', 'POST'])
+def admin_users():
+    """Admin endpoint to manage users"""
+    if 'username' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if request.method == 'GET':
+        users = load_users()
+        return jsonify({'success': True, 'users': users})
+    
+    elif request.method == 'POST':
+        try:
+            user_data = request.get_json()
+            users = load_users()
+            
+            username = user_data['username']
+            if username in users:
+                return jsonify({'error': 'Username already exists'}), 400
+            
+            users[username] = {
+                'password': user_data['password'],
+                'role': user_data['role'],
+                'name': user_data['name']
+            }
+            
+            if user_data['role'] == 'client' and user_data.get('csv_url'):
+                users[username]['csv_url'] = user_data['csv_url']
+            
+            save_users(users)
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/users/<username>', methods=['GET', 'PUT', 'DELETE'])
+def admin_user_detail(username):
+    """Admin endpoint to manage specific user"""
+    if 'username' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    users = load_users()
+    
+    if request.method == 'GET':
+        if username not in users:
+            return jsonify({'error': 'User not found'}), 404
+        return jsonify({'success': True, 'user': users[username]})
+    
+    elif request.method == 'PUT':
+        try:
+            if username not in users:
+                return jsonify({'error': 'User not found'}), 404
+            
+            user_data = request.get_json()
+            users[username]['name'] = user_data['name']
+            users[username]['role'] = user_data['role']
+            
+            if 'password' in user_data and user_data['password']:
+                users[username]['password'] = user_data['password']
+            
+            if user_data['role'] == 'client':
+                if user_data.get('csv_url'):
+                    users[username]['csv_url'] = user_data['csv_url']
+            else:
+                users[username].pop('csv_url', None)
+            
+            save_users(users)
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'DELETE':
+        try:
+            if username not in users:
+                return jsonify({'error': 'User not found'}), 404
+            
+            if users[username]['role'] == 'admin':
+                return jsonify({'error': 'Cannot delete admin user'}), 400
+            
+            del users[username]
+            save_users(users)
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/uploads', methods=['GET'])
+def admin_uploads():
+    """Admin endpoint to list uploaded files"""
+    if 'username' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        # For now, return empty list since we're not implementing actual GCS upload yet
+        # In production, this would list files from GCS cuploads folder
+        uploads = []
+        return jsonify({'success': True, 'uploads': uploads})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    """Endpoint for clients to upload CSV files"""
+    if 'username' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not file.filename.lower().endswith('.csv'):
+            return jsonify({'error': 'Only CSV files allowed'}), 400
+        
+        # For now, just validate the file without actual upload
+        # In production, this would upload to GCS cuploads folder
+        return jsonify({'success': True, 'message': 'File upload simulated successfully'})
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
