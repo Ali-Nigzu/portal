@@ -6,16 +6,52 @@ let filterBuilder = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
+    // Force visible feedback
+    alert('JavaScript is loading...');
     console.log('Dashboard initializing...');
+    
+    // Test basic DOM access
+    const testElement = document.getElementById('liveOccupancy');
+    if (!testElement) {
+        alert('ERROR: Cannot find chart containers!');
+        return;
+    }
+    
+    alert('Chart containers found, testing API...');
+    
     try {
-        initializeFilterBuilder();
-        console.log('FilterBuilder initialized');
-        loadDashboardData();
-        console.log('Loading dashboard data...');
-        setupEventListeners();
-        console.log('Event listeners set up');
+        // Test API directly first
+        fetch('/api/chart-data')
+            .then(response => {
+                alert('API response status: ' + response.status);
+                if (!response.ok) {
+                    throw new Error('API returned ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('API data received: ' + data.data.length + ' records');
+                
+                // Simple test chart
+                const simpleData = [{
+                    x: ['Test'],
+                    y: [data.data.length],
+                    type: 'bar'
+                }];
+                
+                alert('Creating test chart...');
+                Plotly.newPlot('liveOccupancy', simpleData, {title: 'Test Chart'}, {responsive: true});
+                alert('Test chart created successfully!');
+                
+            })
+            .catch(error => {
+                alert('ERROR: ' + error.message);
+                showError('API Error: ' + error.message);
+            });
+            
     } catch (error) {
-        console.error('Dashboard initialization error:', error);
+        alert('JavaScript error: ' + error.message);
+        showError('JavaScript error: ' + error.message);
     }
 });
 
@@ -332,7 +368,8 @@ class FilterBuilder {
 }
 
 function initializeFilterBuilder() {
-    filterBuilder = new FilterBuilder();
+    // Temporarily disabled - will re-enable after charts work
+    console.log('FilterBuilder initialization skipped for debugging');
 }
 
 function setupEventListeners() {
@@ -379,7 +416,7 @@ function loadDashboardData(filterParams = {}) {
         })
         .catch(error => {
             console.error('Error loading data:', error);
-            showError('Failed to load dashboard data');
+            showError('Failed to load dashboard data: ' + error.message);
         });
 }
 
