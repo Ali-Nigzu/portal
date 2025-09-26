@@ -12,7 +12,7 @@ const getApiBaseUrl = (): string => {
     return 'http://localhost:8000';
   }
   
-  // For deployed environments, use same origin (assumes FastAPI on same host)
+  // For Replit deployment and other environments, use relative path (proxied)
   return window.location.origin;
 };
 
