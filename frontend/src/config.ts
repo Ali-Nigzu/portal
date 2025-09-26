@@ -7,12 +7,12 @@ const getApiBaseUrl = (): string => {
     return envUrl;
   }
   
-  // For development, use current domain with port 8000
-  if (window.location.hostname === 'localhost') {
+  // For development, use localhost with FastAPI port
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:8000';
   }
   
-  // For deployed environments, use same origin (relative path)
+  // For deployed environments, use same origin (assumes FastAPI on same host)
   return window.location.origin;
 };
 
