@@ -167,13 +167,11 @@ def get_chart_data():
         
         # Try to fetch CSV data, fall back to demo data if fails
         try:
-            df = pd.read_csv(csv_url)
+            # Load CSV with proper column names since Google Sheets export may not have headers
+            df = pd.read_csv(csv_url, header=None, names=['index', 'track_number', 'event', 'timestamp', 'sex', 'age_estimate'])
             
-            # Check if required columns exist
-            required_columns = ['timestamp', 'sex', 'age_estimate', 'event']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                # Fall back to demo data for MVP testing
+            # Check if data loaded properly
+            if len(df) == 0:
                 df = generate_demo_data()
         except Exception:
             # Fall back to demo data if CSV fetch fails
@@ -344,4 +342,4 @@ def upload_file():
 
 if __name__ == '__main__':
     init_users()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)

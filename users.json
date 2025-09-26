@@ -8,12 +8,12 @@
     "password": "client123",
     "role": "client",
     "name": "Test Client 1",
-    "csv_url": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client0/testdata.csv"
+    "csv_url": "https://docs.google.com/spreadsheets/d/1OJMcp1-KviFud4Hv14rCX38TSyycAUkjpweuBGCowHY/export?format=csv"
   },
   "client2": {
     "password": "client456",
     "role": "client",
     "name": "Test Client 2",
-    "csv_url": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client1/testdata0.csv"
+    "csv_url": "https://docs.google.com/spreadsheets/d/1GpecqUhHJPVl4IVDsp76vzEtJ7PfRhnu4-M1r4Tvy7o/export?format=csv"
   }
 }
