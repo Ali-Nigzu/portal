@@ -1,0 +1,237 @@
+Nigzsu — Web App Build Brief (MVP)
+Acceptance Criteria / Definition of Done
+Login works (Admins + Clients).
+
+
+Dashboards read from Google Cloud Storage CSVs (per-client).
+
+
+Chart exports (PNG) and CSV exports function.
+
+
+Client uploads go to the correct GCS folder.
+
+
+Deployable to Google Cloud Run (via Dockerfile).
+
+
+No images/logos — leave placeholders.
+
+
+
+Landing Page
+Minimal, public-facing entry point.
+
+
+Placeholder logo/text areas only (no branding yet).
+
+
+Short description block.
+
+
+Prominent “Login” button → routes to login page.
+
+
+
+Users & Access
+Clients (business owners)
+
+
+Login → see only their own dashboards.
+
+
+Dashboards show metrics from CCTV CSVs.
+
+
+Can export charts (PNG) and CSV.
+
+
+Can upload CSVs → uploads stored in https://storage.googleapis.com/nigzsu_cdata-testclient1/cuploads/ (not used in dashboards).
+
+
+Admins (system managers)
+
+
+Login from same page.
+
+
+Manage users (create/edit/remove).
+
+
+Control which CSVs link to each client dashboard.
+
+
+View/download client-uploaded CSVs.
+
+
+See all dashboards.
+
+
+
+Data Handling
+Dashboard Source CSVs (per-client):
+
+
+Public links (for testing now):
+
+
+User 1 → https://storage.googleapis.com/nigzsu_cdata-testclient1/client0/testdata.csv
+
+
+User 2 → https://storage.googleapis.com/nigzsu_cdata-testclient1/client1/testdata0.csv
+
+
+CSVs are the only source of truth.
+
+
+Dashboards aggregate all rows continuously.
+
+
+Client Uploads:
+
+
+Stored in https://storage.googleapis.com/nigzsu_cdata-testclient1/cuploads/
+
+
+Visible/downloadable to Admins.
+
+
+Do not affect dashboards.
+
+
+CSV Format (fixed):
+
+ index, track_number, event, timestamp, sex, age_estimate
+
+
+Sample Data:
+
+ index	track_number	event	timestamp	sex	age_estimate
+1800	1826	exit	49:23:14:09:2025	M	(40,60)
+1799	1475	exit	45:23:14:09:2025	F	(40,60)
+1798	1831	exit	39:23:14:09:2025	M	(17,25)
+...
+1787	8227	exit	39:23:14:09:2025	M	(9,16)
+Age Categories (0,8), (9,16), (17,25), (25,40), (40,60), (60+)
+
+Dashboards
+One shared template dashboard across all clients.
+
+
+Charts:
+
+
+Live Occupancy (latest rows)
+
+
+Foot Traffic Over Time
+
+
+Age Distribution
+
+
+Gender Breakdown
+
+
+Average Dwell Time by Age Group
+
+
+Peak Entry Times by Gender
+
+
+Occupancy Trend by Day
+
+
+Entry-to-Exit Ratio
+
+
+Demographic Flow
+
+
+Weekly Traffic Pattern
+
+
+Features:
+
+
+Filters (time ranges, gender, age).
+
+
+Export charts as PNG.
+
+
+Export underlying CSV data.
+
+
+
+Application Structure
+Flask web app (frontend + backend).
+
+
+No external DB. User credentials stored in JSON inside the app.
+
+
+On dashboard load → Flask fetches client CSV from GCS → aggregates in memory → renders charts.
+
+
+Client uploads stored in cuploads/.
+
+
+
+Authentication
+One login page (Admins + Clients).
+
+
+JSON file stores user credentials & roles (kept inside app).
+
+
+Flask sessions with role-based routing:
+
+
+Client → Dashboard.
+
+
+Admin → User management + all dashboards.
+
+
+
+Visual Design
+Clean, simple, responsive.
+
+
+Placeholder for future branding.
+
+
+Business-friendly layout.
+
+
+Accessible on desktop + mobile.
+
+
+
+Deployment
+Must include Dockerfile.
+
+
+Must be Google Cloud Run–ready.
+
+
+Use service account authentication for GCS (env var or Secret Manager).
+
+
+No GitHub Actions / CI/CD needed (manual deploy is fine).
+
+
+
+Non-Goals (Out of Scope)
+No real-time CCTV feed.
+
+
+No external DB (beyond JSON credentials + GCS CSVs).
+
+
+No client-specific dashboard customisation.
+
+
+No branding/logos yet.
+3 accounts needed - 1 admin, 2 users (with each using their own csv’s to build dashboards)
