@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Nigzsu{% endblock %}
+
+{% block content %}
+<div class="dashboard-header text-center">
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        <p class="mb-0">Manage users and system configurations</p>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- User Management Section -->
+    <div class="admin-section">
+        <h5>User Management</h5>
+        <div class="row">
+            <div class="col-md-8">
+                <h6>Existing Users</h6>
+                {% for username, user_data in users.items() %}
+                <div class="user-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ user_data.name }}</strong>
+                            <span class="badge bg-{{ 'primary' if user_data.role == 'admin' else 'secondary' }} user-role-badge ms-2">{{ user_data.role }}</span>
+                            <br>
+                            <small class="text-muted">Username: {{ username }}</small>
+                            {% if user_data.role == 'client' and user_data.get('csv_url') %}
+                            <br>
+                            <small class="text-muted">CSV: {{ user_data.csv_url }}</small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editUser('{{ username }}')">Edit</button>
+                            {% if user_data.role != 'admin' %}
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('{{ username }}')">Delete</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="col-md-4">
+                <h6>Add New User</h6>
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label for="newUsername" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="newUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newName" class="form-label">Display Name</label>
+                        <input type="text" class="form-control" id="newName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newRole" class="form-label">Role</label>
+                        <select class="form-select" id="newRole" required>
+                            <option value="client">Client</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="csvUrlSection">
+                        <label for="newCsvUrl" class="form-label">CSV URL (for clients)</label>
+                        <input type="url" class="form-control" id="newCsvUrl" placeholder="https://storage.googleapis.com/...">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Dashboards Section -->
+    <div class="admin-section">
+        <h5>Client Dashboards</h5>
+        <div class="row">
+            {% for username, user_data in users.items() %}
+                {% if user_data.role == 'client' %}
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ user_data.name }}</h6>
+                            <p class="card-text">
+                                <small class="text-muted">Username: {{ username }}</small><br>
+                                {% if user_data.get('csv_url') %}
+                                <small class="text-muted">CSV: {{ user_data.csv_url }}</small>
+                                {% else %}
+                                <small class="text-warning">No CSV configured</small>
+                                {% endif %}
+                            </p>
+                            <button class="btn btn-sm btn-primary" onclick="viewClientDashboard('{{ username }}')">
+                                View Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Client Uploads Section -->
+    <div class="admin-section">
+        <h5>Client Uploads</h5>
+        <p class="text-muted">Manage CSV files uploaded by clients</p>
+        
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Upload Date</th>
+                        <th>Size</th>
+                        <th>Client</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="uploadsTable">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">Loading uploads...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <button class="btn btn-primary" onclick="refreshUploads()">Refresh Uploads</button>
+    </div>
+
+    <!-- System Statistics -->
+    <div class="admin-section">
+        <h5>System Statistics</h5>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-primary">{{ users|length }}</h4>
+                        <p class="mb-0">Total Users</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-success">{{ users.values()|selectattr('role', 'equalto', 'client')|list|length }}</h4>
+                        <p class="mb-0">Active Clients</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-info">{{ users.values()|selectattr('role', 'equalto', 'admin')|list|length }}</h4>
+                        <p class="mb-0">Administrators</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h4 class="text-warning" id="uploadCount">-</h4>
+                        <p class="mb-0">Total Uploads</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editUserForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editUsername">
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">Password (leave blank to keep current)</label>
+                        <input type="password" class="form-control" id="editPassword">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">Display Name</label>
+                        <input type="text" class="form-control" id="editName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRole" class="form-label">Role</label>
+                        <select class="form-select" id="editRole" required>
+                            <option value="client">Client</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="editCsvUrlSection">
+                        <label for="editCsvUrl" class="form-label">CSV URL (for clients)</label>
+                        <input type="url" class="form-control" id="editCsvUrl">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}
