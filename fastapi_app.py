@@ -196,7 +196,7 @@ class DataProcessor:
                 'index': i + 1,
                 'track_number': random.randint(1000, 9999),
                 'event': random.choice(events),
-                'timestamp': timestamp.strftime('%S:%M:%H:%d:%Y'),  # Correct format
+                'timestamp': timestamp.strftime('%M:%H:%d:%m:%Y'),  # Format: mm:hh:dd:mm:yyyy
                 'sex': random.choice(genders),
                 'age_estimate': random.choice(age_groups)
             })
@@ -205,10 +205,10 @@ class DataProcessor:
     
     @staticmethod
     def process_timestamps(df: pd.DataFrame) -> pd.DataFrame:
-        """Process timestamps with format ss:mm:hh:dd:yyyy"""
+        """Process timestamps with format mm:hh:dd:mm:yyyy"""
         try:
-            # Parse timestamps with correct format
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%S:%M:%H:%d:%Y', errors='coerce')
+            # Parse timestamps with correct format (no seconds)
+            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%M:%H:%d:%m:%Y', errors='coerce')
             
             # Create derived time columns
             df['hour'] = df['timestamp'].dt.hour

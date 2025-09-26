@@ -177,9 +177,9 @@ def get_chart_data():
             # Fall back to demo data if CSV fetch fails
             df = generate_demo_data()
         
-        # Process timestamp column with correct format: ss:mm:hh:dd:yyyy
+        # Process timestamp column with correct format: mm:hh:dd:mm:yyyy
         try:
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%S:%M:%H:%d:%Y', errors='coerce')
+            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%M:%H:%d:%m:%Y', errors='coerce')
             # Keep all rows, just mark invalid timestamps as NaT
             df['hour'] = df['timestamp'].dt.hour
             df['day_of_week'] = df['timestamp'].dt.day_name()
