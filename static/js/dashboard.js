@@ -406,21 +406,67 @@ function generateAllCharts() {
     const data = currentData.data;
     console.log('Processing', data.length, 'data records for charts');
     
-    // Time-based metrics
+    // Only generate charts for the currently active tab
+    generateTimeBasedCharts(data);
+    
+    // Set up tab event listeners to generate charts when tabs are shown
+    setupTabHandlers(data);
+}
+
+function generateTimeBasedCharts(data) {
+    // Time-based metrics (default active tab)
     generateLiveOccupancy(data);
     generateFootTraffic(data);
     generateOccupancyTrend(data);
     generateWeeklyPattern(data);
-    
-    // Demographics
-    generateAgeDistribution(data);
-    generateGenderBreakdown(data);
-    generateDwellTimeByAge(data);
-    
+}
+
+function generateDemographicsCharts(data) {
+    // Demographics charts
+    try {
+        generateAgeDistribution(data);
+        generateGenderBreakdown(data);
+        generateDwellTimeByAge(data);
+    } catch (error) {
+        console.error('Error generating demographics charts:', error);
+    }
+}
+
+function generateEntryExitCharts(data) {
     // Entry/Exit metrics
-    generatePeakEntryTimes(data);
-    generateEntryExitRatio(data);
-    generateDemographicFlow(data);
+    try {
+        generatePeakEntryTimes(data);
+        generateEntryExitRatio(data);
+        generateDemographicFlow(data);
+    } catch (error) {
+        console.error('Error generating entry/exit charts:', error);
+    }
+}
+
+function setupTabHandlers(data) {
+    // Handle tab switching to generate charts on demand
+    const demographicsTab = document.getElementById('demographics-tab');
+    const entryExitTab = document.getElementById('entry-exit-tab');
+    
+    if (demographicsTab) {
+        demographicsTab.addEventListener('shown.bs.tab', function() {
+            console.log('Demographics tab shown, generating charts...');
+            const ageChart = document.getElementById('ageDistribution');
+            if (ageChart && !ageChart.querySelector('.plotly-graph-div')) {
+                generateDemographicsCharts(data);
+            }
+        });
+    }
+    
+    if (entryExitTab) {
+        entryExitTab.addEventListener('shown.bs.tab', function() {
+            console.log('Entry/Exit tab shown, generating charts...');
+            const peakChart = document.getElementById('peakEntryTimes');
+            if (peakChart && !peakChart.querySelector('.plotly-graph-div')) {
+                generateEntryExitCharts(data);
+            }
+        });
+    }
 }
 
 function generateLiveOccupancy(data) {
