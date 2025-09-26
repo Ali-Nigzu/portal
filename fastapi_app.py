@@ -325,7 +325,8 @@ async def get_chart_data(
         intelligence = DataProcessor.analyze_data_intelligence(filtered_df)
         
         # Convert to records for frontend
-        data_records = [dict(record) for record in filtered_df.fillna('').to_dict(orient='records')]
+        records = filtered_df.fillna('').to_dict(orient='records')
+        data_records: List[Dict[str, Any]] = [dict(record) for record in records]
         
         # Create summary
         summary = {

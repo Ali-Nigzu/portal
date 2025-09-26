@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
+import { API_ENDPOINTS } from './config';
 import { 
   LiveOccupancyChart, 
-  TrafficTimeChart, 
+  HourlyActivityChart, 
   AgeDistributionChart, 
   EntryExitChart 
-} from './components/ProfessionalCharts';
+} from './components/EChartsComponents';
 
 // Types for our data
 interface ChartData {
@@ -48,14 +49,14 @@ const Dashboard: React.FC<{credentials: {username: string, password: string}}> =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       
       // Create basic auth header
       const auth = btoa(`${credentials.username}:${credentials.password}`);
       
-      const response = await fetch('http://localhost:8000/api/chart-data', {
+      const response = await fetch(API_ENDPOINTS.CHART_DATA, {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
@@ -74,11 +75,11 @@ const Dashboard: React.FC<{credentials: {username: string, password: string}}> =
     } finally {
       setLoading(false);
     }
-  };
+  }, [credentials.username, credentials.password]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -168,7 +169,7 @@ const Dashboard: React.FC<{credentials: {username: string, password: string}}> =
                   <button className="export-btn">CSV</button>
                 </div>
               </div>
-              <TrafficTimeChart data={data.data} intelligence={data.intelligence} />
+              <HourlyActivityChart data={data.data} intelligence={data.intelligence} />
             </div>
 
             <div className="chart-card">
