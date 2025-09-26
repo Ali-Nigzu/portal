@@ -177,13 +177,15 @@ def get_chart_data():
             # Fall back to demo data if CSV fetch fails
             df = generate_demo_data()
         
-        # Process timestamp column with error handling
+        # Process timestamp column with correct format: ss:mm:hh:dd:yyyy
         try:
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%H:%M:%d:%m:%Y', errors='coerce')
-            # Remove rows with invalid timestamps
-            df = df.dropna(subset=['timestamp'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%S:%M:%H:%d:%Y', errors='coerce')
+            # Keep all rows, just mark invalid timestamps as NaT
             df['hour'] = df['timestamp'].dt.hour
             df['day_of_week'] = df['timestamp'].dt.day_name()
+            # For rows with invalid timestamps, use default values
+            df['hour'] = df['hour'].fillna(12)  # Default to noon
+            df['day_of_week'] = df['day_of_week'].fillna('Unknown')
         except Exception as e:
             return jsonify({'error': f'Timestamp processing failed: {str(e)}'}), 400
         

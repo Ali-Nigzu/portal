@@ -6,52 +6,13 @@ let filterBuilder = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    // Force visible feedback
-    alert('JavaScript is loading...');
     console.log('Dashboard initializing...');
-    
-    // Test basic DOM access
-    const testElement = document.getElementById('liveOccupancy');
-    if (!testElement) {
-        alert('ERROR: Cannot find chart containers!');
-        return;
-    }
-    
-    alert('Chart containers found, testing API...');
-    
     try {
-        // Test API directly first
-        fetch('/api/chart-data')
-            .then(response => {
-                alert('API response status: ' + response.status);
-                if (!response.ok) {
-                    throw new Error('API returned ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                alert('API data received: ' + data.data.length + ' records');
-                
-                // Simple test chart
-                const simpleData = [{
-                    x: ['Test'],
-                    y: [data.data.length],
-                    type: 'bar'
-                }];
-                
-                alert('Creating test chart...');
-                Plotly.newPlot('liveOccupancy', simpleData, {title: 'Test Chart'}, {responsive: true});
-                alert('Test chart created successfully!');
-                
-            })
-            .catch(error => {
-                alert('ERROR: ' + error.message);
-                showError('API Error: ' + error.message);
-            });
-            
+        loadDashboardData();
+        setupEventListeners();
     } catch (error) {
-        alert('JavaScript error: ' + error.message);
-        showError('JavaScript error: ' + error.message);
+        console.error('Dashboard initialization error:', error);
+        showError('JavaScript initialization failed: ' + error.message);
     }
 });
 
@@ -463,10 +424,13 @@ function generateAllCharts() {
 }
 
 function generateLiveOccupancy(data) {
-    console.log('generateLiveOccupancy called with data length:', data.length);
     try {
         const currentHour = new Date().getHours();
-        const currentData = data.filter(d => new Date(d.timestamp).getHours() === currentHour);
+        const currentData = data.filter(d => {
+            if (!d.timestamp) return false;
+            const hour = new Date(d.timestamp).getHours();
+            return !isNaN(hour) && hour === currentHour;
+        });
         
         const occupancyData = [{
             x: ['Current Hour'],
@@ -476,19 +440,17 @@ function generateLiveOccupancy(data) {
         }];
         
         const layout = {
-            title: 'Live Occupancy (Current Hour)',
+            title: `Live Occupancy (${data.length} total records)`,
             xaxis: { title: 'Time Period' },
             yaxis: { title: 'Number of People' },
             margin: { t: 40, b: 40, l: 60, r: 20 }
         };
         
-        console.log('About to create Plotly chart for liveOccupancy');
         Plotly.newPlot('liveOccupancy', occupancyData, layout, {responsive: true});
         chartInstances['liveOccupancy'] = { data: occupancyData, layout: layout };
-        console.log('Successfully created liveOccupancy chart');
     } catch (error) {
         console.error('Error in generateLiveOccupancy:', error);
-        throw error;
+        document.getElementById('liveOccupancy').innerHTML = '<div class="alert alert-danger">Chart error: ' + error.message + '</div>';
     }
 }
 
