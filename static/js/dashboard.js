@@ -6,9 +6,17 @@ let filterBuilder = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    initializeFilterBuilder();
-    loadDashboardData();
-    setupEventListeners();
+    console.log('Dashboard initializing...');
+    try {
+        initializeFilterBuilder();
+        console.log('FilterBuilder initialized');
+        loadDashboardData();
+        console.log('Loading dashboard data...');
+        setupEventListeners();
+        console.log('Event listeners set up');
+    } catch (error) {
+        console.error('Dashboard initialization error:', error);
+    }
 });
 
 // Advanced Filter Builder Class
@@ -384,12 +392,15 @@ function showError(message) {
 }
 
 function generateAllCharts() {
+    console.log('generateAllCharts called with data:', currentData);
     if (!currentData || !currentData.data) {
+        console.error('No data available for charts');
         showError('No data available');
         return;
     }
 
     const data = currentData.data;
+    console.log('Processing', data.length, 'data records for charts');
     
     // Time-based metrics
     generateLiveOccupancy(data);
