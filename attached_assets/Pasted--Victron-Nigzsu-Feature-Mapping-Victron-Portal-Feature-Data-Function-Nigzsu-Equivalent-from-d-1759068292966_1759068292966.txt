@@ -1,0 +1,66 @@
+🔄 Victron → Nigzsu Feature Mapping
+Victron Portal Feature	Data / Function	Nigzsu Equivalent (from dataset)	Notes
+System Overview (PV, Grid, Loads, Battery)	Energy flows (solar, grid, consumption, battery state)	Dashboard Overview (Occupancy, Traffic, Demographics, Flow)	The “system overview” card in Victron becomes an overview of business activity.
+PV Inverter	Solar input (kWh/W)	Entries (Traffic In)	Each “entry” event represents people entering (energy in).
+Grid	Grid consumption (kWh/W)	Exits (Traffic Out)	Each “exit” event represents people leaving (energy out).
+AC/Essential Loads	Electricity consumption	Occupancy Count (entries - exits)	Active load maps to real-time occupancy.
+Battery SOC % (State of Charge)	Battery percentage level	Live Occupancy % (current occupancy vs. capacity threshold)	Gauge visualization reused with occupancy as % of capacity.
+Temperature Sensor	Ambient temperature	Smart Insights Panel	Instead of temperature, this panel provides recommended insights (e.g., “Peak at 18:00, mostly 17-25 age group”).
+Advanced Tab	Technical readings (frequency, voltages)	Analytics	Occupancy trends, traffic flows, gender/age breakdowns.
+Device List	Connected energy devices	Data Sources	Raw data tables, possibly multiple cameras/sensors in future.
+Notes	User notes	Annotations	Analysts add tags or comments to periods/events.
+Photos	Images of installations	Snapshots	Snapshots of business activity (data captures at a time).
+Alarm Logs	System warnings/errors	Alerts Log	Spikes, anomalies, or occupancy thresholds triggered.
+Event Logs	Technical event log	Event Logs	Raw chronological events (track_number, event, timestamp).
+Reports	Energy reports export	Reports & Exports	CSV/PDF business intelligence reports with charts + logs.
+Settings	Configurations	Settings	Client-specific configurations, thresholds, access levels.
+📊 Chart/Panel Mapping
+Panel	Victron Example	Nigzsu Equivalent	Dataset Mapping
+Live Gauge	Battery %	Occupancy %	entries - exits vs. max threshold
+Bar Chart	Consumption over time	Traffic Over Time	Group event by timestamp (hour/day)
+Stacked Area	Grid vs Solar	Entry vs Exit Flow	entries vs exits by time
+Pie Chart	Source breakdown (grid/solar)	Age Distribution	age_estimate frequency
+Bar/Donut	Loads	Gender Distribution	sex counts
+Log Table	Event log	Event Log	Raw rows: track_number, event, timestamp, sex, age_estimate
+Alerts	System warnings	Alerts Log	Derived: thresholds, unusual spikes
+Text Insight	N/A	Smart Insights	Auto-analysis (peak hour, dominant group, anomalies)
+🧩 Data Flow Example
+
+User selects time range (Today, Last 7 Days, etc.)
+→ Filter dataset by timestamp.
+
+System computes metrics:
+
+Occupancy = cumulative (entries - exits).
+
+Traffic = count of events per hour/day.
+
+Age distribution = group by age_estimate.
+
+Gender distribution = group by sex.
+
+Flow = entries vs exits trend line.
+
+Logs = unaltered dataset.
+
+UI Panels update (gauge, bar, pie, area, log, insights).
+
+🎨 Styling Notes (Victron-Inspired)
+
+Dark Gray Background: #1E1E1E / #2B2B2B.
+
+Sidebar Active Color: Victron Blue (#1976D2) or Nigzsu Accent Purple.
+
+Charts:
+
+Entries = Blue
+
+Exits = Red
+
+Occupancy Gauge = Green → Yellow → Red (capacity thresholds).
+
+Demographics = Teal, Purple, Orange accents.
+
+Typography: Clean sans-serif (similar to Victron).
+
+Cards: Rounded, minimal drop shadow, export buttons top-right.
