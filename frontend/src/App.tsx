@@ -6,6 +6,7 @@ import EventLogsPage from './pages/EventLogsPage';
 import AlarmLogsPage from './pages/AlarmLogsPage';
 import DeviceListPage from './pages/DeviceListPage';
 import ReportsPage from './pages/ReportsPage';
+import AdminPage from './pages/AdminPage';
 import './styles/VRMTheme.css';
 
 // Login Component
@@ -238,14 +239,7 @@ const App: React.FC = () => {
           {userRole === 'admin' && (
             <Route 
               path="/admin" 
-              element={
-                <div>
-                  <h1 style={{ color: 'var(--vrm-text-primary)' }}>Admin Panel</h1>
-                  <p style={{ color: 'var(--vrm-text-secondary)' }}>
-                    Admin functionality coming soon - User CRUD and data source management
-                  </p>
-                </div>
-              } 
+              element={<AdminPage credentials={credentials} />} 
             />
           )}
           

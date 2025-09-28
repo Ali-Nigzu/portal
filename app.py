@@ -14,6 +14,7 @@ from werkzeug.utils import secure_filename
 from google.cloud import storage
 import io
 import base64
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
@@ -21,9 +22,11 @@ app.secret_key = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-prod
 # Configuration
 GCS_BUCKET = 'nigzsu_cdata-testclient1'
 UPLOAD_FOLDER = 'cuploads'
+ADMIN_UPLOAD_FOLDER = 'admin_uploads'
 
 # User credentials storage
 USERS_FILE = 'users.json'
+UPLOADS_FILE = 'admin_uploads.json'
 
 # Initialize users if file doesn't exist
 def init_users():
@@ -49,6 +52,10 @@ def init_users():
         }
         with open(USERS_FILE, 'w') as f:
             json.dump(users_data, f, indent=2)
+        
+        # Ensure admin upload folder exists
+        if not os.path.exists(ADMIN_UPLOAD_FOLDER):
+            os.makedirs(ADMIN_UPLOAD_FOLDER)
 
 def load_users():
     with open(USERS_FILE, 'r') as f:
@@ -57,6 +64,41 @@ def load_users():
 def save_users(users_data):
     with open(USERS_FILE, 'w') as f:
         json.dump(users_data, f, indent=2)
+
+def load_uploads():
+    """Load admin uploads data from JSON file"""
+    try:
+        with open(UPLOADS_FILE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def save_uploads(uploads_data):
+    """Save admin uploads data to JSON file"""
+    with open(UPLOADS_FILE, 'w') as f:
+        json.dump(uploads_data, f, indent=2)
+
+def check_admin_auth():
+    """Check admin authentication via session or Basic Auth"""
+    # Check session first (for web interface)
+    if 'username' in session and session.get('role') == 'admin':
+        return True
+    
+    # Check Basic Auth (for API interface)
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Basic '):
+        try:
+            auth_token = auth_header[6:]  # Remove 'Basic ' prefix
+            credentials = base64.b64decode(auth_token).decode('utf-8')
+            username, password = credentials.split(':', 1)
+            
+            users = load_users()
+            if username in users and users[username]['password'] == password and users[username]['role'] == 'admin':
+                return True
+        except Exception:
+            pass
+    
+    return False
 
 def generate_demo_data():
     """Generate demo CCTV data for testing"""
@@ -221,7 +263,7 @@ def get_chart_data():
 @app.route('/api/admin/users', methods=['GET', 'POST'])
 def admin_users():
     """Admin endpoint to manage users"""
-    if 'username' not in session or session['role'] != 'admin':
+    if not check_admin_auth():
         return jsonify({'error': 'Access denied'}), 403
     
     if request.method == 'GET':
@@ -255,7 +297,7 @@ def admin_users():
 @app.route('/api/admin/users/<username>', methods=['GET', 'PUT', 'DELETE'])
 def admin_user_detail(username):
     """Admin endpoint to manage specific user"""
-    if 'username' not in session or session['role'] != 'admin':
+    if not check_admin_auth():
         return jsonify({'error': 'Access denied'}), 403
     
     users = load_users()
@@ -304,17 +346,102 @@ def admin_user_detail(username):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-@app.route('/api/admin/uploads', methods=['GET'])
+@app.route('/api/admin/uploads', methods=['GET', 'POST'])
 def admin_uploads():
-    """Admin endpoint to list uploaded files"""
-    if 'username' not in session or session['role'] != 'admin':
+    """Admin endpoint to manage uploaded files"""
+    if not check_admin_auth():
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if request.method == 'GET':
+        try:
+            uploads = load_uploads()
+            return jsonify({'success': True, 'uploads': uploads})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'POST':
+        try:
+            if 'file' not in request.files:
+                return jsonify({'error': 'No file provided'}), 400
+            
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({'error': 'No file selected'}), 400
+            
+            if not file.filename or not file.filename.lower().endswith('.csv'):
+                return jsonify({'error': 'Only CSV files allowed'}), 400
+            
+            # Load existing uploads
+            uploads = load_uploads()
+            
+            # Check if file already exists
+            if any(upload['filename'] == file.filename for upload in uploads):
+                return jsonify({'error': 'File with this name already exists'}), 400
+            
+            # Read file content and save to disk
+            file_content = file.read()
+            file_size = len(file_content)
+            
+            # Ensure admin upload folder exists
+            if not os.path.exists(ADMIN_UPLOAD_FOLDER):
+                os.makedirs(ADMIN_UPLOAD_FOLDER)
+            
+            # Save file to disk
+            file_path = os.path.join(ADMIN_UPLOAD_FOLDER, secure_filename(file.filename))
+            with open(file_path, 'wb') as f:
+                f.write(file_content)
+            
+            # Create upload metadata
+            upload_metadata = {
+                'filename': file.filename,
+                'upload_date': datetime.now().isoformat(),
+                'size': file_size,
+                'client': session.get('username', 'admin'),
+                'file_path': file_path
+            }
+            
+            # Add to uploads list
+            uploads.append(upload_metadata)
+            save_uploads(uploads)
+            
+            return jsonify({
+                'success': True, 
+                'message': f'File "{file.filename}" uploaded successfully',
+                'filename': file.filename
+            })
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/uploads/<filename>', methods=['DELETE'])
+def delete_admin_upload(filename):
+    """Admin endpoint to delete uploaded files"""
+    if not check_admin_auth():
         return jsonify({'error': 'Access denied'}), 403
     
     try:
-        # For now, return empty list since we're not implementing actual GCS upload yet
-        # In production, this would list files from GCS cuploads folder
-        uploads = []
-        return jsonify({'success': True, 'uploads': uploads})
+        uploads = load_uploads()
+        
+        # Find the file to delete
+        file_to_delete = None
+        for upload in uploads:
+            if upload['filename'] == filename:
+                file_to_delete = upload
+                break
+        
+        if not file_to_delete:
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Remove physical file if it exists
+        if 'file_path' in file_to_delete and os.path.exists(file_to_delete['file_path']):
+            os.remove(file_to_delete['file_path'])
+        
+        # Remove from uploads list
+        uploads = [upload for upload in uploads if upload['filename'] != filename]
+        save_uploads(uploads)
+        
+        return jsonify({'success': True, 'message': f'File "{filename}" deleted successfully'})
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
