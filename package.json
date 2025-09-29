@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/papaparse": "^5.3.16",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
     "html2canvas": "^1.4.1",
