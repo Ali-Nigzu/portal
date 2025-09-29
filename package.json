@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "echarts": "^5.6.0",
-    "echarts-for-react": "^3.0.2"
+    "echarts-for-react": "^3.0.2",
+    "recharts": "^3.2.1"
   }
 }

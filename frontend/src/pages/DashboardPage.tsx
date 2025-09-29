@@ -118,6 +118,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const exitsCount = data.data.filter(d => d.event === 'exit').length;
   const liveOccupancy = Math.max(0, entriesCount - exitsCount);
 
+  // Calculate today's traffic (events from today only)
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todaysTraffic = data.data.filter(d => {
+    const eventDate = new Date(d.timestamp);
+    return eventDate >= todayStart && eventDate <= today;
+  }).length;
+
   return (
     <div>
       {/* Page Header */}
@@ -154,9 +162,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-teal)', marginBottom: '8px' }}>
-              {data.summary.total_records.toLocaleString()}
+              {todaysTraffic.toLocaleString()}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Events recorded</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Today's traffic</p>
           </div>
         </div>
 
