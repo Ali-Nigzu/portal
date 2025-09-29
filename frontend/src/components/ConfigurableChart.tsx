@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { exportChartAsPNG, exportDataAsCSV, generateChartId } from '../utils/exportUtils';
 
@@ -27,12 +27,11 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({ data, intelligenc
   const chartRef = useRef<HTMLDivElement>(null);
   const chartId = generateChartId('configurable-chart');
 
-  useEffect(() => {
-    processChartData();
-  }, [data, dataType]);
-
-  const processChartData = () => {
-    if (!data || data.length === 0) return;
+  const processChartData = useCallback(() => {
+    if (!data || data.length === 0) {
+      setChartData([]);
+      return;
+    }
 
     // Use the data passed in (already filtered by parent component)
     const filteredData = data;
@@ -40,10 +39,17 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({ data, intelligenc
     // Group and process data based on type
     const grouped: { [key: string]: any } = {};
     
-    // Determine if we should group by hour or by date based on data span
-    const timeSpan = filteredData.length > 0 ? 
-      new Date(Math.max(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime() - 
-      new Date(Math.min(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime() : 0;
+    // Optimized timestamp calculation - single pass through data
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+    
+    filteredData.forEach(item => {
+      const timestamp = new Date(item.timestamp).getTime();
+      if (timestamp < minTime) minTime = timestamp;
+      if (timestamp > maxTime) maxTime = timestamp;
+    });
+    
+    const timeSpan = filteredData.length > 0 ? maxTime - minTime : 0;
     const isShortTimespan = timeSpan <= 24 * 60 * 60 * 1000; // Less than or equal to 24 hours
     
     if (isShortTimespan && filteredData.length > 0) {
@@ -81,7 +87,11 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({ data, intelligenc
     });
 
     setChartData(processedData);
-  };
+  }, [data, dataType]);
+
+  useEffect(() => {
+    processChartData();
+  }, [processChartData]);
 
   const renderChart = () => {
     const color = dataType === 'activity' ? '#1976d2' : 
