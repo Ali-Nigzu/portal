@@ -20,6 +20,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
       description: 'System Overview'
     },
     {
+      path: '/analytics',
+      label: 'Analytics',
+      icon: '📈',
+      description: 'Advanced Analytics'
+    },
+    {
       path: '/event-logs',
       label: 'Event logs',
       icon: '📝',
@@ -36,12 +42,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
       label: 'Device list',
       icon: '📷',
       description: 'Data Sources'
-    },
-    {
-      path: '/analytics',
-      label: 'Analytics',
-      icon: '📈',
-      description: 'Advanced Analytics'
     },
     {
       path: '/reports',
