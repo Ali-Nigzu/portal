@@ -12,6 +12,7 @@ import {
   calculateDwellTimeDistribution,
   formatDuration
 } from '../utils/dataProcessing';
+import { exportChartAsPNG, exportDataAsCSV, generateChartId } from '../utils/exportUtils';
 
 interface ChartData {
   index: number;
@@ -65,6 +66,12 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Chart IDs for export
+  const genderChartId = generateChartId('gender-distribution');
+  const ageChartId = generateChartId('age-distribution');
+  const activityChartId = generateChartId('activity-patterns');
+  const trendsChartId = generateChartId('advanced-trends');
   // Individual time filters for each chart
   const [genderTimeFilter, setGenderTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
   const [ageTimeFilter, setAgeTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
@@ -319,13 +326,24 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
                 value={genderTimeFilter} 
                 onChange={setGenderTimeFilter}
               />
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
+              <button 
+                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                onClick={() => exportChartAsPNG(genderChartId, 'gender-distribution')}
+              >
+                PNG
+              </button>
+              <button 
+                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                onClick={() => exportDataAsCSV(processGenderData(), 'gender-distribution')}
+              >
+                CSV
+              </button>
             </div>
           </div>
           <div className="vrm-card-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+            <div id={genderChartId}>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
                 <Pie
                   data={processGenderData()}
                   cx="50%"
@@ -342,6 +360,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -354,13 +373,24 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
                 value={ageTimeFilter} 
                 onChange={setAgeTimeFilter}
               />
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
+              <button 
+                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                onClick={() => exportChartAsPNG(ageChartId, 'age-distribution')}
+              >
+                PNG
+              </button>
+              <button 
+                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                onClick={() => exportDataAsCSV(processAgeData(), 'age-distribution')}
+              >
+                CSV
+              </button>
             </div>
           </div>
           <div className="vrm-card-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={processAgeData()}>
+            <div id={ageChartId}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={processAgeData()}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--vrm-border)" />
                 <XAxis dataKey="age" stroke="var(--vrm-text-secondary)" fontSize={12} />
                 <YAxis stroke="var(--vrm-text-secondary)" fontSize={12} />
@@ -374,6 +404,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
                 <Bar dataKey="visitors" fill="#1976d2" />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>
@@ -403,13 +434,24 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
               <option value="weekly">Weekly Pattern</option>
               <option value="monthly">Monthly Pattern</option>
             </select>
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
+            <button 
+              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+              onClick={() => exportChartAsPNG(activityChartId, 'activity-patterns')}
+            >
+              PNG
+            </button>
+            <button 
+              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+              onClick={() => exportDataAsCSV(processActivityPatterns(), 'activity-patterns')}
+            >
+              CSV
+            </button>
           </div>
         </div>
         <div className="vrm-card-body">
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={processActivityPatterns()}>
+          <div id={activityChartId}>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={processActivityPatterns()}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--vrm-border)" />
               <XAxis dataKey="period" stroke="var(--vrm-text-secondary)" fontSize={10} />
               <YAxis stroke="var(--vrm-text-secondary)" fontSize={12} />
@@ -423,6 +465,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
               <Area type="monotone" dataKey="activity" stroke="#1976d2" fill="#1976d2" fillOpacity={0.3} />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
@@ -435,8 +478,18 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
               value={trendsTimeFilter} 
               onChange={setTrendsTimeFilter}
             />
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
+            <button 
+              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+              onClick={() => exportChartAsPNG(trendsChartId, 'advanced-trends')}
+            >
+              PNG
+            </button>
+            <button 
+              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+              onClick={() => exportDataAsCSV(processFoxessTrends(), 'advanced-trends')}
+            >
+              CSV
+            </button>
           </div>
         </div>
         
@@ -465,8 +518,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         </div>
 
         <div className="vrm-card-body">
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={processFoxessTrends()}>
+          <div id={trendsChartId}>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={processFoxessTrends()}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--vrm-border)" />
               <XAxis dataKey="date" stroke="var(--vrm-text-secondary)" fontSize={10} />
               <YAxis yAxisId="left" stroke="var(--vrm-text-secondary)" fontSize={12} />
@@ -502,6 +556,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
               )}
             </LineChart>
           </ResponsiveContainer>
+          </div>
         </div>
       </div>
 

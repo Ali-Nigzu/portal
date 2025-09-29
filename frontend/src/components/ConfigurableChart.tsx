@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { exportChartAsPNG, exportDataAsCSV, generateChartId } from '../utils/exportUtils';
 
 interface ChartData {
   index: number;
@@ -18,47 +19,37 @@ interface ConfigurableChartProps {
   intelligence: any;
 }
 
-type TimeFrame = 'last24h' | 'last7days' | 'last30days' | 'custom';
 type DataType = 'activity' | 'entrances' | 'exits' | 'occupancy';
 
 const ConfigurableChart: React.FC<ConfigurableChartProps> = ({ data, intelligence }) => {
-  const [timeFrame, setTimeFrame] = useState<TimeFrame>('last24h');
   const [dataType, setDataType] = useState<DataType>('activity');
   const [chartData, setChartData] = useState<any[]>([]);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartId = generateChartId('configurable-chart');
 
   useEffect(() => {
     processChartData();
-  }, [data, timeFrame, dataType]);
+  }, [data, dataType]);
 
   const processChartData = () => {
     if (!data || data.length === 0) return;
 
-    let filteredData = [...data];
-    const now = new Date();
-
-    // Filter by time frame
-    switch (timeFrame) {
-      case 'last24h':
-        const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        filteredData = data.filter(d => new Date(d.timestamp) >= last24h);
-        break;
-      case 'last7days':
-        const last7days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        filteredData = data.filter(d => new Date(d.timestamp) >= last7days);
-        break;
-      case 'last30days':
-        const last30days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        filteredData = data.filter(d => new Date(d.timestamp) >= last30days);
-        break;
-    }
+    // Use the data passed in (already filtered by parent component)
+    const filteredData = data;
 
     // Group and process data based on type
     const grouped: { [key: string]: any } = {};
     
-    if (timeFrame === 'last24h') {
-      // Group by hour for 24h view
+    // Determine if we should group by hour or by date based on data span
+    const timeSpan = filteredData.length > 0 ? 
+      new Date(Math.max(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime() - 
+      new Date(Math.min(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime() : 0;
+    const isShortTimespan = timeSpan <= 24 * 60 * 60 * 1000; // Less than or equal to 24 hours
+    
+    if (isShortTimespan && filteredData.length > 0) {
+      // Group by hour for short timespans
       filteredData.forEach(item => {
-        const hour = `${item.hour}:00`;
+        const hour = `${item.hour.toString().padStart(2, '0')}:00`;
         if (!grouped[hour]) {
           grouped[hour] = { name: hour, activity: 0, entrances: 0, exits: 0, occupancy: 0 };
         }
@@ -135,29 +126,6 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({ data, intelligenc
       <div className="vrm-card-header">
         <h3 className="vrm-card-title">Analytics Dashboard</h3>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {/* Time Frame Dropdown */}
-          <div>
-            <label style={{ fontSize: '12px', color: 'var(--vrm-text-secondary)', marginRight: '6px' }}>
-              Time Frame:
-            </label>
-            <select 
-              value={timeFrame} 
-              onChange={(e) => setTimeFrame(e.target.value as TimeFrame)}
-              style={{
-                backgroundColor: 'var(--vrm-bg-secondary)',
-                border: '1px solid var(--vrm-border)',
-                borderRadius: '4px',
-                padding: '4px 8px',
-                color: 'var(--vrm-text-primary)',
-                fontSize: '12px'
-              }}
-            >
-              <option value="last24h">Last 24 Hours</option>
-              <option value="last7days">Last 7 Days</option>
-              <option value="last30days">Last 30 Days</option>
-            </select>
-          </div>
-
           {/* Data Type Dropdown */}
           <div>
             <label style={{ fontSize: '12px', color: 'var(--vrm-text-secondary)', marginRight: '6px' }}>
@@ -183,13 +151,25 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({ data, intelligenc
           </div>
 
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
+            <button 
+              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+              onClick={() => exportChartAsPNG(chartId, `activity-chart-${dataType}`)}
+            >
+              PNG
+            </button>
+            <button 
+              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+              onClick={() => exportDataAsCSV(chartData, `activity-data-${dataType}`)}
+            >
+              CSV
+            </button>
           </div>
         </div>
       </div>
       <div className="vrm-card-body">
-        {renderChart()}
+        <div id={chartId} ref={chartRef}>
+          {renderChart()}
+        </div>
         
         {/* Chart Summary */}
         <div style={{ 
@@ -201,7 +181,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({ data, intelligenc
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
             <span style={{ color: 'var(--vrm-text-secondary)' }}>
-              Showing {dataType} data for {timeFrame.replace(/([A-Z])/g, ' $1').toLowerCase()}
+              Showing {dataType} data
             </span>
             <span style={{ color: 'var(--vrm-text-primary)', fontWeight: '600' }}>
               {chartData.length} data points
