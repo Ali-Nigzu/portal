@@ -71,7 +71,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
       <nav className={`vrm-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Sidebar Header */}
         <div className="vrm-sidebar-header">
-          <div className="vrm-logo">N</div>
+          <div className="vrm-logo" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img 
+              src="/company-logo.png" 
+              alt="Company Logo"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          </div>
           <div className="vrm-logo-text">Nigzsu</div>
         </div>
 

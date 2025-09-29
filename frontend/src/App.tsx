@@ -68,17 +68,22 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
           <div style={{
             width: '48px',
             height: '48px',
-            background: 'linear-gradient(135deg, var(--vrm-accent-blue), var(--vrm-accent-teal))',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontSize: '20px',
-            fontWeight: '700',
-            margin: '0 auto 16px'
+            margin: '0 auto 16px',
+            overflow: 'hidden'
           }}>
-            N
+            <img 
+              src="/company-logo.png" 
+              alt="Company Logo"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
           </div>
           <h2 style={{ color: 'var(--vrm-text-primary)', marginBottom: '8px', fontSize: '24px', fontWeight: '600' }}>
             Nigzsu Analytics
