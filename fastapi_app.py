@@ -29,26 +29,53 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Secure CORS middleware - only allow specific origins
-REPLIT_DOMAIN = os.environ.get("REPLIT_DOMAINS", "")
-ALLOWED_ORIGINS = [
-    "http://localhost:5000",
-    "http://127.0.0.1:5000", 
-    "http://0.0.0.0:5000",
-    # Add Replit deployment domain 
-    f"https://{REPLIT_DOMAIN}" if REPLIT_DOMAIN else "",
-    f"http://{REPLIT_DOMAIN}" if REPLIT_DOMAIN else "",
-]
+# Production-ready CORS middleware
+def get_allowed_origins():
+    """Get allowed origins based on environment"""
+    origins = []
+    
+    # Development origins
+    if os.environ.get("NODE_ENV") != "production":
+        origins.extend([
+            "http://localhost:5000",
+            "http://127.0.0.1:5000", 
+            "http://0.0.0.0:5000",
+            "http://localhost:3000",  # React dev server
+        ])
+    
+    # Replit domain
+    replit_domain = os.environ.get("REPLIT_DOMAINS", "")
+    if replit_domain:
+        origins.extend([
+            f"https://{replit_domain}",
+            f"http://{replit_domain}",
+        ])
+    
+    # Google Cloud Run domain 
+    cloud_run_service = os.environ.get("CLOUD_RUN_SERVICE_URL", "")
+    if cloud_run_service:
+        origins.append(cloud_run_service)
+    
+    # Custom production domain
+    production_domain = os.environ.get("PRODUCTION_DOMAIN", "")
+    if production_domain:
+        origins.extend([
+            f"https://{production_domain}",
+            f"http://{production_domain}",
+        ])
+    
+    # Filter out empty strings and return unique origins
+    return list(set(origin for origin in origins if origin))
 
-# Filter out empty strings  
-ALLOWED_ORIGINS = [origin for origin in ALLOWED_ORIGINS if origin]
+ALLOWED_ORIGINS = get_allowed_origins()
 
+# Add CORS middleware with production settings
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],  # Only needed methods
-    allow_headers=["Content-Type", "Authorization"],  # Only needed headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 )
 
 # Configuration

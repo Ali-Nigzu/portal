@@ -1,0 +1,21 @@
+# Google Cloud Run service configuration
+# This file provides deployment configuration examples
+# Deploy using: gcloud run deploy --source .
+
+# Example deployment command:
+# gcloud run deploy nigzsu-analytics \
+#   --source . \
+#   --region us-central1 \
+#   --port 8080 \
+#   --allow-unauthenticated \
+#   --memory 1Gi \
+#   --cpu 1 \
+#   --max-instances 10 \
+#   --set-env-vars="NODE_ENV=production,GCS_BUCKET=nigzsu_cdata-testclient1"
+
+# Environment variables to set during deployment:
+# NODE_ENV=production
+# GCS_BUCKET=nigzsu_cdata-testclient1  
+# CLOUD_RUN_SERVICE_URL=https://your-service-url.run.app
+# PRODUCTION_DOMAIN=your-custom-domain.com (if using custom domain)
+# SESSION_SECRET=your-secure-random-secret-key

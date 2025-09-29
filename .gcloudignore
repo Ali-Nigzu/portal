@@ -1,0 +1,70 @@
+# Ignore development files
+.git/
+.gitignore
+README.md
+*.md
+
+# Node.js dependencies 
+node_modules/
+frontend/node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+pip-log.txt
+
+# Development databases and logs
+*.sqlite
+*.log
+logs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test files
+test/
+tests/
+*_test.py
+*_test.js
+
+# Environment files (secrets should be set via gcloud)
+.env
+.env.local
+.env.development
+.env.production
+
+# Replit specific files
+.replit
+replit.nix
+.config/
+
+# Development build artifacts
+frontend/build/
+build/
+dist/
+
+# Temporary files
+tmp/
+temp/
+session.txt
+cookies.txt
