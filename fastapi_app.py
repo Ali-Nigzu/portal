@@ -114,13 +114,13 @@ def load_users():
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "csv_url": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client0/testdata.csv"
+                "csv_url": "https://docs.google.com/spreadsheets/d/1B6Kg19ONObAmXliyuQNTL0-fh-6ueXOY_amadASZ1W4/export?format=csv&gid=368477740"
             },
             "client2": {
                 "password": hash_password("client456"), 
                 "role": "client",
                 "name": "Test Client 2",
-                "csv_url": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client1/testdata0.csv"
+                "csv_url": "https://docs.google.com/spreadsheets/d/10oFKUDhiKjAIqTaJyCa20r9lbTdSgjPK4HwmdCplUgU/export?format=csv"
             }
         }
         with open(USERS_FILE, 'w') as f:
