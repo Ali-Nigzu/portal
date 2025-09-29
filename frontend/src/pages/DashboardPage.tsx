@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LiveOccupancyChart, TrafficTimeChart, AgeDistributionChart, EntryExitChart } from '../components/ProfessionalCharts';
+import ConfigurableChart from '../components/ConfigurableChart';
 import { API_ENDPOINTS } from '../config';
 
 interface ChartData {
@@ -137,7 +137,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
         {/* Live Occupancy */}
         <div className="vrm-card">
           <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Live Occupancy</h3>
+            <h3 className="vrm-card-title">Current Occupancy</h3>
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-blue)', marginBottom: '8px' }}>
@@ -150,7 +150,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
         {/* Total Activity */}
         <div className="vrm-card">
           <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Total Activity</h3>
+            <h3 className="vrm-card-title">Today's Total Traffic</h3>
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-teal)', marginBottom: '8px' }}>
@@ -163,13 +163,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
         {/* Peak Hour */}
         <div className="vrm-card">
           <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Peak Activity</h3>
+            <h3 className="vrm-card-title">Peak Activity Time</h3>
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-orange)', marginBottom: '8px' }}>
-              {data.intelligence.peak_hours[0] || 'N/A'}h
+              {data.intelligence.peak_hours[0] || 'N/A'}:00
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Busiest hour</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Peak time</p>
           </div>
         </div>
 
@@ -187,63 +187,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
         </div>
       </div>
 
-      {/* Main Charts Grid */}
-      <div className="vrm-grid vrm-grid-2" style={{ marginBottom: '24px' }}>
-        {/* Live Occupancy Gauge */}
-        <div className="vrm-card">
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Live Occupancy Status</h3>
-            <div className="vrm-card-actions">
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
-            </div>
-          </div>
-          <div className="vrm-card-body">
-            <LiveOccupancyChart data={data.data} intelligence={data.intelligence} />
-          </div>
-        </div>
-
-        {/* Traffic Over Time */}
-        <div className="vrm-card">
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Activity Over Time</h3>
-            <div className="vrm-card-actions">
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
-            </div>
-          </div>
-          <div className="vrm-card-body">
-            <TrafficTimeChart data={data.data} intelligence={data.intelligence} />
-          </div>
-        </div>
-
-        {/* Age Distribution */}
-        <div className="vrm-card">
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Demographics - Age</h3>
-            <div className="vrm-card-actions">
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
-            </div>
-          </div>
-          <div className="vrm-card-body">
-            <AgeDistributionChart data={data.data} intelligence={data.intelligence} />
-          </div>
-        </div>
-
-        {/* Entry/Exit Flow */}
-        <div className="vrm-card">
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Entry/Exit Flow</h3>
-            <div className="vrm-card-actions">
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
-              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
-            </div>
-          </div>
-          <div className="vrm-card-body">
-            <EntryExitChart data={data.data} intelligence={data.intelligence} />
-          </div>
-        </div>
+      {/* Main Configurable Chart */}
+      <div style={{ marginBottom: '24px' }}>
+        <ConfigurableChart data={data.data} intelligence={data.intelligence} />
       </div>
 
       {/* Smart Insights Panel */}
