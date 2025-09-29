@@ -46,7 +46,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeFilter, setTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
+  // Independent time filters for dashboard components
+  const [kpiTimeFilter, setKpiTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
+  const [chartTimeFilter, setChartTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
 
   const fetchData = useCallback(async () => {
     try {
@@ -116,18 +118,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     return null;
   }
 
-  // Filter data based on selected time period
-  const filteredData = filterDataByTime(data.data, timeFilter);
+  // Filter data independently for KPIs and chart
+  const kpiFilteredData = filterDataByTime(data.data, kpiTimeFilter);
+  const chartFilteredData = filterDataByTime(data.data, chartTimeFilter);
   
-  // Calculate live occupancy from filtered data
-  const liveOccupancy = calculateCurrentOccupancy(filteredData);
+  // Calculate KPI metrics from KPI filtered data
+  const liveOccupancy = calculateCurrentOccupancy(kpiFilteredData);
+  const totalTraffic = kpiFilteredData.length;
 
-  // Calculate traffic from filtered data (not just today)
-  const totalTraffic = filteredData.length;
-
-  // Calculate peak activity time from filtered data
+  // Calculate peak activity time from KPI filtered data
   const hourlyActivity = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
-  filteredData.forEach(item => {
+  kpiFilteredData.forEach(item => {
     if (item.hour >= 0 && item.hour < 24) {
       hourlyActivity[item.hour].count++;
     }
@@ -136,30 +137,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     current.count > max.count ? current : max
   ).hour;
 
-  // Calculate data coverage from filtered data efficiently (avoid spread operator with large arrays)
-  const dateCoverage = filteredData.length > 0 ? 
-    (() => {
-      let minTime = Infinity;
-      let maxTime = -Infinity;
-      
-      filteredData.forEach(d => {
-        const time = new Date(d.timestamp).getTime();
-        if (time < minTime) minTime = time;
-        if (time > maxTime) maxTime = time;
-      });
-      
-      return minTime !== Infinity && maxTime !== -Infinity ? 
-        Math.ceil((maxTime - minTime) / (1000 * 60 * 60 * 24)) + 1 : 0;
-    })()
-    : 0;
-
-  // Calculate average dwell time from filtered data
-  const avgDwellTime = calculateAverageDwellTime(filteredData);
+  // Calculate average dwell time from KPI filtered data
+  const avgDwellTime = calculateAverageDwellTime(kpiFilteredData);
 
   return (
     <div>
-      {/* Page Header with Time Filter */}
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Page Header */}
+      <div style={{ marginBottom: '24px' }}>
         <div>
           <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
             System Overview
@@ -170,17 +154,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
             <span>Overview</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Time Period:</span>
-          <TimeFilterDropdown 
-            value={timeFilter} 
-            onChange={setTimeFilter}
-          />
-        </div>
       </div>
 
-      {/* Summary Cards Grid */}
-      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
+      {/* KPI Section with Independent Time Filter */}
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ color: 'var(--vrm-text-primary)', fontSize: '18px', fontWeight: '600', margin: 0 }}>Key Metrics</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Time Period:</span>
+            <TimeFilterDropdown 
+              value={kpiTimeFilter} 
+              onChange={setKpiTimeFilter}
+            />
+          </div>
+        </div>
+        <div className="vrm-grid vrm-grid-4">
         {/* Live Occupancy */}
         <div className="vrm-card">
           <div className="vrm-card-header">
@@ -233,10 +221,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
         </div>
       </div>
+      </div>
 
-      {/* Main Configurable Chart */}
+      {/* Chart Section with Independent Time Filter */}
       <div style={{ marginBottom: '24px' }}>
-        <ConfigurableChart data={filteredData} intelligence={data.intelligence} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ color: 'var(--vrm-text-primary)', fontSize: '18px', fontWeight: '600', margin: 0 }}>Activity Chart</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Time Period:</span>
+            <TimeFilterDropdown 
+              value={chartTimeFilter} 
+              onChange={setChartTimeFilter}
+            />
+          </div>
+        </div>
+        <ConfigurableChart data={chartFilteredData} intelligence={data.intelligence} />
       </div>
 
       {/* Smart Insights Panel */}
