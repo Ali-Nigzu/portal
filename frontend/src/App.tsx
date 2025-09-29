@@ -6,6 +6,7 @@ import EventLogsPage from './pages/EventLogsPage';
 import AlarmLogsPage from './pages/AlarmLogsPage';
 import DeviceListPage from './pages/DeviceListPage';
 import ReportsPage from './pages/ReportsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import AdminPage from './pages/AdminPage';
 import './styles/VRMTheme.css';
 
@@ -232,6 +233,10 @@ const App: React.FC = () => {
           <Route 
             path="/device-list" 
             element={<DeviceListPage credentials={credentials} />} 
+          />
+          <Route 
+            path="/analytics" 
+            element={<AnalyticsPage credentials={credentials} />} 
           />
           <Route path="/reports" element={<ReportsPage />} />
           
