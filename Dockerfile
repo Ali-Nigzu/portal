@@ -49,27 +49,35 @@ http { \
         server_name _; \
         root /app/static/react; \
         index index.html; \
+        \
+        # API routes - must come before catch-all \
+        location ^~ /api { \
+            proxy_pass http://127.0.0.1:8000; \
+            proxy_set_header Host $host; \
+            proxy_set_header X-Real-IP $remote_addr; \
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+            proxy_set_header X-Forwarded-Proto $scheme; \
+        } \
+        \
+        # Backend authentication routes \
+        location ^~ /login { \
+            proxy_pass http://127.0.0.1:8000; \
+            proxy_set_header Host $host; \
+            proxy_set_header X-Real-IP $remote_addr; \
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+            proxy_set_header X-Forwarded-Proto $scheme; \
+        } \
+        \
+        # Health check and other backend routes \
+        location ^~ /health { \
+            proxy_pass http://127.0.0.1:8000; \
+            proxy_set_header Host $host; \
+            proxy_set_header X-Real-IP $remote_addr; \
+        } \
+        \
+        # React SPA - serve static files or fallback to index.html \
         location / { \
-            try_files $uri $uri/ @backend; \
-        } \
-        location @backend { \
-            proxy_pass http://127.0.0.1:8000; \
-            proxy_set_header Host $host; \
-            proxy_set_header X-Real-IP $remote_addr; \
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-            proxy_set_header X-Forwarded-Proto $scheme; \
-        } \
-        location /api { \
-            proxy_pass http://127.0.0.1:8000; \
-            proxy_set_header Host $host; \
-            proxy_set_header X-Real-IP $remote_addr; \
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-            proxy_set_header X-Forwarded-Proto $scheme; \
-        } \
-        location /login { \
-            proxy_pass http://127.0.0.1:8000; \
-            proxy_set_header Host $host; \
-            proxy_set_header X-Real-IP $remote_addr; \
+            try_files $uri $uri/ /index.html; \
         } \
     } \
 }' > /etc/nginx/nginx.conf
