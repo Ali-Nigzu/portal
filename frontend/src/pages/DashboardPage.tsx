@@ -136,10 +136,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     current.count > max.count ? current : max
   ).hour;
 
-  // Calculate data coverage from filtered data
+  // Calculate data coverage from filtered data efficiently (avoid spread operator with large arrays)
   const dateCoverage = filteredData.length > 0 ? 
-    Math.ceil((new Date(Math.max(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime() - 
-               new Date(Math.min(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    (() => {
+      let minTime = Infinity;
+      let maxTime = -Infinity;
+      
+      filteredData.forEach(d => {
+        const time = new Date(d.timestamp).getTime();
+        if (time < minTime) minTime = time;
+        if (time > maxTime) maxTime = time;
+      });
+      
+      return minTime !== Infinity && maxTime !== -Infinity ? 
+        Math.ceil((maxTime - minTime) / (1000 * 60 * 60 * 24)) + 1 : 0;
+    })()
     : 0;
 
   // Calculate average dwell time from filtered data
@@ -169,7 +180,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       </div>
 
       {/* Summary Cards Grid */}
-      <div className="vrm-grid vrm-grid-5" style={{ marginBottom: '24px' }}>
+      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
         {/* Live Occupancy */}
         <div className="vrm-card">
           <div className="vrm-card-header">
@@ -206,19 +217,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
               {peakHour !== undefined ? `${peakHour.toString().padStart(2, '0')}:00` : 'N/A'}
             </div>
             <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Peak time</p>
-          </div>
-        </div>
-
-        {/* Data Span */}
-        <div className="vrm-card">
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Data Coverage</h3>
-          </div>
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-purple)', marginBottom: '8px' }}>
-              {dateCoverage}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Days of data</p>
           </div>
         </div>
 
