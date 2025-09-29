@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ConfigurableChart from '../components/ConfigurableChart';
 import { API_ENDPOINTS } from '../config';
-import { calculateAverageDwellTime, formatDuration } from '../utils/dataProcessing';
+import TimeFilterDropdown, { TimeFilterValue } from '../components/TimeFilterDropdown';
+import { calculateAverageDwellTime, formatDuration, filterDataByTime, calculateCurrentOccupancy } from '../utils/dataProcessing';
 
 interface ChartData {
   index: number;
@@ -45,6 +46,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeFilter, setTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
 
   const fetchData = useCallback(async () => {
     try {
@@ -114,33 +116,55 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     return null;
   }
 
-  // Calculate live occupancy
-  const entriesCount = data.data.filter(d => d.event === 'entry').length;
-  const exitsCount = data.data.filter(d => d.event === 'exit').length;
-  const liveOccupancy = Math.max(0, entriesCount - exitsCount);
+  // Filter data based on selected time period
+  const filteredData = filterDataByTime(data.data, timeFilter);
+  
+  // Calculate live occupancy from filtered data
+  const liveOccupancy = calculateCurrentOccupancy(filteredData);
 
-  // Calculate today's traffic (events from today only)
-  const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const todaysTraffic = data.data.filter(d => {
-    const eventDate = new Date(d.timestamp);
-    return eventDate >= todayStart && eventDate <= today;
-  }).length;
+  // Calculate traffic from filtered data (not just today)
+  const totalTraffic = filteredData.length;
 
-  // Calculate average dwell time
-  const avgDwellTime = calculateAverageDwellTime(data.data);
+  // Calculate peak activity time from filtered data
+  const hourlyActivity = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
+  filteredData.forEach(item => {
+    if (item.hour >= 0 && item.hour < 24) {
+      hourlyActivity[item.hour].count++;
+    }
+  });
+  const peakHour = hourlyActivity.reduce((max, current) => 
+    current.count > max.count ? current : max
+  ).hour;
+
+  // Calculate data coverage from filtered data
+  const dateCoverage = filteredData.length > 0 ? 
+    Math.ceil((new Date(Math.max(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime() - 
+               new Date(Math.min(...filteredData.map(d => new Date(d.timestamp).getTime()))).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    : 0;
+
+  // Calculate average dwell time from filtered data
+  const avgDwellTime = calculateAverageDwellTime(filteredData);
 
   return (
     <div>
-      {/* Page Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          System Overview
-        </h1>
-        <div className="vrm-breadcrumb">
-          <span>Dashboard</span>
-          <span>›</span>
-          <span>Overview</span>
+      {/* Page Header with Time Filter */}
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+            System Overview
+          </h1>
+          <div className="vrm-breadcrumb">
+            <span>Dashboard</span>
+            <span>›</span>
+            <span>Overview</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Time Period:</span>
+          <TimeFilterDropdown 
+            value={timeFilter} 
+            onChange={setTimeFilter}
+          />
         </div>
       </div>
 
@@ -162,13 +186,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
         {/* Total Activity */}
         <div className="vrm-card">
           <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Today's Total Traffic</h3>
+            <h3 className="vrm-card-title">Total Traffic</h3>
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-teal)', marginBottom: '8px' }}>
-              {todaysTraffic.toLocaleString()}
+              {totalTraffic.toLocaleString()}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Today's traffic</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Events in period</p>
           </div>
         </div>
 
@@ -179,7 +203,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-orange)', marginBottom: '8px' }}>
-              {data.intelligence.peak_hours[0] || 'N/A'}:00
+              {peakHour !== undefined ? `${peakHour.toString().padStart(2, '0')}:00` : 'N/A'}
             </div>
             <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Peak time</p>
           </div>
@@ -192,7 +216,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-purple)', marginBottom: '8px' }}>
-              {data.intelligence.date_span_days}
+              {dateCoverage}
             </div>
             <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Days of data</p>
           </div>
@@ -214,7 +238,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
 
       {/* Main Configurable Chart */}
       <div style={{ marginBottom: '24px' }}>
-        <ConfigurableChart data={data.data} intelligence={data.intelligence} />
+        <ConfigurableChart data={filteredData} intelligence={data.intelligence} />
       </div>
 
       {/* Smart Insights Panel */}
