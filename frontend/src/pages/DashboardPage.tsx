@@ -238,40 +238,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
         <ConfigurableChart data={chartFilteredData} intelligence={data.intelligence} />
       </div>
 
-      {/* Smart Insights Panel */}
-      <div className="vrm-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Smart Insights</h3>
-        </div>
-        <div className="vrm-card-body">
-          <div className="vrm-grid vrm-grid-3">
-            <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-blue)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Optimal Viewing:</strong>
-              <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {data.intelligence.optimal_granularity} granularity recommended for {data.intelligence.date_span_days}-day span
-              </p>
-            </div>
-            
-            <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-teal)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Peak Activity:</strong>
-              <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                Hour {data.intelligence.temporal_patterns.peak_times?.hour || 'N/A'} 
-                with {data.intelligence.temporal_patterns.peak_times?.count || 0} records
-              </p>
-            </div>
-            
-            <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-purple)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Latest Reference:</strong>
-              <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {data.intelligence.latest_timestamp 
-                  ? new Date(data.intelligence.latest_timestamp).toLocaleString() 
-                  : 'No timestamp'} as "current time"
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }

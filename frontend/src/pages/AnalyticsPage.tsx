@@ -560,44 +560,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         </div>
       </div>
 
-      {/* Enhanced Analytics Summary Panel */}
-      <div className="vrm-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Analytics Summary</h3>
-        </div>
-        <div className="vrm-card-body">
-          <div className="vrm-grid vrm-grid-4">
-            <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-blue)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Total Data:</strong>
-              <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {data.data.length.toLocaleString()} total events available
-              </p>
-            </div>
-            
-            <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-teal)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Independent Charts:</strong>
-              <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                Each chart has its own time filter
-              </p>
-            </div>
-            
-            <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-orange)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Chart Types:</strong>
-              <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                Demographics, Patterns, Trends with toggles
-              </p>
-            </div>
-            
-            <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-purple)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Data Coverage:</strong>
-              <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {data.intelligence.date_span_days} days of historical data
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
