@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ConfigurableChart from '../components/ConfigurableChart';
 import { API_ENDPOINTS } from '../config';
+import { calculateAverageDwellTime, formatDuration } from '../utils/dataProcessing';
 
 interface ChartData {
   index: number;
@@ -126,6 +127,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     return eventDate >= todayStart && eventDate <= today;
   }).length;
 
+  // Calculate average dwell time
+  const avgDwellTime = calculateAverageDwellTime(data.data);
+
   return (
     <div>
       {/* Page Header */}
@@ -141,7 +145,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       </div>
 
       {/* Summary Cards Grid */}
-      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
+      <div className="vrm-grid vrm-grid-5" style={{ marginBottom: '24px' }}>
         {/* Live Occupancy */}
         <div className="vrm-card">
           <div className="vrm-card-header">
@@ -191,6 +195,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
               {data.intelligence.date_span_days}
             </div>
             <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Days of data</p>
+          </div>
+        </div>
+
+        {/* Average Dwell Time */}
+        <div className="vrm-card">
+          <div className="vrm-card-header">
+            <h3 className="vrm-card-title">Avg. Dwell Time</h3>
+          </div>
+          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-red)', marginBottom: '8px' }}>
+              {formatDuration(avgDwellTime)}
+            </div>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Average visit duration</p>
           </div>
         </div>
       </div>

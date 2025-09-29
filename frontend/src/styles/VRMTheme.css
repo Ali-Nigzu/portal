@@ -379,6 +379,10 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
+.vrm-grid-5 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
 /* VRM Collapse Button */
 .vrm-collapse-btn {
   position: absolute;
