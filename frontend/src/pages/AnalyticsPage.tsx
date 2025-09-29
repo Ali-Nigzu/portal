@@ -65,7 +65,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [globalTimeFilter, setGlobalTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
+  // Individual time filters for each chart
+  const [genderTimeFilter, setGenderTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
+  const [ageTimeFilter, setAgeTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
+  const [activityTimeFilter, setActivityTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
+  const [trendsTimeFilter, setTrendsTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
   const [activityPatternType, setActivityPatternType] = useState<'hourly' | 'weekly' | 'monthly'>('hourly');
   
   // Foxess-style toggleable data series
@@ -108,8 +112,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
     fetchData();
   }, [fetchData]);
 
-  // Filter data based on global time filter
-  const filteredData = data ? filterDataByTime(data.data, globalTimeFilter) : [];
+  // Filter data for each chart independently
+  const genderFilteredData = data ? filterDataByTime(data.data, genderTimeFilter) : [];
+  const ageFilteredData = data ? filterDataByTime(data.data, ageTimeFilter) : [];
+  const activityFilteredData = data ? filterDataByTime(data.data, activityTimeFilter) : [];
+  const trendsFilteredData = data ? filterDataByTime(data.data, trendsTimeFilter) : [];
 
   const toggleDataSeries = (key: string) => {
     setDataSeriesConfig(prev => 
@@ -120,8 +127,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
   };
 
   const processGenderData = () => {
-    if (!filteredData.length) return [];
-    const genderCounts = filteredData.reduce((acc, item) => {
+    if (!genderFilteredData.length) return [];
+    const genderCounts = genderFilteredData.reduce((acc, item) => {
       acc[item.sex] = (acc[item.sex] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -129,13 +136,13 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
     return Object.entries(genderCounts).map(([gender, count]) => ({
       name: gender === 'M' ? 'Male' : gender === 'F' ? 'Female' : 'Unknown',
       value: count,
-      percentage: ((count / filteredData.length) * 100).toFixed(1)
+      percentage: ((count / genderFilteredData.length) * 100).toFixed(1)
     }));
   };
 
   const processAgeData = () => {
-    if (!filteredData.length) return [];
-    const ageCounts = filteredData.reduce((acc, item) => {
+    if (!ageFilteredData.length) return [];
+    const ageCounts = ageFilteredData.reduce((acc, item) => {
       acc[item.age_estimate] = (acc[item.age_estimate] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -147,7 +154,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
   };
 
   const processActivityPatterns = () => {
-    if (!filteredData.length) return [];
+    if (!activityFilteredData.length) return [];
 
     if (activityPatternType === 'hourly') {
       const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
@@ -157,7 +164,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         exits: 0
       }));
 
-      filteredData.forEach(item => {
+      activityFilteredData.forEach(item => {
         const hour = item.hour;
         if (hour >= 0 && hour < 24) {
           hourlyData[hour].activity++;
@@ -176,7 +183,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         exits: 0
       }));
 
-      filteredData.forEach(item => {
+      activityFilteredData.forEach(item => {
         const dayIndex = new Date(item.timestamp).getDay();
         weeklyData[dayIndex].activity++;
         if (item.event === 'entry') weeklyData[dayIndex].entrances++;
@@ -193,7 +200,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         exits: 0
       }));
 
-      filteredData.forEach(item => {
+      activityFilteredData.forEach(item => {
         const month = new Date(item.timestamp).getMonth();
         monthlyData[month].activity++;
         if (item.event === 'entry') monthlyData[month].entrances++;
@@ -205,10 +212,10 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
   };
 
   const processFoxessTrends = () => {
-    if (!filteredData.length) return [];
+    if (!trendsFilteredData.length) return [];
     
     // Group data by date
-    const dailyData = filteredData.reduce((acc, item) => {
+    const dailyData = trendsFilteredData.reduce((acc, item) => {
       const date = new Date(item.timestamp).toLocaleDateString();
       if (!acc[date]) {
         acc[date] = { 
@@ -287,8 +294,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
 
   return (
     <div>
-      {/* Page Header with Global Time Filter */}
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Page Header */}
+      <div style={{ marginBottom: '24px' }}>
         <div>
           <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
             Advanced Analytics
@@ -299,13 +306,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
             <span>Analytics</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Time Period:</span>
-          <TimeFilterDropdown 
-            value={globalTimeFilter} 
-            onChange={setGlobalTimeFilter}
-          />
-        </div>
       </div>
 
       {/* Top Row - Demographics with Time Filtering */}
@@ -314,7 +314,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         <div className="vrm-card">
           <div className="vrm-card-header">
             <h3 className="vrm-card-title">Gender Distribution</h3>
-            <div className="vrm-card-actions">
+            <div className="vrm-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TimeFilterDropdown 
+                value={genderTimeFilter} 
+                onChange={setGenderTimeFilter}
+              />
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
             </div>
@@ -345,7 +349,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         <div className="vrm-card">
           <div className="vrm-card-header">
             <h3 className="vrm-card-title">Age Distribution</h3>
-            <div className="vrm-card-actions">
+            <div className="vrm-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TimeFilterDropdown 
+                value={ageTimeFilter} 
+                onChange={setAgeTimeFilter}
+              />
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
             </div>
@@ -374,7 +382,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
       <div className="vrm-card" style={{ marginBottom: '24px' }}>
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Activity Patterns</h3>
-          <div className="vrm-card-actions">
+          <div className="vrm-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TimeFilterDropdown 
+              value={activityTimeFilter} 
+              onChange={setActivityTimeFilter}
+            />
             <select 
               value={activityPatternType} 
               onChange={(e) => setActivityPatternType(e.target.value as 'hourly' | 'weekly' | 'monthly')}
@@ -384,8 +396,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
                 border: '1px solid var(--vrm-border)',
                 borderRadius: '4px',
                 color: 'var(--vrm-text-primary)',
-                fontSize: '12px',
-                marginRight: '8px'
+                fontSize: '12px'
               }}
             >
               <option value="hourly">24-Hour Pattern</option>
@@ -419,7 +430,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
       <div className="vrm-card" style={{ marginBottom: '24px' }}>
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Advanced Trends</h3>
-          <div className="vrm-card-actions">
+          <div className="vrm-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TimeFilterDropdown 
+              value={trendsTimeFilter} 
+              onChange={setTrendsTimeFilter}
+            />
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">PNG</button>
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">CSV</button>
           </div>
@@ -498,32 +513,30 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         <div className="vrm-card-body">
           <div className="vrm-grid vrm-grid-4">
             <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-blue)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Filtered Data:</strong>
+              <strong style={{ color: 'var(--vrm-text-primary)' }}>Total Data:</strong>
               <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {filteredData.length.toLocaleString()} events in selected period
+                {data.data.length.toLocaleString()} total events available
               </p>
             </div>
             
             <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-teal)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Avg Dwell Time:</strong>
+              <strong style={{ color: 'var(--vrm-text-primary)' }}>Independent Charts:</strong>
               <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {formatDuration(calculateAverageDwellTime(filteredData))}
+                Each chart has its own time filter
               </p>
             </div>
             
             <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-orange)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Gender Balance:</strong>
+              <strong style={{ color: 'var(--vrm-text-primary)' }}>Chart Types:</strong>
               <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {processGenderData().map(g => `${g.name}: ${g.percentage}%`).join(', ')}
+                Demographics, Patterns, Trends with toggles
               </p>
             </div>
             
             <div style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px', borderLeft: '4px solid var(--vrm-accent-purple)' }}>
-              <strong style={{ color: 'var(--vrm-text-primary)' }}>Time Period:</strong>
+              <strong style={{ color: 'var(--vrm-text-primary)' }}>Data Coverage:</strong>
               <p style={{ color: 'var(--vrm-text-secondary)', marginTop: '4px', fontSize: '14px' }}>
-                {globalTimeFilter.option === 'custom' && globalTimeFilter.startDate && globalTimeFilter.endDate
-                  ? `${new Date(globalTimeFilter.startDate).toLocaleDateString()} - ${new Date(globalTimeFilter.endDate).toLocaleDateString()}`
-                  : globalTimeFilter.option.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, str => str.toUpperCase())}
+                {data.intelligence.date_span_days} days of historical data
               </p>
             </div>
           </div>
