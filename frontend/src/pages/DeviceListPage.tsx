@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '../config';
 
 interface DeviceInfo {
@@ -12,6 +12,12 @@ interface DeviceInfo {
   recordCount?: number;
 }
 
+interface User {
+  role: 'admin' | 'client';
+  name: string;
+  csv_url?: string;
+}
+
 interface DeviceListPageProps {
   credentials: { username: string; password: string };
 }
@@ -20,8 +26,38 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<{ [key: string]: User }>({});
+  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const fetchDeviceList = React.useCallback(async () => {
+  // Fetch users list (for admin only)
+  const fetchUsers = useCallback(async () => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+        setIsAdmin(credentials.username === 'admin' || data[credentials.username]?.role === 'admin');
+        
+        // Set default selected client to first client user
+        const clientUsers = Object.entries(data).filter(([_, user]) => (user as User).role === 'client');
+        if (clientUsers.length > 0) {
+          setSelectedClient(clientUsers[0][0]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    }
+  }, [credentials.username, credentials.password]);
+
+  const fetchDeviceList = useCallback(async (clientId?: string) => {
     try {
       setLoading(true);
       
@@ -38,6 +74,11 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
       } else {
         const auth = btoa(`${credentials.username}:${credentials.password}`);
         headers['Authorization'] = `Basic ${auth}`;
+        
+        // Add client_id if admin and client is selected
+        if (isAdmin && clientId) {
+          apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+        }
       }
       
       const response = await fetch(apiUrl, { headers });
@@ -54,11 +95,24 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
     } finally {
       setLoading(false);
     }
-  }, [credentials.username, credentials.password]);
+  }, [credentials.username, credentials.password, isAdmin]);
 
+  // Initial load: fetch users first, then devices
   useEffect(() => {
-    fetchDeviceList();
-  }, [fetchDeviceList]);
+    const initialize = async () => {
+      await fetchUsers();
+    };
+    initialize();
+  }, [fetchUsers]);
+
+  // Fetch devices when selected client changes
+  useEffect(() => {
+    if (isAdmin && selectedClient) {
+      fetchDeviceList(selectedClient);
+    } else if (!isAdmin) {
+      fetchDeviceList();
+    }
+  }, [selectedClient, isAdmin, fetchDeviceList]);
 
   const getDeviceIcon = (type: string) => {
     switch (type) {
@@ -109,6 +163,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const onlineDevices = devices.filter(d => d.status === 'online').length;
   const offlineDevices = devices.filter(d => d.status === 'offline').length;
   const maintenanceDevices = devices.filter(d => d.status === 'maintenance').length;
+  const clientUsers = Object.entries(users).filter(([_, user]) => user.role === 'client');
 
   return (
     <div>
@@ -123,6 +178,35 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
           <span>Device list</span>
         </div>
       </div>
+
+      {/* Client Selector (Admin Only) */}
+      {isAdmin && clientUsers.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)', fontWeight: '500' }}>
+            Select Client
+          </label>
+          <select
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+            style={{
+              padding: '10px 12px',
+              backgroundColor: 'var(--vrm-bg-tertiary)',
+              border: '1px solid var(--vrm-border-color)',
+              borderRadius: '4px',
+              color: 'var(--vrm-text-primary)',
+              fontSize: '14px',
+              minWidth: '250px',
+              cursor: 'pointer'
+            }}
+          >
+            {clientUsers.map(([username, user]) => (
+              <option key={username} value={username}>
+                {user.name} ({username})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {error && (
         <div className="vrm-card" style={{ marginBottom: '24px' }}>
@@ -179,7 +263,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Connected Devices</h3>
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={fetchDeviceList}>Refresh</button>
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => fetchDeviceList(isAdmin ? selectedClient : undefined)}>Refresh</button>
             <button className="vrm-btn vrm-btn-sm">Add Device</button>
           </div>
         </div>

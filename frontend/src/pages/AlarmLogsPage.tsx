@@ -11,6 +11,12 @@ interface AlarmEvent {
   severity: 'high' | 'medium' | 'low';
 }
 
+interface User {
+  role: 'admin' | 'client';
+  name: string;
+  csv_url?: string;
+}
+
 interface AlarmLogsPageProps {
   credentials: { username: string; password: string };
 }
@@ -19,8 +25,38 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
   const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<{ [key: string]: User }>({});
+  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const fetchAlarmLogs = useCallback(async () => {
+  // Fetch users list (for admin only)
+  const fetchUsers = useCallback(async () => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+        setIsAdmin(credentials.username === 'admin' || data[credentials.username]?.role === 'admin');
+        
+        // Set default selected client to first client user
+        const clientUsers = Object.entries(data).filter(([_, user]) => (user as User).role === 'client');
+        if (clientUsers.length > 0) {
+          setSelectedClient(clientUsers[0][0]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    }
+  }, [credentials.username, credentials.password]);
+
+  const fetchAlarmLogs = useCallback(async (clientId?: string) => {
     try {
       setLoading(true);
       
@@ -37,6 +73,11 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
       } else {
         const auth = btoa(`${credentials.username}:${credentials.password}`);
         headers['Authorization'] = `Basic ${auth}`;
+        
+        // Add client_id if admin and client is selected
+        if (isAdmin && clientId) {
+          apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+        }
       }
       
       const response = await fetch(apiUrl, { headers });
@@ -53,11 +94,24 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
     } finally {
       setLoading(false);
     }
-  }, [credentials.username, credentials.password]);
+  }, [credentials.username, credentials.password, isAdmin]);
 
+  // Initial load: fetch users first, then alarms
   useEffect(() => {
-    fetchAlarmLogs();
-  }, [fetchAlarmLogs]);
+    const initialize = async () => {
+      await fetchUsers();
+    };
+    initialize();
+  }, [fetchUsers]);
+
+  // Fetch alarms when selected client changes
+  useEffect(() => {
+    if (isAdmin && selectedClient) {
+      fetchAlarmLogs(selectedClient);
+    } else if (!isAdmin) {
+      fetchAlarmLogs();
+    }
+  }, [selectedClient, isAdmin, fetchAlarmLogs]);
 
   const getSeverityClass = (severity: string) => {
     switch (severity) {
@@ -104,7 +158,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
         </div>
         <div className="vrm-card-body">
           <p style={{ color: 'var(--vrm-accent-red)', marginBottom: '16px' }}>{error}</p>
-          <button className="vrm-btn" onClick={fetchAlarmLogs}>Retry Connection</button>
+          <button className="vrm-btn" onClick={() => fetchAlarmLogs(isAdmin ? selectedClient : undefined)}>Retry Connection</button>
         </div>
       </div>
     );
@@ -114,6 +168,8 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
   const clearedAlarms = alarms.filter(a => a.alarmClearedAfter);
   const highSeverityAlarms = alarms.filter(a => a.severity === 'high').length;
   const mediumSeverityAlarms = alarms.filter(a => a.severity === 'medium').length;
+
+  const clientUsers = Object.entries(users).filter(([_, user]) => user.role === 'client');
 
   return (
     <div>
@@ -128,6 +184,35 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
           <span>Alarm logs</span>
         </div>
       </div>
+
+      {/* Client Selector (Admin Only) */}
+      {isAdmin && clientUsers.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)', fontWeight: '500' }}>
+            Select Client
+          </label>
+          <select
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+            style={{
+              padding: '10px 12px',
+              backgroundColor: 'var(--vrm-bg-tertiary)',
+              border: '1px solid var(--vrm-border-color)',
+              borderRadius: '4px',
+              color: 'var(--vrm-text-primary)',
+              fontSize: '14px',
+              minWidth: '250px',
+              cursor: 'pointer'
+            }}
+          >
+            {clientUsers.map(([username, user]) => (
+              <option key={username} value={username}>
+                {user.name} ({username})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Alarm Summary */}
       <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
@@ -175,7 +260,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
             <h3 className="vrm-card-title">Active Alarms ({activeAlarms.length})</h3>
             <div className="vrm-card-actions">
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Clear All</button>
-              <button className="vrm-btn vrm-btn-sm" onClick={fetchAlarmLogs}>Refresh</button>
+              <button className="vrm-btn vrm-btn-sm" onClick={() => fetchAlarmLogs(isAdmin ? selectedClient : undefined)}>Refresh</button>
             </div>
           </div>
           <div className="vrm-card-body" style={{ padding: 0 }}>
@@ -244,7 +329,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
           </h3>
           <div className="vrm-card-actions">
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Export CSV</button>
-            <button className="vrm-btn vrm-btn-sm" onClick={fetchAlarmLogs}>Refresh</button>
+            <button className="vrm-btn vrm-btn-sm" onClick={() => fetchAlarmLogs(isAdmin ? selectedClient : undefined)}>Refresh</button>
           </div>
         </div>
         <div className="vrm-card-body" style={{ padding: 0 }}>
