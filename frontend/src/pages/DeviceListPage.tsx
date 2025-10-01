@@ -25,13 +25,22 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
     try {
       setLoading(true);
       
-      const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch(`${API_BASE_URL}/api/device-list`, {
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewToken = urlParams.get('view_token');
+      
+      let apiUrl = `${API_BASE_URL}/api/device-list`;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (viewToken) {
+        apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
+      } else {
+        const auth = btoa(`${credentials.username}:${credentials.password}`);
+        headers['Authorization'] = `Basic ${auth}`;
+      }
+      
+      const response = await fetch(apiUrl, { headers });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
