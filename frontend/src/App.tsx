@@ -224,7 +224,7 @@ const App: React.FC = () => {
     <Router>
       <VRMLayout userRole={userRole} onLogout={handleLogout}>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
           <Route 
             path="/dashboard" 
             element={<DashboardPage credentials={credentials} />} 
@@ -255,8 +255,8 @@ const App: React.FC = () => {
             />
           )}
           
-          {/* Catch all - redirect to dashboard */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Catch all - redirect based on role */}
+          <Route path="*" element={<Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
         </Routes>
       </VRMLayout>
     </Router>
