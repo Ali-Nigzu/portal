@@ -12,7 +12,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
 
-  const navigationItems = [
+  const clientNavigationItems = [
     {
       path: '/dashboard',
       label: 'Dashboard',
@@ -51,15 +51,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
     }
   ];
 
-  // Add admin section for admin users
-  if (userRole === 'admin') {
-    navigationItems.push({
+  const adminNavigationItems = [
+    {
       path: '/admin',
       label: 'Admin',
       icon: '',
-      description: 'User Management'
-    });
-  }
+      description: 'Admin Panel'
+    }
+  ];
+
+  // Show only admin navigation for admin users, client navigation for clients
+  const navigationItems = userRole === 'admin' ? adminNavigationItems : clientNavigationItems;
 
   const isActiveRoute = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');

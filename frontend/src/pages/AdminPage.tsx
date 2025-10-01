@@ -267,6 +267,29 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   };
 
+  const handleViewDashboard = async (username: string) => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/create-view-token`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ client_id: username }),
+      });
+
+      const data = await response.json();
+      if (data.token) {
+        window.open(`/dashboard?view_token=${data.token}`, '_blank');
+      } else {
+        setAlert({ message: 'Failed to create view token', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to open dashboard', type: 'error' });
+    }
+  };
+
   const handleAddAlarm = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -494,7 +517,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
             fontWeight: '600'
           }}
         >
-          👥 User Management
+          User Management
         </button>
         <button
           onClick={() => setActiveTab('alarms')}
@@ -509,7 +532,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
             fontWeight: '600'
           }}
         >
-          🚨 Alarm Logs
+          Alarm Logs
         </button>
         <button
           onClick={() => setActiveTab('devices')}
@@ -524,7 +547,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
             fontWeight: '600'
           }}
         >
-          📱 Device List
+          Device List
         </button>
       </div>
 
@@ -566,6 +589,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
+                            {user.role === 'client' && (
+                              <button
+                                className="vrm-btn vrm-btn-primary vrm-btn-sm"
+                                onClick={() => handleViewDashboard(username)}
+                              >
+                                View Dashboard
+                              </button>
+                            )}
                             <button
                               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
                               onClick={() => {
