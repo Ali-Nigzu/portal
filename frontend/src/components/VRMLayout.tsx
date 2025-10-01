@@ -12,6 +12,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
 
+  const viewToken = new URLSearchParams(location.search).get('view_token');
+  const getNavigationPath = (path: string) => {
+    return viewToken ? `${path}?view_token=${viewToken}` : path;
+  };
+
   const clientNavigationItems = [
     {
       path: '/dashboard',
@@ -92,7 +97,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
           {navigationItems.map((item) => (
             <Link
               key={item.path}
-              to={item.path}
+              to={getNavigationPath(item.path)}
               className={`vrm-nav-item ${isActiveRoute(item.path) ? 'active' : ''}`}
               title={sidebarCollapsed ? item.description : ''}
             >
