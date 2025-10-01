@@ -2,62 +2,95 @@
 
 ## Overview
 
-Nigzsu is a Flask-based business intelligence dashboard application that transforms CCTV-derived data into actionable insights for businesses. The application provides role-based access control with separate interfaces for administrators and clients. Clients can view personalized dashboards with charts and analytics based on their specific CSV data stored in Google Cloud Storage, while administrators can manage users and system configurations. The system supports data filtering, chart exports, and CSV file uploads for enhanced data management capabilities.
+Nigzsu is a modern React + FastAPI business intelligence dashboard application that transforms CCTV-derived data into actionable insights for businesses. The application provides role-based access control with separate interfaces for administrators and clients. Clients can view personalized dashboards with charts and analytics based on their specific CSV data from Google Sheets, while administrators can manage users and system configurations. The system supports advanced data filtering with date range pickers, comprehensive search capabilities, and full user management.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Major Updates (October 2025)
+
+### Event Log Enhancements
+- Date range picker with calendar UI using react-datepicker library
+- Track ID search functionality with partial matching
+- Comprehensive filtering system (Event Type, Gender, Age Group, Track ID, Date Range)
+- Real-time filtering with event counters
+- Dark theme styling matching VRM design aesthetic
+
+### Admin System Overhaul
+- Complete user management system with last login tracking
+- Add/Edit/Delete users with persistent changes to users.json
+- Password hashing with SHA-256 for security
+- "View Dashboard" feature to see client views in new tabs
+- System statistics cards showing user metrics
+
+### Site-Wide Professional Polish
+- Removed all emojis for professional appearance
+- Consistent VRM-inspired dark theme throughout
+
+### Technical Improvements
+- Downgraded from React 19 to React 18.3.1 for library compatibility
+- Fixed react-datepicker integration issues
+- Optimized data processing for 275k+ record datasets
+
 ## System Architecture
 
 ### Frontend Architecture
-The application uses a traditional server-side rendered architecture with Flask templates and Bootstrap 5 for styling. The frontend consists of:
-- **Template Engine**: Jinja2 templates with a base template inheritance pattern
-- **Styling**: Bootstrap 5 with custom dark theme CSS inspired by Victron design
-- **Interactive Components**: Plotly.js for data visualizations and vanilla JavaScript for dashboard interactions
-- **User Interface**: Responsive design with separate layouts for landing page, login, client dashboards, and admin panel
+Modern React SPA with TypeScript and professional dark theme:
+- **Framework**: React 18.3.1 with TypeScript for type safety
+- **UI Library**: Custom VRM-inspired dark theme with professional styling
+- **Routing**: React Router v6 for client-side navigation
+- **Charts**: ECharts and Recharts for interactive data visualizations
+- **Date Pickers**: react-datepicker library with custom dark theme styling
+- **State Management**: React hooks (useState, useEffect, useCallback)
+- **Build Tool**: Create React App with Craco for custom webpack configuration
 
 ### Backend Architecture
-The backend is built on Flask with a simple but effective architecture:
-- **Web Framework**: Flask with session-based authentication
-- **File Structure**: Single main application file (app.py) with modular template organization
-- **Authentication**: Simple JSON-based user storage with role-based access control (admin/client roles)
-- **Data Processing**: Pandas for CSV data manipulation and Plotly for chart generation
-- **File Handling**: Werkzeug utilities for secure file uploads
+FastAPI-based REST API with secure authentication:
+- **Web Framework**: FastAPI with async support
+- **Authentication**: HTTP Basic Auth with SHA-256 password hashing
+- **File Structure**: Single fastapi_app.py with modular endpoint organization
+- **User Management**: JSON-based user storage (users.json) with last login tracking
+- **Data Processing**: Pandas for CSV data manipulation and filtering
+- **CORS**: Configured for React frontend integration
 
 ### Data Storage Solutions
 The application uses a hybrid storage approach:
-- **User Management**: Local JSON file (users.json) for storing user credentials and configurations
-- **Data Storage**: Google Cloud Storage bucket for CSV files with client-specific folder organization
-- **Session Management**: Flask session storage with configurable secret key
-- **File Organization**: Client uploads stored in dedicated GCS folders, with separate data folders per client
+- **User Management**: Local JSON file (users.json) with password hashing and last login tracking
+- **Data Source**: Google Sheets CSV exports via public URLs
+- **Client Configuration**: Each client has a dedicated csv_url for their data source
+- **Session Management**: HTTP Basic Auth for API authentication
 
 ### Authentication and Authorization
-Simple but effective security model:
-- **Authentication Method**: Username/password authentication with Flask sessions
+Secure authentication model:
+- **Authentication Method**: HTTP Basic Auth with SHA-256 password hashing
 - **User Roles**: Two-tier role system (admin/client) with different access levels
-- **Session Management**: Server-side session storage with logout functionality
-- **Access Control**: Route-level protection based on user roles and login status
+- **Last Login Tracking**: Timestamps recorded on every authentication
+- **Access Control**: Route-level protection based on user roles and credentials
+- **Password Security**: Salted SHA-256 hashing with legacy plaintext support for migration
 
 ## External Dependencies
 
-### Cloud Services
-- **Google Cloud Storage**: Primary data storage for CSV files and client uploads
-- **Bucket Configuration**: Uses 'nigzsu_cdata-testclient1' bucket with organized folder structure
+### Data Sources
+- **Google Sheets**: Primary data source via CSV export URLs
+- **Client Configuration**: Each client has a configurable data source URL
 
-### Python Libraries
-- **Flask 3.1.2**: Core web framework for routing and templating
-- **google-cloud-storage 3.4.0**: GCS integration for file storage and retrieval
-- **pandas 2.3.2**: Data manipulation and CSV processing
-- **plotly 6.3.0**: Interactive chart generation and data visualization
-- **Werkzeug 3.1.3**: Secure filename handling and utilities
-- **gunicorn 23.0.0**: WSGI server for production deployment
+### Python Backend Libraries
+- **FastAPI**: Modern async web framework for REST API
+- **Uvicorn**: ASGI server for running FastAPI
+- **Pandas 2.3.2**: Data manipulation and CSV processing
+- **python-multipart**: Form data and file upload handling
 
-### Frontend Dependencies
-- **Bootstrap 5**: CSS framework for responsive design and components
-- **Plotly.js**: Client-side charting library loaded via CDN
+### React Frontend Libraries
+- **React 18.3.1**: Core UI framework
+- **React Router 6.26.0**: Client-side routing
+- **react-datepicker 7.5.0**: Date range picker with calendar UI
+- **ECharts 5.6.0**: Professional charting library
+- **Recharts 3.2.1**: Additional chart components
+- **TypeScript**: Type safety and developer experience
 
 ### Deployment Infrastructure
 - **Target Platform**: Google Cloud Run (Dockerfile-ready)
-- **Production Server**: Gunicorn WSGI server
+- **Production Server**: Uvicorn ASGI server
+- **Build Process**: Multi-stage Docker build with nginx for React SPA
 - **Environment Configuration**: Environment variable support for secrets and configuration
