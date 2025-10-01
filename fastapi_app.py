@@ -319,7 +319,9 @@ def validate_view_token(token: str) -> Optional[Dict[str, Any]]:
     
     token_data['used_count'] += 1
     
-    if token_data['used_count'] > 10:
+    # Increased limit to accommodate multiple dashboard requests
+    # Main dashboard (6 charts) + Event logs + Alarm logs + Device list + retries
+    if token_data['used_count'] > 100:
         del view_tokens[token]
         return None
     
