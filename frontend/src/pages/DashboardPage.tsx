@@ -54,22 +54,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     try {
       setLoading(true);
       
-      const auth = btoa(`${credentials.username}:${credentials.password}`);
-      
       const urlParams = new URLSearchParams(window.location.search);
+      const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
       
       let apiUrl = API_ENDPOINTS.CHART_DATA;
-      if (clientId) {
-        apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (viewToken) {
+        apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
+      } else {
+        const auth = btoa(`${credentials.username}:${credentials.password}`);
+        headers['Authorization'] = `Basic ${auth}`;
+        
+        if (clientId) {
+          apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+        }
       }
       
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch(apiUrl, { headers });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

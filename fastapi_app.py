@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import hashlib
 import secrets
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any
 from fastapi import FastAPI, HTTPException, Depends, status, Request
@@ -84,6 +85,10 @@ USERS_FILE = 'users.json'
 
 security = HTTPBasic()
 
+# In-memory token storage for view tokens
+# Format: {token: {client_id: str, expires_at: datetime, used_count: int}}
+view_tokens: Dict[str, Dict[str, Any]] = {}
+
 # Data Models
 class LoginRequest(BaseModel):
     username: str
@@ -120,6 +125,14 @@ class UpdateUserRequest(BaseModel):
     password: Optional[str] = None
     role: Optional[str] = None
     csv_url: Optional[str] = None
+
+class CreateViewTokenRequest(BaseModel):
+    client_id: str
+
+class ViewTokenResponse(BaseModel):
+    token: str
+    expires_at: str
+    client_id: str
 
 # User Management (keeping compatible with existing)
 def hash_password(password: str) -> str:
@@ -189,6 +202,54 @@ def save_users(users_data: dict):
     """Save users data to JSON file"""
     with open(USERS_FILE, 'w') as f:
         json.dump(users_data, f, indent=2)
+
+def create_view_token(client_id: str) -> Dict[str, Any]:
+    """Create a secure temporary view token for a client"""
+    token = str(uuid.uuid4())
+    expires_at = datetime.now() + timedelta(minutes=5)
+    
+    view_tokens[token] = {
+        'client_id': client_id,
+        'expires_at': expires_at,
+        'used_count': 0
+    }
+    
+    logger.info(f"Created view token for client: {client_id}")
+    return {
+        'token': token,
+        'expires_at': expires_at.isoformat(),
+        'client_id': client_id
+    }
+
+def validate_view_token(token: str) -> Optional[Dict[str, Any]]:
+    """Validate a view token and return client info if valid"""
+    clean_expired_tokens()
+    
+    if token not in view_tokens:
+        return None
+    
+    token_data = view_tokens[token]
+    
+    if datetime.now() > token_data['expires_at']:
+        del view_tokens[token]
+        return None
+    
+    token_data['used_count'] += 1
+    
+    if token_data['used_count'] > 10:
+        del view_tokens[token]
+        return None
+    
+    return token_data
+
+def clean_expired_tokens():
+    """Remove expired tokens from storage"""
+    now = datetime.now()
+    expired = [token for token, data in view_tokens.items() if now > data['expires_at']]
+    for token in expired:
+        del view_tokens[token]
+    if expired:
+        logger.info(f"Cleaned {len(expired)} expired tokens")
 
 def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
     """Authenticate user and return user info using secure password verification"""
@@ -410,6 +471,50 @@ async def login(login_request: LoginRequest):
         logger.error(f"Login error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@app.post("/api/admin/create-view-token", response_model=ViewTokenResponse)
+async def create_admin_view_token(
+    token_request: CreateViewTokenRequest,
+    user: dict = Depends(authenticate_user)
+):
+    """Create a temporary view token for a client (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if token_request.client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if users[token_request.client_id]['role'] != 'client':
+        raise HTTPException(status_code=400, detail="Can only create view tokens for client users")
+    
+    token_data = create_view_token(token_request.client_id)
+    
+    return ViewTokenResponse(**token_data)
+
+@app.get("/api/view-dashboard/{token}")
+async def get_view_dashboard_info(token: str):
+    """Validate view token and return client information"""
+    token_data = validate_view_token(token)
+    
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    users = load_users()
+    client_id = token_data['client_id']
+    
+    if client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    client_data = users[client_id]
+    
+    return {
+        'client_id': client_id,
+        'name': client_data['name'],
+        'csv_url': client_data.get('csv_url', ''),
+        'token_valid': True
+    }
+
 @app.get("/api/chart-data", response_model=ChartDataResponse)
 async def get_chart_data(
     request: Request,
@@ -418,34 +523,90 @@ async def get_chart_data(
     gender: Optional[str] = None,
     age_group: Optional[str] = None,
     event: Optional[str] = None,
-    user: dict = Depends(authenticate_user)
+    view_token: Optional[str] = None
 ):
     """
     Get intelligent chart data with auto-scaling and smart aggregation
+    Supports both authenticated users and view tokens
     """
     try:
-        # Get CSV URL for user
         csv_url = None
-        if user['role'] == 'client':
-            csv_url = user['csv_url']
+        
+        if view_token:
+            token_data = validate_view_token(view_token)
+            if not token_data:
+                raise HTTPException(status_code=401, detail="Invalid or expired view token")
+            
+            users = load_users()
+            client_id = token_data['client_id']
+            
+            if client_id not in users:
+                raise HTTPException(status_code=404, detail="Client not found")
+            
+            csv_url = users[client_id].get('csv_url')
             if not csv_url:
-                raise HTTPException(status_code=400, detail="No CSV configured for this user")
+                raise HTTPException(status_code=400, detail="No CSV configured for this client")
+        
         else:
-            # Admin can specify client_id
-            client_id = request.query_params.get('client_id')
-            if client_id:
+            auth_header = request.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Basic '):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required",
+                    headers={"WWW-Authenticate": "Basic"},
+                )
+            
+            try:
+                credentials = HTTPBasicCredentials(
+                    username=auth_header.split(' ')[1].split(':')[0] if ':' in auth_header.split(' ')[1] else '',
+                    password=auth_header.split(' ')[1].split(':')[1] if ':' in auth_header.split(' ')[1] else ''
+                )
+                import base64
+                decoded = base64.b64decode(auth_header.split(' ')[1]).decode('utf-8')
+                username, password = decoded.split(':', 1)
+                credentials = HTTPBasicCredentials(username=username, password=password)
+                
                 users = load_users()
-                if client_id in users and 'csv_url' in users[client_id]:
-                    csv_url = users[client_id]['csv_url']
-                else:
-                    raise HTTPException(status_code=400, detail="Invalid client ID or no CSV configured")
+                if username not in users or not verify_password(password, users[username]['password']):
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid credentials",
+                        headers={"WWW-Authenticate": "Basic"},
+                    )
+                
+                user = {
+                    'username': username,
+                    'role': users[username]['role'],
+                    'name': users[username]['name'],
+                    'csv_url': users[username].get('csv_url')
+                }
+                
+                users[username]['last_login'] = datetime.now().isoformat()
+                save_users(users)
+                
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials",
+                    headers={"WWW-Authenticate": "Basic"},
+                )
+            
+            if user['role'] == 'client':
+                csv_url = user['csv_url']
+                if not csv_url:
+                    raise HTTPException(status_code=400, detail="No CSV configured for this user")
             else:
-                # Default to first available client for admin
-                users = load_users()
-                for username, user_data in users.items():
-                    if user_data.get('role') == 'client' and 'csv_url' in user_data:
-                        csv_url = user_data['csv_url']
-                        break
+                client_id = request.query_params.get('client_id')
+                if client_id:
+                    if client_id in users and 'csv_url' in users[client_id]:
+                        csv_url = users[client_id]['csv_url']
+                    else:
+                        raise HTTPException(status_code=400, detail="Invalid client ID or no CSV configured")
+                else:
+                    for username, user_data in users.items():
+                        if user_data.get('role') == 'client' and 'csv_url' in user_data:
+                            csv_url = user_data['csv_url']
+                            break
         
         if not csv_url:
             raise HTTPException(status_code=400, detail="No CSV data source available")

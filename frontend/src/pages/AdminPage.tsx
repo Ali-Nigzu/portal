@@ -231,8 +231,28 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   };
 
-  const viewClientDashboard = (username: string) => {
-    window.open(`/dashboard?client_id=${username}`, '_blank');
+  const viewClientDashboard = async (username: string) => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch('/api/admin/create-view-token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ client_id: username }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        window.open(`/dashboard?view_token=${data.token}`, '_blank');
+      } else {
+        const error = await response.json();
+        setAlert({ message: error.detail || 'Failed to create view token', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to generate view token', type: 'error' });
+    }
   };
 
   if (loading) {
