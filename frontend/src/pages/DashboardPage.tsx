@@ -56,7 +56,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       
       const auth = btoa(`${credentials.username}:${credentials.password}`);
       
-      const response = await fetch(API_ENDPOINTS.CHART_DATA, {
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientId = urlParams.get('client_id');
+      
+      let apiUrl = API_ENDPOINTS.CHART_DATA;
+      if (clientId) {
+        apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+      }
+      
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',

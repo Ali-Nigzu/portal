@@ -108,6 +108,19 @@ class DataIntelligence(BaseModel):
     demographics_breakdown: Dict[str, Any]
     temporal_patterns: Dict[str, Any]
 
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+    name: str
+    role: str
+    csv_url: Optional[str] = None
+
+class UpdateUserRequest(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+    csv_url: Optional[str] = None
+
 # User Management (keeping compatible with existing)
 def hash_password(password: str) -> str:
     """Hash password using SHA-256 with salt"""
@@ -135,19 +148,22 @@ def load_users():
             "admin": {
                 "password": hash_password("admin123"),
                 "role": "admin",
-                "name": "System Administrator"
+                "name": "System Administrator",
+                "last_login": None
             },
             "client1": {
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "csv_url": "https://docs.google.com/spreadsheets/d/1B6Kg19ONObAmXliyuQNTL0-fh-6ueXOY_amadASZ1W4/export?format=csv&gid=368477740"
+                "csv_url": "https://docs.google.com/spreadsheets/d/1B6Kg19ONObAmXliyuQNTL0-fh-6ueXOY_amadASZ1W4/export?format=csv&gid=368477740",
+                "last_login": None
             },
             "client2": {
                 "password": hash_password("client456"), 
                 "role": "client",
                 "name": "Test Client 2",
-                "csv_url": "https://docs.google.com/spreadsheets/d/10oFKUDhiKjAIqTaJyCa20r9lbTdSgjPK4HwmdCplUgU/export?format=csv"
+                "csv_url": "https://docs.google.com/spreadsheets/d/10oFKUDhiKjAIqTaJyCa20r9lbTdSgjPK4HwmdCplUgU/export?format=csv",
+                "last_login": None
             }
         }
         with open(USERS_FILE, 'w') as f:
@@ -155,7 +171,24 @@ def load_users():
         return users_data
     
     with open(USERS_FILE, 'r') as f:
-        return json.load(f)
+        users = json.load(f)
+    
+    # Migrate existing users to add last_login if missing
+    modified = False
+    for username, user_data in users.items():
+        if 'last_login' not in user_data:
+            user_data['last_login'] = None
+            modified = True
+    
+    if modified:
+        save_users(users)
+    
+    return users
+
+def save_users(users_data: dict):
+    """Save users data to JSON file"""
+    with open(USERS_FILE, 'w') as f:
+        json.dump(users_data, f, indent=2)
 
 def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
     """Authenticate user and return user info using secure password verification"""
@@ -169,6 +202,10 @@ def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
             detail="Invalid credentials",
             headers={"WWW-Authenticate": "Basic"},
         )
+    
+    # Update last login timestamp
+    users[username]['last_login'] = datetime.now().isoformat()
+    save_users(users)
     
     return {
         'username': username,
@@ -350,6 +387,10 @@ async def login(login_request: LoginRequest):
         if not verify_password(password, user_data['password']):
             raise HTTPException(status_code=401, detail="Invalid username or password")
         
+        # Update last login timestamp
+        users[username]['last_login'] = datetime.now().isoformat()
+        save_users(users)
+        
         # Return user info without password
         safe_user = {
             'username': username,
@@ -468,6 +509,122 @@ async def get_users(user: dict = Depends(authenticate_user)):
         }
     
     return safe_users
+
+@app.get("/api/admin/users")
+async def admin_get_users(user: dict = Depends(authenticate_user)):
+    """Get all users with last_login times (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    safe_users = {}
+    for username, user_data in users.items():
+        safe_users[username] = {
+            'name': user_data['name'],
+            'role': user_data['role'],
+            'csv_url': user_data.get('csv_url', ''),
+            'last_login': user_data.get('last_login')
+        }
+    
+    return {'users': safe_users}
+
+@app.post("/api/admin/users")
+async def admin_create_user(
+    create_request: CreateUserRequest,
+    user: dict = Depends(authenticate_user)
+):
+    """Create new user (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if create_request.username in users:
+        return {'success': False, 'error': 'Username already exists'}
+    
+    if create_request.role not in ['admin', 'client']:
+        return {'success': False, 'error': 'Role must be either admin or client'}
+    
+    # Create new user with hashed password
+    new_user = {
+        'password': hash_password(create_request.password),
+        'name': create_request.name,
+        'role': create_request.role,
+        'last_login': None
+    }
+    
+    if create_request.role == 'client' and create_request.csv_url:
+        new_user['csv_url'] = create_request.csv_url
+    
+    users[create_request.username] = new_user
+    save_users(users)
+    
+    logger.info(f"Admin created new user: {create_request.username}")
+    return {'success': True, 'message': f'User {create_request.username} created successfully'}
+
+@app.put("/api/admin/users/{username}")
+async def admin_update_user(
+    username: str,
+    update_request: UpdateUserRequest,
+    user: dict = Depends(authenticate_user)
+):
+    """Update existing user (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if username not in users:
+        return {'success': False, 'error': 'User not found'}
+    
+    # Update user fields
+    if update_request.name is not None:
+        users[username]['name'] = update_request.name
+    
+    if update_request.password is not None and update_request.password.strip():
+        users[username]['password'] = hash_password(update_request.password)
+    
+    if update_request.role is not None:
+        if update_request.role not in ['admin', 'client']:
+            return {'success': False, 'error': 'Role must be either admin or client'}
+        users[username]['role'] = update_request.role
+    
+    if update_request.csv_url is not None:
+        if users[username]['role'] == 'client':
+            users[username]['csv_url'] = update_request.csv_url
+        elif 'csv_url' in users[username]:
+            del users[username]['csv_url']
+    
+    save_users(users)
+    
+    logger.info(f"Admin updated user: {username}")
+    return {'success': True, 'message': f'User {username} updated successfully'}
+
+@app.delete("/api/admin/users/{username}")
+async def admin_delete_user(
+    username: str,
+    user: dict = Depends(authenticate_user)
+):
+    """Delete user (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if username not in users:
+        return {'success': False, 'error': 'User not found'}
+    
+    # Prevent deleting the last admin
+    if users[username]['role'] == 'admin':
+        admin_count = sum(1 for u in users.values() if u['role'] == 'admin')
+        if admin_count <= 1:
+            return {'success': False, 'error': 'Cannot delete the last admin user'}
+    
+    del users[username]
+    save_users(users)
+    
+    logger.info(f"Admin deleted user: {username}")
+    return {'success': True, 'message': f'User {username} deleted successfully'}
 
 if __name__ == "__main__":
     import uvicorn

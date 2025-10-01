@@ -16,37 +16,37 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
     {
       path: '/dashboard',
       label: 'Dashboard',
-      icon: '📊',
+      icon: '',
       description: 'System Overview'
     },
     {
       path: '/analytics',
       label: 'Analytics',
-      icon: '📈',
+      icon: '',
       description: 'Advanced Analytics'
     },
     {
       path: '/event-logs',
       label: 'Event logs',
-      icon: '📝',
+      icon: '',
       description: 'Activity Events'
     },
     {
       path: '/alarm-logs', 
       label: 'Alarm logs',
-      icon: '⚠️',
+      icon: '',
       description: 'System Alerts'
     },
     {
       path: '/device-list',
       label: 'Device list',
-      icon: '📷',
+      icon: '',
       description: 'Data Sources'
     },
     {
       path: '/reports',
       label: 'Reports',
-      icon: '📋',
+      icon: '',
       description: 'Analytics Reports'
     }
   ];
@@ -56,7 +56,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
     navigationItems.push({
       path: '/admin',
       label: 'Admin',
-      icon: '⚙️',
+      icon: '',
       description: 'User Management'
     });
   }
@@ -118,7 +118,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
           <div className="vrm-header-left">
             {/* Search Bar */}
             <div className="vrm-search">
-              <div className="vrm-search-icon">🔍</div>
+              <div className="vrm-search-icon"></div>
               <input 
                 type="text" 
                 placeholder="Search..." 

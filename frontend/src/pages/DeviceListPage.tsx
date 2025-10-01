@@ -112,10 +112,10 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
 
   const getDeviceIcon = (type: string) => {
     switch (type) {
-      case 'Camera': return '📷';
-      case 'Sensor': return '📡';
-      case 'Gateway': return '🖥️';
-      default: return '📱';
+      case 'Camera': return '';
+      case 'Sensor': return '';
+      case 'Gateway': return '';
+      default: return '';
     }
   };
 

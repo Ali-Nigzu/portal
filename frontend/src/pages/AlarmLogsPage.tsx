@@ -201,7 +201,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
     return (
       <div className="vrm-card">
         <div className="vrm-card-header">
-          <h3 className="vrm-card-title">⚠️ Connection Error</h3>
+          <h3 className="vrm-card-title">Connection Error</h3>
         </div>
         <div className="vrm-card-body">
           <p style={{ color: 'var(--vrm-accent-red)', marginBottom: '16px' }}>{error}</p>
@@ -273,7 +273,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
       {activeAlarms.length > 0 && (
         <div className="vrm-card" style={{ marginBottom: '24px' }}>
           <div className="vrm-card-header">
-            <h3 className="vrm-card-title">🚨 Active Alarms ({activeAlarms.length})</h3>
+            <h3 className="vrm-card-title">Active Alarms ({activeAlarms.length})</h3>
             <div className="vrm-card-actions">
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Clear All</button>
               <button className="vrm-btn vrm-btn-sm" onClick={generateSmartAlarms}>Refresh</button>
@@ -308,7 +308,6 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
                       <td>{alarm.device}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>⚠️</span>
                           <span>{alarm.description}</span>
                         </div>
                       </td>
@@ -379,7 +378,6 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
                       <td>{alarm.device}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>{alarm.alarmClearedAfter ? '✅' : '⚠️'}</span>
                           <span>{alarm.description}</span>
                         </div>
                       </td>

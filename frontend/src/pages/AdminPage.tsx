@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
 interface User {
-  username: string;
   name: string;
   role: 'client' | 'admin';
   csv_url?: string;
-}
-
-interface Upload {
-  filename: string;
-  upload_date: string;
-  size: number;
-  client?: string;
+  last_login?: string | null;
 }
 
 interface AdminPageProps {
@@ -20,15 +13,12 @@ interface AdminPageProps {
 
 const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
   const [users, setUsers] = useState<{ [key: string]: User }>({});
-  const [uploads, setUploads] = useState<Upload[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
   const [showEditUser, setShowEditUser] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [uploading, setUploading] = useState(false);
   
-  // Form states
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -44,37 +34,48 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     csv_url: ''
   });
 
+  const formatRelativeTime = (timestamp: string | null | undefined): string => {
+    if (!timestamp) return 'Never logged in';
+    
+    const now = new Date();
+    const loginDate = new Date(timestamp);
+    const diffMs = now.getTime() - loginDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return loginDate.toLocaleDateString();
+  };
+
+  const formatFullTimestamp = (timestamp: string | null | undefined): string => {
+    if (!timestamp) return 'Never';
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  };
+
   const loadAdminData = React.useCallback(async () => {
     try {
       setLoading(true);
       const auth = btoa(`${credentials.username}:${credentials.password}`);
       
-      // Load users
-      const usersResponse = await fetch('/api/admin/users', {
+      const response = await fetch('/api/admin/users', {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        setUsers(usersData.users || {});
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users || {});
+      } else {
+        setAlert({ message: 'Failed to load users', type: 'error' });
       }
-
-      // Load uploads
-      const uploadsResponse = await fetch('/api/admin/uploads', {
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (uploadsResponse.ok) {
-        const uploadsData = await uploadsResponse.json();
-        setUploads(uploadsData.uploads || []);
-      }
-
     } catch (err) {
       setAlert({ message: `Failed to load admin data: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
     } finally {
@@ -95,6 +96,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!newUser.username.trim() || !newUser.password.trim() || !newUser.name.trim()) {
+      setAlert({ message: 'Please fill in all required fields', type: 'error' });
+      return;
+    }
+
+    if (newUser.role === 'client' && newUser.csv_url && !isValidUrl(newUser.csv_url)) {
+      setAlert({ message: 'Please enter a valid CSV URL', type: 'error' });
+      return;
+    }
+
     try {
       const auth = btoa(`${credentials.username}:${credentials.password}`);
       const response = await fetch('/api/admin/users', {
@@ -104,7 +116,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...newUser,
+          username: newUser.username,
+          password: newUser.password,
+          name: newUser.name,
+          role: newUser.role,
           csv_url: newUser.role === 'client' ? newUser.csv_url : undefined
         }),
       });
@@ -127,14 +142,22 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     e.preventDefault();
     if (!editingUser) return;
 
+    if (editUser.role === 'client' && editUser.csv_url && !isValidUrl(editUser.csv_url)) {
+      setAlert({ message: 'Please enter a valid CSV URL', type: 'error' });
+      return;
+    }
+
     try {
       const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const updateData = {
+      const updateData: any = {
         name: editUser.name,
         role: editUser.role,
-        ...(editUser.password && { password: editUser.password }),
-        ...(editUser.role === 'client' && { csv_url: editUser.csv_url })
+        csv_url: editUser.role === 'client' ? editUser.csv_url : undefined
       };
+
+      if (editUser.password && editUser.password.trim()) {
+        updateData.password = editUser.password;
+      }
 
       const response = await fetch(`/api/admin/users/${editingUser}`, {
         method: 'PUT',
@@ -160,7 +183,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
   };
 
   const handleDeleteUser = async (username: string) => {
-    if (!window.confirm(`Are you sure you want to delete user "${username}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -185,32 +208,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   };
 
-  const handleDeleteUpload = async (filename: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) {
-      return;
-    }
-
-    try {
-      const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch(`/api/admin/uploads/${encodeURIComponent(filename)}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-        },
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setAlert({ message: 'Upload deleted successfully', type: 'success' });
-        loadAdminData();
-      } else {
-        setAlert({ message: data.error || 'Failed to delete upload', type: 'error' });
-      }
-    } catch (err) {
-      setAlert({ message: 'Failed to delete upload', type: 'error' });
-    }
-  };
-
   const openEditUser = (username: string) => {
     const user = users[username];
     if (user) {
@@ -225,60 +222,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setAlert({ message: 'Please select a CSV file', type: 'error' });
-      return;
-    }
-
-    setUploading(true);
+  const isValidUrl = (url: string): boolean => {
     try {
-      const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/admin/uploads', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setAlert({ message: `File "${file.name}" uploaded successfully`, type: 'success' });
-        loadAdminData(); // Refresh the uploads list
-        
-        // Reset file input
-        if (event.target) {
-          event.target.value = '';
-        }
-      } else {
-        setAlert({ message: data.error || 'Failed to upload file', type: 'error' });
-      }
-    } catch (err) {
-      setAlert({ message: 'Failed to upload file', type: 'error' });
-    } finally {
-      setUploading(false);
+      new URL(url);
+      return true;
+    } catch {
+      return false;
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+  const viewClientDashboard = (username: string) => {
+    window.open(`/dashboard?client_id=${username}`, '_blank');
   };
 
   if (loading) {
@@ -306,7 +260,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
 
   return (
     <div>
-      {/* Page Header */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
           Admin Panel
@@ -318,7 +271,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
         </div>
       </div>
 
-      {/* Alert */}
       {alert && (
         <div style={{ 
           marginBottom: '24px',
@@ -332,7 +284,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
         </div>
       )}
 
-      {/* System Statistics */}
       <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
@@ -364,14 +315,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-purple)', marginBottom: '8px' }}>
-              {uploads.length}
+              {Object.values(users).filter(u => u.last_login).length}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Total Uploads</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Active Sessions</p>
           </div>
         </div>
       </div>
 
-      {/* User Management */}
       <div className="vrm-card" style={{ marginBottom: '24px' }}>
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">👥 User Management</h3>
@@ -393,9 +343,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
               <thead>
                 <tr>
                   <th>Username</th>
-                  <th>Display Name</th>
+                  <th>Name</th>
                   <th>Role</th>
-                  <th>CSV Data Source</th>
+                  <th>Last Login</th>
+                  <th>Data Source</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -420,9 +371,21 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                       </div>
                     </td>
                     <td>
+                      <span 
+                        title={formatFullTimestamp(user.last_login)}
+                        style={{ 
+                          color: user.last_login ? 'var(--vrm-text-primary)' : 'var(--vrm-text-muted)',
+                          cursor: user.last_login ? 'help' : 'default',
+                          fontSize: '13px'
+                        }}
+                      >
+                        {formatRelativeTime(user.last_login)}
+                      </span>
+                    </td>
+                    <td>
                       {user.csv_url ? (
                         <span style={{ color: 'var(--vrm-text-secondary)', fontSize: '12px' }}>
-                          {user.csv_url.length > 50 ? user.csv_url.substring(0, 50) + '...' : user.csv_url}
+                          {user.csv_url.length > 40 ? user.csv_url.substring(0, 40) + '...' : user.csv_url}
                         </span>
                       ) : (
                         <span style={{ color: 'var(--vrm-text-muted)' }}>-</span>
@@ -430,21 +393,28 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
+                        {user.role === 'client' && (
+                          <button 
+                            className="vrm-btn vrm-btn-sm"
+                            onClick={() => viewClientDashboard(username)}
+                            style={{ backgroundColor: 'var(--vrm-accent-blue)' }}
+                          >
+                            View Dashboard
+                          </button>
+                        )}
                         <button 
                           className="vrm-btn vrm-btn-secondary vrm-btn-sm"
                           onClick={() => openEditUser(username)}
                         >
                           Edit
                         </button>
-                        {user.role !== 'admin' && (
-                          <button 
-                            className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                            onClick={() => handleDeleteUser(username)}
-                            style={{ color: 'var(--vrm-accent-red)' }}
-                          >
-                            Delete
-                          </button>
-                        )}
+                        <button 
+                          className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                          onClick={() => handleDeleteUser(username)}
+                          style={{ color: 'var(--vrm-accent-red)' }}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -455,136 +425,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
         </div>
       </div>
 
-      {/* Client Dashboards */}
-      {clientUsers.length > 0 && (
-        <div className="vrm-card" style={{ marginBottom: '24px' }}>
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">📊 Client Dashboards</h3>
-          </div>
-          <div className="vrm-card-body">
-            <div className="vrm-grid vrm-grid-2">
-              {clientUsers.map(([username, user]) => (
-                <div key={username} style={{ 
-                  padding: '20px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  borderRadius: '8px',
-                  border: '1px solid var(--vrm-border)'
-                }}>
-                  <h4 style={{ color: 'var(--vrm-text-primary)', marginBottom: '8px', fontSize: '16px' }}>
-                    {user.name}
-                  </h4>
-                  <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    Username: {username}
-                  </p>
-                  {user.csv_url ? (
-                    <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '12px', marginBottom: '16px' }}>
-                      CSV: {user.csv_url.length > 40 ? user.csv_url.substring(0, 40) + '...' : user.csv_url}
-                    </p>
-                  ) : (
-                    <p style={{ color: 'var(--vrm-accent-orange)', fontSize: '12px', marginBottom: '16px' }}>
-                      No CSV configured
-                    </p>
-                  )}
-                  <button 
-                    className="vrm-btn vrm-btn-sm" 
-                    style={{ width: '100%' }}
-                    onClick={() => window.open(`/dashboard?client_id=${username}`, '_blank')}
-                  >
-                    View Dashboard
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* File Uploads Management */}
-      <div className="vrm-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">📁 File Uploads ({uploads.length})</h3>
-          <div className="vrm-card-actions">
-            <label style={{ 
-              display: 'inline-block',
-              position: 'relative',
-              overflow: 'hidden',
-              cursor: uploading ? 'not-allowed' : 'pointer'
-            }}>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                disabled={uploading}
-                style={{
-                  position: 'absolute',
-                  left: '-9999px',
-                  visibility: 'hidden'
-                }}
-              />
-              <span className={`vrm-btn vrm-btn-sm ${uploading ? 'vrm-btn-secondary' : ''}`} 
-                    style={{ 
-                      pointerEvents: uploading ? 'none' : 'auto',
-                      opacity: uploading ? 0.6 : 1
-                    }}>
-                {uploading ? 'Uploading...' : 'Upload CSV'}
-              </span>
-            </label>
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={loadAdminData}>
-              Refresh
-            </button>
-          </div>
-        </div>
-        <div className="vrm-card-body" style={{ padding: 0 }}>
-          {uploads.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="vrm-table">
-                <thead>
-                  <tr>
-                    <th>Filename</th>
-                    <th>Upload Date</th>
-                    <th>Size</th>
-                    <th>Client</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {uploads.map((upload) => (
-                    <tr key={upload.filename}>
-                      <td>{upload.filename}</td>
-                      <td>{formatDate(upload.upload_date)}</td>
-                      <td>{formatFileSize(upload.size)}</td>
-                      <td>{upload.client || 'Unknown'}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button 
-                            className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                            onClick={() => window.open(`/api/admin/uploads/${encodeURIComponent(upload.filename)}/download`, '_blank')}
-                          >
-                            Download
-                          </button>
-                          <button 
-                            className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                            onClick={() => handleDeleteUpload(upload.filename)}
-                            style={{ color: 'var(--vrm-accent-red)' }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--vrm-text-secondary)' }}>
-              No uploads found
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Add User Modal */}
       {showAddUser && (
         <div style={{
           position: 'fixed',
@@ -610,7 +450,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
             <form onSubmit={handleAddUser}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Username
+                  Username *
                 </label>
                 <input
                   type="text"
@@ -630,7 +470,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
 
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Password
+                  Password *
                 </label>
                 <input
                   type="password"
@@ -650,7 +490,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
 
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Display Name
+                  Display Name *
                 </label>
                 <input
                   type="text"
@@ -670,7 +510,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
 
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Role
+                  Role *
                 </label>
                 <select
                   value={newUser.role}
@@ -692,13 +532,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
               {newUser.role === 'client' && (
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                    CSV URL (optional)
+                    CSV Data Source URL
                   </label>
                   <input
                     type="url"
                     value={newUser.csv_url}
                     onChange={(e) => setNewUser({...newUser, csv_url: e.target.value})}
-                    placeholder="https://storage.googleapis.com/..."
+                    placeholder="https://example.com/data.csv"
                     style={{
                       width: '100%',
                       padding: '8px 12px',
@@ -711,16 +551,19 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <button 
                   type="button"
                   className="vrm-btn vrm-btn-secondary"
-                  onClick={() => setShowAddUser(false)}
+                  onClick={() => {
+                    setShowAddUser(false);
+                    setNewUser({ username: '', password: '', name: '', role: 'client', csv_url: '' });
+                  }}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="vrm-btn">
-                  Add User
+                  Create User
                 </button>
               </div>
             </form>
@@ -728,7 +571,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
         </div>
       )}
 
-      {/* Edit User Modal */}
       {showEditUser && editingUser && (
         <div style={{
           position: 'fixed',
@@ -750,32 +592,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
             maxWidth: '500px',
             border: '1px solid var(--vrm-border)'
           }}>
-            <h3 style={{ color: 'var(--vrm-text-primary)', marginBottom: '20px' }}>
-              Edit User: {editingUser}
-            </h3>
+            <h3 style={{ color: 'var(--vrm-text-primary)', marginBottom: '20px' }}>Edit User: {editingUser}</h3>
             <form onSubmit={handleEditUser}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Password (leave blank to keep current)
-                </label>
-                <input
-                  type="password"
-                  value={editUser.password}
-                  onChange={(e) => setEditUser({...editUser, password: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Display Name
+                  Display Name *
                 </label>
                 <input
                   type="text"
@@ -795,7 +616,27 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
 
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Role
+                  New Password (leave empty to keep current)
+                </label>
+                <input
+                  type="password"
+                  value={editUser.password}
+                  onChange={(e) => setEditUser({...editUser, password: e.target.value})}
+                  placeholder="Enter new password or leave empty"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    backgroundColor: 'var(--vrm-bg-tertiary)',
+                    border: '1px solid var(--vrm-border)',
+                    borderRadius: '6px',
+                    color: 'var(--vrm-text-primary)'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+                  Role *
                 </label>
                 <select
                   value={editUser.role}
@@ -817,13 +658,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
               {editUser.role === 'client' && (
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                    CSV URL (optional)
+                    CSV Data Source URL
                   </label>
                   <input
                     type="url"
                     value={editUser.csv_url}
                     onChange={(e) => setEditUser({...editUser, csv_url: e.target.value})}
-                    placeholder="https://storage.googleapis.com/..."
+                    placeholder="https://example.com/data.csv"
                     style={{
                       width: '100%',
                       padding: '8px 12px',
@@ -836,8 +677,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <button 
                   type="button"
                   className="vrm-btn vrm-btn-secondary"
                   onClick={() => {
@@ -848,20 +689,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                   Cancel
                 </button>
                 <button type="submit" className="vrm-btn">
-                  Save Changes
+                  Update User
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

@@ -6,28 +6,28 @@ const ReportsPage: React.FC = () => {
       id: 'occupancy-summary',
       name: 'Occupancy Summary Report',
       description: 'Daily, weekly, and monthly occupancy patterns with peak hours analysis',
-      icon: '📊',
+      icon: '',
       type: 'Standard Report'
     },
     {
       id: 'traffic-analysis',
       name: 'Traffic Flow Analysis',
       description: 'Entry/exit patterns, flow rates, and demographic breakdowns',
-      icon: '🚶‍♂️',
+      icon: '',
       type: 'Analytics Report'
     },
     {
       id: 'demographics-report', 
       name: 'Demographics Report',
       description: 'Age and gender distribution analysis with trend comparisons',
-      icon: '👥',
+      icon: '',
       type: 'Demographics Report'
     },
     {
       id: 'device-performance',
       name: 'Device Performance Report',
       description: 'Camera and sensor status, uptime, and data quality metrics',
-      icon: '📷',
+      icon: '',
       type: 'Technical Report'
     }
   ];

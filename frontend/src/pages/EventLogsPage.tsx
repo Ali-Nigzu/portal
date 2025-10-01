@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { API_ENDPOINTS } from '../config';
 
 interface EventData {
@@ -25,8 +27,10 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     event: '',
     sex: '',
     age: '',
-    date: ''
+    trackId: ''
   });
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 20;
 
@@ -61,23 +65,75 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Filter events based on current filters
+  const parseEventDate = (timestamp: string): Date | null => {
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      return date;
+    } catch {
+      return null;
+    }
+  };
+
+  const isSameDay = (date1: Date, date2: Date): boolean => {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+  };
+
+  const isDateInRange = (eventDate: Date, start: Date | null, end: Date | null): boolean => {
+    if (!start && !end) return true;
+    
+    const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    
+    if (start && end) {
+      const startDateOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      
+      if (isSameDay(startDateOnly, endDateOnly)) {
+        return isSameDay(eventDateOnly, startDateOnly);
+      }
+      
+      return eventDateOnly >= startDateOnly && eventDateOnly <= endDateOnly;
+    }
+    
+    if (start) {
+      const startDateOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      return eventDateOnly >= startDateOnly;
+    }
+    
+    if (end) {
+      const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      return eventDateOnly <= endDateOnly;
+    }
+    
+    return true;
+  };
+
   const filteredEvents = events.filter(event => {
+    const eventDate = parseEventDate(event.timestamp);
+    
+    const dateInRange = eventDate ? isDateInRange(eventDate, startDate, endDate) : true;
+    
+    const trackIdMatch = !filter.trackId || 
+      event.track_number.toString().includes(filter.trackId);
+    
     return (
       (!filter.event || event.event.toLowerCase().includes(filter.event.toLowerCase())) &&
       (!filter.sex || event.sex === filter.sex) &&
       (!filter.age || event.age_estimate === filter.age) &&
-      (!filter.date || event.date.includes(filter.date))
+      dateInRange &&
+      trackIdMatch
     );
   });
 
-  // Pagination
   const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
   const startIndex = (currentPage - 1) * eventsPerPage;
   const endIndex = startIndex + eventsPerPage;
   const currentEvents = filteredEvents.slice(startIndex, endIndex);
 
-  // Get unique values for filters
   const uniqueAges = Array.from(new Set(events.map(e => e.age_estimate))).filter(Boolean);
 
   const formatTimestamp = (timestamp: string) => {
@@ -94,9 +150,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
 
   const getEventIcon = (event: string) => {
     switch (event.toLowerCase()) {
-      case 'entry': return '📥';
-      case 'exit': return '📤';
-      default: return '📝';
+      case 'entry': return '';
+      case 'exit': return '';
+      default: return '';
     }
   };
 
@@ -106,6 +162,13 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       case 'exit': return 'vrm-status-warning';
       default: return 'vrm-status-offline';
     }
+  };
+
+  const clearAllFilters = () => {
+    setFilter({ event: '', sex: '', age: '', trackId: '' });
+    setStartDate(null);
+    setEndDate(null);
+    setCurrentPage(1);
   };
 
   if (loading) {
@@ -131,7 +194,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     return (
       <div className="vrm-card">
         <div className="vrm-card-header">
-          <h3 className="vrm-card-title">⚠️ Connection Error</h3>
+          <h3 className="vrm-card-title">Connection Error</h3>
         </div>
         <div className="vrm-card-body">
           <p style={{ color: 'var(--vrm-accent-red)', marginBottom: '16px' }}>{error}</p>
@@ -162,14 +225,68 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           <div className="vrm-card-actions">
             <button 
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={() => setFilter({ event: '', sex: '', age: '', date: '' })}
+              onClick={clearAllFilters}
             >
               Clear All
             </button>
           </div>
         </div>
         <div className="vrm-card-body">
-          <div className="vrm-grid vrm-grid-4">
+          {/* First Row: Date Pickers, Track ID, Event Type */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '16px',
+            marginBottom: '16px'
+          }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+                Start Date
+              </label>
+              <DatePicker
+                selected={startDate}
+                onChange={(date: Date | null) => setStartDate(date)}
+                placeholderText="Select start date"
+                dateFormat="yyyy-MM-dd"
+                className="vrm-date-picker"
+                maxDate={endDate || undefined}
+              />
+            </div>
+            
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+                End Date
+              </label>
+              <DatePicker
+                selected={endDate}
+                onChange={(date: Date | null) => setEndDate(date)}
+                placeholderText="Select end date"
+                dateFormat="yyyy-MM-dd"
+                className="vrm-date-picker"
+                minDate={startDate || undefined}
+              />
+            </div>
+            
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+                Track ID
+              </label>
+              <input 
+                type="text"
+                value={filter.trackId}
+                onChange={(e) => setFilter(prev => ({ ...prev, trackId: e.target.value }))}
+                placeholder="Search by track number"
+                style={{ 
+                  width: '100%', 
+                  padding: '8px 12px', 
+                  backgroundColor: 'var(--vrm-bg-tertiary)', 
+                  border: '1px solid var(--vrm-border)', 
+                  borderRadius: '6px', 
+                  color: 'var(--vrm-text-primary)'
+                }}
+              />
+            </div>
+            
             <div>
               <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
                 Event Type
@@ -191,7 +308,14 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 <option value="exit">Exit</option>
               </select>
             </div>
-            
+          </div>
+
+          {/* Second Row: Gender, Age Group */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '16px'
+          }}>
             <div>
               <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
                 Gender
@@ -236,26 +360,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 ))}
               </select>
             </div>
-            
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                Date Filter
-              </label>
-              <input 
-                type="text"
-                value={filter.date}
-                onChange={(e) => setFilter(prev => ({ ...prev, date: e.target.value }))}
-                placeholder="YYYY-MM-DD"
-                style={{ 
-                  width: '100%', 
-                  padding: '8px 12px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  border: '1px solid var(--vrm-border)', 
-                  borderRadius: '6px', 
-                  color: 'var(--vrm-text-primary)'
-                }}
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -264,7 +368,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       <div className="vrm-card">
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">
-            Activity Events ({filteredEvents.length.toLocaleString()} total)
+            Activity Events ({filteredEvents.length.toLocaleString()} of {events.length.toLocaleString()} total)
           </h3>
           <div className="vrm-card-actions">
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Export CSV</button>
@@ -333,7 +437,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="vrm-card-body" style={{ borderTop: '1px solid var(--vrm-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
               <div style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredEvents.length)} of {filteredEvents.length} events
               </div>
@@ -370,6 +474,95 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+
+        .vrm-date-picker {
+          width: 100%;
+          padding: 8px 12px;
+          background-color: var(--vrm-bg-tertiary);
+          border: 1px solid var(--vrm-border);
+          border-radius: 6px;
+          color: var(--vrm-text-primary);
+          font-size: 14px;
+        }
+
+        .vrm-date-picker:focus {
+          outline: none;
+          border-color: var(--vrm-accent-blue);
+        }
+
+        .react-datepicker-wrapper {
+          width: 100%;
+        }
+
+        .react-datepicker__input-container {
+          width: 100%;
+        }
+
+        .react-datepicker {
+          background-color: var(--vrm-bg-secondary);
+          border: 1px solid var(--vrm-border);
+          border-radius: 8px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+
+        .react-datepicker__header {
+          background-color: var(--vrm-bg-tertiary);
+          border-bottom: 1px solid var(--vrm-border);
+          border-radius: 8px 8px 0 0;
+        }
+
+        .react-datepicker__current-month,
+        .react-datepicker__day-name {
+          color: var(--vrm-text-primary);
+        }
+
+        .react-datepicker__day {
+          color: var(--vrm-text-secondary);
+        }
+
+        .react-datepicker__day:hover {
+          background-color: var(--vrm-hover);
+          color: var(--vrm-text-primary);
+        }
+
+        .react-datepicker__day--selected,
+        .react-datepicker__day--keyboard-selected {
+          background-color: var(--vrm-accent-blue);
+          color: white;
+        }
+
+        .react-datepicker__day--disabled {
+          color: var(--vrm-text-muted);
+          opacity: 0.5;
+        }
+
+        .react-datepicker__navigation-icon::before {
+          border-color: var(--vrm-text-secondary);
+        }
+
+        .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+          border-color: var(--vrm-text-primary);
+        }
+
+        .react-datepicker__day--in-range,
+        .react-datepicker__day--in-selecting-range {
+          background-color: rgba(25, 118, 210, 0.2);
+          color: var(--vrm-text-primary);
+        }
+
+        .react-datepicker__day--range-start,
+        .react-datepicker__day--range-end {
+          background-color: var(--vrm-accent-blue);
+          color: white;
+        }
+
+        .react-datepicker__triangle {
+          display: none;
+        }
+
+        .react-datepicker-popper {
+          z-index: 1000;
         }
       `}</style>
     </div>
