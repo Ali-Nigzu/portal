@@ -410,7 +410,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                       <td>{formatTimestamp(event.timestamp)}</td>
                       <td>
                         <div style={{ fontSize: '13px' }}>
-                          <div>{event.sex === 'M' ? '👨' : '👩'} {event.sex === 'M' ? 'Male' : 'Female'}</div>
+                          <div>{event.sex === 'M' ? 'Male' : 'Female'}</div>
                           <div style={{ color: 'var(--vrm-text-muted)', marginTop: '2px' }}>
                             Age: {event.age_estimate}
                           </div>
