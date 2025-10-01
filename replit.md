@@ -28,6 +28,17 @@ Preferred communication style: Simple, everyday language.
 - Removed all emojis for professional appearance
 - Consistent VRM-inspired dark theme throughout
 
+### View Token Authentication System (October 1, 2025)
+- Extended view token support to all read-only endpoints (device-list, alarm-logs, chart-data)
+- Fixed 401 authentication errors when using view tokens for client dashboards
+- Implemented unified authentication: view_token first, then fallback to Basic Auth
+- Eliminated credential popup dialogs when using temporary view tokens
+
+### Admin Experience Improvements (October 1, 2025)
+- Fixed admin default route to land on /admin page instead of client dashboard
+- Role-based routing: admins → /admin, clients → /dashboard
+- Consistent navigation and access control across all user roles
+
 ### Technical Improvements
 - Downgraded from React 19 to React 18.3.1 for library compatibility
 - Fixed react-datepicker integration issues
