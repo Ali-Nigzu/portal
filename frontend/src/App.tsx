@@ -214,7 +214,9 @@ const App: React.FC = () => {
     setUserRole('client');
   };
 
-  if (!isLoggedIn) {
+  const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
+
+  if (!isLoggedIn && !hasViewToken) {
     return <Login onLogin={handleLogin} />;
   }
 
