@@ -872,18 +872,56 @@ async def admin_delete_user(
 
 @app.get("/api/alarm-logs")
 async def get_alarm_logs(
-    client_id: Optional[str] = None,
-    user: dict = Depends(authenticate_user)
+    request: Request,
+    view_token: Optional[str] = None,
+    client_id: Optional[str] = None
 ):
-    """Get alarm logs for a client (authenticated users)"""
+    """Get alarm logs for a client (supports view tokens and authenticated users)"""
     alarm_data = load_alarm_logs()
+    target_client = None
     
-    if user['role'] == 'client':
-        target_client = user['username']
-    elif user['role'] == 'admin' and client_id:
-        target_client = client_id
+    # Check for view token first
+    if view_token:
+        token_data = validate_view_token(view_token)
+        if not token_data:
+            raise HTTPException(status_code=401, detail="Invalid or expired view token")
+        target_client = token_data['client_id']
     else:
-        target_client = user['username']
+        # Fall back to Basic Auth
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Basic '):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+                headers={"WWW-Authenticate": "Basic"},
+            )
+        
+        import base64
+        try:
+            decoded = base64.b64decode(auth_header.split(' ')[1]).decode('utf-8')
+            username, password = decoded.split(':', 1)
+            
+            users = load_users()
+            if username not in users or not verify_password(password, users[username]['password']):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials",
+                    headers={"WWW-Authenticate": "Basic"},
+                )
+            
+            user_role = users[username]['role']
+            if user_role == 'client':
+                target_client = username
+            elif user_role == 'admin' and client_id:
+                target_client = client_id
+            else:
+                target_client = username
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+                headers={"WWW-Authenticate": "Basic"},
+            )
     
     alarms = alarm_data.get(target_client, [])
     return {'alarms': alarms, 'client_id': target_client}
@@ -976,18 +1014,56 @@ async def delete_alarm_log(
 
 @app.get("/api/device-list")
 async def get_device_list(
-    client_id: Optional[str] = None,
-    user: dict = Depends(authenticate_user)
+    request: Request,
+    view_token: Optional[str] = None,
+    client_id: Optional[str] = None
 ):
-    """Get device list for a client (authenticated users)"""
+    """Get device list for a client (supports view tokens and authenticated users)"""
     device_data = load_device_lists()
+    target_client = None
     
-    if user['role'] == 'client':
-        target_client = user['username']
-    elif user['role'] == 'admin' and client_id:
-        target_client = client_id
+    # Check for view token first
+    if view_token:
+        token_data = validate_view_token(view_token)
+        if not token_data:
+            raise HTTPException(status_code=401, detail="Invalid or expired view token")
+        target_client = token_data['client_id']
     else:
-        target_client = user['username']
+        # Fall back to Basic Auth
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Basic '):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+                headers={"WWW-Authenticate": "Basic"},
+            )
+        
+        import base64
+        try:
+            decoded = base64.b64decode(auth_header.split(' ')[1]).decode('utf-8')
+            username, password = decoded.split(':', 1)
+            
+            users = load_users()
+            if username not in users or not verify_password(password, users[username]['password']):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials",
+                    headers={"WWW-Authenticate": "Basic"},
+                )
+            
+            user_role = users[username]['role']
+            if user_role == 'client':
+                target_client = username
+            elif user_role == 'admin' and client_id:
+                target_client = client_id
+            else:
+                target_client = username
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+                headers={"WWW-Authenticate": "Basic"},
+            )
     
     devices = device_data.get(target_client, [])
     return {'devices': devices, 'client_id': target_client}
