@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { API_ENDPOINTS } from '../config';
+import { API_BASE_URL } from '../config';
 
 interface AlarmEvent {
   id: string;
@@ -20,13 +20,12 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const generateSmartAlarms = useCallback(async () => {
+  const fetchAlarmLogs = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Fetch data to analyze for anomalies
       const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch(API_ENDPOINTS.CHART_DATA, {
+      const response = await fetch(`${API_BASE_URL}/api/alarm-logs`, {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
@@ -38,127 +37,18 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
       }
 
       const result = await response.json();
-      const data = result.data || [];
-      
-      // Generate smart alarms based on business intelligence data
-      const generatedAlarms: AlarmEvent[] = [];
-      
-      // Analyze occupancy patterns
-      const entriesCount = data.filter((d: any) => d.event === 'entry').length;
-      const exitsCount = data.filter((d: any) => d.event === 'exit').length;
-      const currentOccupancy = Math.max(0, entriesCount - exitsCount);
-      
-      // High occupancy alarm
-      if (currentOccupancy > 50) {
-        generatedAlarms.push({
-          id: '001',
-          instance: '261',
-          device: 'Main Entrance Camera [261]',
-          description: 'High occupancy detected: Capacity threshold exceeded',
-          alarmStartedAt: '2025-09-28 14:20:15 (2 hours ago)',
-          alarmClearedAfter: null,
-          severity: 'high'
-        });
-      }
-      
-      // Traffic surge detection
-      const hourlyActivity = data.reduce((acc: any, item: any) => {
-        const hour = item.hour || new Date().getHours();
-        acc[hour] = (acc[hour] || 0) + 1;
-        return acc;
-      }, {});
-      
-      const maxHourlyActivity = Math.max(...Object.values(hourlyActivity) as number[]);
-      const avgHourlyActivity = (Object.values(hourlyActivity) as number[]).reduce((a: number, b: number) => a + b, 0) / Object.keys(hourlyActivity).length;
-      
-      if (maxHourlyActivity > avgHourlyActivity * 2) {
-        generatedAlarms.push({
-          id: '002',
-          instance: '261',
-          device: 'System Overview [261]',
-          description: 'Traffic surge: Unusual activity spike detected',
-          alarmStartedAt: '2025-09-28 12:45:28 (4 hours ago)',
-          alarmClearedAfter: '1m, 31s',
-          severity: 'medium'
-        });
-      }
-      
-      // Data quality alerts
-      const recentData = data.filter((d: any) => {
-        if (!d.timestamp) return false;
-        const eventTime = new Date(d.timestamp).getTime();
-        const now = Date.now();
-        return (now - eventTime) < 24 * 60 * 60 * 1000; // Last 24 hours
-      });
-      
-      if (recentData.length === 0) {
-        generatedAlarms.push({
-          id: '003',
-          instance: '261',
-          device: 'Data Processing Gateway [261]',
-          description: 'Data feed interruption: No recent activity detected',
-          alarmStartedAt: '2025-09-28 10:30:45 (6 hours ago)',
-          alarmClearedAfter: null,
-          severity: 'high'
-        });
-      }
-      
-      // Gender distribution anomaly
-      const genderCounts = data.reduce((acc: any, item: any) => {
-        acc[item.sex] = (acc[item.sex] || 0) + 1;
-        return acc;
-      }, {});
-      
-      const totalGenderEntries = (Object.values(genderCounts) as number[]).reduce((a: number, b: number) => a + b, 0);
-      if (totalGenderEntries > 0) {
-        const maleRatio = (genderCounts.M || 0) / totalGenderEntries;
-        if (maleRatio > 0.9 || maleRatio < 0.1) {
-          generatedAlarms.push({
-            id: '004',
-            instance: '262',
-            device: 'Demographics Analyzer [262]',
-            description: 'Demographics anomaly: Unusual gender distribution pattern',
-            alarmStartedAt: '2025-09-28 08:15:22 (8 hours ago)',
-            alarmClearedAfter: '45s',
-            severity: 'low'
-          });
-        }
-      }
-      
-      // Add some historical cleared alarms for demonstration
-      generatedAlarms.push(
-        {
-          id: '005',
-          instance: '261',
-          device: 'System Overview [261]',
-          description: 'Device communication timeout',
-          alarmStartedAt: '2025-09-27 22:45:18 (18 hours ago)',
-          alarmClearedAfter: '2m, 15s',
-          severity: 'medium'
-        },
-        {
-          id: '006',
-          instance: '263',
-          device: 'Side Exit Camera [263]',
-          description: 'Camera offline: Connection lost',
-          alarmStartedAt: '2025-09-27 15:30:42 (1 day ago)',
-          alarmClearedAfter: '18s',
-          severity: 'high'
-        }
-      );
-      
-      setAlarms(generatedAlarms);
+      setAlarms(result.alarms || []);
       setError(null);
     } catch (err) {
-      setError(`Failed to generate alarm data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Failed to load alarm logs: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   }, [credentials.username, credentials.password]);
 
   useEffect(() => {
-    generateSmartAlarms();
-  }, [generateSmartAlarms]);
+    fetchAlarmLogs();
+  }, [fetchAlarmLogs]);
 
   const getSeverityClass = (severity: string) => {
     switch (severity) {
@@ -205,7 +95,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
         </div>
         <div className="vrm-card-body">
           <p style={{ color: 'var(--vrm-accent-red)', marginBottom: '16px' }}>{error}</p>
-          <button className="vrm-btn" onClick={generateSmartAlarms}>Retry Connection</button>
+          <button className="vrm-btn" onClick={fetchAlarmLogs}>Retry Connection</button>
         </div>
       </div>
     );
@@ -276,7 +166,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
             <h3 className="vrm-card-title">Active Alarms ({activeAlarms.length})</h3>
             <div className="vrm-card-actions">
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Clear All</button>
-              <button className="vrm-btn vrm-btn-sm" onClick={generateSmartAlarms}>Refresh</button>
+              <button className="vrm-btn vrm-btn-sm" onClick={fetchAlarmLogs}>Refresh</button>
             </div>
           </div>
           <div className="vrm-card-body" style={{ padding: 0 }}>
@@ -345,7 +235,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
           </h3>
           <div className="vrm-card-actions">
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Export CSV</button>
-            <button className="vrm-btn vrm-btn-sm" onClick={generateSmartAlarms}>Refresh</button>
+            <button className="vrm-btn vrm-btn-sm" onClick={fetchAlarmLogs}>Refresh</button>
           </div>
         </div>
         <div className="vrm-card-body" style={{ padding: 0 }}>

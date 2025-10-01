@@ -1,0 +1,36 @@
+{
+  "client1": [
+    {
+      "id": "alarm-001",
+      "instance": "261",
+      "device": "Main Entrance Camera [261]",
+      "description": "High occupancy detected: Capacity threshold exceeded",
+      "alarmStartedAt": "2025-09-28T14:20:15",
+      "alarmClearedAfter": null,
+      "severity": "high",
+      "client_id": "client1"
+    },
+    {
+      "id": "alarm-002",
+      "instance": "261",
+      "device": "System Overview [261]",
+      "description": "Traffic surge: Unusual activity spike detected",
+      "alarmStartedAt": "2025-09-28T12:45:28",
+      "alarmClearedAfter": "1m, 31s",
+      "severity": "medium",
+      "client_id": "client1"
+    }
+  ],
+  "client2": [
+    {
+      "id": "alarm-003",
+      "instance": "262",
+      "device": "Main Gateway [262]",
+      "description": "Network latency detected",
+      "alarmStartedAt": "2025-09-29T10:15:00",
+      "alarmClearedAfter": null,
+      "severity": "low",
+      "client_id": "client2"
+    }
+  ]
+}

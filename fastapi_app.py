@@ -82,6 +82,8 @@ app.add_middleware(
 # Configuration
 GCS_BUCKET = 'nigzsu_cdata-testclient1'
 USERS_FILE = 'users.json'
+ALARM_LOGS_FILE = 'alarm_logs.json'
+DEVICE_LISTS_FILE = 'device_lists.json'
 
 security = HTTPBasic()
 
@@ -133,6 +135,63 @@ class ViewTokenResponse(BaseModel):
     token: str
     expires_at: str
     client_id: str
+
+class AlarmEvent(BaseModel):
+    id: str
+    instance: str
+    device: str
+    description: str
+    alarmStartedAt: str
+    alarmClearedAfter: Optional[str] = None
+    severity: str
+    client_id: str
+
+class CreateAlarmRequest(BaseModel):
+    instance: str
+    device: str
+    description: str
+    alarmStartedAt: str
+    alarmClearedAfter: Optional[str] = None
+    severity: str
+    client_id: str
+
+class UpdateAlarmRequest(BaseModel):
+    instance: Optional[str] = None
+    device: Optional[str] = None
+    description: Optional[str] = None
+    alarmStartedAt: Optional[str] = None
+    alarmClearedAfter: Optional[str] = None
+    severity: Optional[str] = None
+
+class DeviceInfo(BaseModel):
+    id: str
+    name: str
+    type: str
+    status: str
+    lastSeen: str
+    dataSource: Optional[str] = None
+    location: Optional[str] = None
+    recordCount: Optional[int] = None
+    client_id: str
+
+class CreateDeviceRequest(BaseModel):
+    name: str
+    type: str
+    status: str
+    lastSeen: str
+    dataSource: Optional[str] = None
+    location: Optional[str] = None
+    recordCount: Optional[int] = None
+    client_id: str
+
+class UpdateDeviceRequest(BaseModel):
+    name: Optional[str] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
+    lastSeen: Optional[str] = None
+    dataSource: Optional[str] = None
+    location: Optional[str] = None
+    recordCount: Optional[int] = None
 
 # User Management (keeping compatible with existing)
 def hash_password(password: str) -> str:
@@ -202,6 +261,30 @@ def save_users(users_data: dict):
     """Save users data to JSON file"""
     with open(USERS_FILE, 'w') as f:
         json.dump(users_data, f, indent=2)
+
+def load_alarm_logs():
+    """Load alarm logs from JSON file"""
+    if not os.path.exists(ALARM_LOGS_FILE):
+        return {}
+    with open(ALARM_LOGS_FILE, 'r') as f:
+        return json.load(f)
+
+def save_alarm_logs(alarm_data: dict):
+    """Save alarm logs to JSON file"""
+    with open(ALARM_LOGS_FILE, 'w') as f:
+        json.dump(alarm_data, f, indent=2)
+
+def load_device_lists():
+    """Load device lists from JSON file"""
+    if not os.path.exists(DEVICE_LISTS_FILE):
+        return {}
+    with open(DEVICE_LISTS_FILE, 'r') as f:
+        return json.load(f)
+
+def save_device_lists(device_data: dict):
+    """Save device lists to JSON file"""
+    with open(DEVICE_LISTS_FILE, 'w') as f:
+        json.dump(device_data, f, indent=2)
 
 def create_view_token(client_id: str) -> Dict[str, Any]:
     """Create a secure temporary view token for a client"""
@@ -786,6 +869,217 @@ async def admin_delete_user(
     
     logger.info(f"Admin deleted user: {username}")
     return {'success': True, 'message': f'User {username} deleted successfully'}
+
+@app.get("/api/alarm-logs")
+async def get_alarm_logs(
+    client_id: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    """Get alarm logs for a client (authenticated users)"""
+    alarm_data = load_alarm_logs()
+    
+    if user['role'] == 'client':
+        target_client = user['username']
+    elif user['role'] == 'admin' and client_id:
+        target_client = client_id
+    else:
+        target_client = user['username']
+    
+    alarms = alarm_data.get(target_client, [])
+    return {'alarms': alarms, 'client_id': target_client}
+
+@app.post("/api/admin/alarm-logs")
+async def create_alarm_log(
+    create_request: CreateAlarmRequest,
+    user: dict = Depends(authenticate_user)
+):
+    """Create a new alarm log (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    alarm_data = load_alarm_logs()
+    
+    if create_request.client_id not in alarm_data:
+        alarm_data[create_request.client_id] = []
+    
+    new_alarm = {
+        'id': f"alarm-{str(uuid.uuid4())[:8]}",
+        'instance': create_request.instance,
+        'device': create_request.device,
+        'description': create_request.description,
+        'alarmStartedAt': create_request.alarmStartedAt,
+        'alarmClearedAfter': create_request.alarmClearedAfter,
+        'severity': create_request.severity,
+        'client_id': create_request.client_id
+    }
+    
+    alarm_data[create_request.client_id].append(new_alarm)
+    save_alarm_logs(alarm_data)
+    
+    logger.info(f"Admin created alarm: {new_alarm['id']} for client: {create_request.client_id}")
+    return {'success': True, 'alarm': new_alarm}
+
+@app.put("/api/admin/alarm-logs/{alarm_id}")
+async def update_alarm_log(
+    alarm_id: str,
+    update_request: UpdateAlarmRequest,
+    user: dict = Depends(authenticate_user)
+):
+    """Update an existing alarm log (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    alarm_data = load_alarm_logs()
+    
+    for client_id, alarms in alarm_data.items():
+        for alarm in alarms:
+            if alarm['id'] == alarm_id:
+                if update_request.instance is not None:
+                    alarm['instance'] = update_request.instance
+                if update_request.device is not None:
+                    alarm['device'] = update_request.device
+                if update_request.description is not None:
+                    alarm['description'] = update_request.description
+                if update_request.alarmStartedAt is not None:
+                    alarm['alarmStartedAt'] = update_request.alarmStartedAt
+                if update_request.alarmClearedAfter is not None:
+                    alarm['alarmClearedAfter'] = update_request.alarmClearedAfter
+                if update_request.severity is not None:
+                    alarm['severity'] = update_request.severity
+                
+                save_alarm_logs(alarm_data)
+                logger.info(f"Admin updated alarm: {alarm_id}")
+                return {'success': True, 'alarm': alarm}
+    
+    raise HTTPException(status_code=404, detail="Alarm not found")
+
+@app.delete("/api/admin/alarm-logs/{alarm_id}")
+async def delete_alarm_log(
+    alarm_id: str,
+    user: dict = Depends(authenticate_user)
+):
+    """Delete an alarm log (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    alarm_data = load_alarm_logs()
+    
+    for client_id, alarms in alarm_data.items():
+        for i, alarm in enumerate(alarms):
+            if alarm['id'] == alarm_id:
+                deleted_alarm = alarms.pop(i)
+                save_alarm_logs(alarm_data)
+                logger.info(f"Admin deleted alarm: {alarm_id}")
+                return {'success': True, 'message': f'Alarm {alarm_id} deleted successfully'}
+    
+    raise HTTPException(status_code=404, detail="Alarm not found")
+
+@app.get("/api/device-list")
+async def get_device_list(
+    client_id: Optional[str] = None,
+    user: dict = Depends(authenticate_user)
+):
+    """Get device list for a client (authenticated users)"""
+    device_data = load_device_lists()
+    
+    if user['role'] == 'client':
+        target_client = user['username']
+    elif user['role'] == 'admin' and client_id:
+        target_client = client_id
+    else:
+        target_client = user['username']
+    
+    devices = device_data.get(target_client, [])
+    return {'devices': devices, 'client_id': target_client}
+
+@app.post("/api/admin/device-list")
+async def create_device(
+    create_request: CreateDeviceRequest,
+    user: dict = Depends(authenticate_user)
+):
+    """Create a new device (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    device_data = load_device_lists()
+    
+    if create_request.client_id not in device_data:
+        device_data[create_request.client_id] = []
+    
+    new_device = {
+        'id': f"device-{str(uuid.uuid4())[:8]}",
+        'name': create_request.name,
+        'type': create_request.type,
+        'status': create_request.status,
+        'lastSeen': create_request.lastSeen,
+        'dataSource': create_request.dataSource,
+        'location': create_request.location,
+        'recordCount': create_request.recordCount,
+        'client_id': create_request.client_id
+    }
+    
+    device_data[create_request.client_id].append(new_device)
+    save_device_lists(device_data)
+    
+    logger.info(f"Admin created device: {new_device['id']} for client: {create_request.client_id}")
+    return {'success': True, 'device': new_device}
+
+@app.put("/api/admin/device-list/{device_id}")
+async def update_device(
+    device_id: str,
+    update_request: UpdateDeviceRequest,
+    user: dict = Depends(authenticate_user)
+):
+    """Update an existing device (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    device_data = load_device_lists()
+    
+    for client_id, devices in device_data.items():
+        for device in devices:
+            if device['id'] == device_id:
+                if update_request.name is not None:
+                    device['name'] = update_request.name
+                if update_request.type is not None:
+                    device['type'] = update_request.type
+                if update_request.status is not None:
+                    device['status'] = update_request.status
+                if update_request.lastSeen is not None:
+                    device['lastSeen'] = update_request.lastSeen
+                if update_request.dataSource is not None:
+                    device['dataSource'] = update_request.dataSource
+                if update_request.location is not None:
+                    device['location'] = update_request.location
+                if update_request.recordCount is not None:
+                    device['recordCount'] = update_request.recordCount
+                
+                save_device_lists(device_data)
+                logger.info(f"Admin updated device: {device_id}")
+                return {'success': True, 'device': device}
+    
+    raise HTTPException(status_code=404, detail="Device not found")
+
+@app.delete("/api/admin/device-list/{device_id}")
+async def delete_device(
+    device_id: str,
+    user: dict = Depends(authenticate_user)
+):
+    """Delete a device (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    device_data = load_device_lists()
+    
+    for client_id, devices in device_data.items():
+        for i, device in enumerate(devices):
+            if device['id'] == device_id:
+                deleted_device = devices.pop(i)
+                save_device_lists(device_data)
+                logger.info(f"Admin deleted device: {device_id}")
+                return {'success': True, 'message': f'Device {device_id} deleted successfully'}
+    
+    raise HTTPException(status_code=404, detail="Device not found")
 
 if __name__ == "__main__":
     import uvicorn

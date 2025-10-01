@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_ENDPOINTS } from '../config';
+import { API_BASE_URL } from '../config';
 
 interface DeviceInfo {
   id: string;
@@ -21,94 +21,35 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Simulate device data based on current system
-    // In a real implementation, this would come from an API endpoint
-    const simulateDevices = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch actual data to understand data sources
-        const auth = btoa(`${credentials.username}:${credentials.password}`);
-        const response = await fetch(API_ENDPOINTS.CHART_DATA, {
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/json',
-          },
-        });
+  const fetchDeviceList = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/device-list`, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-        if (response.ok) {
-          const result = await response.json();
-          const recordCount = result.data?.length || 0;
-          
-          // Create simulated devices based on the fact that we have data
-          const simulatedDevices: DeviceInfo[] = [
-            {
-              id: 'cam-001',
-              name: 'Main Entrance Camera',
-              type: 'Camera',
-              status: recordCount > 0 ? 'online' : 'offline',
-              lastSeen: recordCount > 0 ? 'a few seconds ago' : '10 minutes ago',
-              dataSource: 'https://storage.googleapis.com/nigzsu_cdata-testclient1/client0/testdata.csv',
-              location: 'Main Entrance',
-              recordCount: Math.floor(recordCount * 0.6)
-            },
-            {
-              id: 'cam-002', 
-              name: 'Secondary Exit Camera',
-              type: 'Camera',
-              status: recordCount > 0 ? 'online' : 'offline',
-              lastSeen: recordCount > 0 ? '10 minutes ago' : '3 years ago',
-              dataSource: 'https://storage.googleapis.com/nigzsu_cdata-testclient1/client1/testdata0.csv',
-              location: 'Side Exit',
-              recordCount: Math.floor(recordCount * 0.4)
-            },
-            {
-              id: 'gateway-001',
-              name: 'Data Processing Gateway',
-              type: 'Gateway', 
-              status: 'online',
-              lastSeen: 'a few seconds ago',
-              location: 'Server Room',
-              recordCount: recordCount
-            },
-            {
-              id: 'sensor-001',
-              name: 'Motion Detection Sensor',
-              type: 'Sensor',
-              status: 'maintenance',
-              lastSeen: '2 hours ago',
-              location: 'Lobby Area',
-              recordCount: 0
-            }
-          ];
-          
-          setDevices(simulatedDevices);
-        } else {
-          throw new Error('Failed to fetch data');
-        }
-        
-        setError(null);
-      } catch (err) {
-        setError(`Failed to load device information: ${err instanceof Error ? err.message : 'Unknown error'}`);
-        // Still show some devices even on error
-        setDevices([
-          {
-            id: 'cam-001',
-            name: 'Main Entrance Camera',
-            type: 'Camera',
-            status: 'offline',
-            lastSeen: 'unknown',
-            location: 'Main Entrance'
-          }
-        ]);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
 
-    simulateDevices();
-  }, [credentials]);
+      const result = await response.json();
+      setDevices(result.devices || []);
+      setError(null);
+    } catch (err) {
+      setError(`Failed to load device information: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [credentials.username, credentials.password]);
+
+  useEffect(() => {
+    fetchDeviceList();
+  }, [fetchDeviceList]);
 
   const getDeviceIcon = (type: string) => {
     switch (type) {
@@ -229,7 +170,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Connected Devices</h3>
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Refresh</button>
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={fetchDeviceList}>Refresh</button>
             <button className="vrm-btn vrm-btn-sm">Add Device</button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 interface User {
   name: string;
@@ -7,18 +8,54 @@ interface User {
   last_login?: string | null;
 }
 
+interface AlarmEvent {
+  id: string;
+  instance: string;
+  device: string;
+  description: string;
+  alarmStartedAt: string;
+  alarmClearedAfter: string | null;
+  severity: string;
+  client_id: string;
+}
+
+interface DeviceInfo {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  lastSeen: string;
+  dataSource?: string;
+  location?: string;
+  recordCount?: number;
+  client_id: string;
+}
+
 interface AdminPageProps {
   credentials: { username: string; password: string };
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
+  const [activeTab, setActiveTab] = useState<'users' | 'alarms' | 'devices'>('users');
   const [users, setUsers] = useState<{ [key: string]: User }>({});
+  const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
+  const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
   const [showAddUser, setShowAddUser] = useState(false);
   const [showEditUser, setShowEditUser] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
+  const [showAddAlarm, setShowAddAlarm] = useState(false);
+  const [showEditAlarm, setShowEditAlarm] = useState(false);
+  const [editingAlarm, setEditingAlarm] = useState<AlarmEvent | null>(null);
+  
+  const [showAddDevice, setShowAddDevice] = useState(false);
+  const [showEditDevice, setShowEditDevice] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<DeviceInfo | null>(null);
+
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -34,36 +71,33 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     csv_url: ''
   });
 
-  const formatRelativeTime = (timestamp: string | null | undefined): string => {
-    if (!timestamp) return 'Never logged in';
-    
-    const now = new Date();
-    const loginDate = new Date(timestamp);
-    const diffMs = now.getTime() - loginDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    
-    return loginDate.toLocaleDateString();
-  };
+  const [newAlarm, setNewAlarm] = useState({
+    instance: '',
+    device: '',
+    description: '',
+    alarmStartedAt: new Date().toISOString().slice(0, 16),
+    alarmClearedAfter: '',
+    severity: 'medium',
+    client_id: ''
+  });
 
-  const formatFullTimestamp = (timestamp: string | null | undefined): string => {
-    if (!timestamp) return 'Never';
-    const date = new Date(timestamp);
-    return date.toLocaleString();
-  };
+  const [newDevice, setNewDevice] = useState({
+    name: '',
+    type: 'Camera',
+    status: 'online',
+    lastSeen: new Date().toISOString().slice(0, 16),
+    dataSource: '',
+    location: '',
+    recordCount: 0,
+    client_id: ''
+  });
 
   const loadAdminData = React.useCallback(async () => {
     try {
       setLoading(true);
       const auth = btoa(`${credentials.username}:${credentials.password}`);
       
-      const response = await fetch('/api/admin/users', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
@@ -73,6 +107,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users || {});
+        
+        const clientUsers = Object.entries(data.users || {}).filter(([_, user]) => (user as User).role === 'client');
+        if (clientUsers.length > 0 && !selectedClient) {
+          setSelectedClient(clientUsers[0][0]);
+        }
       } else {
         setAlert({ message: 'Failed to load users', type: 'error' });
       }
@@ -81,11 +120,61 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     } finally {
       setLoading(false);
     }
+  }, [credentials.username, credentials.password, selectedClient]);
+
+  const loadAlarms = React.useCallback(async (clientId: string) => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/alarm-logs?client_id=${clientId}`, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAlarms(data.alarms || []);
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to load alarms', type: 'error' });
+    }
+  }, [credentials.username, credentials.password]);
+
+  const loadDevices = React.useCallback(async (clientId: string) => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/device-list?client_id=${clientId}`, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDevices(data.devices || []);
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to load devices', type: 'error' });
+    }
   }, [credentials.username, credentials.password]);
 
   useEffect(() => {
     loadAdminData();
   }, [loadAdminData]);
+
+  useEffect(() => {
+    if (selectedClient && activeTab === 'alarms') {
+      loadAlarms(selectedClient);
+    }
+  }, [selectedClient, activeTab, loadAlarms]);
+
+  useEffect(() => {
+    if (selectedClient && activeTab === 'devices') {
+      loadDevices(selectedClient);
+    }
+  }, [selectedClient, activeTab, loadDevices]);
 
   useEffect(() => {
     if (alert) {
@@ -102,26 +191,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
       return;
     }
 
-    if (newUser.role === 'client' && newUser.csv_url && !isValidUrl(newUser.csv_url)) {
-      setAlert({ message: 'Please enter a valid CSV URL', type: 'error' });
-      return;
-    }
-
     try {
       const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch('/api/admin/users', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username: newUser.username,
-          password: newUser.password,
-          name: newUser.name,
-          role: newUser.role,
-          csv_url: newUser.role === 'client' ? newUser.csv_url : undefined
-        }),
+        body: JSON.stringify(newUser),
       });
 
       const data = await response.json();
@@ -142,30 +220,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     e.preventDefault();
     if (!editingUser) return;
 
-    if (editUser.role === 'client' && editUser.csv_url && !isValidUrl(editUser.csv_url)) {
-      setAlert({ message: 'Please enter a valid CSV URL', type: 'error' });
-      return;
-    }
-
     try {
       const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const updateData: any = {
-        name: editUser.name,
-        role: editUser.role,
-        csv_url: editUser.role === 'client' ? editUser.csv_url : undefined
-      };
-
-      if (editUser.password && editUser.password.trim()) {
-        updateData.password = editUser.password;
-      }
-
-      const response = await fetch(`/api/admin/users/${editingUser}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/users/${editingUser}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(editUser),
       });
 
       const data = await response.json();
@@ -183,17 +246,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
   };
 
   const handleDeleteUser = async (username: string) => {
-    if (!window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
-      return;
-    }
+    if (!window.confirm(`Are you sure you want to delete user "${username}"?`)) return;
 
     try {
       const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch(`/api/admin/users/${username}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/users/${username}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-        },
+        headers: { 'Authorization': `Basic ${auth}` },
       });
 
       const data = await response.json();
@@ -208,50 +267,169 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   };
 
-  const openEditUser = (username: string) => {
-    const user = users[username];
-    if (user) {
-      setEditingUser(username);
-      setEditUser({
-        password: '',
-        name: user.name,
-        role: user.role,
-        csv_url: user.csv_url || ''
-      });
-      setShowEditUser(true);
+  const handleAddAlarm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newAlarm.client_id || !newAlarm.device || !newAlarm.description) {
+      setAlert({ message: 'Please fill in all required fields', type: 'error' });
+      return;
     }
-  };
 
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const viewClientDashboard = async (username: string) => {
     try {
       const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch('/api/admin/create-view-token', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/alarm-logs`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ client_id: username }),
+        body: JSON.stringify(newAlarm),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        window.open(`/dashboard?view_token=${data.token}`, '_blank');
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Alarm created successfully', type: 'success' });
+        setShowAddAlarm(false);
+        loadAlarms(selectedClient);
       } else {
-        const error = await response.json();
-        setAlert({ message: error.detail || 'Failed to create view token', type: 'error' });
+        setAlert({ message: 'Failed to create alarm', type: 'error' });
       }
     } catch (err) {
-      setAlert({ message: 'Failed to generate view token', type: 'error' });
+      setAlert({ message: 'Failed to create alarm', type: 'error' });
+    }
+  };
+
+  const handleEditAlarm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAlarm) return;
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/alarm-logs/${editingAlarm.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editingAlarm),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Alarm updated successfully', type: 'success' });
+        setShowEditAlarm(false);
+        setEditingAlarm(null);
+        loadAlarms(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to update alarm', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to update alarm', type: 'error' });
+    }
+  };
+
+  const handleDeleteAlarm = async (alarmId: string) => {
+    if (!window.confirm('Are you sure you want to delete this alarm?')) return;
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/alarm-logs/${alarmId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Basic ${auth}` },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Alarm deleted successfully', type: 'success' });
+        loadAlarms(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to delete alarm', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to delete alarm', type: 'error' });
+    }
+  };
+
+  const handleAddDevice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newDevice.client_id || !newDevice.name) {
+      setAlert({ message: 'Please fill in all required fields', type: 'error' });
+      return;
+    }
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/device-list`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newDevice),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Device created successfully', type: 'success' });
+        setShowAddDevice(false);
+        loadDevices(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to create device', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to create device', type: 'error' });
+    }
+  };
+
+  const handleEditDevice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDevice) return;
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/device-list/${editingDevice.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editingDevice),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Device updated successfully', type: 'success' });
+        setShowEditDevice(false);
+        setEditingDevice(null);
+        loadDevices(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to update device', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to update device', type: 'error' });
+    }
+  };
+
+  const handleDeleteDevice = async (deviceId: string) => {
+    if (!window.confirm('Are you sure you want to delete this device?')) return;
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/device-list/${deviceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Basic ${auth}` },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Device deleted successfully', type: 'success' });
+        loadDevices(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to delete device', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to delete device', type: 'error' });
     }
   };
 
@@ -275,8 +453,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
   }
 
   const clientUsers = Object.entries(users).filter(([_, user]) => user.role === 'client');
-  const adminUsers = Object.entries(users).filter(([_, user]) => user.role === 'admin');
-  const totalUsers = Object.keys(users).length;
 
   return (
     <div>
@@ -304,418 +480,996 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
         </div>
       )}
 
-      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-blue)', marginBottom: '8px' }}>
-              {totalUsers}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Total Users</p>
-          </div>
-        </div>
-
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-green)', marginBottom: '8px' }}>
-              {clientUsers.length}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Active Clients</p>
-          </div>
-        </div>
-
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-orange)', marginBottom: '8px' }}>
-              {adminUsers.length}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Administrators</p>
-          </div>
-        </div>
-
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-purple)', marginBottom: '8px' }}>
-              {Object.values(users).filter(u => u.last_login).length}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Active Sessions</p>
-          </div>
-        </div>
+      <div style={{ marginBottom: '24px', display: 'flex', gap: '8px', borderBottom: '1px solid var(--vrm-border-color)' }}>
+        <button
+          onClick={() => setActiveTab('users')}
+          style={{
+            padding: '12px 24px',
+            background: activeTab === 'users' ? 'var(--vrm-bg-tertiary)' : 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'users' ? '2px solid var(--vrm-accent-blue)' : '2px solid transparent',
+            color: activeTab === 'users' ? 'var(--vrm-accent-blue)' : 'var(--vrm-text-secondary)',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}
+        >
+          👥 User Management
+        </button>
+        <button
+          onClick={() => setActiveTab('alarms')}
+          style={{
+            padding: '12px 24px',
+            background: activeTab === 'alarms' ? 'var(--vrm-bg-tertiary)' : 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'alarms' ? '2px solid var(--vrm-accent-blue)' : '2px solid transparent',
+            color: activeTab === 'alarms' ? 'var(--vrm-accent-blue)' : 'var(--vrm-text-secondary)',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}
+        >
+          🚨 Alarm Logs
+        </button>
+        <button
+          onClick={() => setActiveTab('devices')}
+          style={{
+            padding: '12px 24px',
+            background: activeTab === 'devices' ? 'var(--vrm-bg-tertiary)' : 'transparent',
+            border: 'none',
+            borderBottom: activeTab === 'devices' ? '2px solid var(--vrm-accent-blue)' : '2px solid transparent',
+            color: activeTab === 'devices' ? 'var(--vrm-accent-blue)' : 'var(--vrm-text-secondary)',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}
+        >
+          📱 Device List
+        </button>
       </div>
 
-      <div className="vrm-card" style={{ marginBottom: '24px' }}>
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">👥 User Management</h3>
-          <div className="vrm-card-actions">
-            <button 
-              className="vrm-btn vrm-btn-sm"
-              onClick={() => setShowAddUser(true)}
-            >
-              Add User
-            </button>
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={loadAdminData}>
-              Refresh
-            </button>
+      {activeTab === 'users' && (
+        <div>
+          <div className="vrm-card" style={{ marginBottom: '24px' }}>
+            <div className="vrm-card-header">
+              <h3 className="vrm-card-title">User Management</h3>
+              <div className="vrm-card-actions">
+                <button className="vrm-btn vrm-btn-sm" onClick={() => setShowAddUser(true)}>
+                  Add User
+                </button>
+              </div>
+            </div>
+            <div className="vrm-card-body" style={{ padding: 0 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="vrm-table">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>CSV URL</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(users).map(([username, user]) => (
+                      <tr key={username}>
+                        <td><code>{username}</code></td>
+                        <td>{user.name}</td>
+                        <td>
+                          <span className={`vrm-status ${user.role === 'admin' ? 'vrm-status-warning' : 'vrm-status-online'}`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.csv_url || '-'}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                              onClick={() => {
+                                setEditingUser(username);
+                                setEditUser({
+                                  password: '',
+                                  name: user.name,
+                                  role: user.role,
+                                  csv_url: user.csv_url || ''
+                                });
+                                setShowEditUser(true);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                              onClick={() => handleDeleteUser(username)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="vrm-card-body" style={{ padding: 0 }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="vrm-table">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>Last Login</th>
-                  <th>Data Source</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(users).map(([username, user]) => (
-                  <tr key={username}>
-                    <td>
-                      <code style={{ 
-                        backgroundColor: 'var(--vrm-bg-tertiary)', 
-                        padding: '2px 6px', 
-                        borderRadius: '3px',
-                        fontSize: '12px'
-                      }}>
-                        {username}
-                      </code>
-                    </td>
-                    <td>{user.name}</td>
-                    <td>
-                      <div className={`vrm-status ${user.role === 'admin' ? 'vrm-status-warning' : 'vrm-status-online'}`}>
-                        <div className="vrm-status-dot"></div>
-                        {user.role}
-                      </div>
-                    </td>
-                    <td>
-                      <span 
-                        title={formatFullTimestamp(user.last_login)}
-                        style={{ 
-                          color: user.last_login ? 'var(--vrm-text-primary)' : 'var(--vrm-text-muted)',
-                          cursor: user.last_login ? 'help' : 'default',
-                          fontSize: '13px'
+
+          {showAddUser && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Add New User</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleAddUser}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Username *
+                      </label>
+                      <input
+                        type="text"
+                        value={newUser.username}
+                        onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Password *
+                      </label>
+                      <input
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Role *
+                      </label>
+                      <select
+                        value={newUser.role}
+                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'client' | 'admin' })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
                         }}
                       >
-                        {formatRelativeTime(user.last_login)}
-                      </span>
-                    </td>
-                    <td>
-                      {user.csv_url ? (
-                        <span style={{ color: 'var(--vrm-text-secondary)', fontSize: '12px' }}>
-                          {user.csv_url.length > 40 ? user.csv_url.substring(0, 40) + '...' : user.csv_url}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--vrm-text-muted)' }}>-</span>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {user.role === 'client' && (
-                          <button 
-                            className="vrm-btn vrm-btn-sm"
-                            onClick={() => viewClientDashboard(username)}
-                            style={{ backgroundColor: 'var(--vrm-accent-blue)' }}
-                          >
-                            View Dashboard
-                          </button>
-                        )}
-                        <button 
-                          className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                          onClick={() => openEditUser(username)}
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                          onClick={() => handleDeleteUser(username)}
-                          style={{ color: 'var(--vrm-accent-red)' }}
-                        >
-                          Delete
-                        </button>
+                        <option value="client">Client</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                    {newUser.role === 'client' && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                          CSV URL
+                        </label>
+                        <input
+                          type="text"
+                          value={newUser.csv_url}
+                          onChange={(e) => setNewUser({ ...newUser, csv_url: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            backgroundColor: 'var(--vrm-bg-tertiary)',
+                            border: '1px solid var(--vrm-border-color)',
+                            borderRadius: '4px',
+                            color: 'var(--vrm-text-primary)'
+                          }}
+                        />
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {showAddUser && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'var(--vrm-bg-secondary)',
-            borderRadius: '8px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '500px',
-            border: '1px solid var(--vrm-border)'
-          }}>
-            <h3 style={{ color: 'var(--vrm-text-primary)', marginBottom: '20px' }}>Add New User</h3>
-            <form onSubmit={handleAddUser}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Username *
-                </label>
-                <input
-                  type="text"
-                  value={newUser.username}
-                  onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Display Name *
-                </label>
-                <input
-                  type="text"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Role *
-                </label>
-                <select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({...newUser, role: e.target.value as 'client' | 'admin'})}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                >
-                  <option value="client">Client</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-
-              {newUser.role === 'client' && (
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                    CSV Data Source URL
-                  </label>
-                  <input
-                    type="url"
-                    value={newUser.csv_url}
-                    onChange={(e) => setNewUser({...newUser, csv_url: e.target.value})}
-                    placeholder="https://example.com/data.csv"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      backgroundColor: 'var(--vrm-bg-tertiary)',
-                      border: '1px solid var(--vrm-border)',
-                      borderRadius: '6px',
-                      color: 'var(--vrm-text-primary)'
-                    }}
-                  />
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => {
+                          setShowAddUser(false);
+                          setNewUser({ username: '', password: '', name: '', role: 'client', csv_url: '' });
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Create User
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-                <button 
-                  type="button"
-                  className="vrm-btn vrm-btn-secondary"
-                  onClick={() => {
-                    setShowAddUser(false);
-                    setNewUser({ username: '', password: '', name: '', role: 'client', csv_url: '' });
-                  }}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="vrm-btn">
-                  Create User
-                </button>
               </div>
-            </form>
-          </div>
+            </div>
+          )}
+
+          {showEditUser && editingUser && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Edit User: {editingUser}</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleEditUser}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editUser.name}
+                        onChange={(e) => setEditUser({ ...editUser, name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        New Password (leave blank to keep current)
+                      </label>
+                      <input
+                        type="password"
+                        value={editUser.password}
+                        onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => {
+                          setShowEditUser(false);
+                          setEditingUser(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Update User
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {showEditUser && editingUser && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'var(--vrm-bg-secondary)',
-            borderRadius: '8px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '500px',
-            border: '1px solid var(--vrm-border)'
-          }}>
-            <h3 style={{ color: 'var(--vrm-text-primary)', marginBottom: '20px' }}>Edit User: {editingUser}</h3>
-            <form onSubmit={handleEditUser}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Display Name *
-                </label>
-                <input
-                  type="text"
-                  value={editUser.name}
-                  onChange={(e) => setEditUser({...editUser, name: e.target.value})}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  New Password (leave empty to keep current)
-                </label>
-                <input
-                  type="password"
-                  value={editUser.password}
-                  onChange={(e) => setEditUser({...editUser, password: e.target.value})}
-                  placeholder="Enter new password or leave empty"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                  Role *
-                </label>
-                <select
-                  value={editUser.role}
-                  onChange={(e) => setEditUser({...editUser, role: e.target.value as 'client' | 'admin'})}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'var(--vrm-bg-tertiary)',
-                    border: '1px solid var(--vrm-border)',
-                    borderRadius: '6px',
-                    color: 'var(--vrm-text-primary)'
-                  }}
-                >
-                  <option value="client">Client</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-
-              {editUser.role === 'client' && (
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                    CSV Data Source URL
-                  </label>
-                  <input
-                    type="url"
-                    value={editUser.csv_url}
-                    onChange={(e) => setEditUser({...editUser, csv_url: e.target.value})}
-                    placeholder="https://example.com/data.csv"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      backgroundColor: 'var(--vrm-bg-tertiary)',
-                      border: '1px solid var(--vrm-border)',
-                      borderRadius: '6px',
-                      color: 'var(--vrm-text-primary)'
-                    }}
-                  />
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-                <button 
-                  type="button"
-                  className="vrm-btn vrm-btn-secondary"
-                  onClick={() => {
-                    setShowEditUser(false);
-                    setEditingUser(null);
-                  }}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="vrm-btn">
-                  Update User
-                </button>
-              </div>
-            </form>
+      {activeTab === 'alarms' && (
+        <div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+              Select Client
+            </label>
+            <select
+              value={selectedClient}
+              onChange={(e) => setSelectedClient(e.target.value)}
+              style={{
+                padding: '8px',
+                backgroundColor: 'var(--vrm-bg-tertiary)',
+                border: '1px solid var(--vrm-border-color)',
+                borderRadius: '4px',
+                color: 'var(--vrm-text-primary)'
+              }}
+            >
+              {clientUsers.map(([username, user]) => (
+                <option key={username} value={username}>
+                  {user.name} ({username})
+                </option>
+              ))}
+            </select>
           </div>
+
+          <div className="vrm-card">
+            <div className="vrm-card-header">
+              <h3 className="vrm-card-title">Alarm Logs for {selectedClient}</h3>
+              <div className="vrm-card-actions">
+                <button
+                  className="vrm-btn vrm-btn-sm"
+                  onClick={() => {
+                    setNewAlarm({
+                      instance: '',
+                      device: '',
+                      description: '',
+                      alarmStartedAt: new Date().toISOString().slice(0, 16),
+                      alarmClearedAfter: '',
+                      severity: 'medium',
+                      client_id: selectedClient
+                    });
+                    setShowAddAlarm(true);
+                  }}
+                >
+                  Add Alarm
+                </button>
+              </div>
+            </div>
+            <div className="vrm-card-body" style={{ padding: 0 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="vrm-table">
+                  <thead>
+                    <tr>
+                      <th>Instance</th>
+                      <th>Device</th>
+                      <th>Description</th>
+                      <th>Started</th>
+                      <th>Cleared</th>
+                      <th>Severity</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {alarms.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--vrm-text-secondary)' }}>
+                          No alarms found for this client
+                        </td>
+                      </tr>
+                    ) : (
+                      alarms.map((alarm) => (
+                        <tr key={alarm.id}>
+                          <td><code>{alarm.instance}</code></td>
+                          <td>{alarm.device}</td>
+                          <td>{alarm.description}</td>
+                          <td>{alarm.alarmStartedAt}</td>
+                          <td>{alarm.alarmClearedAfter || 'Active'}</td>
+                          <td>
+                            <span className={`vrm-status ${
+                              alarm.severity === 'high' ? 'vrm-status-offline' :
+                              alarm.severity === 'medium' ? 'vrm-status-warning' :
+                              'vrm-status-online'
+                            }`}>
+                              {alarm.severity}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                onClick={() => {
+                                  setEditingAlarm(alarm);
+                                  setShowEditAlarm(true);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                onClick={() => handleDeleteAlarm(alarm.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {showAddAlarm && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Add New Alarm</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleAddAlarm}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Instance *
+                      </label>
+                      <input
+                        type="text"
+                        value={newAlarm.instance}
+                        onChange={(e) => setNewAlarm({ ...newAlarm, instance: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Device *
+                      </label>
+                      <input
+                        type="text"
+                        value={newAlarm.device}
+                        onChange={(e) => setNewAlarm({ ...newAlarm, device: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Description *
+                      </label>
+                      <textarea
+                        value={newAlarm.description}
+                        onChange={(e) => setNewAlarm({ ...newAlarm, description: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)',
+                          minHeight: '80px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Severity *
+                      </label>
+                      <select
+                        value={newAlarm.severity}
+                        onChange={(e) => setNewAlarm({ ...newAlarm, severity: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => setShowAddAlarm(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Create Alarm
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showEditAlarm && editingAlarm && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Edit Alarm</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleEditAlarm}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Description
+                      </label>
+                      <textarea
+                        value={editingAlarm.description}
+                        onChange={(e) => setEditingAlarm({ ...editingAlarm, description: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)',
+                          minHeight: '80px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Cleared After (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={editingAlarm.alarmClearedAfter || ''}
+                        onChange={(e) => setEditingAlarm({ ...editingAlarm, alarmClearedAfter: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                        placeholder="e.g., 5m, 10s"
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Severity
+                      </label>
+                      <select
+                        value={editingAlarm.severity}
+                        onChange={(e) => setEditingAlarm({ ...editingAlarm, severity: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => {
+                          setShowEditAlarm(false);
+                          setEditingAlarm(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Update Alarm
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      {activeTab === 'devices' && (
+        <div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+              Select Client
+            </label>
+            <select
+              value={selectedClient}
+              onChange={(e) => setSelectedClient(e.target.value)}
+              style={{
+                padding: '8px',
+                backgroundColor: 'var(--vrm-bg-tertiary)',
+                border: '1px solid var(--vrm-border-color)',
+                borderRadius: '4px',
+                color: 'var(--vrm-text-primary)'
+              }}
+            >
+              {clientUsers.map(([username, user]) => (
+                <option key={username} value={username}>
+                  {user.name} ({username})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="vrm-card">
+            <div className="vrm-card-header">
+              <h3 className="vrm-card-title">Device List for {selectedClient}</h3>
+              <div className="vrm-card-actions">
+                <button
+                  className="vrm-btn vrm-btn-sm"
+                  onClick={() => {
+                    setNewDevice({
+                      name: '',
+                      type: 'Camera',
+                      status: 'online',
+                      lastSeen: new Date().toISOString().slice(0, 16),
+                      dataSource: '',
+                      location: '',
+                      recordCount: 0,
+                      client_id: selectedClient
+                    });
+                    setShowAddDevice(true);
+                  }}
+                >
+                  Add Device
+                </button>
+              </div>
+            </div>
+            <div className="vrm-card-body" style={{ padding: 0 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="vrm-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Location</th>
+                      <th>Last Seen</th>
+                      <th>Records</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {devices.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--vrm-text-secondary)' }}>
+                          No devices found for this client
+                        </td>
+                      </tr>
+                    ) : (
+                      devices.map((device) => (
+                        <tr key={device.id}>
+                          <td>{device.name}</td>
+                          <td>{device.type}</td>
+                          <td>
+                            <span className={`vrm-status ${
+                              device.status === 'online' ? 'vrm-status-online' :
+                              device.status === 'offline' ? 'vrm-status-offline' :
+                              'vrm-status-warning'
+                            }`}>
+                              {device.status}
+                            </span>
+                          </td>
+                          <td>{device.location || '-'}</td>
+                          <td>{device.lastSeen}</td>
+                          <td>{device.recordCount?.toLocaleString() || 0}</td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                onClick={() => {
+                                  setEditingDevice(device);
+                                  setShowEditDevice(true);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                onClick={() => handleDeleteDevice(device.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {showAddDevice && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Add New Device</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleAddDevice}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Device Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newDevice.name}
+                        onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Type *
+                      </label>
+                      <select
+                        value={newDevice.type}
+                        onChange={(e) => setNewDevice({ ...newDevice, type: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      >
+                        <option value="Camera">Camera</option>
+                        <option value="Sensor">Sensor</option>
+                        <option value="Gateway">Gateway</option>
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Status *
+                      </label>
+                      <select
+                        value={newDevice.status}
+                        onChange={(e) => setNewDevice({ ...newDevice, status: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      >
+                        <option value="online">Online</option>
+                        <option value="offline">Offline</option>
+                        <option value="maintenance">Maintenance</option>
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        value={newDevice.location}
+                        onChange={(e) => setNewDevice({ ...newDevice, location: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => setShowAddDevice(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Create Device
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showEditDevice && editingDevice && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Edit Device</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleEditDevice}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Device Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editingDevice.name}
+                        onChange={(e) => setEditingDevice({ ...editingDevice, name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Status
+                      </label>
+                      <select
+                        value={editingDevice.status}
+                        onChange={(e) => setEditingDevice({ ...editingDevice, status: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      >
+                        <option value="online">Online</option>
+                        <option value="offline">Offline</option>
+                        <option value="maintenance">Maintenance</option>
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        value={editingDevice.location || ''}
+                        onChange={(e) => setEditingDevice({ ...editingDevice, location: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => {
+                          setShowEditDevice(false);
+                          setEditingDevice(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Update Device
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
