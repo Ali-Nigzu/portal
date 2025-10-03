@@ -287,9 +287,9 @@ def save_device_lists(device_data: dict):
         json.dump(device_data, f, indent=2)
 
 def create_view_token(client_id: str) -> Dict[str, Any]:
-    """Create a secure temporary view token for a client"""
+    """Create a view token for a client"""
     token = str(uuid.uuid4())
-    expires_at = datetime.now() + timedelta(minutes=5)
+    expires_at = datetime.now() + timedelta(hours=24)
     
     view_tokens[token] = {
         'client_id': client_id,
@@ -319,9 +319,8 @@ def validate_view_token(token: str) -> Optional[Dict[str, Any]]:
     
     token_data['used_count'] += 1
     
-    # Increased limit to accommodate multiple dashboard requests
-    # Main dashboard (6 charts) + Event logs + Alarm logs + Device list + retries
-    if token_data['used_count'] > 100:
+    # Effectively unlimited uses for simplified token management
+    if token_data['used_count'] > 999999:
         del view_tokens[token]
         return None
     

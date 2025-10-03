@@ -56,58 +56,96 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     setSelectedMetrics(prev => ({ ...prev, [metric]: !prev[metric] }));
   };
 
-  const generateSynthesizedMetrics = () => {
+  const generateSynthesizedMetrics = (reportTypeId: string) => {
     const now = new Date();
     const metrics: any = {};
 
+    // Generate data specific to each report type
+    const multipliers: any = {
+      'occupancy-summary': { traffic: 1.2, peak: 1.5, dwell: 1.3 },
+      'traffic-analysis': { traffic: 1.5, flow: 1.8, entries: 1.4 },
+      'demographics-report': { demo: 2.0, age: 1.6, gender: 1.5 },
+      'device-performance': { devices: 1.0, uptime: 1.1, quality: 1.2 }
+    };
+    
+    const mult = multipliers[reportTypeId] || { traffic: 1.0, peak: 1.0, dwell: 1.0 };
+
     if (selectedMetrics.totalTraffic) {
+      const baseValue = reportTypeId === 'traffic-analysis' ? 15000 : 
+                        reportTypeId === 'occupancy-summary' ? 12000 : 8000;
       metrics.totalTraffic = {
-        value: Math.floor(Math.random() * 10000) + 5000,
+        value: Math.floor((Math.random() * 5000 + baseValue) * (mult.traffic || 1)),
         change: (Math.random() * 30 - 10).toFixed(1) + '%',
         label: 'Total Traffic Events'
       };
     }
 
     if (selectedMetrics.peakHours) {
-      const peakHour = Math.floor(Math.random() * 12) + 9;
+      const peakHour = reportTypeId === 'occupancy-summary' ? 
+                       Math.floor(Math.random() * 3) + 14 : 
+                       Math.floor(Math.random() * 12) + 9;
+      const count = reportTypeId === 'traffic-analysis' ? 
+                    Math.floor(Math.random() * 800) + 400 :
+                    Math.floor(Math.random() * 500) + 200;
       metrics.peakHours = {
         time: `${peakHour}:00 - ${peakHour + 1}:00`,
-        count: Math.floor(Math.random() * 500) + 200,
+        count: count,
         label: 'Peak Activity Time'
       };
     }
 
     if (selectedMetrics.demographics) {
+      const maleBase = reportTypeId === 'demographics-report' ? 52 : 48;
+      const femaleBase = reportTypeId === 'demographics-report' ? 48 : 52;
+      const ageGroups = ['18-25', '26-35', '36-45', '46-60'];
+      const ageIndex = reportTypeId === 'demographics-report' ? 1 : Math.floor(Math.random() * 4);
+      
       metrics.demographics = {
-        male: Math.floor(Math.random() * 20) + 40,
-        female: Math.floor(Math.random() * 20) + 40,
-        ageGroup: ['18-25', '26-35', '36-45', '46-60'][Math.floor(Math.random() * 4)],
+        male: Math.floor(Math.random() * 15 + maleBase),
+        female: Math.floor(Math.random() * 15 + femaleBase),
+        ageGroup: ageGroups[ageIndex],
         label: 'Demographics Breakdown'
       };
     }
 
     if (selectedMetrics.entryExit) {
-      const entries = Math.floor(Math.random() * 5000) + 2500;
+      const baseEntries = reportTypeId === 'traffic-analysis' ? 8000 : 3500;
+      const entries = Math.floor(Math.random() * 3000 + baseEntries);
+      const exitRatio = reportTypeId === 'traffic-analysis' ? 0.92 : 0.95;
+      
       metrics.entryExit = {
         entries,
-        exits: Math.floor(entries * (0.9 + Math.random() * 0.2)),
+        exits: Math.floor(entries * (exitRatio + Math.random() * 0.1)),
         label: 'Entry/Exit Analysis'
       };
     }
 
     if (selectedMetrics.dwellTime) {
+      const avgBase = reportTypeId === 'occupancy-summary' ? 25 : 15;
+      const medBase = reportTypeId === 'occupancy-summary' ? 18 : 12;
+      
       metrics.dwellTime = {
-        average: Math.floor(Math.random() * 20) + 10,
-        median: Math.floor(Math.random() * 15) + 8,
+        average: Math.floor(Math.random() * 15 + avgBase),
+        median: Math.floor(Math.random() * 10 + medBase),
         label: 'Average Dwell Time (min)'
       };
     }
 
     if (selectedMetrics.deviceStatus) {
+      const online = reportTypeId === 'device-performance' ? 
+                     Math.floor(Math.random() * 2) + 10 :
+                     Math.floor(Math.random() * 3) + 8;
+      const offline = reportTypeId === 'device-performance' ?
+                      Math.floor(Math.random() * 3) :
+                      Math.floor(Math.random() * 2);
+      const uptime = reportTypeId === 'device-performance' ?
+                     (97 + Math.random() * 2).toFixed(1) :
+                     (95 + Math.random() * 4).toFixed(1);
+      
       metrics.deviceStatus = {
-        online: Math.floor(Math.random() * 3) + 8,
-        offline: Math.floor(Math.random() * 2),
-        uptime: (95 + Math.random() * 4).toFixed(1) + '%',
+        online,
+        offline,
+        uptime: uptime + '%',
         label: 'Device Status'
       };
     }
@@ -120,13 +158,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
 
     try {
       const doc = new jsPDF();
-      const metrics = generateSynthesizedMetrics();
+      const metrics = generateSynthesizedMetrics(reportType);
       const template = reportTemplates.find(t => t.id === reportType);
       
       // Header
       doc.setFontSize(24);
       doc.setTextColor(33, 150, 243);
-      doc.text('Nigzsu Analytics', 105, 20, { align: 'center' });
+      doc.text('Nigzsu', 105, 20, { align: 'center' });
       
       // Report Title
       doc.setFontSize(18);
@@ -144,20 +182,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       doc.line(20, 52, 190, 52);
       
       let yPos = 62;
-      
-      // Executive Summary
-      doc.setFontSize(14);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Executive Summary', 20, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(60, 60, 60);
-      const summaryText = `This ${template?.type.toLowerCase()} provides comprehensive insights into business operations ` +
-        `for the period ${timePeriod.replace('-', ' ')}. Key metrics have been analyzed to identify trends and patterns.`;
-      const splitSummary = doc.splitTextToSize(summaryText, 170);
-      doc.text(splitSummary, 20, yPos);
-      yPos += splitSummary.length * 5 + 10;
       
       // Key Metrics Section
       doc.setFontSize(14);
@@ -217,37 +241,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         yPos += 3;
       });
       
-      // Recommendations section
-      if (yPos > 240) {
-        doc.addPage();
-        yPos = 20;
-      }
-      
-      yPos += 5;
-      doc.setFontSize(14);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Recommendations', 20, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(60, 60, 60);
-      const recommendations = [
-        'Monitor peak hours to optimize staff allocation and resource management',
-        'Analyze demographic patterns for targeted marketing and service improvements',
-        'Review entry/exit patterns to improve traffic flow and customer experience',
-        'Maintain regular device monitoring to ensure data quality and system reliability'
-      ];
-      
-      recommendations.forEach(rec => {
-        if (yPos > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
-        const splitRec = doc.splitTextToSize(`• ${rec}`, 165);
-        doc.text(splitRec, 25, yPos);
-        yPos += splitRec.length * 5 + 3;
-      });
-      
       // Footer
       const pageCount = doc.internal.pages.length - 1;
       for (let i = 1; i <= pageCount; i++) {
@@ -293,7 +286,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       </div>
 
       {/* Quick Stats */}
-      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
+      <div className="vrm-grid vrm-grid-3" style={{ marginBottom: '24px' }}>
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-blue)', marginBottom: '8px' }}>
@@ -309,15 +302,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
               {Object.values(selectedMetrics).filter(Boolean).length}
             </div>
             <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Selected Metrics</p>
-          </div>
-        </div>
-
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-green)', marginBottom: '8px' }}>
-              ✓
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Ready to Generate</p>
           </div>
         </div>
 
