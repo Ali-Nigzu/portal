@@ -36,16 +36,21 @@ Preferred communication style: Simple, everyday language.
 - **Simplified token security**: 24-hour expiry (up from 5 minutes) and 999,999 usage limit (up from 100) for uninterrupted admin viewing
 
 ### Reports System Implementation (October 3, 2025)
-- Functional PDF export with jsPDF library
-- Report-type-specific data generation:
-  - Occupancy Summary: Higher dwell times (25-40min), afternoon peak hours
-  - Traffic Analysis: Highest traffic counts (15k-20k), high entry/exit volumes
-  - Demographics Report: Balanced demographics, consistent age groups
-  - Device Performance: More devices, higher uptime percentages
-- Controllable metric selection with toggle checkboxes
-- Streamlined UI with 3-card stats (removed "Ready to Generate" card)
-- Clean PDF branding showing "Nigzsu" (removed "Analytics")
-- Simplified PDF structure: Title → Key Metrics → Footer (removed Executive Summary and Recommendations)
+- Complete redesign with unique metrics per report type (not shared metrics with different values)
+- Four distinct report types with specific metrics:
+  - **Occupancy Summary**: Current occupancy, capacity utilization, average dwell time, peak times, floor utilization, hourly patterns
+  - **Traffic Flow Analysis**: Total entries/exits, peak flow times and rates, average flow rate, congestion points, hourly flow patterns
+  - **Demographics Report**: Total visitors, gender distribution, age distribution, visitor profiles, dynamically calculated peak demographic
+  - **Device Performance**: Total/online/offline devices (consistent counts), uptime, data quality, device status table, maintenance alerts and schedules
+- Export functionality in three formats:
+  - **PDF Export**: Using jsPDF library with clean Nigzsu branding
+  - **Excel Export**: Using xlsx library with proper worksheet structure
+  - **CSV Export**: Custom generation with proper formatting
+- Data consistency improvements:
+  - Demographics: Peak demographic calculated dynamically from actual age distribution
+  - Device Performance: Online + offline = total devices, device status table matches claimed total
+- Streamlined UI with 3-card stats showing report type, format, and time period
+- Professional PDF structure: Title → Key Metrics → Footer
 
 ### Admin Experience Improvements (October 1, 2025)
 - Fixed admin default route to land on /admin page instead of client dashboard
