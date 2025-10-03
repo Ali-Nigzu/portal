@@ -43,6 +43,7 @@ Preferred communication style: Simple, everyday language.
   - View token session: Closes admin-opened tab or redirects to home
 - **Security**: Session data cleared on logout and when browser tab closes
 - **Admin View Navigation**: When viewing client dashboard via "View Dashboard" button, client navigation menu now displays properly, enabling access to all client pages (Event Logs, Alarm Logs, Device List, Analytics, Reports)
+- **Enhanced Sidebar Toggle**: Improved collapse/expand functionality with larger hamburger menu icon (40x40), better visibility, and consistent behavior across all user scenarios
 
 ### Reports System Implementation (October 3, 2025)
 - Complete redesign with unique metrics per report type (not shared metrics with different values)
