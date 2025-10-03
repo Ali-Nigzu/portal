@@ -454,14 +454,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         yPos += 6;
         doc.text(`Average Dwell Time: ${d.averageDwellTime} minutes`, 25, yPos);
         yPos += 6;
-        doc.text(`Peak Occupancy Time: ${d.peakOccupancyTime} (${d.peakOccupancyCount} events)`, 25, yPos);
+        doc.text(`Peak Occupancy Time: ${d.peakOccupancyTime} (${d.peakOccupancyCount} occupancy)`, 25, yPos);
         yPos += 10;
         
         if (d.hourlyOccupancy && d.hourlyOccupancy.length > 0) {
           doc.text('Hourly Occupancy Patterns:', 25, yPos);
           yPos += 6;
           d.hourlyOccupancy.slice(0, 15).forEach((item: any) => {
-            doc.text(`  ${item.hour}: ${item.count} events`, 30, yPos);
+            doc.text(`  ${item.hour}: ${item.count} occupancy`, 30, yPos);
             yPos += 5;
           });
         }
@@ -562,7 +562,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ['Peak Occupancy Count', d.peakOccupancyCount],
           [],
           ['Hourly Occupancy'],
-          ['Hour', 'Count'],
+          ['Hour', 'Occupancy'],
           ...d.hourlyOccupancy.map((item: any) => [item.hour, item.count])
         ];
       } else if (reportType === 'traffic-analysis') {
@@ -650,7 +650,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         csvContent += `Average Dwell Time,${d.averageDwellTime} minutes\n`;
         csvContent += `Peak Occupancy Time,${d.peakOccupancyTime}\n`;
         csvContent += `Peak Occupancy Count,${d.peakOccupancyCount}\n\n`;
-        csvContent += `Hourly Occupancy\nHour,Count\n`;
+        csvContent += `Hourly Occupancy\nHour,Occupancy\n`;
         d.hourlyOccupancy.forEach((item: any) => {
           csvContent += `${item.hour},${item.count}\n`;
         });
