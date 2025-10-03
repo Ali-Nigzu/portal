@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 interface ReportsPageProps {
   credentials?: { username: string; password: string };
@@ -10,16 +11,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
   const [timePeriod, setTimePeriod] = useState('last-7-days');
   const [format, setFormat] = useState('pdf');
   const [isGenerating, setIsGenerating] = useState(false);
-  
-  // Controllable metrics
-  const [selectedMetrics, setSelectedMetrics] = useState({
-    totalTraffic: true,
-    peakHours: true,
-    demographics: true,
-    entryExit: true,
-    dwellTime: true,
-    deviceStatus: false
-  });
 
   const reportTemplates = [
     {
@@ -52,105 +43,137 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     }
   ];
 
-  const toggleMetric = (metric: keyof typeof selectedMetrics) => {
-    setSelectedMetrics(prev => ({ ...prev, [metric]: !prev[metric] }));
+  const generateOccupancyData = () => {
+    return {
+      currentOccupancy: Math.floor(Math.random() * 200) + 200,
+      maxCapacity: 500,
+      occupancyRate: (Math.random() * 30 + 50).toFixed(1) + '%',
+      averageDwellTime: Math.floor(Math.random() * 20) + 25,
+      peakOccupancyTime: `${Math.floor(Math.random() * 3) + 14}:00`,
+      peakOccupancyCount: Math.floor(Math.random() * 100) + 380,
+      floorUtilization: {
+        floor1: (Math.random() * 20 + 70).toFixed(1) + '%',
+        floor2: (Math.random() * 20 + 60).toFixed(1) + '%',
+        floor3: (Math.random() * 20 + 50).toFixed(1) + '%'
+      },
+      hourlyOccupancy: [
+        { hour: '09:00', count: Math.floor(Math.random() * 100) + 150 },
+        { hour: '12:00', count: Math.floor(Math.random() * 100) + 300 },
+        { hour: '15:00', count: Math.floor(Math.random() * 100) + 350 },
+        { hour: '18:00', count: Math.floor(Math.random() * 100) + 200 }
+      ]
+    };
   };
 
-  const generateSynthesizedMetrics = (reportTypeId: string) => {
-    const now = new Date();
-    const metrics: any = {};
+  const generateTrafficData = () => {
+    return {
+      totalEntries: Math.floor(Math.random() * 3000) + 8000,
+      totalExits: Math.floor(Math.random() * 3000) + 7800,
+      peakFlowTime: `${Math.floor(Math.random() * 3) + 12}:00`,
+      peakFlowRate: Math.floor(Math.random() * 200) + 450,
+      averageFlowRate: Math.floor(Math.random() * 100) + 180,
+      congestionPoints: [
+        { location: 'Main Entrance', congestion: (Math.random() * 20 + 70).toFixed(1) + '%' },
+        { location: 'Elevator Lobby', congestion: (Math.random() * 20 + 60).toFixed(1) + '%' },
+        { location: 'Exit Gates', congestion: (Math.random() * 20 + 50).toFixed(1) + '%' }
+      ],
+      flowByHour: [
+        { hour: '09:00', entries: Math.floor(Math.random() * 200) + 600 },
+        { hour: '12:00', entries: Math.floor(Math.random() * 200) + 800 },
+        { hour: '15:00', entries: Math.floor(Math.random() * 200) + 750 },
+        { hour: '18:00', entries: Math.floor(Math.random() * 200) + 650 }
+      ]
+    };
+  };
 
-    // Generate data specific to each report type
-    const multipliers: any = {
-      'occupancy-summary': { traffic: 1.2, peak: 1.5, dwell: 1.3 },
-      'traffic-analysis': { traffic: 1.5, flow: 1.8, entries: 1.4 },
-      'demographics-report': { demo: 2.0, age: 1.6, gender: 1.5 },
-      'device-performance': { devices: 1.0, uptime: 1.1, quality: 1.2 }
+  const generateDemographicsData = () => {
+    const ageData = {
+      '18-25': Math.random() * 10 + 20,
+      '26-35': Math.random() * 10 + 30,
+      '36-45': Math.random() * 10 + 25,
+      '46-60': Math.random() * 10 + 15,
+      '60+': Math.random() * 5 + 8
     };
     
-    const mult = multipliers[reportTypeId] || { traffic: 1.0, peak: 1.0, dwell: 1.0 };
+    let peakAge = '26-35';
+    let maxValue = ageData['26-35'];
+    Object.entries(ageData).forEach(([age, value]) => {
+      if (value > maxValue) {
+        maxValue = value;
+        peakAge = age;
+      }
+    });
+    
+    return {
+      totalVisitors: Math.floor(Math.random() * 5000) + 10000,
+      genderDistribution: {
+        male: (Math.random() * 10 + 48).toFixed(1) + '%',
+        female: (Math.random() * 10 + 48).toFixed(1) + '%',
+        unidentified: (Math.random() * 5 + 2).toFixed(1) + '%'
+      },
+      ageDistribution: {
+        '18-25': ageData['18-25'].toFixed(1) + '%',
+        '26-35': ageData['26-35'].toFixed(1) + '%',
+        '36-45': ageData['36-45'].toFixed(1) + '%',
+        '46-60': ageData['46-60'].toFixed(1) + '%',
+        '60+': ageData['60+'].toFixed(1) + '%'
+      },
+      visitorProfiles: [
+        { profile: 'Regular Customers', percentage: (Math.random() * 10 + 35).toFixed(1) + '%' },
+        { profile: 'First-time Visitors', percentage: (Math.random() * 10 + 25).toFixed(1) + '%' },
+        { profile: 'Occasional Visitors', percentage: (Math.random() * 10 + 30).toFixed(1) + '%' }
+      ],
+      peakDemographic: `${peakAge} age group`
+    };
+  };
 
-    if (selectedMetrics.totalTraffic) {
-      const baseValue = reportTypeId === 'traffic-analysis' ? 15000 : 
-                        reportTypeId === 'occupancy-summary' ? 12000 : 8000;
-      metrics.totalTraffic = {
-        value: Math.floor((Math.random() * 5000 + baseValue) * (mult.traffic || 1)),
-        change: (Math.random() * 30 - 10).toFixed(1) + '%',
-        label: 'Total Traffic Events'
-      };
-    }
-
-    if (selectedMetrics.peakHours) {
-      const peakHour = reportTypeId === 'occupancy-summary' ? 
-                       Math.floor(Math.random() * 3) + 14 : 
-                       Math.floor(Math.random() * 12) + 9;
-      const count = reportTypeId === 'traffic-analysis' ? 
-                    Math.floor(Math.random() * 800) + 400 :
-                    Math.floor(Math.random() * 500) + 200;
-      metrics.peakHours = {
-        time: `${peakHour}:00 - ${peakHour + 1}:00`,
-        count: count,
-        label: 'Peak Activity Time'
-      };
-    }
-
-    if (selectedMetrics.demographics) {
-      const maleBase = reportTypeId === 'demographics-report' ? 52 : 48;
-      const femaleBase = reportTypeId === 'demographics-report' ? 48 : 52;
-      const ageGroups = ['18-25', '26-35', '36-45', '46-60'];
-      const ageIndex = reportTypeId === 'demographics-report' ? 1 : Math.floor(Math.random() * 4);
+  const generateDeviceData = () => {
+    const totalDevices = Math.floor(Math.random() * 3) + 12;
+    const offlineDevices = Math.floor(Math.random() * 2);
+    const onlineDevices = totalDevices - offlineDevices;
+    
+    const deviceStatus = [];
+    const qualities = ['Excellent', 'Good', 'Fair'];
+    
+    for (let i = 1; i <= totalDevices; i++) {
+      const isOnline = i <= onlineDevices;
+      const uptime = isOnline ? (95 + Math.random() * 4).toFixed(1) : (50 + Math.random() * 30).toFixed(1);
+      const quality = isOnline ? qualities[Math.floor(Math.random() * 2)] : 'Poor';
       
-      metrics.demographics = {
-        male: Math.floor(Math.random() * 15 + maleBase),
-        female: Math.floor(Math.random() * 15 + femaleBase),
-        ageGroup: ageGroups[ageIndex],
-        label: 'Demographics Breakdown'
-      };
-    }
-
-    if (selectedMetrics.entryExit) {
-      const baseEntries = reportTypeId === 'traffic-analysis' ? 8000 : 3500;
-      const entries = Math.floor(Math.random() * 3000 + baseEntries);
-      const exitRatio = reportTypeId === 'traffic-analysis' ? 0.92 : 0.95;
-      
-      metrics.entryExit = {
-        entries,
-        exits: Math.floor(entries * (exitRatio + Math.random() * 0.1)),
-        label: 'Entry/Exit Analysis'
-      };
-    }
-
-    if (selectedMetrics.dwellTime) {
-      const avgBase = reportTypeId === 'occupancy-summary' ? 25 : 15;
-      const medBase = reportTypeId === 'occupancy-summary' ? 18 : 12;
-      
-      metrics.dwellTime = {
-        average: Math.floor(Math.random() * 15 + avgBase),
-        median: Math.floor(Math.random() * 10 + medBase),
-        label: 'Average Dwell Time (min)'
-      };
-    }
-
-    if (selectedMetrics.deviceStatus) {
-      const online = reportTypeId === 'device-performance' ? 
-                     Math.floor(Math.random() * 2) + 10 :
-                     Math.floor(Math.random() * 3) + 8;
-      const offline = reportTypeId === 'device-performance' ?
-                      Math.floor(Math.random() * 3) :
-                      Math.floor(Math.random() * 2);
-      const uptime = reportTypeId === 'device-performance' ?
-                     (97 + Math.random() * 2).toFixed(1) :
-                     (95 + Math.random() * 4).toFixed(1);
-      
-      metrics.deviceStatus = {
-        online,
-        offline,
+      deviceStatus.push({
+        device: `Camera-${i.toString().padStart(2, '0')}`,
+        status: isOnline ? 'Online' : 'Offline',
         uptime: uptime + '%',
-        label: 'Device Status'
-      };
+        quality: quality
+      });
     }
+    
+    return {
+      totalDevices,
+      onlineDevices,
+      offlineDevices,
+      averageUptime: (97 + Math.random() * 2).toFixed(2) + '%',
+      dataQuality: (92 + Math.random() * 6).toFixed(1) + '%',
+      deviceStatus,
+      maintenanceAlerts: Math.floor(Math.random() * 3),
+      lastMaintenance: '2 days ago',
+      nextScheduledMaintenance: '5 days'
+    };
+  };
 
-    return metrics;
+  const getReportData = (reportTypeId: string) => {
+    switch (reportTypeId) {
+      case 'occupancy-summary':
+        return generateOccupancyData();
+      case 'traffic-analysis':
+        return generateTrafficData();
+      case 'demographics-report':
+        return generateDemographicsData();
+      case 'device-performance':
+        return generateDeviceData();
+      default:
+        return {};
+    }
   };
 
   const generatePDFReport = () => {
@@ -158,7 +181,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
 
     try {
       const doc = new jsPDF();
-      const metrics = generateSynthesizedMetrics(reportType);
+      const data = getReportData(reportType);
       const template = reportTemplates.find(t => t.id === reportType);
       
       // Header
@@ -183,63 +206,118 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       
       let yPos = 62;
       
-      // Key Metrics Section
+      // Report-specific content
       doc.setFontSize(14);
       doc.setTextColor(0, 0, 0);
       doc.text('Key Metrics', 20, yPos);
       yPos += 10;
       
-      // Display selected metrics
-      Object.entries(metrics).forEach(([key, data]: [string, any]) => {
-        if (yPos > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+
+      if (reportType === 'occupancy-summary') {
+        const d: any = data;
+        doc.text(`Current Occupancy: ${d.currentOccupancy} / ${d.maxCapacity} (${d.occupancyRate})`, 25, yPos);
+        yPos += 6;
+        doc.text(`Average Dwell Time: ${d.averageDwellTime} minutes`, 25, yPos);
+        yPos += 6;
+        doc.text(`Peak Occupancy Time: ${d.peakOccupancyTime} (${d.peakOccupancyCount} people)`, 25, yPos);
+        yPos += 10;
         
-        doc.setFontSize(12);
-        doc.setTextColor(33, 150, 243);
-        doc.text(`• ${data.label}`, 25, yPos);
-        yPos += 7;
+        doc.text('Floor Utilization:', 25, yPos);
+        yPos += 6;
+        doc.text(`  Floor 1: ${d.floorUtilization.floor1}`, 30, yPos);
+        yPos += 5;
+        doc.text(`  Floor 2: ${d.floorUtilization.floor2}`, 30, yPos);
+        yPos += 5;
+        doc.text(`  Floor 3: ${d.floorUtilization.floor3}`, 30, yPos);
+        yPos += 10;
         
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
+        doc.text('Hourly Occupancy Patterns:', 25, yPos);
+        yPos += 6;
+        d.hourlyOccupancy.forEach((item: any) => {
+          doc.text(`  ${item.hour}: ${item.count} people`, 30, yPos);
+          yPos += 5;
+        });
+      } else if (reportType === 'traffic-analysis') {
+        const d: any = data;
+        doc.text(`Total Entries: ${d.totalEntries.toLocaleString()}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Total Exits: ${d.totalExits.toLocaleString()}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Peak Flow Time: ${d.peakFlowTime} (${d.peakFlowRate} people/hour)`, 25, yPos);
+        yPos += 6;
+        doc.text(`Average Flow Rate: ${d.averageFlowRate} people/hour`, 25, yPos);
+        yPos += 10;
         
-        if (data.value !== undefined) {
-          doc.text(`   ${data.value.toLocaleString()} (${data.change} vs. previous period)`, 25, yPos);
-          yPos += 6;
-        }
+        doc.text('Congestion Points:', 25, yPos);
+        yPos += 6;
+        d.congestionPoints.forEach((item: any) => {
+          doc.text(`  ${item.location}: ${item.congestion}`, 30, yPos);
+          yPos += 5;
+        });
+        yPos += 5;
         
-        if (data.time) {
-          doc.text(`   Peak Time: ${data.time}`, 25, yPos);
-          yPos += 6;
-          doc.text(`   Peak Count: ${data.count.toLocaleString()} events`, 25, yPos);
-          yPos += 6;
-        }
+        doc.text('Flow by Hour:', 25, yPos);
+        yPos += 6;
+        d.flowByHour.forEach((item: any) => {
+          doc.text(`  ${item.hour}: ${item.entries} entries`, 30, yPos);
+          yPos += 5;
+        });
+      } else if (reportType === 'demographics-report') {
+        const d: any = data;
+        doc.text(`Total Visitors: ${d.totalVisitors.toLocaleString()}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Peak Demographic: ${d.peakDemographic}`, 25, yPos);
+        yPos += 10;
         
-        if (data.male !== undefined) {
-          doc.text(`   Male: ${data.male}% | Female: ${data.female}%`, 25, yPos);
-          yPos += 6;
-          doc.text(`   Dominant Age Group: ${data.ageGroup}`, 25, yPos);
-          yPos += 6;
-        }
+        doc.text('Gender Distribution:', 25, yPos);
+        yPos += 6;
+        doc.text(`  Male: ${d.genderDistribution.male}`, 30, yPos);
+        yPos += 5;
+        doc.text(`  Female: ${d.genderDistribution.female}`, 30, yPos);
+        yPos += 5;
+        doc.text(`  Unidentified: ${d.genderDistribution.unidentified}`, 30, yPos);
+        yPos += 10;
         
-        if (data.entries !== undefined) {
-          doc.text(`   Entries: ${data.entries.toLocaleString()} | Exits: ${data.exits.toLocaleString()}`, 25, yPos);
-          yPos += 6;
-        }
+        doc.text('Age Distribution:', 25, yPos);
+        yPos += 6;
+        Object.entries(d.ageDistribution).forEach(([age, pct]) => {
+          doc.text(`  ${age}: ${pct}`, 30, yPos);
+          yPos += 5;
+        });
+        yPos += 5;
         
-        if (data.average !== undefined) {
-          doc.text(`   Average: ${data.average} min | Median: ${data.median} min`, 25, yPos);
-          yPos += 6;
-        }
+        doc.text('Visitor Profiles:', 25, yPos);
+        yPos += 6;
+        d.visitorProfiles.forEach((item: any) => {
+          doc.text(`  ${item.profile}: ${item.percentage}`, 30, yPos);
+          yPos += 5;
+        });
+      } else if (reportType === 'device-performance') {
+        const d: any = data;
+        doc.text(`Total Devices: ${d.totalDevices}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Online: ${d.onlineDevices} | Offline: ${d.offlineDevices}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Average Uptime: ${d.averageUptime}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Data Quality: ${d.dataQuality}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Maintenance Alerts: ${d.maintenanceAlerts}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Last Maintenance: ${d.lastMaintenance}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Next Scheduled: ${d.nextScheduledMaintenance}`, 25, yPos);
+        yPos += 10;
         
-        if (data.online !== undefined) {
-          doc.text(`   Online: ${data.online} | Offline: ${data.offline} | Uptime: ${data.uptime}`, 25, yPos);
-          yPos += 6;
-        }
-        
-        yPos += 3;
-      });
+        doc.text('Device Status:', 25, yPos);
+        yPos += 6;
+        d.deviceStatus.forEach((item: any) => {
+          doc.text(`  ${item.device}: ${item.status} | Uptime: ${item.uptime} | Quality: ${item.quality}`, 30, yPos);
+          yPos += 5;
+        });
+      }
       
       // Footer
       const pageCount = doc.internal.pages.length - 1;
@@ -263,11 +341,233 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     }
   };
 
+  const generateExcelReport = () => {
+    setIsGenerating(true);
+
+    try {
+      const data = getReportData(reportType);
+      const template = reportTemplates.find(t => t.id === reportType);
+      
+      let worksheetData: any[] = [];
+
+      if (reportType === 'occupancy-summary') {
+        const d: any = data;
+        worksheetData = [
+          ['Occupancy Summary Report'],
+          ['Generated:', new Date().toLocaleString()],
+          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
+          [],
+          ['Metric', 'Value'],
+          ['Current Occupancy', `${d.currentOccupancy} / ${d.maxCapacity}`],
+          ['Occupancy Rate', d.occupancyRate],
+          ['Average Dwell Time', `${d.averageDwellTime} minutes`],
+          ['Peak Occupancy Time', d.peakOccupancyTime],
+          ['Peak Occupancy Count', d.peakOccupancyCount],
+          [],
+          ['Floor Utilization'],
+          ['Floor 1', d.floorUtilization.floor1],
+          ['Floor 2', d.floorUtilization.floor2],
+          ['Floor 3', d.floorUtilization.floor3],
+          [],
+          ['Hourly Occupancy'],
+          ['Hour', 'Count'],
+          ...d.hourlyOccupancy.map((item: any) => [item.hour, item.count])
+        ];
+      } else if (reportType === 'traffic-analysis') {
+        const d: any = data;
+        worksheetData = [
+          ['Traffic Flow Analysis Report'],
+          ['Generated:', new Date().toLocaleString()],
+          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
+          [],
+          ['Metric', 'Value'],
+          ['Total Entries', d.totalEntries],
+          ['Total Exits', d.totalExits],
+          ['Peak Flow Time', d.peakFlowTime],
+          ['Peak Flow Rate', `${d.peakFlowRate} people/hour`],
+          ['Average Flow Rate', `${d.averageFlowRate} people/hour`],
+          [],
+          ['Congestion Points'],
+          ['Location', 'Congestion Level'],
+          ...d.congestionPoints.map((item: any) => [item.location, item.congestion]),
+          [],
+          ['Flow by Hour'],
+          ['Hour', 'Entries'],
+          ...d.flowByHour.map((item: any) => [item.hour, item.entries])
+        ];
+      } else if (reportType === 'demographics-report') {
+        const d: any = data;
+        worksheetData = [
+          ['Demographics Report'],
+          ['Generated:', new Date().toLocaleString()],
+          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
+          [],
+          ['Metric', 'Value'],
+          ['Total Visitors', d.totalVisitors],
+          ['Peak Demographic', d.peakDemographic],
+          [],
+          ['Gender Distribution'],
+          ['Male', d.genderDistribution.male],
+          ['Female', d.genderDistribution.female],
+          ['Unidentified', d.genderDistribution.unidentified],
+          [],
+          ['Age Distribution'],
+          ...Object.entries(d.ageDistribution).map(([age, pct]) => [age, pct]),
+          [],
+          ['Visitor Profiles'],
+          ['Profile', 'Percentage'],
+          ...d.visitorProfiles.map((item: any) => [item.profile, item.percentage])
+        ];
+      } else if (reportType === 'device-performance') {
+        const d: any = data;
+        worksheetData = [
+          ['Device Performance Report'],
+          ['Generated:', new Date().toLocaleString()],
+          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
+          [],
+          ['Metric', 'Value'],
+          ['Total Devices', d.totalDevices],
+          ['Online Devices', d.onlineDevices],
+          ['Offline Devices', d.offlineDevices],
+          ['Average Uptime', d.averageUptime],
+          ['Data Quality', d.dataQuality],
+          ['Maintenance Alerts', d.maintenanceAlerts],
+          ['Last Maintenance', d.lastMaintenance],
+          ['Next Scheduled Maintenance', d.nextScheduledMaintenance],
+          [],
+          ['Device Status'],
+          ['Device', 'Status', 'Uptime', 'Quality'],
+          ...d.deviceStatus.map((item: any) => [item.device, item.status, item.uptime, item.quality])
+        ];
+      }
+
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+
+      const filename = `${template?.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+
+    } catch (error) {
+      console.error('Error generating Excel:', error);
+      alert('Failed to generate Excel report');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const generateCSVReport = () => {
+    setIsGenerating(true);
+
+    try {
+      const data = getReportData(reportType);
+      const template = reportTemplates.find(t => t.id === reportType);
+      
+      let csvContent = '';
+
+      if (reportType === 'occupancy-summary') {
+        const d: any = data;
+        csvContent = `Occupancy Summary Report\n`;
+        csvContent += `Generated,${new Date().toLocaleString()}\n`;
+        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
+        csvContent += `Metric,Value\n`;
+        csvContent += `Current Occupancy,"${d.currentOccupancy} / ${d.maxCapacity}"\n`;
+        csvContent += `Occupancy Rate,${d.occupancyRate}\n`;
+        csvContent += `Average Dwell Time,${d.averageDwellTime} minutes\n`;
+        csvContent += `Peak Occupancy Time,${d.peakOccupancyTime}\n`;
+        csvContent += `Peak Occupancy Count,${d.peakOccupancyCount}\n\n`;
+        csvContent += `Floor Utilization\n`;
+        csvContent += `Floor 1,${d.floorUtilization.floor1}\n`;
+        csvContent += `Floor 2,${d.floorUtilization.floor2}\n`;
+        csvContent += `Floor 3,${d.floorUtilization.floor3}\n\n`;
+        csvContent += `Hourly Occupancy\nHour,Count\n`;
+        d.hourlyOccupancy.forEach((item: any) => {
+          csvContent += `${item.hour},${item.count}\n`;
+        });
+      } else if (reportType === 'traffic-analysis') {
+        const d: any = data;
+        csvContent = `Traffic Flow Analysis Report\n`;
+        csvContent += `Generated,${new Date().toLocaleString()}\n`;
+        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
+        csvContent += `Metric,Value\n`;
+        csvContent += `Total Entries,${d.totalEntries}\n`;
+        csvContent += `Total Exits,${d.totalExits}\n`;
+        csvContent += `Peak Flow Time,${d.peakFlowTime}\n`;
+        csvContent += `Peak Flow Rate,${d.peakFlowRate} people/hour\n`;
+        csvContent += `Average Flow Rate,${d.averageFlowRate} people/hour\n\n`;
+        csvContent += `Congestion Points\nLocation,Congestion Level\n`;
+        d.congestionPoints.forEach((item: any) => {
+          csvContent += `${item.location},${item.congestion}\n`;
+        });
+        csvContent += `\nFlow by Hour\nHour,Entries\n`;
+        d.flowByHour.forEach((item: any) => {
+          csvContent += `${item.hour},${item.entries}\n`;
+        });
+      } else if (reportType === 'demographics-report') {
+        const d: any = data;
+        csvContent = `Demographics Report\n`;
+        csvContent += `Generated,${new Date().toLocaleString()}\n`;
+        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
+        csvContent += `Metric,Value\n`;
+        csvContent += `Total Visitors,${d.totalVisitors}\n`;
+        csvContent += `Peak Demographic,${d.peakDemographic}\n\n`;
+        csvContent += `Gender Distribution\n`;
+        csvContent += `Male,${d.genderDistribution.male}\n`;
+        csvContent += `Female,${d.genderDistribution.female}\n`;
+        csvContent += `Unidentified,${d.genderDistribution.unidentified}\n\n`;
+        csvContent += `Age Distribution\nAge Group,Percentage\n`;
+        Object.entries(d.ageDistribution).forEach(([age, pct]) => {
+          csvContent += `${age},${pct}\n`;
+        });
+        csvContent += `\nVisitor Profiles\nProfile,Percentage\n`;
+        d.visitorProfiles.forEach((item: any) => {
+          csvContent += `${item.profile},${item.percentage}\n`;
+        });
+      } else if (reportType === 'device-performance') {
+        const d: any = data;
+        csvContent = `Device Performance Report\n`;
+        csvContent += `Generated,${new Date().toLocaleString()}\n`;
+        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
+        csvContent += `Metric,Value\n`;
+        csvContent += `Total Devices,${d.totalDevices}\n`;
+        csvContent += `Online Devices,${d.onlineDevices}\n`;
+        csvContent += `Offline Devices,${d.offlineDevices}\n`;
+        csvContent += `Average Uptime,${d.averageUptime}\n`;
+        csvContent += `Data Quality,${d.dataQuality}\n`;
+        csvContent += `Maintenance Alerts,${d.maintenanceAlerts}\n`;
+        csvContent += `Last Maintenance,${d.lastMaintenance}\n`;
+        csvContent += `Next Scheduled Maintenance,${d.nextScheduledMaintenance}\n\n`;
+        csvContent += `Device Status\nDevice,Status,Uptime,Quality\n`;
+        d.deviceStatus.forEach((item: any) => {
+          csvContent += `${item.device},${item.status},${item.uptime},${item.quality}\n`;
+        });
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${template?.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (error) {
+      console.error('Error generating CSV:', error);
+      alert('Failed to generate CSV report');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleGenerateReport = () => {
     if (format === 'pdf') {
       generatePDFReport();
-    } else {
-      alert(`${format.toUpperCase()} export coming soon!`);
+    } else if (format === 'excel') {
+      generateExcelReport();
+    } else if (format === 'csv') {
+      generateCSVReport();
     }
   };
 
@@ -299,60 +599,18 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-teal)', marginBottom: '8px' }}>
-              {Object.values(selectedMetrics).filter(Boolean).length}
+              {format.toUpperCase()}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Selected Metrics</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Export Format</p>
           </div>
         </div>
 
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-purple)', marginBottom: '8px' }}>
-              PDF
+              {timePeriod.split('-').length}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Export Format</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Metric Selector */}
-      <div className="vrm-card" style={{ marginBottom: '24px' }}>
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Select Metrics to Include</h3>
-        </div>
-        <div className="vrm-card-body">
-          <div className="vrm-grid vrm-grid-3">
-            {Object.entries(selectedMetrics).map(([key, value]) => (
-              <div 
-                key={key}
-                onClick={() => toggleMetric(key as keyof typeof selectedMetrics)}
-                style={{ 
-                  padding: '12px 16px',
-                  backgroundColor: value ? 'var(--vrm-accent-blue)' : 'var(--vrm-bg-tertiary)',
-                  border: `1px solid ${value ? 'var(--vrm-accent-blue)' : 'var(--vrm-border)'}`,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}
-              >
-                <input 
-                  type="checkbox" 
-                  checked={value} 
-                  onChange={() => {}}
-                  style={{ cursor: 'pointer' }}
-                />
-                <span style={{ 
-                  color: value ? '#fff' : 'var(--vrm-text-primary)',
-                  fontSize: '14px',
-                  fontWeight: value ? '600' : '400'
-                }}>
-                  {key.replace(/([A-Z])/g, ' $1').trim().replace(/^./, str => str.toUpperCase())}
-                </span>
-              </div>
-            ))}
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Time Period</p>
           </div>
         </div>
       </div>
@@ -438,19 +696,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
               className="vrm-btn" 
               style={{ flex: 1 }}
               onClick={handleGenerateReport}
-              disabled={isGenerating || Object.values(selectedMetrics).every(v => !v)}
+              disabled={isGenerating}
             >
               {isGenerating ? 'Generating...' : 'Generate & Download Report'}
-            </button>
-            <button className="vrm-btn vrm-btn-secondary" onClick={() => setSelectedMetrics({
-              totalTraffic: true,
-              peakHours: true,
-              demographics: true,
-              entryExit: true,
-              dwellTime: true,
-              deviceStatus: false
-            })}>
-              Reset Defaults
             </button>
           </div>
         </div>
