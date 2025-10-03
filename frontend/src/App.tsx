@@ -269,7 +269,7 @@ const App: React.FC = () => {
             element={
               userRole === 'admin' && !hasViewToken ? 
               <Navigate to="/admin" replace /> : 
-              <ReportsPage />
+              <ReportsPage credentials={credentials} />
             } 
           />
           
