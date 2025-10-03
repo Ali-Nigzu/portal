@@ -254,7 +254,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <VRMLayout userRole={userRole} onLogout={handleLogout}>
+      <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
         <Routes>
           <Route path="/" element={<Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
           
