@@ -1,6 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import { API_ENDPOINTS } from '../config';
+
+interface EventData {
+  index: number;
+  track_number: number;
+  event: string;
+  timestamp: string;
+  sex: string;
+  age_estimate: string;
+  hour: number;
+  day_of_week: string;
+  date: string;
+}
 
 interface ReportsPageProps {
   credentials?: { username: string; password: string };
@@ -11,6 +26,64 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
   const [timePeriod, setTimePeriod] = useState('last-7-days');
   const [format, setFormat] = useState('pdf');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchEvents = useCallback(async () => {
+    if (!credentials) return;
+    
+    try {
+      setLoading(true);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewToken = urlParams.get('view_token');
+      const clientId = urlParams.get('client_id');
+      
+      let apiUrl = API_ENDPOINTS.CHART_DATA;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (viewToken) {
+        apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
+      } else {
+        const auth = btoa(`${credentials.username}:${credentials.password}`);
+        headers['Authorization'] = `Basic ${auth}`;
+        
+        if (clientId) {
+          apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+        }
+      }
+      
+      const response = await fetch(apiUrl, { headers });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setEvents(result.data || []);
+    } catch (err) {
+      console.error('Failed to fetch events:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [credentials]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  useEffect(() => {
+    if (timePeriod === 'custom-range') {
+      setShowDatePicker(true);
+    } else {
+      setShowDatePicker(false);
+    }
+  }, [timePeriod]);
 
   const reportTemplates = [
     {
@@ -43,121 +116,207 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     }
   ];
 
+  const getFilteredEvents = () => {
+    let filtered = [...events];
+    
+    if (timePeriod !== 'custom-range') {
+      const now = new Date();
+      let startDate = new Date();
+      
+      if (timePeriod === 'last-7-days') {
+        startDate.setDate(now.getDate() - 7);
+      } else if (timePeriod === 'last-30-days') {
+        startDate.setDate(now.getDate() - 30);
+      } else if (timePeriod === 'this-month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (timePeriod === 'last-month') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        filtered = filtered.filter(e => {
+          const eventDate = new Date(e.timestamp);
+          return eventDate >= startDate && eventDate <= endOfLastMonth;
+        });
+        return filtered;
+      }
+      
+      filtered = filtered.filter(e => new Date(e.timestamp) >= startDate);
+    } else if (startDate && endDate) {
+      filtered = filtered.filter(e => {
+        const eventDate = new Date(e.timestamp);
+        const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+        const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        return eventDateOnly >= startDateOnly && eventDateOnly <= endDateOnly;
+      });
+    }
+    
+    return filtered;
+  };
+
   const generateOccupancyData = () => {
+    const filtered = getFilteredEvents();
+    const entries = filtered.filter(e => e.event === 'Entry').length;
+    const exits = filtered.filter(e => e.event === 'Exit').length;
+    const currentOccupancy = Math.max(0, entries - exits);
+    
+    const hourCounts: {[key: number]: number} = {};
+    filtered.forEach(e => {
+      const hour = e.hour;
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    
+    let peakHour = 0;
+    let peakCount = 0;
+    Object.entries(hourCounts).forEach(([hour, count]) => {
+      if (count > peakCount) {
+        peakCount = count;
+        peakHour = parseInt(hour);
+      }
+    });
+    
+    const dwellTimes = filtered.map(e => {
+      const trackEvents = filtered.filter(ev => ev.track_number === e.track_number);
+      if (trackEvents.length < 2) return 0;
+      const first = new Date(trackEvents[0].timestamp);
+      const last = new Date(trackEvents[trackEvents.length - 1].timestamp);
+      return (last.getTime() - first.getTime()) / 60000;
+    }).filter(t => t > 0 && t < 1440);
+    
+    const avgDwellTime = dwellTimes.length > 0 
+      ? Math.round(dwellTimes.reduce((a, b) => a + b, 0) / dwellTimes.length)
+      : 0;
+    
     return {
-      currentOccupancy: Math.floor(Math.random() * 200) + 200,
-      maxCapacity: 500,
-      occupancyRate: (Math.random() * 30 + 50).toFixed(1) + '%',
-      averageDwellTime: Math.floor(Math.random() * 20) + 25,
-      peakOccupancyTime: `${Math.floor(Math.random() * 3) + 14}:00`,
-      peakOccupancyCount: Math.floor(Math.random() * 100) + 380,
-      floorUtilization: {
-        floor1: (Math.random() * 20 + 70).toFixed(1) + '%',
-        floor2: (Math.random() * 20 + 60).toFixed(1) + '%',
-        floor3: (Math.random() * 20 + 50).toFixed(1) + '%'
-      },
-      hourlyOccupancy: [
-        { hour: '09:00', count: Math.floor(Math.random() * 100) + 150 },
-        { hour: '12:00', count: Math.floor(Math.random() * 100) + 300 },
-        { hour: '15:00', count: Math.floor(Math.random() * 100) + 350 },
-        { hour: '18:00', count: Math.floor(Math.random() * 100) + 200 }
-      ]
+      currentOccupancy,
+      totalEntries: entries,
+      totalExits: exits,
+      occupancyRate: entries > 0 ? ((currentOccupancy / entries) * 100).toFixed(1) + '%' : '0%',
+      averageDwellTime: avgDwellTime,
+      peakOccupancyTime: `${peakHour.toString().padStart(2, '0')}:00`,
+      peakOccupancyCount: peakCount,
+      hourlyOccupancy: Object.entries(hourCounts).map(([hour, count]) => ({
+        hour: `${hour.toString().padStart(2, '0')}:00`,
+        count
+      })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
     };
   };
 
   const generateTrafficData = () => {
+    const filtered = getFilteredEvents();
+    const entries = filtered.filter(e => e.event === 'Entry');
+    const exits = filtered.filter(e => e.event === 'Exit');
+    
+    const hourCounts: {[key: number]: {entries: number, exits: number}} = {};
+    filtered.forEach(e => {
+      const hour = e.hour;
+      if (!hourCounts[hour]) hourCounts[hour] = {entries: 0, exits: 0};
+      if (e.event === 'Entry') hourCounts[hour].entries++;
+      if (e.event === 'Exit') hourCounts[hour].exits++;
+    });
+    
+    let peakHour = 0;
+    let peakRate = 0;
+    Object.entries(hourCounts).forEach(([hour, counts]) => {
+      const rate = counts.entries + counts.exits;
+      if (rate > peakRate) {
+        peakRate = rate;
+        peakHour = parseInt(hour);
+      }
+    });
+    
+    const totalFlow = entries.length + exits.length;
+    const hours = Object.keys(hourCounts).length || 1;
+    const avgFlowRate = Math.round(totalFlow / hours);
+    
     return {
-      totalEntries: Math.floor(Math.random() * 3000) + 8000,
-      totalExits: Math.floor(Math.random() * 3000) + 7800,
-      peakFlowTime: `${Math.floor(Math.random() * 3) + 12}:00`,
-      peakFlowRate: Math.floor(Math.random() * 200) + 450,
-      averageFlowRate: Math.floor(Math.random() * 100) + 180,
-      congestionPoints: [
-        { location: 'Main Entrance', congestion: (Math.random() * 20 + 70).toFixed(1) + '%' },
-        { location: 'Elevator Lobby', congestion: (Math.random() * 20 + 60).toFixed(1) + '%' },
-        { location: 'Exit Gates', congestion: (Math.random() * 20 + 50).toFixed(1) + '%' }
-      ],
-      flowByHour: [
-        { hour: '09:00', entries: Math.floor(Math.random() * 200) + 600 },
-        { hour: '12:00', entries: Math.floor(Math.random() * 200) + 800 },
-        { hour: '15:00', entries: Math.floor(Math.random() * 200) + 750 },
-        { hour: '18:00', entries: Math.floor(Math.random() * 200) + 650 }
-      ]
+      totalEntries: entries.length,
+      totalExits: exits.length,
+      peakFlowTime: `${peakHour.toString().padStart(2, '0')}:00`,
+      peakFlowRate: peakRate,
+      averageFlowRate: avgFlowRate,
+      flowByHour: Object.entries(hourCounts).map(([hour, counts]) => ({
+        hour: `${hour.toString().padStart(2, '0')}:00`,
+        entries: counts.entries
+      })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
     };
   };
 
   const generateDemographicsData = () => {
-    const ageData = {
-      '18-25': Math.random() * 10 + 20,
-      '26-35': Math.random() * 10 + 30,
-      '36-45': Math.random() * 10 + 25,
-      '46-60': Math.random() * 10 + 15,
-      '60+': Math.random() * 5 + 8
+    const filtered = getFilteredEvents();
+    const totalVisitors = new Set(filtered.map(e => e.track_number)).size;
+    
+    const genderCounts = { male: 0, female: 0, unidentified: 0 };
+    const ageCounts: {[key: string]: number} = {
+      '18-25': 0,
+      '26-35': 0,
+      '36-45': 0,
+      '46-60': 0,
+      '60+': 0
     };
     
+    filtered.forEach(e => {
+      const sex = e.sex.toLowerCase();
+      if (sex === 'm' || sex === 'male') genderCounts.male++;
+      else if (sex === 'f' || sex === 'female') genderCounts.female++;
+      else genderCounts.unidentified++;
+      
+      const age = parseInt(e.age_estimate);
+      if (!isNaN(age)) {
+        if (age >= 18 && age <= 25) ageCounts['18-25']++;
+        else if (age >= 26 && age <= 35) ageCounts['26-35']++;
+        else if (age >= 36 && age <= 45) ageCounts['36-45']++;
+        else if (age >= 46 && age <= 60) ageCounts['46-60']++;
+        else if (age > 60) ageCounts['60+']++;
+      }
+    });
+    
+    const totalGender = genderCounts.male + genderCounts.female + genderCounts.unidentified;
+    const genderPcts = totalGender > 0 ? {
+      male: ((genderCounts.male / totalGender) * 100).toFixed(1),
+      female: ((genderCounts.female / totalGender) * 100).toFixed(1),
+      unidentified: ((genderCounts.unidentified / totalGender) * 100).toFixed(1)
+    } : {
+      male: '0.0',
+      female: '0.0',
+      unidentified: '0.0'
+    };
+    
+    const totalAge = Object.values(ageCounts).reduce((a, b) => a + b, 0);
+    const agePcts: {[key: string]: string} = {};
+    Object.entries(ageCounts).forEach(([age, count]) => {
+      agePcts[age] = totalAge > 0 ? ((count / totalAge) * 100).toFixed(1) : '0.0';
+    });
+    
     let peakAge = '26-35';
-    let maxValue = ageData['26-35'];
-    Object.entries(ageData).forEach(([age, value]) => {
-      if (value > maxValue) {
-        maxValue = value;
+    let maxAgeCount = 0;
+    Object.entries(ageCounts).forEach(([age, count]) => {
+      if (count > maxAgeCount) {
+        maxAgeCount = count;
         peakAge = age;
       }
     });
     
     return {
-      totalVisitors: Math.floor(Math.random() * 5000) + 10000,
+      totalVisitors,
       genderDistribution: {
-        male: (Math.random() * 10 + 48).toFixed(1) + '%',
-        female: (Math.random() * 10 + 48).toFixed(1) + '%',
-        unidentified: (Math.random() * 5 + 2).toFixed(1) + '%'
+        male: genderPcts.male + '%',
+        female: genderPcts.female + '%',
+        unidentified: genderPcts.unidentified + '%'
       },
       ageDistribution: {
-        '18-25': ageData['18-25'].toFixed(1) + '%',
-        '26-35': ageData['26-35'].toFixed(1) + '%',
-        '36-45': ageData['36-45'].toFixed(1) + '%',
-        '46-60': ageData['46-60'].toFixed(1) + '%',
-        '60+': ageData['60+'].toFixed(1) + '%'
+        '18-25': agePcts['18-25'] + '%',
+        '26-35': agePcts['26-35'] + '%',
+        '36-45': agePcts['36-45'] + '%',
+        '46-60': agePcts['46-60'] + '%',
+        '60+': agePcts['60+'] + '%'
       },
-      visitorProfiles: [
-        { profile: 'Regular Customers', percentage: (Math.random() * 10 + 35).toFixed(1) + '%' },
-        { profile: 'First-time Visitors', percentage: (Math.random() * 10 + 25).toFixed(1) + '%' },
-        { profile: 'Occasional Visitors', percentage: (Math.random() * 10 + 30).toFixed(1) + '%' }
-      ],
       peakDemographic: `${peakAge} age group`
     };
   };
 
   const generateDeviceData = () => {
-    const totalDevices = Math.floor(Math.random() * 3) + 12;
-    const offlineDevices = Math.floor(Math.random() * 2);
-    const onlineDevices = totalDevices - offlineDevices;
-    
-    const deviceStatus = [];
-    const qualities = ['Excellent', 'Good', 'Fair'];
-    
-    for (let i = 1; i <= totalDevices; i++) {
-      const isOnline = i <= onlineDevices;
-      const uptime = isOnline ? (95 + Math.random() * 4).toFixed(1) : (50 + Math.random() * 30).toFixed(1);
-      const quality = isOnline ? qualities[Math.floor(Math.random() * 2)] : 'Poor';
-      
-      deviceStatus.push({
-        device: `Camera-${i.toString().padStart(2, '0')}`,
-        status: isOnline ? 'Online' : 'Offline',
-        uptime: uptime + '%',
-        quality: quality
-      });
-    }
-    
     return {
-      totalDevices,
-      onlineDevices,
-      offlineDevices,
-      averageUptime: (97 + Math.random() * 2).toFixed(2) + '%',
-      dataQuality: (92 + Math.random() * 6).toFixed(1) + '%',
-      deviceStatus,
-      maintenanceAlerts: Math.floor(Math.random() * 3),
-      lastMaintenance: '2 days ago',
-      nextScheduledMaintenance: '5 days'
+      message: 'Device performance data is not available in the current data source. This report requires camera/sensor metadata that is not present in the CSV data.'
     };
   };
 
@@ -217,53 +376,44 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
 
       if (reportType === 'occupancy-summary') {
         const d: any = data;
-        doc.text(`Current Occupancy: ${d.currentOccupancy} / ${d.maxCapacity} (${d.occupancyRate})`, 25, yPos);
+        doc.text(`Current Occupancy: ${d.currentOccupancy} (${d.occupancyRate})`, 25, yPos);
+        yPos += 6;
+        doc.text(`Total Entries: ${d.totalEntries.toLocaleString()}`, 25, yPos);
+        yPos += 6;
+        doc.text(`Total Exits: ${d.totalExits.toLocaleString()}`, 25, yPos);
         yPos += 6;
         doc.text(`Average Dwell Time: ${d.averageDwellTime} minutes`, 25, yPos);
         yPos += 6;
-        doc.text(`Peak Occupancy Time: ${d.peakOccupancyTime} (${d.peakOccupancyCount} people)`, 25, yPos);
+        doc.text(`Peak Occupancy Time: ${d.peakOccupancyTime} (${d.peakOccupancyCount} events)`, 25, yPos);
         yPos += 10;
         
-        doc.text('Floor Utilization:', 25, yPos);
-        yPos += 6;
-        doc.text(`  Floor 1: ${d.floorUtilization.floor1}`, 30, yPos);
-        yPos += 5;
-        doc.text(`  Floor 2: ${d.floorUtilization.floor2}`, 30, yPos);
-        yPos += 5;
-        doc.text(`  Floor 3: ${d.floorUtilization.floor3}`, 30, yPos);
-        yPos += 10;
-        
-        doc.text('Hourly Occupancy Patterns:', 25, yPos);
-        yPos += 6;
-        d.hourlyOccupancy.forEach((item: any) => {
-          doc.text(`  ${item.hour}: ${item.count} people`, 30, yPos);
-          yPos += 5;
-        });
+        if (d.hourlyOccupancy && d.hourlyOccupancy.length > 0) {
+          doc.text('Hourly Occupancy Patterns:', 25, yPos);
+          yPos += 6;
+          d.hourlyOccupancy.slice(0, 15).forEach((item: any) => {
+            doc.text(`  ${item.hour}: ${item.count} events`, 30, yPos);
+            yPos += 5;
+          });
+        }
       } else if (reportType === 'traffic-analysis') {
         const d: any = data;
         doc.text(`Total Entries: ${d.totalEntries.toLocaleString()}`, 25, yPos);
         yPos += 6;
         doc.text(`Total Exits: ${d.totalExits.toLocaleString()}`, 25, yPos);
         yPos += 6;
-        doc.text(`Peak Flow Time: ${d.peakFlowTime} (${d.peakFlowRate} people/hour)`, 25, yPos);
+        doc.text(`Peak Flow Time: ${d.peakFlowTime} (${d.peakFlowRate} events/hour)`, 25, yPos);
         yPos += 6;
-        doc.text(`Average Flow Rate: ${d.averageFlowRate} people/hour`, 25, yPos);
+        doc.text(`Average Flow Rate: ${d.averageFlowRate} events/hour`, 25, yPos);
         yPos += 10;
         
-        doc.text('Congestion Points:', 25, yPos);
-        yPos += 6;
-        d.congestionPoints.forEach((item: any) => {
-          doc.text(`  ${item.location}: ${item.congestion}`, 30, yPos);
-          yPos += 5;
-        });
-        yPos += 5;
-        
-        doc.text('Flow by Hour:', 25, yPos);
-        yPos += 6;
-        d.flowByHour.forEach((item: any) => {
-          doc.text(`  ${item.hour}: ${item.entries} entries`, 30, yPos);
-          yPos += 5;
-        });
+        if (d.flowByHour && d.flowByHour.length > 0) {
+          doc.text('Flow by Hour:', 25, yPos);
+          yPos += 6;
+          d.flowByHour.slice(0, 15).forEach((item: any) => {
+            doc.text(`  ${item.hour}: ${item.entries} entries`, 30, yPos);
+            yPos += 5;
+          });
+        }
       } else if (reportType === 'demographics-report') {
         const d: any = data;
         doc.text(`Total Visitors: ${d.totalVisitors.toLocaleString()}`, 25, yPos);
@@ -287,36 +437,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           yPos += 5;
         });
         yPos += 5;
-        
-        doc.text('Visitor Profiles:', 25, yPos);
-        yPos += 6;
-        d.visitorProfiles.forEach((item: any) => {
-          doc.text(`  ${item.profile}: ${item.percentage}`, 30, yPos);
-          yPos += 5;
-        });
       } else if (reportType === 'device-performance') {
         const d: any = data;
-        doc.text(`Total Devices: ${d.totalDevices}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Online: ${d.onlineDevices} | Offline: ${d.offlineDevices}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Average Uptime: ${d.averageUptime}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Data Quality: ${d.dataQuality}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Maintenance Alerts: ${d.maintenanceAlerts}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Last Maintenance: ${d.lastMaintenance}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Next Scheduled: ${d.nextScheduledMaintenance}`, 25, yPos);
-        yPos += 10;
-        
-        doc.text('Device Status:', 25, yPos);
-        yPos += 6;
-        d.deviceStatus.forEach((item: any) => {
-          doc.text(`  ${item.device}: ${item.status} | Uptime: ${item.uptime} | Quality: ${item.quality}`, 30, yPos);
-          yPos += 5;
-        });
+        if (d.message) {
+          doc.text(d.message, 25, yPos, { maxWidth: 160 });
+        }
       }
       
       // Footer
@@ -358,7 +483,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
           [],
           ['Metric', 'Value'],
-          ['Current Occupancy', `${d.currentOccupancy} / ${d.maxCapacity}`],
+          ['Current Occupancy', d.currentOccupancy],
+          ['Total Entries', d.totalEntries],
+          ['Total Exits', d.totalExits],
           ['Occupancy Rate', d.occupancyRate],
           ['Average Dwell Time', `${d.averageDwellTime} minutes`],
           ['Peak Occupancy Time', d.peakOccupancyTime],
@@ -585,36 +712,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="vrm-grid vrm-grid-3" style={{ marginBottom: '24px' }}>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-blue)', marginBottom: '8px' }}>
-              4
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Report Templates</p>
-          </div>
-        </div>
-
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-teal)', marginBottom: '8px' }}>
-              {format.toUpperCase()}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Export Format</p>
-          </div>
-        </div>
-
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-purple)', marginBottom: '8px' }}>
-              {timePeriod.split('-').length}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Time Period</p>
-          </div>
-        </div>
-      </div>
-
       {/* Report Configuration */}
       <div className="vrm-card" style={{ marginBottom: '24px' }}>
         <div className="vrm-card-header">
@@ -691,12 +788,50 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
             </div>
           </div>
           
+          {showDatePicker && (
+            <div style={{ marginTop: '20px', padding: '16px', backgroundColor: 'var(--vrm-bg-secondary)', borderRadius: '6px', border: '1px solid var(--vrm-border)' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+                    Start Date
+                  </label>
+                  <DatePicker
+                    selected={startDate}
+                    onChange={(date) => setStartDate(date)}
+                    selectsStart
+                    startDate={startDate}
+                    endDate={endDate}
+                    dateFormat="yyyy-MM-dd"
+                    className="vrm-date-picker"
+                    placeholderText="Select start date"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+                    End Date
+                  </label>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    selectsEnd
+                    startDate={startDate}
+                    endDate={endDate}
+                    minDate={startDate}
+                    dateFormat="yyyy-MM-dd"
+                    className="vrm-date-picker"
+                    placeholderText="Select end date"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
             <button 
               className="vrm-btn" 
               style={{ flex: 1 }}
               onClick={handleGenerateReport}
-              disabled={isGenerating}
+              disabled={isGenerating || loading}
             >
               {isGenerating ? 'Generating...' : 'Generate & Download Report'}
             </button>
