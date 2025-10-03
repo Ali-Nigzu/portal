@@ -92,6 +92,8 @@ body {
 .vrm-nav {
   flex: 1;
   padding: 8px 0;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .vrm-nav-section {
@@ -398,6 +400,7 @@ body {
   transition: all 0.2s ease;
   margin: 16px auto;
   position: relative;
+  flex-shrink: 0;
 }
 
 .vrm-collapse-btn:hover {
