@@ -92,21 +92,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
           <div className="vrm-logo-text">Nigzsu</div>
         </div>
 
-        {/* Navigation Menu */}
-        <div className="vrm-nav">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.path}
-              to={getNavigationPath(item.path)}
-              className={`vrm-nav-item ${isActiveRoute(item.path) ? 'active' : ''}`}
-              title={sidebarCollapsed ? item.description : ''}
-            >
-              <div className="vrm-nav-icon">{item.icon}</div>
-              <div className="vrm-nav-text">{item.label}</div>
-            </Link>
-          ))}
-        </div>
-
         {/* Collapse Toggle */}
         <button
           className="vrm-collapse-btn"
@@ -121,6 +106,21 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
             )}
           </svg>
         </button>
+
+        {/* Navigation Menu */}
+        <div className="vrm-nav">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.path}
+              to={getNavigationPath(item.path)}
+              className={`vrm-nav-item ${isActiveRoute(item.path) ? 'active' : ''}`}
+              title={sidebarCollapsed ? item.description : ''}
+            >
+              <div className="vrm-nav-icon">{item.icon}</div>
+              <div className="vrm-nav-text">{item.label}</div>
+            </Link>
+          ))}
+        </div>
       </nav>
 
       {/* Main Content Area */}

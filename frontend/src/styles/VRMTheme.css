@@ -398,7 +398,7 @@ body {
   cursor: pointer;
   color: var(--vrm-text-secondary);
   transition: all 0.2s ease;
-  margin: 16px auto;
+  margin: 12px auto;
   position: relative;
   flex-shrink: 0;
 }
