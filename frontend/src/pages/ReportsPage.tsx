@@ -716,6 +716,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
   };
 
   const handleGenerateReport = () => {
+    if (reportType === 'device-performance') {
+      alert('Data unavailable for this report type. Device performance metrics are not available in the current data source.');
+      return;
+    }
+    
     if (format === 'pdf') {
       generatePDFReport();
     } else if (format === 'excel') {
