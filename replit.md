@@ -44,7 +44,8 @@ Preferred communication style: Simple, everyday language.
 - **Security**: Session data cleared on logout and when browser tab closes
 - **Admin View Navigation**: When viewing client dashboard via "View Dashboard" button, client navigation menu now displays properly, enabling access to all client pages (Event Logs, Alarm Logs, Device List, Analytics, Reports)
 - **Enhanced Sidebar Toggle**: Improved collapse/expand functionality with larger hamburger menu icon (40x40), better visibility, and consistent behavior across all user scenarios
-  - Fixed disappearing toggle button: Navigation menu now scrolls independently while toggle button remains anchored at bottom
+  - Repositioned toggle button to top of sidebar (between header and navigation menu) for immediate accessibility
+  - Fixed disappearing toggle button: Navigation menu now scrolls independently while toggle button remains visible
   - CSS improvements: Added overflow-y scrolling to nav, min-height: 0 for proper flex behavior, flex-shrink: 0 on toggle button
 
 ### Reports System Implementation (October 3, 2025)
