@@ -313,10 +313,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     
     const genderCounts = { male: 0, female: 0, unidentified: 0 };
     const ageCounts: {[key: string]: number} = {
-      '18-25': 0,
-      '26-35': 0,
-      '36-45': 0,
-      '46-60': 0,
+      '0-8': 0,
+      '9-16': 0,
+      '17-25': 0,
+      '25-40': 0,
+      '40-60': 0,
       '60+': 0
     };
     
@@ -327,14 +328,16 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       else genderCounts.unidentified++;
       
       const ageStr = e.age_estimate.toString().toLowerCase();
-      if (ageStr.includes('0,8') || ageStr.includes('9,16')) {
-        // Skip children/teens
+      if (ageStr.includes('0,8')) {
+        ageCounts['0-8']++;
+      } else if (ageStr.includes('9,16')) {
+        ageCounts['9-16']++;
       } else if (ageStr.includes('17,25')) {
-        ageCounts['18-25']++;
+        ageCounts['17-25']++;
       } else if (ageStr.includes('25,40')) {
-        ageCounts['26-35']++;
+        ageCounts['25-40']++;
       } else if (ageStr.includes('40,60')) {
-        ageCounts['46-60']++;
+        ageCounts['40-60']++;
       } else if (ageStr.includes('60+') || ageStr.includes('60)')) {
         ageCounts['60+']++;
       }
@@ -357,7 +360,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       agePcts[age] = totalAge > 0 ? ((count / totalAge) * 100).toFixed(1) : '0.0';
     });
     
-    let peakAge = '26-35';
+    let peakAge = '25-40';
     let maxAgeCount = 0;
     Object.entries(ageCounts).forEach(([age, count]) => {
       if (count > maxAgeCount) {
@@ -374,10 +377,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         unidentified: genderPcts.unidentified + '%'
       },
       ageDistribution: {
-        '18-25': agePcts['18-25'] + '%',
-        '26-35': agePcts['26-35'] + '%',
-        '36-45': agePcts['36-45'] + '%',
-        '46-60': agePcts['46-60'] + '%',
+        '0-8': agePcts['0-8'] + '%',
+        '9-16': agePcts['9-16'] + '%',
+        '17-25': agePcts['17-25'] + '%',
+        '25-40': agePcts['25-40'] + '%',
+        '40-60': agePcts['40-60'] + '%',
         '60+': agePcts['60+'] + '%'
       },
       peakDemographic: `${peakAge} age group`
