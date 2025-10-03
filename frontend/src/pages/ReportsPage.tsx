@@ -33,7 +33,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchEvents = useCallback(async () => {
-    if (!credentials) return;
+    if (!credentials) {
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
