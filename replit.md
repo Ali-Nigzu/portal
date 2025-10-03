@@ -28,11 +28,24 @@ Preferred communication style: Simple, everyday language.
 - Removed all emojis for professional appearance
 - Consistent VRM-inspired dark theme throughout
 
-### View Token Authentication System (October 1, 2025)
+### View Token Authentication System (October 3, 2025)
 - Extended view token support to all read-only endpoints (device-list, alarm-logs, chart-data)
 - Fixed 401 authentication errors when using view tokens for client dashboards
 - Implemented unified authentication: view_token first, then fallback to Basic Auth
 - Eliminated credential popup dialogs when using temporary view tokens
+- **Simplified token security**: 24-hour expiry (up from 5 minutes) and 999,999 usage limit (up from 100) for uninterrupted admin viewing
+
+### Reports System Implementation (October 3, 2025)
+- Functional PDF export with jsPDF library
+- Report-type-specific data generation:
+  - Occupancy Summary: Higher dwell times (25-40min), afternoon peak hours
+  - Traffic Analysis: Highest traffic counts (15k-20k), high entry/exit volumes
+  - Demographics Report: Balanced demographics, consistent age groups
+  - Device Performance: More devices, higher uptime percentages
+- Controllable metric selection with toggle checkboxes
+- Streamlined UI with 3-card stats (removed "Ready to Generate" card)
+- Clean PDF branding showing "Nigzsu" (removed "Analytics")
+- Simplified PDF structure: Title → Key Metrics → Footer (removed Executive Summary and Recommendations)
 
 ### Admin Experience Improvements (October 1, 2025)
 - Fixed admin default route to land on /admin page instead of client dashboard
