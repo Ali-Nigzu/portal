@@ -93,34 +93,34 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       id: 'occupancy-summary',
       name: 'Occupancy Summary Report',
       description: 'Daily, weekly, and monthly occupancy patterns with peak hours analysis',
-      icon: '📊',
       type: 'Standard Report'
     },
     {
       id: 'traffic-analysis',
       name: 'Traffic Flow Analysis',
       description: 'Entry/exit patterns, flow rates, and demographic breakdowns',
-      icon: '🚶',
       type: 'Analytics Report'
     },
     {
       id: 'demographics-report', 
       name: 'Demographics Report',
       description: 'Age and gender distribution analysis with trend comparisons',
-      icon: '👥',
       type: 'Demographics Report'
     },
     {
       id: 'device-performance',
       name: 'Device Performance Report',
       description: 'Camera and sensor status, uptime, and data quality metrics',
-      icon: '📷',
       type: 'Technical Report'
     }
   ];
 
   const getFilteredEvents = () => {
     let filtered = [...events];
+    
+    if (timePeriod === 'all-time') {
+      return filtered;
+    }
     
     if (timePeriod !== 'custom-range') {
       const now = new Date();
@@ -130,6 +130,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         startDate.setDate(now.getDate() - 7);
       } else if (timePeriod === 'last-30-days') {
         startDate.setDate(now.getDate() - 30);
+      } else if (timePeriod === 'past-year') {
+        startDate.setDate(now.getDate() - 365);
       } else if (timePeriod === 'this-month') {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       } else if (timePeriod === 'last-month') {
@@ -814,8 +816,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
               >
                 <option value="last-7-days">Last 7 Days</option>
                 <option value="last-30-days">Last 30 Days</option>
+                <option value="past-year">Past Year</option>
                 <option value="this-month">This Month</option>
                 <option value="last-month">Last Month</option>
+                <option value="all-time">All Time</option>
                 <option value="custom-range">Custom Range</option>
               </select>
             </div>
@@ -897,7 +901,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       {/* Report Templates */}
       <div className="vrm-card">
         <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Available Report Templates</h3>
+          <h3 className="vrm-card-title">Reports</h3>
         </div>
         <div className="vrm-card-body">
           <div className="vrm-grid vrm-grid-2">
@@ -923,16 +927,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '24px' }}>{template.icon}</span>
-                  <div>
-                    <h4 style={{ color: 'var(--vrm-text-primary)', margin: 0, fontSize: '16px', fontWeight: '600' }}>
-                      {template.name}
-                    </h4>
-                    <span className="vrm-status vrm-status-online" style={{ fontSize: '11px', marginTop: '4px' }}>
-                      {template.type}
-                    </span>
-                  </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <h4 style={{ color: 'var(--vrm-text-primary)', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                    {template.name}
+                  </h4>
+                  <span className="vrm-status vrm-status-online" style={{ fontSize: '11px', marginTop: '4px' }}>
+                    {template.type}
+                  </span>
                 </div>
                 
                 <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px', marginBottom: '0', lineHeight: '1.5' }}>
