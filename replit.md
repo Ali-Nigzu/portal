@@ -35,6 +35,14 @@ Preferred communication style: Simple, everyday language.
 - Eliminated credential popup dialogs when using temporary view tokens
 - **Simplified token security**: 24-hour expiry (up from 5 minutes) and 999,999 usage limit (up from 100) for uninterrupted admin viewing
 
+### Session Persistence & Logout Fixes (October 3, 2025)
+- **Session Persistence**: Credentials now saved to sessionStorage, surviving page refreshes
+- **Auto-restore**: Login state automatically restored on app reload from sessionStorage
+- **Smart Logout**: Logout button properly handles both scenarios:
+  - Normal login: Clears session and redirects to login page
+  - View token session: Closes admin-opened tab or redirects to home
+- **Security**: Session data cleared on logout and when browser tab closes
+
 ### Reports System Implementation (October 3, 2025)
 - Complete redesign with unique metrics per report type (not shared metrics with different values)
 - Four distinct report types with specific metrics:
