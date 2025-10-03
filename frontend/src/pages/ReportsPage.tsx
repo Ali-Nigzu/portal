@@ -302,7 +302,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       averageFlowRate: avgFlowRate,
       flowByHour: Object.entries(hourCounts).map(([hour, counts]) => ({
         hour: `${hour.toString().padStart(2, '0')}:00`,
-        entries: counts.entries
+        entries: counts.entries,
+        exits: counts.exits
       })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
     };
   };
@@ -506,7 +507,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           doc.text('Flow by Hour:', 25, yPos);
           yPos += 6;
           d.flowByHour.slice(0, 15).forEach((item: any) => {
-            doc.text(`  ${item.hour}: ${item.entries} entries`, 30, yPos);
+            doc.text(`  ${item.hour}: ${item.entries} entries, ${item.exits} exits`, 30, yPos);
             yPos += 5;
           });
         }
@@ -606,8 +607,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ['Average Flow Rate', `${d.averageFlowRate} events/hour`],
           [],
           ['Flow by Hour'],
-          ['Hour', 'Entries'],
-          ...d.flowByHour.map((item: any) => [item.hour, item.entries])
+          ['Hour', 'Entries', 'Exits'],
+          ...d.flowByHour.map((item: any) => [item.hour, item.entries, item.exits])
         ];
       } else if (reportType === 'demographics-report') {
         const d: any = data;
@@ -691,9 +692,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         csvContent += `Peak Flow Time,${d.peakFlowTime}\n`;
         csvContent += `Peak Flow Rate,${d.peakFlowRate} events/hour\n`;
         csvContent += `Average Flow Rate,${d.averageFlowRate} events/hour\n\n`;
-        csvContent += `Flow by Hour\nHour,Entries\n`;
+        csvContent += `Flow by Hour\nHour,Entries,Exits\n`;
         d.flowByHour.forEach((item: any) => {
-          csvContent += `${item.hour},${item.entries}\n`;
+          csvContent += `${item.hour},${item.entries},${item.exits}\n`;
         });
       } else if (reportType === 'demographics-report') {
         const d: any = data;
