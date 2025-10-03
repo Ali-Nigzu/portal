@@ -158,8 +158,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
 
   const generateOccupancyData = () => {
     const filtered = getFilteredEvents();
-    const entries = filtered.filter(e => e.event === 'Entry').length;
-    const exits = filtered.filter(e => e.event === 'Exit').length;
+    const entries = filtered.filter(e => e.event.toLowerCase() === 'entry').length;
+    const exits = filtered.filter(e => e.event.toLowerCase() === 'exit').length;
     const currentOccupancy = Math.max(0, entries - exits);
     
     const trackMap: {[key: number]: Date[]} = {};
@@ -209,9 +209,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       const currentHour = currentTimestamp.getHours();
       hourlyOccupancy[currentHour] = Math.max(hourlyOccupancy[currentHour] || 0, runningOccupancy);
       
-      if (e.event === 'Entry') {
+      if (e.event.toLowerCase() === 'entry') {
         runningOccupancy++;
-      } else if (e.event === 'Exit') {
+      } else if (e.event.toLowerCase() === 'exit') {
         runningOccupancy = Math.max(0, runningOccupancy - 1);
       }
       
@@ -269,15 +269,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
 
   const generateTrafficData = () => {
     const filtered = getFilteredEvents();
-    const entries = filtered.filter(e => e.event === 'Entry');
-    const exits = filtered.filter(e => e.event === 'Exit');
+    const entries = filtered.filter(e => e.event.toLowerCase() === 'entry');
+    const exits = filtered.filter(e => e.event.toLowerCase() === 'exit');
     
     const hourCounts: {[key: number]: {entries: number, exits: number}} = {};
     filtered.forEach(e => {
       const hour = e.hour;
       if (!hourCounts[hour]) hourCounts[hour] = {entries: 0, exits: 0};
-      if (e.event === 'Entry') hourCounts[hour].entries++;
-      if (e.event === 'Exit') hourCounts[hour].exits++;
+      if (e.event.toLowerCase() === 'entry') hourCounts[hour].entries++;
+      if (e.event.toLowerCase() === 'exit') hourCounts[hour].exits++;
     });
     
     let peakHour = 0;
@@ -326,13 +326,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       else if (sex === 'f' || sex === 'female') genderCounts.female++;
       else genderCounts.unidentified++;
       
-      const age = parseInt(e.age_estimate);
-      if (!isNaN(age)) {
-        if (age >= 18 && age <= 25) ageCounts['18-25']++;
-        else if (age >= 26 && age <= 35) ageCounts['26-35']++;
-        else if (age >= 36 && age <= 45) ageCounts['36-45']++;
-        else if (age >= 46 && age <= 60) ageCounts['46-60']++;
-        else if (age > 60) ageCounts['60+']++;
+      const ageStr = e.age_estimate.toString().toLowerCase();
+      if (ageStr.includes('0,8') || ageStr.includes('9,16')) {
+        // Skip children/teens
+      } else if (ageStr.includes('17,25')) {
+        ageCounts['18-25']++;
+      } else if (ageStr.includes('25,40')) {
+        ageCounts['26-35']++;
+      } else if (ageStr.includes('40,60')) {
+        ageCounts['46-60']++;
+      } else if (ageStr.includes('60+') || ageStr.includes('60)')) {
+        ageCounts['60+']++;
       }
     });
     
