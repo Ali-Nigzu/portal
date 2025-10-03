@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import VRMLayout from './components/VRMLayout';
 import DashboardPage from './pages/DashboardPage';
@@ -199,16 +199,51 @@ const App: React.FC = () => {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [userRole, setUserRole] = useState<'client' | 'admin'>('client');
 
+  // Restore session from sessionStorage on app load
+  useEffect(() => {
+    const savedCredentials = sessionStorage.getItem('nigzsu_credentials');
+    if (savedCredentials) {
+      try {
+        const { username, password } = JSON.parse(savedCredentials);
+        setCredentials({ username, password });
+        setUserRole(username === 'admin' ? 'admin' : 'client');
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error('Failed to restore session:', error);
+        sessionStorage.removeItem('nigzsu_credentials');
+      }
+    }
+  }, []);
+
   const handleLogin = (username: string, password: string) => {
     setCredentials({ username, password });
     setUserRole(username === 'admin' ? 'admin' : 'client');
     setIsLoggedIn(true);
+    
+    // Persist credentials to sessionStorage
+    sessionStorage.setItem('nigzsu_credentials', JSON.stringify({ username, password }));
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCredentials({ username: '', password: '' });
-    setUserRole('client');
+    // Clear session storage
+    sessionStorage.removeItem('nigzsu_credentials');
+    
+    // Check if we're in a view token session
+    const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
+    
+    if (hasViewToken) {
+      // If viewing via view token, close the tab or redirect to home without token
+      window.close();
+      // Fallback if window.close() doesn't work (some browsers block it)
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+    } else {
+      // Normal logout - clear state
+      setIsLoggedIn(false);
+      setCredentials({ username: '', password: '' });
+      setUserRole('client');
+    }
   };
 
   const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
