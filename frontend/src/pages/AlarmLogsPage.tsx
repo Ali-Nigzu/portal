@@ -96,10 +96,16 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
     }
   }, [credentials.username, credentials.password, isAdmin]);
 
-  // Initial load: fetch users first, then alarms
+  // Initial load: fetch users first (only if not using view token), then alarms
   useEffect(() => {
     const initialize = async () => {
-      await fetchUsers();
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewToken = urlParams.get('view_token');
+      
+      // Only fetch users if not using view token (view tokens can't access admin endpoints)
+      if (!viewToken) {
+        await fetchUsers();
+      }
     };
     initialize();
   }, [fetchUsers]);

@@ -86,11 +86,8 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
             />
           </div>
           <h2 style={{ color: 'var(--vrm-text-primary)', marginBottom: '8px', fontSize: '24px', fontWeight: '600' }}>
-            Nigzsu Analytics
+            Nigzsu
           </h2>
-          <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-            Access your business intelligence monitoring portal
-          </p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -225,27 +222,56 @@ const App: React.FC = () => {
       <VRMLayout userRole={userRole} onLogout={handleLogout}>
         <Routes>
           <Route path="/" element={<Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
+          
+          {/* Client-only routes - redirect admins unless they have a view_token */}
           <Route 
             path="/dashboard" 
-            element={<DashboardPage credentials={credentials} />} 
+            element={
+              userRole === 'admin' && !hasViewToken ? 
+              <Navigate to="/admin" replace /> : 
+              <DashboardPage credentials={credentials} />
+            } 
           />
           <Route 
             path="/event-logs" 
-            element={<EventLogsPage credentials={credentials} />} 
+            element={
+              userRole === 'admin' && !hasViewToken ? 
+              <Navigate to="/admin" replace /> : 
+              <EventLogsPage credentials={credentials} />
+            } 
           />
           <Route 
             path="/alarm-logs" 
-            element={<AlarmLogsPage credentials={credentials} />} 
+            element={
+              userRole === 'admin' && !hasViewToken ? 
+              <Navigate to="/admin" replace /> : 
+              <AlarmLogsPage credentials={credentials} />
+            } 
           />
           <Route 
             path="/device-list" 
-            element={<DeviceListPage credentials={credentials} />} 
+            element={
+              userRole === 'admin' && !hasViewToken ? 
+              <Navigate to="/admin" replace /> : 
+              <DeviceListPage credentials={credentials} />
+            } 
           />
           <Route 
             path="/analytics" 
-            element={<AnalyticsPage credentials={credentials} />} 
+            element={
+              userRole === 'admin' && !hasViewToken ? 
+              <Navigate to="/admin" replace /> : 
+              <AnalyticsPage credentials={credentials} />
+            } 
           />
-          <Route path="/reports" element={<ReportsPage />} />
+          <Route 
+            path="/reports" 
+            element={
+              userRole === 'admin' && !hasViewToken ? 
+              <Navigate to="/admin" replace /> : 
+              <ReportsPage />
+            } 
+          />
           
           {/* Admin-only routes */}
           {userRole === 'admin' && (
