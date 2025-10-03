@@ -320,26 +320,46 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       '40-60': 0,
       '60+': 0
     };
+    const genderAgeCounts: {[key: string]: number} = {};
     
     filtered.forEach(e => {
       const sex = e.sex.toLowerCase();
-      if (sex === 'm' || sex === 'male') genderCounts.male++;
-      else if (sex === 'f' || sex === 'female') genderCounts.female++;
-      else genderCounts.unidentified++;
+      let gender = 'unidentified';
+      if (sex === 'm' || sex === 'male') {
+        genderCounts.male++;
+        gender = 'male';
+      } else if (sex === 'f' || sex === 'female') {
+        genderCounts.female++;
+        gender = 'female';
+      } else {
+        genderCounts.unidentified++;
+      }
       
       const ageStr = e.age_estimate.toString().toLowerCase();
+      let ageGroup = '';
       if (ageStr.includes('0,8')) {
         ageCounts['0-8']++;
+        ageGroup = '0-8';
       } else if (ageStr.includes('9,16')) {
         ageCounts['9-16']++;
+        ageGroup = '9-16';
       } else if (ageStr.includes('17,25')) {
         ageCounts['17-25']++;
+        ageGroup = '17-25';
       } else if (ageStr.includes('25,40')) {
         ageCounts['25-40']++;
+        ageGroup = '25-40';
       } else if (ageStr.includes('40,60')) {
         ageCounts['40-60']++;
+        ageGroup = '40-60';
       } else if (ageStr.includes('60+') || ageStr.includes('60)')) {
         ageCounts['60+']++;
+        ageGroup = '60+';
+      }
+      
+      if (ageGroup && gender !== 'unidentified') {
+        const key = `${gender}_${ageGroup}`;
+        genderAgeCounts[key] = (genderAgeCounts[key] || 0) + 1;
       }
     });
     
@@ -360,12 +380,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       agePcts[age] = totalAge > 0 ? ((count / totalAge) * 100).toFixed(1) : '0.0';
     });
     
-    let peakAge = '25-40';
-    let maxAgeCount = 0;
-    Object.entries(ageCounts).forEach(([age, count]) => {
-      if (count > maxAgeCount) {
-        maxAgeCount = count;
-        peakAge = age;
+    let peakDemographic = 'Male 25-40 age group';
+    let maxCount = 0;
+    Object.entries(genderAgeCounts).forEach(([key, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        const [gender, age] = key.split('_');
+        const genderLabel = gender.charAt(0).toUpperCase() + gender.slice(1);
+        peakDemographic = `${genderLabel} ${age} age group`;
       }
     });
     
@@ -384,7 +406,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         '40-60': agePcts['40-60'] + '%',
         '60+': agePcts['60+'] + '%'
       },
-      peakDemographic: `${peakAge} age group`
+      peakDemographic
     };
   };
 
