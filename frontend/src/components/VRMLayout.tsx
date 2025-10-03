@@ -112,9 +112,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
           className="vrm-collapse-btn"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          style={{ position: 'relative', margin: '16px auto' }}
         >
-          {sidebarCollapsed ? '→' : '←'}
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {sidebarCollapsed ? (
+              <path d="M3 10h14M3 5h14M3 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            ) : (
+              <path d="M6 10h8M6 5h8M6 15h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            )}
+          </svg>
         </button>
       </nav>
 

@@ -385,25 +385,30 @@ body {
 
 /* VRM Collapse Button */
 .vrm-collapse-btn {
-  position: absolute;
-  top: 16px;
-  right: -12px;
-  width: 24px;
-  height: 24px;
-  background-color: var(--vrm-bg-secondary);
+  width: 40px;
+  height: 40px;
+  background-color: var(--vrm-bg-tertiary);
   border: 1px solid var(--vrm-border);
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--vrm-text-muted);
+  color: var(--vrm-text-secondary);
   transition: all 0.2s ease;
+  margin: 16px auto;
+  position: relative;
 }
 
 .vrm-collapse-btn:hover {
   background-color: var(--vrm-hover);
   color: var(--vrm-text-primary);
+  border-color: var(--vrm-accent-blue);
+}
+
+.vrm-sidebar.collapsed .vrm-collapse-btn {
+  width: 36px;
+  height: 36px;
 }
 
 /* Responsive Design */
