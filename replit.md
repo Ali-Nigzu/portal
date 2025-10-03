@@ -39,18 +39,22 @@ Preferred communication style: Simple, everyday language.
 - Complete redesign with unique metrics per report type (not shared metrics with different values)
 - Four distinct report types with specific metrics:
   - **Occupancy Summary**: Current occupancy, capacity utilization, average dwell time, peak times, floor utilization, hourly patterns
-  - **Traffic Flow Analysis**: Total entries/exits, peak flow times and rates, average flow rate, congestion points, hourly flow patterns
-  - **Demographics Report**: Total visitors, gender distribution, age distribution, visitor profiles, dynamically calculated peak demographic
+  - **Traffic Flow Analysis**: Total entries/exits (with exits data in all exports), peak flow times and rates, average flow rate, congestion points, hourly flow patterns
+  - **Demographics Report**: Total visitors, gender distribution, age distribution, visitor profiles, peak demographic with gender (e.g., "Female 25-40 age group")
   - **Device Performance**: Total/online/offline devices (consistent counts), uptime, data quality, device status table, maintenance alerts and schedules
 - Export functionality in three formats:
   - **PDF Export**: Using jsPDF library with clean Nigzsu branding
   - **Excel Export**: Using xlsx library with proper worksheet structure
   - **CSV Export**: Custom generation with proper formatting
 - Data consistency improvements:
-  - Demographics: Peak demographic calculated dynamically from actual age distribution
-  - Device Performance: Online + offline = total devices, device status table matches claimed total
-- Streamlined UI with 3-card stats showing report type, format, and time period
-- Professional PDF structure: Title → Key Metrics → Footer
+  - Demographics: Peak demographic combines most common gender AND age group
+  - Traffic Flow: Exit data included in hourly breakdowns across all export formats
+  - Device Performance: Simple "Not available" alert for unavailable data
+- Professional UI with clean design:
+  - No emojis throughout the interface
+  - Heading simplified to "Reports"
+  - Extended time filters: Last 7 Days, Last 30 Days, Past Year, This Month, Last Month, All Time, Custom Range
+  - Streamlined report cards showing type badge and description
 
 ### Admin Experience Improvements (October 1, 2025)
 - Fixed admin default route to land on /admin page instead of client dashboard
