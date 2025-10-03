@@ -159,32 +159,95 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const exits = filtered.filter(e => e.event === 'Exit').length;
     const currentOccupancy = Math.max(0, entries - exits);
     
-    const hourCounts: {[key: number]: number} = {};
+    const trackMap: {[key: number]: Date[]} = {};
     filtered.forEach(e => {
-      const hour = e.hour;
-      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      if (!trackMap[e.track_number]) trackMap[e.track_number] = [];
+      trackMap[e.track_number].push(new Date(e.timestamp));
     });
+    
+    const dwellTimes: number[] = [];
+    Object.values(trackMap).forEach(timestamps => {
+      if (timestamps.length >= 2) {
+        const sorted = timestamps.sort((a, b) => a.getTime() - b.getTime());
+        const dwellMinutes = (sorted[sorted.length - 1].getTime() - sorted[0].getTime()) / 60000;
+        if (dwellMinutes > 0 && dwellMinutes < 1440) {
+          dwellTimes.push(dwellMinutes);
+        }
+      }
+    });
+    
+    const avgDwellTime = dwellTimes.length > 0 
+      ? Math.round(dwellTimes.reduce((a, b) => a + b, 0) / dwellTimes.length)
+      : 0;
+    
+    const sortedEvents = [...filtered].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
+    const hourlyOccupancy: {[key: number]: number} = {};
+    let runningOccupancy = 0;
+    let lastTimestamp: Date | null = null;
+    
+    sortedEvents.forEach(e => {
+      const currentTimestamp = new Date(e.timestamp);
+      
+      if (lastTimestamp) {
+        let tempTime = new Date(lastTimestamp);
+        tempTime.setMinutes(0, 0, 0);
+        tempTime.setHours(tempTime.getHours() + 1);
+        
+        while (tempTime <= currentTimestamp) {
+          const tempHour = tempTime.getHours();
+          hourlyOccupancy[tempHour] = Math.max(hourlyOccupancy[tempHour] || 0, runningOccupancy);
+          tempTime.setHours(tempTime.getHours() + 1);
+        }
+      }
+      
+      const currentHour = currentTimestamp.getHours();
+      hourlyOccupancy[currentHour] = Math.max(hourlyOccupancy[currentHour] || 0, runningOccupancy);
+      
+      if (e.event === 'Entry') {
+        runningOccupancy++;
+      } else if (e.event === 'Exit') {
+        runningOccupancy = Math.max(0, runningOccupancy - 1);
+      }
+      
+      hourlyOccupancy[currentHour] = Math.max(hourlyOccupancy[currentHour] || 0, runningOccupancy);
+      
+      lastTimestamp = currentTimestamp;
+    });
+    
+    if (lastTimestamp && runningOccupancy > 0) {
+      let windowEnd = new Date();
+      
+      if (timePeriod === 'last-month') {
+        const now = new Date();
+        windowEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      } else if (timePeriod === 'custom-range' && endDate) {
+        windowEnd = new Date(endDate);
+        windowEnd.setHours(23, 59, 59, 999);
+      }
+      
+      const lastTime = lastTimestamp as Date;
+      let tempTime = new Date(lastTime);
+      tempTime.setMinutes(0, 0, 0);
+      tempTime.setHours(tempTime.getHours() + 1);
+      
+      while (tempTime <= windowEnd && tempTime.getTime() - lastTime.getTime() < 24 * 60 * 60 * 1000) {
+        const tempHour = tempTime.getHours();
+        hourlyOccupancy[tempHour] = Math.max(hourlyOccupancy[tempHour] || 0, runningOccupancy);
+        tempTime.setHours(tempTime.getHours() + 1);
+      }
+    }
     
     let peakHour = 0;
     let peakCount = 0;
-    Object.entries(hourCounts).forEach(([hour, count]) => {
+    Object.entries(hourlyOccupancy).forEach(([hour, count]) => {
       if (count > peakCount) {
         peakCount = count;
         peakHour = parseInt(hour);
       }
     });
-    
-    const dwellTimes = filtered.map(e => {
-      const trackEvents = filtered.filter(ev => ev.track_number === e.track_number);
-      if (trackEvents.length < 2) return 0;
-      const first = new Date(trackEvents[0].timestamp);
-      const last = new Date(trackEvents[trackEvents.length - 1].timestamp);
-      return (last.getTime() - first.getTime()) / 60000;
-    }).filter(t => t > 0 && t < 1440);
-    
-    const avgDwellTime = dwellTimes.length > 0 
-      ? Math.round(dwellTimes.reduce((a, b) => a + b, 0) / dwellTimes.length)
-      : 0;
     
     return {
       currentOccupancy,
@@ -194,7 +257,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       averageDwellTime: avgDwellTime,
       peakOccupancyTime: `${peakHour.toString().padStart(2, '0')}:00`,
       peakOccupancyCount: peakCount,
-      hourlyOccupancy: Object.entries(hourCounts).map(([hour, count]) => ({
+      hourlyOccupancy: Object.entries(hourlyOccupancy).map(([hour, count]) => ({
         hour: `${hour.toString().padStart(2, '0')}:00`,
         count
       })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
@@ -491,11 +554,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ['Peak Occupancy Time', d.peakOccupancyTime],
           ['Peak Occupancy Count', d.peakOccupancyCount],
           [],
-          ['Floor Utilization'],
-          ['Floor 1', d.floorUtilization.floor1],
-          ['Floor 2', d.floorUtilization.floor2],
-          ['Floor 3', d.floorUtilization.floor3],
-          [],
           ['Hourly Occupancy'],
           ['Hour', 'Count'],
           ...d.hourlyOccupancy.map((item: any) => [item.hour, item.count])
@@ -511,12 +569,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ['Total Entries', d.totalEntries],
           ['Total Exits', d.totalExits],
           ['Peak Flow Time', d.peakFlowTime],
-          ['Peak Flow Rate', `${d.peakFlowRate} people/hour`],
-          ['Average Flow Rate', `${d.averageFlowRate} people/hour`],
-          [],
-          ['Congestion Points'],
-          ['Location', 'Congestion Level'],
-          ...d.congestionPoints.map((item: any) => [item.location, item.congestion]),
+          ['Peak Flow Rate', `${d.peakFlowRate} events/hour`],
+          ['Average Flow Rate', `${d.averageFlowRate} events/hour`],
           [],
           ['Flow by Hour'],
           ['Hour', 'Entries'],
@@ -539,11 +593,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ['Unidentified', d.genderDistribution.unidentified],
           [],
           ['Age Distribution'],
-          ...Object.entries(d.ageDistribution).map(([age, pct]) => [age, pct]),
-          [],
-          ['Visitor Profiles'],
-          ['Profile', 'Percentage'],
-          ...d.visitorProfiles.map((item: any) => [item.profile, item.percentage])
+          ...Object.entries(d.ageDistribution).map(([age, pct]) => [age, pct])
         ];
       } else if (reportType === 'device-performance') {
         const d: any = data;
@@ -552,19 +602,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ['Generated:', new Date().toLocaleString()],
           ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
           [],
-          ['Metric', 'Value'],
-          ['Total Devices', d.totalDevices],
-          ['Online Devices', d.onlineDevices],
-          ['Offline Devices', d.offlineDevices],
-          ['Average Uptime', d.averageUptime],
-          ['Data Quality', d.dataQuality],
-          ['Maintenance Alerts', d.maintenanceAlerts],
-          ['Last Maintenance', d.lastMaintenance],
-          ['Next Scheduled Maintenance', d.nextScheduledMaintenance],
-          [],
-          ['Device Status'],
-          ['Device', 'Status', 'Uptime', 'Quality'],
-          ...d.deviceStatus.map((item: any) => [item.device, item.status, item.uptime, item.quality])
+          [d.message || 'No data available']
         ];
       }
 
@@ -598,15 +636,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         csvContent += `Generated,${new Date().toLocaleString()}\n`;
         csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
         csvContent += `Metric,Value\n`;
-        csvContent += `Current Occupancy,"${d.currentOccupancy} / ${d.maxCapacity}"\n`;
+        csvContent += `Current Occupancy,${d.currentOccupancy}\n`;
+        csvContent += `Total Entries,${d.totalEntries}\n`;
+        csvContent += `Total Exits,${d.totalExits}\n`;
         csvContent += `Occupancy Rate,${d.occupancyRate}\n`;
         csvContent += `Average Dwell Time,${d.averageDwellTime} minutes\n`;
         csvContent += `Peak Occupancy Time,${d.peakOccupancyTime}\n`;
         csvContent += `Peak Occupancy Count,${d.peakOccupancyCount}\n\n`;
-        csvContent += `Floor Utilization\n`;
-        csvContent += `Floor 1,${d.floorUtilization.floor1}\n`;
-        csvContent += `Floor 2,${d.floorUtilization.floor2}\n`;
-        csvContent += `Floor 3,${d.floorUtilization.floor3}\n\n`;
         csvContent += `Hourly Occupancy\nHour,Count\n`;
         d.hourlyOccupancy.forEach((item: any) => {
           csvContent += `${item.hour},${item.count}\n`;
@@ -620,13 +656,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         csvContent += `Total Entries,${d.totalEntries}\n`;
         csvContent += `Total Exits,${d.totalExits}\n`;
         csvContent += `Peak Flow Time,${d.peakFlowTime}\n`;
-        csvContent += `Peak Flow Rate,${d.peakFlowRate} people/hour\n`;
-        csvContent += `Average Flow Rate,${d.averageFlowRate} people/hour\n\n`;
-        csvContent += `Congestion Points\nLocation,Congestion Level\n`;
-        d.congestionPoints.forEach((item: any) => {
-          csvContent += `${item.location},${item.congestion}\n`;
-        });
-        csvContent += `\nFlow by Hour\nHour,Entries\n`;
+        csvContent += `Peak Flow Rate,${d.peakFlowRate} events/hour\n`;
+        csvContent += `Average Flow Rate,${d.averageFlowRate} events/hour\n\n`;
+        csvContent += `Flow by Hour\nHour,Entries\n`;
         d.flowByHour.forEach((item: any) => {
           csvContent += `${item.hour},${item.entries}\n`;
         });
@@ -646,28 +678,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         Object.entries(d.ageDistribution).forEach(([age, pct]) => {
           csvContent += `${age},${pct}\n`;
         });
-        csvContent += `\nVisitor Profiles\nProfile,Percentage\n`;
-        d.visitorProfiles.forEach((item: any) => {
-          csvContent += `${item.profile},${item.percentage}\n`;
-        });
       } else if (reportType === 'device-performance') {
         const d: any = data;
         csvContent = `Device Performance Report\n`;
         csvContent += `Generated,${new Date().toLocaleString()}\n`;
         csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
-        csvContent += `Metric,Value\n`;
-        csvContent += `Total Devices,${d.totalDevices}\n`;
-        csvContent += `Online Devices,${d.onlineDevices}\n`;
-        csvContent += `Offline Devices,${d.offlineDevices}\n`;
-        csvContent += `Average Uptime,${d.averageUptime}\n`;
-        csvContent += `Data Quality,${d.dataQuality}\n`;
-        csvContent += `Maintenance Alerts,${d.maintenanceAlerts}\n`;
-        csvContent += `Last Maintenance,${d.lastMaintenance}\n`;
-        csvContent += `Next Scheduled Maintenance,${d.nextScheduledMaintenance}\n\n`;
-        csvContent += `Device Status\nDevice,Status,Uptime,Quality\n`;
-        d.deviceStatus.forEach((item: any) => {
-          csvContent += `${item.device},${item.status},${item.uptime},${item.quality}\n`;
-        });
+        csvContent += `${d.message || 'No data available'}\n`;
       }
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -816,7 +832,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                     selectsEnd
                     startDate={startDate}
                     endDate={endDate}
-                    minDate={startDate}
+                    minDate={startDate || undefined}
                     dateFormat="yyyy-MM-dd"
                     className="vrm-date-picker"
                     placeholderText="Select end date"
