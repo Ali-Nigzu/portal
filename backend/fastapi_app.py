@@ -280,7 +280,7 @@ async def get_chart_data(
         raise HTTPException(status_code=500, detail=f"Failed to process chart data: {str(e)}")
 
 
-@app.get("/api/users")
+@app.get("/api/admin/users")
 async def get_users(user: dict = Depends(authenticate_user)):
     """Get all users (admin only)"""
     if user['role'] != 'admin':
