@@ -221,6 +221,25 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   }, [selectedClient, activeTab, loadDataSources]);
 
+  // Format last login timestamp
+  const formatLastLogin = (lastLogin: string | null | undefined): string => {
+    if (!lastLogin) return 'Never';
+    
+    try {
+      const date = new Date(lastLogin);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch (err) {
+      return 'Invalid date';
+    }
+  };
+
   useEffect(() => {
     if (alert) {
       const timer = setTimeout(() => setAlert(null), 5000);
@@ -723,6 +742,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                       <th>Username</th>
                       <th>Name</th>
                       <th>Role</th>
+                      <th>Last Login</th>
                       <th>CSV URL</th>
                       <th>Actions</th>
                     </tr>
@@ -736,6 +756,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                           <span className={`vrm-status ${user.role === 'admin' ? 'vrm-status-warning' : 'vrm-status-online'}`}>
                             {user.role}
                           </span>
+                        </td>
+                        <td style={{ fontSize: '14px', color: user.last_login ? 'var(--vrm-text-primary)' : 'var(--vrm-text-muted)' }}>
+                          {formatLastLogin(user.last_login)}
                         </td>
                         <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {user.csv_url || '-'}

@@ -208,6 +208,30 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
     }
   };
 
+  // Download CSV data for a specific data source
+  const handleDownloadDataSource = async (sourceUrl: string, sourceName: string) => {
+    try {
+      const response = await fetch(sourceUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download data');
+      }
+      
+      const csvData = await response.text();
+      const blob = new Blob([csvData], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${sourceName.replace(/[^a-z0-9]/gi, '_')}_data.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Failed to download data source');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
@@ -331,7 +355,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
           <h3 className="vrm-card-title">Connected Devices</h3>
           <div className="vrm-card-actions">
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => fetchDeviceList(isAdmin ? selectedClient : undefined)}>Refresh</button>
-            <button className="vrm-btn vrm-btn-sm">Add Device</button>
+            {isAdmin && <button className="vrm-btn vrm-btn-sm">Add Device</button>}
           </div>
         </div>
         <div className="vrm-card-body" style={{ padding: 0 }}>
@@ -387,12 +411,32 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
-                          View
-                        </button>
-                        {device.dataSource && (
-                          <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
-                            Data Source
+                        {isAdmin ? (
+                          <>
+                            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                              View
+                            </button>
+                            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                              Edit
+                            </button>
+                            <button className="vrm-btn vrm-btn-danger vrm-btn-sm">
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <button 
+                            className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                            onClick={() => {
+                              // Find the data source for this device
+                              const source = dataSources.find(s => s.id === device.dataSource);
+                              if (source) {
+                                handleDownloadDataSource(source.url, source.title);
+                              } else {
+                                alert('No data source available for this device');
+                              }
+                            }}
+                          >
+                            Download
                           </button>
                         )}
                       </div>
