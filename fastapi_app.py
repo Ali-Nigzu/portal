@@ -768,6 +768,7 @@ async def admin_get_users(user: dict = Depends(authenticate_user)):
             'name': user_data['name'],
             'role': user_data['role'],
             'csv_url': user_data.get('csv_url', ''),
+            'data_sources': user_data.get('data_sources', []),
             'last_login': user_data.get('last_login')
         }
     
@@ -870,6 +871,173 @@ async def admin_delete_user(
     
     logger.info(f"Admin deleted user: {username}")
     return {'success': True, 'message': f'User {username} deleted successfully'}
+
+@app.get("/api/admin/data-sources/{client_id}")
+async def get_data_sources(
+    client_id: str,
+    user: dict = Depends(authenticate_user)
+):
+    """Get all data sources for a client (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if users[client_id]['role'] != 'client':
+        raise HTTPException(status_code=400, detail="User is not a client")
+    
+    data_sources = users[client_id].get('data_sources', [])
+    return {'success': True, 'data_sources': data_sources}
+
+@app.post("/api/admin/data-sources/{client_id}")
+async def add_data_source(
+    client_id: str,
+    request: Dict[str, Any],
+    user: dict = Depends(authenticate_user)
+):
+    """Add a new data source for a client (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if users[client_id]['role'] != 'client':
+        raise HTTPException(status_code=400, detail="User is not a client")
+    
+    # Validate required fields
+    title = request.get('title', '').strip()
+    url = request.get('url', '').strip()
+    source_type = request.get('type', 'Camera')
+    
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+    if source_type not in ['Camera', 'Sensor', 'Gateway']:
+        raise HTTPException(status_code=400, detail="Type must be Camera, Sensor, or Gateway")
+    
+    # Basic URL validation
+    if not (url.startswith('http://') or url.startswith('https://')):
+        raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
+    
+    # Initialize data_sources array if it doesn't exist
+    if 'data_sources' not in users[client_id]:
+        users[client_id]['data_sources'] = []
+    
+    # Generate next source ID
+    existing_sources = users[client_id]['data_sources']
+    next_num = len(existing_sources) + 1
+    source_id = f"source_{next_num}"
+    
+    # Create new data source
+    new_source = {
+        'id': source_id,
+        'title': title,
+        'url': url,
+        'type': source_type
+    }
+    
+    users[client_id]['data_sources'].append(new_source)
+    save_users(users)
+    
+    logger.info(f"Admin added data source {source_id} for client {client_id}")
+    return {'success': True, 'message': 'Data source added successfully', 'source': new_source}
+
+@app.put("/api/admin/data-sources/{client_id}/{source_id}")
+async def update_data_source(
+    client_id: str,
+    source_id: str,
+    request: Dict[str, Any],
+    user: dict = Depends(authenticate_user)
+):
+    """Update a data source for a client (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if users[client_id]['role'] != 'client':
+        raise HTTPException(status_code=400, detail="User is not a client")
+    
+    data_sources = users[client_id].get('data_sources', [])
+    
+    # Validate inputs if provided
+    if 'title' in request and not request['title'].strip():
+        raise HTTPException(status_code=400, detail="Title cannot be empty")
+    if 'url' in request:
+        url = request['url'].strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="URL cannot be empty")
+        if not (url.startswith('http://') or url.startswith('https://')):
+            raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
+    if 'type' in request and request['type'] not in ['Camera', 'Sensor', 'Gateway']:
+        raise HTTPException(status_code=400, detail="Type must be Camera, Sensor, or Gateway")
+    
+    # Find and update the source
+    source_found = False
+    for source in data_sources:
+        if source['id'] == source_id:
+            if 'title' in request:
+                source['title'] = request['title'].strip()
+            if 'url' in request:
+                source['url'] = request['url'].strip()
+            if 'type' in request:
+                source['type'] = request['type']
+            source_found = True
+            break
+    
+    if not source_found:
+        raise HTTPException(status_code=404, detail="Data source not found")
+    
+    save_users(users)
+    
+    logger.info(f"Admin updated data source {source_id} for client {client_id}")
+    return {'success': True, 'message': 'Data source updated successfully'}
+
+@app.delete("/api/admin/data-sources/{client_id}/{source_id}")
+async def delete_data_source(
+    client_id: str,
+    source_id: str,
+    user: dict = Depends(authenticate_user)
+):
+    """Delete a data source for a client (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if users[client_id]['role'] != 'client':
+        raise HTTPException(status_code=400, detail="User is not a client")
+    
+    data_sources = users[client_id].get('data_sources', [])
+    
+    # Find and remove the source
+    initial_length = len(data_sources)
+    users[client_id]['data_sources'] = [s for s in data_sources if s['id'] != source_id]
+    
+    if len(users[client_id]['data_sources']) == initial_length:
+        raise HTTPException(status_code=404, detail="Data source not found")
+    
+    # Renumber remaining sources
+    for idx, source in enumerate(users[client_id]['data_sources']):
+        source['id'] = f"source_{idx + 1}"
+    
+    save_users(users)
+    
+    logger.info(f"Admin deleted data source {source_id} for client {client_id}")
+    return {'success': True, 'message': 'Data source deleted successfully'}
 
 @app.get("/api/alarm-logs")
 async def get_alarm_logs(
@@ -1067,7 +1235,14 @@ async def get_device_list(
             )
     
     devices = device_data.get(target_client, [])
-    return {'devices': devices, 'client_id': target_client}
+    
+    # Include client's data sources
+    users = load_users()
+    data_sources = []
+    if target_client and target_client in users:
+        data_sources = users[target_client].get('data_sources', [])
+    
+    return {'devices': devices, 'client_id': target_client, 'data_sources': data_sources}
 
 @app.post("/api/admin/device-list")
 async def create_device(

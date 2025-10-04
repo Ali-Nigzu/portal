@@ -12,10 +12,18 @@ interface DeviceInfo {
   recordCount?: number;
 }
 
+interface DataSource {
+  id: string;
+  title: string;
+  url: string;
+  type: string;
+}
+
 interface User {
   role: 'admin' | 'client';
   name: string;
   csv_url?: string;
+  data_sources?: DataSource[];
 }
 
 interface DeviceListPageProps {
@@ -29,6 +37,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const [users, setUsers] = useState<{ [key: string]: User }>({});
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
   // Fetch users list (for admin only)
   const fetchUsers = useCallback(async () => {
@@ -43,11 +52,12 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUsers(data);
-        setIsAdmin(credentials.username === 'admin' || data[credentials.username]?.role === 'admin');
+        const usersData = data.users || data;
+        setUsers(usersData);
+        setIsAdmin(credentials.username === 'admin' || usersData[credentials.username]?.role === 'admin');
         
         // Set default selected client to first client user
-        const clientUsers = Object.entries(data).filter(([_, user]) => (user as User).role === 'client');
+        const clientUsers = Object.entries(usersData).filter(([_, user]) => (user as User).role === 'client');
         if (clientUsers.length > 0) {
           setSelectedClient(clientUsers[0][0]);
         }
@@ -89,6 +99,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
 
       const result = await response.json();
       setDevices(result.devices || []);
+      setDataSources(result.data_sources || []);
       setError(null);
     } catch (err) {
       setError(`Failed to load device information: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -96,6 +107,51 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
       setLoading(false);
     }
   }, [credentials.username, credentials.password, isAdmin]);
+
+  // Fetch data sources for current user or selected client
+  const fetchDataSources = useCallback(async () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewToken = urlParams.get('view_token');
+      
+      // Determine which client's data sources to load
+      let clientToLoad = isAdmin ? selectedClient : credentials.username;
+      
+      // If using view token, try to get from users state
+      if (viewToken && users && Object.keys(users).length > 0) {
+        const clientUsers = Object.entries(users).filter(([_, user]) => user.role === 'client');
+        if (clientUsers.length > 0) {
+          clientToLoad = clientUsers[0][0];
+        }
+      }
+      
+      if (!clientToLoad) return;
+      
+      // Check if we have users data first
+      if (users && users[clientToLoad] && users[clientToLoad].data_sources) {
+        setDataSources(users[clientToLoad].data_sources || []);
+      } else {
+        // Fallback: fetch from API if admin
+        if (isAdmin && !viewToken) {
+          const auth = btoa(`${credentials.username}:${credentials.password}`);
+          const response = await fetch(`${API_BASE_URL}/api/admin/data-sources/${clientToLoad}`, {
+            headers: {
+              'Authorization': `Basic ${auth}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setDataSources(data.data_sources || []);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch data sources:', err);
+      setDataSources([]);
+    }
+  }, [credentials.username, credentials.password, isAdmin, selectedClient, users]);
 
   // Initial load: fetch users first (only if not using view token), then devices
   useEffect(() => {
@@ -119,6 +175,11 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
       fetchDeviceList();
     }
   }, [selectedClient, isAdmin, fetchDeviceList]);
+
+  // Fetch data sources when user data changes
+  useEffect(() => {
+    fetchDataSources();
+  }, [fetchDataSources, users, selectedClient]);
 
   const getDeviceIcon = (type: string) => {
     switch (type) {
@@ -344,49 +405,98 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
         </div>
       </div>
 
-      {/* Device Details Section */}
-      {devices.length > 0 && (
+      {/* Data Source Configuration Section */}
+      {dataSources.length > 0 && (
         <div className="vrm-card" style={{ marginTop: '24px' }}>
           <div className="vrm-card-header">
             <h3 className="vrm-card-title">Data Source Configuration</h3>
+            <div style={{ fontSize: '12px', color: 'var(--vrm-text-muted)' }}>
+              Read-only view of configured data sources
+            </div>
           </div>
           <div className="vrm-card-body">
             <div className="vrm-grid vrm-grid-2">
-              {devices.filter(d => d.dataSource).map((device) => (
-                <div key={device.id} style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <span>{getDeviceIcon(device.type)}</span>
-                    <strong style={{ color: 'var(--vrm-text-primary)' }}>{device.name}</strong>
-                    <div className={`vrm-status ${getStatusClass(device.status)}`}>
-                      <div className="vrm-status-dot"></div>
+              {dataSources.map((source, index) => (
+                <div key={source.id} style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '8px', 
+                      backgroundColor: 'var(--vrm-accent-blue)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: '700',
+                      fontSize: '14px'
+                    }}>
+                      {index + 1}
                     </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '600', 
+                        color: 'var(--vrm-text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        Source {index + 1}
+                      </div>
+                      <div style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '600', 
+                        color: 'var(--vrm-text-primary)',
+                        marginTop: '2px'
+                      }}>
+                        {source.title}
+                      </div>
+                    </div>
+                    <span className={`vrm-status ${
+                      source.type === 'Camera' ? 'vrm-status-online' : 
+                      source.type === 'Sensor' ? 'vrm-status-warning' : 
+                      'vrm-status-offline'
+                    }`}>
+                      {source.type}
+                    </span>
                   </div>
                   
                   <div style={{ fontSize: '14px', color: 'var(--vrm-text-secondary)' }}>
-                    <div style={{ marginBottom: '6px' }}>
-                      <strong>Data Source:</strong>
+                    <div style={{ marginBottom: '6px', fontWeight: '500' }}>
+                      Data Source URL:
                     </div>
                     <code style={{ 
                       backgroundColor: 'var(--vrm-bg-primary)', 
-                      padding: '4px 8px', 
+                      padding: '8px 12px', 
                       borderRadius: '4px', 
-                      fontSize: '12px',
+                      fontSize: '11px',
                       wordBreak: 'break-all',
-                      display: 'block'
+                      display: 'block',
+                      color: 'var(--vrm-accent-teal)',
+                      fontFamily: 'monospace',
+                      lineHeight: '1.5'
                     }}>
-                      {device.dataSource}
+                      {source.url}
                     </code>
                   </div>
-                  
-                  {device.recordCount !== undefined && (
-                    <div style={{ marginTop: '12px', fontSize: '14px' }}>
-                      <span style={{ color: 'var(--vrm-text-secondary)' }}>Records processed: </span>
-                      <strong style={{ color: 'var(--vrm-accent-blue)' }}>{device.recordCount.toLocaleString()}</strong>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
+            
+            {dataSources.length === 0 && (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px',
+                color: 'var(--vrm-text-muted)'
+              }}>
+                <p>No data sources configured for this client.</p>
+                {isAdmin && (
+                  <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                    Configure data sources from the Admin panel.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

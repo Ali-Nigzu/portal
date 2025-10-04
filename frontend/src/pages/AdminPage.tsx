@@ -31,6 +31,14 @@ interface DeviceInfo {
   client_id: string;
 }
 
+interface DataSource {
+  id: string;
+  title: string;
+  url: string;
+  type: 'Camera' | 'Sensor' | 'Gateway';
+  client_id: string;
+}
+
 interface AdminPageProps {
   credentials: { username: string; password: string };
 }
@@ -40,6 +48,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
   const [users, setUsers] = useState<{ [key: string]: User }>({});
   const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [alert, setAlert] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -55,6 +64,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [showEditDevice, setShowEditDevice] = useState(false);
   const [editingDevice, setEditingDevice] = useState<DeviceInfo | null>(null);
+  
+  const [showAddDataSource, setShowAddDataSource] = useState(false);
+  const [showEditDataSource, setShowEditDataSource] = useState(false);
+  const [editingDataSource, setEditingDataSource] = useState<DataSource | null>(null);
 
   const [newUser, setNewUser] = useState({
     username: '',
@@ -90,6 +103,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     location: '',
     recordCount: 0,
     client_id: ''
+  });
+
+  const [newDataSource, setNewDataSource] = useState({
+    title: '',
+    url: '',
+    type: 'Camera' as 'Camera' | 'Sensor' | 'Gateway'
   });
 
   const loadAdminData = React.useCallback(async () => {
@@ -160,6 +179,25 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   }, [credentials.username, credentials.password]);
 
+  const loadDataSources = React.useCallback(async (clientId: string) => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/data-sources/${clientId}`, {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDataSources(data.data_sources || []);
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to load data sources', type: 'error' });
+    }
+  }, [credentials.username, credentials.password]);
+
   useEffect(() => {
     loadAdminData();
   }, [loadAdminData]);
@@ -175,6 +213,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
       loadDevices(selectedClient);
     }
   }, [selectedClient, activeTab, loadDevices]);
+
+  useEffect(() => {
+    if (selectedClient && activeTab === 'users') {
+      loadDataSources(selectedClient);
+    }
+  }, [selectedClient, activeTab, loadDataSources]);
 
   useEffect(() => {
     if (alert) {
@@ -456,6 +500,94 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   };
 
+  const handleAddDataSource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedClient || !newDataSource.title || !newDataSource.url) {
+      setAlert({ message: 'Please fill in all required fields', type: 'error' });
+      return;
+    }
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/data-sources/${selectedClient}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newDataSource),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Data source created successfully', type: 'success' });
+        setNewDataSource({ title: '', url: '', type: 'Camera' });
+        setShowAddDataSource(false);
+        loadDataSources(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to create data source', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to create data source', type: 'error' });
+    }
+  };
+
+  const handleEditDataSource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDataSource) return;
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/data-sources/${selectedClient}/${editingDataSource.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editingDataSource.title,
+          url: editingDataSource.url,
+          type: editingDataSource.type
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Data source updated successfully', type: 'success' });
+        setShowEditDataSource(false);
+        setEditingDataSource(null);
+        loadDataSources(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to update data source', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to update data source', type: 'error' });
+    }
+  };
+
+  const handleDeleteDataSource = async (sourceId: string) => {
+    if (!window.confirm('Are you sure you want to delete this data source?')) return;
+
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/data-sources/${selectedClient}/${sourceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Basic ${auth}` },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Data source deleted successfully', type: 'success' });
+        loadDataSources(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to delete data source', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to delete data source', type: 'error' });
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
@@ -627,6 +759,80 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
               </div>
             </div>
           </div>
+
+          {selectedClient && (
+            <div className="vrm-card" style={{ marginBottom: '24px' }}>
+              <div className="vrm-card-header">
+                <h3 className="vrm-card-title">Data Sources for {users[selectedClient]?.name || selectedClient}</h3>
+                <div className="vrm-card-actions">
+                  <button 
+                    className="vrm-btn vrm-btn-sm" 
+                    onClick={() => setShowAddDataSource(true)}
+                  >
+                    Add Data Source
+                  </button>
+                </div>
+              </div>
+              <div className="vrm-card-body" style={{ padding: 0 }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="vrm-table">
+                    <thead>
+                      <tr>
+                        <th>Source ID</th>
+                        <th>Title</th>
+                        <th>URL</th>
+                        <th>Type</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dataSources.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--vrm-text-secondary)' }}>
+                            No data sources found for this client
+                          </td>
+                        </tr>
+                      ) : (
+                        dataSources.map((source, index) => (
+                          <tr key={source.id}>
+                            <td><code>Source {index + 1}</code></td>
+                            <td>{source.title}</td>
+                            <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {source.url}
+                            </td>
+                            <td>
+                              <span className="vrm-status vrm-status-online">
+                                {source.type}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                  onClick={() => {
+                                    setEditingDataSource(source);
+                                    setShowEditDataSource(true);
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                  onClick={() => handleDeleteDataSource(source.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
           {showAddUser && (
             <div style={{
@@ -830,6 +1036,200 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                       </button>
                       <button type="submit" className="vrm-btn">
                         Update User
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showAddDataSource && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Add New Data Source</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleAddDataSource}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={newDataSource.title}
+                        onChange={(e) => setNewDataSource({ ...newDataSource, title: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        URL *
+                      </label>
+                      <input
+                        type="text"
+                        value={newDataSource.url}
+                        onChange={(e) => setNewDataSource({ ...newDataSource, url: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Type *
+                      </label>
+                      <select
+                        value={newDataSource.type}
+                        onChange={(e) => setNewDataSource({ ...newDataSource, type: e.target.value as 'Camera' | 'Sensor' | 'Gateway' })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      >
+                        <option value="Camera">Camera</option>
+                        <option value="Sensor">Sensor</option>
+                        <option value="Gateway">Gateway</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => {
+                          setShowAddDataSource(false);
+                          setNewDataSource({ title: '', url: '', type: 'Camera' });
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Create Data Source
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showEditDataSource && editingDataSource && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="vrm-card" style={{ width: '500px', maxWidth: '90%' }}>
+                <div className="vrm-card-header">
+                  <h3 className="vrm-card-title">Edit Data Source</h3>
+                </div>
+                <div className="vrm-card-body">
+                  <form onSubmit={handleEditDataSource}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={editingDataSource.title}
+                        onChange={(e) => setEditingDataSource({ ...editingDataSource, title: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        URL *
+                      </label>
+                      <input
+                        type="text"
+                        value={editingDataSource.url}
+                        onChange={(e) => setEditingDataSource({ ...editingDataSource, url: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', color: 'var(--vrm-text-primary)' }}>
+                        Type *
+                      </label>
+                      <select
+                        value={editingDataSource.type}
+                        onChange={(e) => setEditingDataSource({ ...editingDataSource, type: e.target.value as 'Camera' | 'Sensor' | 'Gateway' })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          backgroundColor: 'var(--vrm-bg-tertiary)',
+                          border: '1px solid var(--vrm-border-color)',
+                          borderRadius: '4px',
+                          color: 'var(--vrm-text-primary)'
+                        }}
+                      >
+                        <option value="Camera">Camera</option>
+                        <option value="Sensor">Sensor</option>
+                        <option value="Gateway">Gateway</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="vrm-btn vrm-btn-secondary"
+                        onClick={() => {
+                          setShowEditDataSource(false);
+                          setEditingDataSource(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="vrm-btn">
+                        Update Data Source
                       </button>
                     </div>
                   </form>

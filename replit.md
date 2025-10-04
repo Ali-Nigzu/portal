@@ -74,6 +74,26 @@ Preferred communication style: Simple, everyday language.
 - Role-based routing: admins → /admin, clients → /dashboard
 - Consistent navigation and access control across all user roles
 
+### Multi-Data Source Management (October 4, 2025)
+- **Data Model Migration**: Moved from single `csv_url` to flexible `data_sources` array per client
+- **Admin CRUD Interface**: Complete data source management in AdminPage Users tab
+  - Add new sources with title, URL, and type (Camera/Sensor/Gateway)
+  - Edit existing sources with inline validation
+  - Delete sources with automatic ID renumbering (source_1, source_2, etc.)
+  - Real-time updates with alert feedback
+- **Backend Validation**: 
+  - Title required and non-empty
+  - URL must start with http:// or https://
+  - Type restricted to: Camera, Sensor, or Gateway
+  - Sequential auto-numbering (source_1, source_2, source_3...)
+- **Device List Enhancement**: 
+  - Sources displayed as numbered badges ("Source 1", "Source 2")
+  - Admin-defined titles shown under source numbers
+  - Type-specific color coding for source badges
+  - Read-only display for all users
+- **View Token Support**: data_sources included in device-list API response for token-based viewers
+- **Backward Compatibility**: Legacy csv_url field maintained for existing analytics endpoints
+
 ### Technical Improvements
 - Downgraded from React 19 to React 18.3.1 for library compatibility
 - Fixed react-datepicker integration issues
@@ -103,8 +123,11 @@ FastAPI-based REST API with secure authentication:
 ### Data Storage Solutions
 The application uses a hybrid storage approach:
 - **User Management**: Local JSON file (users.json) with password hashing and last login tracking
-- **Data Source**: Google Sheets CSV exports via public URLs
-- **Client Configuration**: Each client has a dedicated csv_url for their data source
+- **Data Sources**: Multiple configurable sources per client via `data_sources` array
+  - Each source has: id (source_1, source_2...), title, url, type (Camera/Sensor/Gateway)
+  - Admin CRUD operations via dedicated API endpoints
+  - Backward compatibility maintained with legacy `csv_url` field
+- **Data Format**: Google Sheets CSV exports via public URLs
 - **Session Management**: HTTP Basic Auth for API authentication
 
 ### Authentication and Authorization
