@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 
 interface User {
+  username: string;
   name: string;
   role: 'client' | 'admin';
   csv_url?: string;
   last_login?: string | null;
+  data_sources?: DataSource[];
 }
 
 interface AlarmEvent {
@@ -46,7 +48,7 @@ interface AdminPageProps {
 
 const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'alarms' | 'devices'>('users');
-  const [users, setUsers] = useState<{ [key: string]: User }>({});
+  const [users, setUsers] = useState<User[]>([]);
   const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -126,11 +128,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.users || {});
+        setUsers(data.users || []);
         
-        const clientUsers = Object.entries(data.users || {}).filter(([_, user]) => (user as User).role === 'client');
+        const clientUsers = (data.users || []).filter((user: User) => user.role === 'client');
         if (clientUsers.length > 0 && !selectedClient) {
-          setSelectedClient(clientUsers[0][0]);
+          setSelectedClient(clientUsers[0].username);
         }
       } else {
         setAlert({ message: 'Failed to load users', type: 'error' });
@@ -647,7 +649,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     );
   }
 
-  const clientUsers = Object.entries(users).filter(([_, user]) => user.role === 'client');
+  const clientUsers = users.filter(user => user.role === 'client');
 
   return (
     <div>
@@ -748,9 +750,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(users).map(([username, user]) => (
-                      <tr key={username}>
-                        <td><code>{username}</code></td>
+                    {users.map(user => (
+                      <tr key={user.username}>
+                        <td><code>{user.username}</code></td>
                         <td>{user.name}</td>
                         <td>
                           <span className={`vrm-status ${user.role === 'admin' ? 'vrm-status-warning' : 'vrm-status-online'}`}>
@@ -768,7 +770,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                             {user.role === 'client' && (
                               <button
                                 className="vrm-btn vrm-btn-primary vrm-btn-sm"
-                                onClick={() => handleViewDashboard(username)}
+                                onClick={() => handleViewDashboard(user.username)}
                               >
                                 View Dashboard
                               </button>
@@ -776,7 +778,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                             <button
                               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
                               onClick={() => {
-                                setEditingUser(username);
+                                setEditingUser(user.username);
                                 setEditUser({
                                   password: '',
                                   name: user.name,
@@ -790,7 +792,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                             </button>
                             <button
                               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                              onClick={() => handleDeleteUser(username)}
+                              onClick={() => handleDeleteUser(user.username)}
                             >
                               Delete
                             </button>
@@ -828,11 +830,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                   }}
                 >
                   <option value="">-- Select a client --</option>
-                  {Object.entries(users)
-                    .filter(([_, user]) => (user as User).role === 'client')
-                    .map(([username, user]) => (
-                      <option key={username} value={username}>
-                        {(user as User).name} ({username})
+                  {users
+                    .filter(user => user.role === 'client')
+                    .map(user => (
+                      <option key={user.username} value={user.username}>
+                        {user.name} ({user.username})
                       </option>
                     ))}
                 </select>
@@ -1354,9 +1356,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                 color: 'var(--vrm-text-primary)'
               }}
             >
-              {clientUsers.map(([username, user]) => (
-                <option key={username} value={username}>
-                  {user.name} ({username})
+              {clientUsers.map(user => (
+                <option key={user.username} value={user.username}>
+                  {user.name} ({user.username})
                 </option>
               ))}
             </select>
@@ -1680,9 +1682,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                 color: 'var(--vrm-text-primary)'
               }}
             >
-              {clientUsers.map(([username, user]) => (
-                <option key={username} value={username}>
-                  {user.name} ({username})
+              {clientUsers.map(user => (
+                <option key={user.username} value={user.username}>
+                  {user.name} ({user.username})
                 </option>
               ))}
             </select>
