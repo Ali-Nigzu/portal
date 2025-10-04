@@ -150,7 +150,7 @@ async def login(login_request: LoginRequest):
             'username': username,
             'role': user_data['role'],
             'name': user_data['name'],
-            'csv_url': user_data.get('csv_url', '')
+            'table_name': user_data.get('table_name', '')
         }
         
         return LoginResponse(

@@ -30,7 +30,8 @@ class DataProcessor:
                 df = pd.read_sql(query, conn)
             
             if len(df) == 0:
-                raise ValueError(f"No data found in table {table_name}")
+                logger.warning(f"Table {table_name} is empty, returning empty DataFrame")
+                return pd.DataFrame(columns=['index', 'track_number', 'event', 'timestamp', 'sex', 'age_estimate'])
             
             df = DataProcessor.transform_cloudsql_format(df)
             

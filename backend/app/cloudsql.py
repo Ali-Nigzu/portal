@@ -14,7 +14,7 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-INSTANCE_CONNECTION_NAME = "nigzsu:us-central1:nigzsutestdb"
+INSTANCE_CONNECTION_NAME = "nigzsu:europe-west2:nigzsutestdb"
 DB_USER = "postgres"
 DB_NAME = "postgres"
 
@@ -25,6 +25,7 @@ class CloudSQLConnection:
     def __init__(self):
         self.connector = None
         self._engine = None
+        self.credentials_path = None
         self._initialize_connector()
     
     def _initialize_connector(self):
@@ -36,9 +37,17 @@ class CloudSQLConnection:
             
             credentials_dict = json.loads(credentials_json)
             
-            os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'] = credentials_json
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                f.write(credentials_json)
+                self.credentials_path = f.name
             
-            self.connector = Connector()
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = self.credentials_path
+            
+            from google.oauth2 import service_account
+            credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+            
+            self.connector = Connector(credentials=credentials)
             logger.info("Cloud SQL Connector initialized successfully")
             
         except Exception as e:
@@ -48,16 +57,6 @@ class CloudSQLConnection:
     def _get_connection(self):
         """Create a database connection using the Cloud SQL connector"""
         try:
-            credentials_json = os.environ.get('GOOGLE_CLOUD_KEY')
-            credentials_dict = json.loads(credentials_json)
-            
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-                f.write(credentials_json)
-                temp_cred_path = f.name
-            
-            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_cred_path
-            
             conn = self.connector.connect(
                 INSTANCE_CONNECTION_NAME,
                 "pg8000",
@@ -117,6 +116,10 @@ class CloudSQLConnection:
         if self.connector:
             self.connector.close()
             logger.info("Cloud SQL connector closed")
+        
+        if self.credentials_path and os.path.exists(self.credentials_path):
+            os.unlink(self.credentials_path)
+            logger.info(f"Cleaned up credentials file: {self.credentials_path}")
 
 
 cloudsql_connection = CloudSQLConnection()
