@@ -39,6 +39,12 @@
   font-size: 2rem;
 }
 
+.logo-image {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
 .logo-text {
   color: #ffffff;
 }
@@ -526,6 +532,12 @@
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
+}
+
+.footer-logo-image {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
 
 .footer-tagline {

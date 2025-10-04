@@ -81,7 +81,7 @@ const LandingPage: React.FC = () => {
       <nav className="landing-nav">
         <div className="nav-container">
           <div className="nav-logo">
-            <span className="logo-icon">≋</span>
+            <img src="/company-logo.png" alt="Nigzsu Logo" className="logo-image" />
             <span className="logo-text">Nigzsu</span>
           </div>
           <div className="nav-links">
@@ -105,10 +105,10 @@ const LandingPage: React.FC = () => {
           </h1>
           <p className="hero-subtitle">
             Your cameras capture everything. Now learn from it.<br />
-            Frictionless visual intelligence for busy SMB owners — free, instant, and effortless.
+            Frictionless visual intelligence — hassle free, instant, and effortless.
           </p>
           <button onClick={scrollToForm} className="hero-cta-btn">
-            Get Started Free
+            Get Started
             <span className="btn-arrow">→</span>
           </button>
         </div>
@@ -155,17 +155,17 @@ const LandingPage: React.FC = () => {
           </p>
           <div className="solution-cards">
             <div className="solution-card">
-              <div className="card-icon">⚡</div>
+              <div className="card-icon">[Icon]</div>
               <h3>Instant Clarity</h3>
               <p>Real-time processing delivers insights immediately—no waiting, no complexity.</p>
             </div>
             <div className="solution-card">
-              <div className="card-icon">🔌</div>
+              <div className="card-icon">[Icon]</div>
               <h3>Effortless Integration</h3>
               <p>Secure API connects to your existing CCTV system. Zero setup costs, zero disruption.</p>
             </div>
             <div className="solution-card">
-              <div className="card-icon">📊</div>
+              <div className="card-icon">[Icon]</div>
               <h3>Customizable Dashboard</h3>
               <p>Intuitive interface tailored to your business needs—no technical expertise required.</p>
             </div>
@@ -175,31 +175,31 @@ const LandingPage: React.FC = () => {
 
       <section id="features" className="features-section">
         <div className="section-container">
-          <h2 className="section-title">Built For Busy Business Owners</h2>
+          <h2 className="section-title">Built For Business Owners</h2>
           <div className="features-grid">
             <div className="feature-item">
-              <div className="feature-icon">✓</div>
+              <div className="feature-icon">[Check]</div>
               <div className="feature-content">
                 <h3>No Technical Expertise</h3>
                 <p>Designed for decision-makers who don't have time to waste learning complex systems.</p>
               </div>
             </div>
             <div className="feature-item">
-              <div className="feature-icon">✓</div>
+              <div className="feature-icon">[Check]</div>
               <div className="feature-content">
-                <h3>Zero Hidden Fees</h3>
-                <p>Completely free from setup to usage. No subscription traps or surprise charges.</p>
+                <h3>1 Year Free Trial</h3>
+                <p>Register your interest now for a limited time and get a full year completely free. Zero hidden fees or subscription traps—ever.</p>
               </div>
             </div>
             <div className="feature-item">
-              <div className="feature-icon">✓</div>
+              <div className="feature-icon">[Check]</div>
               <div className="feature-content">
                 <h3>Smarter Decisions</h3>
                 <p>Turn routine footage into strategic insights that optimize operations and improve forecasting.</p>
               </div>
             </div>
             <div className="feature-item">
-              <div className="feature-icon">✓</div>
+              <div className="feature-icon">[Check]</div>
               <div className="feature-content">
                 <h3>Ready Out-of-the-Box</h3>
                 <p>Fits effortlessly into your existing workflows—start getting value on day one.</p>
@@ -218,7 +218,7 @@ const LandingPage: React.FC = () => {
 
           {submitSuccess ? (
             <div className="success-message">
-              <div className="success-icon">✓</div>
+              <div className="success-icon">[Check]</div>
               <h3>Thank You!</h3>
               <p>We've received your submission and will be in touch soon.</p>
               <button onClick={() => setSubmitSuccess(false)} className="reset-form-btn">
@@ -327,7 +327,7 @@ const LandingPage: React.FC = () => {
         <div className="footer-container">
           <div className="footer-section">
             <div className="footer-logo">
-              <span className="logo-icon">≋</span>
+              <img src="/company-logo.png" alt="Nigzsu Logo" className="footer-logo-image" />
               <span className="logo-text">Nigzsu</span>
             </div>
             <p className="footer-tagline">
@@ -345,7 +345,7 @@ const LandingPage: React.FC = () => {
           <div className="footer-section">
             <h4>Contact</h4>
             <p>United Kingdom</p>
-            <p>info@nigzsu.com</p>
+            <p>hello@nigzsu.com</p>
           </div>
         </div>
         <div className="footer-bottom">
