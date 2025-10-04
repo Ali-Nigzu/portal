@@ -262,6 +262,22 @@ def save_users(users_data: dict):
     with open(USERS_FILE, 'w') as f:
         json.dump(users_data, f, indent=2)
 
+def get_active_data_source_url(client_id: str, users: dict) -> Optional[str]:
+    """Get the active data source URL for a client, fallback to csv_url if no active source"""
+    if client_id not in users:
+        return None
+    
+    client_data = users[client_id]
+    
+    # Try to get active data source
+    data_sources = client_data.get('data_sources', [])
+    for source in data_sources:
+        if source.get('active', False):
+            return source.get('url')
+    
+    # Fallback to csv_url for backward compatibility
+    return client_data.get('csv_url')
+
 def load_alarm_logs():
     """Load alarm logs from JSON file"""
     if not os.path.exists(ALARM_LOGS_FILE):
@@ -627,9 +643,9 @@ async def get_chart_data(
             if client_id not in users:
                 raise HTTPException(status_code=404, detail="Client not found")
             
-            csv_url = users[client_id].get('csv_url')
+            csv_url = get_active_data_source_url(client_id, users)
             if not csv_url:
-                raise HTTPException(status_code=400, detail="No CSV configured for this client")
+                raise HTTPException(status_code=400, detail="No active data source configured for this client")
         
         else:
             auth_header = request.headers.get('Authorization')
@@ -676,21 +692,21 @@ async def get_chart_data(
                 )
             
             if user['role'] == 'client':
-                csv_url = user['csv_url']
+                csv_url = get_active_data_source_url(username, users)
                 if not csv_url:
-                    raise HTTPException(status_code=400, detail="No CSV configured for this user")
+                    raise HTTPException(status_code=400, detail="No active data source configured for this user")
             else:
                 client_id = request.query_params.get('client_id')
                 if client_id:
-                    if client_id in users and 'csv_url' in users[client_id]:
-                        csv_url = users[client_id]['csv_url']
-                    else:
-                        raise HTTPException(status_code=400, detail="Invalid client ID or no CSV configured")
+                    csv_url = get_active_data_source_url(client_id, users)
+                    if not csv_url:
+                        raise HTTPException(status_code=400, detail="Invalid client ID or no active data source configured")
                 else:
                     for username, user_data in users.items():
-                        if user_data.get('role') == 'client' and 'csv_url' in user_data:
-                            csv_url = user_data['csv_url']
-                            break
+                        if user_data.get('role') == 'client':
+                            csv_url = get_active_data_source_url(username, users)
+                            if csv_url:
+                                break
         
         if not csv_url:
             raise HTTPException(status_code=400, detail="No CSV data source available")
@@ -936,11 +952,14 @@ async def add_data_source(
     source_id = f"source_{next_num}"
     
     # Create new data source
+    # Set as active if it's the first source, otherwise inactive
+    is_first_source = len(existing_sources) == 0
     new_source = {
         'id': source_id,
         'title': title,
         'url': url,
-        'type': source_type
+        'type': source_type,
+        'active': is_first_source
     }
     
     users[client_id]['data_sources'].append(new_source)
@@ -1023,6 +1042,13 @@ async def delete_data_source(
     
     data_sources = users[client_id].get('data_sources', [])
     
+    # Find the source to check if it was active
+    was_active = False
+    for source in data_sources:
+        if source['id'] == source_id and source.get('active', False):
+            was_active = True
+            break
+    
     # Find and remove the source
     initial_length = len(data_sources)
     users[client_id]['data_sources'] = [s for s in data_sources if s['id'] != source_id]
@@ -1034,10 +1060,51 @@ async def delete_data_source(
     for idx, source in enumerate(users[client_id]['data_sources']):
         source['id'] = f"source_{idx + 1}"
     
+    # If the deleted source was active, set the first remaining source as active
+    if was_active and len(users[client_id]['data_sources']) > 0:
+        users[client_id]['data_sources'][0]['active'] = True
+    
     save_users(users)
     
     logger.info(f"Admin deleted data source {source_id} for client {client_id}")
     return {'success': True, 'message': 'Data source deleted successfully'}
+
+@app.post("/api/admin/data-sources/{client_id}/{source_id}/set-active")
+async def set_active_data_source(
+    client_id: str,
+    source_id: str,
+    user: dict = Depends(authenticate_user)
+):
+    """Set a data source as active for a client (admin only)"""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users = load_users()
+    
+    if client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    if users[client_id]['role'] != 'client':
+        raise HTTPException(status_code=400, detail="User is not a client")
+    
+    data_sources = users[client_id].get('data_sources', [])
+    
+    # Find the source and set it as active, deactivate all others
+    source_found = False
+    for source in data_sources:
+        if source['id'] == source_id:
+            source['active'] = True
+            source_found = True
+        else:
+            source['active'] = False
+    
+    if not source_found:
+        raise HTTPException(status_code=404, detail="Data source not found")
+    
+    save_users(users)
+    
+    logger.info(f"Admin set data source {source_id} as active for client {client_id}")
+    return {'success': True, 'message': 'Data source activated successfully'}
 
 @app.get("/api/alarm-logs")
 async def get_alarm_logs(
