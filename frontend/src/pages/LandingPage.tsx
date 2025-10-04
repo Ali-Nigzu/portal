@@ -124,25 +124,37 @@ const LandingPage: React.FC = () => {
 
       <section className="problem-section">
         <div className="section-container">
-          <h2 className="section-title">The Overlooked Opportunity</h2>
+          <h2 className="section-title">You already have the cameras.</h2>
           <p className="section-description">
-            Most businesses already have CCTV systems installed—but they're only using them for security. 
-            The rich operational data your cameras capture every day goes completely unused.
+            They're watching your customers, your staff, your space — every hour of every day.<br />
+            But right now, they're only protecting you from risk.<br />
+            They're not helping you run your business better.
           </p>
-          <div className="problem-stats">
-            <div className="stat-card">
-              <div className="stat-number">68%</div>
-              <div className="stat-label">of CCTV footage goes strategically unused</div>
+          <p className="section-description" style={{ marginTop: '2rem' }}>
+            Nigzsu transforms your existing CCTV footage into real operational insight —<br />
+            showing you things like:
+          </p>
+          <div className="insights-list">
+            <div className="insight-item">
+              <span className="insight-bullet">•</span>
+              <span className="insight-text">When and where your business gets busiest</span>
             </div>
-            <div className="stat-card">
-              <div className="stat-number">0</div>
-              <div className="stat-label">time or budget for complex analytics</div>
+            <div className="insight-item">
+              <span className="insight-bullet">•</span>
+              <span className="insight-text">How long customers wait to be served</span>
             </div>
-            <div className="stat-card">
-              <div className="stat-number">100%</div>
-              <div className="stat-label">free to integrate and use</div>
+            <div className="insight-item">
+              <span className="insight-bullet">•</span>
+              <span className="insight-text">Which areas are underused or overstaffed</span>
             </div>
           </div>
+          <p className="section-description" style={{ marginTop: '2rem', fontWeight: '600' }}>
+            No new hardware. No technical setup.<br />
+            Just plug in, and start seeing your business clearly.
+          </p>
+          <p className="section-description" style={{ marginTop: '1.5rem', fontSize: '1.1rem' }}>
+            Your cameras can do more than watch — they can help you grow.
+          </p>
         </div>
       </section>
 

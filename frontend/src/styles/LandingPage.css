@@ -264,6 +264,43 @@
   line-height: 1.4;
 }
 
+.insights-list {
+  max-width: 700px;
+  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(0, 212, 255, 0.05);
+  border-left: 3px solid #00d4ff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.insight-item:hover {
+  background: rgba(0, 212, 255, 0.08);
+  transform: translateX(5px);
+}
+
+.insight-bullet {
+  color: #00d4ff;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.insight-text {
+  font-size: 1.1rem;
+  color: #ffffff;
+  line-height: 1.5;
+}
+
 .solution-section {
   padding: 80px 2rem;
   background: #0a0a0a;
