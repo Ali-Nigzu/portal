@@ -111,13 +111,14 @@ Preferred communication style: Simple, everyday language.
 - **Atomic File Writes**: Implemented atomic write operations using temporary files with `mkstemp()` and atomic `rename()` to prevent JSON corruption during concurrent user management operations
   - Fixed directory resolution bug: `file_dir = os.path.dirname(USERS_FILE) or '.'` to handle empty dirname
   - Prevents FileNotFoundError and race conditions during user CRUD operations
-- **Device List Page Redesign**: Complete transformation from device management to data source viewer
-  - Page renamed from "Device list" to "Data Sources"
-  - Shows client's configured data sources instead of device information
+- **Device List Page Redesign**: Comprehensive view showing both device information and data sources
+  - Page displays device inventory (name, type, status, location, last seen, records, data source) at the top
+  - Summary cards show Total Devices, Online count, and Offline count
+  - Device table shows all accessible device fields for monitoring
+  - Data sources section below with download functionality for CSV data
   - Download buttons fetch actual CSV data from Google Sheets URLs
-  - Summary cards show Total Sources, Camera Feeds, and Sensor Feeds
-  - Clean table layout: Source Name, Type, Status, Data URL, Actions
-  - Read-only for all users (data source management happens in Admin page)
+  - Clean dual-table layout: Devices table followed by Data Sources table
+  - Read-only for all users (device and data source management happens in Admin page)
 
 ### Technical Improvements
 - Downgraded from React 19 to React 18.3.1 for library compatibility

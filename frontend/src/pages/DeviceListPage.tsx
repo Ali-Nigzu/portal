@@ -17,6 +17,7 @@ interface DataSource {
   title: string;
   url: string;
   type: string;
+  active?: boolean;
 }
 
 interface User {
@@ -181,15 +182,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
     fetchDataSources();
   }, [fetchDataSources, users, selectedClient]);
 
-  const getDeviceIcon = (type: string) => {
-    switch (type) {
-      case 'Camera': return '';
-      case 'Sensor': return '';
-      case 'Gateway': return '';
-      default: return '';
-    }
-  };
-
   const getStatusClass = (status: string) => {
     switch (status) {
       case 'online': return 'vrm-status-online';
@@ -253,7 +245,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
 
   const onlineDevices = devices.filter(d => d.status === 'online').length;
   const offlineDevices = devices.filter(d => d.status === 'offline').length;
-  const maintenanceDevices = devices.filter(d => d.status === 'maintenance').length;
   const clientUsers = Object.entries(users).filter(([_, user]) => user.role === 'client');
 
   return (
@@ -261,12 +252,12 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
       {/* Page Header */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          Data Sources
+          Device List
         </h1>
         <div className="vrm-breadcrumb">
           <span>Dashboard</span>
           <span>›</span>
-          <span>Data Sources</span>
+          <span>Device List</span>
         </div>
       </div>
 
@@ -310,33 +301,115 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
         </div>
       )}
 
-      {/* Data Sources Summary */}
+      {/* Device Summary */}
       <div className="vrm-grid vrm-grid-3" style={{ marginBottom: '24px' }}>
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-blue)', marginBottom: '8px' }}>
-              {dataSources.length}
+              {devices.length}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Total Data Sources</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Total Devices</p>
           </div>
         </div>
 
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-green)', marginBottom: '8px' }}>
-              {dataSources.filter(s => s.type === 'Camera').length}
+              {onlineDevices}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Camera Feeds</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Online</p>
           </div>
         </div>
 
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-orange)', marginBottom: '8px' }}>
-              {dataSources.filter(s => s.type === 'Sensor').length}
+              {offlineDevices}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Sensor Feeds</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Offline</p>
           </div>
+        </div>
+      </div>
+
+      {/* Devices List */}
+      <div className="vrm-card" style={{ marginBottom: '24px' }}>
+        <div className="vrm-card-header">
+          <h3 className="vrm-card-title">Devices</h3>
+          <div className="vrm-card-actions">
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => fetchDeviceList(isAdmin ? selectedClient : undefined)}>Refresh</button>
+          </div>
+        </div>
+        <div className="vrm-card-body" style={{ padding: 0 }}>
+          {devices.length > 0 ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="vrm-table">
+                <thead>
+                  <tr>
+                    <th>Device Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Location</th>
+                    <th>Last Seen</th>
+                    <th>Records</th>
+                    <th>Data Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {devices.map((device) => (
+                    <tr key={device.id}>
+                      <td>
+                        <div>
+                          <div style={{ fontWeight: '600' }}>{device.name}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--vrm-text-muted)' }}>
+                            {device.id}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`vrm-status ${
+                          device.type === 'Camera' ? 'vrm-status-online' : 
+                          device.type === 'Sensor' ? 'vrm-status-warning' : 
+                          'vrm-status-offline'
+                        }`}>
+                          {device.type}
+                        </span>
+                      </td>
+                      <td>
+                        <div className={`vrm-status ${getStatusClass(device.status)}`}>
+                          <div className="vrm-status-dot"></div>
+                          {getStatusText(device.status)}
+                        </div>
+                      </td>
+                      <td>{device.location || '-'}</td>
+                      <td style={{ fontSize: '13px', color: 'var(--vrm-text-secondary)' }}>
+                        {new Date(device.lastSeen).toLocaleString()}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>{device.recordCount || '-'}</td>
+                      <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {device.dataSource ? (
+                          <code style={{ fontSize: '11px', color: 'var(--vrm-text-muted)' }}>
+                            {device.dataSource}
+                          </code>
+                        ) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '60px 20px',
+              color: 'var(--vrm-text-muted)'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📱</div>
+              <p style={{ fontSize: '16px', marginBottom: '8px' }}>No devices found</p>
+              <p style={{ fontSize: '14px' }}>
+                {isAdmin ? 'Add devices from the Admin panel.' : 'Contact your administrator to configure devices.'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -382,9 +455,9 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         </span>
                       </td>
                       <td>
-                        <div className="vrm-status vrm-status-online">
+                        <div className={`vrm-status ${source.active ? 'vrm-status-online' : 'vrm-status-offline'}`}>
                           <div className="vrm-status-dot"></div>
-                          Active
+                          {source.active ? 'Active' : 'Inactive'}
                         </div>
                       </td>
                       <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
