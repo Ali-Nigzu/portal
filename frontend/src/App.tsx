@@ -8,6 +8,7 @@ import DeviceListPage from './pages/DeviceListPage';
 import ReportsPage from './pages/ReportsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AdminPage from './pages/AdminPage';
+import LandingPage from './pages/LandingPage';
 import './styles/VRMTheme.css';
 
 // Login Component
@@ -250,78 +251,82 @@ const App: React.FC = () => {
 
   const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
 
-  if (!isLoggedIn && !hasViewToken) {
-    return <Login onLogin={handleLogin} />;
-  }
-
   return (
     <Router>
-      <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-        <Routes>
-          <Route path="/" element={<Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
-          
-          {/* Client-only routes - redirect admins unless they have a view_token */}
-          <Route 
-            path="/dashboard" 
-            element={
-              userRole === 'admin' && !hasViewToken ? 
-              <Navigate to="/admin" replace /> : 
-              <DashboardPage credentials={credentials} />
-            } 
-          />
-          <Route 
-            path="/event-logs" 
-            element={
-              userRole === 'admin' && !hasViewToken ? 
-              <Navigate to="/admin" replace /> : 
-              <EventLogsPage credentials={credentials} />
-            } 
-          />
-          <Route 
-            path="/alarm-logs" 
-            element={
-              userRole === 'admin' && !hasViewToken ? 
-              <Navigate to="/admin" replace /> : 
-              <AlarmLogsPage credentials={credentials} />
-            } 
-          />
-          <Route 
-            path="/device-list" 
-            element={
-              userRole === 'admin' && !hasViewToken ? 
-              <Navigate to="/admin" replace /> : 
-              <DeviceListPage credentials={credentials} />
-            } 
-          />
-          <Route 
-            path="/analytics" 
-            element={
-              userRole === 'admin' && !hasViewToken ? 
-              <Navigate to="/admin" replace /> : 
-              <AnalyticsPage credentials={credentials} />
-            } 
-          />
-          <Route 
-            path="/reports" 
-            element={
-              userRole === 'admin' && !hasViewToken ? 
-              <Navigate to="/admin" replace /> : 
-              <ReportsPage credentials={credentials} />
-            } 
-          />
-          
-          {/* Admin-only routes */}
-          {userRole === 'admin' && (
-            <Route 
-              path="/admin" 
-              element={<AdminPage credentials={credentials} />} 
-            />
-          )}
-          
-          {/* Catch all - redirect based on role */}
-          <Route path="*" element={<Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
-        </Routes>
-      </VRMLayout>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={!isLoggedIn && !hasViewToken ? <LandingPage /> : <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
+        <Route path="/login" element={!isLoggedIn && !hasViewToken ? <Login onLogin={handleLogin} /> : <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
+        
+        {/* Protected routes - require login */}
+        {(isLoggedIn || hasViewToken) && (
+          <>
+            <Route path="/dashboard" element={
+              <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
+                {userRole === 'admin' && !hasViewToken ? 
+                  <Navigate to="/admin" replace /> : 
+                  <DashboardPage credentials={credentials} />
+                }
+              </VRMLayout>
+            } />
+            <Route path="/event-logs" element={
+              <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
+                {userRole === 'admin' && !hasViewToken ? 
+                  <Navigate to="/admin" replace /> : 
+                  <EventLogsPage credentials={credentials} />
+                }
+              </VRMLayout>
+            } />
+            <Route path="/alarm-logs" element={
+              <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
+                {userRole === 'admin' && !hasViewToken ? 
+                  <Navigate to="/admin" replace /> : 
+                  <AlarmLogsPage credentials={credentials} />
+                }
+              </VRMLayout>
+            } />
+            <Route path="/device-list" element={
+              <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
+                {userRole === 'admin' && !hasViewToken ? 
+                  <Navigate to="/admin" replace /> : 
+                  <DeviceListPage credentials={credentials} />
+                }
+              </VRMLayout>
+            } />
+            <Route path="/analytics" element={
+              <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
+                {userRole === 'admin' && !hasViewToken ? 
+                  <Navigate to="/admin" replace /> : 
+                  <AnalyticsPage credentials={credentials} />
+                }
+              </VRMLayout>
+            } />
+            <Route path="/reports" element={
+              <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
+                {userRole === 'admin' && !hasViewToken ? 
+                  <Navigate to="/admin" replace /> : 
+                  <ReportsPage credentials={credentials} />
+                }
+              </VRMLayout>
+            } />
+            
+            {userRole === 'admin' && (
+              <Route path="/admin" element={
+                <VRMLayout userRole={userRole} onLogout={handleLogout}>
+                  <AdminPage credentials={credentials} />
+                </VRMLayout>
+              } />
+            )}
+          </>
+        )}
+        
+        {/* Redirect all other routes */}
+        <Route path="*" element={
+          !isLoggedIn && !hasViewToken ? 
+            <Navigate to="/" replace /> : 
+            <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />
+        } />
+      </Routes>
     </Router>
   );
 };

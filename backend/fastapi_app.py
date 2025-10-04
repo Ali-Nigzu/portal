@@ -28,7 +28,9 @@ from backend.app.models import (
     UpdateAlarmRequest,
     DeviceInfo,
     CreateDeviceRequest,
-    UpdateDeviceRequest
+    UpdateDeviceRequest,
+    RegisterInterestRequest,
+    RegisterInterestResponse
 )
 from backend.app.auth import (
     hash_password,
@@ -50,6 +52,7 @@ from backend.app.config import (
     USERS_FILE,
     ALARM_LOGS_FILE,
     DEVICE_LISTS_FILE,
+    INTEREST_SUBMISSIONS_FILE,
     GCS_BUCKET
 )
 from backend.app.view_tokens import (
@@ -83,6 +86,46 @@ app.add_middleware(
 async def root():
     """API health check"""
     return {"message": "Nigzsu Analytics API v2.0", "status": "healthy"}
+
+
+@app.post("/api/register-interest", response_model=RegisterInterestResponse)
+async def register_interest(submission: RegisterInterestRequest):
+    """Register interest form submission endpoint"""
+    try:
+        if os.path.exists(INTEREST_SUBMISSIONS_FILE):
+            with open(INTEREST_SUBMISSIONS_FILE, 'r') as f:
+                submissions = json.load(f)
+        else:
+            submissions = []
+        
+        submission_id = str(uuid.uuid4())
+        submission_data = {
+            'id': submission_id,
+            'name': submission.name,
+            'email': submission.email,
+            'company': submission.company,
+            'phone': submission.phone,
+            'business_type': submission.business_type,
+            'message': submission.message,
+            'submitted_at': datetime.now().isoformat()
+        }
+        
+        submissions.append(submission_data)
+        
+        os.makedirs(os.path.dirname(INTEREST_SUBMISSIONS_FILE), exist_ok=True)
+        with open(INTEREST_SUBMISSIONS_FILE, 'w') as f:
+            json.dump(submissions, f, indent=2)
+        
+        logger.info(f"New interest submission from {submission.email} at {submission.company}")
+        
+        return RegisterInterestResponse(
+            message="Thank you for your interest! We'll be in touch soon.",
+            submission_id=submission_id
+        )
+        
+    except Exception as e:
+        logger.error(f"Interest submission error: {e}")
+        raise HTTPException(status_code=500, detail="Unable to process submission")
 
 
 @app.post("/api/login", response_model=LoginResponse)
