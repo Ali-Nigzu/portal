@@ -106,6 +106,19 @@ Preferred communication style: Simple, everyday language.
 - **View Token Support**: data_sources included in device-list API response for token-based viewers
 - **Backward Compatibility**: Legacy csv_url field maintained for existing analytics endpoints
 
+### Critical Production Fixes (October 4, 2025)
+- **User Creation Fix**: New users automatically initialized with empty `data_sources` array and `last_login: null` to prevent 404 errors and structural inconsistencies
+- **Atomic File Writes**: Implemented atomic write operations using temporary files with `mkstemp()` and atomic `rename()` to prevent JSON corruption during concurrent user management operations
+  - Fixed directory resolution bug: `file_dir = os.path.dirname(USERS_FILE) or '.'` to handle empty dirname
+  - Prevents FileNotFoundError and race conditions during user CRUD operations
+- **Device List Page Redesign**: Complete transformation from device management to data source viewer
+  - Page renamed from "Device list" to "Data Sources"
+  - Shows client's configured data sources instead of device information
+  - Download buttons fetch actual CSV data from Google Sheets URLs
+  - Summary cards show Total Sources, Camera Feeds, and Sensor Feeds
+  - Clean table layout: Source Name, Type, Status, Data URL, Actions
+  - Read-only for all users (data source management happens in Admin page)
+
 ### Technical Improvements
 - Downgraded from React 19 to React 18.3.1 for library compatibility
 - Fixed react-datepicker integration issues
