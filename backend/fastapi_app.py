@@ -45,7 +45,7 @@ from backend.app.database import (
     save_alarm_logs,
     load_device_lists,
     save_device_lists,
-    get_active_data_source_url
+    get_active_table_name
 )
 from backend.app.config import (
     get_allowed_origins,
@@ -206,7 +206,7 @@ async def get_view_dashboard_info(token: str):
     return {
         'client_id': client_id,
         'name': client_data['name'],
-        'csv_url': client_data.get('csv_url', ''),
+        'table_name': client_data.get('table_name', ''),
         'token_valid': True
     }
 
@@ -224,10 +224,10 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
         if client_id not in users:
             raise HTTPException(status_code=404, detail="Client not found")
         
-        csv_url = get_active_data_source_url(client_id, users)
-        if not csv_url:
-            raise HTTPException(status_code=400, detail="No active data source configured for this client")
-        return csv_url
+        table_name = get_active_table_name(client_id, users)
+        if not table_name:
+            raise HTTPException(status_code=400, detail="No table configured for this client")
+        return table_name
     
     else:
         auth_header = request.headers.get('Authorization')
@@ -248,10 +248,10 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                     detail="Invalid credentials"
                 )
             
-            csv_url = get_active_data_source_url(username, users)
-            if not csv_url:
-                raise HTTPException(status_code=400, detail="No active data source configured")
-            return csv_url
+            table_name = get_active_table_name(username, users)
+            if not table_name:
+                raise HTTPException(status_code=400, detail="No table configured for this user")
+            return table_name
         except HTTPException:
             raise
         except Exception as e:
@@ -276,9 +276,9 @@ async def get_chart_data(
     Supports both authenticated users and view tokens
     """
     try:
-        csv_url = _authenticate_chart_data_request(request, view_token)
+        table_name = _authenticate_chart_data_request(request, view_token)
         
-        df = DataProcessor.load_csv_data(csv_url)
+        df = DataProcessor.load_table_data(table_name)
         df = DataProcessor.process_timestamps(df)
         
         filters = {
@@ -334,7 +334,7 @@ async def get_users(user: dict = Depends(authenticate_user)):
             'username': username,
             'name': user_data['name'],
             'role': user_data['role'],
-            'csv_url': user_data.get('csv_url', ''),
+            'table_name': user_data.get('table_name', ''),
             'last_login': user_data.get('last_login'),
             'data_sources': user_data.get('data_sources', [])
         })
@@ -360,7 +360,7 @@ async def create_user(
         'password': hash_password(create_request.password),
         'name': create_request.name,
         'role': create_request.role,
-        'csv_url': create_request.csv_url or '',
+        'table_name': create_request.table_name or '',
         'last_login': None,
         'data_sources': []
     }
@@ -392,8 +392,8 @@ async def update_user(
         users[username]['password'] = hash_password(update_request.password)
     if update_request.role is not None:
         users[username]['role'] = update_request.role
-    if update_request.csv_url is not None:
-        users[username]['csv_url'] = update_request.csv_url
+    if update_request.table_name is not None:
+        users[username]['table_name'] = update_request.table_name
     
     save_users(users)
     

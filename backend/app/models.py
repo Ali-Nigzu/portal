@@ -39,14 +39,14 @@ class CreateUserRequest(BaseModel):
     password: str
     name: str
     role: str
-    csv_url: Optional[str] = None
+    table_name: Optional[str] = None
 
 
 class UpdateUserRequest(BaseModel):
     name: Optional[str] = None
     password: Optional[str] = None
     role: Optional[str] = None
-    csv_url: Optional[str] = None
+    table_name: Optional[str] = None
 
 
 class CreateViewTokenRequest(BaseModel):
