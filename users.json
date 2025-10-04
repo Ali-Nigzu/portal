@@ -3,7 +3,7 @@
     "password": "admin123",
     "role": "admin",
     "name": "System Administrator",
-    "last_login": "2025-10-04T10:41:45.106763"
+    "last_login": "2025-10-04T10:44:30.788030"
   },
   "client1": {
     "password": "client123",
@@ -45,11 +45,19 @@
     "last_login": "2025-10-01T19:12:30.667716"
   },
   "client3": {
-    "password": "39678aa8292d502cc1ca80318b8a4f4f:36eea0e90432b639ada12e6e31e16fbbc30912fca333f83793291f4aacf90fb0",
+    "password": "1f09eefa21bdfac401e4c72f8b701ce3:a8d8716417fbc38ee58599bba33e2686d1ff7d0b5b5c51427d40e287d1f535a7",
     "name": "client3",
     "role": "client",
     "last_login": null,
     "csv_url": "https://docs.google.com/spreadsheets/d/1B6Kg19ONObAmXliyuQNTL0-fh-6ueXOY_amadASZ1W4/export?format=csv&gid=368477740",
-    "data_sources": []
+    "data_sources": [
+      {
+        "id": "source_1",
+        "title": "Cam 1",
+        "url": "https://docs.google.com/spreadsheets/d/1B6Kg19ONObAmXliyuQNTL0-fh-6ueXOY_amadASZ1W4/export?format=csv&gid=368477740",
+        "type": "Camera",
+        "active": true
+      }
+    ]
   }
 }
