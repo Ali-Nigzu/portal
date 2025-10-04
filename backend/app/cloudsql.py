@@ -14,7 +14,7 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-INSTANCE_CONNECTION_NAME = "nigzsu:europe-west2:postgres"
+INSTANCE_CONNECTION_NAME = "nigzsu:europe-west2:nigzsutestdb"
 DB_USER = "postgres"
 DB_NAME = "postgres"
 
