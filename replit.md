@@ -10,6 +10,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Major Updates (October 2025)
 
+### Backend Refactoring - Modular Structure (October 4, 2025)
+- **Clean Directory Structure**: Reorganized project into clean backend/ and frontend/ directories
+- **Modular Backend Components**: Split monolithic fastapi_app.py into focused modules:
+  - Authentication and security (auth.py)
+  - Database operations (database.py)
+  - Data models (models.py)
+  - Configuration management (config.py)
+  - View token system (view_tokens.py)
+  - Data processing logic (data_processor.py)
+- **Data Organization**: Moved all data files to backend/data/ directory
+- **Deployment Ready**: Updated Dockerfile and deployment configs for new structure
+- **Root Cleanup**: Removed old Flask app, templates, static files, and temporary files
+- **Version Control**: Created comprehensive .gitignore for Python and Node.js projects
+- **Zero Functionality Loss**: All features preserved and tested during refactoring
+
+## Recent Major Updates (October 2025)
+
 ### Event Log Enhancements
 - Date range picker with calendar UI using react-datepicker library
 - Track ID search functionality with partial matching
@@ -138,11 +155,19 @@ Modern React SPA with TypeScript and professional dark theme:
 - **Build Tool**: Create React App with Craco for custom webpack configuration
 
 ### Backend Architecture
-FastAPI-based REST API with secure authentication:
+FastAPI-based REST API with secure authentication and modular structure:
 - **Web Framework**: FastAPI with async support
+- **Modular Structure**: Organized backend/ directory with separate modules:
+  - `backend/fastapi_app.py`: Main application entry point with all API routes
+  - `backend/app/models.py`: Pydantic models and data validation schemas
+  - `backend/app/auth.py`: Authentication utilities and password hashing
+  - `backend/app/database.py`: User and data persistence layer
+  - `backend/app/config.py`: Application configuration and settings
+  - `backend/app/view_tokens.py`: Temporary view token management
+  - `backend/app/data_processor.py`: Intelligent CSV data processing
+  - `backend/data/`: JSON data files (users.json, alarm_logs.json, device_lists.json)
 - **Authentication**: HTTP Basic Auth with SHA-256 password hashing
-- **File Structure**: Single fastapi_app.py with modular endpoint organization
-- **User Management**: JSON-based user storage (users.json) with last login tracking
+- **User Management**: JSON-based user storage with atomic file writes and last login tracking
 - **Data Processing**: Pandas for CSV data manipulation and filtering
 - **CORS**: Configured for React frontend integration
 
@@ -186,6 +211,8 @@ Secure authentication model:
 
 ### Deployment Infrastructure
 - **Target Platform**: Google Cloud Run (Dockerfile-ready)
-- **Production Server**: Uvicorn ASGI server
+- **Production Server**: Uvicorn ASGI server with backend.fastapi_app:app
 - **Build Process**: Multi-stage Docker build with nginx for React SPA
 - **Environment Configuration**: Environment variable support for secrets and configuration
+- **Project Structure**: Clean separation of backend/ and frontend/ directories
+- **Requirements**: Isolated backend/requirements.txt with production dependencies

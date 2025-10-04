@@ -27,14 +27,14 @@ RUN apt-get update && apt-get install -y \
     nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better layer caching
-COPY requirements.txt .
+# Copy backend requirements first for better layer caching
+COPY backend/requirements.txt ./backend/requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Copy application code (backend)
-COPY . .
+# Copy backend application code
+COPY backend/ ./backend/
 
 # Copy React build from first stage
 COPY --from=react-build /app/frontend/build ./static/react
@@ -59,16 +59,7 @@ http { \
             proxy_set_header X-Forwarded-Proto $scheme; \
         } \
         \
-        # Backend authentication routes \
-        location ^~ /login { \
-            proxy_pass http://127.0.0.1:8000; \
-            proxy_set_header Host $host; \
-            proxy_set_header X-Real-IP $remote_addr; \
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-            proxy_set_header X-Forwarded-Proto $scheme; \
-        } \
-        \
-        # Health check and other backend routes \
+        # Backend health check \
         location ^~ /health { \
             proxy_pass http://127.0.0.1:8000; \
             proxy_set_header Host $host; \
@@ -82,10 +73,10 @@ http { \
     } \
 }' > /etc/nginx/nginx.conf
 
-# Create startup script
+# Create startup script with updated path
 RUN echo '#!/bin/bash \
 nginx & \
-exec uvicorn fastapi_app:app --host 127.0.0.1 --port 8000' > /app/start.sh \
+exec uvicorn backend.fastapi_app:app --host 127.0.0.1 --port 8000' > /app/start.sh \
 && chmod +x /app/start.sh
 
 # Create a non-root user
