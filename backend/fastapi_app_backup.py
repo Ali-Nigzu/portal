@@ -81,9 +81,9 @@ app.add_middleware(
 
 # Configuration
 GCS_BUCKET = 'nigzsu_cdata-testclient1'
-USERS_FILE = 'users.json'
-ALARM_LOGS_FILE = 'alarm_logs.json'
-DEVICE_LISTS_FILE = 'device_lists.json'
+USERS_FILE = 'backend/data/users.json'
+ALARM_LOGS_FILE = 'backend/data/alarm_logs.json'
+DEVICE_LISTS_FILE = 'backend/data/device_lists.json'
 
 security = HTTPBasic()
 

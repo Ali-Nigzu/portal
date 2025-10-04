@@ -3,7 +3,8 @@
     "password": "admin123",
     "role": "admin",
     "name": "System Administrator",
-    "last_login": "2025-10-04T11:12:11.103921"
+    "last_login": "2025-10-04T11:21:48.148243",
+    "data_sources": []
   },
   "client1": {
     "password": "client123",
@@ -26,7 +27,7 @@
         "active": false
       }
     ],
-    "last_login": "2025-10-03T20:58:07.238828"
+    "last_login": "2025-10-04T11:14:48.236799"
   },
   "client2": {
     "password": "238c0099d9ebcd9badb3d6090935a47d:b33ec0d1336fd94879e06f5838a4d1b26ea2df928af454c6b92ebb7c6c5c98f9",
