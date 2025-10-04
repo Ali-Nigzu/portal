@@ -258,9 +258,25 @@ def load_users():
     return users
 
 def save_users(users_data: dict):
-    """Save users data to JSON file"""
-    with open(USERS_FILE, 'w') as f:
-        json.dump(users_data, f, indent=2)
+    """Save users data to JSON file using atomic write to prevent corruption"""
+    import tempfile
+    import shutil
+    
+    # Get directory for temp file (use current dir if dirname is empty)
+    file_dir = os.path.dirname(USERS_FILE) or '.'
+    
+    # Write to temp file first
+    temp_fd, temp_path = tempfile.mkstemp(dir=file_dir, suffix='.tmp')
+    try:
+        with os.fdopen(temp_fd, 'w') as f:
+            json.dump(users_data, f, indent=2)
+        # Atomic rename (on same filesystem)
+        shutil.move(temp_path, USERS_FILE)
+    except Exception as e:
+        # Clean up temp file if something went wrong
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+        raise e
 
 def get_active_data_source_url(client_id: str, users: dict) -> Optional[str]:
     """Get the active data source URL for a client, fallback to csv_url if no active source"""
@@ -815,8 +831,11 @@ async def admin_create_user(
         'last_login': None
     }
     
-    if create_request.role == 'client' and create_request.csv_url:
-        new_user['csv_url'] = create_request.csv_url
+    if create_request.role == 'client':
+        if create_request.csv_url:
+            new_user['csv_url'] = create_request.csv_url
+        # Initialize empty data_sources array for all new clients
+        new_user['data_sources'] = []
     
     users[create_request.username] = new_user
     save_users(users)

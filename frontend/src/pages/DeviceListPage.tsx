@@ -261,12 +261,12 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
       {/* Page Header */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
-          Device list
+          Data Sources
         </h1>
         <div className="vrm-breadcrumb">
           <span>Dashboard</span>
           <span>›</span>
-          <span>Device list</span>
+          <span>Data Sources</span>
         </div>
       </div>
 
@@ -310,240 +310,116 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
         </div>
       )}
 
-      {/* Device Status Summary */}
-      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: '24px' }}>
+      {/* Data Sources Summary */}
+      <div className="vrm-grid vrm-grid-3" style={{ marginBottom: '24px' }}>
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-green)', marginBottom: '8px' }}>
-              {onlineDevices}
+            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-blue)', marginBottom: '8px' }}>
+              {dataSources.length}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Online Devices</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Total Data Sources</p>
           </div>
         </div>
 
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-red)', marginBottom: '8px' }}>
-              {offlineDevices}
+            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-green)', marginBottom: '8px' }}>
+              {dataSources.filter(s => s.type === 'Camera').length}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Offline Devices</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Camera Feeds</p>
           </div>
         </div>
 
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-orange)', marginBottom: '8px' }}>
-              {maintenanceDevices}
+              {dataSources.filter(s => s.type === 'Sensor').length}
             </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Maintenance</p>
-          </div>
-        </div>
-
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', color: 'var(--vrm-accent-blue)', marginBottom: '8px' }}>
-              {devices.length}
-            </div>
-            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Total Devices</p>
+            <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Sensor Feeds</p>
           </div>
         </div>
       </div>
 
-      {/* Device List */}
+      {/* Data Sources List */}
       <div className="vrm-card">
         <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Connected Devices</h3>
+          <h3 className="vrm-card-title">Data Sources</h3>
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => fetchDeviceList(isAdmin ? selectedClient : undefined)}>Refresh</button>
-            {isAdmin && <button className="vrm-btn vrm-btn-sm">Add Device</button>}
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => fetchDataSources()}>Refresh</button>
           </div>
         </div>
         <div className="vrm-card-body" style={{ padding: 0 }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="vrm-table">
-              <thead>
-                <tr>
-                  <th>Device</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Last Seen</th>
-                  <th>Location</th>
-                  <th>Data Records</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {devices.map((device) => (
-                  <tr key={device.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '24px' }}>{getDeviceIcon(device.type)}</span>
+          {dataSources.length > 0 ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="vrm-table">
+                <thead>
+                  <tr>
+                    <th>Source Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Data URL</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dataSources.map((source) => (
+                    <tr key={source.id}>
+                      <td>
                         <div>
-                          <div style={{ fontWeight: '600' }}>{device.name}</div>
+                          <div style={{ fontWeight: '600' }}>{source.title}</div>
                           <div style={{ fontSize: '12px', color: 'var(--vrm-text-muted)' }}>
-                            ID: {device.id}
+                            {source.id}
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`vrm-status ${device.type === 'Camera' ? 'vrm-status-online' : device.type === 'Gateway' ? 'vrm-status-warning' : 'vrm-status-offline'}`}>
-                        {device.type}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={`vrm-status ${getStatusClass(device.status)}`}>
-                        <div className="vrm-status-dot"></div>
-                        {getStatusText(device.status)}
-                      </div>
-                    </td>
-                    <td>{device.lastSeen}</td>
-                    <td>{device.location || 'Unknown'}</td>
-                    <td>
-                      {device.recordCount !== undefined ? (
-                        <div>
-                          <div style={{ fontWeight: '600' }}>{device.recordCount.toLocaleString()}</div>
-                          <div style={{ fontSize: '12px', color: 'var(--vrm-text-muted)' }}>events</div>
+                      </td>
+                      <td>
+                        <span className={`vrm-status ${
+                          source.type === 'Camera' ? 'vrm-status-online' : 
+                          source.type === 'Sensor' ? 'vrm-status-warning' : 
+                          'vrm-status-offline'
+                        }`}>
+                          {source.type}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="vrm-status vrm-status-online">
+                          <div className="vrm-status-dot"></div>
+                          Active
                         </div>
-                      ) : (
-                        <span style={{ color: 'var(--vrm-text-muted)' }}>N/A</span>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {isAdmin ? (
-                          <>
-                            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
-                              View
-                            </button>
-                            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
-                              Edit
-                            </button>
-                            <button className="vrm-btn vrm-btn-danger vrm-btn-sm">
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <button 
-                            className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                            onClick={() => {
-                              // Find the data source for this device
-                              const source = dataSources.find(s => s.id === device.dataSource);
-                              if (source) {
-                                handleDownloadDataSource(source.url, source.title);
-                              } else {
-                                alert('No data source available for this device');
-                              }
-                            }}
-                          >
-                            Download
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                      <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <code style={{ fontSize: '11px', color: 'var(--vrm-text-muted)' }}>
+                          {source.url}
+                        </code>
+                      </td>
+                      <td>
+                        <button 
+                          className="vrm-btn vrm-btn-primary vrm-btn-sm"
+                          onClick={() => handleDownloadDataSource(source.url, source.title)}
+                        >
+                          Download CSV
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '60px 20px',
+              color: 'var(--vrm-text-muted)'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
+              <p style={{ fontSize: '16px', marginBottom: '8px' }}>No data sources configured</p>
+              <p style={{ fontSize: '14px' }}>
+                {isAdmin ? 'Add data sources from the Admin panel.' : 'Contact your administrator to configure data sources.'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Data Source Configuration Section */}
-      {dataSources.length > 0 && (
-        <div className="vrm-card" style={{ marginTop: '24px' }}>
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">Data Source Configuration</h3>
-            <div style={{ fontSize: '12px', color: 'var(--vrm-text-muted)' }}>
-              Read-only view of configured data sources
-            </div>
-          </div>
-          <div className="vrm-card-body">
-            <div className="vrm-grid vrm-grid-2">
-              {dataSources.map((source, index) => (
-                <div key={source.id} style={{ padding: '16px', backgroundColor: 'var(--vrm-bg-tertiary)', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ 
-                      width: '40px', 
-                      height: '40px', 
-                      borderRadius: '8px', 
-                      backgroundColor: 'var(--vrm-accent-blue)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: '700',
-                      fontSize: '14px'
-                    }}>
-                      {index + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ 
-                        fontSize: '12px', 
-                        fontWeight: '600', 
-                        color: 'var(--vrm-text-muted)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>
-                        Source {index + 1}
-                      </div>
-                      <div style={{ 
-                        fontSize: '16px', 
-                        fontWeight: '600', 
-                        color: 'var(--vrm-text-primary)',
-                        marginTop: '2px'
-                      }}>
-                        {source.title}
-                      </div>
-                    </div>
-                    <span className={`vrm-status ${
-                      source.type === 'Camera' ? 'vrm-status-online' : 
-                      source.type === 'Sensor' ? 'vrm-status-warning' : 
-                      'vrm-status-offline'
-                    }`}>
-                      {source.type}
-                    </span>
-                  </div>
-                  
-                  <div style={{ fontSize: '14px', color: 'var(--vrm-text-secondary)' }}>
-                    <div style={{ marginBottom: '6px', fontWeight: '500' }}>
-                      Data Source URL:
-                    </div>
-                    <code style={{ 
-                      backgroundColor: 'var(--vrm-bg-primary)', 
-                      padding: '8px 12px', 
-                      borderRadius: '4px', 
-                      fontSize: '11px',
-                      wordBreak: 'break-all',
-                      display: 'block',
-                      color: 'var(--vrm-accent-teal)',
-                      fontFamily: 'monospace',
-                      lineHeight: '1.5'
-                    }}>
-                      {source.url}
-                    </code>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {dataSources.length === 0 && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '40px',
-                color: 'var(--vrm-text-muted)'
-              }}>
-                <p>No data sources configured for this client.</p>
-                {isAdmin && (
-                  <p style={{ fontSize: '14px', marginTop: '8px' }}>
-                    Configure data sources from the Admin panel.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <style>{`
         @keyframes spin {
