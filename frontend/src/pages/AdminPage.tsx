@@ -36,6 +36,7 @@ interface DataSource {
   title: string;
   url: string;
   type: 'Camera' | 'Sensor' | 'Gateway';
+  active?: boolean;
   client_id: string;
 }
 
@@ -588,6 +589,26 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
     }
   };
 
+  const handleSetActiveDataSource = async (sourceId: string) => {
+    try {
+      const auth = btoa(`${credentials.username}:${credentials.password}`);
+      const response = await fetch(`${API_BASE_URL}/api/admin/data-sources/${selectedClient}/${sourceId}/set-active`, {
+        method: 'POST',
+        headers: { 'Authorization': `Basic ${auth}` },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAlert({ message: 'Data source activated successfully', type: 'success' });
+        loadDataSources(selectedClient);
+      } else {
+        setAlert({ message: 'Failed to activate data source', type: 'error' });
+      }
+    } catch (err) {
+      setAlert({ message: 'Failed to activate data source', type: 'error' });
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
@@ -760,79 +781,132 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
             </div>
           </div>
 
-          {selectedClient && (
-            <div className="vrm-card" style={{ marginBottom: '24px' }}>
-              <div className="vrm-card-header">
-                <h3 className="vrm-card-title">Data Sources for {users[selectedClient]?.name || selectedClient}</h3>
-                <div className="vrm-card-actions">
+          <div className="vrm-card" style={{ marginBottom: '24px' }}>
+            <div className="vrm-card-header">
+              <h3 className="vrm-card-title">Data Sources Management</h3>
+            </div>
+            <div className="vrm-card-body">
+              <div style={{ marginBottom: '20px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <label style={{ color: 'var(--vrm-text-primary)', fontWeight: 'bold' }}>
+                  Select Client:
+                </label>
+                <select
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                  style={{
+                    flex: 1,
+                    maxWidth: '300px',
+                    padding: '8px 12px',
+                    backgroundColor: 'var(--vrm-bg-tertiary)',
+                    border: '1px solid var(--vrm-border-color)',
+                    borderRadius: '4px',
+                    color: 'var(--vrm-text-primary)',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="">-- Select a client --</option>
+                  {Object.entries(users)
+                    .filter(([_, user]) => (user as User).role === 'client')
+                    .map(([username, user]) => (
+                      <option key={username} value={username}>
+                        {(user as User).name} ({username})
+                      </option>
+                    ))}
+                </select>
+                {selectedClient && (
                   <button 
                     className="vrm-btn vrm-btn-sm" 
                     onClick={() => setShowAddDataSource(true)}
                   >
                     Add Data Source
                   </button>
-                </div>
+                )}
               </div>
-              <div className="vrm-card-body" style={{ padding: 0 }}>
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="vrm-table">
-                    <thead>
-                      <tr>
-                        <th>Source ID</th>
-                        <th>Title</th>
-                        <th>URL</th>
-                        <th>Type</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataSources.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--vrm-text-secondary)' }}>
-                            No data sources found for this client
-                          </td>
-                        </tr>
-                      ) : (
-                        dataSources.map((source, index) => (
-                          <tr key={source.id}>
-                            <td><code>Source {index + 1}</code></td>
-                            <td>{source.title}</td>
-                            <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {source.url}
-                            </td>
-                            <td>
-                              <span className="vrm-status vrm-status-online">
-                                {source.type}
-                              </span>
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                  onClick={() => {
-                                    setEditingDataSource(source);
-                                    setShowEditDataSource(true);
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                  onClick={() => handleDeleteDataSource(source.id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
+
+              {selectedClient && (
+                <>
+                  <div style={{ padding: '0 20px 20px 20px' }}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="vrm-table">
+                        <thead>
+                          <tr>
+                            <th>Source ID</th>
+                            <th>Title</th>
+                            <th>URL</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                        </thead>
+                        <tbody>
+                          {dataSources.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--vrm-text-secondary)' }}>
+                                No data sources found for this client
+                              </td>
+                            </tr>
+                          ) : (
+                            dataSources.map((source, index) => (
+                              <tr key={source.id}>
+                                <td><code>Source {index + 1}</code></td>
+                                <td>{source.title}</td>
+                                <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {source.url}
+                                </td>
+                                <td>
+                                  <span className="vrm-status vrm-status-online">
+                                    {source.type}
+                                  </span>
+                                </td>
+                                <td>
+                                  {source.active ? (
+                                    <span className="vrm-status vrm-status-online" style={{ backgroundColor: '#22c55e', fontWeight: 'bold' }}>
+                                      Active
+                                    </span>
+                                  ) : (
+                                    <span className="vrm-status" style={{ backgroundColor: '#6b7280' }}>
+                                      Inactive
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {!source.active && (
+                                      <button
+                                        className="vrm-btn vrm-btn-sm"
+                                        onClick={() => handleSetActiveDataSource(source.id)}
+                                      >
+                                        Set as Active
+                                      </button>
+                                    )}
+                                    <button
+                                      className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                      onClick={() => {
+                                        setEditingDataSource(source);
+                                        setShowEditDataSource(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                      onClick={() => handleDeleteDataSource(source.id)}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          </div>
 
           {showAddUser && (
             <div style={{
