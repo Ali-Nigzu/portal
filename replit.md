@@ -8,6 +8,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 2025)
 
+### Landing Page & Interest Registration (October 4, 2025)
+- **Public Landing Page**: Created professional marketing landing page at root URL (/) with dark theme and cyan accents
+- **Hero Section**: Compelling headline "Transform Your CCTV Footage Into Instant Business Insights" with animated visual elements
+- **Value Proposition**: Multiple sections highlighting the problem (unused CCTV data), solution (Nigzsu's frictionless approach), and key features
+- **Register Interest Form**: Comprehensive form capturing name, email, company, phone, business type, and message with client-side validation
+- **Backend Endpoint**: New `/api/register-interest` endpoint stores submissions to `backend/data/interest_submissions.json` with UUID tracking
+- **Updated Routing**: Landing page at `/`, login at `/login`, protected routes for authenticated users only
+- **Navigation**: Clear separation between "Get Started" (scrolls to form) and "Login" (existing clients) buttons
+- **Form Validation**: Client-side validation for required fields and email format before submission
+- **Responsive Design**: Mobile-friendly layout adapting to different screen sizes
+- **Result**: Professional customer-facing entry point that captures leads while keeping the dashboard secure
+
 ### Codebase Cleanup & Production Optimization (October 4, 2025)
 - **Removed Unnecessary Files**: Cleaned up 40+ files including attached_assets/, old prompts, screenshots, design docs
 - **Build Artifacts**: Removed committed frontend/build/ directory (3.3MB) and updated .gitignore to prevent future commits
