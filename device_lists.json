@@ -2,24 +2,13 @@
   "client1": [
     {
       "id": "device-001",
-      "name": "Main Entrance Camera",
+      "name": "Main Camera",
       "type": "Camera",
       "status": "online",
       "lastSeen": "2025-10-01T17:30:00",
       "dataSource": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client0/testdata.csv",
       "location": "Main Entrance",
       "recordCount": 165000,
-      "client_id": "client1"
-    },
-    {
-      "id": "device-002",
-      "name": "Secondary Exit Camera",
-      "type": "Camera",
-      "status": "online",
-      "lastSeen": "2025-10-01T17:25:00",
-      "dataSource": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client1/testdata0.csv",
-      "location": "Side Exit",
-      "recordCount": 110696,
       "client_id": "client1"
     },
     {
