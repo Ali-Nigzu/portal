@@ -8,6 +8,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 2025)
 
+### Cloud SQL PostgreSQL Migration (October 4, 2025)
+- **Database Infrastructure**: Migrated from Google Sheets CSV to Google Cloud SQL PostgreSQL for faster, more reliable data access
+- **Cloud SQL Connector**: Implemented secure connection using Cloud SQL Python Connector with service account authentication
+- **Data Transformation**: Built automatic transformation layer to convert Cloud SQL schema (site, cam_id, track_id hex, event 1/0, ISO timestamps, updated age buckets) to analytics-compatible format
+- **User Management Update**: Changed from csv_url to table_name for client configuration - admins now assign Cloud SQL table names to clients
+- **Backward Compatible**: All existing analytics, charts, and filtering functionality work identically with the new data source
+- **Performance**: Significantly faster data loading compared to Google Sheets CSV parsing
+- **Empty Dataset Handling**: Gracefully handles empty tables by returning empty datasets rather than errors
+- **Security**: Service account credentials managed as environment secrets with proper cleanup
+- **Result**: Scalable database infrastructure ready for production deployment while maintaining all existing functionality
+
 ### Landing Page & Interest Registration (October 4, 2025)
 - **Public Landing Page**: Created professional marketing landing page at root URL (/) with dark theme and cyan accents
 - **Hero Section**: Compelling headline "Transform Your CCTV Footage Into Instant Business Insights" with animated visual elements
@@ -41,7 +52,7 @@ A modern React SPA built with TypeScript, featuring a professional dark theme. I
 A FastAPI-based REST API with a modular and secure design. The backend is organized into modules for authentication, database operations, data models, configuration, view token management, and data processing. It uses HTTP Basic Auth with SHA-256 password hashing and stores user data in JSON files with atomic write operations. Data processing leverages Pandas for CSV manipulation.
 
 ### Data Storage Solutions
-The application employs a hybrid storage approach. User data, including hashed passwords and last login times, is stored in a local JSON file (`users.json`). Client data sources are configured as an array of objects, each specifying an ID, title, URL, and type (Camera/Sensor/Gateway), with Google Sheets CSV exports serving as the primary data format.
+The application employs a hybrid storage approach. User data, including hashed passwords and last login times, is stored in a local JSON file (`users.json`). Client analytics data is stored in Google Cloud SQL PostgreSQL tables, with each client assigned a dedicated table name (e.g., client1, client2). The application uses the Cloud SQL Python Connector for secure, authenticated access with automatic connection pooling.
 
 ### Authentication and Authorization
 A secure authentication model using HTTP Basic Auth with SHA-256 password hashing. It supports a two-tier role system (admin/client), tracks last login times, and enforces route-level access control.
@@ -49,12 +60,15 @@ A secure authentication model using HTTP Basic Auth with SHA-256 password hashin
 ## External Dependencies
 
 ### Data Sources
-- **Google Sheets**: Primary source for business data via public CSV export URLs.
+- **Google Cloud SQL**: PostgreSQL database (nigzsu:europe-west2:nigzsutestdb) storing client analytics data with tables per client.
 
 ### Python Backend Libraries
 - **FastAPI**: Web framework for the REST API.
 - **Uvicorn**: ASGI server.
-- **Pandas**: For data manipulation and CSV processing.
+- **Pandas**: For data manipulation and analytics processing.
+- **cloud-sql-python-connector**: Secure connection to Google Cloud SQL with service account authentication.
+- **SQLAlchemy**: ORM and database toolkit for PostgreSQL queries.
+- **pg8000**: Pure-Python PostgreSQL database driver.
 - **python-multipart**: For form data handling.
 
 ### React Frontend Libraries
