@@ -1,5 +1,6 @@
 """
-Intelligent CSV Data Processor for Nigzsu Analytics
+Intelligent Data Processor for Nigzsu Analytics
+Supports Cloud SQL PostgreSQL data sources
 """
 
 import pandas as pd
@@ -8,67 +9,70 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from fastapi import HTTPException
+from sqlalchemy import text
 
 from .models import DataIntelligence
+from .cloudsql import cloudsql_connection
 
 logger = logging.getLogger(__name__)
 
 
 class DataProcessor:
-    """Intelligent CSV data processor with auto-scaling features"""
+    """Intelligent data processor with Cloud SQL support"""
     
     @staticmethod
-    def load_csv_data(csv_url: str) -> pd.DataFrame:
-        """Load and validate CSV data"""
+    def load_table_data(table_name: str) -> pd.DataFrame:
+        """Load and validate data from Cloud SQL table"""
         try:
-            df = pd.read_csv(csv_url, header=None,
-                           names=['index', 'track_number', 'event', 'timestamp', 'sex', 'age_estimate'])
+            query = f"SELECT * FROM {table_name} ORDER BY index ASC"
+            
+            with cloudsql_connection.get_connection_context() as conn:
+                df = pd.read_sql(query, conn)
             
             if len(df) == 0:
-                raise ValueError("Empty CSV file")
-                
-            logger.info(f"Loaded {len(df)} records from CSV")
+                raise ValueError(f"No data found in table {table_name}")
+            
+            df = DataProcessor.transform_cloudsql_format(df)
+            
+            logger.info(f"Loaded {len(df)} records from table {table_name}")
             return df
+            
         except Exception as e:
-            logger.error(f"Failed to load CSV data: {e}")
-            return DataProcessor.generate_demo_data()
+            logger.error(f"Failed to load data from table {table_name}: {e}")
+            raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
     
     @staticmethod
-    def generate_demo_data() -> pd.DataFrame:
-        """Generate demo CCTV data for testing"""
-        import random
+    def transform_cloudsql_format(df: pd.DataFrame) -> pd.DataFrame:
+        """Transform Cloud SQL data format to match expected analytics format"""
+        df['track_number'] = df['track_id']
         
-        base_time = datetime.now() - timedelta(days=7)
-        data = []
+        df['event'] = df['event'].apply(lambda x: 'entry' if x == 1 else 'exit')
         
-        age_groups = ['(0,8)', '(9,16)', '(17,25)', '(25,40)', '(40,60)', '(60+)']
-        genders = ['M', 'F']
-        events = ['entry', 'exit']
+        age_bucket_map = {
+            '0-4': '(0,8)',
+            '5-13': '(0,8)',
+            '14-25': '(17,25)',
+            '26-45': '(25,40)',
+            '46-65': '(40,60)',
+            '66+': '(60+)'
+        }
+        df['age_estimate'] = df['age_bucket'].map(age_bucket_map)
         
-        for i in range(1000):
-            timestamp = base_time + timedelta(
-                days=random.randint(0, 6),
-                hours=random.randint(8, 22),
-                minutes=random.randint(0, 59),
-                seconds=random.randint(0, 59)
-            )
-            
-            data.append({
-                'index': i + 1,
-                'track_number': random.randint(1000, 9999),
-                'event': random.choice(events),
-                'timestamp': timestamp.strftime('%M:%H:%d:%m:%Y'),
-                'sex': random.choice(genders),
-                'age_estimate': random.choice(age_groups)
-            })
+        df['timestamp_iso'] = pd.to_datetime(df['timestamp'])
+        df['timestamp'] = df['timestamp_iso'].dt.strftime('%M:%H:%d:%m:%Y')
         
-        return pd.DataFrame(data)
+        required_columns = ['index', 'track_number', 'event', 'timestamp', 'sex', 'age_estimate']
+        df = df[required_columns]
+        
+        logger.info(f"Transformed {len(df)} records to analytics format")
+        return df
     
     @staticmethod
     def process_timestamps(df: pd.DataFrame) -> pd.DataFrame:
         """Process timestamps with format mm:hh:dd:mm:yyyy"""
         try:
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%M:%H:%d:%m:%Y', errors='coerce')
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'], format='%M:%H:%d:%m:%Y', errors='coerce')
             
             df['hour'] = df['timestamp'].dt.hour
             df['day_of_week'] = df['timestamp'].dt.day_name()

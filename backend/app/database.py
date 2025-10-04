@@ -36,7 +36,7 @@ def load_users():
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "csv_url": "https://docs.google.com/spreadsheets/d/1B6Kg19ONObAmXliyuQNTL0-fh-6ueXOY_amadASZ1W4/export?format=csv&gid=368477740",
+                "table_name": "client1",
                 "last_login": None,
                 "data_sources": []
             },
@@ -44,7 +44,7 @@ def load_users():
                 "password": hash_password("client456"),
                 "role": "client",
                 "name": "Test Client 2",
-                "csv_url": "https://docs.google.com/spreadsheets/d/10oFKUDhiKjAIqTaJyCa20r9lbTdSgjPK4HwmdCplUgU/export?format=csv",
+                "table_name": "client2",
                 "last_login": None,
                 "data_sources": []
             }
@@ -86,19 +86,13 @@ def save_users(users_data: dict):
         raise e
 
 
-def get_active_data_source_url(client_id: str, users: dict) -> Optional[str]:
-    """Get the active data source URL for a client"""
+def get_active_table_name(client_id: str, users: dict) -> Optional[str]:
+    """Get the Cloud SQL table name for a client"""
     if client_id not in users:
         return None
     
     client_data = users[client_id]
-    
-    data_sources = client_data.get('data_sources', [])
-    for source in data_sources:
-        if source.get('active', False):
-            return source.get('url')
-    
-    return client_data.get('csv_url')
+    return client_data.get('table_name')
 
 
 def load_alarm_logs():
