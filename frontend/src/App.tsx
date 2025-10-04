@@ -23,16 +23,16 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
     setError(null);
     
     try {
-      // Validate credentials by attempting to fetch data
-      const auth = btoa(`${username}:${password}`);
-      const response = await fetch('/api/chart-data', {
+      const response = await fetch('/api/login', {
+        method: 'POST',
         headers: {
-          'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ username, password }),
       });
 
       if (response.ok) {
+        await response.json();
         onLogin(username, password);
       } else if (response.status === 401) {
         setError('Invalid username or password');

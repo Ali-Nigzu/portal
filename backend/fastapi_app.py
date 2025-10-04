@@ -191,8 +191,7 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
         if not auth_header or not auth_header.startswith('Basic '):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required",
-                headers={"WWW-Authenticate": "Basic"},
+                detail="Authentication required"
             )
         
         try:
@@ -203,8 +202,7 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
             if username not in users or not verify_password(password, users[username]['password']):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid credentials",
-                    headers={"WWW-Authenticate": "Basic"},
+                    detail="Invalid credentials"
                 )
             
             csv_url = get_active_data_source_url(username, users)
@@ -216,8 +214,7 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials",
-                headers={"WWW-Authenticate": "Basic"},
+                detail="Invalid credentials"
             )
 
 
@@ -612,8 +609,7 @@ async def get_alarm_logs(
         if not auth_header or not auth_header.startswith('Basic '):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required",
-                headers={"WWW-Authenticate": "Basic"},
+                detail="Authentication required"
             )
         
         try:
@@ -624,8 +620,7 @@ async def get_alarm_logs(
             if username not in users or not verify_password(password, users[username]['password']):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid credentials",
-                    headers={"WWW-Authenticate": "Basic"},
+                    detail="Invalid credentials"
                 )
             
             user_role = users[username]['role']
@@ -638,8 +633,7 @@ async def get_alarm_logs(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials",
-                headers={"WWW-Authenticate": "Basic"},
+                detail="Invalid credentials"
             )
     
     alarms = alarm_data.get(target_client, [])
@@ -755,8 +749,7 @@ async def get_device_list(
         if not auth_header or not auth_header.startswith('Basic '):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required",
-                headers={"WWW-Authenticate": "Basic"},
+                detail="Authentication required"
             )
         
         try:
@@ -767,8 +760,7 @@ async def get_device_list(
             if username not in users or not verify_password(password, users[username]['password']):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid credentials",
-                    headers={"WWW-Authenticate": "Basic"},
+                    detail="Invalid credentials"
                 )
             
             user_role = users[username]['role']
@@ -781,8 +773,7 @@ async def get_device_list(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials",
-                headers={"WWW-Authenticate": "Basic"},
+                detail="Invalid credentials"
             )
     
     devices = device_data.get(target_client, [])
