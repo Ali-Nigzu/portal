@@ -12,8 +12,8 @@ import './styles/VRMTheme.css';
 
 // Login Component
 const Login: React.FC<{onLogin: (username: string, password: string) => void}> = ({ onLogin }) => {
-  const [username, setUsername] = useState('client1');
-  const [password, setPassword] = useState('client123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -106,6 +106,7 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
               value={username} 
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter username"
+              autoComplete="username"
               required
               style={{ 
                 width: '100%',
@@ -134,6 +135,7 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
               value={password} 
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
+              autoComplete="current-password"
               required
               style={{ 
                 width: '100%',
