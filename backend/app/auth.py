@@ -40,8 +40,7 @@ def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
     if credentials.username not in users:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
+            detail="Invalid credentials"
         )
     
     user = users[credentials.username]
@@ -49,8 +48,7 @@ def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
     if not verify_password(credentials.password, user['password']):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials", 
-            headers={"WWW-Authenticate": "Basic"},
+            detail="Invalid credentials"
         )
     
     users[credentials.username]['last_login'] = datetime.now().isoformat()
