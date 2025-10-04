@@ -74,6 +74,18 @@ Preferred communication style: Simple, everyday language.
 - Role-based routing: admins → /admin, clients → /dashboard
 - Consistent navigation and access control across all user roles
 
+### Client Device List Access Control (October 4, 2025)
+- **Read-Only Client View**: Clients can only view device information, all Add/Edit/Delete buttons hidden
+- **Download Functionality**: Clients can download full CSV datasets for each data source using "Download" button
+- **Admin Full CRUD**: Administrators retain complete access to View/Edit/Delete device operations
+- **Smart Data Source Matching**: Download automatically fetches CSV from correct Google Sheets URL for each device
+
+### Last Login Tracking Display (October 4, 2025)
+- **Visible Last Login**: Admin user management table now displays "Last Login" column
+- **Formatted Timestamps**: Shows login time as "YYYY-MM-DD HH:MM:SS" (e.g., "2025-10-04 10:25:59")
+- **Never Logged In**: Displays "Never" for users who haven't logged in yet
+- **Real-Time Tracking**: Backend automatically updates timestamp on every successful authentication
+
 ### Multi-Data Source Management (October 4, 2025)
 - **Data Model Migration**: Moved from single `csv_url` to flexible `data_sources` array per client
 - **Admin CRUD Interface**: Complete data source management in AdminPage Users tab
