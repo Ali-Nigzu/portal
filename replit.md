@@ -9,12 +9,16 @@ Preferred communication style: Simple, everyday language.
 ## Recent Updates (October 2025)
 
 ### Codebase Cleanup & Production Optimization (October 4, 2025)
-- **Removed Unnecessary Files**: Cleaned up 35+ files from attached_assets/ (old prompts, screenshots, design docs)
+- **Removed Unnecessary Files**: Cleaned up 40+ files including attached_assets/, old prompts, screenshots, design docs
 - **Build Artifacts**: Removed committed frontend/build/ directory (3.3MB) and updated .gitignore to prevent future commits
 - **Dependency Consolidation**: Moved export-related dependencies (html2canvas, jspdf, papaparse, xlsx) from root to frontend/package.json
 - **Removed Unused Dependencies**: Eliminated google-cloud-storage and requests from backend requirements.txt
 - **Removed Test Files**: Deleted test_deployment.py and duplicate root package.json files
-- **Result**: Leaner codebase, faster builds, production-ready structure with all functionality preserved
+- **Python Dependency Cleanup**: Removed unused root pyproject.toml and uv.lock (Dockerfile uses backend/requirements.txt)
+- **Environment File Cleanup**: Removed duplicate frontend/public/.env, kept frontend/.env and frontend/.env.production
+- **Documentation**: Created comprehensive README.md with local dev and Google Cloud Run deployment instructions
+- **Removed Legacy Config**: Eliminated GCS_BUCKET environment variable references (app uses Google Sheets CSV and local JSON)
+- **Result**: Leaner codebase, faster builds, production-ready structure with 100% functionality preserved
 
 ## System Architecture
 

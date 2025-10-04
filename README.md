@@ -143,14 +143,16 @@ gcloud run deploy nigzsu-analytics \
 
 ### Environment Variables (Optional)
 
-Set environment variables during deployment:
+Set environment variables during deployment if needed:
 
 ```bash
 gcloud run deploy nigzsu-analytics \
   --source . \
   --region us-central1 \
-  --set-env-vars="NODE_ENV=production,GCS_BUCKET=your-bucket-name"
+  --set-env-vars="NODE_ENV=production"
 ```
+
+**Note:** The app uses Google Sheets CSV exports (via public URLs) for data and local JSON files for user storage. No cloud storage buckets are required.
 
 ### Post-Deployment
 
