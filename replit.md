@@ -6,6 +6,16 @@ Nigzsu is a React and FastAPI business intelligence dashboard that converts CCTV
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Updates (October 2025)
+
+### Codebase Cleanup & Production Optimization (October 4, 2025)
+- **Removed Unnecessary Files**: Cleaned up 35+ files from attached_assets/ (old prompts, screenshots, design docs)
+- **Build Artifacts**: Removed committed frontend/build/ directory (3.3MB) and updated .gitignore to prevent future commits
+- **Dependency Consolidation**: Moved export-related dependencies (html2canvas, jspdf, papaparse, xlsx) from root to frontend/package.json
+- **Removed Unused Dependencies**: Eliminated google-cloud-storage and requests from backend requirements.txt
+- **Removed Test Files**: Deleted test_deployment.py and duplicate root package.json files
+- **Result**: Leaner codebase, faster builds, production-ready structure with all functionality preserved
+
 ## System Architecture
 
 ### Frontend Architecture
