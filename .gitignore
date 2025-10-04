@@ -130,6 +130,16 @@ test_*.py
 # Development assets
 attached_assets/
 
+# Replit system folders (auto-generated)
+.config/
+.pythonlibs/
+.cache/
+.upm/
+.breakpoints
+npm/
+node_global/
+Packager files/
+
 # Deployment
 *.zip
 *.tar.gz
