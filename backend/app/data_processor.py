@@ -108,26 +108,49 @@ class DataProcessor:
                 """)
                 records_df = pd.read_sql(records_query, conn, params=params)
                 
-                # Query 5: Dwell time (exclude event filter, use other filters only)
+                # Query 5: Occupancy-based dwell time calculation
+                # Calculate total person-minutes (area under occupancy curve) / total entries
+                # This gives average time spent per person based on aggregate occupancy
+                dwell_where_clause = f"WHERE {' AND '.join(dwell_where_clauses)}" if dwell_where_clauses else ""
                 dwell_query = text(f"""
-                WITH entries AS (
-                    SELECT track_id, MIN(timestamp) as entry_time
+                WITH ordered_events AS (
+                    SELECT 
+                        timestamp,
+                        CASE WHEN event = 1 THEN 1 ELSE -1 END as occupancy_change
+                    FROM {table_name}
+                    {dwell_where_clause}
+                    ORDER BY timestamp
+                ),
+                occupancy_periods AS (
+                    SELECT 
+                        timestamp as start_time,
+                        LEAD(timestamp) OVER (ORDER BY timestamp) as end_time,
+                        SUM(occupancy_change) OVER (ORDER BY timestamp) as occupancy
+                    FROM ordered_events
+                ),
+                person_minutes AS (
+                    SELECT 
+                        SUM(
+                            CASE 
+                                WHEN end_time IS NOT NULL AND occupancy > 0
+                                THEN occupancy * EXTRACT(EPOCH FROM (end_time - start_time)) / 60.0
+                                ELSE 0
+                            END
+                        ) as total_person_minutes
+                    FROM occupancy_periods
+                ),
+                total_entries AS (
+                    SELECT COUNT(*) as entry_count
                     FROM {table_name}
                     WHERE event = 1 {dwell_where_sql}
-                    GROUP BY track_id
-                ),
-                exits AS (
-                    SELECT track_id, MAX(timestamp) as exit_time
-                    FROM {table_name}
-                    WHERE event = 0 {dwell_where_sql}
-                    GROUP BY track_id
                 )
                 SELECT 
-                    AVG(EXTRACT(EPOCH FROM (e.exit_time - en.entry_time)) / 60) as avg_dwell_minutes,
-                    COUNT(*) as complete_sessions
-                FROM entries en
-                JOIN exits e ON en.track_id = e.track_id
-                WHERE e.exit_time > en.entry_time
+                    CASE 
+                        WHEN te.entry_count > 0 
+                        THEN pm.total_person_minutes / te.entry_count 
+                        ELSE 0 
+                    END as avg_dwell_minutes
+                FROM person_minutes pm, total_entries te
                 """)
                 # Only pass non-event params to dwell query
                 dwell_params = {k: v for k, v in params.items() if k != 'event'}
