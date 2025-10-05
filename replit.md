@@ -15,11 +15,13 @@ Preferred communication style: Simple, everyday language.
 - **User Management Update**: Changed from csv_url to table_name for client configuration - admins now assign Cloud SQL table names to clients
 - **SQL Aggregation Performance**: Replaced full table scans with targeted SQL aggregation queries (GROUP BY, COUNT, AVG) for 3-4x performance improvement
 - **Parameterized Queries**: All user inputs protected with SQLAlchemy text() parameter binding to prevent SQL injection attacks
-- **Dwell Time Accuracy**: Fixed dwell time calculations to exclude event filter from entry/exit CTEs, ensuring accurate pairing even with filtered data
+- **Occupancy-Based Dwell Time**: Redesigned dwell time calculation from individual track matching to occupancy-based method using SQL window functions - calculates area under occupancy curve (person-minutes ÷ entries) for accurate average visit duration (~24 minutes vs incorrect 38+ hours)
+- **Correct Total Traffic Display**: Frontend now displays actual total_records (881,726) from summary instead of limited data array length (10,000)
+- **Full Database Event Search**: New /api/search-events endpoint enables searching across entire 881k+ event database with server-side filtering (date, event type, gender, age, track ID) and pagination instead of limited client-side filtering
 - **Actual Event Records**: Returns up to 10,000 real event records with track_id, timestamp, sex, age_bucket fields for frontend chart compatibility
 - **Empty Dataset Handling**: Gracefully handles empty tables by returning empty datasets rather than errors
 - **Security**: Service account credentials managed as environment secrets, parameterized queries block SQL injection
-- **Result**: Scalable database infrastructure (~9 second API response for 880k+ records) with secure, native Cloud SQL data format providing accurate analytics
+- **Result**: Scalable database infrastructure (~9 second API response for 880k+ records) with accurate calculations, correct KPI displays, and full database search capability
 
 ### Landing Page & Interest Registration (October 4, 2025)
 - **Public Landing Page**: Created professional marketing landing page at root URL (/) with dark theme and cyan accents
