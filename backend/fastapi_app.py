@@ -8,6 +8,7 @@ import json
 import uuid
 import base64
 import logging
+import pandas as pd
 from datetime import datetime
 from typing import Optional, Dict, List, Any
 from fastapi import FastAPI, HTTPException, Depends, status, Request
@@ -272,14 +273,11 @@ async def get_chart_data(
     view_token: Optional[str] = None
 ):
     """
-    Get intelligent chart data with auto-scaling and smart aggregation
+    Get intelligent chart data using SQL aggregation - much faster than loading all rows
     Supports both authenticated users and view tokens
     """
     try:
         table_name = _authenticate_chart_data_request(request, view_token)
-        
-        df = DataProcessor.load_table_data(table_name)
-        df = DataProcessor.process_timestamps(df)
         
         filters = {
             'start_date': start_date,
@@ -288,29 +286,96 @@ async def get_chart_data(
             'age_group': age_group,
             'event': event
         }
-        df = DataProcessor.apply_filters(df, filters)
         
-        intelligence = DataProcessor.analyze_data_intelligence(df)
+        # Get aggregated data from SQL
+        agg_data = DataProcessor.get_aggregated_analytics(table_name, filters)
         
-        raw_records = df.to_dict('records')
-        chart_data: List[Dict[str, Any]] = [dict(record) for record in raw_records]
+        stats = agg_data['stats'].iloc[0] if len(agg_data['stats']) > 0 else None
+        total_records = int(stats['total_records']) if stats is not None else 0
+        
+        # Build demographics from aggregated data
+        gender_counts = {}
+        age_counts = {}
+        for _, row in agg_data['demographics'].iterrows():
+            gender_counts[row['sex']] = gender_counts.get(row['sex'], 0) + int(row['count'])
+            age_counts[row['age_bucket']] = age_counts.get(row['age_bucket'], 0) + int(row['count'])
+        
+        # Build hourly distribution
+        hourly_dist = {int(row['hour']): int(row['count']) for _, row in agg_data['hourly'].iterrows()}
+        peak_hour = max(hourly_dist.items(), key=lambda x: x[1])[0] if hourly_dist else 12
+        peak_hours = sorted(hourly_dist.items(), key=lambda x: x[1], reverse=True)[:3]
+        peak_hours_list = [int(h[0]) for h in peak_hours]
+        
+        # Calculate date span
+        date_span_days = 0
+        if stats is not None and stats['min_timestamp'] and stats['max_timestamp']:
+            date_span_days = (stats['max_timestamp'] - stats['min_timestamp']).days
+        
+        optimal_granularity = "hourly"
+        if date_span_days > 30:
+            optimal_granularity = "weekly"
+        elif date_span_days > 7:
+            optimal_granularity = "daily"
+        
+        # Get dwell time
+        avg_dwell = 0
+        if len(agg_data['dwell']) > 0 and agg_data['dwell'].iloc[0]['avg_dwell_minutes']:
+            avg_dwell = float(agg_data['dwell'].iloc[0]['avg_dwell_minutes'])
+        
+        # Use actual event records from database (limited to 10k for performance)
+        chart_data = []
+        for _, row in agg_data['records'].iterrows():
+            timestamp = pd.to_datetime(row['timestamp'])
+            chart_data.append({
+                'timestamp': timestamp.isoformat(),
+                'hour': timestamp.hour,
+                'date': timestamp.date().isoformat(),
+                'event': 'entry' if row['event'] == 1 else 'exit',
+                'track_number': row['track_id'],
+                'sex': row['sex'],
+                'age_estimate': row['age_bucket'],
+                'day_of_week': timestamp.strftime('%A'),
+                'index': 0
+            })
         
         summary = {
-            'total_records': len(df),
+            'total_records': total_records,
             'date_range': {
-                'start': df['timestamp'].min().isoformat() if len(df) > 0 and df['timestamp'].notna().any() else None,
-                'end': df['timestamp'].max().isoformat() if len(df) > 0 and df['timestamp'].notna().any() else None
+                'start': stats['min_timestamp'].isoformat() if stats is not None and stats['min_timestamp'] else None,
+                'end': stats['max_timestamp'].isoformat() if stats is not None and stats['max_timestamp'] else None
             },
             'demographics': {
-                'gender': df['sex'].value_counts().to_dict(),
-                'age_groups': df['age_estimate'].value_counts().to_dict()
+                'gender': gender_counts,
+                'age_groups': age_counts
             }
+        }
+        
+        intelligence = {
+            'total_records': total_records,
+            'date_span_days': date_span_days,
+            'latest_timestamp': stats['max_timestamp'] if stats is not None else None,
+            'optimal_granularity': optimal_granularity,
+            'peak_hours': peak_hours_list,
+            'demographics_breakdown': {
+                'gender': gender_counts,
+                'age_groups': age_counts,
+                'events': {'entry': int(stats['entries']) if stats is not None else 0, 'exit': int(stats['exits']) if stats is not None else 0}
+            },
+            'temporal_patterns': {
+                'hourly_distribution': hourly_dist,
+                'daily_distribution': {},
+                'peak_times': {
+                    'hour': peak_hour,
+                    'count': hourly_dist.get(peak_hour, 0)
+                }
+            },
+            'avg_dwell_minutes': avg_dwell
         }
         
         return ChartDataResponse(
             data=chart_data,
             summary=summary,
-            intelligence=intelligence.dict()
+            intelligence=intelligence
         )
         
     except HTTPException:

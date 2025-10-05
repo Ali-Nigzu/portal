@@ -18,29 +18,134 @@ logger = logging.getLogger(__name__)
 
 
 class DataProcessor:
-    """Intelligent data processor with Cloud SQL support"""
+    """Intelligent data processor with Cloud SQL support using aggregation queries"""
     
     @staticmethod
-    def load_table_data(table_name: str) -> pd.DataFrame:
-        """Load and validate data from Cloud SQL table"""
+    def get_aggregated_analytics(table_name: str, filters: Dict[str, Optional[str]] = None) -> Dict:
+        """Get pre-aggregated analytics data from Cloud SQL using parameterized queries"""
         try:
-            query = f"SELECT * FROM {table_name} ORDER BY index ASC"
+            filters = filters or {}
+            params = {}
+            where_clauses = []
+            dwell_where_clauses = []  # For dwell time, exclude event filter
+            
+            # Build parameterized WHERE clauses
+            if filters.get('start_date'):
+                where_clauses.append("timestamp >= :start_date")
+                dwell_where_clauses.append("timestamp >= :start_date")
+                params['start_date'] = filters['start_date']
+            if filters.get('end_date'):
+                where_clauses.append("timestamp <= :end_date")
+                dwell_where_clauses.append("timestamp <= :end_date")
+                params['end_date'] = filters['end_date']
+            if filters.get('gender'):
+                where_clauses.append("sex = :gender")
+                dwell_where_clauses.append("sex = :gender")
+                params['gender'] = filters['gender']
+            if filters.get('age_group'):
+                where_clauses.append("age_bucket = :age_group")
+                dwell_where_clauses.append("age_bucket = :age_group")
+                params['age_group'] = filters['age_group']
+            if filters.get('event'):
+                event_val = 1 if filters['event'] == 'entry' else 0
+                where_clauses.append("event = :event")
+                params['event'] = event_val
+            
+            where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+            dwell_where_sql = f"AND {' AND '.join(dwell_where_clauses)}" if dwell_where_clauses else ""
             
             with cloudsql_connection.get_connection_context() as conn:
-                df = pd.read_sql(query, conn)
-            
-            if len(df) == 0:
-                logger.warning(f"Table {table_name} is empty, returning empty DataFrame")
-                return pd.DataFrame(columns=['index', 'track_number', 'event', 'timestamp', 'sex', 'age_estimate'])
-            
-            df = DataProcessor.transform_cloudsql_format(df)
-            
-            logger.info(f"Loaded {len(df)} records from table {table_name}")
-            return df
-            
+                # Query 1: Basic stats
+                stats_query = text(f"""
+                SELECT 
+                    COUNT(*) as total_records,
+                    MIN(timestamp) as min_timestamp,
+                    MAX(timestamp) as max_timestamp,
+                    COUNT(CASE WHEN event = 1 THEN 1 END) as entries,
+                    COUNT(CASE WHEN event = 0 THEN 1 END) as exits
+                FROM {table_name}
+                {where_sql}
+                """)
+                stats_df = pd.read_sql(stats_query, conn, params=params)
+                
+                # Query 2: Demographics
+                demo_query = text(f"""
+                SELECT 
+                    sex,
+                    age_bucket,
+                    COUNT(*) as count
+                FROM {table_name}
+                {where_sql}
+                GROUP BY sex, age_bucket
+                """)
+                demo_df = pd.read_sql(demo_query, conn, params=params)
+                
+                # Query 3: Hourly distribution
+                hourly_query = text(f"""
+                SELECT 
+                    EXTRACT(HOUR FROM timestamp) as hour,
+                    COUNT(*) as count
+                FROM {table_name}
+                {where_sql}
+                GROUP BY hour
+                ORDER BY hour
+                """)
+                hourly_df = pd.read_sql(hourly_query, conn, params=params)
+                
+                # Query 4: Actual event records (limited for performance, sorted by timestamp)
+                limit = 10000  # Limit records to keep response size manageable
+                records_query = text(f"""
+                SELECT 
+                    track_id,
+                    event,
+                    timestamp,
+                    sex,
+                    age_bucket
+                FROM {table_name}
+                {where_sql}
+                ORDER BY timestamp DESC
+                LIMIT {limit}
+                """)
+                records_df = pd.read_sql(records_query, conn, params=params)
+                
+                # Query 5: Dwell time (exclude event filter, use other filters only)
+                dwell_query = text(f"""
+                WITH entries AS (
+                    SELECT track_id, MIN(timestamp) as entry_time
+                    FROM {table_name}
+                    WHERE event = 1 {dwell_where_sql}
+                    GROUP BY track_id
+                ),
+                exits AS (
+                    SELECT track_id, MAX(timestamp) as exit_time
+                    FROM {table_name}
+                    WHERE event = 0 {dwell_where_sql}
+                    GROUP BY track_id
+                )
+                SELECT 
+                    AVG(EXTRACT(EPOCH FROM (e.exit_time - en.entry_time)) / 60) as avg_dwell_minutes,
+                    COUNT(*) as complete_sessions
+                FROM entries en
+                JOIN exits e ON en.track_id = e.track_id
+                WHERE e.exit_time > en.entry_time
+                """)
+                # Only pass non-event params to dwell query
+                dwell_params = {k: v for k, v in params.items() if k != 'event'}
+                dwell_df = pd.read_sql(dwell_query, conn, params=dwell_params)
+                
+                logger.info(f"Loaded aggregated analytics for {table_name}")
+                
+                return {
+                    'stats': stats_df,
+                    'demographics': demo_df,
+                    'hourly': hourly_df,
+                    'records': records_df,
+                    'dwell': dwell_df
+                }
+                
         except Exception as e:
-            logger.error(f"Failed to load data from table {table_name}: {e}")
-            raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
+            logger.error(f"Failed to load aggregated analytics from {table_name}: {e}")
+            raise HTTPException(status_code=500, detail=f"Database query failed: {str(e)}")
     
     @staticmethod
     def transform_cloudsql_format(df: pd.DataFrame) -> pd.DataFrame:
