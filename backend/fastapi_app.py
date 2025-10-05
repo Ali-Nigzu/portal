@@ -62,6 +62,8 @@ from backend.app.view_tokens import (
     view_tokens
 )
 from backend.app.data_processor import DataProcessor
+from backend.app.cloudsql import cloudsql_connection
+from sqlalchemy import text
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

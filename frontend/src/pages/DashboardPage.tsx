@@ -152,7 +152,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   ).hour;
 
   // Use dwell time from backend intelligence (occupancy-based calculation)
-  const avgDwellTime = data.intelligence?.avg_dwell_minutes || calculateAverageDwellTime(kpiFilteredData);
+  const avgDwellTime: number = (data.intelligence && 'avg_dwell_minutes' in data.intelligence) 
+    ? (data.intelligence.avg_dwell_minutes as number)
+    : calculateAverageDwellTime(kpiFilteredData);
 
   return (
     <div>
