@@ -103,9 +103,22 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     }
   }, [credentials.username, credentials.password, currentPage, startDate, endDate, filter]);
 
+  // Initial load only
   useEffect(() => {
     fetchEvents();
-  }, [fetchEvents]);
+  }, []);
+
+  // Refetch when page changes
+  useEffect(() => {
+    if (currentPage > 1) {
+      fetchEvents();
+    }
+  }, [currentPage]);
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchEvents();
+  };
 
   // Server-side filtering and pagination - no client-side filtering needed
   const uniqueAges = ['0-4', '5-13', '14-25', '26-45', '46-65', '66+'];
@@ -196,12 +209,19 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       <div className="vrm-card" style={{ marginBottom: '24px' }}>
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Filters</h3>
-          <div className="vrm-card-actions">
+          <div className="vrm-card-actions" style={{ display: 'flex', gap: '8px' }}>
             <button 
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
               onClick={clearAllFilters}
             >
               Clear All
+            </button>
+            <button 
+              className="vrm-btn vrm-btn-sm"
+              onClick={handleSearch}
+              style={{ backgroundColor: 'var(--vrm-primary)', color: 'white' }}
+            >
+              🔍 Search
             </button>
           </div>
         </div>
