@@ -32,6 +32,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalEvents, setTotalEvents] = useState(0);
   const eventsPerPage = 20;
 
   const fetchEvents = useCallback(async () => {
@@ -42,19 +44,44 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
       
-      let apiUrl = API_ENDPOINTS.CHART_DATA;
+      // Build search query parameters
+      const searchParams = new URLSearchParams();
+      searchParams.append('page', currentPage.toString());
+      searchParams.append('per_page', eventsPerPage.toString());
+      
+      if (startDate) {
+        searchParams.append('start_date', startDate.toISOString().split('T')[0]);
+      }
+      if (endDate) {
+        searchParams.append('end_date', endDate.toISOString().split('T')[0]);
+      }
+      if (filter.event) {
+        searchParams.append('event_type', filter.event);
+      }
+      if (filter.sex) {
+        searchParams.append('sex', filter.sex);
+      }
+      if (filter.age) {
+        searchParams.append('age', filter.age);
+      }
+      if (filter.trackId) {
+        searchParams.append('track_id', filter.trackId);
+      }
+      
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
       
+      let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}?${searchParams.toString()}`;
+      
       if (viewToken) {
-        apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
+        apiUrl += `&view_token=${encodeURIComponent(viewToken)}`;
       } else {
         const auth = btoa(`${credentials.username}:${credentials.password}`);
         headers['Authorization'] = `Basic ${auth}`;
         
         if (clientId) {
-          apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+          apiUrl += `&client_id=${encodeURIComponent(clientId)}`;
         }
       }
       
@@ -65,89 +92,23 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       }
 
       const result = await response.json();
-      setEvents(result.data || []);
+      setEvents(result.events || []);
+      setTotalPages(result.total_pages || 1);
+      setTotalEvents(result.total || 0);
       setError(null);
     } catch (err) {
       setError(`Failed to fetch events: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
-  }, [credentials.username, credentials.password]);
+  }, [credentials.username, credentials.password, currentPage, startDate, endDate, filter]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
-  const parseEventDate = (timestamp: string): Date | null => {
-    try {
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) {
-        return null;
-      }
-      return date;
-    } catch {
-      return null;
-    }
-  };
-
-  const isSameDay = (date1: Date, date2: Date): boolean => {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
-  };
-
-  const isDateInRange = (eventDate: Date, start: Date | null, end: Date | null): boolean => {
-    if (!start && !end) return true;
-    
-    const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-    
-    if (start && end) {
-      const startDateOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-      
-      if (isSameDay(startDateOnly, endDateOnly)) {
-        return isSameDay(eventDateOnly, startDateOnly);
-      }
-      
-      return eventDateOnly >= startDateOnly && eventDateOnly <= endDateOnly;
-    }
-    
-    if (start) {
-      const startDateOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      return eventDateOnly >= startDateOnly;
-    }
-    
-    if (end) {
-      const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-      return eventDateOnly <= endDateOnly;
-    }
-    
-    return true;
-  };
-
-  const filteredEvents = events.filter(event => {
-    const eventDate = parseEventDate(event.timestamp);
-    
-    const dateInRange = eventDate ? isDateInRange(eventDate, startDate, endDate) : true;
-    
-    const trackIdMatch = !filter.trackId || 
-      event.track_number.toString().includes(filter.trackId);
-    
-    return (
-      (!filter.event || event.event.toLowerCase().includes(filter.event.toLowerCase())) &&
-      (!filter.sex || event.sex === filter.sex) &&
-      (!filter.age || event.age_estimate === filter.age) &&
-      dateInRange &&
-      trackIdMatch
-    );
-  });
-
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
-  const startIndex = (currentPage - 1) * eventsPerPage;
-  const endIndex = startIndex + eventsPerPage;
-  const currentEvents = filteredEvents.slice(startIndex, endIndex);
-
-  const uniqueAges = Array.from(new Set(events.map(e => e.age_estimate))).filter(Boolean);
+  // Server-side filtering and pagination - no client-side filtering needed
+  const uniqueAges = ['0-4', '5-13', '14-25', '26-45', '46-65', '66+'];
 
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -381,7 +342,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       <div className="vrm-card">
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">
-            Activity Events ({filteredEvents.length.toLocaleString()} of {events.length.toLocaleString()} total)
+            Activity Events ({totalEvents.toLocaleString()} total)
           </h3>
           <div className="vrm-card-actions">
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Export CSV</button>
@@ -389,7 +350,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           </div>
         </div>
         <div className="vrm-card-body" style={{ padding: 0 }}>
-          {currentEvents.length > 0 ? (
+          {events.length > 0 ? (
             <div style={{ overflowX: 'auto' }}>
               <table className="vrm-table">
                 <thead>
@@ -402,7 +363,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentEvents.map((event, index) => (
+                  {events.map((event, index) => (
                     <tr key={`${event.index}-${index}`}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -452,7 +413,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           <div className="vrm-card-body" style={{ borderTop: '1px solid var(--vrm-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
               <div style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredEvents.length)} of {filteredEvents.length} events
+                Showing {((currentPage - 1) * eventsPerPage) + 1} to {Math.min(currentPage * eventsPerPage, totalEvents)} of {totalEvents.toLocaleString()} events
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button 

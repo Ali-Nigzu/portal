@@ -385,6 +385,109 @@ async def get_chart_data(
         raise HTTPException(status_code=500, detail=f"Failed to process chart data: {str(e)}")
 
 
+@app.get("/api/search-events")
+async def search_events(
+    request: Request,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    event_type: Optional[str] = None,
+    sex: Optional[str] = None,
+    age: Optional[str] = None,
+    track_id: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 20,
+    view_token: Optional[str] = None
+):
+    """
+    Search events with filters and pagination - queries database directly for full dataset access
+    """
+    try:
+        table_name = _authenticate_chart_data_request(request, view_token)
+        
+        params = {}
+        where_clauses = []
+        
+        # Build parameterized WHERE clauses
+        if start_date:
+            where_clauses.append("timestamp >= :start_date")
+            params['start_date'] = start_date
+        if end_date:
+            where_clauses.append("timestamp <= :end_date")
+            params['end_date'] = end_date
+        if event_type and event_type.lower() != 'all':
+            event_val = 1 if event_type.lower() == 'entry' else 0
+            where_clauses.append("event = :event")
+            params['event'] = event_val
+        if sex and sex.lower() != 'all':
+            where_clauses.append("sex = :sex")
+            params['sex'] = sex
+        if age and age.lower() != 'all':
+            where_clauses.append("age_bucket = :age")
+            params['age'] = age
+        if track_id:
+            where_clauses.append("CAST(track_id AS TEXT) LIKE :track_id")
+            params['track_id'] = f"%{track_id}%"
+        
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+        
+        # Calculate offset for pagination
+        offset = (page - 1) * per_page
+        
+        with cloudsql_connection.get_connection_context() as conn:
+            # Get total count
+            count_query = text(f"""
+                SELECT COUNT(*) as total
+                FROM {table_name}
+                {where_sql}
+            """)
+            count_result = pd.read_sql(count_query, conn, params=params)
+            total_count = int(count_result.iloc[0]['total'])
+            
+            # Get paginated results
+            search_query = text(f"""
+                SELECT 
+                    track_id,
+                    event,
+                    timestamp,
+                    sex,
+                    age_bucket
+                FROM {table_name}
+                {where_sql}
+                ORDER BY timestamp DESC
+                LIMIT :limit OFFSET :offset
+            """)
+            params['limit'] = per_page
+            params['offset'] = offset
+            
+            results_df = pd.read_sql(search_query, conn, params=params)
+            
+            # Transform results to match frontend format
+            events = []
+            for _, row in results_df.iterrows():
+                timestamp = pd.to_datetime(row['timestamp'])
+                events.append({
+                    'track_number': row['track_id'],
+                    'event': 'entry' if row['event'] == 1 else 'exit',
+                    'timestamp': timestamp.isoformat(),
+                    'sex': row['sex'],
+                    'age_estimate': row['age_bucket']
+                })
+            
+            return {
+                'events': events,
+                'total': total_count,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (total_count + per_page - 1) // per_page
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Event search error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to search events: {str(e)}")
+
+
 @app.get("/api/admin/users")
 async def get_users(user: dict = Depends(authenticate_user)):
     """Get all users (admin only)"""

@@ -137,7 +137,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   
   // Calculate KPI metrics from KPI filtered data
   const liveOccupancy = calculateCurrentOccupancy(kpiFilteredData);
-  const totalTraffic = kpiFilteredData.length;
+  // Use total_records from summary instead of filtered array length
+  const totalTraffic = data.summary?.total_records || kpiFilteredData.length;
 
   // Calculate peak activity time from KPI filtered data
   const hourlyActivity = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
@@ -150,8 +151,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     current.count > max.count ? current : max
   ).hour;
 
-  // Calculate average dwell time from KPI filtered data
-  const avgDwellTime = calculateAverageDwellTime(kpiFilteredData);
+  // Use dwell time from backend intelligence (occupancy-based calculation)
+  const avgDwellTime = data.intelligence?.avg_dwell_minutes || calculateAverageDwellTime(kpiFilteredData);
 
   return (
     <div>

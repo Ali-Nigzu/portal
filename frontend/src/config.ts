@@ -26,5 +26,6 @@ const getApiBaseUrl = (): string => {
 export const API_BASE_URL = getApiBaseUrl();
 export const API_ENDPOINTS = {
   CHART_DATA: `${API_BASE_URL}/api/chart-data`,
+  SEARCH_EVENTS: `${API_BASE_URL}/api/search-events`,
   USERS: `${API_BASE_URL}/api/users`,
 } as const;
