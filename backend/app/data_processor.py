@@ -49,18 +49,9 @@ class DataProcessor:
         
         df['event'] = df['event'].apply(lambda x: 'entry' if x == 1 else 'exit')
         
-        age_bucket_map = {
-            '0-4': '(0,8)',
-            '5-13': '(0,8)',
-            '14-25': '(17,25)',
-            '26-45': '(25,40)',
-            '46-65': '(40,60)',
-            '66+': '(60+)'
-        }
-        df['age_estimate'] = df['age_bucket'].map(age_bucket_map)
+        df['age_estimate'] = df['age_bucket']
         
-        df['timestamp_iso'] = pd.to_datetime(df['timestamp'])
-        df['timestamp'] = df['timestamp_iso'].dt.strftime('%M:%H:%d:%m:%Y')
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
         
         required_columns = ['index', 'track_number', 'event', 'timestamp', 'sex', 'age_estimate']
         df = df[required_columns]
@@ -70,10 +61,10 @@ class DataProcessor:
     
     @staticmethod
     def process_timestamps(df: pd.DataFrame) -> pd.DataFrame:
-        """Process timestamps with format mm:hh:dd:mm:yyyy"""
+        """Process timestamps - already in ISO format from Cloud SQL"""
         try:
             if 'timestamp' in df.columns:
-                df['timestamp'] = pd.to_datetime(df['timestamp'], format='%M:%H:%d:%m:%Y', errors='coerce')
+                df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
             
             df['hour'] = df['timestamp'].dt.hour
             df['day_of_week'] = df['timestamp'].dt.day_name()
