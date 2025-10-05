@@ -267,6 +267,8 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
 @app.get("/api/chart-data", response_model=ChartDataResponse)
 async def get_chart_data(
     request: Request,
+    kpi_start_date: Optional[str] = None,
+    kpi_end_date: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     gender: Optional[str] = None,
@@ -277,11 +279,23 @@ async def get_chart_data(
     """
     Get intelligent chart data using SQL aggregation - much faster than loading all rows
     Supports both authenticated users and view tokens
+    Accepts separate time filters for KPIs (kpi_start_date/kpi_end_date) and charts (start_date/end_date)
     """
     try:
         table_name = _authenticate_chart_data_request(request, view_token)
         
-        filters = {
+        # Use KPI dates for the main aggregation (KPIs calculation)
+        # If not provided, fall back to chart dates or no filter
+        kpi_filters = {
+            'start_date': kpi_start_date or start_date,
+            'end_date': kpi_end_date or end_date,
+            'gender': gender,
+            'age_group': age_group,
+            'event': event
+        }
+        
+        # Use chart dates for the records query
+        chart_filters = {
             'start_date': start_date,
             'end_date': end_date,
             'gender': gender,
@@ -289,8 +303,8 @@ async def get_chart_data(
             'event': event
         }
         
-        # Get aggregated data from SQL
-        agg_data = DataProcessor.get_aggregated_analytics(table_name, filters)
+        # Get aggregated data from SQL using KPI filters for calculations
+        agg_data = DataProcessor.get_aggregated_analytics(table_name, kpi_filters)
         
         stats = agg_data['stats'].iloc[0] if len(agg_data['stats']) > 0 else None
         total_records = int(stats['total_records']) if stats is not None else 0

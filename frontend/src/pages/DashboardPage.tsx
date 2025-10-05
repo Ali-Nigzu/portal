@@ -58,22 +58,54 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
       
-      let apiUrl = API_ENDPOINTS.CHART_DATA;
+      const queryParams = new URLSearchParams();
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
       
       if (viewToken) {
-        apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
+        queryParams.append('view_token', viewToken);
       } else {
         const auth = btoa(`${credentials.username}:${credentials.password}`);
         headers['Authorization'] = `Basic ${auth}`;
         
         if (clientId) {
-          apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
+          queryParams.append('client_id', clientId);
         }
       }
       
+      if (kpiTimeFilter.option !== 'alltime') {
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date = now;
+
+        switch (kpiTimeFilter.option) {
+          case 'last24h':
+            startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            break;
+          case 'last7days':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case 'last30days':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+          case 'custom':
+            if (kpiTimeFilter.startDate && kpiTimeFilter.endDate) {
+              startDate = new Date(kpiTimeFilter.startDate);
+              endDate = new Date(kpiTimeFilter.endDate + 'T23:59:59');
+            } else {
+              startDate = now;
+            }
+            break;
+          default:
+            startDate = now;
+        }
+
+        queryParams.append('kpi_start_date', startDate.toISOString().split('T')[0]);
+        queryParams.append('kpi_end_date', endDate.toISOString().split('T')[0]);
+      }
+      
+      const apiUrl = `${API_ENDPOINTS.CHART_DATA}?${queryParams.toString()}`;
       const response = await fetch(apiUrl, { headers });
 
       if (!response.ok) {
@@ -88,7 +120,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     } finally {
       setLoading(false);
     }
-  }, [credentials.username, credentials.password]);
+  }, [credentials.username, credentials.password, kpiTimeFilter]);
 
   useEffect(() => {
     fetchData();
