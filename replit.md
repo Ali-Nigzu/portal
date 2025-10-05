@@ -8,16 +8,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 2025)
 
-### Cloud SQL PostgreSQL Migration (October 4, 2025)
+### Cloud SQL PostgreSQL Migration (October 5, 2025)
 - **Database Infrastructure**: Migrated from Google Sheets CSV to Google Cloud SQL PostgreSQL for faster, more reliable data access
 - **Cloud SQL Connector**: Implemented secure connection using Cloud SQL Python Connector with service account authentication
-- **Data Transformation**: Built automatic transformation layer to convert Cloud SQL schema (site, cam_id, track_id hex, event 1/0, ISO timestamps, updated age buckets) to analytics-compatible format
+- **Native Data Format**: Uses Cloud SQL data directly without transformation - age buckets (0-4, 5-13, 14-25, 26-45, 46-65, 66+) displayed as-is, ISO timestamps throughout
 - **User Management Update**: Changed from csv_url to table_name for client configuration - admins now assign Cloud SQL table names to clients
-- **Backward Compatible**: All existing analytics, charts, and filtering functionality work identically with the new data source
-- **Performance**: Significantly faster data loading compared to Google Sheets CSV parsing
+- **Dwell Time Accuracy**: Fixed dwell time calculations by removing timestamp format conversion, ensuring accurate entry/exit time parsing
+- **Performance**: Significantly faster data loading compared to Google Sheets CSV parsing (handles 800k+ records efficiently)
 - **Empty Dataset Handling**: Gracefully handles empty tables by returning empty datasets rather than errors
 - **Security**: Service account credentials managed as environment secrets with proper cleanup
-- **Result**: Scalable database infrastructure ready for production deployment while maintaining all existing functionality
+- **Result**: Scalable database infrastructure with native Cloud SQL data format providing accurate analytics
 
 ### Landing Page & Interest Registration (October 4, 2025)
 - **Public Landing Page**: Created professional marketing landing page at root URL (/) with dark theme and cyan accents
