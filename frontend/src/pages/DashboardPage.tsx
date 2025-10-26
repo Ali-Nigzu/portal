@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ConfigurableChart from '../components/ConfigurableChart';
 import { API_ENDPOINTS } from '../config';
 import TimeFilterDropdown, { TimeFilterValue } from '../components/TimeFilterDropdown';
 import { calculateAverageDwellTime, formatDuration, filterDataByTime, calculateCurrentOccupancy } from '../utils/dataProcessing';
+import { useChartData, NormalizedChartPoint } from '../hooks/useChartData';
+import { GranularityOption, IntelligencePayload } from '../types/analytics';
+import InsightRail, { InsightItem } from '../components/InsightRail';
 
 interface ChartData {
   index: number;
@@ -27,15 +30,7 @@ interface ApiResponse {
     };
     latest_timestamp: string | null;
   };
-  intelligence: {
-    total_records: number;
-    date_span_days: number;
-    latest_timestamp: string | null;
-    optimal_granularity: string;
-    peak_hours: number[];
-    demographics_breakdown: any;
-    temporal_patterns: any;
-  };
+  intelligence: IntelligencePayload | null;
 }
 
 interface DashboardPageProps {
@@ -49,6 +44,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   // Independent time filters for dashboard components
   const [kpiTimeFilter, setKpiTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
   const [chartTimeFilter, setChartTimeFilter] = useState<TimeFilterValue>({ option: 'last7days' });
+  const [granularitySelection, setGranularitySelection] = useState<GranularityOption>('auto');
 
   const fetchData = useCallback(async () => {
     try {
@@ -126,16 +122,134 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     fetchData();
   }, [fetchData]);
 
+  const dataset = data?.data ?? [];
+  const summary = data?.summary;
+  const intelligence = data?.intelligence ?? null;
+
+  // Filter data independently for KPIs and chart
+  const kpiFilteredData = filterDataByTime(dataset, kpiTimeFilter);
+  const chartFilteredData = filterDataByTime(dataset, chartTimeFilter);
+
+  const {
+    series: chartSeries,
+    activeGranularity,
+    recommendedGranularity,
+    highlightBuckets,
+    averageOccupancy,
+    totalActivity: chartTotalActivity
+  } = useChartData(chartFilteredData, granularitySelection, intelligence);
+
+  const {
+    series: kpiSeries,
+    activeGranularity: kpiGranularity,
+    totalActivity: kpiTotalActivity
+  } = useChartData(kpiFilteredData, granularitySelection, intelligence);
+
+  const liveOccupancy = kpiSeries.length
+    ? kpiSeries[kpiSeries.length - 1].occupancy
+    : calculateCurrentOccupancy(kpiFilteredData);
+
+  const totalTraffic = summary?.total_records ?? kpiTotalActivity;
+
+  const peakBucket = kpiSeries.reduce<NormalizedChartPoint | null>((max, current) => {
+    if (!max || current.activity > max.activity) {
+      return current;
+    }
+    return max;
+  }, null);
+
+  const peakDescriptor = peakBucket
+    ? (() => {
+        const bucketDate = new Date(peakBucket.bucketStart);
+        if (!Number.isNaN(bucketDate.getTime())) {
+          if (kpiGranularity === 'hourly') {
+            return bucketDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          }
+          if (kpiGranularity === 'daily') {
+            return bucketDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+          }
+          if (kpiGranularity === 'weekly') {
+            const weekEnd = new Date(bucketDate);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            return `${bucketDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+          }
+        }
+        return peakBucket.label;
+      })()
+    : intelligence?.temporal_patterns && typeof intelligence.temporal_patterns === 'object'
+    ? (() => {
+        const patterns = intelligence!.temporal_patterns as Record<string, any>;
+        const peakTimes = patterns?.peak_times as { hour?: number } | undefined;
+        if (peakTimes?.hour !== undefined) {
+          return `${peakTimes.hour.toString().padStart(2, '0')}:00`;
+        }
+        return 'N/A';
+      })()
+    : 'N/A';
+
+  const avgDwellTime: number = intelligence?.avg_dwell_minutes ?? calculateAverageDwellTime(kpiFilteredData);
+
+  const insightItems: InsightItem[] = useMemo(() => {
+    if (!intelligence) {
+      return [];
+    }
+
+    const insights: InsightItem[] = [];
+    const { peak_hours: peakHours, avg_dwell_minutes: avgDwell, date_span_days: spanDaysRaw } = intelligence;
+    const spanDays = spanDaysRaw ?? 0;
+
+    if (peakHours && peakHours.length > 0) {
+      const formatted = peakHours
+        .map(hour => `${hour.toString().padStart(2, '0')}:00`)
+        .join(', ');
+      insights.push({
+        id: 'peak-hours',
+        title: 'Peak Hours Identified',
+        description: `Highest throughput observed around ${formatted}.`
+      });
+    }
+
+    if (avgDwell && avgDwell > 0) {
+      insights.push({
+        id: 'avg-dwell',
+        title: 'Average dwell time',
+        description: `Visitors spend approximately ${formatDuration(avgDwell)} on-site.`,
+        tone: avgDwell > 60 ? 'warning' : 'info'
+      });
+    }
+
+    if (chartSeries.length > 0) {
+      const maxOccupancyPoint = chartSeries.reduce((max, point) => (point.occupancy > max.occupancy ? point : max), chartSeries[0]);
+      insights.push({
+        id: 'max-occupancy',
+        title: 'Occupancy apex',
+        description: `Peak occupancy reached ${maxOccupancyPoint.occupancy.toLocaleString()} during ${maxOccupancyPoint.label}.`,
+        tone: maxOccupancyPoint.occupancy > averageOccupancy * 1.5 ? 'warning' : 'info'
+      });
+    }
+
+    if (spanDays > 0 || chartTotalActivity > 0) {
+      insights.push({
+        id: 'coverage-window',
+        title: 'Coverage window',
+        description: `Dataset spans ${spanDays} day${spanDays === 1 ? '' : 's'} with ${chartTotalActivity.toLocaleString()} recorded events.`,
+        tone: spanDays >= 30 ? 'success' : 'info'
+      });
+    }
+
+    return insights;
+  }, [intelligence, chartSeries, averageOccupancy, chartTotalActivity]);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #333', 
-            borderTop: '4px solid #1976d2', 
-            borderRadius: '50%', 
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #333',
+            borderTop: '4px solid #1976d2',
+            borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }}></div>
@@ -158,35 +272,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       </div>
     );
   }
-
-  if (!data) {
-    return null;
-  }
-
-  // Filter data independently for KPIs and chart
-  const kpiFilteredData = filterDataByTime(data.data, kpiTimeFilter);
-  const chartFilteredData = filterDataByTime(data.data, chartTimeFilter);
-  
-  // Calculate KPI metrics from KPI filtered data
-  const liveOccupancy = calculateCurrentOccupancy(kpiFilteredData);
-  // Use total_records from summary instead of filtered array length
-  const totalTraffic = data.summary?.total_records || kpiFilteredData.length;
-
-  // Calculate peak activity time from KPI filtered data
-  const hourlyActivity = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
-  kpiFilteredData.forEach(item => {
-    if (item.hour >= 0 && item.hour < 24) {
-      hourlyActivity[item.hour].count++;
-    }
-  });
-  const peakHour = hourlyActivity.reduce((max, current) => 
-    current.count > max.count ? current : max
-  ).hour;
-
-  // Use dwell time from backend intelligence (occupancy-based calculation)
-  const avgDwellTime: number = (data.intelligence && 'avg_dwell_minutes' in data.intelligence) 
-    ? (data.intelligence.avg_dwell_minutes as number)
-    : calculateAverageDwellTime(kpiFilteredData);
 
   return (
     <div>
@@ -250,7 +335,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
           <div className="vrm-card-body" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--vrm-accent-orange)', marginBottom: '8px' }}>
-              {peakHour !== undefined ? `${peakHour.toString().padStart(2, '0')}:00` : 'N/A'}
+              {peakDescriptor}
             </div>
             <p style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>Peak time</p>
           </div>
@@ -283,7 +368,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
             />
           </div>
         </div>
-        <ConfigurableChart data={chartFilteredData} intelligence={data.intelligence} />
+        <ConfigurableChart
+          data={chartSeries}
+          granularitySelection={granularitySelection}
+          activeGranularity={activeGranularity}
+          recommendedGranularity={recommendedGranularity}
+          onGranularityChange={setGranularitySelection}
+          highlightBuckets={highlightBuckets}
+          averageOccupancy={averageOccupancy}
+        />
+      </div>
+
+      {/* Insight Rail */}
+      <div style={{ marginBottom: '24px' }}>
+        <InsightRail insights={insightItems} />
       </div>
 
       <style>{`
