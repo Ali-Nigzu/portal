@@ -6,7 +6,7 @@
       "type": "Camera",
       "status": "online",
       "lastSeen": "2025-10-01T17:30:00",
-      "dataSource": "https://storage.googleapis.com/nigzsu_cdata-testclient1/client0/testdata.csv",
+      "dataSource": "https://storage.googleapis.com/camOS_cdata-testclient1/client0/testdata.csv",
       "location": "Main Entrance",
       "recordCount": 165000,
       "client_id": "client1"

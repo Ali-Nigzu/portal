@@ -445,7 +445,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       // Header
       doc.setFontSize(24);
       doc.setTextColor(33, 150, 243);
-      doc.text('Nigzsu', 105, 20, { align: 'center' });
+      doc.text('camOS', 105, 20, { align: 'center' });
       
       // Report Title
       doc.setFontSize(18);
@@ -550,7 +550,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
-        doc.text('Confidential - Nigzsu Business Intelligence', 105, 285, { align: 'center' });
+        doc.text('Confidential - camOS Business Intelligence', 105, 285, { align: 'center' });
       }
       
       // Save the PDF

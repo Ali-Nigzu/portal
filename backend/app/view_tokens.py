@@ -1,5 +1,5 @@
 """
-View Token Management for Nigzsu Analytics API
+View Token Management for camOS Analytics API
 Temporary access tokens for client dashboard viewing
 """
 

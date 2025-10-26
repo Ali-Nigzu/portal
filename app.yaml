@@ -3,7 +3,7 @@
 # Deploy using: gcloud run deploy --source .
 
 # Example deployment command:
-# gcloud run deploy nigzsu-analytics \
+# gcloud run deploy camOS-analytics \
 #   --source . \
 #   --region us-central1 \
 #   --port 8080 \

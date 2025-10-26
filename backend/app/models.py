@@ -1,5 +1,5 @@
 """
-Pydantic Data Models for Nigzsu Analytics API
+Pydantic Data Models for camOS Analytics API
 """
 
 from datetime import datetime

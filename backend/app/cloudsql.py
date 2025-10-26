@@ -1,6 +1,6 @@
 """
-Cloud SQL Connection Module for Nigzsu Analytics
-Handles direct PostgreSQL TCP connections (no Cloud SQL Connector)
+Cloud SQL Connection Module for camOS Analytics
+Handles secure connections to Google Cloud SQL PostgreSQL instances
 """
 
 import os
