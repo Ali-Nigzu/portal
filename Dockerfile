@@ -1,13 +1,13 @@
 # Multi-stage build for production deployment
 # Stage 1: Build React frontend
-FROM node:20-alpine AS react-build
+#FROM node:20-alpine AS react-build
 
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci --only=production
+#WORKDIR /app/frontend
+#COPY frontend/package*.json ./
+#RUN npm ci --only=production
 
-COPY frontend/ .
-RUN npm run build
+#COPY frontend/ .
+#RUN npm run build
 
 # Stage 2: Python backend with React build
 FROM python:3.11-slim
@@ -22,73 +22,81 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # Install system dependencies including nginx
-RUN apt-get update && apt-get install -y \
-    gcc \
-    nginx \
+#RUN apt-get update && apt-get install -y \
+#    gcc \
+#    nginx \
+#    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y gcc \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Copy backend requirements first for better layer caching
 COPY backend/requirements.txt ./backend/requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r backend/requirements.txt
+#RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt && pip install pg8000 sqlalchemy
 
 # Copy backend application code
 COPY backend/ ./backend/
 
 # Copy React build from first stage
-COPY --from=react-build /app/frontend/build ./static/react
+#COPY --from=react-build /app/frontend/build ./static/react
+#COPY backend/frontend_build ./static/react
+COPY backend/frontend_build ./backend/frontend_build
 
 # Create nginx configuration
-RUN echo 'events { worker_connections 1024; } \
-http { \
-    include /etc/nginx/mime.types; \
-    default_type application/octet-stream; \
-    server { \
-        listen 8080; \
-        server_name _; \
-        root /app/static/react; \
-        index index.html; \
-        \
-        # API routes - must come before catch-all \
-        location ^~ /api { \
-            proxy_pass http://127.0.0.1:8000; \
-            proxy_set_header Host $host; \
-            proxy_set_header X-Real-IP $remote_addr; \
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-            proxy_set_header X-Forwarded-Proto $scheme; \
-        } \
-        \
-        # Backend health check \
-        location ^~ /health { \
-            proxy_pass http://127.0.0.1:8000; \
-            proxy_set_header Host $host; \
-            proxy_set_header X-Real-IP $remote_addr; \
-        } \
-        \
-        # React SPA - serve static files or fallback to index.html \
-        location / { \
-            try_files $uri $uri/ /index.html; \
-        } \
-    } \
-}' > /etc/nginx/nginx.conf
+#RUN echo 'events { worker_connections 1024; } \
+#http { \
+#    include /etc/nginx/mime.types; \
+#    default_type application/octet-stream; \
+#    server { \
+#        listen 8080; \
+#        server_name _; \
+#        root /app/static/react; \
+#        index index.html; \
+#        \
+#        # API routes - must come before catch-all \
+#        location ^~ /api { \
+#            proxy_pass http://127.0.0.1:8080; \
+#            proxy_set_header Host $host; \
+#            proxy_set_header X-Real-IP $remote_addr; \
+#            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+#            proxy_set_header X-Forwarded-Proto $scheme; \
+#        } \
+#        \
+#        # Backend health check \
+#        location ^~ /health { \
+#            proxy_pass http://127.0.0.1:8080; \
+#            proxy_set_header Host $host; \
+#            proxy_set_header X-Real-IP $remote_addr; \
+#        } \
+#        \
+#        # React SPA - serve static files or fallback to index.html \
+#        location / { \
+#            try_files $uri $uri/ /index.html; \
+#        } \
+#    } \
+#}' > /etc/nginx/nginx.conf
 
 # Create startup script with updated path
-RUN echo '#!/bin/bash \
-nginx & \
-exec uvicorn backend.fastapi_app:app --host 127.0.0.1 --port 8000' > /app/start.sh \
-&& chmod +x /app/start.sh
+#RUN echo '#!/bin/bash \
+#nginx & \
+#exec uvicorn backend.fastapi_app:app --host 127.0.0.1 --port 8080' > /app/start.sh \
+#&& chmod +x /app/start.sh
 
 # Create a non-root user
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app \
-    && chown -R app:app /var/log/nginx \
-    && chown -R app:app /var/lib/nginx
+#RUN useradd --create-home --shell /bin/bash app \
+#    && chown -R app:app /app \
+#    && chown -R app:app /var/log/nginx \
+#    && chown -R app:app /var/lib/nginx
 
-USER app
+#USER app
 
 # Expose port
 EXPOSE 8080
 
 # Command to run both nginx and FastAPI
-CMD ["/app/start.sh"]
+#CMD ["/app/start.sh"]
+CMD ["sh", "-c", "uvicorn backend.fastapi_app:app --host 0.0.0.0 --port ${PORT:-8080}"]

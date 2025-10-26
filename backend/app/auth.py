@@ -9,6 +9,9 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
+from fastapi import APIRouter, Depends
+#from .auth import authenticate_user  # make sure this is correct path
+
 from .database import load_users, save_users
 
 security = HTTPBasic()
@@ -59,3 +62,9 @@ def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
         'role': user['role'],
         'name': user.get('name', credentials.username)
     }
+
+from fastapi import APIRouter, Depends
+from fastapi.security import HTTPBasicCredentials
+from .auth import authenticate_user  # import your authenticate_user function
+
+router = APIRouter()
