@@ -1,4 +1,4 @@
-# Nigzsu Business Intelligence Dashboard
+# camOS Business Intelligence Dashboard
 
 A modern React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. Features role-based access for administrators and clients with real-time analytics from Google Sheets CSV data.
 
@@ -75,13 +75,13 @@ cd frontend && HOST=0.0.0.0 npm start
 ### Build the Docker image
 
 ```bash
-docker build -t nigzsu-analytics .
+docker build -t camOS-analytics .
 ```
 
 ### Run locally with Docker
 
 ```bash
-docker run -p 8080:8080 nigzsu-analytics
+docker run -p 8080:8080 camOS-analytics
 ```
 
 Application will be available at `http://localhost:8080`
@@ -116,7 +116,7 @@ curl http://localhost:8080/api/
 
 **Option 1: Direct deployment from source**
 ```bash
-gcloud run deploy nigzsu-analytics \
+gcloud run deploy camOS-analytics \
   --source . \
   --region us-central1 \
   --port 8080 \
@@ -129,11 +129,11 @@ gcloud run deploy nigzsu-analytics \
 **Option 2: Build and deploy from Docker image**
 ```bash
 # Build and push to Google Container Registry
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/nigzsu-analytics
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/camOS-analytics
 
 # Deploy the image
-gcloud run deploy nigzsu-analytics \
-  --image gcr.io/YOUR_PROJECT_ID/nigzsu-analytics \
+gcloud run deploy camOS-analytics \
+  --image gcr.io/YOUR_PROJECT_ID/camOS-analytics \
   --region us-central1 \
   --port 8080 \
   --allow-unauthenticated \
@@ -146,7 +146,7 @@ gcloud run deploy nigzsu-analytics \
 Set environment variables during deployment if needed:
 
 ```bash
-gcloud run deploy nigzsu-analytics \
+gcloud run deploy camOS-analytics \
   --source . \
   --region us-central1 \
   --set-env-vars="NODE_ENV=production"
@@ -158,7 +158,7 @@ gcloud run deploy nigzsu-analytics \
 
 After deployment, Cloud Run will provide a URL like:
 ```
-https://nigzsu-analytics-xxxxxx-uc.a.run.app
+https://camOS-analytics-xxxxxx-uc.a.run.app
 ```
 
 Access your application at this URL.
@@ -166,7 +166,7 @@ Access your application at this URL.
 ## 📁 Project Structure
 
 ```
-nigzsu/
+camOS/
 ├── backend/              # FastAPI backend
 │   ├── app/             # Core modules (auth, database, models)
 │   ├── data/            # JSON data files

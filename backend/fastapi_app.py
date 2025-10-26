@@ -1,5 +1,5 @@
 """
-Nigzsu FastAPI Application
+camOS FastAPI Application
 Modern Business Intelligence Dashboard with Smart Data Processing
 """
 
@@ -72,7 +72,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Nigzsu Analytics API",
+    title="camOS Analytics API",
     description="Intelligent CCTV data analytics with auto-scaling insights",
     version="2.0.0"
 )
@@ -93,7 +93,7 @@ app.add_middleware(
 #@app.get("/")
 #async def root():
 #    """API health check"""
-#    return {"message": "Nigzsu Analytics API v2.0", "status": "healthy"}
+#    return {"message": "camOS Analytics API v2.0", "status": "healthy"}
 
 
 @app.post("/api/register-interest", response_model=RegisterInterestResponse)

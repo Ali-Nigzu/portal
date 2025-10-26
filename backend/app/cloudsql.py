@@ -1,5 +1,5 @@
 """
-Cloud SQL Connection Module for Nigzsu Analytics
+Cloud SQL Connection Module for camOS Analytics
 Handles secure connections to Google Cloud SQL PostgreSQL instances
 """
 
@@ -14,7 +14,7 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-INSTANCE_CONNECTION_NAME = os.environ.get("INSTANCE_CONNECTION_NAME", "nigzsu:europe-west2:nigzsutestdb")
+INSTANCE_CONNECTION_NAME = os.environ.get("INSTANCE_CONNECTION_NAME", "camOS:europe-west2:camOStestdb")
 DB_USER = os.environ.get("DB_USER", "postgres")
 DB_PASS = os.environ.get("DB_PASS", "")
 DB_NAME = os.environ.get("DB_NAME", "postgres")

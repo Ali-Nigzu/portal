@@ -81,8 +81,8 @@ const LandingPage: React.FC = () => {
       <nav className="landing-nav">
         <div className="nav-container">
           <div className="nav-logo">
-            <img src="/company-logo.png" alt="Nigzsu Logo" className="logo-image" />
-            <span className="logo-text">Nigzsu</span>
+            <img src="/company-logo.png" alt="camOS Logo" className="logo-image" />
+            <span className="logo-text">camOS</span>
           </div>
           <div className="nav-links">
             <a href="#features">Features</a>
@@ -131,7 +131,7 @@ const LandingPage: React.FC = () => {
             They're not helping you run your business better.
           </p>
           <p className="section-description" style={{ marginTop: '2rem' }}>
-            Nigzsu transforms your existing CCTV footage into real operational insight —<br />
+            camOS transforms your existing CCTV footage into real operational insight —<br />
             showing you things like:
           </p>
           <div className="insights-list">
@@ -160,7 +160,7 @@ const LandingPage: React.FC = () => {
 
       <section id="solution" className="solution-section">
         <div className="section-container">
-          <h2 className="section-title">Meet Nigzsu</h2>
+          <h2 className="section-title">Meet camOS</h2>
           <p className="section-description">
             We transform raw CCTV footage into clear, actionable intelligence—without the hassle, 
             technical complexity, or cost.
@@ -339,8 +339,8 @@ const LandingPage: React.FC = () => {
         <div className="footer-container">
           <div className="footer-section">
             <div className="footer-logo">
-              <img src="/company-logo.png" alt="Nigzsu Logo" className="footer-logo-image" />
-              <span className="logo-text">Nigzsu</span>
+              <img src="/company-logo.png" alt="camOS Logo" className="footer-logo-image" />
+              <span className="logo-text">camOS</span>
             </div>
             <p className="footer-tagline">
               Democratising visual intelligence for everyone
@@ -357,11 +357,11 @@ const LandingPage: React.FC = () => {
           <div className="footer-section">
             <h4>Contact</h4>
             <p>United Kingdom</p>
-            <p>hello@nigzsu.com</p>
+            <p>hello@camOS.com</p>
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; 2025 Nigzsu. All rights reserved.</p>
+          <p>&copy; 2025 camOS. All rights reserved.</p>
         </div>
       </footer>
     </div>
