@@ -152,3 +152,4 @@ service_account.json
 logs/
 *.log
 /tmp/logs/
+nigzsu-*.json
