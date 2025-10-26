@@ -1,5 +1,5 @@
 """
-Intelligent Data Processor for Nigzsu Analytics
+Intelligent Data Processor for camOS Analytics
 Supports Cloud SQL PostgreSQL data sources
 """
 

@@ -16,14 +16,14 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Nigzsu FastAPI Server"
+args = "camOS FastAPI Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Nigzsu React Frontend"
+args = "camOS React Frontend"
 
 [[workflows.workflow]]
-name = "Nigzsu FastAPI Server"
+name = "camOS FastAPI Server"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -35,7 +35,7 @@ args = "cd /home/runner/workspace && python3 -m uvicorn backend.fastapi_app:app 
 waitForPort = 8000
 
 [[workflows.workflow]]
-name = "Nigzsu React Frontend"
+name = "camOS React Frontend"
 author = "agent"
 
 [workflows.workflow.metadata]

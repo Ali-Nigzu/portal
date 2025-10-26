@@ -89,7 +89,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
               }}
             />
           </div>
-          <div className="vrm-logo-text">Nigzsu</div>
+          <div className="vrm-logo-text">camOS</div>
         </div>
 
         {/* Collapse Toggle */}

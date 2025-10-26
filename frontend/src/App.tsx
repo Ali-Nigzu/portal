@@ -87,7 +87,7 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
             />
           </div>
           <h2 style={{ color: 'var(--vrm-text-primary)', marginBottom: '8px', fontSize: '24px', fontWeight: '600' }}>
-            Nigzsu
+            camOS
           </h2>
         </div>
 
@@ -204,7 +204,7 @@ const App: React.FC = () => {
 
   // Restore session from sessionStorage on app load
   useEffect(() => {
-    const savedCredentials = sessionStorage.getItem('nigzsu_credentials');
+    const savedCredentials = sessionStorage.getItem('camOS_credentials');
     if (savedCredentials) {
       try {
         const { username, password } = JSON.parse(savedCredentials);
@@ -213,7 +213,7 @@ const App: React.FC = () => {
         setIsLoggedIn(true);
       } catch (error) {
         console.error('Failed to restore session:', error);
-        sessionStorage.removeItem('nigzsu_credentials');
+        sessionStorage.removeItem('camOS_credentials');
       }
     }
   }, []);
@@ -224,12 +224,12 @@ const App: React.FC = () => {
     setIsLoggedIn(true);
     
     // Persist credentials to sessionStorage
-    sessionStorage.setItem('nigzsu_credentials', JSON.stringify({ username, password }));
+    sessionStorage.setItem('camOS_credentials', JSON.stringify({ username, password }));
   };
 
   const handleLogout = () => {
     // Clear session storage
-    sessionStorage.removeItem('nigzsu_credentials');
+    sessionStorage.removeItem('camOS_credentials');
     
     // Check if we're in a view token session
     const hasViewToken = new URLSearchParams(window.location.search).has('view_token');

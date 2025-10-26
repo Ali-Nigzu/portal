@@ -1,5 +1,5 @@
 """
-Authentication utilities for Nigzsu Analytics API
+Authentication utilities for camOS Analytics API
 """
 
 import hashlib

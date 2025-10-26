@@ -1,7 +1,7 @@
-# Nigzsu Business Intelligence Dashboard
+# camOS Business Intelligence Dashboard
 
 ## Overview
-Nigzsu is a React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. It features role-based access for administrators and clients. Clients access personalized dashboards with charts and analytics from Google Sheets CSV data, while administrators manage users and system configurations. The application includes advanced data filtering, search capabilities, and comprehensive user management.
+camOS is a React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. It features role-based access for administrators and clients. Clients access personalized dashboards with charts and analytics from Google Sheets CSV data, while administrators manage users and system configurations. The application includes advanced data filtering, search capabilities, and comprehensive user management.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -26,7 +26,7 @@ Preferred communication style: Simple, everyday language.
 ### Landing Page & Interest Registration (October 4, 2025)
 - **Public Landing Page**: Created professional marketing landing page at root URL (/) with dark theme and cyan accents
 - **Hero Section**: Compelling headline "Transform Your CCTV Footage Into Instant Business Insights" with animated visual elements
-- **Value Proposition**: Multiple sections highlighting the problem (unused CCTV data), solution (Nigzsu's frictionless approach), and key features
+- **Value Proposition**: Multiple sections highlighting the problem (unused CCTV data), solution (camOS's frictionless approach), and key features
 - **Register Interest Form**: Comprehensive form capturing name, email, company, phone, business type, and message with client-side validation
 - **Backend Endpoint**: New `/api/register-interest` endpoint stores submissions to `backend/data/interest_submissions.json` with UUID tracking
 - **Updated Routing**: Landing page at `/`, login at `/login`, protected routes for authenticated users only
@@ -64,7 +64,7 @@ A secure authentication model using HTTP Basic Auth with SHA-256 password hashin
 ## External Dependencies
 
 ### Data Sources
-- **Google Cloud SQL**: PostgreSQL database (nigzsu:europe-west2:nigzsutestdb) storing client analytics data with tables per client.
+- **Google Cloud SQL**: PostgreSQL database (camOS:europe-west2:camOStestdb) storing client analytics data with tables per client.
 
 ### Python Backend Libraries
 - **FastAPI**: Web framework for the REST API.

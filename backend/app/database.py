@@ -1,5 +1,5 @@
 """
-Database operations for Nigzsu Analytics API
+Database operations for camOS Analytics API
 JSON file-based storage with atomic writes
 """
 
