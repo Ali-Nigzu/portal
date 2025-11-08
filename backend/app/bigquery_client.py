@@ -13,9 +13,12 @@ import pandas as pd
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
+from typing import Optional
+import logging
+from google.oauth2 import service_account
+
 try:  # pragma: no cover - informational logging only
     import db_dtypes  # type: ignore
-
     DB_DTYPES_VERSION = getattr(db_dtypes, "__version__", "unknown")
 except Exception:  # pragma: no cover - defensive logging
     DB_DTYPES_VERSION = None
@@ -27,6 +30,7 @@ class BigQueryDataFrameError(RuntimeError):
     def __init__(self, message: str, job_id: Optional[str]) -> None:
         super().__init__(message)
         self.job_id = job_id
+
 
 logger = logging.getLogger(__name__)
 
