@@ -1,27 +1,22 @@
 # camOS Business Intelligence Dashboard
 
 ## Overview
-camOS is a React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. It features role-based access for administrators and clients. Clients access personalized dashboards with charts and analytics from Google Sheets CSV data, while administrators manage users and system configurations. The application includes advanced data filtering, search capabilities, and comprehensive user management.
+camOS is a React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. It features role-based access for administrators and clients. Clients access personalized dashboards with charts and analytics from Google BigQuery tables, while administrators manage users and system configurations. The application includes advanced data filtering, search capabilities, and comprehensive user management.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (October 2025)
 
-### Cloud SQL PostgreSQL Migration (October 5, 2025)
-- **Database Infrastructure**: Migrated from Google Sheets CSV to Google Cloud SQL PostgreSQL for faster, more reliable data access
-- **Cloud SQL Connector**: Implemented secure connection using Cloud SQL Python Connector with service account authentication
-- **Native Data Format**: Uses Cloud SQL data directly without transformation - age buckets (0-4, 5-13, 14-25, 26-45, 46-65, 66+) displayed as-is, ISO timestamps throughout
-- **User Management Update**: Changed from csv_url to table_name for client configuration - admins now assign Cloud SQL table names to clients
-- **SQL Aggregation Performance**: Replaced full table scans with targeted SQL aggregation queries (GROUP BY, COUNT, AVG) for 3-4x performance improvement
-- **Parameterized Queries**: All user inputs protected with SQLAlchemy text() parameter binding to prevent SQL injection attacks
-- **Occupancy-Based Dwell Time**: Redesigned dwell time calculation from individual track matching to occupancy-based method using SQL window functions - calculates area under occupancy curve (person-minutes ÷ entries) for accurate average visit duration (~24 minutes vs incorrect 38+ hours)
-- **Correct Total Traffic Display**: Frontend now displays actual total_records (881,726) from summary instead of limited data array length (10,000)
-- **Full Database Event Search**: New /api/search-events endpoint enables searching across entire 881k+ event database with server-side filtering (date, event type, gender, age, track ID) and pagination instead of limited client-side filtering
-- **Actual Event Records**: Returns up to 10,000 real event records with track_id, timestamp, sex, age_bucket fields for frontend chart compatibility
-- **Empty Dataset Handling**: Gracefully handles empty tables by returning empty datasets rather than errors
-- **Security**: Service account credentials managed as environment secrets, parameterized queries block SQL injection
-- **Result**: Scalable database infrastructure (~9 second API response for 880k+ records) with accurate calculations, correct KPI displays, and full database search capability
+### BigQuery Analytics Migration (October 5, 2025)
+- **Data Warehouse**: Moved analytics storage from Cloud SQL to Google BigQuery for sub-second scans on partitioned tables.
+- **Service Account Access**: Configured workload to use `portal-bq-reader@nigzsu.iam.gserviceaccount.com` with read-only roles.
+- **Parameterized SQL**: Rewrote aggregation and search queries with BigQuery Standard SQL and named parameters for safety.
+- **Partition-aware Filtering**: All queries include timestamp predicates and optional cluster filters to minimize scanned bytes.
+- **Dwell-Time Logic**: Ported window-function occupancy calculation using `TIMESTAMP_DIFF`, `LAG`, and `LEAD` in BigQuery.
+- **Result Consistency**: Maintained legacy API response shapes so the React dashboard required no changes.
+- **Caching**: Added a 2-minute TTL cache on analytics responses to keep P95 latency under 1.5s.
+- **Health Check**: Implemented startup probe that issues `SELECT 1` against BigQuery to fail fast on credential issues.
 
 ### Landing Page & Interest Registration (October 4, 2025)
 - **Public Landing Page**: Created professional marketing landing page at root URL (/) with dark theme and cyan accents
@@ -56,7 +51,7 @@ A modern React SPA built with TypeScript, featuring a professional dark theme. I
 A FastAPI-based REST API with a modular and secure design. The backend is organized into modules for authentication, database operations, data models, configuration, view token management, and data processing. It uses HTTP Basic Auth with SHA-256 password hashing and stores user data in JSON files with atomic write operations. Data processing leverages Pandas for CSV manipulation.
 
 ### Data Storage Solutions
-The application employs a hybrid storage approach. User data, including hashed passwords and last login times, is stored in a local JSON file (`users.json`). Client analytics data is stored in Google Cloud SQL PostgreSQL tables, with each client assigned a dedicated table name (e.g., client1, client2). The application uses the Cloud SQL Python Connector for secure, authenticated access with automatic connection pooling.
+The application employs a hybrid storage approach. User data, including hashed passwords and last login times, is stored in a local JSON file (`users.json`). Client analytics data now resides in Google BigQuery tables (`nigzsu.demodata.client0`, `client1`), queried via the official BigQuery client with service-account authentication and query caching.
 
 ### Authentication and Authorization
 A secure authentication model using HTTP Basic Auth with SHA-256 password hashing. It supports a two-tier role system (admin/client), tracks last login times, and enforces route-level access control.
@@ -64,15 +59,15 @@ A secure authentication model using HTTP Basic Auth with SHA-256 password hashin
 ## External Dependencies
 
 ### Data Sources
-- **Google Cloud SQL**: PostgreSQL database (camOS:europe-west2:camOStestdb) storing client analytics data with tables per client.
+- **Google BigQuery**: Dataset `nigzsu.demodata` with partitioned tables (`client0`, `client1`) serving analytics queries.
 
 ### Python Backend Libraries
 - **FastAPI**: Web framework for the REST API.
 - **Uvicorn**: ASGI server.
 - **Pandas**: For data manipulation and analytics processing.
-- **cloud-sql-python-connector**: Secure connection to Google Cloud SQL with service account authentication.
-- **SQLAlchemy**: ORM and database toolkit for PostgreSQL queries.
-- **pg8000**: Pure-Python PostgreSQL database driver.
+- **google-cloud-bigquery**: Native client for executing parameterized BigQuery queries.
+- **cachetools**: TTL cache used to memoize analytics responses.
+- **pyarrow**: Columnar dependency for BigQuery DataFrame results.
 - **python-multipart**: For form data handling.
 
 ### React Frontend Libraries
