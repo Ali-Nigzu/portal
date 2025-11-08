@@ -9,4 +9,13 @@ export interface IntelligencePayload {
   avg_dwell_minutes?: number;
 }
 
-export type GranularityOption = 'auto' | 'hourly' | 'daily' | 'weekly';
+export type GranularityOption =
+  | 'auto'
+  | '5m'
+  | '15m'
+  | 'hour'
+  | 'day'
+  | 'week'
+  | 'hourly'
+  | 'daily'
+  | 'weekly';

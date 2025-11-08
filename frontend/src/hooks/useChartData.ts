@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { ChartData } from '../utils/dataProcessing';
 import { GranularityOption, IntelligencePayload } from '../types/analytics';
 
+type CanonicalGranularity = '5m' | '15m' | 'hour' | 'day' | 'week';
+
 export interface NormalizedChartPoint {
   label: string;
   bucketStart: string;
@@ -22,37 +24,58 @@ export interface UseChartDataResult {
   totalActivity: number;
 }
 
-const GRANULARITY_ORDER: GranularityOption[] = ['hourly', 'daily', 'weekly'];
+const GRANULARITY_ORDER: CanonicalGranularity[] = ['5m', '15m', 'hour', 'day', 'week'];
 
-const normalizeGranularity = (value?: string): GranularityOption => {
+const canonicalGranularity = (value: GranularityOption): CanonicalGranularity => {
+  switch (value) {
+    case '5m':
+    case '15m':
+    case 'hour':
+    case 'day':
+    case 'week':
+      return value;
+    case 'hourly':
+      return 'hour';
+    case 'daily':
+      return 'day';
+    case 'weekly':
+      return 'week';
+    default:
+      return 'hour';
+  }
+};
+
+const normalizeGranularity = (value?: string): CanonicalGranularity => {
   if (!value) {
-    return 'hourly';
+    return 'hour';
   }
 
   const normalized = value.toLowerCase();
+  if (normalized.includes('5')) {
+    return '5m';
+  }
+  if (normalized.includes('15')) {
+    return '15m';
+  }
   if (normalized.includes('week')) {
-    return 'weekly';
+    return 'week';
   }
   if (normalized.includes('day')) {
-    return 'daily';
+    return 'day';
   }
-  if (normalized.includes('hour')) {
-    return 'hourly';
-  }
-
-  return 'hourly';
+  return 'hour';
 };
 
 const getRecommendedGranularity = (
   data: ChartData[],
   intelligence?: IntelligencePayload | null
-): GranularityOption => {
+): CanonicalGranularity => {
   if (intelligence?.optimal_granularity) {
     return normalizeGranularity(intelligence.optimal_granularity);
   }
 
   if (!data.length) {
-    return 'hourly';
+    return 'hour';
   }
 
   const timestamps = data
@@ -62,16 +85,22 @@ const getRecommendedGranularity = (
 
   const first = timestamps[0];
   const last = timestamps[timestamps.length - 1];
-  const spanDays = (last - first) / (1000 * 60 * 60 * 24);
+  const spanMinutes = (last - first) / (1000 * 60);
 
-  if (spanDays > 30) {
-    return 'weekly';
+  if (spanMinutes <= 12 * 60) {
+    return '5m';
   }
-  if (spanDays > 7) {
-    return 'daily';
+  if (spanMinutes <= 48 * 60) {
+    return '15m';
+  }
+  if (spanMinutes <= 14 * 24 * 60) {
+    return 'hour';
+  }
+  if (spanMinutes <= 60 * 24 * 60) {
+    return 'day';
   }
 
-  return 'hourly';
+  return 'week';
 };
 
 const startOfDay = (date: Date) => {
@@ -88,18 +117,19 @@ const startOfWeek = (date: Date) => {
   return normalized;
 };
 
-const formatLabel = (date: Date, granularity: GranularityOption) => {
-  if (granularity === 'hourly') {
+const formatLabel = (date: Date, granularity: CanonicalGranularity) => {
+  if (granularity === '5m' || granularity === '15m' || granularity === 'hour') {
     const day = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     const hour = date.getHours().toString().padStart(2, '0');
-    return `${day} ${hour}:00`;
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${day} ${hour}:${minutes}`;
   }
 
-  if (granularity === 'daily') {
+  if (granularity === 'day') {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
-  if (granularity === 'weekly') {
+  if (granularity === 'week') {
     const day = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     return `Week of ${day}`;
   }
@@ -107,18 +137,27 @@ const formatLabel = (date: Date, granularity: GranularityOption) => {
   return date.toLocaleDateString();
 };
 
-const getBucketStart = (date: Date, granularity: GranularityOption): Date => {
-  if (granularity === 'hourly') {
+const getBucketStart = (date: Date, granularity: CanonicalGranularity): Date => {
+  if (granularity === '5m' || granularity === '15m') {
+    const normalized = new Date(date);
+    normalized.setSeconds(0, 0);
+    const interval = granularity === '5m' ? 5 : 15;
+    const minutes = normalized.getMinutes();
+    normalized.setMinutes(minutes - (minutes % interval), 0, 0);
+    return normalized;
+  }
+
+  if (granularity === 'hour') {
     const normalized = new Date(date);
     normalized.setMinutes(0, 0, 0);
     return normalized;
   }
 
-  if (granularity === 'daily') {
+  if (granularity === 'day') {
     return startOfDay(date);
   }
 
-  if (granularity === 'weekly') {
+  if (granularity === 'week') {
     return startOfWeek(date);
   }
 
@@ -129,7 +168,7 @@ const sortGranularity = (granularity: GranularityOption): number => {
   if (granularity === 'auto') {
     return 0;
   }
-  return GRANULARITY_ORDER.indexOf(granularity) + 1;
+  return GRANULARITY_ORDER.indexOf(canonicalGranularity(granularity)) + 1;
 };
 
 export const useChartData = (
@@ -139,12 +178,12 @@ export const useChartData = (
 ): UseChartDataResult => {
   return useMemo(() => {
     const recommended = getRecommendedGranularity(data, intelligence);
-    const active = userGranularity === 'auto' ? recommended : userGranularity;
+    const activeCanonical = userGranularity === 'auto' ? recommended : canonicalGranularity(userGranularity);
 
     if (!data.length) {
       return {
         series: [],
-        activeGranularity: active,
+        activeGranularity: activeCanonical,
         recommendedGranularity: recommended,
         highlightBuckets: [],
         averageOccupancy: 0,
@@ -164,18 +203,18 @@ export const useChartData = (
         return;
       }
 
-      const bucketStart = getBucketStart(eventTime, active);
+      const bucketStart = getBucketStart(eventTime, activeCanonical);
       const bucketKey = bucketStart.toISOString();
 
       if (!bucketsMap.has(bucketKey)) {
         bucketsMap.set(bucketKey, {
-          label: formatLabel(bucketStart, active),
+          label: formatLabel(bucketStart, activeCanonical),
           bucketStart: bucketStart.toISOString(),
           entries: 0,
           exits: 0,
           activity: 0,
           occupancy: 0,
-          hourOfDay: active === 'hourly' ? bucketStart.getHours() : undefined,
+          hourOfDay: activeCanonical === 'hour' ? bucketStart.getHours() : undefined,
           startDate: bucketStart
         });
       }
@@ -214,7 +253,7 @@ export const useChartData = (
       : 0;
 
     const highlightBucketsSet = new Set<string>();
-    if (intelligence?.peak_hours?.length && active === 'hourly') {
+    if (intelligence?.peak_hours?.length && activeCanonical === 'hour') {
       const peakSet = new Set(
         intelligence.peak_hours.map(hour => Number(hour)).filter(hour => !Number.isNaN(hour))
       );
@@ -236,7 +275,7 @@ export const useChartData = (
 
     return {
       series,
-      activeGranularity: active,
+      activeGranularity: activeCanonical,
       recommendedGranularity: recommended,
       highlightBuckets: Array.from(highlightBucketsSet),
       averageOccupancy,
@@ -247,9 +286,11 @@ export const useChartData = (
 
 export const getGranularityOptions = (): { value: GranularityOption; label: string }[] => [
   { value: 'auto', label: 'Auto' },
-  { value: 'hourly', label: 'Hourly' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' }
+  { value: '5m', label: '5 minutes' },
+  { value: '15m', label: '15 minutes' },
+  { value: 'hour', label: 'Hourly' },
+  { value: 'day', label: 'Daily' },
+  { value: 'week', label: 'Weekly' }
 ];
 
 export const compareGranularityPriority = (

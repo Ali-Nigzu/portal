@@ -1,184 +1,300 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Area,
   Bar,
   Brush,
   CartesianGrid,
   ComposedChart,
-  Legend,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from 'recharts';
 import { TooltipProps } from 'recharts/types/component/Tooltip';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
-import GranularityToggle from './GranularityToggle';
-import { GranularityOption } from '../types/analytics';
-import { NormalizedChartPoint } from '../hooks/useChartData';
+import CardControlHeader from './CardControlHeader';
+import { useCardControls, CardControlState } from '../hooks/useCardControls';
+import { useSeriesVisibility } from '../hooks/useSeriesVisibility';
+import { useInteractionContext } from '../context/InteractionContext';
+import { filterDataByControls, getDateRangeFromPreset } from '../utils/rangeUtils';
+import { useChartData, NormalizedChartPoint } from '../hooks/useChartData';
+import { IntelligencePayload } from '../types/analytics';
+import { ChartData } from '../utils/dataProcessing';
 import { exportChartAsPNG, exportDataAsCSV, generateChartId } from '../utils/exportUtils';
+import { useGlobalControls } from '../context/GlobalControlsContext';
+import { CompareOption, RangePreset } from '../styles/designTokens';
 
-interface ConfigurableChartProps {
-  data: NormalizedChartPoint[];
-  granularitySelection: GranularityOption;
-  activeGranularity: GranularityOption;
-  recommendedGranularity: GranularityOption;
-  onGranularityChange: (value: GranularityOption) => void;
-  highlightBuckets?: string[];
-  averageOccupancy: number;
+interface SeriesDefinition {
+  key: keyof NormalizedChartPoint | 'activity';
+  label: string;
+  color: string;
 }
 
-type SeriesKey = 'activity' | 'entries' | 'exits' | 'occupancy';
+interface ConfigurableChartProps {
+  cardId: string;
+  routeKey: string;
+  title: string;
+  subtitle?: string;
+  data: ChartData[];
+  intelligence?: IntelligencePayload | null;
+  onControlsChange?: (state: CardControlState) => void;
+}
 
-const SERIES_CONFIG: Record<SeriesKey, { label: string; color: string; type: 'line' | 'bar' | 'area' }> = {
-  activity: { label: 'Activity', color: '#673ab7', type: 'line' },
-  entries: { label: 'Entrances', color: '#2e7d32', type: 'bar' },
-  exits: { label: 'Exits', color: '#d32f2f', type: 'bar' },
-  occupancy: { label: 'Occupancy', color: '#1976d2', type: 'area' }
+const SERIES_DEFINITIONS: SeriesDefinition[] = [
+  { key: 'occupancy', label: 'Occupancy', color: 'var(--vrm-color-accent-occupancy)' },
+  { key: 'entries', label: 'Entrances', color: 'var(--vrm-color-accent-entrances)' },
+  { key: 'exits', label: 'Exits', color: 'var(--vrm-color-accent-exits)' },
+  { key: 'activity', label: 'Total activity', color: 'var(--vrm-color-accent-dwell)' },
+];
+
+const SERIES_ORDER: (keyof NormalizedChartPoint | 'activity')[] = ['entries', 'exits', 'activity', 'occupancy'];
+
+const SEGMENT_SUBTITLE: Record<string, string> = {
+  sex: 'Sex',
+  age: 'Age bands',
 };
 
-const tooltipFormatter = (props: TooltipProps<ValueType, NameType>) => {
-  const { active, payload, label } = props as TooltipProps<ValueType, NameType> & {
-    payload?: Array<{ dataKey?: string | number; value?: ValueType; color?: string }>;
-    label?: string | number;
-  };
+const MAX_VISIBLE_POINTS = 2000;
 
-  if (!active || !payload?.length) {
+const buildExportFilename = (
+  routeKey: string,
+  cardId: string,
+  rangePreset: RangePreset,
+  compare: CompareOption,
+  segments: string[],
+) => {
+  const segmentPart = segments.length ? `_${segments.join('-')}` : '';
+  return `${routeKey}_${cardId}_${rangePreset}_${compare}${segmentPart}`;
+};
+
+const formatTooltipValue = (value?: ValueType) => {
+  if (typeof value === 'number') {
+    return value.toLocaleString();
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return value ?? '';
+};
+
+const renderTooltip = (
+  props: TooltipProps<ValueType, NameType>,
+  segments: string[],
+  granularity: string,
+) => {
+  const extendedProps = props as TooltipProps<ValueType, NameType> & {
+    label?: string | number;
+    payload?: Array<{
+      dataKey?: string | number;
+      value?: ValueType;
+      color?: string;
+      name?: string | number;
+    }>;
+    active?: boolean;
+  };
+  const active = extendedProps.active;
+  const payload = extendedProps.payload;
+  const label = extendedProps.label;
+  if (!active || !payload || payload.length === 0) {
     return null;
   }
 
-  const labelText = typeof label === 'number' ? label.toString() : label ?? '';
+  const ordered = [...payload].sort((a, b) => {
+    const aIndex = SERIES_ORDER.indexOf((a.dataKey as keyof NormalizedChartPoint) ?? 'activity');
+    const bIndex = SERIES_ORDER.indexOf((b.dataKey as keyof NormalizedChartPoint) ?? 'activity');
+    return aIndex - bIndex;
+  });
+
+  const subtitle = segments.length
+    ? `Segments: ${segments.map(segment => SEGMENT_SUBTITLE[segment] ?? segment).join(', ')}`
+    : undefined;
 
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--vrm-bg-secondary)',
-        border: '1px solid var(--vrm-border)',
-        borderRadius: '8px',
-        padding: '12px',
-        minWidth: '180px'
-      }}
-    >
-      <p style={{ margin: 0, marginBottom: '8px', color: 'var(--vrm-text-primary)', fontWeight: 600 }}>{labelText}</p>
-      {payload.map((rawEntry, index) => {
-        const entry = rawEntry as {
-          dataKey?: string | number;
-          value?: ValueType;
-          color?: string;
-          name?: string | number;
-        };
-        const identifier = String(entry.dataKey ?? entry.name ?? index);
-        const seriesLabel = SERIES_CONFIG[String(entry.dataKey ?? entry.name ?? '') as SeriesKey]?.label ?? entry.name ?? entry.dataKey;
-
-        return (
-          <div key={identifier} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-            <span style={{ color: entry.color ?? 'var(--vrm-text-secondary)' }}>{seriesLabel}</span>
-            <span style={{ color: 'var(--vrm-text-primary)', fontWeight: 600 }}>{entry.value as number}</span>
-          </div>
-        );
-      })}
+    <div className="vrm-tooltip">
+      <div className="vrm-tooltip-header">
+        <span className="vrm-tooltip-title">{String(label)}</span>
+        <span className="vrm-tooltip-meta">{granularity === 'auto' ? 'Auto' : granularity}</span>
+      </div>
+      {subtitle && <div className="vrm-tooltip-subtitle">{subtitle}</div>}
+      <ul className="vrm-tooltip-list">
+        {ordered.map(item => (
+          <li key={`${item.dataKey}-${item.value}`} className="vrm-tooltip-item">
+            <span className="vrm-tooltip-dot" style={{ backgroundColor: item.color ?? 'var(--vrm-text-secondary)' }} />
+            <span className="vrm-tooltip-label">{item.name}</span>
+            <span className="vrm-tooltip-value">{formatTooltipValue(item.value)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
 
 const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
+  cardId,
+  routeKey,
+  title,
+  subtitle,
   data,
-  granularitySelection,
-  activeGranularity,
-  recommendedGranularity,
-  onGranularityChange,
-  highlightBuckets = [],
-  averageOccupancy
+  intelligence,
+  onControlsChange,
 }) => {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const chartId = useMemo(() => generateChartId('configurable-chart'), []);
-  const [visibleSeries, setVisibleSeries] = useState<Record<SeriesKey, boolean>>({
-    activity: true,
-    entries: true,
-    exits: true,
-    occupancy: true
-  });
+  const chartDomId = useMemo(() => generateChartId(`${cardId}-chart`), [cardId]);
+  const { syncId } = useInteractionContext();
+  const globalControls = useGlobalControls();
+  const {
+    state: controls,
+    isSynced,
+    setRangePreset,
+    setCustomRange,
+    setGranularity,
+    setScope,
+    toggleSegment,
+    setCompare,
+    resync,
+  } = useCardControls(routeKey, cardId, onControlsChange);
 
-  const toggleSeries = (key: SeriesKey) => {
-    setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
+  const { visibility, toggleSeries } = useSeriesVisibility(
+    routeKey,
+    cardId,
+    SERIES_DEFINITIONS.map(series => ({ key: series.key })),
+  );
+
+  const filteredData = useMemo(() => filterDataByControls(data, controls), [data, controls]);
+
+  const { series, activeGranularity, highlightBuckets, averageOccupancy } = useChartData(
+    filteredData,
+    controls.granularity,
+    intelligence,
+  );
+
+  const decimatedSeries = useMemo(() => {
+    if (series.length <= MAX_VISIBLE_POINTS) {
+      return series;
+    }
+    const step = Math.ceil(series.length / MAX_VISIBLE_POINTS);
+    return series.filter((_, index) => index % step === 0);
+  }, [series]);
+
+  const [brushSelection, setBrushSelection] = useState<{ startIndex: number; endIndex: number } | null>(null);
+
+  const handleBrushChange = useCallback(
+    (range: { startIndex?: number; endIndex?: number }) => {
+      if (
+        typeof range.startIndex === 'number' &&
+        typeof range.endIndex === 'number' &&
+        range.endIndex > range.startIndex
+      ) {
+        setBrushSelection({ startIndex: range.startIndex, endIndex: range.endIndex });
+      } else {
+        setBrushSelection(null);
+      }
+    },
+    [],
+  );
+
+  const resolveSelectionRange = () => {
+    if (!brushSelection) {
+      return null;
+    }
+    const startPoint = decimatedSeries[brushSelection.startIndex];
+    const endPoint = decimatedSeries[Math.min(brushSelection.endIndex, decimatedSeries.length - 1)];
+    if (!startPoint || !endPoint) {
+      return null;
+    }
+    const fromDate = new Date(startPoint.bucketStart);
+    const toDate = new Date(endPoint.bucketStart);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      return null;
+    }
+    return {
+      from: fromDate.toISOString().slice(0, 10),
+      to: toDate.toISOString().slice(0, 10),
+      label: `${startPoint.label} → ${endPoint.label}`,
+    };
+  };
+
+  const selectionRange = resolveSelectionRange();
+
+  const handleZoomToSelection = () => {
+    if (!selectionRange) {
+      return;
+    }
+    setCustomRange({ from: selectionRange.from, to: selectionRange.to });
+    setBrushSelection(null);
+  };
+
+  const handleApplyToPage = () => {
+    if (!selectionRange) {
+      return;
+    }
+    globalControls.setRangePreset('custom');
+    globalControls.setCustomRange({ from: selectionRange.from, to: selectionRange.to });
+    setCustomRange({ from: selectionRange.from, to: selectionRange.to });
+    setBrushSelection(null);
+  };
+
+  const filenameBase = useMemo(
+    () => buildExportFilename(routeKey, cardId, controls.rangePreset, controls.compare, controls.segments),
+    [routeKey, cardId, controls.rangePreset, controls.compare, controls.segments],
+  );
+
+  const exportPng = () => {
+    exportChartAsPNG(chartDomId, filenameBase);
+  };
+
+  const exportCsv = () => {
+    exportDataAsCSV(decimatedSeries, filenameBase);
   };
 
   const summaryText = useMemo(() => {
-    const seriesLabel = activeGranularity.charAt(0).toUpperCase() + activeGranularity.slice(1);
-    const pointCount = data.length;
-    return `${seriesLabel} view · ${pointCount} buckets`;
-  }, [activeGranularity, data.length]);
+    const range = getDateRangeFromPreset(controls.rangePreset, controls.customRange);
+    const bucketCount = decimatedSeries.length;
+    return `${bucketCount.toLocaleString()} buckets · ${range.from.toLocaleDateString()} – ${range.to.toLocaleDateString()}`;
+  }, [controls.rangePreset, controls.customRange, decimatedSeries]);
 
   return (
     <div className="vrm-card">
-      <div className="vrm-card-header" style={{ gap: '12px' }}>
-        <div>
-          <h3 className="vrm-card-title" style={{ marginBottom: '4px' }}>Interactive Activity Board</h3>
-          <p style={{ fontSize: '12px', color: 'var(--vrm-text-secondary)', margin: 0 }}>
-            Explore entrances, exits, and live occupancy across the selected time window
-          </p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-          <GranularityToggle
-            value={granularitySelection}
-            activeGranularity={activeGranularity}
-            recommendedGranularity={recommendedGranularity}
-            onChange={onGranularityChange}
-          />
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {(Object.keys(SERIES_CONFIG) as SeriesKey[]).map(key => {
-              const config = SERIES_CONFIG[key];
-              const isActive = visibleSeries[key];
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleSeries(key)}
-                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                  style={{
-                    backgroundColor: isActive ? config.color : 'var(--vrm-bg-secondary)',
-                    color: isActive ? '#fff' : 'var(--vrm-text-primary)',
-                    borderColor: isActive ? config.color : 'var(--vrm-border)',
-                    fontWeight: 600
-                  }}
-                >
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      <div className="vrm-card-body">
-        <div id={chartId} ref={chartRef} style={{ width: '100%', height: '420px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} syncId="dashboard-series" margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+      <CardControlHeader
+        cardId={cardId}
+        title={title}
+        subtitle={subtitle}
+        controls={controls}
+        isSynced={isSynced}
+        setRangePreset={setRangePreset}
+        setCustomRange={setCustomRange}
+        setGranularity={setGranularity}
+        setScope={setScope}
+        toggleSegment={toggleSegment}
+        setCompare={setCompare}
+        resync={resync}
+        onExportPNG={exportPng}
+        onExportCSV={exportCsv}
+        exportDisabled={!decimatedSeries.length}
+        seriesConfig={SERIES_DEFINITIONS.map(series => ({
+          key: series.key,
+          label: series.label,
+          color: series.color,
+        }))}
+        visibleSeries={visibility}
+        onToggleSeries={toggleSeries}
+        disablePerCamera
+      />
+      <div className="vrm-card-body vrm-card-body--stacked">
+        <div className="vrm-chart-wrapper">
+          <ResponsiveContainer width="100%" height={420}>
+            <ComposedChart data={decimatedSeries} syncId={syncId} margin={{ top: 16, right: 24, bottom: 0, left: 0 }}>
               <defs>
-                <linearGradient id="occupancyGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={SERIES_CONFIG.occupancy.color} stopOpacity={0.5} />
-                  <stop offset="100%" stopColor={SERIES_CONFIG.occupancy.color} stopOpacity={0.05} />
+                <linearGradient id={`${cardId}-occupancyGradient`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--vrm-color-accent-occupancy)" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="var(--vrm-color-accent-occupancy)" stopOpacity={0.05} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--vrm-border)" />
-              <XAxis dataKey="label" stroke="var(--vrm-text-secondary)" fontSize={12} minTickGap={12} />
-              <YAxis stroke="var(--vrm-text-secondary)" fontSize={12} allowDecimals={false} />
-              <Tooltip content={tooltipFormatter} cursor={{ stroke: 'var(--vrm-accent-blue)', strokeWidth: 1, strokeDasharray: '4 2' }} />
-              <Legend
-                verticalAlign="top"
-                height={32}
-                formatter={(value, entry) => {
-                  const key = (entry?.dataKey as SeriesKey) ?? (value as SeriesKey);
-                  return SERIES_CONFIG[key]?.label ?? value;
-                }}
-                onClick={legendEntry => {
-                  const key = legendEntry?.dataKey as SeriesKey | undefined;
-                  if (key) {
-                    toggleSeries(key);
-                  }
-                }}
-              />
+              <XAxis dataKey="label" stroke="var(--vrm-text-muted)" fontSize={12} minTickGap={12} />
+              <YAxis stroke="var(--vrm-text-muted)" fontSize={12} allowDecimals={false} />
+              <Tooltip content={tooltipProps => renderTooltip(tooltipProps, controls.segments, activeGranularity)} />
               {highlightBuckets.map(bucket => (
                 <ReferenceArea
                   key={bucket}
@@ -186,68 +302,91 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   x2={bucket}
                   strokeOpacity={0}
                   fill="var(--vrm-accent-orange)"
-                  fillOpacity={0.12}
+                  fillOpacity={0.1}
                 />
               ))}
-              {visibleSeries.occupancy && (
+              {visibility['occupancy'] && (
                 <Area
                   type="monotone"
                   dataKey="occupancy"
-                  name={SERIES_CONFIG.occupancy.label}
-                  stroke={SERIES_CONFIG.occupancy.color}
-                  fill="url(#occupancyGradient)"
+                  stroke="var(--vrm-color-accent-occupancy)"
+                  fill={`url(#${cardId}-occupancyGradient)`}
                   strokeWidth={2}
+                  name="Occupancy"
                   dot={false}
                 />
               )}
-              {visibleSeries.activity && (
-                <Bar dataKey="activity" name={SERIES_CONFIG.activity.label} barSize={24} fill={SERIES_CONFIG.activity.color} radius={[4, 4, 0, 0]} opacity={0.75} />
+              {visibility['entries'] && (
+                <Bar
+                  dataKey="entries"
+                  stackId="flow"
+                  fill="var(--vrm-color-accent-entrances)"
+                  name="Entrances"
+                  radius={[4, 4, 0, 0]}
+                  barSize={18}
+                />
               )}
-              {visibleSeries.entries && (
-                <Bar dataKey="entries" name={SERIES_CONFIG.entries.label} barSize={12} fill={SERIES_CONFIG.entries.color} radius={[4, 4, 0, 0]} />
+              {visibility['exits'] && (
+                <Bar
+                  dataKey="exits"
+                  stackId="flow"
+                  fill="var(--vrm-color-accent-exits)"
+                  name="Exits"
+                  radius={[4, 4, 0, 0]}
+                  barSize={18}
+                />
               )}
-              {visibleSeries.exits && (
-                <Bar dataKey="exits" name={SERIES_CONFIG.exits.label} barSize={12} fill={SERIES_CONFIG.exits.color} radius={[4, 4, 0, 0]} />
+              {visibility['activity'] && (
+                <Bar
+                  dataKey="activity"
+                  fill="var(--vrm-color-accent-dwell)"
+                  name="Total activity"
+                  barSize={6}
+                  opacity={0.5}
+                />
               )}
               {averageOccupancy > 0 && (
-                <ReferenceLine y={averageOccupancy} stroke="var(--vrm-accent-teal)" strokeDasharray="4 2" label={{ value: `Avg Occupancy ${Math.round(averageOccupancy)}`, position: 'right', fill: 'var(--vrm-accent-teal)', fontSize: 11 }} />
+                <ReferenceLine
+                  y={averageOccupancy}
+                  stroke="var(--vrm-color-accent-entrances)"
+                  strokeDasharray="4 2"
+                  label={{
+                    value: `Mean occupancy ${Math.round(averageOccupancy)}`,
+                    position: 'right',
+                    fill: 'var(--vrm-color-accent-entrances)',
+                    fontSize: 11,
+                  }}
+                />
               )}
-              <Brush dataKey="label" height={24} travellerWidth={10} stroke="var(--vrm-accent-blue)" fill="var(--vrm-bg-secondary)" />
+              <ReferenceLine y={0} stroke="var(--vrm-border)" />
+              <Brush dataKey="label" height={24} stroke="var(--vrm-color-accent-occupancy)" onChange={handleBrushChange} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-
-        <div
-          style={{
-            marginTop: '16px',
-            padding: '12px 16px',
-            backgroundColor: 'var(--vrm-bg-tertiary)',
-            borderRadius: '6px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px'
-          }}
-        >
-          <div style={{ color: 'var(--vrm-text-secondary)', fontSize: '13px' }}>{summaryText}</div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={() => exportChartAsPNG(chartId, `activity-board-${activeGranularity}`)}
-              disabled={!data.length}
-            >
+        <div className="vrm-chart-footer">
+          <span className="vrm-chart-summary">{summaryText}</span>
+          <div className="vrm-chart-actions">
+            <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={exportPng} disabled={!decimatedSeries.length}>
               Export PNG
             </button>
-            <button
-              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={() => exportDataAsCSV(data, `activity-board-${activeGranularity}`)}
-              disabled={!data.length}
-            >
+            <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={exportCsv} disabled={!decimatedSeries.length}>
               Export CSV
             </button>
           </div>
         </div>
+        {selectionRange && (
+          <div className="vrm-brush-actions" role="status">
+            <span>{selectionRange.label}</span>
+            <div className="vrm-brush-buttons">
+              <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleZoomToSelection}>
+                Zoom to selection
+              </button>
+              <button type="button" className="vrm-btn vrm-btn-sm" onClick={handleApplyToPage}>
+                Apply to page
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

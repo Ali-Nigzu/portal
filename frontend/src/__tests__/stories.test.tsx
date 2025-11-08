@@ -13,12 +13,24 @@ import * as CardStories from '../stories/Card.stories';
 applyDesignTokens();
 
 describe('Storybook design baselines', () => {
+  const originalWarn = console.warn;
+  let warnSpy: jest.SpyInstance;
+
   beforeAll(() => {
     jest.useFakeTimers().setSystemTime(new Date('2024-01-01T12:00:00Z'));
+
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation((message?: unknown, ...args: unknown[]) => {
+      if (typeof message === 'string' && message.includes('React Router Future Flag Warning')) {
+        return;
+      }
+
+      originalWarn.apply(console, [message, ...args]);
+    });
   });
 
   afterAll(() => {
     jest.useRealTimers();
+    warnSpy.mockRestore();
   });
 
   const storyModules = [
