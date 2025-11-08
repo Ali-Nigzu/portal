@@ -11,6 +11,8 @@ import logging
 import pandas as pd
 from datetime import datetime
 from typing import Optional, Dict, List, Any
+
+from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -64,9 +66,8 @@ from backend.app.view_tokens import (
     validate_view_token,
     view_tokens
 )
-from backend.app.data_processor import DataProcessor
-from backend.app.cloudsql import cloudsql_connection
-from sqlalchemy import text
+from backend.app.data_processor import DataProcessor, _resolve_time_bounds
+from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -78,8 +79,19 @@ app = FastAPI(
 )
 #app.include_router(auth.router, prefix="/api")
 
+ANALYTICS_CACHE_TTL = int(os.getenv("ANALYTICS_CACHE_TTL", "120"))
+analytics_cache: TTLCache = TTLCache(maxsize=128, ttl=ANALYTICS_CACHE_TTL)
 
 ALLOWED_ORIGINS = get_allowed_origins()
+
+@app.on_event("startup")
+async def startup_health_check():
+    """Run a lightweight BigQuery connectivity check on startup."""
+    try:
+        bigquery_client.run_health_check()
+    except Exception as exc:
+        logger.error("BigQuery startup health check failed: %s", exc)
+        raise
 
 app.add_middleware(
     CORSMiddleware,
@@ -281,129 +293,163 @@ async def get_chart_data(
     event: Optional[str] = None,
     view_token: Optional[str] = None
 ):
-    """
-    Get intelligent chart data using SQL aggregation - much faster than loading all rows
-    Supports both authenticated users and view tokens
-    Accepts separate time filters for KPIs (kpi_start_date/kpi_end_date) and charts (start_date/end_date)
-    """
+    """Return analytics payload backed by BigQuery aggregations."""
     try:
         table_name = _authenticate_chart_data_request(request, view_token)
-        
-        # Use KPI dates for the main aggregation (KPIs calculation)
-        # If not provided, fall back to chart dates or no filter
+
         kpi_filters = {
             'start_date': kpi_start_date or start_date,
             'end_date': kpi_end_date or end_date,
             'gender': gender,
             'age_group': age_group,
-            'event': event
+            'event': event,
         }
-        
-        # Use chart dates for the records query
+
         chart_filters = {
             'start_date': start_date,
             'end_date': end_date,
             'gender': gender,
             'age_group': age_group,
-            'event': event
+            'event': event,
         }
-        
-        # Get aggregated data from SQL using KPI filters for calculations
+
+        cache_key = json.dumps(
+            {
+                'table': table_name,
+                'kpi': kpi_filters,
+                'chart': chart_filters,
+            },
+            sort_keys=True,
+        )
+
+        cached_response = analytics_cache.get(cache_key)
+        if cached_response is not None:
+            logger.debug("Analytics cache hit for key %s", cache_key)
+            return cached_response
+
         agg_data = DataProcessor.get_aggregated_analytics(table_name, kpi_filters)
-        
-        stats = agg_data['stats'].iloc[0] if len(agg_data['stats']) > 0 else None
-        total_records = int(stats['total_records']) if stats is not None else 0
-        
-        # Build demographics from aggregated data
-        gender_counts = {}
-        age_counts = {}
+
+        stats_df = agg_data['stats']
+        stats = stats_df.iloc[0] if not stats_df.empty else None
+
+        def _to_datetime(value):
+            if value is None or (hasattr(pd, 'isna') and pd.isna(value)):
+                return None
+            if isinstance(value, pd.Timestamp):
+                return value.to_pydatetime()
+            if isinstance(value, datetime):
+                return value
+            return pd.to_datetime(value).to_pydatetime()
+
+        def _to_iso(value):
+            dt_value = _to_datetime(value)
+            return dt_value.isoformat() if dt_value else None
+
+        total_records = 0
+        min_dt = None
+        max_dt = None
+        entries = exits = 0
+        if stats is not None:
+            total_records = int(stats['total_records']) if not pd.isna(stats['total_records']) else 0
+            min_dt = _to_datetime(stats['min_timestamp'])
+            max_dt = _to_datetime(stats['max_timestamp'])
+            entries = int(stats['entries']) if not pd.isna(stats['entries']) else 0
+            exits = int(stats['exits']) if not pd.isna(stats['exits']) else 0
+
+        gender_counts: Dict[str, int] = {}
+        age_counts: Dict[str, int] = {}
         for _, row in agg_data['demographics'].iterrows():
             gender_counts[row['sex']] = gender_counts.get(row['sex'], 0) + int(row['count'])
             age_counts[row['age_bucket']] = age_counts.get(row['age_bucket'], 0) + int(row['count'])
-        
-        # Build hourly distribution
-        hourly_dist = {int(row['hour']): int(row['count']) for _, row in agg_data['hourly'].iterrows()}
+
+        hourly_dist = {
+            int(row['hour']): int(row['count'])
+            for _, row in agg_data['hourly'].iterrows()
+        }
         peak_hour = max(hourly_dist.items(), key=lambda x: x[1])[0] if hourly_dist else 12
         peak_hours = sorted(hourly_dist.items(), key=lambda x: x[1], reverse=True)[:3]
-        peak_hours_list = [int(h[0]) for h in peak_hours]
-        
-        # Calculate date span
+        peak_hours_list = [int(hour) for hour, _ in peak_hours]
+
         date_span_days = 0
-        if stats is not None and stats['min_timestamp'] and stats['max_timestamp']:
-            date_span_days = (stats['max_timestamp'] - stats['min_timestamp']).days
-        
-        optimal_granularity = "hourly"
+        if min_dt and max_dt:
+            date_span_days = (max_dt - min_dt).days
+
+        optimal_granularity = 'hourly'
         if date_span_days > 30:
-            optimal_granularity = "weekly"
+            optimal_granularity = 'weekly'
         elif date_span_days > 7:
-            optimal_granularity = "daily"
-        
-        # Get dwell time
-        avg_dwell = 0
-        if len(agg_data['dwell']) > 0 and agg_data['dwell'].iloc[0]['avg_dwell_minutes']:
-            avg_dwell = float(agg_data['dwell'].iloc[0]['avg_dwell_minutes'])
-        
-        # Use actual event records from database (limited to 10k for performance)
-        chart_data = []
+            optimal_granularity = 'daily'
+
+        avg_dwell = 0.0
+        dwell_df = agg_data['dwell']
+        if not dwell_df.empty:
+            dwell_value = dwell_df.iloc[0]['avg_dwell_minutes']
+            if not pd.isna(dwell_value):
+                avg_dwell = float(dwell_value)
+
+        chart_data: List[Dict[str, Any]] = []
         for _, row in agg_data['records'].iterrows():
             timestamp = pd.to_datetime(row['timestamp'])
             chart_data.append({
                 'timestamp': timestamp.isoformat(),
-                'hour': timestamp.hour,
+                'hour': int(timestamp.hour),
                 'date': timestamp.date().isoformat(),
                 'event': 'entry' if row['event'] == 1 else 'exit',
                 'track_number': row['track_id'],
                 'sex': row['sex'],
                 'age_estimate': row['age_bucket'],
                 'day_of_week': timestamp.strftime('%A'),
-                'index': 0
+                'index': 0,
             })
-        
+
         summary = {
             'total_records': total_records,
             'date_range': {
-                'start': stats['min_timestamp'].isoformat() if stats is not None and stats['min_timestamp'] else None,
-                'end': stats['max_timestamp'].isoformat() if stats is not None and stats['max_timestamp'] else None
+                'start': _to_iso(min_dt),
+                'end': _to_iso(max_dt),
             },
             'demographics': {
                 'gender': gender_counts,
-                'age_groups': age_counts
-            }
+                'age_groups': age_counts,
+            },
         }
-        
+
         intelligence = {
             'total_records': total_records,
             'date_span_days': date_span_days,
-            'latest_timestamp': stats['max_timestamp'] if stats is not None else None,
+            'latest_timestamp': _to_iso(max_dt),
             'optimal_granularity': optimal_granularity,
             'peak_hours': peak_hours_list,
             'demographics_breakdown': {
                 'gender': gender_counts,
                 'age_groups': age_counts,
-                'events': {'entry': int(stats['entries']) if stats is not None else 0, 'exit': int(stats['exits']) if stats is not None else 0}
+                'events': {'entry': entries, 'exit': exits},
             },
             'temporal_patterns': {
                 'hourly_distribution': hourly_dist,
                 'daily_distribution': {},
                 'peak_times': {
                     'hour': peak_hour,
-                    'count': hourly_dist.get(peak_hour, 0)
-                }
+                    'count': hourly_dist.get(peak_hour, 0),
+                },
             },
-            'avg_dwell_minutes': avg_dwell
+            'avg_dwell_minutes': avg_dwell,
         }
-        
-        return ChartDataResponse(
+
+        response = ChartDataResponse(
             data=chart_data,
             summary=summary,
-            intelligence=intelligence
+            intelligence=intelligence,
         )
-        
+
+        analytics_cache[cache_key] = response
+        return response
+
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Chart data error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to process chart data: {str(e)}")
+    except Exception as exc:
+        logger.error("Chart data error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process chart data: {exc}")
 
 
 @app.get("/api/search-events")
@@ -419,96 +465,102 @@ async def search_events(
     per_page: int = 20,
     view_token: Optional[str] = None
 ):
-    """
-    Search events with filters and pagination - queries database directly for full dataset access
-    """
+    """Search BigQuery event logs with pagination."""
     try:
         table_name = _authenticate_chart_data_request(request, view_token)
-        
-        params = {}
-        where_clauses = []
-        
-        # Build parameterized WHERE clauses
-        if start_date:
-            where_clauses.append("timestamp >= :start_date")
-            params['start_date'] = start_date
-        if end_date:
-            where_clauses.append("timestamp <= :end_date")
-            params['end_date'] = end_date
+
+        filters: Dict[str, Optional[str]] = {
+            'start_date': start_date,
+            'end_date': end_date,
+        }
+        params = _resolve_time_bounds(filters)
+
+        where_conditions = ['timestamp BETWEEN @start_ts AND @end_ts']
+
         if event_type and event_type.lower() != 'all':
-            event_val = 1 if event_type.lower() == 'entry' else 0
-            where_clauses.append("event = :event")
-            params['event'] = event_val
+            params['event'] = 1 if event_type.lower() == 'entry' else 0
+            where_conditions.append('event = @event')
         if sex and sex.lower() != 'all':
-            where_clauses.append("sex = :sex")
             params['sex'] = sex
+            where_conditions.append('sex = @sex')
         if age and age.lower() != 'all':
-            where_clauses.append("age_bucket = :age")
             params['age'] = age
+            where_conditions.append('age_bucket = @age')
         if track_id:
-            where_clauses.append("CAST(track_id AS TEXT) LIKE :track_id")
             params['track_id'] = f"%{track_id}%"
-        
-        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-        
-        # Calculate offset for pagination
-        offset = (page - 1) * per_page
-        
-        with cloudsql_connection.get_connection_context() as conn:
-            # Get total count
-            count_query = text(f"""
-                SELECT COUNT(*) as total
-                FROM {table_name}
-                {where_sql}
-            """)
-            count_result = pd.read_sql(count_query, conn, params=params)
-            total_count = int(count_result.iloc[0]['total'])
-            
-            # Get paginated results
-            search_query = text(f"""
-                SELECT 
-                    track_id,
-                    event,
-                    timestamp,
-                    sex,
-                    age_bucket
-                FROM {table_name}
-                {where_sql}
-                ORDER BY timestamp DESC
-                LIMIT :limit OFFSET :offset
-            """)
-            params['limit'] = per_page
-            params['offset'] = offset
-            
-            results_df = pd.read_sql(search_query, conn, params=params)
-            
-            # Transform results to match frontend format
-            events = []
-            for _, row in results_df.iterrows():
-                timestamp = pd.to_datetime(row['timestamp'])
-                events.append({
-                    'track_number': row['track_id'],
-                    'event': 'entry' if row['event'] == 1 else 'exit',
-                    'timestamp': timestamp.isoformat(),
-                    'sex': row['sex'],
-                    'age_estimate': row['age_bucket']
-                })
-            
-            return {
-                'events': events,
-                'total': total_count,
-                'page': page,
-                'per_page': per_page,
-                'total_pages': (total_count + per_page - 1) // per_page
-            }
-            
+            where_conditions.append('track_id LIKE @track_id')
+
+        where_sql = 'WHERE ' + ' AND '.join(where_conditions)
+
+        offset = max(page - 1, 0) * per_page
+
+        table_identifier = f"`{table_name}`"
+
+        count_query = f"""
+            SELECT COUNT(*) AS total
+            FROM {table_identifier}
+            {where_sql}
+        """
+        count_df = bigquery_client.query_dataframe(
+            count_query, params, job_context=f"{table_name}::search_count"
+        )
+        total_count = int(count_df.iloc[0]['total']) if not count_df.empty else 0
+
+        search_params = dict(params)
+        search_params['limit'] = per_page
+        search_params['offset'] = offset
+
+        search_query = f"""
+            SELECT
+                track_id,
+                event,
+                timestamp,
+                sex,
+                age_bucket
+            FROM {table_identifier}
+            {where_sql}
+            ORDER BY timestamp DESC
+            LIMIT @limit OFFSET @offset
+        """
+        results_df = bigquery_client.query_dataframe(
+            search_query, search_params, job_context=f"{table_name}::search_results"
+        )
+
+        events: List[Dict[str, Any]] = []
+        for _, row in results_df.iterrows():
+            timestamp = pd.to_datetime(row['timestamp'])
+            events.append({
+                'track_number': row['track_id'],
+                'event': 'entry' if row['event'] == 1 else 'exit',
+                'timestamp': timestamp.isoformat(),
+                'sex': row['sex'],
+                'age_estimate': row['age_bucket'],
+            })
+
+        return {
+            'events': events,
+            'total': total_count,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total_count + per_page - 1) // per_page,
+        }
+
+    except BigQueryDataFrameError as exc:
+        logger.error(
+            "Event search failed for %s (job_id=%s): %s", table_name, exc.job_id, exc
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "BigQuery dataframe conversion failed",
+                "job_id": exc.job_id,
+            },
+        ) from exc
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Event search error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to search events: {str(e)}")
-
-
+    except Exception as exc:
+        logger.error("Event search error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to search events: {exc}")
 @app.get("/api/admin/users")
 async def get_users(user: dict = Depends(authenticate_user)):
     """Get all users (admin only)"""

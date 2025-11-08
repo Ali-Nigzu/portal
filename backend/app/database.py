@@ -36,7 +36,7 @@ def load_users():
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "table_name": "client1",
+                "table_name": "nigzsu.demodata.client0",
                 "last_login": None,
                 "data_sources": []
             },
@@ -44,7 +44,7 @@ def load_users():
                 "password": hash_password("client456"),
                 "role": "client",
                 "name": "Test Client 2",
-                "table_name": "client2",
+                "table_name": "nigzsu.demodata.client1",
                 "last_login": None,
                 "data_sources": []
             }
@@ -87,12 +87,23 @@ def save_users(users_data: dict):
 
 
 def get_active_table_name(client_id: str, users: dict) -> Optional[str]:
-    """Get the Cloud SQL table name for a client"""
+    """Get the fully-qualified analytics table for a client."""
     if client_id not in users:
         return None
-    
+
     client_data = users[client_id]
-    return client_data.get('table_name')
+    table_name = client_data.get('table_name')
+
+    if not table_name:
+        return None
+
+    if table_name.count('.') < 2:
+        project = os.getenv('BQ_PROJECT')
+        dataset = os.getenv('BQ_DATASET')
+        if project and dataset:
+            return f"{project}.{dataset}.{table_name}"
+
+    return table_name
 
 
 def load_alarm_logs():

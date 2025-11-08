@@ -10,7 +10,7 @@
     "password": "client123",
     "role": "client",
     "name": "Test Client 1",
-    "table_name": "client1",
+    "table_name": "nigzsu.demodata.client0",
     "data_sources": [],
     "last_login": "2025-10-05T15:13:22.019559"
   },
@@ -18,7 +18,7 @@
     "password": "238c0099d9ebcd9badb3d6090935a47d:b33ec0d1336fd94879e06f5838a4d1b26ea2df928af454c6b92ebb7c6c5c98f9",
     "role": "client",
     "name": "Test Client 2",
-    "table_name": "client2",
+    "table_name": "nigzsu.demodata.client1",
     "data_sources": [],
     "last_login": "2025-10-01T19:12:30.667716"
   }
