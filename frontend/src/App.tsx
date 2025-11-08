@@ -10,6 +10,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import AdminPage from './pages/AdminPage';
 import LandingPage from './pages/LandingPage';
 import './styles/VRMTheme.css';
+import { GlobalControlsProvider } from './context/GlobalControlsContext';
 
 // Login Component
 const Login: React.FC<{onLogin: (username: string, password: string) => void}> = ({ onLogin }) => {
@@ -48,147 +49,69 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      minHeight: '100vh', 
-      background: 'var(--vrm-bg-primary)',
-      padding: '20px' 
-    }}>
-      <div style={{ 
-        background: 'var(--vrm-bg-secondary)', 
-        padding: '40px',
-        borderRadius: '12px',
-        border: '1px solid var(--vrm-border)',
-        maxWidth: '400px',
-        width: '100%',
-        textAlign: 'center'
-      }}>
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-            overflow: 'hidden'
-          }}>
-            <img 
-              src="/company-logo.png" 
-              alt="Company Logo"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
-            />
+    <div className="vrm-auth-shell">
+      <div className="vrm-auth-card" role="dialog" aria-labelledby="camOS-login-title">
+        <div>
+          <div className="vrm-auth-logo">
+            <img src="/company-logo.png" alt="Company Logo" />
           </div>
-          <h2 style={{ color: 'var(--vrm-text-primary)', marginBottom: '8px', fontSize: '24px', fontWeight: '600' }}>
+          <h2 id="camOS-login-title" className="vrm-auth-title">
             camOS
           </h2>
+          <p className="vrm-auth-subtitle">Sign in to monitor your sites</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px', 
-              color: 'var(--vrm-text-secondary)', 
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              Username:
+        <form onSubmit={handleSubmit} className="vrm-auth-form">
+          <div className="vrm-field">
+            <label className="vrm-label" htmlFor="login-username">
+              Username
             </label>
-            <input 
-              type="text" 
-              value={username} 
+            <input
+              id="login-username"
+              className="vrm-input"
+              type="text"
+              value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter username"
               autoComplete="username"
               required
-              style={{ 
-                width: '100%',
-                padding: '12px 16px',
-                backgroundColor: 'var(--vrm-bg-tertiary)',
-                border: '1px solid var(--vrm-border)',
-                borderRadius: '6px',
-                color: 'var(--vrm-text-primary)',
-                fontSize: '14px'
-              }}
             />
           </div>
-          
-          <div style={{ marginBottom: '24px', textAlign: 'left' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px', 
-              color: 'var(--vrm-text-secondary)', 
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              Password:
+
+          <div className="vrm-field">
+            <label className="vrm-label" htmlFor="login-password">
+              Password
             </label>
-            <input 
-              type="password" 
-              value={password} 
+            <input
+              id="login-password"
+              className="vrm-input"
+              type="password"
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
               autoComplete="current-password"
               required
-              style={{ 
-                width: '100%',
-                padding: '12px 16px',
-                backgroundColor: 'var(--vrm-bg-tertiary)',
-                border: '1px solid var(--vrm-border)',
-                borderRadius: '6px',
-                color: 'var(--vrm-text-primary)',
-                fontSize: '14px'
-              }}
             />
           </div>
 
           {error && (
-            <div style={{ 
-              marginBottom: '20px',
-              padding: '12px',
-              backgroundColor: 'rgba(244, 67, 54, 0.1)',
-              border: '1px solid var(--vrm-accent-red)',
-              borderRadius: '6px',
-              color: 'var(--vrm-accent-red)',
-              fontSize: '14px'
-            }}>
+            <div className="vrm-status vrm-status-warning vrm-auth-error" role="alert" aria-live="assertive">
               {error}
             </div>
           )}
 
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="vrm-btn"
-            style={{ 
-              width: '100%',
-              padding: '14px',
-              fontSize: '16px',
-              fontWeight: '600'
-            }}
-          >
-            {loading ? 'Signing In...' : 'Sign In'}
-          </button>
+          <div className="vrm-auth-actions">
+            <button type="submit" className="vrm-btn vrm-btn-primary" style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Signing in…' : 'Login'}
+            </button>
+          </div>
         </form>
 
-        <div style={{ 
-          marginTop: '24px', 
-          padding: '16px', 
-          backgroundColor: 'var(--vrm-bg-tertiary)', 
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: 'var(--vrm-text-muted)'
-        }}>
-          <strong>Demo Credentials:</strong><br />
-          Client: client1 / client123<br />
+        <div className="vrm-auth-hint">
+          <strong>Demo credentials</strong>
+          <br />
+          Client: client1 / client123
+          <br />
           Admin: admin / admin123
         </div>
       </div>
@@ -253,7 +176,8 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <Routes>
+      <GlobalControlsProvider>
+        <Routes>
         {/* Public routes */}
         <Route path="/" element={!isLoggedIn && !hasViewToken ? <LandingPage /> : <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
         <Route path="/login" element={!isLoggedIn && !hasViewToken ? <Login onLogin={handleLogin} /> : <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />} />
@@ -326,7 +250,8 @@ const App: React.FC = () => {
             <Navigate to="/" replace /> : 
             <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} replace />
         } />
-      </Routes>
+        </Routes>
+      </GlobalControlsProvider>
     </Router>
   );
 };

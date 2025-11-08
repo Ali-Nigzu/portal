@@ -1,0 +1,1042 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Storybook design baselines DefaultShell matches snapshot 1`] = `
+<div
+  className="vrm-layout"
+>
+  <nav
+    aria-label="Primary"
+    className="vrm-sidebar "
+  >
+    <div
+      className="vrm-sidebar-header"
+    >
+      <div
+        className="vrm-logo"
+      >
+        <img
+          alt="Company Logo"
+          className="vrm-logo-img"
+          src="/company-logo.png"
+        />
+      </div>
+      <div
+        className="vrm-logo-text"
+      >
+        camOS
+      </div>
+    </div>
+    <button
+      className="vrm-collapse-btn"
+      onClick={[Function]}
+      title="Collapse sidebar"
+    >
+      <svg
+        fill="none"
+        height="20"
+        viewBox="0 0 20 20"
+        width="20"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M6 10h8M6 5h8M6 15h8"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="2"
+        />
+      </svg>
+    </button>
+    <div
+      className="vrm-nav"
+    >
+      <a
+        className="vrm-nav-item "
+        href="/dashboard"
+        onClick={[Function]}
+        title=""
+      >
+        <svg
+          aria-hidden="true"
+          className="vrm-nav-icon"
+          role="presentation"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M4 13h7V4H4v9Zm9 7h7V4h-7v16ZM4 20h7v-5H4v5Z"
+            fill="currentColor"
+            opacity="0.9"
+          />
+        </svg>
+        <div
+          className="vrm-nav-text"
+        >
+          Dashboard
+        </div>
+      </a>
+      <a
+        className="vrm-nav-item "
+        href="/analytics"
+        onClick={[Function]}
+        title=""
+      >
+        <svg
+          aria-hidden="true"
+          className="vrm-nav-icon"
+          role="presentation"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M5 19h2v-6H5v6Zm6 0h2V5h-2v14Zm6 0h2v-9h-2v9ZM4 21h16a1 1 0 0 0 0-2H4a1 1 0 0 0 0 2Z"
+            fill="currentColor"
+            opacity="0.9"
+          />
+        </svg>
+        <div
+          className="vrm-nav-text"
+        >
+          Analytics
+        </div>
+      </a>
+      <a
+        className="vrm-nav-item "
+        href="/event-logs"
+        onClick={[Function]}
+        title=""
+      >
+        <svg
+          aria-hidden="true"
+          className="vrm-nav-icon"
+          role="presentation"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M5 4h4l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm0 5v10h14V9H5Zm9 3h3v2h-3v-2Zm-8 0h6v2H6v-2Z"
+            fill="currentColor"
+            opacity="0.9"
+          />
+        </svg>
+        <div
+          className="vrm-nav-text"
+        >
+          Event logs
+        </div>
+      </a>
+      <a
+        className="vrm-nav-item "
+        href="/alarm-logs"
+        onClick={[Function]}
+        title=""
+      >
+        <svg
+          aria-hidden="true"
+          className="vrm-nav-icon"
+          role="presentation"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M12 3a7 7 0 0 0-7 7v3.764l-1.447 2.894A1 1 0 0 0 4.447 18H19.55a1 1 0 0 0 .894-1.447L19 13.764V10a7 7 0 0 0-7-7Zm0 18a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2Z"
+            fill="currentColor"
+            opacity="0.9"
+          />
+        </svg>
+        <div
+          className="vrm-nav-text"
+        >
+          Alarm logs
+        </div>
+      </a>
+      <a
+        className="vrm-nav-item "
+        href="/device-list"
+        onClick={[Function]}
+        title=""
+      >
+        <svg
+          aria-hidden="true"
+          className="vrm-nav-icon"
+          role="presentation"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M5 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Zm2 0v12h10V6H7Zm2 13h6v2H9v-2Z"
+            fill="currentColor"
+            opacity="0.9"
+          />
+        </svg>
+        <div
+          className="vrm-nav-text"
+        >
+          Device list
+        </div>
+      </a>
+      <a
+        className="vrm-nav-item "
+        href="/reports"
+        onClick={[Function]}
+        title=""
+      >
+        <svg
+          aria-hidden="true"
+          className="vrm-nav-icon"
+          role="presentation"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M6 4h9l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm8 0v4h4l-4-4ZM8 12h8v2H8v-2Zm0 4h5v2H8v-2Z"
+            fill="currentColor"
+            opacity="0.9"
+          />
+        </svg>
+        <div
+          className="vrm-nav-text"
+        >
+          Reports
+        </div>
+      </a>
+    </div>
+  </nav>
+  <main
+    className="vrm-main"
+  >
+    <div
+      className="vrm-header-stack"
+    >
+      <header
+        className="vrm-header"
+      >
+        <div
+          className="vrm-header-left"
+        >
+          <div
+            className="vrm-search"
+          >
+            <div
+              aria-hidden="true"
+              className="vrm-search-icon"
+            />
+            <input
+              aria-label="Search"
+              placeholder="Search or type /"
+              type="text"
+            />
+          </div>
+          <div
+            aria-label="Sites"
+            className="vrm-site-context"
+            role="tablist"
+          >
+            <button
+              aria-selected="true"
+              className="vrm-site-chip active"
+              role="tab"
+              type="button"
+            >
+              Site 0
+            </button>
+            <button
+              aria-disabled={true}
+              className="vrm-site-chip disabled"
+              role="tab"
+              type="button"
+            >
+              Add site
+            </button>
+          </div>
+        </div>
+        <div
+          className="vrm-header-right"
+        >
+          <div
+            className="vrm-user-meta"
+          >
+            <span
+              className="vrm-status vrm-status-online"
+            >
+              <div
+                className="vrm-status-dot"
+              />
+              Client
+            </span>
+          </div>
+        </div>
+      </header>
+      <div
+        aria-live="polite"
+        className="vrm-status-strip"
+        role="status"
+      >
+        <div
+          className="vrm-status-strip-section"
+        >
+          <button
+            aria-pressed={false}
+            className="vrm-status-chip vrm-status-chip-action "
+            onClick={[Function]}
+            type="button"
+          >
+            <span
+              className="vrm-status-indicator warning"
+            />
+            Realtime off
+          </button>
+          <span
+            className="vrm-status-chip"
+            title="Last updated timestamp"
+          >
+            Last updated: 
+            12:00:00 PM
+          </span>
+          <span
+            className="vrm-status-chip"
+            title="Local site time"
+          >
+            Local time: 
+            1/1/2024, 12:00:00 PM
+          </span>
+        </div>
+        <div
+          className="vrm-status-strip-section"
+        >
+          <span
+            className="vrm-status-chip"
+            title="System status: OK"
+          >
+            <span
+              aria-hidden={true}
+              className="vrm-status-indicator ok"
+            />
+            System status: OK
+          </span>
+          <span
+            className="vrm-status-chip"
+            title="Viewer access"
+          >
+            Viewer rights: Full
+          </span>
+        </div>
+      </div>
+      <div
+        aria-label="Global analytics controls"
+        className="vrm-toolbar"
+        role="toolbar"
+      >
+        <div
+          className="vrm-toolbar-main"
+        >
+          <div
+            aria-label="Range controls"
+            className="vrm-toolbar-group"
+          >
+            <button
+              aria-label="Step backward"
+              className="vrm-toolbar-chevron"
+              onClick={[Function]}
+              type="button"
+            >
+              ◀
+            </button>
+            <select
+              aria-label="Quick ranges"
+              className="vrm-toolbar-select"
+              onChange={[Function]}
+              value="last_7_days"
+            >
+              <option
+                value="last_2_days"
+              >
+                Last 2 days
+              </option>
+              <option
+                value="last_7_days"
+              >
+                Last 7 days
+              </option>
+              <option
+                value="last_30_days"
+              >
+                Last 30 days
+              </option>
+              <option
+                value="last_12_weeks"
+              >
+                Last 12 weeks
+              </option>
+              <option
+                value="last_6_months"
+              >
+                Last 6 months
+              </option>
+              <option
+                value="last_12_months"
+              >
+                Last 12 months
+              </option>
+              <option
+                value="today"
+              >
+                Today
+              </option>
+              <option
+                value="yesterday"
+              >
+                Yesterday
+              </option>
+              <option
+                value="this_week"
+              >
+                This week
+              </option>
+              <option
+                value="this_month"
+              >
+                This month
+              </option>
+              <option
+                value="this_year"
+              >
+                This year
+              </option>
+              <option
+                value="previous_week"
+              >
+                Previous week
+              </option>
+              <option
+                value="previous_month"
+              >
+                Previous month
+              </option>
+              <option
+                value="last_hour"
+              >
+                Last hour
+              </option>
+              <option
+                value="last_3_hours"
+              >
+                Last 3 hours
+              </option>
+              <option
+                value="last_6_hours"
+              >
+                Last 6 hours
+              </option>
+              <option
+                value="last_12_hours"
+              >
+                Last 12 hours
+              </option>
+              <option
+                value="last_24_hours"
+              >
+                Last 24 hours
+              </option>
+              <option
+                value="last_48_hours"
+              >
+                Last 48 hours
+              </option>
+              <option
+                value="custom"
+              >
+                Custom range…
+              </option>
+            </select>
+            <button
+              aria-label="Step forward"
+              className="vrm-toolbar-chevron"
+              onClick={[Function]}
+              type="button"
+            >
+              ▶
+            </button>
+          </div>
+          <div
+            aria-label="Granularity"
+            className="vrm-toolbar-group"
+          >
+            <span
+              className="vrm-toolbar-label"
+            >
+              Granularity
+            </span>
+            <select
+              className="vrm-toolbar-select"
+              onChange={[Function]}
+              value="auto"
+            >
+              <option
+                value="auto"
+              >
+                Auto
+              </option>
+              <option
+                value="5m"
+              >
+                5 minutes
+              </option>
+              <option
+                value="15m"
+              >
+                15 minutes
+              </option>
+              <option
+                value="hour"
+              >
+                Hourly
+              </option>
+              <option
+                value="day"
+              >
+                Daily
+              </option>
+              <option
+                value="week"
+              >
+                Weekly
+              </option>
+            </select>
+          </div>
+          <div
+            aria-label="Scope"
+            className="vrm-toolbar-group"
+          >
+            <span
+              className="vrm-toolbar-label"
+            >
+              Scope
+            </span>
+            <button
+              className="vrm-toolbar-chip active"
+              disabled={false}
+              onClick={[Function]}
+              type="button"
+            >
+              All cameras
+               · 1 of 1
+            </button>
+            <button
+              className="vrm-toolbar-chip "
+              disabled={true}
+              onClick={[Function]}
+              type="button"
+            >
+              Per-camera
+            </button>
+          </div>
+        </div>
+        <div
+          className="vrm-toolbar-secondary"
+        >
+          <div
+            aria-label="Segments"
+            className="vrm-toolbar-group"
+          >
+            <span
+              className="vrm-toolbar-label"
+            >
+              Segments
+            </span>
+            <button
+              className="vrm-toolbar-chip "
+              onClick={[Function]}
+              type="button"
+            >
+              Sex
+            </button>
+            <button
+              className="vrm-toolbar-chip "
+              onClick={[Function]}
+              type="button"
+            >
+              Age bands
+            </button>
+          </div>
+          <div
+            aria-label="Comparison mode"
+            className="vrm-toolbar-group"
+          >
+            <span
+              className="vrm-toolbar-label"
+            >
+              Compare
+            </span>
+            <select
+              className="vrm-toolbar-select"
+              onChange={[Function]}
+              value="off"
+            >
+              <option
+                value="off"
+              >
+                Off
+              </option>
+              <option
+                value="previous_period"
+              >
+                Previous period
+              </option>
+              <option
+                value="same_day_last_week"
+              >
+                Same day last week
+              </option>
+              <option
+                value="same_period_last_year"
+              >
+                Same period last year
+              </option>
+            </select>
+          </div>
+          <div
+            aria-label="Realtime toggle"
+            className="vrm-toolbar-group"
+          >
+            <span
+              className="vrm-toolbar-label"
+            >
+              Realtime
+            </span>
+            <button
+              aria-pressed={false}
+              className="vrm-toolbar-chip "
+              onClick={[Function]}
+              type="button"
+            >
+              <span
+                className="vrm-toolbar-live"
+              >
+                <span
+                  aria-hidden={true}
+                  className="vrm-toolbar-live-indicator"
+                />
+                Off
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      className="vrm-content"
+    >
+      <div
+        className="vrm-card"
+      >
+        <div
+          className="vrm-card-header"
+        >
+          <h3
+            className="vrm-card-title"
+          >
+            Sample card
+          </h3>
+        </div>
+        <div
+          className="vrm-card-body"
+        >
+          The unified shell keeps the sidebar, header strip, and toolbar pinned.
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+`;
+
+exports[`Storybook design baselines DefaultStatus matches snapshot 1`] = `
+<div
+  aria-live="polite"
+  className="vrm-status-strip"
+  role="status"
+>
+  <div
+    className="vrm-status-strip-section"
+  >
+    <button
+      aria-pressed={false}
+      className="vrm-status-chip vrm-status-chip-action "
+      onClick={[Function]}
+      type="button"
+    >
+      <span
+        className="vrm-status-indicator warning"
+      />
+      Realtime off
+    </button>
+    <span
+      className="vrm-status-chip"
+      title="Last updated timestamp"
+    >
+      Last updated: 
+      12:00:00 PM
+    </span>
+    <span
+      className="vrm-status-chip"
+      title="Local site time"
+    >
+      Local time: 
+      1/1/2024, 12:00:00 PM
+    </span>
+  </div>
+  <div
+    className="vrm-status-strip-section"
+  >
+    <span
+      className="vrm-status-chip"
+      title="System status: OK"
+    >
+      <span
+        aria-hidden={true}
+        className="vrm-status-indicator ok"
+      />
+      System status: OK
+    </span>
+    <span
+      className="vrm-status-chip"
+      title="Viewer access"
+    >
+      Viewer rights: Full
+    </span>
+  </div>
+</div>
+`;
+
+exports[`Storybook design baselines DefaultToolbar matches snapshot 1`] = `
+<div
+  aria-label="Global analytics controls"
+  className="vrm-toolbar"
+  role="toolbar"
+>
+  <div
+    className="vrm-toolbar-main"
+  >
+    <div
+      aria-label="Range controls"
+      className="vrm-toolbar-group"
+    >
+      <button
+        aria-label="Step backward"
+        className="vrm-toolbar-chevron"
+        onClick={[Function]}
+        type="button"
+      >
+        ◀
+      </button>
+      <select
+        aria-label="Quick ranges"
+        className="vrm-toolbar-select"
+        onChange={[Function]}
+        value="last_7_days"
+      >
+        <option
+          value="last_2_days"
+        >
+          Last 2 days
+        </option>
+        <option
+          value="last_7_days"
+        >
+          Last 7 days
+        </option>
+        <option
+          value="last_30_days"
+        >
+          Last 30 days
+        </option>
+        <option
+          value="last_12_weeks"
+        >
+          Last 12 weeks
+        </option>
+        <option
+          value="last_6_months"
+        >
+          Last 6 months
+        </option>
+        <option
+          value="last_12_months"
+        >
+          Last 12 months
+        </option>
+        <option
+          value="today"
+        >
+          Today
+        </option>
+        <option
+          value="yesterday"
+        >
+          Yesterday
+        </option>
+        <option
+          value="this_week"
+        >
+          This week
+        </option>
+        <option
+          value="this_month"
+        >
+          This month
+        </option>
+        <option
+          value="this_year"
+        >
+          This year
+        </option>
+        <option
+          value="previous_week"
+        >
+          Previous week
+        </option>
+        <option
+          value="previous_month"
+        >
+          Previous month
+        </option>
+        <option
+          value="last_hour"
+        >
+          Last hour
+        </option>
+        <option
+          value="last_3_hours"
+        >
+          Last 3 hours
+        </option>
+        <option
+          value="last_6_hours"
+        >
+          Last 6 hours
+        </option>
+        <option
+          value="last_12_hours"
+        >
+          Last 12 hours
+        </option>
+        <option
+          value="last_24_hours"
+        >
+          Last 24 hours
+        </option>
+        <option
+          value="last_48_hours"
+        >
+          Last 48 hours
+        </option>
+        <option
+          value="custom"
+        >
+          Custom range…
+        </option>
+      </select>
+      <button
+        aria-label="Step forward"
+        className="vrm-toolbar-chevron"
+        onClick={[Function]}
+        type="button"
+      >
+        ▶
+      </button>
+    </div>
+    <div
+      aria-label="Granularity"
+      className="vrm-toolbar-group"
+    >
+      <span
+        className="vrm-toolbar-label"
+      >
+        Granularity
+      </span>
+      <select
+        className="vrm-toolbar-select"
+        onChange={[Function]}
+        value="auto"
+      >
+        <option
+          value="auto"
+        >
+          Auto
+        </option>
+        <option
+          value="5m"
+        >
+          5 minutes
+        </option>
+        <option
+          value="15m"
+        >
+          15 minutes
+        </option>
+        <option
+          value="hour"
+        >
+          Hourly
+        </option>
+        <option
+          value="day"
+        >
+          Daily
+        </option>
+        <option
+          value="week"
+        >
+          Weekly
+        </option>
+      </select>
+    </div>
+    <div
+      aria-label="Scope"
+      className="vrm-toolbar-group"
+    >
+      <span
+        className="vrm-toolbar-label"
+      >
+        Scope
+      </span>
+      <button
+        className="vrm-toolbar-chip active"
+        disabled={false}
+        onClick={[Function]}
+        type="button"
+      >
+        All cameras
+         · 1 of 1
+      </button>
+      <button
+        className="vrm-toolbar-chip "
+        disabled={true}
+        onClick={[Function]}
+        type="button"
+      >
+        Per-camera
+      </button>
+    </div>
+  </div>
+  <div
+    className="vrm-toolbar-secondary"
+  >
+    <div
+      aria-label="Segments"
+      className="vrm-toolbar-group"
+    >
+      <span
+        className="vrm-toolbar-label"
+      >
+        Segments
+      </span>
+      <button
+        className="vrm-toolbar-chip "
+        onClick={[Function]}
+        type="button"
+      >
+        Sex
+      </button>
+      <button
+        className="vrm-toolbar-chip "
+        onClick={[Function]}
+        type="button"
+      >
+        Age bands
+      </button>
+    </div>
+    <div
+      aria-label="Comparison mode"
+      className="vrm-toolbar-group"
+    >
+      <span
+        className="vrm-toolbar-label"
+      >
+        Compare
+      </span>
+      <select
+        className="vrm-toolbar-select"
+        onChange={[Function]}
+        value="off"
+      >
+        <option
+          value="off"
+        >
+          Off
+        </option>
+        <option
+          value="previous_period"
+        >
+          Previous period
+        </option>
+        <option
+          value="same_day_last_week"
+        >
+          Same day last week
+        </option>
+        <option
+          value="same_period_last_year"
+        >
+          Same period last year
+        </option>
+      </select>
+    </div>
+    <div
+      aria-label="Realtime toggle"
+      className="vrm-toolbar-group"
+    >
+      <span
+        className="vrm-toolbar-label"
+      >
+        Realtime
+      </span>
+      <button
+        aria-pressed={false}
+        className="vrm-toolbar-chip "
+        onClick={[Function]}
+        type="button"
+      >
+        <span
+          className="vrm-toolbar-live"
+        >
+          <span
+            aria-hidden={true}
+            className="vrm-toolbar-live-indicator"
+          />
+          Off
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Storybook design baselines StandardCard matches snapshot 1`] = `
+<div
+  className="vrm-card"
+  style={
+    Object {
+      "maxWidth": "480px",
+    }
+  }
+>
+  <div
+    className="vrm-card-header"
+  >
+    <h3
+      className="vrm-card-title"
+    >
+      Card baseline
+    </h3>
+    <div
+      className="vrm-card-actions"
+    >
+      <button
+        className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+        type="button"
+      >
+        Action
+      </button>
+    </div>
+  </div>
+  <div
+    className="vrm-card-body"
+  >
+    Card chrome, padding, and elevation rely on the shared design tokens.
+  </div>
+</div>
+`;

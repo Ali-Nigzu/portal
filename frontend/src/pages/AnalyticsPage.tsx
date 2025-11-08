@@ -5,12 +5,10 @@ import {
 } from 'recharts';
 import { API_ENDPOINTS } from '../config';
 import TimeFilterDropdown, { TimeFilterValue } from '../components/TimeFilterDropdown';
-import { 
-  filterDataByTime, 
-  calculateAverageDwellTime, 
-  calculateOccupancyTimeSeries,
-  calculateDwellTimeDistribution,
-  formatDuration
+import {
+  filterDataByTime,
+  calculateAverageDwellTime,
+  calculateOccupancyTimeSeries
 } from '../utils/dataProcessing';
 import { exportChartAsPNG, exportDataAsCSV, generateChartId } from '../utils/exportUtils';
 

@@ -103,21 +103,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     }
   }, [credentials.username, credentials.password, currentPage, startDate, endDate, filter]);
 
-  // Initial load only
   useEffect(() => {
     fetchEvents();
-  }, []);
-
-  // Refetch when page changes
-  useEffect(() => {
-    if (currentPage > 1) {
-      fetchEvents();
-    }
-  }, [currentPage]);
+  }, [fetchEvents]);
 
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchEvents();
   };
 
   // Server-side filtering and pagination - no client-side filtering needed
@@ -160,18 +151,10 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #333', 
-            borderTop: '4px solid #1976d2', 
-            borderRadius: '50%', 
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }}></div>
-          <p style={{ color: 'var(--vrm-text-secondary)' }}>Loading event logs...</p>
+      <div className="vrm-loading-state">
+        <div className="vrm-loading-state-content">
+          <div className="vrm-loading-spinner" />
+          <p>Loading event logs…</p>
         </div>
       </div>
     );
@@ -179,12 +162,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
 
   if (error) {
     return (
-      <div className="vrm-card">
+      <div className="vrm-card vrm-card--spaced">
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Connection Error</h3>
         </div>
         <div className="vrm-card-body">
-          <p style={{ color: 'var(--vrm-accent-red)', marginBottom: '16px' }}>{error}</p>
+          <p style={{ color: 'var(--vrm-accent-red)', marginBottom: 'var(--vrm-spacing-4)' }}>{error}</p>
           <button className="vrm-btn" onClick={fetchEvents}>Retry Connection</button>
         </div>
       </div>
@@ -194,8 +177,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   return (
     <div>
       {/* Page Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+      <div className="vrm-page-header">
+        <h1 className="vrm-page-title">
           Event logs
         </h1>
         <div className="vrm-breadcrumb">
@@ -206,20 +189,19 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       </div>
 
       {/* Filters */}
-      <div className="vrm-card" style={{ marginBottom: '24px' }}>
+      <div className="vrm-card vrm-card--spaced">
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Filters</h3>
-          <div className="vrm-card-actions" style={{ display: 'flex', gap: '8px' }}>
-            <button 
+          <div className="vrm-card-actions">
+            <button
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
               onClick={clearAllFilters}
             >
               Clear All
             </button>
-            <button 
-              className="vrm-btn vrm-btn-sm"
+            <button
+              className="vrm-btn vrm-btn-primary vrm-btn-sm"
               onClick={handleSearch}
-              style={{ backgroundColor: 'var(--vrm-primary)', color: 'white' }}
             >
               🔍 Search
             </button>
@@ -227,14 +209,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         </div>
         <div className="vrm-card-body">
           {/* First Row: Date Pickers, Track ID, Event Type */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '16px',
-            marginBottom: '16px'
-          }}>
+          <div className="vrm-filter-grid">
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+              <label className="vrm-label" htmlFor="event-start-date">
                 Start Date
               </label>
               <DatePicker
@@ -244,11 +221,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 dateFormat="yyyy-MM-dd"
                 className="vrm-date-picker"
                 maxDate={endDate || undefined}
+                id="event-start-date"
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+              <label className="vrm-label" htmlFor="event-end-date">
                 End Date
               </label>
               <DatePicker
@@ -258,44 +236,33 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 dateFormat="yyyy-MM-dd"
                 className="vrm-date-picker"
                 minDate={startDate || undefined}
+                id="event-end-date"
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+              <label className="vrm-label" htmlFor="event-track-id">
                 Track ID
               </label>
-              <input 
+              <input
+                id="event-track-id"
                 type="text"
                 value={filter.trackId}
                 onChange={(e) => setFilter(prev => ({ ...prev, trackId: e.target.value }))}
                 placeholder="Search by track number"
-                style={{ 
-                  width: '100%', 
-                  padding: '8px 12px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  border: '1px solid var(--vrm-border)', 
-                  borderRadius: '6px', 
-                  color: 'var(--vrm-text-primary)'
-                }}
+                className="vrm-input"
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+              <label className="vrm-label" htmlFor="event-type">
                 Event Type
               </label>
-              <select 
+              <select
+                id="event-type"
                 value={filter.event}
                 onChange={(e) => setFilter(prev => ({ ...prev, event: e.target.value }))}
-                style={{ 
-                  width: '100%', 
-                  padding: '8px 12px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  border: '1px solid var(--vrm-border)', 
-                  borderRadius: '6px', 
-                  color: 'var(--vrm-text-primary)'
-                }}
+                className="vrm-select"
               >
                 <option value="">All Events</option>
                 <option value="entry">Entry</option>
@@ -305,48 +272,32 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           </div>
 
           {/* Second Row: Gender, Age Group */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '16px'
-          }}>
+          <div className="vrm-filter-grid">
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+              <label className="vrm-label" htmlFor="event-gender">
                 Gender
               </label>
-              <select 
+              <select
+                id="event-gender"
                 value={filter.sex}
                 onChange={(e) => setFilter(prev => ({ ...prev, sex: e.target.value }))}
-                style={{ 
-                  width: '100%', 
-                  padding: '8px 12px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  border: '1px solid var(--vrm-border)', 
-                  borderRadius: '6px', 
-                  color: 'var(--vrm-text-primary)'
-                }}
+                className="vrm-select"
               >
                 <option value="">All Genders</option>
                 <option value="M">Male</option>
                 <option value="F">Female</option>
               </select>
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+              <label className="vrm-label" htmlFor="event-age-group">
                 Age Group
               </label>
-              <select 
+              <select
+                id="event-age-group"
                 value={filter.age}
                 onChange={(e) => setFilter(prev => ({ ...prev, age: e.target.value }))}
-                style={{ 
-                  width: '100%', 
-                  padding: '8px 12px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  border: '1px solid var(--vrm-border)', 
-                  borderRadius: '6px', 
-                  color: 'var(--vrm-text-primary)'
-                }}
+                className="vrm-select"
               >
                 <option value="">All Ages</option>
                 {uniqueAges.map(age => (
@@ -369,9 +320,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             <button className="vrm-btn vrm-btn-sm" onClick={fetchEvents}>Refresh</button>
           </div>
         </div>
-        <div className="vrm-card-body" style={{ padding: 0 }}>
+        <div className="vrm-card-body vrm-card-body--flush">
           {events.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="vrm-table-scroll">
               <table className="vrm-table">
                 <thead>
                   <tr>
@@ -386,26 +337,19 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                   {events.map((event, index) => (
                     <tr key={`${event.index}-${index}`}>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="vrm-inline">
                           <span>{getEventIcon(event.event)}</span>
                           <span style={{ textTransform: 'capitalize' }}>{event.event}</span>
                         </div>
                       </td>
                       <td>
-                        <code style={{ 
-                          backgroundColor: 'var(--vrm-bg-tertiary)', 
-                          padding: '2px 6px', 
-                          borderRadius: '3px',
-                          fontSize: '12px'
-                        }}>
-                          #{event.track_number}
-                        </code>
+                        <code className="vrm-code-badge">#{event.track_number}</code>
                       </td>
                       <td>{formatTimestamp(event.timestamp)}</td>
                       <td>
-                        <div style={{ fontSize: '13px' }}>
+                        <div style={{ fontSize: 'var(--vrm-typography-font-size-body)' }}>
                           <div>{event.sex === 'M' ? 'Male' : 'Female'}</div>
-                          <div style={{ color: 'var(--vrm-text-muted)', marginTop: '2px' }}>
+                          <div style={{ color: 'var(--vrm-text-muted)', marginTop: 'var(--vrm-spacing-1)' }}>
                             Age: {event.age_estimate}
                           </div>
                         </div>
@@ -422,7 +366,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </table>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--vrm-text-secondary)' }}>
+            <div style={{ textAlign: 'center', padding: 'var(--vrm-spacing-8)', color: 'var(--vrm-text-secondary)' }}>
               No events found matching current filters
             </div>
           )}
@@ -430,28 +374,23 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="vrm-card-body" style={{ borderTop: '1px solid var(--vrm-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-              <div style={{ color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
+          <div className="vrm-card-body" style={{ borderTop: 'var(--vrm-borderWidth-thin) solid var(--vrm-border)' }}>
+            <div className="vrm-pagination">
+              <div className="vrm-pagination-info">
                 Showing {((currentPage - 1) * eventsPerPage) + 1} to {Math.min(currentPage * eventsPerPage, totalEvents)} of {totalEvents.toLocaleString()} events
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button 
+              <div className="vrm-pagination-controls">
+                <button
                   className="vrm-btn vrm-btn-secondary vrm-btn-sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                 >
                   Previous
                 </button>
-                <span style={{ 
-                  padding: '6px 12px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  borderRadius: '6px',
-                  fontSize: '14px'
-                }}>
+                <span className="vrm-pagination-badge">
                   Page {currentPage} of {totalPages}
                 </span>
-                <button 
+                <button
                   className="vrm-btn vrm-btn-secondary vrm-btn-sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
@@ -464,101 +403,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         )}
       </div>
 
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .vrm-date-picker {
-          width: 100%;
-          padding: 8px 12px;
-          background-color: var(--vrm-bg-tertiary);
-          border: 1px solid var(--vrm-border);
-          border-radius: 6px;
-          color: var(--vrm-text-primary);
-          font-size: 14px;
-        }
-
-        .vrm-date-picker:focus {
-          outline: none;
-          border-color: var(--vrm-accent-blue);
-        }
-
-        .react-datepicker-wrapper {
-          width: 100%;
-        }
-
-        .react-datepicker__input-container {
-          width: 100%;
-        }
-
-        .react-datepicker {
-          background-color: var(--vrm-bg-secondary);
-          border: 1px solid var(--vrm-border);
-          border-radius: 8px;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        }
-
-        .react-datepicker__header {
-          background-color: var(--vrm-bg-tertiary);
-          border-bottom: 1px solid var(--vrm-border);
-          border-radius: 8px 8px 0 0;
-        }
-
-        .react-datepicker__current-month,
-        .react-datepicker__day-name {
-          color: var(--vrm-text-primary);
-        }
-
-        .react-datepicker__day {
-          color: var(--vrm-text-secondary);
-        }
-
-        .react-datepicker__day:hover {
-          background-color: var(--vrm-hover);
-          color: var(--vrm-text-primary);
-        }
-
-        .react-datepicker__day--selected,
-        .react-datepicker__day--keyboard-selected {
-          background-color: var(--vrm-accent-blue);
-          color: white;
-        }
-
-        .react-datepicker__day--disabled {
-          color: var(--vrm-text-muted);
-          opacity: 0.5;
-        }
-
-        .react-datepicker__navigation-icon::before {
-          border-color: var(--vrm-text-secondary);
-        }
-
-        .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
-          border-color: var(--vrm-text-primary);
-        }
-
-        .react-datepicker__day--in-range,
-        .react-datepicker__day--in-selecting-range {
-          background-color: rgba(25, 118, 210, 0.2);
-          color: var(--vrm-text-primary);
-        }
-
-        .react-datepicker__day--range-start,
-        .react-datepicker__day--range-end {
-          background-color: var(--vrm-accent-blue);
-          color: white;
-        }
-
-        .react-datepicker__triangle {
-          display: none;
-        }
-
-        .react-datepicker-popper {
-          z-index: 1000;
-        }
-      `}</style>
+      
     </div>
   );
 };
