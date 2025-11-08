@@ -30,8 +30,7 @@ RUN apt-get update && apt-get install -y gcc && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt ./backend/requirements.txt
 
 # Install backend dependencies
-RUN pip install --no-cache-dir -r backend/requirements.txt && \
-    pip install pg8000 psycopg2-binary sqlalchemy
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
 # Copy backend code
 COPY backend/ ./backend/

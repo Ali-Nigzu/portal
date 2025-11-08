@@ -124,8 +124,6 @@ cookies.txt
 session.txt
 test.txt
 *.bak
-test_*.py
-*_test.py
 
 # Development assets
 attached_assets/

@@ -2,11 +2,14 @@
 
 A modern React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. Features role-based access for administrators and clients with real-time analytics from Google Sheets CSV data.
 
+> **Note**
+> The application intentionally focuses on analytics workflows only—no greeting or welcome-message feature is provided or required for its operation.
+
 ## 🏗️ Architecture
 
 **Frontend**: React SPA with TypeScript, ECharts/Recharts visualizations, React Router navigation, and professional dark theme  
 **Backend**: FastAPI REST API with modular design, HTTP Basic Auth, SHA-256 password hashing, and Pandas data processing  
-**Data**: Google Sheets CSV exports as primary data source, JSON file-based user storage  
+**Data**: Google BigQuery (dataset `nigzsu.demodata`) with partitioned tables per client, JSON file-based user storage  
 **Deployment**: Docker multi-stage builds with Nginx, optimized for Google Cloud Run
 
 ## 📋 Prerequisites
@@ -152,7 +155,18 @@ gcloud run deploy camOS-analytics \
   --set-env-vars="NODE_ENV=production"
 ```
 
-**Note:** The app uses Google Sheets CSV exports (via public URLs) for data and local JSON files for user storage. No cloud storage buckets are required.
+### BigQuery configuration
+
+Set the following runtime variables so the backend can reach BigQuery:
+
+- `BQ_PROJECT`: GCP project that owns the dataset (e.g. `nigzsu`).
+- `BQ_DATASET`: Dataset containing the client tables (e.g. `demodata`).
+- `BQ_LOCATION`: Region for all queries (e.g. `EU`).
+- Provide credentials either by pointing `GOOGLE_APPLICATION_CREDENTIALS` to the downloaded `sa.json` or by exporting `BQ_SERVICE_ACCOUNT_JSON` with the raw key contents.
+
+The default user mapping resolves `client1` to `nigzsu.demodata.client0` and `client2` to `nigzsu.demodata.client1`. Adjust `backend/data/users.json` if you add more accounts.
+
+**Note:** Analytics data is read-only and sourced from Google BigQuery tables (`nigzsu.demodata.client0`/`client1`). User metadata continues to live in local JSON files.
 
 ### Post-Deployment
 
