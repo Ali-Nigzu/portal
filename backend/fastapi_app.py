@@ -67,7 +67,7 @@ from backend.app.view_tokens import (
     view_tokens
 )
 from backend.app.data_processor import DataProcessor, _resolve_time_bounds
-from backend.app.bigquery_client import bigquery_client
+from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -501,7 +501,9 @@ async def search_events(
             FROM {table_identifier}
             {where_sql}
         """
-        count_df = bigquery_client.query_dataframe(count_query, params)
+        count_df = bigquery_client.query_dataframe(
+            count_query, params, job_context=f"{table_name}::search_count"
+        )
         total_count = int(count_df.iloc[0]['total']) if not count_df.empty else 0
 
         search_params = dict(params)
@@ -520,7 +522,9 @@ async def search_events(
             ORDER BY timestamp DESC
             LIMIT @limit OFFSET @offset
         """
-        results_df = bigquery_client.query_dataframe(search_query, search_params)
+        results_df = bigquery_client.query_dataframe(
+            search_query, search_params, job_context=f"{table_name}::search_results"
+        )
 
         events: List[Dict[str, Any]] = []
         for _, row in results_df.iterrows():
@@ -541,6 +545,17 @@ async def search_events(
             'total_pages': (total_count + per_page - 1) // per_page,
         }
 
+    except BigQueryDataFrameError as exc:
+        logger.error(
+            "Event search failed for %s (job_id=%s): %s", table_name, exc.job_id, exc
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "BigQuery dataframe conversion failed",
+                "job_id": exc.job_id,
+            },
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:

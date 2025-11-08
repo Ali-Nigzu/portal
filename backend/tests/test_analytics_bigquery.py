@@ -74,7 +74,7 @@ def mock_bigquery(monkeypatch):
         },
     ])
 
-    def fake_query_dataframe(sql: str, params: Dict[str, Any]):
+    def fake_query_dataframe(sql: str, params: Dict[str, Any], job_context: Any = None):
         if "COUNT(*) AS total_records" in sql:
             return stats_df
         if "GROUP BY sex, age_bucket" in sql:

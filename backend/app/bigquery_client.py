@@ -13,6 +13,25 @@ import pandas as pd
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
+from typing import Optional
+import logging
+from google.oauth2 import service_account
+
+try:  # pragma: no cover - informational logging only
+    import db_dtypes  # type: ignore
+    DB_DTYPES_VERSION = getattr(db_dtypes, "__version__", "unknown")
+except Exception:  # pragma: no cover - defensive logging
+    DB_DTYPES_VERSION = None
+
+
+class BigQueryDataFrameError(RuntimeError):
+    """Raised when a query job fails during DataFrame materialisation."""
+
+    def __init__(self, message: str, job_id: Optional[str]) -> None:
+        super().__init__(message)
+        self.job_id = job_id
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,6 +78,8 @@ class BigQueryClient:
         )
         self._credentials = _load_credentials()
         self._client: Optional[bigquery.Client] = None
+        self._bqstorage_client: Optional[object] = None
+        self._bqstorage_unavailable = False
 
     def _ensure_client(self) -> bigquery.Client:
         if self._client is None:
@@ -74,6 +95,32 @@ class BigQueryClient:
                 self.settings.location,
             )
         return self._client
+
+    def _get_bqstorage_client(self) -> Optional[object]:
+        """Return a BigQuery Storage client if the dependency is available."""
+        if self._bqstorage_unavailable:
+            return None
+        if self._bqstorage_client is None:
+            try:
+                from google.cloud import bigquery_storage
+
+                self._bqstorage_client = bigquery_storage.BigQueryReadClient(
+                    credentials=self._credentials
+                )
+                logger.info(
+                    "Initialized BigQuery Storage client for high-throughput downloads"
+                )
+            except ImportError:
+                logger.info(
+                    "google-cloud-bigquery-storage not installed; using REST fallback"
+                )
+                self._bqstorage_unavailable = True
+            except Exception:
+                logger.exception(
+                    "Failed to initialize BigQuery Storage client; falling back to REST"
+                )
+                self._bqstorage_unavailable = True
+        return self._bqstorage_client if not self._bqstorage_unavailable else None
 
     def _build_query_parameters(self, params: Dict[str, Any]) -> List[bigquery.ScalarQueryParameter]:
         query_parameters: List[bigquery.ScalarQueryParameter] = []
@@ -103,16 +150,53 @@ class BigQueryClient:
         job = client.query(sql, job_config=job_config, location=self.settings.location)
         return job
 
-    def query_dataframe(self, sql: str, params: Dict[str, Any]) -> pd.DataFrame:
+    def query_dataframe(
+        self, sql: str, params: Dict[str, Any], *, job_context: Optional[str] = None
+    ) -> pd.DataFrame:
         job = self.query(sql, params)
-        return job.result().to_dataframe(create_bqstorage_client=False)
+        try:
+            result = job.result()
+            storage_client = self._get_bqstorage_client()
+            dataframe_kwargs: Dict[str, Any] = {}
+            if storage_client is not None:
+                dataframe_kwargs["bqstorage_client"] = storage_client
+            else:
+                dataframe_kwargs["create_bqstorage_client"] = False
+            df = result.to_dataframe(**dataframe_kwargs)
+            logger.debug(
+                "BigQuery job %s materialised dataframe (%s rows) [%s]",
+                job.job_id,
+                len(df),
+                job_context or "unlabeled",
+            )
+            return df
+        except Exception as exc:
+            logger.exception(
+                "BigQuery job %s failed during to_dataframe [%s]: %s",
+                getattr(job, "job_id", "unknown"),
+                job_context or "unlabeled",
+                exc,
+            )
+            raise BigQueryDataFrameError(str(exc), getattr(job, "job_id", None)) from exc
 
     def run_health_check(self) -> None:
         try:
             client = self._ensure_client()
-            job = client.query("SELECT 1", location=self.settings.location)
-            job.result()
-            logger.info("✅ BigQuery connectivity check succeeded")
+            job = client.query("SELECT 1 AS ok", location=self.settings.location)
+            result = job.result()
+            storage_client = self._get_bqstorage_client()
+            dataframe_kwargs: Dict[str, Any] = {}
+            if storage_client is not None:
+                dataframe_kwargs["bqstorage_client"] = storage_client
+            else:
+                dataframe_kwargs["create_bqstorage_client"] = False
+            df = result.to_dataframe(**dataframe_kwargs)
+            logger.info(
+                "✅ BigQuery connectivity check succeeded (rows=%d, pandas=%s, db-dtypes=%s)",
+                len(df),
+                pd.__version__,
+                DB_DTYPES_VERSION or "unavailable",
+            )
         except Exception as exc:
             logger.exception("❌ BigQuery connectivity check failed: %s", exc)
             raise
@@ -120,4 +204,4 @@ class BigQueryClient:
 
 bigquery_client = BigQueryClient()
 
-__all__ = ["bigquery_client", "BigQueryClient"]
+__all__ = ["bigquery_client", "BigQueryClient", "BigQueryDataFrameError"]

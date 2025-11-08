@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 
-from .bigquery_client import bigquery_client
+from .bigquery_client import BigQueryDataFrameError, bigquery_client
 from .models import DataIntelligence
 
 logger = logging.getLogger(__name__)
@@ -110,7 +110,9 @@ class DataProcessor:
                 FROM {table_identifier}
                 {where_sql}
             """
-            stats_df = bigquery_client.query_dataframe(stats_query, params)
+            stats_df = bigquery_client.query_dataframe(
+                stats_query, params, job_context=f"{table_name}::stats"
+            )
 
             # Query 2: Gender x age aggregation
             demo_query = f"""
@@ -122,7 +124,9 @@ class DataProcessor:
                 {where_sql}
                 GROUP BY sex, age_bucket
             """
-            demo_df = bigquery_client.query_dataframe(demo_query, params)
+            demo_df = bigquery_client.query_dataframe(
+                demo_query, params, job_context=f"{table_name}::demographics"
+            )
 
             # Query 3: Hourly distribution
             hourly_query = f"""
@@ -134,7 +138,9 @@ class DataProcessor:
                 GROUP BY hour
                 ORDER BY hour
             """
-            hourly_df = bigquery_client.query_dataframe(hourly_query, params)
+            hourly_df = bigquery_client.query_dataframe(
+                hourly_query, params, job_context=f"{table_name}::hourly"
+            )
 
             # Query 4: Raw event sample (10k rows max)
             records_query = f"""
@@ -149,7 +155,9 @@ class DataProcessor:
                 ORDER BY timestamp DESC
                 LIMIT 10000
             """
-            records_df = bigquery_client.query_dataframe(records_query, params)
+            records_df = bigquery_client.query_dataframe(
+                records_query, params, job_context=f"{table_name}::records"
+            )
 
             # Query 5: Dwell-time calculation using occupancy deltas
             dwell_query = f"""
@@ -193,7 +201,11 @@ class DataProcessor:
             """
             dwell_params = dict(params)
             dwell_params.pop("event", None)
-            dwell_df = bigquery_client.query_dataframe(dwell_query, dwell_params)
+            dwell_df = bigquery_client.query_dataframe(
+                dwell_query,
+                dwell_params,
+                job_context=f"{table_name}::dwell",
+            )
 
             logger.info("Loaded aggregated analytics for %s", table_name)
 
@@ -205,6 +217,20 @@ class DataProcessor:
                 "dwell": dwell_df,
             }
 
+        except BigQueryDataFrameError as exc:
+            logger.error(
+                "Failed to load aggregated analytics from %s (job_id=%s): %s",
+                table_name,
+                exc.job_id,
+                exc,
+            )
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "message": "BigQuery dataframe conversion failed",
+                    "job_id": exc.job_id,
+                },
+            ) from exc
         except HTTPException:
             raise
         except Exception as exc:
