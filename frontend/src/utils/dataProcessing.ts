@@ -10,6 +10,8 @@ export interface ChartData {
   hour: number;
   day_of_week: string;
   date: string;
+  camera_id?: string | number;
+  camera_name?: string;
 }
 
 export interface VisitorSession {
@@ -19,7 +21,7 @@ export interface VisitorSession {
   dwellTime?: number; // in minutes
 }
 
-const MAX_SESSION_WINDOW_MINUTES = 6 * 60;
+export const MAX_SESSION_WINDOW_MINUTES = 6 * 60;
 
 // Filter data based on time selection
 export const filterDataByTime = (data: ChartData[], timeFilter: TimeFilterValue): ChartData[] => {
@@ -166,4 +168,34 @@ export const formatDuration = (minutes: number): string => {
     const remainingMinutes = Math.round(minutes % 60);
     return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
   }
+};
+
+const AGE_BANDS = [
+  { min: 0, max: 4, label: '0-4' },
+  { min: 5, max: 13, label: '5-13' },
+  { min: 14, max: 25, label: '14-25' },
+  { min: 26, max: 45, label: '26-45' },
+  { min: 46, max: 65, label: '46-65' },
+  { min: 66, max: Infinity, label: '66+' },
+];
+
+const extractAgeFromEstimate = (estimate?: string): number | null => {
+  if (!estimate) {
+    return null;
+  }
+  const matches = estimate.match(/\d+/g);
+  if (!matches || !matches.length) {
+    return null;
+  }
+  const numeric = Number.parseInt(matches[0], 10);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+export const getAgeBand = (estimate?: string): string | null => {
+  const age = extractAgeFromEstimate(estimate);
+  if (age == null) {
+    return null;
+  }
+  const band = AGE_BANDS.find(range => age >= range.min && age <= range.max);
+  return band ? band.label : null;
 };

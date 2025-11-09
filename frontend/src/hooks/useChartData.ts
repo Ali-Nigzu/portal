@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ChartData } from '../utils/dataProcessing';
+import { ChartData, MAX_SESSION_WINDOW_MINUTES } from '../utils/dataProcessing';
 import { GranularityOption, IntelligencePayload } from '../types/analytics';
 
 type CanonicalGranularity = '5m' | '15m' | 'hour' | 'day' | 'week';
@@ -14,6 +14,7 @@ export interface NormalizedChartPoint {
   bucketMinutes: number;
   hourOfDay?: number;
   zScore?: number;
+  dwellMean: number;
 }
 
 export interface UseChartDataResult {
@@ -131,15 +132,20 @@ const bucketMinutesForGranularity = (granularity: CanonicalGranularity): number 
   }
 };
 
+interface BucketAccumulator extends NormalizedChartPoint {
+  startDate: Date;
+  dwellTotal: number;
+  dwellSamples: number;
+}
+
 const buildSeriesForGranularity = (
   sortedEvents: ChartData[],
   activeCanonical: CanonicalGranularity,
 ): NormalizedChartPoint[] => {
+  const activeEntries = new Map<number, Date>();
   const bucketsMap = new Map<
     string,
-    NormalizedChartPoint & {
-      startDate: Date;
-    }
+    BucketAccumulator
   >();
 
   sortedEvents.forEach(item => {
@@ -163,6 +169,9 @@ const buildSeriesForGranularity = (
         hourOfDay: activeCanonical === 'hour' ? bucketStart.getHours() : undefined,
         zScore: 0,
         startDate: bucketStart,
+        dwellMean: 0,
+        dwellTotal: 0,
+        dwellSamples: 0,
       });
     }
 
@@ -170,8 +179,18 @@ const buildSeriesForGranularity = (
     bucket.activity += 1;
     if (item.event === 'entry') {
       bucket.entries += 1;
+      activeEntries.set(item.track_number, eventTime);
     } else if (item.event === 'exit') {
       bucket.exits += 1;
+      const entryTime = activeEntries.get(item.track_number);
+      if (entryTime) {
+        const dwellMinutes = (eventTime.getTime() - entryTime.getTime()) / (1000 * 60);
+        if (dwellMinutes >= 0 && dwellMinutes <= MAX_SESSION_WINDOW_MINUTES) {
+          bucket.dwellTotal += dwellMinutes;
+          bucket.dwellSamples += 1;
+        }
+        activeEntries.delete(item.track_number);
+      }
     }
   });
 
@@ -183,6 +202,7 @@ const buildSeriesForGranularity = (
   series.forEach(point => {
     runningOccupancy += point.entries - point.exits;
     point.occupancy = Math.max(0, runningOccupancy);
+    point.dwellMean = point.dwellSamples > 0 ? point.dwellTotal / point.dwellSamples : 0;
   });
 
   const activityValues = series.map(point => point.activity);
@@ -202,7 +222,18 @@ const buildSeriesForGranularity = (
     }
   });
 
-  return series;
+  return series.map(point => ({
+    label: point.label,
+    bucketStart: point.bucketStart,
+    entries: point.entries,
+    exits: point.exits,
+    activity: point.activity,
+    occupancy: point.occupancy,
+    bucketMinutes: point.bucketMinutes,
+    hourOfDay: point.hourOfDay,
+    zScore: point.zScore,
+    dwellMean: point.dwellMean,
+  }));
 };
 
 export const computeChartSeries = (

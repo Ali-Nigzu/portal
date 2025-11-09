@@ -39,6 +39,15 @@ interface CardControlHeaderProps {
   onToggleSeries?: (key: string) => void;
   disablePerCamera?: boolean;
   actions?: React.ReactNode;
+  showRange?: boolean;
+  showGranularity?: boolean;
+  showScope?: boolean;
+  showSegments?: boolean;
+  showCompare?: boolean;
+  showSeries?: boolean;
+  showExport?: boolean;
+  availableSegments?: SegmentOption[];
+  isLoading?: boolean;
 }
 
 const SEGMENT_LABELS: Record<SegmentOption, string> = {
@@ -77,6 +86,15 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
   onToggleSeries,
   disablePerCamera = false,
   actions,
+  showRange = true,
+  showGranularity = true,
+  showScope = true,
+  showSegments = true,
+  showCompare = true,
+  showSeries = true,
+  showExport = true,
+  availableSegments,
+  isLoading = false,
 }) => {
   const [isCustomPopoverOpen, setIsCustomPopoverOpen] = useState(false);
   const [draftRange, setDraftRange] = useState<{ from?: string; to?: string } | undefined>(controls.customRange ?? undefined);
@@ -138,7 +156,15 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
   };
 
   const scopeOptions = useMemo(() => Object.keys(SCOPE_LABELS) as ScopeOption[], []);
-  const segmentOptions = useMemo(() => Object.keys(SEGMENT_LABELS) as SegmentOption[], []);
+  const segmentOptions = useMemo(() =>
+    (availableSegments && availableSegments.length
+      ? availableSegments
+      : (Object.keys(SEGMENT_LABELS) as SegmentOption[])),
+    [availableSegments],
+  );
+
+  const shouldShowScope = showScope && (!disablePerCamera || scopeOptions.length > 1);
+  const shouldShowSegments = showSegments && segmentOptions.length > 0;
 
   return (
     <div className="vrm-card-header vrm-card-header--controls">
@@ -160,6 +186,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
       </div>
 
       <div className="vrm-card-controls">
+        {showRange && (
         <div className="vrm-card-control-group vrm-card-control-group--range">
           <label className="vrm-label" htmlFor={`${cardId}-range`}>
             Range
@@ -168,6 +195,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
             <select
               id={`${cardId}-range`}
               className="vrm-select"
+              disabled={isLoading}
               value={controls.rangePreset}
               onChange={event => {
                 const nextValue = event.target.value as RangePreset;
@@ -193,6 +221,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
               className="vrm-btn vrm-btn-tertiary vrm-btn-sm"
               onClick={() => setIsCustomPopoverOpen(value => !value)}
               ref={customButtonRef}
+              disabled={isLoading}
             >
               {controls.customRange ? `${controls.customRange.from} → ${controls.customRange.to}` : 'Set custom'}
             </button>
@@ -264,7 +293,9 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
               : formatRangeLabel(controls.rangePreset)}
           </span>
         </div>
+        )}
 
+        {showGranularity && (
         <div className="vrm-card-control-group">
           <label className="vrm-label" htmlFor={`${cardId}-granularity`}>
             Granularity
@@ -272,6 +303,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
           <select
             id={`${cardId}-granularity`}
             className="vrm-select"
+            disabled={isLoading}
             value={controls.granularity}
             onChange={event => setGranularity(event.target.value as GranularityOption)}
           >
@@ -282,7 +314,9 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
             ))}
           </select>
         </div>
+        )}
 
+        {shouldShowScope && (
         <div className="vrm-card-control-group">
           <span className="vrm-label">Scope</span>
           <div className="vrm-card-chip-row">
@@ -292,14 +326,16 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
                 type="button"
                 className={`vrm-toolbar-chip ${controls.scope === option ? 'active' : ''}`}
                 onClick={() => setScope(option)}
-                disabled={disablePerCamera && option === 'per_camera'}
+                disabled={isLoading || (disablePerCamera && option === 'per_camera')}
               >
                 {SCOPE_LABELS[option]}
               </button>
             ))}
           </div>
         </div>
+        )}
 
+        {shouldShowSegments && (
         <div className="vrm-card-control-group">
           <span className="vrm-label">Segments</span>
           <div className="vrm-card-chip-row">
@@ -309,13 +345,16 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
                 type="button"
                 className={`vrm-toolbar-chip ${controls.segments.includes(segment) ? 'active' : ''}`}
                 onClick={() => toggleSegment(segment)}
+                disabled={isLoading}
               >
                 {SEGMENT_LABELS[segment]}
               </button>
             ))}
           </div>
         </div>
+        )}
 
+        {showCompare && (
         <div className="vrm-card-control-group">
           <label className="vrm-label" htmlFor={`${cardId}-compare`}>
             Compare
@@ -323,6 +362,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
           <select
             id={`${cardId}-compare`}
             className="vrm-select"
+            disabled={isLoading}
             value={controls.compare}
             onChange={event => setCompare(event.target.value as CompareOption)}
           >
@@ -333,7 +373,9 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
             ))}
           </select>
         </div>
+        )}
 
+        {showExport && (
         <div className="vrm-card-control-group vrm-card-control-group--export">
           <span className="vrm-label">Export</span>
           <div className="vrm-card-export">
@@ -344,6 +386,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
               ref={exportButtonRef}
               aria-expanded={isExportOpen}
               aria-haspopup="menu"
+              disabled={isLoading}
             >
               Export
             </button>
@@ -377,9 +420,10 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
             )}
           </div>
         </div>
+        )}
       </div>
 
-      {seriesConfig && visibleSeries && onToggleSeries && (
+      {showSeries && seriesConfig && visibleSeries && onToggleSeries && (
         <div className="vrm-card-series">
           <span className="vrm-label">Series</span>
           <div className="vrm-card-chip-row">
@@ -389,6 +433,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
                 type="button"
                 className={`vrm-toolbar-chip ${visibleSeries[series.key] ? 'active' : ''}`}
                 onClick={() => onToggleSeries(series.key)}
+                disabled={isLoading}
                 style={visibleSeries[series.key] ? { borderColor: series.color, color: series.color } : undefined}
               >
                 {series.label}

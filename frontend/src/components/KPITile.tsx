@@ -1,13 +1,10 @@
 import React from 'react';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
-
 interface KPITileProps {
   title: string;
   value: string;
   unit?: string;
   deltaLabel?: string;
   trend?: 'up' | 'down' | 'neutral';
-  sparklineData?: number[];
   color?: string;
   caption?: string;
   badgeLabel?: string;
@@ -21,7 +18,6 @@ const KPITile: React.FC<KPITileProps> = ({
   unit,
   deltaLabel,
   trend = 'neutral',
-  sparklineData = [],
   color = 'var(--vrm-color-accent-occupancy)',
   caption,
   badgeLabel,
@@ -44,27 +40,10 @@ const KPITile: React.FC<KPITileProps> = ({
         {badgeLabel && <span className={badgeClass}>{badgeLabel}</span>}
       </div>
       <div className="vrm-kpi-main">
-        <span className="vrm-kpi-value">
+        <span className="vrm-kpi-value" style={{ color }}>
           {value}
           {unit && <span className="vrm-kpi-unit">{unit}</span>}
         </span>
-        {sparklineData.length > 1 && (
-          <div className="vrm-kpi-sparkline">
-            <ResponsiveContainer width="100%" height={40}>
-              <AreaChart data={sparklineData.map((datum, index) => ({ index, value: datum }))}>
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke={color}
-                  fill={color}
-                  fillOpacity={0.15}
-                  strokeWidth={2}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
       </div>
       {caption && <span className="vrm-kpi-caption">{caption}</span>}
     </Wrapper>

@@ -1,6 +1,6 @@
 import { CardControlState } from '../hooks/useCardControls';
-import { RangePreset } from '../styles/designTokens';
-import { ChartData } from './dataProcessing';
+import { CompareOption, RangePreset } from '../styles/designTokens';
+import { ChartData, getAgeBand } from './dataProcessing';
 
 export interface DateRange {
   from: Date;
@@ -143,14 +143,50 @@ export const getRangeFromPreset = (preset: RangePreset, custom?: { from?: string
   }
 };
 
-export const filterDataByControls = (data: ChartData[], controls: CardControlState): ChartData[] => {
-  const range = getRangeFromPreset(controls.rangePreset, controls.customRange);
+interface FilterOptions {
+  rangeOverride?: DateRange;
+}
+
+const matchesSegments = (item: ChartData, controls: CardControlState) => {
+  if (controls.segments.includes('sex')) {
+    const normalizedSex = item.sex?.toLowerCase();
+    if (normalizedSex !== 'male' && normalizedSex !== 'female') {
+      return false;
+    }
+  }
+
+  if (controls.segments.includes('age')) {
+    const band = getAgeBand(item.age_estimate);
+    if (!band) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+export const filterDataByControls = (
+  data: ChartData[],
+  controls: CardControlState,
+  options?: FilterOptions,
+): ChartData[] => {
+  const range = options?.rangeOverride ?? getRangeFromPreset(controls.rangePreset, controls.customRange);
   return data.filter(item => {
     const timestamp = new Date(item.timestamp).getTime();
     if (Number.isNaN(timestamp)) {
       return false;
     }
-    return timestamp >= range.from.getTime() && timestamp <= range.to.getTime();
+    const inRange = timestamp >= range.from.getTime() && timestamp <= range.to.getTime();
+    if (!inRange) {
+      return false;
+    }
+    if (!matchesSegments(item, controls)) {
+      return false;
+    }
+    if (controls.scope === 'per_camera' && !item.camera_id) {
+      return false;
+    }
+    return true;
   });
 };
 
@@ -158,3 +194,34 @@ export const getDateRangeFromPreset = (
   preset: RangePreset,
   custom?: { from?: string; to?: string },
 ): DateRange => getRangeFromPreset(preset, custom);
+
+export const filterDataByRange = (data: ChartData[], range: DateRange): ChartData[] =>
+  data.filter(item => {
+    const timestamp = new Date(item.timestamp).getTime();
+    if (Number.isNaN(timestamp)) {
+      return false;
+    }
+    return timestamp >= range.from.getTime() && timestamp <= range.to.getTime();
+  });
+
+const shiftRange = (range: DateRange, milliseconds: number): DateRange => ({
+  from: new Date(range.from.getTime() + milliseconds),
+  to: new Date(range.to.getTime() + milliseconds),
+});
+
+export const deriveComparisonRange = (range: DateRange, compare: CompareOption): DateRange | null => {
+  const duration = range.to.getTime() - range.from.getTime();
+  switch (compare) {
+    case 'previous_period':
+      return {
+        from: new Date(range.from.getTime() - duration),
+        to: new Date(range.from.getTime()),
+      };
+    case 'same_day_last_week':
+      return shiftRange(range, -7 * 24 * 60 * 60 * 1000);
+    case 'same_period_last_year':
+      return shiftRange(range, -365 * 24 * 60 * 60 * 1000);
+    default:
+      return null;
+  }
+};

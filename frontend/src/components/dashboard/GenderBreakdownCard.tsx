@@ -27,8 +27,8 @@ const LABELS: Record<string, string> = {
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 const GenderBreakdownCard: React.FC<GenderBreakdownCardProps> = ({ data, intelligence: _intelligence }) => {
-  const cardId = 'dashboard-gender';
-  const routeKey = 'dashboard';
+  const cardId = 'analytics-gender';
+  const routeKey = 'analytics';
   const {
     state: controls,
     isSynced,
@@ -83,6 +83,8 @@ const GenderBreakdownCard: React.FC<GenderBreakdownCardProps> = ({ data, intelli
     exportChartAsPNG(chartDomId, `${routeKey}_${cardId}_${controls.rangePreset}_${controls.granularity}`);
   };
 
+  const hasCameraData = useMemo(() => data.some(item => item.camera_id != null), [data]);
+
   return (
     <div className="vrm-card" id={chartDomId}>
       <CardControlHeader
@@ -101,7 +103,11 @@ const GenderBreakdownCard: React.FC<GenderBreakdownCardProps> = ({ data, intelli
         onExportCSV={exportCsv}
         onExportPNG={exportPng}
         exportDisabled={!summary.total}
-        disablePerCamera
+        disablePerCamera={!hasCameraData}
+        showGranularity={false}
+        showSegments={false}
+        showSeries={false}
+        showScope={hasCameraData}
         actions={
           <div className="vrm-toggle-group" role="group" aria-label="Display mode">
             <button
