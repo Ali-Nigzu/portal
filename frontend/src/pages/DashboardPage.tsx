@@ -2,11 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConfigurableChart from '../components/ConfigurableChart';
 import KPITile from '../components/KPITile';
-import HeatmapCard from '../components/dashboard/HeatmapCard';
-import GenderBreakdownCard from '../components/dashboard/GenderBreakdownCard';
-import AgeBandsCard from '../components/dashboard/AgeBandsCard';
-import DwellHistogramCard from '../components/dashboard/DwellHistogramCard';
-import TurnoverOccupancyCard from '../components/dashboard/TurnoverOccupancyCard';
 import InsightRail, { InsightItem } from '../components/InsightRail';
 import { API_ENDPOINTS } from '../config';
 import {
@@ -164,8 +159,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     ? throughputSeries[throughputSeries.length - 2]
     : throughput;
 
-  const occupancySparkline = flowSeriesData.series.map(point => point.occupancy);
-
   const now = new Date();
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
@@ -309,13 +302,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     applyRangeToAll,
   ]);
 
+  const totalTraffic = flowSeriesData.totalActivity;
+
   const kpiTiles = [
     {
       key: 'live-occupancy',
       title: 'Live occupancy',
       value: liveOccupancy.toLocaleString(),
       delta: formatDelta(liveOccupancy, previousOccupancy),
-      sparkline: occupancySparkline,
       color: 'var(--vrm-color-accent-occupancy)',
       caption: `${flowSeriesData.series.length.toLocaleString()} buckets in range`,
     },
@@ -325,7 +319,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       value: throughput.toFixed(1),
       unit: 'events/min',
       delta: formatDelta(throughput, previousThroughput),
-      sparkline: throughputSeries,
       color: 'var(--vrm-color-accent-entrances)',
       caption: `Total traffic ${flowSeriesData.totalActivity.toLocaleString()}`,
       badgeLabel: throughput > throughput95th ? 'Surge' : undefined,
@@ -336,7 +329,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Entrances today',
       value: todayEntries.toLocaleString(),
       delta: { label: 'Local day total', trend: 'neutral' as const },
-      sparkline: [],
       color: 'var(--vrm-color-accent-entrances)',
       caption: 'Updates with local midnight',
     },
@@ -345,16 +337,22 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Exits today',
       value: todayExits.toLocaleString(),
       delta: { label: 'Local day total', trend: 'neutral' as const },
-      sparkline: [],
       color: 'var(--vrm-color-accent-exits)',
       caption: 'Updates with local midnight',
+    },
+    {
+      key: 'total-traffic',
+      title: 'Total traffic',
+      value: totalTraffic.toLocaleString(),
+      delta: { label: 'Current range', trend: 'neutral' as const },
+      color: 'var(--vrm-color-accent-entrances)',
+      caption: 'Entrances + exits in view',
     },
     {
       key: 'avg-dwell',
       title: 'Avg dwell time',
       value: dwellDisplay,
       delta: { label: `Median ${dwellMedian.toFixed(1)}m`, trend: 'neutral' as const },
-      sparkline: [],
       color: 'var(--vrm-color-accent-dwell)',
       caption: dwellDurations.length ? `P90 ${dwellP90.toFixed(1)}m` : 'No matched sessions',
     },
@@ -363,7 +361,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Data freshness',
       value: freshnessStatus === 'ok' ? 'OK' : freshnessStatus === 'warning' ? 'Warning' : 'Stale',
       delta: { label: freshnessCaption, trend: 'neutral' as const },
-      sparkline: [],
       color:
         freshnessStatus === 'stale'
           ? 'var(--vrm-color-accent-exits)'
@@ -379,7 +376,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Active alarms',
       value: '0',
       delta: { label: 'High/Med/Low: 0 / 0 / 0', trend: 'neutral' as const },
-      sparkline: [],
       color: 'var(--vrm-color-accent-exits)',
       caption: 'Tap to review alarm rules',
       onClick: () => navigate('/alarm-logs'),
@@ -435,7 +431,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
                 unit={tile.unit}
                 deltaLabel={tile.delta.label}
                 trend={tile.delta.trend}
-                sparklineData={tile.sparkline}
                 color={tile.color}
                 caption={tile.caption}
                 badgeLabel={tile.badgeLabel}
@@ -456,16 +451,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
             intelligence={intelligence}
             onControlsChange={setFlowControlsState}
           />
-        </section>
-
-        <section className="vrm-section">
-          <div className="vrm-grid vrm-grid-3">
-            <HeatmapCard data={dataset} intelligence={intelligence} />
-            <GenderBreakdownCard data={dataset} intelligence={intelligence} />
-            <AgeBandsCard data={dataset} intelligence={intelligence} />
-            <DwellHistogramCard data={dataset} intelligence={intelligence} />
-            <TurnoverOccupancyCard data={dataset} intelligence={intelligence} />
-          </div>
         </section>
 
         <section className="vrm-section">

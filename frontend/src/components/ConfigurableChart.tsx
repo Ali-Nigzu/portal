@@ -5,6 +5,7 @@ import {
   Brush,
   CartesianGrid,
   ComposedChart,
+  Line,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -18,13 +19,17 @@ import CardControlHeader from './CardControlHeader';
 import { useCardControls, CardControlState } from '../hooks/useCardControls';
 import { useSeriesVisibility } from '../hooks/useSeriesVisibility';
 import { useInteractionContext } from '../context/InteractionContext';
-import { filterDataByControls, getDateRangeFromPreset } from '../utils/rangeUtils';
+import {
+  filterDataByControls,
+  getDateRangeFromPreset,
+  deriveComparisonRange,
+} from '../utils/rangeUtils';
 import { useChartData, NormalizedChartPoint } from '../hooks/useChartData';
 import { IntelligencePayload } from '../types/analytics';
 import { ChartData } from '../utils/dataProcessing';
 import { exportChartAsPNG, exportDataAsCSV, generateChartId } from '../utils/exportUtils';
 import { useGlobalControls } from '../context/GlobalControlsContext';
-import { CompareOption, RangePreset } from '../styles/designTokens';
+import { CompareOption, RangePreset, SegmentOption } from '../styles/designTokens';
 
 interface SeriesDefinition {
   key: keyof NormalizedChartPoint | 'activity';
@@ -49,7 +54,14 @@ const SERIES_DEFINITIONS: SeriesDefinition[] = [
   { key: 'activity', label: 'Total activity', color: 'var(--vrm-color-accent-dwell)' },
 ];
 
-const SERIES_ORDER: (keyof NormalizedChartPoint | 'activity')[] = ['entries', 'exits', 'activity', 'occupancy'];
+const SERIES_ORDER: (keyof NormalizedChartPoint | 'activity' | 'comparison_activity' | 'comparison_occupancy')[] = [
+  'entries',
+  'exits',
+  'activity',
+  'occupancy',
+  'comparison_activity',
+  'comparison_occupancy',
+];
 
 const SEGMENT_SUBTITLE: Record<string, string> = {
   sex: 'Sex',
@@ -161,23 +173,83 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
     SERIES_DEFINITIONS.map(series => ({ key: series.key })),
   );
 
+  const availableSegments = useMemo(() => {
+    const segments: SegmentOption[] = [];
+    const hasSex = data.some(item => {
+      const value = item.sex?.toLowerCase();
+      return value === 'male' || value === 'female';
+    });
+    if (hasSex) {
+      segments.push('sex');
+    }
+    const hasAgeBands = data.some(item => {
+      const estimate = item.age_estimate ?? '';
+      return estimate && estimate !== 'unknown';
+    });
+    if (hasAgeBands) {
+      segments.push('age');
+    }
+    return segments;
+  }, [data]);
+
+  const hasCameraData = useMemo(() => data.some(item => item.camera_id != null), [data]);
+
   const filteredData = useMemo(() => filterDataByControls(data, controls), [data, controls]);
 
-  const { series, activeGranularity, highlightBuckets, averageOccupancy } = useChartData(
-    filteredData,
-    controls.granularity,
-    intelligence,
-  );
+  const baseChart = useChartData(filteredData, controls.granularity, intelligence);
+  const { series, activeGranularity, highlightBuckets, averageOccupancy } = baseChart;
 
-  const decimatedSeries = useMemo(() => {
-    if (series.length <= MAX_VISIBLE_POINTS) {
-      return series;
+  const rangeForComparison = useMemo(() => {
+    if (controls.compare === 'off') {
+      return null;
     }
-    const step = Math.ceil(series.length / MAX_VISIBLE_POINTS);
-    return series.filter((_, index) => index % step === 0);
-  }, [series]);
+    const baseRange = getDateRangeFromPreset(controls.rangePreset, controls.customRange);
+    return deriveComparisonRange(baseRange, controls.compare);
+  }, [controls.compare, controls.rangePreset, controls.customRange]);
+
+  const comparisonData = useMemo(() => {
+    if (!rangeForComparison) {
+      return [];
+    }
+    return filterDataByControls(data, controls, { rangeOverride: rangeForComparison });
+  }, [data, controls, rangeForComparison]);
+
+  const comparisonChart = useChartData(comparisonData, controls.granularity, intelligence);
 
   const [brushSelection, setBrushSelection] = useState<{ startIndex: number; endIndex: number } | null>(null);
+
+  const decimationStep = useMemo(() => {
+    if (series.length <= MAX_VISIBLE_POINTS) {
+      return 1;
+    }
+    return Math.ceil(series.length / MAX_VISIBLE_POINTS);
+  }, [series.length]);
+
+  const decimatedSeries = useMemo(
+    () =>
+      series.filter((_, index) => index % decimationStep === 0),
+    [series, decimationStep],
+  );
+
+  const decimatedComparison = useMemo(
+    () =>
+      comparisonChart.series.filter((_, index) => index % decimationStep === 0),
+    [comparisonChart.series, decimationStep],
+  );
+
+  const mergedSeries = useMemo(
+    () =>
+      decimatedSeries.map((point, index) => ({
+        ...point,
+        comparison_entries: decimatedComparison[index]?.entries ?? null,
+        comparison_exits: decimatedComparison[index]?.exits ?? null,
+        comparison_activity: decimatedComparison[index]?.activity ?? null,
+        comparison_occupancy: decimatedComparison[index]?.occupancy ?? null,
+      })),
+    [decimatedSeries, decimatedComparison],
+  );
+
+  const hasComparison = controls.compare !== 'off' && mergedSeries.some(point => point.comparison_activity !== null);
 
   const handleBrushChange = useCallback(
     (range: { startIndex?: number; endIndex?: number }) => {
@@ -198,8 +270,8 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
     if (!brushSelection) {
       return null;
     }
-    const startPoint = decimatedSeries[brushSelection.startIndex];
-    const endPoint = decimatedSeries[Math.min(brushSelection.endIndex, decimatedSeries.length - 1)];
+    const startPoint = mergedSeries[brushSelection.startIndex];
+    const endPoint = mergedSeries[Math.min(brushSelection.endIndex, mergedSeries.length - 1)];
     if (!startPoint || !endPoint) {
       return null;
     }
@@ -246,14 +318,31 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   };
 
   const exportCsv = () => {
-    exportDataAsCSV(decimatedSeries, filenameBase);
+    const rows = mergedSeries.map(point => {
+      const bucketStart = new Date(point.bucketStart);
+      const bucketEnd = new Date(bucketStart.getTime() + (point.bucketMinutes ?? 0) * 60 * 1000);
+      return {
+        bucket_start: bucketStart.toISOString(),
+        bucket_end: bucketEnd.toISOString(),
+        entrances: point.entries,
+        exits: point.exits,
+        total_activity: point.activity,
+        occupancy: point.occupancy,
+        surge_flag: highlightBuckets.includes(point.label) ? 1 : 0,
+        comparison_entrances: point.comparison_entries ?? undefined,
+        comparison_exits: point.comparison_exits ?? undefined,
+        comparison_activity: point.comparison_activity ?? undefined,
+        comparison_occupancy: point.comparison_occupancy ?? undefined,
+      };
+    });
+    exportDataAsCSV(rows, filenameBase);
   };
 
   const summaryText = useMemo(() => {
     const range = getDateRangeFromPreset(controls.rangePreset, controls.customRange);
-    const bucketCount = decimatedSeries.length;
+    const bucketCount = mergedSeries.length;
     return `${bucketCount.toLocaleString()} buckets · ${range.from.toLocaleDateString()} – ${range.to.toLocaleDateString()}`;
-  }, [controls.rangePreset, controls.customRange, decimatedSeries]);
+  }, [controls.rangePreset, controls.customRange, mergedSeries]);
 
   return (
     <div className="vrm-card">
@@ -272,7 +361,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
         resync={resync}
         onExportPNG={exportPng}
         onExportCSV={exportCsv}
-        exportDisabled={!decimatedSeries.length}
+        exportDisabled={!mergedSeries.length}
         seriesConfig={SERIES_DEFINITIONS.map(series => ({
           key: series.key,
           label: series.label,
@@ -280,12 +369,15 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
         }))}
         visibleSeries={visibility}
         onToggleSeries={toggleSeries}
-        disablePerCamera
+        disablePerCamera={!hasCameraData}
+        showScope={hasCameraData}
+        showSegments={availableSegments.length > 0}
+        availableSegments={availableSegments}
       />
       <div className="vrm-card-body vrm-card-body--stacked">
         <div className="vrm-chart-wrapper">
           <ResponsiveContainer width="100%" height={420}>
-            <ComposedChart data={decimatedSeries} syncId={syncId} margin={{ top: 16, right: 24, bottom: 0, left: 0 }}>
+            <ComposedChart data={mergedSeries} syncId={syncId} margin={{ top: 16, right: 24, bottom: 0, left: 0 }}>
               <defs>
                 <linearGradient id={`${cardId}-occupancyGradient`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--vrm-color-accent-occupancy)" stopOpacity={0.4} />
@@ -344,6 +436,26 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   name="Total activity"
                   barSize={6}
                   opacity={0.5}
+                />
+              )}
+              {hasComparison && (
+                <Line
+                  type="monotone"
+                  dataKey="comparison_activity"
+                  stroke="var(--vrm-color-accent-dwell)"
+                  strokeDasharray="4 4"
+                  name="Activity (comparison)"
+                  dot={false}
+                />
+              )}
+              {hasComparison && (
+                <Line
+                  type="monotone"
+                  dataKey="comparison_occupancy"
+                  stroke="var(--vrm-color-accent-occupancy)"
+                  strokeDasharray="4 4"
+                  name="Occupancy (comparison)"
+                  dot={false}
                 />
               )}
               {averageOccupancy > 0 && (

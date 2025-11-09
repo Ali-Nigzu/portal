@@ -31,8 +31,8 @@ const normalizeBand = (value: string | undefined): string => {
 };
 
 const AgeBandsCard: React.FC<AgeBandsCardProps> = ({ data, intelligence: _intelligence }) => {
-  const cardId = 'dashboard-age';
-  const routeKey = 'dashboard';
+  const cardId = 'analytics-age';
+  const routeKey = 'analytics';
   const {
     state: controls,
     isSynced,
@@ -89,6 +89,8 @@ const AgeBandsCard: React.FC<AgeBandsCardProps> = ({ data, intelligence: _intell
     exportChartAsPNG(chartDomId, `${routeKey}_${cardId}_${controls.rangePreset}_${controls.granularity}`);
   };
 
+  const hasCameraData = useMemo(() => data.some(item => item.camera_id != null), [data]);
+
   return (
     <div className="vrm-card" id={chartDomId}>
       <CardControlHeader
@@ -107,7 +109,11 @@ const AgeBandsCard: React.FC<AgeBandsCardProps> = ({ data, intelligence: _intell
         onExportCSV={exportCsv}
         onExportPNG={exportPng}
         exportDisabled={!summary.total}
-        disablePerCamera
+        disablePerCamera={!hasCameraData}
+        showGranularity={false}
+        showSegments={false}
+        showSeries={false}
+        showScope={hasCameraData}
         actions={
           <div className="vrm-toggle-group" role="group" aria-label="Display mode">
             <button
