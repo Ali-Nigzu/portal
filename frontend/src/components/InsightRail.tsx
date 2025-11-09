@@ -1,12 +1,19 @@
 import React from 'react';
 
-type InsightTone = 'info' | 'warning' | 'success';
+type InsightTone = 'info' | 'warning' | 'success' | 'danger';
+
+export interface InsightAction {
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}
 
 export interface InsightItem {
   id: string;
   title: string;
   description?: string;
   tone?: InsightTone;
+  action?: InsightAction;
 }
 
 const toneStyles: Record<InsightTone, { background: string; border: string; color: string }> = {
@@ -24,6 +31,11 @@ const toneStyles: Record<InsightTone, { background: string; border: string; colo
     background: 'rgba(46, 125, 50, 0.12)',
     border: 'rgba(46, 125, 50, 0.35)',
     color: 'var(--vrm-accent-teal)'
+  },
+  danger: {
+    background: 'rgba(229, 57, 53, 0.12)',
+    border: 'rgba(229, 57, 53, 0.4)',
+    color: 'var(--vrm-color-accent-exits)'
   }
 };
 
@@ -54,22 +66,29 @@ const InsightRail: React.FC<{ insights: InsightItem[] }> = ({ insights }) => {
           return (
             <div
               key={item.id}
+              className="vrm-insight-card"
               style={{
-                minWidth: '220px',
-                flex: '1 1 240px',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                borderLeft: `4px solid ${palette.border}`,
                 backgroundColor: palette.background,
+                borderLeft: `4px solid ${palette.border}`,
                 color: palette.color,
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03)'
               }}
             >
-              <strong style={{ display: 'block', marginBottom: '6px', fontSize: '13px' }}>
-                {item.title}
-              </strong>
-              {item.description && (
-                <span style={{ fontSize: '12px', lineHeight: 1.4 }}>{item.description}</span>
+              <div className="vrm-insight-content">
+                <strong className="vrm-insight-title">{item.title}</strong>
+                {item.description && <span className="vrm-insight-description">{item.description}</span>}
+              </div>
+              {item.action && (
+                <div className="vrm-insight-action">
+                  {item.action.href ? (
+                    <a className="vrm-btn vrm-btn-text" href={item.action.href}>
+                      {item.action.label}
+                    </a>
+                  ) : (
+                    <button type="button" className="vrm-btn vrm-btn-text" onClick={item.action.onClick}>
+                      {item.action.label}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           );
