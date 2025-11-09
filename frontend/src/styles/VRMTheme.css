@@ -681,6 +681,145 @@ body {
   margin-bottom: 0;
 }
 
+.vrm-analytics-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--vrm-spacing-5);
+}
+
+.vrm-analytics-rail {
+  background-color: var(--vrm-bg-tertiary);
+  border: 1px solid var(--vrm-border);
+  border-radius: var(--vrm-radii-card);
+  padding: var(--vrm-spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--vrm-spacing-4);
+}
+
+.vrm-analytics-rail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vrm-analytics-view-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vrm-spacing-2);
+}
+
+.vrm-analytics-view-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--vrm-spacing-2);
+  padding: var(--vrm-spacing-2);
+  border-radius: var(--vrm-radii-input);
+  background-color: var(--vrm-bg-secondary);
+}
+
+.vrm-analytics-view-list li.active {
+  outline: 1px solid var(--vrm-color-accent-occupancy);
+}
+
+.vrm-analytics-view-list li > button:first-of-type {
+  border: none;
+  background: none;
+  color: var(--vrm-text-primary);
+  text-align: left;
+  flex: 1;
+  cursor: pointer;
+}
+
+.vrm-analytics-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vrm-spacing-4);
+}
+
+.vrm-analytics-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vrm-spacing-2);
+}
+
+.vrm-pill {
+  border: 1px solid var(--vrm-border);
+  background: var(--vrm-bg-tertiary);
+  color: var(--vrm-text-secondary);
+  border-radius: var(--vrm-radii-chip);
+  padding: 4px 10px;
+  font-size: var(--vrm-typography-font-size-caption);
+  cursor: pointer;
+}
+
+.vrm-pill:hover,
+.vrm-pill:focus {
+  border-color: var(--vrm-color-accent-occupancy);
+  color: var(--vrm-text-primary);
+}
+
+.vrm-analytics-builder {
+  border: 1px solid var(--vrm-border);
+  border-radius: var(--vrm-radii-card);
+  padding: var(--vrm-spacing-4);
+  background-color: var(--vrm-bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--vrm-spacing-4);
+}
+
+.vrm-builder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--vrm-spacing-3);
+}
+
+.vrm-builder-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vrm-spacing-2);
+}
+
+.vrm-builder-filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vrm-builder-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr)) auto;
+  gap: var(--vrm-spacing-2);
+  align-items: center;
+}
+
+.vrm-builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vrm-spacing-2);
+  align-items: center;
+}
+
+.vrm-builder-save {
+  display: flex;
+  gap: var(--vrm-spacing-2);
+  flex-wrap: wrap;
+}
+
+.vrm-builder-save .vrm-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.vrm-analytics-rail .vrm-btn {
+  align-self: flex-start;
+}
+
 .vrm-section-header {
   display: flex;
   align-items: center;
@@ -1164,6 +1303,48 @@ body {
   border-top: 1px solid var(--vrm-border);
 }
 
+.vrm-heatmap-grid {
+  display: grid;
+  gap: var(--vrm-spacing-2);
+  padding: var(--vrm-spacing-2) 0;
+  overflow-x: auto;
+}
+
+.vrm-heatmap-header {
+  display: grid;
+  grid-template-columns: 72px repeat(24, minmax(20px, 1fr));
+  gap: var(--vrm-spacing-1);
+  align-items: center;
+  font-size: var(--vrm-typography-font-size-caption);
+  color: var(--vrm-text-muted);
+}
+
+.vrm-heatmap-row {
+  display: grid;
+  grid-template-columns: 72px repeat(24, minmax(20px, 1fr));
+  gap: var(--vrm-spacing-1);
+  align-items: center;
+}
+
+.vrm-heatmap-weekday {
+  font-size: var(--vrm-typography-font-size-caption);
+  font-weight: 600;
+  color: var(--vrm-text-secondary);
+}
+
+.vrm-heatmap-hour {
+  text-align: center;
+  font-size: 10px;
+  color: var(--vrm-text-muted);
+}
+
+.vrm-heatmap-cell {
+  width: 100%;
+  padding-top: 100%;
+  border-radius: var(--vrm-radii-chip);
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
 .vrm-chart-summary {
   color: var(--vrm-text-secondary);
   font-size: var(--vrm-typography-font-size-caption);
@@ -1222,6 +1403,23 @@ body {
   color: var(--vrm-text-secondary);
   font-size: var(--vrm-typography-font-size-caption);
   margin-bottom: var(--vrm-spacing-2);
+}
+
+.vrm-tooltip-section {
+  margin-top: var(--vrm-spacing-2);
+}
+
+.vrm-tooltip-section:first-of-type {
+  margin-top: 0;
+}
+
+.vrm-tooltip-section-label {
+  display: inline-block;
+  font-size: var(--vrm-typography-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vrm-text-muted);
+  margin-bottom: 2px;
 }
 
 .vrm-tooltip-list {

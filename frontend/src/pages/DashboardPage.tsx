@@ -2,11 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConfigurableChart from '../components/ConfigurableChart';
 import KPITile from '../components/KPITile';
-import HeatmapCard from '../components/dashboard/HeatmapCard';
-import GenderBreakdownCard from '../components/dashboard/GenderBreakdownCard';
-import AgeBandsCard from '../components/dashboard/AgeBandsCard';
-import DwellHistogramCard from '../components/dashboard/DwellHistogramCard';
-import TurnoverOccupancyCard from '../components/dashboard/TurnoverOccupancyCard';
 import InsightRail, { InsightItem } from '../components/InsightRail';
 import { API_ENDPOINTS } from '../config';
 import {
@@ -19,7 +14,7 @@ import {
 import { computeChartSeries } from '../hooks/useChartData';
 import { IntelligencePayload } from '../types/analytics';
 import { useGlobalControls } from '../context/GlobalControlsContext';
-import { filterDataByControls, getDateRangeFromPreset } from '../utils/rangeUtils';
+import { filterDataByControls, getDateRangeFromPreset, deriveComparisonRange } from '../utils/rangeUtils';
 import { CardControlState } from '../hooks/useCardControls';
 import { InteractionProvider } from '../context/InteractionContext';
 
@@ -145,8 +140,31 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     [flowFiltered, activeFlowControls.granularity, intelligence],
   );
 
+  const range = useMemo(
+    () => getDateRangeFromPreset(activeFlowControls.rangePreset, activeFlowControls.customRange),
+    [activeFlowControls.rangePreset, activeFlowControls.customRange],
+  );
+
+  const comparisonRange = useMemo(
+    () => deriveComparisonRange(range, 'previous_period'),
+    [range],
+  );
+
+  const previousFiltered = useMemo(
+    () => (comparisonRange ? filterDataByControls(dataset, activeFlowControls, { rangeOverride: comparisonRange }) : []),
+    [dataset, activeFlowControls, comparisonRange],
+  );
+
+  const previousSeriesData = useMemo(
+    () => computeChartSeries(previousFiltered, activeFlowControls.granularity, intelligence),
+    [previousFiltered, activeFlowControls.granularity, intelligence],
+  );
+
   const bucketMinutes = flowSeriesData.series[0]?.bucketMinutes ?? 60;
   const throughputSeries = flowSeriesData.series.map(point =>
+    point.bucketMinutes > 0 ? point.activity / point.bucketMinutes : 0,
+  );
+  const previousThroughputSeries = previousSeriesData.series.map(point =>
     point.bucketMinutes > 0 ? point.activity / point.bucketMinutes : 0,
   );
   const throughput95th = percentile(throughputSeries, 0.95);
@@ -160,30 +178,22 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const previousOccupancy = previousPoint?.occupancy ?? liveOccupancy;
 
   const throughput = latestPoint ? throughputSeries[throughputSeries.length - 1] : 0;
-  const previousThroughput = throughputSeries.length > 1
+  const previousThroughput = previousThroughputSeries.length
+    ? previousThroughputSeries[previousThroughputSeries.length - 1]
+    : throughputSeries.length > 1
     ? throughputSeries[throughputSeries.length - 2]
     : throughput;
-
-  const occupancySparkline = flowSeriesData.series.map(point => point.occupancy);
 
   const now = new Date();
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
 
-  const todayEntries = dataset.filter(item => {
-    const timestamp = new Date(item.timestamp);
-    return timestamp >= todayStart && timestamp <= now && item.event === 'entry';
-  }).length;
-
-  const todayExits = dataset.filter(item => {
-    const timestamp = new Date(item.timestamp);
-    return timestamp >= todayStart && timestamp <= now && item.event === 'exit';
-  }).length;
-
   const avgDwellMinutes = calculateAverageDwellTime(flowFiltered);
+  const previousAvgDwellMinutes = calculateAverageDwellTime(previousFiltered);
   const dwellDurations = useMemo(() => calculateDwellDurations(flowFiltered), [flowFiltered]);
-  const dwellMedian = percentile(dwellDurations, 0.5);
+  const previousDwellDurations = useMemo(() => calculateDwellDurations(previousFiltered), [previousFiltered]);
   const dwellP90 = percentile(dwellDurations, 0.9);
+  const previousP90 = percentile(previousDwellDurations, 0.9);
   const dwellDisplay = avgDwellMinutes > 0 ? formatDuration(avgDwellMinutes) : '—';
 
   const latestEventTimestamp = summary?.latest_timestamp
@@ -206,38 +216,56 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     ? `Updated ${freshnessMinutes < 1 ? '<1' : Math.round(freshnessMinutes)}m ago`
     : 'No events in range';
 
-  const range = getDateRangeFromPreset(activeFlowControls.rangePreset, activeFlowControls.customRange);
   const rangeMinutes = Math.max(1, (range.to.getTime() - range.from.getTime()) / (1000 * 60));
   const expectedBuckets = Math.max(1, Math.round(rangeMinutes / bucketMinutes));
   const coveragePercent = Math.min(100, (flowSeriesData.series.length / expectedBuckets) * 100);
 
-  const topBuckets = [...flowSeriesData.series]
+  const surgeBuckets = flowSeriesData.series.filter(point => flowSeriesData.highlightBuckets.includes(point.label));
+  const topBuckets = [...surgeBuckets]
     .sort((a, b) => b.activity - a.activity)
     .slice(0, 3);
 
   const busiestBucket = flowSeriesData.series.reduce(
     (max, point) => (point.occupancy > max.occupancy ? point : max),
-    flowSeriesData.series[0] ?? { occupancy: 0, label: '', bucketStart: '', bucketMinutes: bucketMinutes },
+    flowSeriesData.series[0] ?? { occupancy: 0, label: '', bucketStart: '', bucketMinutes },
   );
 
-    const applyRangeToAll = useCallback(
-      (bucketStart: string, bucketDuration: number) => {
-        const startDate = new Date(bucketStart);
-        if (Number.isNaN(startDate.getTime())) {
-          return;
-        }
-        const endDate = new Date(startDate.getTime() + bucketDuration * 60 * 1000);
-        const newRange = { from: startDate.toISOString(), to: endDate.toISOString() };
-        globalControls.setRangePreset('custom');
-        globalControls.setCustomRange(newRange);
-        setFlowControlsState(prev => ({
-          ...(prev ?? globalDefaults),
-          rangePreset: 'custom',
-          customRange: newRange,
-        }));
-      },
-      [globalControls, globalDefaults],
-    );
+  const todayStartTime = todayStart.getTime();
+  const nowTime = now.getTime();
+  const todayFiltered = useMemo(() => {
+    const rangeOverride = { from: new Date(todayStartTime), to: new Date(nowTime) };
+    return filterDataByControls(dataset, activeFlowControls, { rangeOverride });
+  }, [dataset, activeFlowControls, todayStartTime, nowTime]);
+
+  const previousDayFiltered = useMemo(() => {
+    const start = new Date(todayStartTime - 24 * 60 * 60 * 1000);
+    const end = new Date(todayStartTime - 1);
+    return filterDataByControls(dataset, activeFlowControls, { rangeOverride: { from: start, to: end } });
+  }, [dataset, activeFlowControls, todayStartTime]);
+
+  const todayEntries = todayFiltered.filter(item => item.event === 'entry').length;
+  const todayExits = todayFiltered.filter(item => item.event === 'exit').length;
+  const previousDayEntries = previousDayFiltered.filter(item => item.event === 'entry').length;
+  const previousDayExits = previousDayFiltered.filter(item => item.event === 'exit').length;
+
+  const applyRangeToAll = useCallback(
+    (bucketStart: string, bucketDuration: number) => {
+      const startDate = new Date(bucketStart);
+      if (Number.isNaN(startDate.getTime())) {
+        return;
+      }
+      const endDate = new Date(startDate.getTime() + bucketDuration * 60 * 1000);
+      const newRange = { from: startDate.toISOString(), to: endDate.toISOString() };
+      globalControls.setRangePreset('custom');
+      globalControls.setCustomRange(newRange);
+      setFlowControlsState(prev => ({
+        ...(prev ?? globalDefaults),
+        rangePreset: 'custom',
+        customRange: newRange,
+      }));
+    },
+    [globalControls, globalDefaults],
+  );
 
   const insightItems: InsightItem[] = useMemo(() => {
     const items: InsightItem[] = [];
@@ -259,6 +287,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       });
     }
 
+    const rangeQuery = new URLSearchParams({ from: range.from.toISOString(), to: range.to.toISOString() }).toString();
+
     items.push({
       id: 'coverage',
       title: 'Coverage quality',
@@ -266,7 +296,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       tone: coveragePercent < 80 ? 'warning' : 'success',
       action: {
         label: 'Open device list',
-        href: '/device-list',
+        href: `/device-list?${rangeQuery}`,
       },
     });
 
@@ -275,12 +305,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Dwell anomaly',
       description:
         dwellDurations.length > 0
-          ? `P90 dwell ${dwellP90.toFixed(1)}m (${(dwellP90 - dwellMedian).toFixed(1)}m vs median)`
+          ? `P90 dwell ${dwellP90.toFixed(1)}m (${(dwellP90 - previousP90).toFixed(1)}m vs prior)`
           : 'Not enough matched sessions',
-      tone: dwellP90 - dwellMedian > 10 ? 'warning' : 'info',
+      tone: dwellDurations.length > 0 && dwellP90 - previousP90 > 10 ? 'warning' : 'info',
       action: {
         label: 'Open event logs',
-        href: '/event-logs',
+        href: `/event-logs?${rangeQuery}`,
       },
     });
 
@@ -294,7 +324,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       tone: busiestBucket.occupancy > 120 ? 'warning' : 'info',
       action: {
         label: 'Create alarm rule',
-        href: '/alarm-logs',
+        href: `/alarm-logs?${rangeQuery}`,
       },
     });
 
@@ -304,10 +334,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     coveragePercent,
     dwellDurations.length,
     dwellP90,
-    dwellMedian,
+    previousP90,
     busiestBucket,
     applyRangeToAll,
+    range.from,
+    range.to,
   ]);
+
+  const totalTraffic = flowSeriesData.totalActivity;
+  const previousTotalTraffic = previousSeriesData.totalActivity;
 
   const kpiTiles = [
     {
@@ -315,7 +350,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Live occupancy',
       value: liveOccupancy.toLocaleString(),
       delta: formatDelta(liveOccupancy, previousOccupancy),
-      sparkline: occupancySparkline,
       color: 'var(--vrm-color-accent-occupancy)',
       caption: `${flowSeriesData.series.length.toLocaleString()} buckets in range`,
     },
@@ -325,7 +359,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       value: throughput.toFixed(1),
       unit: 'events/min',
       delta: formatDelta(throughput, previousThroughput),
-      sparkline: throughputSeries,
       color: 'var(--vrm-color-accent-entrances)',
       caption: `Total traffic ${flowSeriesData.totalActivity.toLocaleString()}`,
       badgeLabel: throughput > throughput95th ? 'Surge' : undefined,
@@ -335,8 +368,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       key: 'entrances',
       title: 'Entrances today',
       value: todayEntries.toLocaleString(),
-      delta: { label: 'Local day total', trend: 'neutral' as const },
-      sparkline: [],
+      delta: formatDelta(todayEntries, previousDayEntries),
       color: 'var(--vrm-color-accent-entrances)',
       caption: 'Updates with local midnight',
     },
@@ -344,17 +376,23 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       key: 'exits',
       title: 'Exits today',
       value: todayExits.toLocaleString(),
-      delta: { label: 'Local day total', trend: 'neutral' as const },
-      sparkline: [],
+      delta: formatDelta(todayExits, previousDayExits),
       color: 'var(--vrm-color-accent-exits)',
       caption: 'Updates with local midnight',
+    },
+    {
+      key: 'total-traffic',
+      title: 'Total traffic',
+      value: totalTraffic.toLocaleString(),
+      delta: formatDelta(totalTraffic, previousTotalTraffic),
+      color: 'var(--vrm-color-accent-entrances)',
+      caption: 'Entrances + exits in view',
     },
     {
       key: 'avg-dwell',
       title: 'Avg dwell time',
       value: dwellDisplay,
-      delta: { label: `Median ${dwellMedian.toFixed(1)}m`, trend: 'neutral' as const },
-      sparkline: [],
+      delta: formatDelta(avgDwellMinutes, previousAvgDwellMinutes),
       color: 'var(--vrm-color-accent-dwell)',
       caption: dwellDurations.length ? `P90 ${dwellP90.toFixed(1)}m` : 'No matched sessions',
     },
@@ -363,7 +401,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Data freshness',
       value: freshnessStatus === 'ok' ? 'OK' : freshnessStatus === 'warning' ? 'Warning' : 'Stale',
       delta: { label: freshnessCaption, trend: 'neutral' as const },
-      sparkline: [],
       color:
         freshnessStatus === 'stale'
           ? 'var(--vrm-color-accent-exits)'
@@ -379,7 +416,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       title: 'Active alarms',
       value: '0',
       delta: { label: 'High/Med/Low: 0 / 0 / 0', trend: 'neutral' as const },
-      sparkline: [],
       color: 'var(--vrm-color-accent-exits)',
       caption: 'Tap to review alarm rules',
       onClick: () => navigate('/alarm-logs'),
@@ -435,7 +471,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
                 unit={tile.unit}
                 deltaLabel={tile.delta.label}
                 trend={tile.delta.trend}
-                sparklineData={tile.sparkline}
                 color={tile.color}
                 caption={tile.caption}
                 badgeLabel={tile.badgeLabel}
@@ -455,17 +490,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
             data={dataset}
             intelligence={intelligence}
             onControlsChange={setFlowControlsState}
+            isLoading={loading}
           />
-        </section>
-
-        <section className="vrm-section">
-          <div className="vrm-grid vrm-grid-3">
-            <HeatmapCard data={dataset} intelligence={intelligence} />
-            <GenderBreakdownCard data={dataset} intelligence={intelligence} />
-            <AgeBandsCard data={dataset} intelligence={intelligence} />
-            <DwellHistogramCard data={dataset} intelligence={intelligence} />
-            <TurnoverOccupancyCard data={dataset} intelligence={intelligence} />
-          </div>
         </section>
 
         <section className="vrm-section">

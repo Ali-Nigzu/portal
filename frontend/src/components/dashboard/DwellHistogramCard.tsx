@@ -44,8 +44,8 @@ const calculatePercentile = (values: number[], percentile: number): number => {
 };
 
 const DwellHistogramCard: React.FC<DwellHistogramCardProps> = ({ data, intelligence: _intelligence }) => {
-  const cardId = 'dashboard-dwell';
-  const routeKey = 'dashboard';
+  const cardId = 'analytics-dwell';
+  const routeKey = 'analytics';
   const {
     state: controls,
     isSynced,
@@ -104,6 +104,8 @@ const DwellHistogramCard: React.FC<DwellHistogramCardProps> = ({ data, intellige
     exportChartAsPNG(chartDomId, `${routeKey}_${cardId}_${controls.rangePreset}_${controls.granularity}`);
   };
 
+  const hasCameraData = useMemo(() => data.some(item => item.camera_id != null), [data]);
+
   return (
     <div className="vrm-card" id={chartDomId}>
       <CardControlHeader
@@ -122,7 +124,11 @@ const DwellHistogramCard: React.FC<DwellHistogramCardProps> = ({ data, intellige
         onExportCSV={exportCsv}
         onExportPNG={exportPng}
         exportDisabled={!dwellDurations.length}
-        disablePerCamera
+        disablePerCamera={!hasCameraData}
+        showGranularity={false}
+        showSegments={false}
+        showSeries={false}
+        showScope={hasCameraData}
         actions={
           <div className="vrm-toggle-group" role="group" aria-label="Highlight lines">
             <label className="vrm-toggle-checkbox">

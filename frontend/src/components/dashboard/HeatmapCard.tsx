@@ -29,8 +29,8 @@ interface HeatmapCardProps {
 const formatHour = (hour: number) => `${hour.toString().padStart(2, '0')}:00`;
 
 const HeatmapCard: React.FC<HeatmapCardProps> = ({ data, intelligence }) => {
-  const cardId = 'dashboard-heatmap';
-  const routeKey = 'dashboard';
+  const cardId = 'analytics-heatmap';
+  const routeKey = 'analytics';
   const globalControls = useGlobalControls();
   const {
     state: controls,
@@ -102,6 +102,7 @@ const HeatmapCard: React.FC<HeatmapCardProps> = ({ data, intelligence }) => {
   const [selected, setSelected] = useState<HeatmapCell | null>(null);
 
   const chartDomId = useMemo(() => generateChartId(`${cardId}-heatmap`), []);
+  const hasCameraData = useMemo(() => data.some(item => item.camera_id != null), [data]);
 
   const exportCsv = () => {
     const rows = cells.map(cell => ({
@@ -162,7 +163,11 @@ const HeatmapCard: React.FC<HeatmapCardProps> = ({ data, intelligence }) => {
         onExportCSV={exportCsv}
         onExportPNG={exportPng}
         exportDisabled={!cells.some(cell => cell.samples > 0)}
-        disablePerCamera
+        disablePerCamera={!hasCameraData}
+        showGranularity={false}
+        showSegments={false}
+        showSeries={false}
+        showScope={hasCameraData}
       />
       <div className="vrm-card-body vrm-card-body--stacked">
         <div className="vrm-heatmap">

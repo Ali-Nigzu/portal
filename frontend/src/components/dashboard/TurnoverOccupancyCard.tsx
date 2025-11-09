@@ -24,8 +24,8 @@ interface TurnoverOccupancyCardProps {
 }
 
 const TurnoverOccupancyCard: React.FC<TurnoverOccupancyCardProps> = ({ data, intelligence }) => {
-  const cardId = 'dashboard-turnover';
-  const routeKey = 'dashboard';
+  const cardId = 'analytics-turnover';
+  const routeKey = 'analytics';
   const {
     state: controls,
     isSynced,
@@ -59,6 +59,7 @@ const TurnoverOccupancyCard: React.FC<TurnoverOccupancyCardProps> = ({ data, int
   );
 
   const chartDomId = useMemo(() => generateChartId(`${cardId}-combo`), []);
+  const hasCameraData = useMemo(() => data.some(item => item.camera_id != null), [data]);
 
   const exportCsv = () => {
     const rows = decoratedSeries.map(point => ({
@@ -92,7 +93,9 @@ const TurnoverOccupancyCard: React.FC<TurnoverOccupancyCardProps> = ({ data, int
         onExportCSV={exportCsv}
         onExportPNG={exportPng}
         exportDisabled={!decoratedSeries.length}
-        disablePerCamera
+        disablePerCamera={!hasCameraData}
+        showSegments={false}
+        showScope={hasCameraData}
         seriesConfig={[
           { key: 'occupancy', label: 'Occupancy', color: 'var(--vrm-color-accent-occupancy)' },
           { key: 'turnover', label: 'Turnover', color: 'var(--vrm-color-accent-exits)' },

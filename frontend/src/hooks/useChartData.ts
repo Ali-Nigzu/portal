@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ChartData } from '../utils/dataProcessing';
+import { ChartData, MAX_SESSION_WINDOW_MINUTES } from '../utils/dataProcessing';
 import { GranularityOption, IntelligencePayload } from '../types/analytics';
 
 type CanonicalGranularity = '5m' | '15m' | 'hour' | 'day' | 'week';
@@ -14,6 +14,9 @@ export interface NormalizedChartPoint {
   bucketMinutes: number;
   hourOfDay?: number;
   zScore?: number;
+  dwellMean: number;
+  dwellP90: number;
+  uniqueTracks: number;
 }
 
 export interface UseChartDataResult {
@@ -131,15 +134,22 @@ const bucketMinutesForGranularity = (granularity: CanonicalGranularity): number 
   }
 };
 
+interface BucketAccumulator extends NormalizedChartPoint {
+  startDate: Date;
+  dwellTotal: number;
+  dwellSamples: number;
+  dwellValues: number[];
+  trackIds: Set<number>;
+}
+
 const buildSeriesForGranularity = (
   sortedEvents: ChartData[],
   activeCanonical: CanonicalGranularity,
 ): NormalizedChartPoint[] => {
+  const activeEntries = new Map<number, Date>();
   const bucketsMap = new Map<
     string,
-    NormalizedChartPoint & {
-      startDate: Date;
-    }
+    BucketAccumulator
   >();
 
   sortedEvents.forEach(item => {
@@ -163,15 +173,36 @@ const buildSeriesForGranularity = (
         hourOfDay: activeCanonical === 'hour' ? bucketStart.getHours() : undefined,
         zScore: 0,
         startDate: bucketStart,
+        dwellMean: 0,
+        dwellP90: 0,
+        dwellTotal: 0,
+        dwellSamples: 0,
+        dwellValues: [],
+        uniqueTracks: 0,
+        trackIds: new Set<number>(),
       });
     }
 
     const bucket = bucketsMap.get(bucketKey)!;
     bucket.activity += 1;
+    if (Number.isFinite(item.track_number)) {
+      bucket.trackIds.add(item.track_number);
+    }
     if (item.event === 'entry') {
       bucket.entries += 1;
+      activeEntries.set(item.track_number, eventTime);
     } else if (item.event === 'exit') {
       bucket.exits += 1;
+      const entryTime = activeEntries.get(item.track_number);
+      if (entryTime) {
+        const dwellMinutes = (eventTime.getTime() - entryTime.getTime()) / (1000 * 60);
+        if (dwellMinutes >= 0 && dwellMinutes <= MAX_SESSION_WINDOW_MINUTES) {
+          bucket.dwellTotal += dwellMinutes;
+          bucket.dwellSamples += 1;
+          bucket.dwellValues.push(dwellMinutes);
+        }
+        activeEntries.delete(item.track_number);
+      }
     }
   });
 
@@ -183,6 +214,15 @@ const buildSeriesForGranularity = (
   series.forEach(point => {
     runningOccupancy += point.entries - point.exits;
     point.occupancy = Math.max(0, runningOccupancy);
+    point.uniqueTracks = point.trackIds.size;
+    point.dwellMean = point.dwellSamples > 0 ? point.dwellTotal / point.dwellSamples : 0;
+    if (point.dwellValues.length) {
+      const sorted = [...point.dwellValues].sort((a, b) => a - b);
+      const idx = Math.min(sorted.length - 1, Math.round(0.9 * (sorted.length - 1)));
+      point.dwellP90 = sorted[idx];
+    } else {
+      point.dwellP90 = 0;
+    }
   });
 
   const activityValues = series.map(point => point.activity);
@@ -202,7 +242,20 @@ const buildSeriesForGranularity = (
     }
   });
 
-  return series;
+  return series.map(point => ({
+    label: point.label,
+    bucketStart: point.bucketStart,
+    entries: point.entries,
+    exits: point.exits,
+    activity: point.activity,
+    occupancy: point.occupancy,
+    bucketMinutes: point.bucketMinutes,
+    hourOfDay: point.hourOfDay,
+    zScore: point.zScore,
+    dwellMean: point.dwellMean,
+    dwellP90: point.dwellP90,
+    uniqueTracks: point.uniqueTracks,
+  }));
 };
 
 export const computeChartSeries = (
