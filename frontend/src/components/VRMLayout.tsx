@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import HeaderStatusStrip from './HeaderStatusStrip';
-import GlobalToolbar from './GlobalToolbar';
 import '../styles/VRMTheme.css';
 
 interface VRMLayoutProps {
@@ -247,7 +246,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
           </header>
 
           <HeaderStatusStrip />
-          <GlobalToolbar />
         </div>
 
         {/* Page Content */}

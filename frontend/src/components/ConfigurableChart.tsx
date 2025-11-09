@@ -208,9 +208,10 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
     if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
       return null;
     }
+    const inclusiveEnd = new Date(toDate.getTime() + (endPoint.bucketMinutes ?? 0) * 60 * 1000);
     return {
-      from: fromDate.toISOString().slice(0, 10),
-      to: toDate.toISOString().slice(0, 10),
+      from: fromDate.toISOString(),
+      to: inclusiveEnd.toISOString(),
       label: `${startPoint.label} → ${endPoint.label}`,
     };
   };

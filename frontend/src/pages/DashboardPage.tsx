@@ -1,18 +1,25 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ConfigurableChart from '../components/ConfigurableChart';
 import KPITile from '../components/KPITile';
+import HeatmapCard from '../components/dashboard/HeatmapCard';
+import GenderBreakdownCard from '../components/dashboard/GenderBreakdownCard';
+import AgeBandsCard from '../components/dashboard/AgeBandsCard';
+import DwellHistogramCard from '../components/dashboard/DwellHistogramCard';
+import TurnoverOccupancyCard from '../components/dashboard/TurnoverOccupancyCard';
+import InsightRail, { InsightItem } from '../components/InsightRail';
 import { API_ENDPOINTS } from '../config';
 import {
+  ChartData,
   calculateAverageDwellTime,
   calculateCurrentOccupancy,
-  ChartData,
+  calculateDwellDurations,
   formatDuration,
 } from '../utils/dataProcessing';
-import { useChartData } from '../hooks/useChartData';
+import { computeChartSeries } from '../hooks/useChartData';
 import { IntelligencePayload } from '../types/analytics';
-import InsightRail, { InsightItem } from '../components/InsightRail';
 import { useGlobalControls } from '../context/GlobalControlsContext';
-import { filterDataByControls } from '../utils/rangeUtils';
+import { filterDataByControls, getDateRangeFromPreset } from '../utils/rangeUtils';
 import { CardControlState } from '../hooks/useCardControls';
 import { InteractionProvider } from '../context/InteractionContext';
 
@@ -33,14 +40,6 @@ interface ApiResponse {
 interface DashboardPageProps {
   credentials: { username: string; password: string };
 }
-
-const GRANULARITY_MINUTES: Record<string, number> = {
-  '5m': 5,
-  '15m': 15,
-  hour: 60,
-  day: 60 * 24,
-  week: 60 * 24 * 7,
-};
 
 const buildGlobalCardState = (global: ReturnType<typeof useGlobalControls>): CardControlState => ({
   rangePreset: global.rangePreset,
@@ -67,11 +66,22 @@ const formatDelta = (current: number, previous: number) => {
   };
 };
 
+const percentile = (values: number[], ratio: number) => {
+  if (!values.length) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.round(ratio * (sorted.length - 1)));
+  return sorted[index];
+};
+
 const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flowControlsState, setFlowControlsState] = useState<CardControlState | null>(null);
   const globalControls = useGlobalControls();
+  const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
     try {
@@ -122,34 +132,39 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const intelligence = data?.intelligence ?? null;
   const summary = data?.summary;
 
-  const globalCardState = useMemo(() => buildGlobalCardState(globalControls), [globalControls]);
-  const filteredForKpis = useMemo(
-    () => filterDataByControls(dataset, globalCardState),
-    [dataset, globalCardState],
+  const globalDefaults = useMemo(() => buildGlobalCardState(globalControls), [globalControls]);
+  const activeFlowControls = flowControlsState ?? globalDefaults;
+
+  const flowFiltered = useMemo(
+    () => filterDataByControls(dataset, activeFlowControls),
+    [dataset, activeFlowControls],
   );
 
-  const {
-    series: kpiSeries,
-    activeGranularity: kpiGranularity,
-    totalActivity: totalActivityInRange,
-  } = useChartData(filteredForKpis, globalControls.granularity, intelligence);
+  const flowSeriesData = useMemo(
+    () => computeChartSeries(flowFiltered, activeFlowControls.granularity, intelligence),
+    [flowFiltered, activeFlowControls.granularity, intelligence],
+  );
 
-  const latestOccupancyPoint = kpiSeries[kpiSeries.length - 1];
-  const previousOccupancyPoint = kpiSeries[kpiSeries.length - 2];
+  const bucketMinutes = flowSeriesData.series[0]?.bucketMinutes ?? 60;
+  const throughputSeries = flowSeriesData.series.map(point =>
+    point.bucketMinutes > 0 ? point.activity / point.bucketMinutes : 0,
+  );
+  const throughput95th = percentile(throughputSeries, 0.95);
 
-  const liveOccupancy = latestOccupancyPoint
-    ? latestOccupancyPoint.occupancy
-    : calculateCurrentOccupancy(filteredForKpis);
-  const previousOccupancy = previousOccupancyPoint?.occupancy ?? liveOccupancy;
+  const latestPoint = flowSeriesData.series[flowSeriesData.series.length - 1];
+  const previousPoint = flowSeriesData.series[flowSeriesData.series.length - 2];
 
-  const minutesPerBucket = GRANULARITY_MINUTES[kpiGranularity] ?? 60;
-  const throughput = latestOccupancyPoint ? latestOccupancyPoint.activity / minutesPerBucket : 0;
-  const previousThroughput = previousOccupancyPoint
-    ? previousOccupancyPoint.activity / minutesPerBucket
+  const liveOccupancy = latestPoint
+    ? latestPoint.occupancy
+    : calculateCurrentOccupancy(flowFiltered);
+  const previousOccupancy = previousPoint?.occupancy ?? liveOccupancy;
+
+  const throughput = latestPoint ? throughputSeries[throughputSeries.length - 1] : 0;
+  const previousThroughput = throughputSeries.length > 1
+    ? throughputSeries[throughputSeries.length - 2]
     : throughput;
 
-  const throughputSparkline = kpiSeries.map(point => point.activity / minutesPerBucket);
-  const occupancySparkline = kpiSeries.map(point => point.occupancy);
+  const occupancySparkline = flowSeriesData.series.map(point => point.occupancy);
 
   const now = new Date();
   const todayStart = new Date(now);
@@ -165,13 +180,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     return timestamp >= todayStart && timestamp <= now && item.event === 'exit';
   }).length;
 
-  const avgDwellMinutes = intelligence?.avg_dwell_minutes ?? calculateAverageDwellTime(filteredForKpis);
+  const avgDwellMinutes = calculateAverageDwellTime(flowFiltered);
+  const dwellDurations = useMemo(() => calculateDwellDurations(flowFiltered), [flowFiltered]);
+  const dwellMedian = percentile(dwellDurations, 0.5);
+  const dwellP90 = percentile(dwellDurations, 0.9);
   const dwellDisplay = avgDwellMinutes > 0 ? formatDuration(avgDwellMinutes) : '—';
 
   const latestEventTimestamp = summary?.latest_timestamp
     ? new Date(summary.latest_timestamp)
-    : filteredForKpis.length
-    ? new Date(filteredForKpis[filteredForKpis.length - 1].timestamp)
+    : flowFiltered.length
+    ? new Date(flowFiltered[flowFiltered.length - 1].timestamp)
     : null;
   const freshnessMinutes = latestEventTimestamp
     ? Math.max(0, (now.getTime() - latestEventTimestamp.getTime()) / (1000 * 60))
@@ -188,124 +206,185 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     ? `Updated ${freshnessMinutes < 1 ? '<1' : Math.round(freshnessMinutes)}m ago`
     : 'No events in range';
 
+  const range = getDateRangeFromPreset(activeFlowControls.rangePreset, activeFlowControls.customRange);
+  const rangeMinutes = Math.max(1, (range.to.getTime() - range.from.getTime()) / (1000 * 60));
+  const expectedBuckets = Math.max(1, Math.round(rangeMinutes / bucketMinutes));
+  const coveragePercent = Math.min(100, (flowSeriesData.series.length / expectedBuckets) * 100);
+
+  const topBuckets = [...flowSeriesData.series]
+    .sort((a, b) => b.activity - a.activity)
+    .slice(0, 3);
+
+  const busiestBucket = flowSeriesData.series.reduce(
+    (max, point) => (point.occupancy > max.occupancy ? point : max),
+    flowSeriesData.series[0] ?? { occupancy: 0, label: '', bucketStart: '', bucketMinutes: bucketMinutes },
+  );
+
+    const applyRangeToAll = useCallback(
+      (bucketStart: string, bucketDuration: number) => {
+        const startDate = new Date(bucketStart);
+        if (Number.isNaN(startDate.getTime())) {
+          return;
+        }
+        const endDate = new Date(startDate.getTime() + bucketDuration * 60 * 1000);
+        const newRange = { from: startDate.toISOString(), to: endDate.toISOString() };
+        globalControls.setRangePreset('custom');
+        globalControls.setCustomRange(newRange);
+        setFlowControlsState(prev => ({
+          ...(prev ?? globalDefaults),
+          rangePreset: 'custom',
+          customRange: newRange,
+        }));
+      },
+      [globalControls, globalDefaults],
+    );
+
+  const insightItems: InsightItem[] = useMemo(() => {
+    const items: InsightItem[] = [];
+
+    if (topBuckets.length) {
+      items.push({
+        id: 'peak-windows',
+        title: 'Peak windows detected',
+        description: topBuckets
+          .map(bucket => `${bucket.label} · ${bucket.activity.toLocaleString()} events`)
+          .join(' \u2022 '),
+        tone: 'info',
+        action: topBuckets.length
+          ? {
+              label: 'Zoom',
+              onClick: () => applyRangeToAll(topBuckets[0].bucketStart, topBuckets[0].bucketMinutes),
+            }
+          : undefined,
+      });
+    }
+
+    items.push({
+      id: 'coverage',
+      title: 'Coverage quality',
+      description: `Data covers ${coveragePercent.toFixed(1)}% of the expected window`,
+      tone: coveragePercent < 80 ? 'warning' : 'success',
+      action: {
+        label: 'Open device list',
+        href: '/device-list',
+      },
+    });
+
+    items.push({
+      id: 'dwell-anomaly',
+      title: 'Dwell anomaly',
+      description:
+        dwellDurations.length > 0
+          ? `P90 dwell ${dwellP90.toFixed(1)}m (${(dwellP90 - dwellMedian).toFixed(1)}m vs median)`
+          : 'Not enough matched sessions',
+      tone: dwellP90 - dwellMedian > 10 ? 'warning' : 'info',
+      action: {
+        label: 'Open event logs',
+        href: '/event-logs',
+      },
+    });
+
+    items.push({
+      id: 'staffing-hint',
+      title: 'Staffing hint',
+      description:
+        busiestBucket && busiestBucket.label
+          ? `Forecast occupancy ${Math.round(busiestBucket.occupancy)} near ${busiestBucket.label}`
+          : 'Insufficient data for staffing guidance',
+      tone: busiestBucket.occupancy > 120 ? 'warning' : 'info',
+      action: {
+        label: 'Create alarm rule',
+        href: '/alarm-logs',
+      },
+    });
+
+    return items;
+  }, [
+    topBuckets,
+    coveragePercent,
+    dwellDurations.length,
+    dwellP90,
+    dwellMedian,
+    busiestBucket,
+    applyRangeToAll,
+  ]);
+
   const kpiTiles = [
     {
+      key: 'live-occupancy',
       title: 'Live occupancy',
       value: liveOccupancy.toLocaleString(),
       delta: formatDelta(liveOccupancy, previousOccupancy),
       sparkline: occupancySparkline,
       color: 'var(--vrm-color-accent-occupancy)',
-      caption: `${occupancySparkline.length} buckets in view`,
+      caption: `${flowSeriesData.series.length.toLocaleString()} buckets in range`,
     },
     {
+      key: 'throughput',
       title: 'Throughput',
       value: throughput.toFixed(1),
       unit: 'events/min',
       delta: formatDelta(throughput, previousThroughput),
-      sparkline: throughputSparkline,
+      sparkline: throughputSeries,
       color: 'var(--vrm-color-accent-entrances)',
-      caption: `${totalActivityInRange.toLocaleString()} events in range`,
+      caption: `Total traffic ${flowSeriesData.totalActivity.toLocaleString()}`,
+      badgeLabel: throughput > throughput95th ? 'Surge' : undefined,
+      badgeTone: throughput > throughput95th ? ('warning' as const) : undefined,
     },
     {
+      key: 'entrances',
       title: 'Entrances today',
       value: todayEntries.toLocaleString(),
-      delta: { label: 'Daily total', trend: 'neutral' as const },
-      sparkline: kpiSeries.map(point => point.entries),
+      delta: { label: 'Local day total', trend: 'neutral' as const },
+      sparkline: [],
       color: 'var(--vrm-color-accent-entrances)',
-      caption: 'Local day window',
+      caption: 'Updates with local midnight',
     },
     {
+      key: 'exits',
       title: 'Exits today',
       value: todayExits.toLocaleString(),
-      delta: { label: 'Daily total', trend: 'neutral' as const },
-      sparkline: kpiSeries.map(point => point.exits),
+      delta: { label: 'Local day total', trend: 'neutral' as const },
+      sparkline: [],
       color: 'var(--vrm-color-accent-exits)',
-      caption: 'Local day window',
+      caption: 'Updates with local midnight',
     },
     {
+      key: 'avg-dwell',
       title: 'Avg dwell time',
       value: dwellDisplay,
-      delta: { label: 'vs. previous bucket', trend: 'neutral' as const },
-      sparkline: throughputSparkline,
+      delta: { label: `Median ${dwellMedian.toFixed(1)}m`, trend: 'neutral' as const },
+      sparkline: [],
       color: 'var(--vrm-color-accent-dwell)',
-      caption: 'Visitor stay duration',
+      caption: dwellDurations.length ? `P90 ${dwellP90.toFixed(1)}m` : 'No matched sessions',
     },
     {
+      key: 'freshness',
       title: 'Data freshness',
-      value:
-        freshnessStatus === 'ok'
-          ? 'OK'
-          : freshnessStatus === 'warning'
-          ? 'Warning'
-          : 'Stale',
+      value: freshnessStatus === 'ok' ? 'OK' : freshnessStatus === 'warning' ? 'Warning' : 'Stale',
       delta: { label: freshnessCaption, trend: 'neutral' as const },
       sparkline: [],
-      color: freshnessStatus === 'stale'
-        ? 'var(--vrm-color-accent-exits)'
-        : freshnessStatus === 'warning'
-        ? 'var(--vrm-color-accent-dwell)'
-        : 'var(--vrm-color-accent-entrances)',
-      caption: summary?.latest_timestamp ? new Date(summary.latest_timestamp).toLocaleString() : 'No recent events',
+      color:
+        freshnessStatus === 'stale'
+          ? 'var(--vrm-color-accent-exits)'
+          : freshnessStatus === 'warning'
+          ? 'var(--vrm-color-accent-dwell)'
+          : 'var(--vrm-color-accent-entrances)',
+      caption: summary?.latest_timestamp
+        ? new Date(summary.latest_timestamp).toLocaleString()
+        : 'No recent events',
     },
     {
+      key: 'alarms',
       title: 'Active alarms',
       value: '0',
-      delta: { label: 'No active alerts', trend: 'neutral' as const },
+      delta: { label: 'High/Med/Low: 0 / 0 / 0', trend: 'neutral' as const },
       sparkline: [],
       color: 'var(--vrm-color-accent-exits)',
-      caption: 'Alarm integration pending',
+      caption: 'Tap to review alarm rules',
+      onClick: () => navigate('/alarm-logs'),
     },
   ];
-
-  const insightItems: InsightItem[] = useMemo(() => {
-    if (!intelligence || !kpiSeries.length) {
-      return [];
-    }
-
-    const insights: InsightItem[] = [];
-    const maxOccupancyPoint = kpiSeries.reduce((max, point) =>
-      point.occupancy > max.occupancy ? point : max,
-    kpiSeries[0]);
-
-    insights.push({
-      id: 'max-occupancy',
-      title: 'Occupancy apex',
-      description: `Peak occupancy reached ${maxOccupancyPoint.occupancy.toLocaleString()} during ${maxOccupancyPoint.label}.`,
-      tone: maxOccupancyPoint.occupancy > liveOccupancy * 1.5 ? 'warning' : 'info',
-    });
-
-    if (intelligence.peak_hours && intelligence.peak_hours.length) {
-      const formatted = intelligence.peak_hours
-        .map(hour => `${hour.toString().padStart(2, '0')}:00`)
-        .join(', ');
-      insights.push({
-        id: 'peak-hours',
-        title: 'Peak hours identified',
-        description: `Highest throughput observed around ${formatted}.`,
-      });
-    }
-
-    if (avgDwellMinutes > 0) {
-      insights.push({
-        id: 'avg-dwell',
-        title: 'Average dwell time',
-        description: `Visitors spend approximately ${avgDwellMinutes.toFixed(1)} minutes on-site.`,
-        tone: avgDwellMinutes > 60 ? 'warning' : 'info',
-      });
-    }
-
-    const spanDays = intelligence.date_span_days ?? 0;
-    if (spanDays > 0 || totalActivityInRange > 0) {
-      insights.push({
-        id: 'coverage-window',
-        title: 'Coverage window',
-        description: `Dataset spans ${spanDays} day${spanDays === 1 ? '' : 's'} with ${totalActivityInRange.toLocaleString()} events.`,
-        tone: spanDays >= 30 ? 'success' : 'info',
-      });
-    }
-
-    return insights;
-  }, [intelligence, kpiSeries, liveOccupancy, avgDwellMinutes, totalActivityInRange]);
 
   if (loading) {
     return (
@@ -347,10 +426,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
         </div>
 
         <section className="vrm-section">
-          <div className="vrm-grid vrm-grid-4">
+          <div className="vrm-kpi-grid">
             {kpiTiles.map(tile => (
               <KPITile
-                key={tile.title}
+                key={tile.key}
                 title={tile.title}
                 value={tile.value}
                 unit={tile.unit}
@@ -359,6 +438,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
                 sparklineData={tile.sparkline}
                 color={tile.color}
                 caption={tile.caption}
+                badgeLabel={tile.badgeLabel}
+                badgeTone={tile.badgeTone}
+                onClick={tile.onClick}
               />
             ))}
           </div>
@@ -372,7 +454,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
             subtitle="Occupancy, entrances, and exits across the selected window"
             data={dataset}
             intelligence={intelligence}
+            onControlsChange={setFlowControlsState}
           />
+        </section>
+
+        <section className="vrm-section">
+          <div className="vrm-grid vrm-grid-3">
+            <HeatmapCard data={dataset} intelligence={intelligence} />
+            <GenderBreakdownCard data={dataset} intelligence={intelligence} />
+            <AgeBandsCard data={dataset} intelligence={intelligence} />
+            <DwellHistogramCard data={dataset} intelligence={intelligence} />
+            <TurnoverOccupancyCard data={dataset} intelligence={intelligence} />
+          </div>
         </section>
 
         <section className="vrm-section">

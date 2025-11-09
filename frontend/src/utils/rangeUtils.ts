@@ -128,7 +128,13 @@ export const getRangeFromPreset = (preset: RangePreset, custom?: { from?: string
       return clampRange({ from: new Date(now.getTime() - 48 * 60 * 60 * 1000), to: now });
     case 'custom': {
       if (custom?.from && custom?.to) {
-        return clampRange({ from: new Date(custom.from), to: endOfDay(new Date(custom.to)) });
+        const fromDate = new Date(custom.from);
+        const toDate = new Date(custom.to);
+        if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+          return clampRange({ from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), to: now });
+        }
+        const hasExplicitTime = custom.from.includes('T') || custom.to.includes('T');
+        return clampRange({ from: fromDate, to: hasExplicitTime ? toDate : endOfDay(toDate) });
       }
       return clampRange({ from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), to: now });
     }

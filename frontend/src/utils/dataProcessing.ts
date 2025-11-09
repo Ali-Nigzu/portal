@@ -19,6 +19,8 @@ export interface VisitorSession {
   dwellTime?: number; // in minutes
 }
 
+const MAX_SESSION_WINDOW_MINUTES = 6 * 60;
+
 // Filter data based on time selection
 export const filterDataByTime = (data: ChartData[], timeFilter: TimeFilterValue): ChartData[] => {
   if (timeFilter.option === 'alltime') {
@@ -58,61 +60,48 @@ export const filterDataByTime = (data: ChartData[], timeFilter: TimeFilterValue)
 };
 
 // Calculate visitor sessions with dwell times
-export const calculateVisitorSessions = (data: ChartData[]): VisitorSession[] => {
-  const sessions: Map<number, VisitorSession> = new Map();
+export const calculateDwellDurations = (data: ChartData[]): number[] => {
+  const sorted = [...data].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
 
-  // Group events by track_number
-  data.forEach(item => {
-    const trackNumber = item.track_number;
-    
-    if (!sessions.has(trackNumber)) {
-      sessions.set(trackNumber, { track_number: trackNumber });
+  const activeEntries = new Map<number, Date>();
+  const dwells: number[] = [];
+
+  sorted.forEach(item => {
+    const eventTime = new Date(item.timestamp);
+    if (Number.isNaN(eventTime.getTime())) {
+      return;
     }
-    
-    const session = sessions.get(trackNumber)!;
-    
+
     if (item.event === 'entry') {
-      if (!session.entryTime || new Date(item.timestamp) < new Date(session.entryTime)) {
-        session.entryTime = item.timestamp;
-      }
-    } else if (item.event === 'exit') {
-      if (!session.exitTime || new Date(item.timestamp) > new Date(session.exitTime)) {
-        session.exitTime = item.timestamp;
+      activeEntries.set(item.track_number, eventTime);
+      return;
+    }
+
+    if (item.event === 'exit') {
+      const entry = activeEntries.get(item.track_number);
+      if (entry) {
+        const dwellMinutes = (eventTime.getTime() - entry.getTime()) / (1000 * 60);
+        if (dwellMinutes >= 0 && dwellMinutes <= MAX_SESSION_WINDOW_MINUTES) {
+          dwells.push(dwellMinutes);
+        }
+        activeEntries.delete(item.track_number);
       }
     }
   });
 
-  // Calculate dwell times for sessions with both entry and exit
-  const sessionsArray = Array.from(sessions.values());
-  
-  sessionsArray.forEach(session => {
-    if (session.entryTime && session.exitTime) {
-      const entryDate = new Date(session.entryTime);
-      const exitDate = new Date(session.exitTime);
-      const dwellTimeMs = exitDate.getTime() - entryDate.getTime();
-      session.dwellTime = dwellTimeMs / (1000 * 60); // Convert to minutes
-    }
-  });
-
-  return sessionsArray;
+  return dwells;
 };
 
 // Calculate average dwell time using the formula: Σ(Exit Time - Entry Time) / n
 export const calculateAverageDwellTime = (data: ChartData[]): number => {
-  const sessions = calculateVisitorSessions(data);
-  
-  // Filter sessions that have both entry and exit times
-  const completeSessions = sessions.filter(session => 
-    session.entryTime && session.exitTime && session.dwellTime !== undefined
-  );
-
-  if (completeSessions.length === 0) {
+  const durations = calculateDwellDurations(data);
+  if (!durations.length) {
     return 0;
   }
-
-  // Sum all dwell times and divide by number of complete sessions
-  const totalDwellTime = completeSessions.reduce((sum, session) => sum + (session.dwellTime || 0), 0);
-  return totalDwellTime / completeSessions.length;
+  const totalDwellTime = durations.reduce((sum, value) => sum + value, 0);
+  return totalDwellTime / durations.length;
 };
 
 // Calculate current occupancy (live count)
@@ -147,23 +136,24 @@ export const calculateOccupancyTimeSeries = (data: ChartData[]): { timestamp: st
 };
 
 // Calculate dwell time distribution for analytics
-export const calculateDwellTimeDistribution = (data: ChartData[]): { range: string, count: number }[] => {
-  const sessions = calculateVisitorSessions(data);
-  const completeSessions = sessions.filter(session => session.dwellTime !== undefined);
-  
+export const calculateDwellTimeDistribution = (
+  data: ChartData[],
+): { range: string; count: number }[] => {
+  const durations = calculateDwellDurations(data);
   const ranges = [
-    { min: 0, max: 5, label: '0-5 min' },
-    { min: 5, max: 15, label: '5-15 min' },
-    { min: 15, max: 30, label: '15-30 min' },
-    { min: 30, max: 60, label: '30-60 min' },
-    { min: 60, max: Infinity, label: '60+ min' }
+    { min: 0, max: 5, label: '0-5' },
+    { min: 5, max: 10, label: '5-10' },
+    { min: 10, max: 15, label: '10-15' },
+    { min: 15, max: 20, label: '15-20' },
+    { min: 20, max: 30, label: '20-30' },
+    { min: 30, max: 45, label: '30-45' },
+    { min: 45, max: 60, label: '45-60' },
+    { min: 60, max: Infinity, label: '60+' },
   ];
-  
+
   return ranges.map(range => ({
     range: range.label,
-    count: completeSessions.filter(session => 
-      session.dwellTime! >= range.min && session.dwellTime! < range.max
-    ).length
+    count: durations.filter(duration => duration >= range.min && duration < range.max).length,
   }));
 };
 

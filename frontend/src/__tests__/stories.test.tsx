@@ -6,7 +6,6 @@ import { applyDesignTokens } from '../styles/designTokens';
 import { GlobalControlsProvider } from '../context/GlobalControlsContext';
 
 import * as AppShellStories from '../stories/AppShell.stories';
-import * as GlobalToolbarStories from '../stories/GlobalToolbar.stories';
 import * as HeaderStatusStripStories from '../stories/HeaderStatusStrip.stories';
 import * as CardStories from '../stories/Card.stories';
 
@@ -35,7 +34,6 @@ describe('Storybook design baselines', () => {
 
   const storyModules = [
     composeStories(AppShellStories),
-    composeStories(GlobalToolbarStories),
     composeStories(HeaderStatusStripStories),
     composeStories(CardStories),
   ];
