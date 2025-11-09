@@ -45,6 +45,7 @@ interface ConfigurableChartProps {
   data: ChartData[];
   intelligence?: IntelligencePayload | null;
   onControlsChange?: (state: CardControlState) => void;
+  isLoading?: boolean;
 }
 
 const SERIES_DEFINITIONS: SeriesDefinition[] = [
@@ -59,6 +60,7 @@ const SERIES_ORDER: (keyof NormalizedChartPoint | 'activity' | 'comparison_activ
   'exits',
   'activity',
   'occupancy',
+  'dwellMean',
   'comparison_activity',
   'comparison_occupancy',
 ];
@@ -114,9 +116,9 @@ const renderTooltip = (
   }
 
   const ordered = [...payload].sort((a, b) => {
-    const aIndex = SERIES_ORDER.indexOf((a.dataKey as keyof NormalizedChartPoint) ?? 'activity');
-    const bIndex = SERIES_ORDER.indexOf((b.dataKey as keyof NormalizedChartPoint) ?? 'activity');
-    return aIndex - bIndex;
+    const aKey = (a.dataKey as keyof NormalizedChartPoint) ?? 'activity';
+    const bKey = (b.dataKey as keyof NormalizedChartPoint) ?? 'activity';
+    return SERIES_ORDER.indexOf(aKey) - SERIES_ORDER.indexOf(bKey);
   });
 
   const subtitle = segments.length
@@ -135,7 +137,11 @@ const renderTooltip = (
           <li key={`${item.dataKey}-${item.value}`} className="vrm-tooltip-item">
             <span className="vrm-tooltip-dot" style={{ backgroundColor: item.color ?? 'var(--vrm-text-secondary)' }} />
             <span className="vrm-tooltip-label">{item.name}</span>
-            <span className="vrm-tooltip-value">{formatTooltipValue(item.value)}</span>
+            <span className="vrm-tooltip-value">
+              {String(item.dataKey) === 'dwellMean' && typeof item.value === 'number'
+                ? `${item.value.toFixed(1)} min`
+                : formatTooltipValue(item.value)}
+            </span>
           </li>
         ))}
       </ul>
@@ -151,6 +157,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   data,
   intelligence,
   onControlsChange,
+  isLoading = false,
 }) => {
   const chartDomId = useMemo(() => generateChartId(`${cardId}-chart`), [cardId]);
   const { syncId } = useInteractionContext();
@@ -298,7 +305,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
     setBrushSelection(null);
   };
 
-  const handleApplyToPage = () => {
+  const handleApplyToAll = () => {
     if (!selectionRange) {
       return;
     }
@@ -328,6 +335,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
         exits: point.exits,
         total_activity: point.activity,
         occupancy: point.occupancy,
+        dwell_mean: Number.isFinite(point.dwellMean) ? Number(point.dwellMean.toFixed(2)) : null,
         surge_flag: highlightBuckets.includes(point.label) ? 1 : 0,
         comparison_entrances: point.comparison_entries ?? undefined,
         comparison_exits: point.comparison_exits ?? undefined,
@@ -373,6 +381,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
         showScope={hasCameraData}
         showSegments={availableSegments.length > 0}
         availableSegments={availableSegments}
+        isLoading={isLoading}
       />
       <div className="vrm-card-body vrm-card-body--stacked">
         <div className="vrm-chart-wrapper">
@@ -438,6 +447,16 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   opacity={0.5}
                 />
               )}
+              <Line
+                type="monotone"
+                dataKey="dwellMean"
+                stroke="var(--vrm-color-accent-dwell)"
+                strokeOpacity={0}
+                dot={false}
+                activeDot={false}
+                name="Avg dwell (min)"
+                legendType="none"
+              />
               {hasComparison && (
                 <Line
                   type="monotone"
@@ -494,8 +513,8 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
               <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleZoomToSelection}>
                 Zoom to selection
               </button>
-              <button type="button" className="vrm-btn vrm-btn-sm" onClick={handleApplyToPage}>
-                Apply to page
+              <button type="button" className="vrm-btn vrm-btn-sm" onClick={handleApplyToAll}>
+                Apply to all cards
               </button>
             </div>
           </div>

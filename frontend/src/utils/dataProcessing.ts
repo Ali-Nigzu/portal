@@ -21,7 +21,7 @@ export interface VisitorSession {
   dwellTime?: number; // in minutes
 }
 
-const MAX_SESSION_WINDOW_MINUTES = 6 * 60;
+export const MAX_SESSION_WINDOW_MINUTES = 6 * 60;
 
 // Filter data based on time selection
 export const filterDataByTime = (data: ChartData[], timeFilter: TimeFilterValue): ChartData[] => {

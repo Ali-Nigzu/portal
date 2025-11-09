@@ -433,6 +433,7 @@ const CardControlHeader: React.FC<CardControlHeaderProps> = ({
                 type="button"
                 className={`vrm-toolbar-chip ${visibleSeries[series.key] ? 'active' : ''}`}
                 onClick={() => onToggleSeries(series.key)}
+                disabled={isLoading}
                 style={visibleSeries[series.key] ? { borderColor: series.color, color: series.color } : undefined}
               >
                 {series.label}
