@@ -652,6 +652,36 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   yAxisId="people"
                 />
               )}
+              <Line
+                type="monotone"
+                dataKey="dwellMean"
+                stroke="var(--vrm-color-accent-dwell)"
+                strokeOpacity={0}
+                dot={false}
+                activeDot={false}
+                name="Avg dwell (min)"
+                legendType="none"
+              />
+              {hasComparison && (
+                <Line
+                  type="monotone"
+                  dataKey="comparison_activity"
+                  stroke="var(--vrm-color-accent-dwell)"
+                  strokeDasharray="4 4"
+                  name="Activity (comparison)"
+                  dot={false}
+                />
+              )}
+              {hasComparison && (
+                <Line
+                  type="monotone"
+                  dataKey="comparison_occupancy"
+                  stroke="var(--vrm-color-accent-occupancy)"
+                  strokeDasharray="4 4"
+                  name="Occupancy (comparison)"
+                  dot={false}
+                />
+              )}
               {averageOccupancy > 0 && (
                 <ReferenceLine
                   y={averageOccupancy}
