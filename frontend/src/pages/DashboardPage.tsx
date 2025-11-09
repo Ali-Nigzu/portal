@@ -155,12 +155,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
 
-  const todayEntries = filteredForKpis.filter(item => {
+  const todayEntries = dataset.filter(item => {
     const timestamp = new Date(item.timestamp);
     return timestamp >= todayStart && timestamp <= now && item.event === 'entry';
   }).length;
 
-  const todayExits = filteredForKpis.filter(item => {
+  const todayExits = dataset.filter(item => {
     const timestamp = new Date(item.timestamp);
     return timestamp >= todayStart && timestamp <= now && item.event === 'exit';
   }).length;

@@ -171,118 +171,143 @@ const sortGranularity = (granularity: GranularityOption): number => {
   return GRANULARITY_ORDER.indexOf(canonicalGranularity(granularity)) + 1;
 };
 
+const buildSeries = (
+  events: ChartData[],
+  activeCanonical: CanonicalGranularity,
+  intelligence?: IntelligencePayload | null,
+): Omit<UseChartDataResult, 'activeGranularity' | 'recommendedGranularity'> => {
+  if (!events.length) {
+    return {
+      series: [],
+      highlightBuckets: [],
+      averageOccupancy: 0,
+      totalActivity: 0,
+    };
+  }
+
+  const sortedEvents = [...events].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+
+  const bucketsMap = new Map<string, NormalizedChartPoint & { startDate: Date }>();
+
+  sortedEvents.forEach(item => {
+    const eventTime = new Date(item.timestamp);
+    if (Number.isNaN(eventTime.getTime())) {
+      return;
+    }
+
+    const bucketStart = getBucketStart(eventTime, activeCanonical);
+    const bucketKey = bucketStart.toISOString();
+
+    if (!bucketsMap.has(bucketKey)) {
+      bucketsMap.set(bucketKey, {
+        label: formatLabel(bucketStart, activeCanonical),
+        bucketStart: bucketStart.toISOString(),
+        entries: 0,
+        exits: 0,
+        activity: 0,
+        occupancy: 0,
+        hourOfDay: activeCanonical === 'hour' ? bucketStart.getHours() : undefined,
+        isPeak: false,
+        startDate: bucketStart,
+      });
+    }
+
+    const bucket = bucketsMap.get(bucketKey)!;
+    bucket.activity += 1;
+    if (item.event === 'entry') {
+      bucket.entries += 1;
+    } else if (item.event === 'exit') {
+      bucket.exits += 1;
+    }
+  });
+
+  const series: NormalizedChartPoint[] = Array.from(bucketsMap.values())
+    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
+    .map(bucket => ({
+      label: bucket.label,
+      bucketStart: bucket.bucketStart,
+      entries: bucket.entries,
+      exits: bucket.exits,
+      activity: bucket.activity,
+      occupancy: 0,
+      hourOfDay: bucket.hourOfDay,
+      isPeak: false,
+    }));
+
+  let runningOccupancy = 0;
+  series.forEach(point => {
+    runningOccupancy += point.entries - point.exits;
+    point.occupancy = Math.max(0, runningOccupancy);
+  });
+
+  const totalActivity = series.reduce((sum, point) => sum + point.activity, 0);
+  const averageOccupancy = series.length
+    ? series.reduce((sum, point) => sum + point.occupancy, 0) / series.length
+    : 0;
+
+  const highlightBucketsSet = new Set<string>();
+  if (intelligence?.peak_hours?.length && activeCanonical === 'hour') {
+    const peakSet = new Set(
+      intelligence.peak_hours.map(hour => Number(hour)).filter(hour => !Number.isNaN(hour)),
+    );
+    series.forEach(point => {
+      if (point.hourOfDay !== undefined && peakSet.has(point.hourOfDay)) {
+        point.isPeak = true;
+        highlightBucketsSet.add(point.label);
+      }
+    });
+  } else if (series.length) {
+    const maxActivity = Math.max(...series.map(point => point.activity));
+    series.forEach(point => {
+      if (point.activity === maxActivity) {
+        point.isPeak = true;
+        highlightBucketsSet.add(point.label);
+      }
+    });
+  }
+
+  return {
+    series,
+    highlightBuckets: Array.from(highlightBucketsSet),
+    averageOccupancy,
+    totalActivity,
+  };
+};
+
+export const computeChartSeries = (
+  data: ChartData[],
+  userGranularity: GranularityOption,
+  intelligence?: IntelligencePayload | null,
+): UseChartDataResult => {
+  const recommended = getRecommendedGranularity(data, intelligence);
+  const activeCanonical = userGranularity === 'auto' ? recommended : canonicalGranularity(userGranularity);
+  const { series, highlightBuckets, averageOccupancy, totalActivity } = buildSeries(
+    data,
+    activeCanonical,
+    intelligence,
+  );
+
+  return {
+    series,
+    activeGranularity: activeCanonical,
+    recommendedGranularity: recommended,
+    highlightBuckets,
+    averageOccupancy,
+    totalActivity,
+  };
+};
+
 export const useChartData = (
   data: ChartData[],
   userGranularity: GranularityOption,
-  intelligence?: IntelligencePayload | null
-): UseChartDataResult => {
-  return useMemo(() => {
-    const recommended = getRecommendedGranularity(data, intelligence);
-    const activeCanonical = userGranularity === 'auto' ? recommended : canonicalGranularity(userGranularity);
-
-    if (!data.length) {
-      return {
-        series: [],
-        activeGranularity: activeCanonical,
-        recommendedGranularity: recommended,
-        highlightBuckets: [],
-        averageOccupancy: 0,
-        totalActivity: 0
-      };
-    }
-
-    const sortedEvents = [...data].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-
-    const bucketsMap = new Map<string, NormalizedChartPoint & { startDate: Date }>();
-
-    sortedEvents.forEach(item => {
-      const eventTime = new Date(item.timestamp);
-      if (Number.isNaN(eventTime.getTime())) {
-        return;
-      }
-
-      const bucketStart = getBucketStart(eventTime, activeCanonical);
-      const bucketKey = bucketStart.toISOString();
-
-      if (!bucketsMap.has(bucketKey)) {
-        bucketsMap.set(bucketKey, {
-          label: formatLabel(bucketStart, activeCanonical),
-          bucketStart: bucketStart.toISOString(),
-          entries: 0,
-          exits: 0,
-          activity: 0,
-          occupancy: 0,
-          hourOfDay: activeCanonical === 'hour' ? bucketStart.getHours() : undefined,
-          startDate: bucketStart
-        });
-      }
-
-      const bucket = bucketsMap.get(bucketKey)!;
-      bucket.activity += 1;
-      if (item.event === 'entry') {
-        bucket.entries += 1;
-      } else if (item.event === 'exit') {
-        bucket.exits += 1;
-      }
-    });
-
-    const series: NormalizedChartPoint[] = Array.from(bucketsMap.values())
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-      .map(bucket => ({
-        label: bucket.label,
-        bucketStart: bucket.bucketStart,
-        entries: bucket.entries,
-        exits: bucket.exits,
-        activity: bucket.activity,
-        occupancy: 0,
-        hourOfDay: bucket.hourOfDay,
-        isPeak: false
-      }));
-
-    let runningOccupancy = 0;
-    series.forEach(point => {
-      runningOccupancy += point.entries - point.exits;
-      point.occupancy = Math.max(0, runningOccupancy);
-    });
-
-    const totalActivity = series.reduce((sum, point) => sum + point.activity, 0);
-    const averageOccupancy = series.length
-      ? series.reduce((sum, point) => sum + point.occupancy, 0) / series.length
-      : 0;
-
-    const highlightBucketsSet = new Set<string>();
-    if (intelligence?.peak_hours?.length && activeCanonical === 'hour') {
-      const peakSet = new Set(
-        intelligence.peak_hours.map(hour => Number(hour)).filter(hour => !Number.isNaN(hour))
-      );
-      series.forEach(point => {
-        if (point.hourOfDay !== undefined && peakSet.has(point.hourOfDay)) {
-          point.isPeak = true;
-          highlightBucketsSet.add(point.label);
-        }
-      });
-    } else {
-      const maxActivity = Math.max(...series.map(point => point.activity));
-      series.forEach(point => {
-        if (point.activity === maxActivity) {
-          point.isPeak = true;
-          highlightBucketsSet.add(point.label);
-        }
-      });
-    }
-
-    return {
-      series,
-      activeGranularity: activeCanonical,
-      recommendedGranularity: recommended,
-      highlightBuckets: Array.from(highlightBucketsSet),
-      averageOccupancy,
-      totalActivity
-    };
-  }, [data, userGranularity, intelligence]);
-};
+  intelligence?: IntelligencePayload | null,
+): UseChartDataResult =>
+  useMemo(
+    () => computeChartSeries(data, userGranularity, intelligence),
+    [data, userGranularity, intelligence],
+  );
 
 export const getGranularityOptions = (): { value: GranularityOption; label: string }[] => [
   { value: 'auto', label: 'Auto' },
