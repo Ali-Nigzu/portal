@@ -31,10 +31,16 @@ import { exportChartAsPNG, exportDataAsCSV, generateChartId } from '../utils/exp
 import { useGlobalControls } from '../context/GlobalControlsContext';
 import { CompareOption, RangePreset, SegmentOption } from '../styles/designTokens';
 
+type AxisKey = 'people' | 'events' | 'throughput' | 'dwell';
+
 interface SeriesDefinition {
-  key: keyof NormalizedChartPoint | 'activity';
+  key: keyof NormalizedChartPoint | 'activity' | 'throughput';
   label: string;
   color: string;
+  axis: AxisKey;
+  type: 'area' | 'bar' | 'line';
+  stackId?: string;
+  defaultVisible?: boolean;
 }
 
 interface ConfigurableChartProps {
@@ -49,17 +55,61 @@ interface ConfigurableChartProps {
 }
 
 const SERIES_DEFINITIONS: SeriesDefinition[] = [
-  { key: 'occupancy', label: 'Occupancy', color: 'var(--vrm-color-accent-occupancy)' },
-  { key: 'entries', label: 'Entrances', color: 'var(--vrm-color-accent-entrances)' },
-  { key: 'exits', label: 'Exits', color: 'var(--vrm-color-accent-exits)' },
-  { key: 'activity', label: 'Total activity', color: 'var(--vrm-color-accent-dwell)' },
+  {
+    key: 'occupancy',
+    label: 'Occupancy',
+    color: 'var(--vrm-color-accent-occupancy)',
+    axis: 'people',
+    type: 'area',
+  },
+  {
+    key: 'entries',
+    label: 'Entrances',
+    color: 'var(--vrm-color-accent-entrances)',
+    axis: 'events',
+    type: 'bar',
+    stackId: 'flow',
+  },
+  {
+    key: 'exits',
+    label: 'Exits',
+    color: 'var(--vrm-color-accent-exits)',
+    axis: 'events',
+    type: 'bar',
+    stackId: 'flow',
+  },
+  {
+    key: 'activity',
+    label: 'Total activity',
+    color: 'var(--vrm-color-accent-dwell)',
+    axis: 'events',
+    type: 'bar',
+    defaultVisible: false,
+  },
+  {
+    key: 'throughput',
+    label: 'Throughput',
+    color: 'var(--vrm-color-accent-entrances)',
+    axis: 'throughput',
+    type: 'line',
+    defaultVisible: false,
+  },
+  {
+    key: 'dwellMean',
+    label: 'Avg dwell',
+    color: 'var(--vrm-color-accent-dwell)',
+    axis: 'dwell',
+    type: 'line',
+    defaultVisible: false,
+  },
 ];
 
-const SERIES_ORDER: (keyof NormalizedChartPoint | 'activity' | 'comparison_activity' | 'comparison_occupancy')[] = [
+const SERIES_ORDER: (keyof NormalizedChartPoint | 'activity' | 'comparison_activity' | 'comparison_occupancy' | 'throughput')[] = [
   'entries',
   'exits',
   'activity',
   'occupancy',
+  'throughput',
   'dwellMean',
   'comparison_activity',
   'comparison_occupancy',
@@ -97,6 +147,7 @@ const renderTooltip = (
   props: TooltipProps<ValueType, NameType>,
   segments: string[],
   granularity: string,
+  axisMap: Record<string, AxisKey>,
 ) => {
   const extendedProps = props as TooltipProps<ValueType, NameType> & {
     label?: string | number;
@@ -125,6 +176,28 @@ const renderTooltip = (
     ? `Segments: ${segments.map(segment => SEGMENT_SUBTITLE[segment] ?? segment).join(', ')}`
     : undefined;
 
+  const grouped = ordered.reduce<
+    Record<AxisKey, { name: string; value: ValueType | undefined; color?: string }[]>
+  >(
+    (acc, item) => {
+      const key = String(item.dataKey);
+      const axisKey = axisMap[key] ?? 'events';
+      if (!acc[axisKey]) {
+        acc[axisKey] = [];
+      }
+      acc[axisKey].push({ name: String(item.name ?? item.dataKey), value: item.value, color: item.color });
+      return acc;
+    },
+    { people: [], events: [], throughput: [], dwell: [] },
+  );
+
+  const sections: { key: AxisKey; label: string; unit: string }[] = [
+    { key: 'people', label: 'Occupancy', unit: 'people' },
+    { key: 'events', label: 'Events', unit: 'events' },
+    { key: 'throughput', label: 'Throughput', unit: 'events/min' },
+    { key: 'dwell', label: 'Dwell', unit: 'minutes' },
+  ];
+
   return (
     <div className="vrm-tooltip">
       <div className="vrm-tooltip-header">
@@ -132,19 +205,31 @@ const renderTooltip = (
         <span className="vrm-tooltip-meta">{granularity === 'auto' ? 'Auto' : granularity}</span>
       </div>
       {subtitle && <div className="vrm-tooltip-subtitle">{subtitle}</div>}
-      <ul className="vrm-tooltip-list">
-        {ordered.map(item => (
-          <li key={`${item.dataKey}-${item.value}`} className="vrm-tooltip-item">
-            <span className="vrm-tooltip-dot" style={{ backgroundColor: item.color ?? 'var(--vrm-text-secondary)' }} />
-            <span className="vrm-tooltip-label">{item.name}</span>
-            <span className="vrm-tooltip-value">
-              {String(item.dataKey) === 'dwellMean' && typeof item.value === 'number'
-                ? `${item.value.toFixed(1)} min`
-                : formatTooltipValue(item.value)}
-            </span>
-          </li>
+      {sections
+        .filter(section => grouped[section.key].length > 0)
+        .map(section => (
+          <div key={section.key} className="vrm-tooltip-section">
+            <span className="vrm-tooltip-section-label">{section.label}</span>
+            <ul className="vrm-tooltip-list">
+              {grouped[section.key].map(item => (
+                <li key={`${section.key}-${item.name}`} className="vrm-tooltip-item">
+                  <span
+                    className="vrm-tooltip-dot"
+                    style={{ backgroundColor: item.color ?? 'var(--vrm-text-secondary)' }}
+                  />
+                  <span className="vrm-tooltip-label">{item.name}</span>
+                  <span className="vrm-tooltip-value">
+                    {typeof item.value === 'number'
+                      ? section.key === 'dwell'
+                        ? `${item.value.toFixed(1)} ${section.unit}`
+                        : `${item.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${section.unit}`
+                      : formatTooltipValue(item.value)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
     </div>
   );
 };
@@ -177,7 +262,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   const { visibility, toggleSeries } = useSeriesVisibility(
     routeKey,
     cardId,
-    SERIES_DEFINITIONS.map(series => ({ key: series.key })),
+    SERIES_DEFINITIONS.map(series => ({ key: series.key, defaultVisible: series.defaultVisible !== false })),
   );
 
   const availableSegments = useMemo(() => {
@@ -233,8 +318,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   }, [series.length]);
 
   const decimatedSeries = useMemo(
-    () =>
-      series.filter((_, index) => index % decimationStep === 0),
+    () => series.filter((_, index) => index % decimationStep === 0),
     [series, decimationStep],
   );
 
@@ -248,12 +332,40 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
     () =>
       decimatedSeries.map((point, index) => ({
         ...point,
+        throughput: point.bucketMinutes > 0 ? point.activity / point.bucketMinutes : 0,
         comparison_entries: decimatedComparison[index]?.entries ?? null,
         comparison_exits: decimatedComparison[index]?.exits ?? null,
         comparison_activity: decimatedComparison[index]?.activity ?? null,
         comparison_occupancy: decimatedComparison[index]?.occupancy ?? null,
       })),
     [decimatedSeries, decimatedComparison],
+  );
+
+  const axisMap = useMemo(
+    () =>
+      SERIES_DEFINITIONS.reduce<Record<string, AxisKey>>((acc, item) => {
+        acc[item.key] = item.axis;
+        return acc;
+      }, {
+        comparison_activity: 'events',
+        comparison_occupancy: 'people',
+      }),
+    [],
+  );
+
+  const visibleAxes = useMemo(
+    () => ({
+      people:
+        !!visibility.occupancy || mergedSeries.some(point => point.comparison_occupancy != null),
+      events:
+        visibility.entries ||
+        visibility.exits ||
+        visibility.activity ||
+        mergedSeries.some(point => point.comparison_activity != null),
+      throughput: visibility.throughput,
+      dwell: visibility.dwellMean,
+    }),
+    [visibility, mergedSeries],
   );
 
   const hasComparison = controls.compare !== 'off' && mergedSeries.some(point => point.comparison_activity !== null);
@@ -335,6 +447,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
         exits: point.exits,
         total_activity: point.activity,
         occupancy: point.occupancy,
+        throughput: Number.isFinite(point.throughput) ? Number(point.throughput.toFixed(4)) : null,
         dwell_mean: Number.isFinite(point.dwellMean) ? Number(point.dwellMean.toFixed(2)) : null,
         surge_flag: highlightBuckets.includes(point.label) ? 1 : 0,
         comparison_entrances: point.comparison_entries ?? undefined,
@@ -395,8 +508,52 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--vrm-border)" />
               <XAxis dataKey="label" stroke="var(--vrm-text-muted)" fontSize={12} minTickGap={12} />
-              <YAxis stroke="var(--vrm-text-muted)" fontSize={12} allowDecimals={false} />
-              <Tooltip content={tooltipProps => renderTooltip(tooltipProps, controls.segments, activeGranularity)} />
+              <YAxis
+                yAxisId="people"
+                stroke="var(--vrm-text-muted)"
+                fontSize={12}
+                allowDecimals={false}
+                width={48}
+                hide={!visibleAxes.people}
+                tickFormatter={value => `${value}`}
+                label={visibleAxes.people ? { value: 'Occupancy', angle: -90, position: 'insideLeft' } : undefined}
+              />
+              <YAxis
+                yAxisId="events"
+                orientation="right"
+                stroke="var(--vrm-text-muted)"
+                fontSize={12}
+                allowDecimals={false}
+                width={48}
+                hide={!visibleAxes.events}
+                tickFormatter={value => `${value}`}
+                label={visibleAxes.events ? { value: 'Events', angle: 90, position: 'insideRight' } : undefined}
+              />
+              <YAxis
+                yAxisId="throughput"
+                orientation="right"
+                stroke="var(--vrm-text-muted)"
+                fontSize={12}
+                width={48}
+                hide={!visibleAxes.throughput}
+                tickFormatter={value => `${Number(value).toFixed(2)}`}
+                label={visibleAxes.throughput ? { value: 'Events/min', angle: 90, position: 'insideRight', offset: 24 } : undefined}
+              />
+              <YAxis
+                yAxisId="dwell"
+                orientation="right"
+                stroke="var(--vrm-text-muted)"
+                fontSize={12}
+                width={48}
+                hide={!visibleAxes.dwell}
+                tickFormatter={value => `${Number(value).toFixed(1)}`}
+                label={visibleAxes.dwell ? { value: 'Minutes', angle: 90, position: 'insideRight', offset: 48 } : undefined}
+              />
+              <Tooltip
+                content={tooltipProps =>
+                  renderTooltip(tooltipProps, controls.segments, activeGranularity, axisMap)
+                }
+              />
               {highlightBuckets.map(bucket => (
                 <ReferenceArea
                   key={bucket}
@@ -407,7 +564,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   fillOpacity={0.1}
                 />
               ))}
-              {visibility['occupancy'] && (
+              {visibility.occupancy && (
                 <Area
                   type="monotone"
                   dataKey="occupancy"
@@ -416,9 +573,10 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   strokeWidth={2}
                   name="Occupancy"
                   dot={false}
+                  yAxisId="people"
                 />
               )}
-              {visibility['entries'] && (
+              {visibility.entries && (
                 <Bar
                   dataKey="entries"
                   stackId="flow"
@@ -426,9 +584,10 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   name="Entrances"
                   radius={[4, 4, 0, 0]}
                   barSize={18}
+                  yAxisId="events"
                 />
               )}
-              {visibility['exits'] && (
+              {visibility.exits && (
                 <Bar
                   dataKey="exits"
                   stackId="flow"
@@ -436,15 +595,61 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   name="Exits"
                   radius={[4, 4, 0, 0]}
                   barSize={18}
+                  yAxisId="events"
                 />
               )}
-              {visibility['activity'] && (
+              {visibility.activity && (
                 <Bar
                   dataKey="activity"
                   fill="var(--vrm-color-accent-dwell)"
                   name="Total activity"
                   barSize={6}
                   opacity={0.5}
+                  yAxisId="events"
+                />
+              )}
+              {visibility.throughput && (
+                <Line
+                  type="monotone"
+                  dataKey="throughput"
+                  stroke="var(--vrm-color-accent-entrances)"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Throughput"
+                  yAxisId="throughput"
+                />
+              )}
+              {visibility.dwellMean && (
+                <Line
+                  type="monotone"
+                  dataKey="dwellMean"
+                  stroke="var(--vrm-color-accent-dwell)"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Avg dwell"
+                  yAxisId="dwell"
+                />
+              )}
+              {hasComparison && (
+                <Line
+                  type="monotone"
+                  dataKey="comparison_activity"
+                  stroke="var(--vrm-color-accent-dwell)"
+                  strokeDasharray="4 4"
+                  name="Activity (comparison)"
+                  dot={false}
+                  yAxisId="events"
+                />
+              )}
+              {hasComparison && (
+                <Line
+                  type="monotone"
+                  dataKey="comparison_occupancy"
+                  stroke="var(--vrm-color-accent-occupancy)"
+                  strokeDasharray="4 4"
+                  name="Occupancy (comparison)"
+                  dot={false}
+                  yAxisId="people"
                 />
               )}
               <Line
@@ -482,6 +687,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   y={averageOccupancy}
                   stroke="var(--vrm-color-accent-entrances)"
                   strokeDasharray="4 2"
+                  yAxisId="people"
                   label={{
                     value: `Mean occupancy ${Math.round(averageOccupancy)}`,
                     position: 'right',
@@ -490,7 +696,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
                   }}
                 />
               )}
-              <ReferenceLine y={0} stroke="var(--vrm-border)" />
+              <ReferenceLine y={0} stroke="var(--vrm-border)" yAxisId="events" />
               <Brush dataKey="label" height={24} stroke="var(--vrm-color-accent-occupancy)" onChange={handleBrushChange} />
             </ComposedChart>
           </ResponsiveContainer>

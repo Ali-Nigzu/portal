@@ -12,6 +12,8 @@ export interface ChartData {
   date: string;
   camera_id?: string | number;
   camera_name?: string;
+  site_id?: string | number;
+  site_name?: string;
 }
 
 export interface VisitorSession {

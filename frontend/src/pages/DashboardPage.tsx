@@ -155,8 +155,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     [dataset, activeFlowControls, comparisonRange],
   );
 
+  const previousSeriesData = useMemo(
+    () => computeChartSeries(previousFiltered, activeFlowControls.granularity, intelligence),
+    [previousFiltered, activeFlowControls.granularity, intelligence],
+  );
+
   const bucketMinutes = flowSeriesData.series[0]?.bucketMinutes ?? 60;
   const throughputSeries = flowSeriesData.series.map(point =>
+    point.bucketMinutes > 0 ? point.activity / point.bucketMinutes : 0,
+  );
+  const previousThroughputSeries = previousSeriesData.series.map(point =>
     point.bucketMinutes > 0 ? point.activity / point.bucketMinutes : 0,
   );
   const throughput95th = percentile(throughputSeries, 0.95);
@@ -170,7 +178,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const previousOccupancy = previousPoint?.occupancy ?? liveOccupancy;
 
   const throughput = latestPoint ? throughputSeries[throughputSeries.length - 1] : 0;
-  const previousThroughput = throughputSeries.length > 1
+  const previousThroughput = previousThroughputSeries.length
+    ? previousThroughputSeries[previousThroughputSeries.length - 1]
+    : throughputSeries.length > 1
     ? throughputSeries[throughputSeries.length - 2]
     : throughput;
 
@@ -179,9 +189,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   todayStart.setHours(0, 0, 0, 0);
 
   const avgDwellMinutes = calculateAverageDwellTime(flowFiltered);
+  const previousAvgDwellMinutes = calculateAverageDwellTime(previousFiltered);
   const dwellDurations = useMemo(() => calculateDwellDurations(flowFiltered), [flowFiltered]);
   const previousDwellDurations = useMemo(() => calculateDwellDurations(previousFiltered), [previousFiltered]);
-  const dwellMedian = percentile(dwellDurations, 0.5);
   const dwellP90 = percentile(dwellDurations, 0.9);
   const previousP90 = percentile(previousDwellDurations, 0.9);
   const dwellDisplay = avgDwellMinutes > 0 ? formatDuration(avgDwellMinutes) : '—';
@@ -227,8 +237,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     return filterDataByControls(dataset, activeFlowControls, { rangeOverride });
   }, [dataset, activeFlowControls, todayStartTime, nowTime]);
 
+  const previousDayFiltered = useMemo(() => {
+    const start = new Date(todayStartTime - 24 * 60 * 60 * 1000);
+    const end = new Date(todayStartTime - 1);
+    return filterDataByControls(dataset, activeFlowControls, { rangeOverride: { from: start, to: end } });
+  }, [dataset, activeFlowControls, todayStartTime]);
+
   const todayEntries = todayFiltered.filter(item => item.event === 'entry').length;
   const todayExits = todayFiltered.filter(item => item.event === 'exit').length;
+  const previousDayEntries = previousDayFiltered.filter(item => item.event === 'entry').length;
+  const previousDayExits = previousDayFiltered.filter(item => item.event === 'exit').length;
 
   const applyRangeToAll = useCallback(
     (bucketStart: string, bucketDuration: number) => {
@@ -324,6 +342,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   ]);
 
   const totalTraffic = flowSeriesData.totalActivity;
+  const previousTotalTraffic = previousSeriesData.totalActivity;
 
   const kpiTiles = [
     {
@@ -349,7 +368,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       key: 'entrances',
       title: 'Entrances today',
       value: todayEntries.toLocaleString(),
-      delta: { label: 'Local day total', trend: 'neutral' as const },
+      delta: formatDelta(todayEntries, previousDayEntries),
       color: 'var(--vrm-color-accent-entrances)',
       caption: 'Updates with local midnight',
     },
@@ -357,7 +376,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       key: 'exits',
       title: 'Exits today',
       value: todayExits.toLocaleString(),
-      delta: { label: 'Local day total', trend: 'neutral' as const },
+      delta: formatDelta(todayExits, previousDayExits),
       color: 'var(--vrm-color-accent-exits)',
       caption: 'Updates with local midnight',
     },
@@ -365,7 +384,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       key: 'total-traffic',
       title: 'Total traffic',
       value: totalTraffic.toLocaleString(),
-      delta: { label: 'Current range', trend: 'neutral' as const },
+      delta: formatDelta(totalTraffic, previousTotalTraffic),
       color: 'var(--vrm-color-accent-entrances)',
       caption: 'Entrances + exits in view',
     },
@@ -373,7 +392,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
       key: 'avg-dwell',
       title: 'Avg dwell time',
       value: dwellDisplay,
-      delta: { label: `Median ${dwellMedian.toFixed(1)}m`, trend: 'neutral' as const },
+      delta: formatDelta(avgDwellMinutes, previousAvgDwellMinutes),
       color: 'var(--vrm-color-accent-dwell)',
       caption: dwellDurations.length ? `P90 ${dwellP90.toFixed(1)}m` : 'No matched sessions',
     },

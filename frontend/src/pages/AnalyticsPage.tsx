@@ -1,9 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import HeatmapCard from '../components/dashboard/HeatmapCard';
-import GenderBreakdownCard from '../components/dashboard/GenderBreakdownCard';
-import AgeBandsCard from '../components/dashboard/AgeBandsCard';
-import DwellHistogramCard from '../components/dashboard/DwellHistogramCard';
-import TurnoverOccupancyCard from '../components/dashboard/TurnoverOccupancyCard';
+import AnalyticsExplorer from '../components/analytics/AnalyticsExplorer';
 import { API_ENDPOINTS } from '../config';
 import { ChartData } from '../utils/dataProcessing';
 import { IntelligencePayload } from '../types/analytics';
@@ -80,31 +76,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
   const dataset = useMemo(() => data?.data ?? [], [data]);
   const intelligence = data?.intelligence ?? null;
 
-  if (loading) {
-    return (
-      <div className="vrm-loading-viewport">
-        <div className="vrm-card-body--centered">
-          <div className="vrm-loading-spinner" />
-          <p className="vrm-text-secondary">Loading analytics…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="vrm-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">⚠️ Unable to load analytics</h3>
-        </div>
-        <div className="vrm-card-body">
-          <p className="vrm-text-danger vrm-mb-4">{error}</p>
-          <button className="vrm-btn" onClick={fetchData}>Retry</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <InteractionProvider pageKey="analytics">
       <div>
@@ -120,13 +91,24 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         </div>
 
         <section className="vrm-section">
-          <div className="vrm-grid vrm-grid-3">
-            <HeatmapCard data={dataset} intelligence={intelligence} />
-            <GenderBreakdownCard data={dataset} intelligence={intelligence} />
-            <AgeBandsCard data={dataset} intelligence={intelligence} />
-            <DwellHistogramCard data={dataset} intelligence={intelligence} />
-            <TurnoverOccupancyCard data={dataset} intelligence={intelligence} />
-          </div>
+          {loading ? (
+            <div className="vrm-card-body vrm-card-body--centered">
+              <div className="vrm-loading-spinner" />
+              <p className="vrm-text-secondary">Loading analytics…</p>
+            </div>
+          ) : error ? (
+            <div className="vrm-card">
+              <div className="vrm-card-header">
+                <h3 className="vrm-card-title">⚠️ Unable to load analytics</h3>
+              </div>
+              <div className="vrm-card-body">
+                <p className="vrm-text-danger vrm-mb-4">{error}</p>
+                <button className="vrm-btn" onClick={fetchData}>Retry</button>
+              </div>
+            </div>
+          ) : (
+            <AnalyticsExplorer data={dataset} intelligence={intelligence} />
+          )}
         </section>
       </div>
     </InteractionProvider>

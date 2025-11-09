@@ -15,6 +15,8 @@ export interface NormalizedChartPoint {
   hourOfDay?: number;
   zScore?: number;
   dwellMean: number;
+  dwellP90: number;
+  uniqueTracks: number;
 }
 
 export interface UseChartDataResult {
@@ -136,6 +138,8 @@ interface BucketAccumulator extends NormalizedChartPoint {
   startDate: Date;
   dwellTotal: number;
   dwellSamples: number;
+  dwellValues: number[];
+  trackIds: Set<number>;
 }
 
 const buildSeriesForGranularity = (
@@ -170,13 +174,20 @@ const buildSeriesForGranularity = (
         zScore: 0,
         startDate: bucketStart,
         dwellMean: 0,
+        dwellP90: 0,
         dwellTotal: 0,
         dwellSamples: 0,
+        dwellValues: [],
+        uniqueTracks: 0,
+        trackIds: new Set<number>(),
       });
     }
 
     const bucket = bucketsMap.get(bucketKey)!;
     bucket.activity += 1;
+    if (Number.isFinite(item.track_number)) {
+      bucket.trackIds.add(item.track_number);
+    }
     if (item.event === 'entry') {
       bucket.entries += 1;
       activeEntries.set(item.track_number, eventTime);
@@ -188,6 +199,7 @@ const buildSeriesForGranularity = (
         if (dwellMinutes >= 0 && dwellMinutes <= MAX_SESSION_WINDOW_MINUTES) {
           bucket.dwellTotal += dwellMinutes;
           bucket.dwellSamples += 1;
+          bucket.dwellValues.push(dwellMinutes);
         }
         activeEntries.delete(item.track_number);
       }
@@ -202,7 +214,15 @@ const buildSeriesForGranularity = (
   series.forEach(point => {
     runningOccupancy += point.entries - point.exits;
     point.occupancy = Math.max(0, runningOccupancy);
+    point.uniqueTracks = point.trackIds.size;
     point.dwellMean = point.dwellSamples > 0 ? point.dwellTotal / point.dwellSamples : 0;
+    if (point.dwellValues.length) {
+      const sorted = [...point.dwellValues].sort((a, b) => a - b);
+      const idx = Math.min(sorted.length - 1, Math.round(0.9 * (sorted.length - 1)));
+      point.dwellP90 = sorted[idx];
+    } else {
+      point.dwellP90 = 0;
+    }
   });
 
   const activityValues = series.map(point => point.activity);
@@ -233,6 +253,8 @@ const buildSeriesForGranularity = (
     hourOfDay: point.hourOfDay,
     zScore: point.zScore,
     dwellMean: point.dwellMean,
+    dwellP90: point.dwellP90,
+    uniqueTracks: point.uniqueTracks,
   }));
 };
 
