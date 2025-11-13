@@ -55,3 +55,17 @@
 1. Connect the BigQuery client used by `AnalyticsEngine` to the real service account and execute compiled SQL against per-client tables.
 2. Expose the `/analytics/run` API endpoint so frontend consumers can request ChartResults over HTTP.
 3. Extend caching beyond the local in-process backend (e.g., prepare Redis adapter) once live execution is stable.
+
+## Handover summary for the next Codex (Phase 3 kickoff)
+- **Phase 3 focus:** build the shared frontend chart engine (`<ChartRenderer />`), axis/series manager, card chrome, and KPI primitives that render Phase 2 `ChartResult` objects without recomputing analytics.
+- **Read first:**
+  - `ANALYTICS_DEVELOPMENT_PLAN.md` – Section “Phase 3 – Shared Frontend Chart Engine & Card Primitives”.
+  - `shared/analytics/examples/chartresult_phase2_example.json` and `shared/analytics/examples/golden_dashboard_live_flow.json` – canonical fixtures to load in Storybook.
+- **Frontend codebase entry points:**
+  - `frontend/src/analytics/` (existing analytics utilities) and `frontend/src/components/` for shared primitives.
+  - Create or extend a charting module under `frontend/src/charting/` (or equivalent) to host the reusable renderer and axis manager.
+  - Storybook lives at `frontend/src/stories/`; add Phase 3 stories here using the provided ChartResult fixtures.
+- **Local workflow:**
+  - Run `npm install` (or `yarn`) inside `frontend/`, then `npm run storybook` to iterate on the shared engine using fixtures.
+  - Use `npm run start` only for smoke-checking integration; Phase 3 work should remain isolated from production routes.
+- **Key behaviour reminders:** maintain canonical bucket calendars, surface coverage/rawCount in tooltips, render null dwell buckets as gaps, and visually flag low-coverage occupancy points.

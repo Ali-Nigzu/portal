@@ -792,6 +792,28 @@ Each phase has explicit deliverables and ticket-ready tasks. Phases must be comp
 
 Phase 2 compiler currently runs fully against test fixtures. Live BigQuery execution for occupancy/activity/throughput will be implemented in the next Phase 2 iteration.
 
+#### Phase 2 completion summary (locked for frontend consumption)
+
+✅ **Phase 2 backend analytics foundation is complete (fixture-backed, frozen contract).**
+
+Delivered assets:
+
+* `backend/app/analytics/compiler.py` – canonical spec→SQL compiler covering occupancy, activity, throughput, dwell, and retention pipelines with unified calendar semantics.
+* `backend/app/analytics/engine.py` – execution, normalisation, coverage/metadata attachment, and cache integration.
+* `backend/app/analytics/cache.py`, `backend/app/analytics/hashing.py` – deterministic spec hashing plus swappable cache backend (current default: in-process TTL).
+* `shared/analytics/fixtures/events_golden_client0.csv` & `backend/app/analytics/fixtures.py` – fixture datasets that mirror live BigQuery schemas.
+* `shared/analytics/examples/chartresult_phase2_example.json` – canonical example consumed by future frontend/QA work.
+* `handover/Phase2_Handover.md` – runbook covering compiler usage, regression commands, fixture locations, and UI-facing semantics.
+
+🔜 **Phase 2.2 – Live BigQuery wiring (pending for next backend iteration):**
+
+* Connect analytics execution to real BigQuery tables using service-account credentials and per-client routing.
+* Stand up `/analytics/run` + `/analytics/catalogue` HTTP endpoints.
+* Add Redis (or equivalent) cache backend configuration once live execution is proven stable.
+* Maintain fixture parity tests to guarantee no divergence between sandbox datasets and compiled SQL.
+
+The backend contract (spec schemas, ChartResult fields, calendar semantics, coverage/rawCount behaviour) is now considered frozen for Phase 3. Any deviations require explicit change-control notes before implementation.
+
 #### ChartResult contract for frontend & chart engine (applies from Phase 3 onward)
 
 **Series structure**
@@ -837,32 +859,88 @@ Phase 2 compiler currently runs fully against test fixtures. Live BigQuery execu
 8. Implement `/analytics/catalogue` endpoint (static data for now).
 9. Add golden dataset regression tests in CI.
 
-### Phase 3 – Shared Chart Engine in Frontend
+### Phase 3 – Shared Frontend Chart Engine & Card Primitives
 
-**Deliverables**
+**What Phase 3 is**
 
-* Reusable chart renderer component with theme + interaction services.
-* Axis manager for multi-axis bindings.
-* Card chrome & layout primitives (dark theme, responsive spacing).
-* KPI tile component powered by `ChartResult`.
-* Export service integrated with backend `/exports`.
-* Storybook coverage.
+Phase 3 delivers the **shared frontend chart engine and card primitives** that will power both the Analytics Builder workspace (Phase 4) and the Dashboard redesign (Phase 5). This work builds the visual foundation only; it does **not** modify any existing client-facing pages yet. All outcomes must consume `ChartResult` objects exactly as produced in Phase 2.
 
-**Done criteria**
+#### Phase 3 deliverables
 
-* Live Flow, demographics bars, heatmap, retention charts render accurately using fixture data.
-* Exports triggered from preview download identical data to visible chart.
-* Accessibility baseline (axe) passes for chart components.
+**A. `<ChartRenderer />` (shared visual engine)**
 
-**Ticket skeleton**
+* Accepts a `ChartResult` payload and renders:
+  * Multi-series time charts (occupancy, activity, throughput, dwell).
+  * Split/grouped bar & column charts (demographics, categorical splits).
+  * Retention heatmaps (cohort × lag matrix).
+  * KPI tiles derived from point or aggregate data.
+* Enforces canonical bucket calendars, labels, units, rawCount, and coverage as provided by the backend—no client-side recomputation.
+* Supports interactions required across the product: hover tooltips, zoom & pan, per-series toggle/show-hide, dual-axis selection, keyboard navigation, and responsive layout adjustments.
+* Provides adaptive tooltips that surface value, unit, rawCount, coverage, and surge metadata verbatim from the backend.
+* Guarantees deterministic rendering (no metric-specific hacks) so identical inputs yield identical visuals across Dashboard and Builder.
 
-1. Build unified chart renderer (time/bar/heatmap support).
-2. Implement multi-axis manager.
-3. Build reusable card chrome with header, actions, gear menu.
-4. Implement KPI tile component + sparkline.
-5. Implement export service wiring to backend.
-6. Add Storybook stories for core chart types.
-7. Run accessibility baseline and fix blockers.
+**B. Axis & series manager**
+
+* Implement unit-aware Y-axis bindings (e.g., people, events, events/min, minutes) with automatic grouping and formatting.
+* Auto-hide unused axes while preserving state for toggled-off series.
+* Handle mixed-unit charts (e.g., Live Flow occupancy + throughput) with clear axis labelling and colour cues.
+* Deliver a reusable colour palette + series identity map that stays consistent across all contexts (Dashboard, Builder, Storybook).
+
+**C. Card chrome & KPI primitives**
+
+* Create the universal chart card shell containing title, subtitle, settings gear (placeholder actions), export button, date-range selector placeholder, and tag/pill container placeholder.
+* Build a KPI Tile component capable of rendering a large value, label + unit, +/- delta badge, optional sparkline (fed by the shared renderer), and coverage/low-confidence messaging.
+* Ensure these primitives are responsive, theme-aware, and match premium references (Victron, SOEnergy, FoxESS) in spacing and typographic rhythm.
+
+**D. Storybook visual catalogue**
+
+* Publish stories that render ChartResults sourced from Phase 2 fixtures/examples:
+  * Live Flow composite (occupancy + activity + throughput).
+  * Dwell averages with null-gap buckets.
+  * Retention heatmap with low-coverage cohorts.
+  * Split bar/column charts (demographics).
+  * KPI tiles showing deltas and sparklines.
+  * Empty-state and low-coverage scenarios.
+* Each story documents expected behaviours (e.g., how null dwell renders as a gap, how coverage badges appear).
+
+**E. Export wiring (frontend only)**
+
+* Wire the export button in card chrome to assemble the correct payload (spec hash or original ChartSpec) and call a placeholder HTTP endpoint.
+* No backend change yet—log or surface a toast confirming the payload structure for later backend hook-up.
+
+**F. Developer experience & tooling**
+
+* Provide local commands to run the chart engine against fixture data without the backend (e.g., mock API loader in Storybook or Vite dev server).
+* Document Storybook startup, hot module reload expectations, and how to inject custom ChartSpecs/ChartResults for visual QA.
+* Ensure linting, type-checking, and testing scripts cover the new frontend packages.
+
+#### Phase 3 done criteria
+
+* All Phase 2 ChartResult examples render pixel-perfect in Storybook (time-series, bars, heatmaps, KPI tiles).
+* Hover/zoom/toggle interactions behave consistently across chart types and preserve canonical data semantics (no inferred buckets).
+* Axis labels, units, and colours remain stable as series are toggled on/off.
+* Export buttons emit the correct payload schema for backend integration.
+* Accessibility baseline (axe/ARIA review) passes for core interactive components.
+
+#### What Phase 3 does **not** include
+
+* No changes to existing Dashboard or Analytics pages yet.
+* No builder UI (inspectors, filters, presets catalogue) beyond Storybook fixtures.
+* No presets or preset management work.
+* No dashboard grid/layout logic.
+* No server-side pinning or saved views.
+* No BigQuery query execution changes or backend modifications.
+
+#### Critical Notes for the Next Codex (Phase 3 engineer)
+
+* **Do not compute analytics in the frontend.** Render exactly what the backend supplies; coverage/rawCount/units/labels are authoritative.
+* Never infer or fabricate buckets. Phase 2 guarantees canonical timelines and full heatmap grids—render gaps (e.g., null dwell) as intentional absences.
+* Highlight low-coverage occupancy buckets visually (e.g., translucency or badges) rather than treating them as high-confidence data.
+* Retention heatmaps must display the full cohort × lag matrix with coverage signals—no sparse rendering.
+* Maintain a single modular, declarative chart engine; do not fork logic per screen or chart type. Dashboard, Builder, and future surfaces must all consume the same primitives.
+* Every chart surface in the product must migrate to this engine—treat duplication or bespoke rendering as a blocker.
+* Align colours, typography, and spacing with premium reference products (Victron, SOEnergy, FoxESS). Document palette/spacing tokens for reuse.
+
 
 ### Phase 4 – Analytics Builder & Presets
 
