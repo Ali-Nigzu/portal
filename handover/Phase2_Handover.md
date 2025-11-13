@@ -37,8 +37,12 @@
 ## BigQuery integration status
 - The analytics engine currently executes entirely against pandas DataFrames sourced from fixtures or stubs. Live BigQuery connectivity (service account auth + table routing) is not yet wired into runtime execution.
 
+## UI-facing behaviour you should rely on
+- Occupancy buckets seeded solely by exit events maintain the carried occupancy value but downgrade coverage to ≤ 0.5; surface these points as low-confidence rather than authoritative counts.
+- Dwell buckets without any paired sessions return `value = null` and `rawCount = 0`, indicating an intentional gap the UI should render as missing data.
+- Retention heatmap cells scale coverage against the `_RETENTION_MIN_COHORT` (100) threshold so small cohorts appear with low coverage even when retention rates are high; preserve this signal in tooltips/legends.
+
 ## Next TODO items
 1. Connect the BigQuery client used by `AnalyticsEngine` to the real service account and execute compiled SQL against per-client tables.
-2. Implement the dwell metric pipeline end-to-end (spec dispatch, SQL compilation, normalisation, and fixtures/tests).
-3. Implement the retention metric pipeline with the agreed visit-boundary logic, including coverage metadata and golden expectations.
-4. Extend caching beyond the local in-process backend (e.g., prepare Redis adapter) once live execution is stable.
+2. Expose the `/analytics/run` API endpoint so frontend consumers can request ChartResults over HTTP.
+3. Extend caching beyond the local in-process backend (e.g., prepare Redis adapter) once live execution is stable.

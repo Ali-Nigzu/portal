@@ -767,15 +767,21 @@ Each phase has explicit deliverables and ticket-ready tasks. Phases must be comp
 * Unified `rawCount`, unit, label metadata
 * Full string operator support
 * Updated fixtures + golden examples
+* Dwell metric pipeline
+* Retention metric pipeline
 
 **Not Delivered Yet**
 
 * Live BigQuery execution
-* Dwell metric pipeline
-* Retention metric pipeline
 * Any dashboard/UI integration
 * Any chart-engine integration
 * Any caching beyond local process
+
+**Intentional UI-facing behaviours**
+
+* Occupancy buckets seeded only by exits retain the carried-forward value while reporting coverage ≤ 0.5; treat these points as low-confidence in the UI.
+* Dwell buckets with zero sessions emit `value = null` alongside `rawCount = 0`, signalling an explicit gap that frontend charts should display as missing rather than interpolated.
+* Retention heatmap cells scale coverage by cohort size versus `_RETENTION_MIN_COHORT` (100); small cohorts therefore surface as low-coverage even when retention rates are high.
 
 Phase 2 compiler currently runs fully against test fixtures. Live BigQuery execution for occupancy/activity/throughput will be implemented in the next Phase 2 iteration.
 
