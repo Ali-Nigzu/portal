@@ -1,0 +1,38 @@
+{
+  "id": "dashboard-live-flow",
+  "dataset": "events",
+  "chartType": "composed_time",
+  "measures": [
+    { "id": "occupancy", "aggregation": "occupancy_recursion" },
+    { "id": "entrances", "aggregation": "count", "eventTypes": [1] },
+    { "id": "exits", "aggregation": "count", "eventTypes": [0] },
+    { "id": "throughput", "aggregation": "activity_rate" }
+  ],
+  "dimensions": [
+    { "id": "time", "column": "timestamp", "bucket": "5_MIN" }
+  ],
+  "filters": [
+    {
+      "logic": "AND",
+      "conditions": [
+        { "field": "site_id", "op": "equals", "value": "SITE_01" }
+      ]
+    }
+  ],
+  "timeWindow": {
+    "from": "2024-01-01T09:00:00Z",
+    "to": "2024-01-01T10:00:00Z",
+    "bucket": "5_MIN",
+    "timezone": "UTC"
+  },
+  "interactions": {
+    "zoom": true,
+    "hoverSync": true,
+    "seriesToggle": true,
+    "export": ["png", "csv"]
+  },
+  "displayHints": {
+    "carryForward": true,
+    "stack": "absolute"
+  }
+}

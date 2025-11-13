@@ -1,0 +1,386 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://line-analytics/schemas/chart-spec.schema.json",
+  "title": "ChartSpec",
+  "type": "object",
+  "required": [
+    "id",
+    "dataset",
+    "measures",
+    "dimensions",
+    "timeWindow",
+    "chartType"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataset": {
+      "type": "string",
+      "enum": [
+        "events"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "description": "Optional semantic version of the spec contract"
+    },
+    "measures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Measure"
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Dimension"
+      }
+    },
+    "splits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Split"
+      }
+    },
+    "filters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FilterGroup"
+      }
+    },
+    "timeWindow": {
+      "$ref": "#/$defs/TimeWindow"
+    },
+    "comparison": {
+      "$ref": "#/$defs/Comparison"
+    },
+    "interactions": {
+      "$ref": "#/$defs/Interactions"
+    },
+    "displayHints": {
+      "$ref": "#/$defs/DisplayHints"
+    },
+    "chartType": {
+      "type": "string",
+      "enum": [
+        "composed_time",
+        "categorical",
+        "heatmap",
+        "retention",
+        "single_value"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "Measure": {
+      "type": "object",
+      "required": [
+        "id",
+        "aggregation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": [
+            "occupancy_recursion",
+            "count",
+            "activity_rate",
+            "dwell_mean",
+            "dwell_p90",
+            "sessions",
+            "demographic_count",
+            "retention_rate"
+          ]
+        },
+        "eventTypes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "enum": [0, 1]
+          },
+          "uniqueItems": true,
+          "description": "Optional filter for entrance/exit events"
+        },
+        "options": {
+          "type": "object",
+          "description": "Aggregator-specific options such as percentile or baseline window",
+          "additionalProperties": true
+        }
+      }
+    },
+    "Dimension": {
+      "type": "object",
+      "required": [
+        "id",
+        "column"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "column": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string",
+          "enum": [
+            "RAW",
+            "5_MIN",
+            "15_MIN",
+            "30_MIN",
+            "HOUR",
+            "DAY",
+            "WEEK",
+            "MONTH"
+          ],
+          "default": "RAW"
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      }
+    },
+    "Split": {
+      "type": "object",
+      "required": [
+        "id",
+        "column"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "column": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sort": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      }
+    },
+    "FilterGroup": {
+      "type": "object",
+      "required": [
+        "logic",
+        "conditions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "logic": {
+          "type": "string",
+          "enum": [
+            "AND",
+            "OR"
+          ]
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/FilterCondition" },
+              { "$ref": "#/$defs/FilterGroup" }
+            ]
+          }
+        }
+      }
+    },
+    "FilterCondition": {
+      "type": "object",
+      "required": [
+        "field",
+        "op"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "op": {
+          "type": "string",
+          "enum": [
+            "equals",
+            "not_equals",
+            "in",
+            "not_in",
+            "between",
+            "gte",
+            "lte",
+            "gt",
+            "lt",
+            "contains",
+            "starts_with",
+            "ends_with"
+          ]
+        },
+        "value": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "TimeWindow": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "pattern": "^(NOW([+-].+)?|\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^(NOW([+-].+)?|\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)$"
+        },
+        "bucket": {
+          "type": "string",
+          "enum": [
+            "RAW",
+            "5_MIN",
+            "15_MIN",
+            "30_MIN",
+            "HOUR",
+            "DAY",
+            "WEEK",
+            "MONTH"
+          ],
+          "default": "RAW"
+        },
+        "timezone": {
+          "type": "string",
+          "default": "UTC"
+        },
+        "compareTo": {
+          "type": "string",
+          "description": "Optional ISO or relative window for comparison"
+        }
+      }
+    },
+    "Comparison": {
+      "type": "object",
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "previous_period",
+            "year_over_year",
+            "custom"
+          ]
+        },
+        "periodOffset": {
+          "type": "string",
+          "description": "ISO 8601 duration offset when mode=previous_period or custom"
+        }
+      }
+    },
+    "Interactions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "zoom": {
+          "type": "boolean",
+          "default": true
+        },
+        "hoverSync": {
+          "type": "boolean",
+          "default": true
+        },
+        "seriesToggle": {
+          "type": "boolean",
+          "default": true
+        },
+        "export": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "png",
+              "csv",
+              "xlsx"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "DisplayHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "carryForward": {
+          "type": "boolean"
+        },
+        "stack": {
+          "type": "string",
+          "enum": [
+            "none",
+            "normalized",
+            "absolute"
+          ]
+        },
+        "y1Label": {
+          "type": "string"
+        },
+        "y2Label": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

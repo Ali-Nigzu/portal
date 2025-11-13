@@ -1,16 +1,29 @@
 # camOS Business Intelligence Dashboard
 
-A modern React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. Features role-based access for administrators and clients with real-time analytics from Google Sheets CSV data.
+A modern React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. The analytics stack now follows the LINE development plan with canonical ChartSpec/ChartResult contracts, deterministic BigQuery math, and strict per-client table isolation.
 
 > **Note**
 > The application intentionally focuses on analytics workflows only—no greeting or welcome-message feature is provided or required for its operation.
 
 ## 🏗️ Architecture
 
-**Frontend**: React SPA with TypeScript, ECharts/Recharts visualizations, React Router navigation, and professional dark theme  
-**Backend**: FastAPI REST API with modular design, HTTP Basic Auth, SHA-256 password hashing, and Pandas data processing  
-**Data**: Google BigQuery (dataset `nigzsu.demodata`) with partitioned tables per client, JSON file-based user storage  
+**Frontend**: React SPA with TypeScript and a shared chart renderer that consumes `ChartResult` payloads produced by the backend.
+**Backend**: FastAPI REST API with modular design, HTTP Basic Auth, SHA-256 password hashing, and analytics services that translate `ChartSpec` requests into tested SQL templates.
+**Data**: Google BigQuery per-client datasets (`client0`, `client1`, …) that all implement the shared CCTV event schema. User metadata remains in JSON during the rebuild.
 **Deployment**: Docker multi-stage builds with Nginx, optimized for Google Cloud Run
+
+## 📐 Analytics Contracts & Fixtures
+
+- Canonical `ChartSpec` and `ChartResult` JSON Schemas live in `shared/analytics/schemas` and are mirrored as TypeScript types in `frontend/src/analytics/schemas/charting.ts`.
+- Example payloads and golden ChartResults reside in `shared/analytics/examples`.
+- The deterministic fixture dataset (`shared/analytics/fixtures/events_golden_client0.csv`) powers both CI tests and BigQuery fixture tables. Regenerate the JSON outputs with:
+
+  ```bash
+  python backend/app/analytics/generate_expected.py
+  ```
+
+- Schema validation tests (`backend/tests/test_chart_schemas.py`) guarantee that the examples remain aligned with the JSON Schemas.
+- See `docs/analytics/foundations.md` for the full Phase 1 summary, validated assumptions, and Phase 2 readiness plan.
 
 ## 📋 Prerequisites
 
@@ -159,14 +172,23 @@ gcloud run deploy camOS-analytics \
 
 Set the following runtime variables so the backend can reach BigQuery:
 
-- `BQ_PROJECT`: GCP project that owns the dataset (e.g. `nigzsu`).
-- `BQ_DATASET`: Dataset containing the client tables (e.g. `demodata`).
+- `BQ_PROJECT`: GCP project that owns the datasets (e.g. `nigzsu`).
+- `BQ_DATASET`: Logical dataset alias that maps to per-client tables (e.g. `client_events`).
 - `BQ_LOCATION`: Region for all queries (e.g. `EU`).
 - Provide credentials either by pointing `GOOGLE_APPLICATION_CREDENTIALS` to the downloaded `sa.json` or by exporting `BQ_SERVICE_ACCOUNT_JSON` with the raw key contents.
 
-The default user mapping resolves `client1` to `nigzsu.demodata.client0` and `client2` to `nigzsu.demodata.client1`. Adjust `backend/data/users.json` if you add more accounts.
+The default user mapping resolves `client1` → `nigzsu.client_events.client0` and `client2` → `nigzsu.client_events.client1`. Adjust `backend/data/users.json` if you add more accounts. Each authenticated organisation must only ever hit its own table; no cross-client joins are performed.
 
-**Note:** Analytics data is read-only and sourced from Google BigQuery tables (`nigzsu.demodata.client0`/`client1`). User metadata continues to live in local JSON files.
+Caching defaults to an in-process TTL cache for development. Future Cloud Memorystore support will be toggled via:
+
+```bash
+export CACHE_BACKEND=redis
+export REDIS_URL=redis://HOST:PORT
+```
+
+Leave `CACHE_BACKEND=local` until infrastructure is provisioned.
+
+Analytics data stays read-only in BigQuery. User metadata continues to live in local JSON files while the rebuild is in progress.
 
 ### Post-Deployment
 
@@ -220,8 +242,7 @@ camOS/
 ## 📊 Key Features
 
 - **Role-Based Access Control** - Admin and client user roles
-- **Real-time Analytics** - Interactive charts and data visualizations
-- **Google Sheets Integration** - CSV data import from public URLs
+- **Spec-driven Analytics** - Shared ChartSpec/ChartResult engine backed by tested SQL templates
 - **View Token System** - Secure data sharing with expiring tokens
 - **Export Functionality** - PDF, Excel, and CSV export options
 - **Advanced Filtering** - Date range and search capabilities
@@ -229,8 +250,8 @@ camOS/
 
 ## 🛠️ Development Notes
 
-- Backend uses **Pandas** for CSV processing and data manipulation
-- Frontend uses **ECharts** and **Recharts** for data visualization
+- Backend uses **Pandas** for fixture generation and BigQuery result normalisation
+- Frontend uses **ECharts** and **Recharts** for data visualization while migrating to the shared chart engine
 - Authentication uses **SHA-256** password hashing
 - Production deployment uses **Nginx** as reverse proxy
 - Multi-stage Docker build optimizes image size
