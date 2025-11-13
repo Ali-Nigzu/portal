@@ -17,81 +17,96 @@
         {
           "x": "2024-01-01T09:00:00Z",
           "y": 1.0,
-          "coverage": 1.0
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:05:00Z",
           "y": 1.0,
-          "coverage": 1.0
+          "coverage": 1.0,
+          "rawCount": 2
         },
         {
           "x": "2024-01-01T09:10:00Z",
-          "y": 2.0,
-          "coverage": 1.0
+          "y": 1.0,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:15:00Z",
           "y": 0.0,
-          "coverage": 1.0
+          "coverage": 1.0,
+          "rawCount": 2
         },
         {
           "x": "2024-01-01T09:20:00Z",
           "y": 0.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:25:00Z",
           "y": 0.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:30:00Z",
           "y": 0.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:35:00Z",
           "y": 0.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:40:00Z",
           "y": 1.0,
-          "coverage": 1.0
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:45:00Z",
           "y": 1.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:50:00Z",
           "y": 1.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:55:00Z",
           "y": 1.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:00:00Z",
           "y": 1.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:05:00Z",
           "y": 1.0,
-          "coverage": 0.0
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:10:00Z",
           "y": 0.0,
-          "coverage": 1.0
+          "coverage": 1.0,
+          "rawCount": 1
         }
       ],
       "summary": {
-        "max": 2.0,
+        "max": 1.0,
         "end": 0.0
       }
     },
@@ -104,63 +119,93 @@
       "data": [
         {
           "x": "2024-01-01T09:00:00Z",
-          "y": 0.2
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:05:00Z",
-          "y": 0.4
+          "y": 0.4,
+          "coverage": 1.0,
+          "rawCount": 2
         },
         {
           "x": "2024-01-01T09:10:00Z",
-          "y": 0.2
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:15:00Z",
-          "y": 0.4
+          "y": 0.4,
+          "coverage": 1.0,
+          "rawCount": 2
         },
         {
           "x": "2024-01-01T09:20:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:25:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:30:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:35:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:40:00Z",
-          "y": 0.2
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:45:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:50:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:55:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:00:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:05:00Z",
-          "y": 0.0
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:10:00Z",
-          "y": 0.2
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
         }
       ]
     },
@@ -174,63 +219,93 @@
       "data": [
         {
           "x": "2024-01-01T09:00:00Z",
-          "y": 1
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:05:00Z",
-          "y": 1
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:10:00Z",
-          "y": 1
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:15:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:20:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:25:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:30:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:35:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:40:00Z",
-          "y": 1
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:45:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:50:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:55:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:00:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:05:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:10:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         }
       ]
     },
@@ -244,63 +319,93 @@
       "data": [
         {
           "x": "2024-01-01T09:00:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:05:00Z",
-          "y": 1
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
         },
         {
           "x": "2024-01-01T09:10:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:15:00Z",
-          "y": 2
+          "y": 2,
+          "coverage": 1.0,
+          "rawCount": 2
         },
         {
           "x": "2024-01-01T09:20:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:25:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:30:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:35:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:40:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:45:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:50:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T09:55:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:00:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:05:00Z",
-          "y": 0
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
         },
         {
           "x": "2024-01-01T10:10:00Z",
-          "y": 1
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
         }
       ]
     }
@@ -372,7 +477,7 @@
     ],
     "surges": [],
     "summary": {
-      "occupancy_max": 2.0,
+      "occupancy_max": 1.0,
       "occupancy_end": 0.0
     }
   }

@@ -121,6 +121,8 @@ def _validate_series_data(data: Iterable[Any]) -> None:
         if "coverage" in point and point["coverage"] is not None:
             _ensure(isinstance(point["coverage"], (int, float)), "coverage must be numeric")
             _ensure(0 <= float(point["coverage"]) <= 1, "coverage must be 0..1")
+        if "rawCount" in point and point["rawCount"] is not None:
+            _ensure(isinstance(point["rawCount"], (int, float)), "rawCount must be numeric")
 
 
 def validate_chart_result(payload: Dict[str, Any]) -> None:

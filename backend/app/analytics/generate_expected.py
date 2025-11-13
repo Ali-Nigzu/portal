@@ -34,20 +34,36 @@ def build_live_flow(events: pd.DataFrame) -> Dict:
             "x": bucket.isoformat().replace("+00:00", "Z"),
             "y": float(row.occupancy_end),
             "coverage": float(row.coverage),
+            "rawCount": int(row.raw_count),
         }
         for bucket, row in buckets.iterrows()
     ]
 
     entrances = [
-        {"x": bucket.isoformat().replace("+00:00", "Z"), "y": int(row.entrances)}
+        {
+            "x": bucket.isoformat().replace("+00:00", "Z"),
+            "y": int(row.entrances),
+            "coverage": float(row.coverage) if row.entrances > 0 else 0.0,
+            "rawCount": int(row.entrances),
+        }
         for bucket, row in buckets.iterrows()
     ]
     exits = [
-        {"x": bucket.isoformat().replace("+00:00", "Z"), "y": int(row.exits)}
+        {
+            "x": bucket.isoformat().replace("+00:00", "Z"),
+            "y": int(row.exits),
+            "coverage": float(row.coverage) if row.exits > 0 else 0.0,
+            "rawCount": int(row.exits),
+        }
         for bucket, row in buckets.iterrows()
     ]
     throughput = [
-        {"x": bucket.isoformat().replace("+00:00", "Z"), "y": _round(row.throughput)}
+        {
+            "x": bucket.isoformat().replace("+00:00", "Z"),
+            "y": _round(row.throughput),
+            "coverage": float(row.coverage) if row.raw_count > 0 else 0.0,
+            "rawCount": int(row.raw_count),
+        }
         for bucket, row in buckets.iterrows()
     ]
 

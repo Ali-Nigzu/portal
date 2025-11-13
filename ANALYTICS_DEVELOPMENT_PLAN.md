@@ -755,6 +755,30 @@ Each phase has explicit deliverables and ticket-ready tasks. Phases must be comp
 * Cache hits visible for repeated identical specs.
 * Coverage metadata populates charts for fixture datasets.
 
+#### Phase 2 — Current Implementation Status (Mid-Phase Checkpoint)
+
+**Delivered**
+
+* Shared canonical bucket calendar
+* Full occupancy recursion pipeline
+* Exit-first handling
+* Forward-fill logic
+* Unified coverage computation
+* Unified `rawCount`, unit, label metadata
+* Full string operator support
+* Updated fixtures + golden examples
+
+**Not Delivered Yet**
+
+* Live BigQuery execution
+* Dwell metric pipeline
+* Retention metric pipeline
+* Any dashboard/UI integration
+* Any chart-engine integration
+* Any caching beyond local process
+
+Phase 2 compiler currently runs fully against test fixtures. Live BigQuery execution for occupancy/activity/throughput will be implemented in the next Phase 2 iteration.
+
 **Ticket skeleton**
 
 1. Implement spec → SQL compiler core.
