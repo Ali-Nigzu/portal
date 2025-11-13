@@ -1,0 +1,41 @@
+{
+  "chartType": "heatmap",
+  "xDimension": {
+    "id": "cohort_week",
+    "type": "matrix",
+    "label": "Cohort week"
+  },
+  "series": [
+    {
+      "id": "retention_rate",
+      "label": "Weekly retention",
+      "geometry": "heatmap",
+      "data": [
+        {
+          "x": "2023-12-26T00:00:00Z",
+          "group": "Week 0",
+          "value": 1.0
+        },
+        {
+          "x": "2024-01-02T00:00:00Z",
+          "group": "Week 0",
+          "value": 1.0
+        },
+        {
+          "x": "2024-01-02T00:00:00Z",
+          "group": "Week 1",
+          "value": 1.0
+        }
+      ],
+      "summary": {
+        "cohorts": 2
+      }
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "notes": [
+      "Week 0 is always 100% because it represents the cohort creation week."
+    ]
+  }
+}

@@ -1,0 +1,240 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://line-analytics/schemas/chart-result.schema.json",
+  "title": "ChartResult",
+  "type": "object",
+  "required": [
+    "chartType",
+    "xDimension",
+    "series",
+    "meta"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "chartType": {
+      "type": "string",
+      "enum": [
+        "composed_time",
+        "categorical",
+        "heatmap",
+        "retention",
+        "single_value"
+      ]
+    },
+    "xDimension": {
+      "$ref": "#/$defs/DimensionDescriptor"
+    },
+    "series": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Series"
+      }
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  },
+  "$defs": {
+    "DimensionDescriptor": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["time", "category", "matrix", "index"]
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "Series": {
+      "type": "object",
+      "required": ["id", "geometry", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "axis": {
+          "type": "string",
+          "enum": ["Y1", "Y2", "Y3"],
+          "default": "Y1"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "geometry": {
+          "type": "string",
+          "enum": [
+            "line",
+            "area",
+            "column",
+            "bar",
+            "heatmap",
+            "scatter",
+            "metric"
+          ]
+        },
+        "stack": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DataPoint"
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["number", "string", "null"]
+          }
+        },
+        "annotations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Annotation"
+          }
+        }
+      }
+    },
+    "DataPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "string"
+        },
+        "y": {
+          "type": ["number", "null"]
+        },
+        "value": {
+          "type": ["number", "null"]
+        },
+        "group": {
+          "type": "string"
+        },
+        "coverage": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "comparison": {
+          "type": ["number", "null"]
+        },
+        "target": {
+          "type": ["number", "null"]
+        }
+      },
+      "required": ["x"],
+      "oneOf": [
+        {"required": ["y"]},
+        {"required": ["value"]}
+      ]
+    },
+    "Annotation": {
+      "type": "object",
+      "required": ["x", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "critical"],
+          "default": "info"
+        }
+      }
+    },
+    "Meta": {
+      "type": "object",
+      "required": ["timezone"],
+      "additionalProperties": false,
+      "properties": {
+        "bucketMinutes": {
+          "type": "number"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CoveragePoint"
+          }
+        },
+        "surges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SurgePoint"
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["number", "string", "null"]
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CoveragePoint": {
+      "type": "object",
+      "required": ["x", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "string"
+        },
+        "value": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "SurgePoint": {
+      "type": "object",
+      "required": ["x", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "measure": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
