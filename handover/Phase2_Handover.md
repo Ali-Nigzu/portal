@@ -57,15 +57,30 @@
 3. Extend caching beyond the local in-process backend (e.g., prepare Redis adapter) once live execution is stable.
 
 ## Handover summary for the next Codex (Phase 3 kickoff)
-- **Phase 3 focus:** build the shared frontend chart engine (`<ChartRenderer />`), axis/series manager, card chrome, and KPI primitives that render Phase 2 `ChartResult` objects without recomputing analytics.
-- **Read first:**
-  - `ANALYTICS_DEVELOPMENT_PLAN.md` – Section “Phase 3 – Shared Frontend Chart Engine & Card Primitives”.
-  - `shared/analytics/examples/chartresult_phase2_example.json` and `shared/analytics/examples/golden_dashboard_live_flow.json` – canonical fixtures to load in Storybook.
-- **Frontend codebase entry points:**
-  - `frontend/src/analytics/` (existing analytics utilities) and `frontend/src/components/` for shared primitives.
-  - Create or extend a charting module under `frontend/src/charting/` (or equivalent) to host the reusable renderer and axis manager.
-  - Storybook lives at `frontend/src/stories/`; add Phase 3 stories here using the provided ChartResult fixtures.
-- **Local workflow:**
-  - Run `npm install` (or `yarn`) inside `frontend/`, then `npm run storybook` to iterate on the shared engine using fixtures.
-  - Use `npm run start` only for smoke-checking integration; Phase 3 work should remain isolated from production routes.
-- **Key behaviour reminders:** maintain canonical bucket calendars, surface coverage/rawCount in tooltips, render null dwell buckets as gaps, and visually flag low-coverage occupancy points.
+- **Phase 3 scope:** build and harden the shared `<ChartRenderer>` engine, unit-aware axis/series manager, and reusable card/KPI chrome that power the forthcoming Analytics Builder (Phase 4) and Dashboard (Phase 5). Existing pages remain untouched.
+- **Read first:** `ANALYTICS_DEVELOPMENT_PLAN.md` Phase 3 section (deliverables, architecture, done criteria) plus `frontend/src/analytics/schemas/charting.ts` for the frozen `ChartResult` contract.
+- **Storybook + fixtures:**
+  - Run `npm --prefix frontend run charts:preview` to inspect fixtures without a backend.
+  - Load `golden_dashboard_live_flow.json`, `chartresult_phase2_example.json`, `golden_dwell_by_camera.json`, `golden_demographics_by_age.json`, and `golden_retention_heatmap.json` via the Storybook controls.
+  - Review the derived scenarios inside Storybook (low coverage, null dwell buckets, retention small cohorts, KPI variants, empty state, contract violation) to understand expected error/empty behaviours.
+- **Frontend directories to touch:**
+  - `frontend/src/analytics/components/ChartRenderer/` – orchestrator, primitives, managers, `ui/ChartErrorState|ChartEmptyState`, `utils/format.ts`, and stylesheet.
+  - `frontend/src/analytics/components/Card/` – card chrome + KPI tile styling.
+  - `frontend/src/analytics/utils/` – `loadChartFixture.ts`, `exportChart.ts`.
+  - `frontend/src/analytics/stories/` – Storybook playground and visual QA matrix.
+- **Key implementation notes:** rely on Recharts; never mutate analytics in the frontend; respect axis/palette/coverage rules; keep all chart logic within the shared engine; ensure the export stub posts `{ spec, specHash }` to the placeholder endpoint; preserve validation + error/empty states when integrating into new surfaces.
+
+## Phase 4 kickoff pointers
+- **Where to look first:**
+  - `frontend/src/analytics/components/ChartRenderer/` (orchestrator, validation, primitives, managers, error/empty states, styling).
+  - `frontend/src/analytics/components/Card/` (card chrome + KPI tile foundation).
+  - `frontend/src/analytics/stories/ChartRendererPlayground.stories.tsx` (authoritative visual QA matrix and fixture wiring).
+  - `shared/analytics/examples/*.json` (golden ChartResult fixtures for local prototyping before the API is connected).
+- **How to run locally:**
+  - `npm --prefix frontend run dev` – launches the frontend app; gate the new `/analytics/v2` workspace behind a feature flag when wiring UI shells.
+  - `npm --prefix frontend run charts:preview` – opens Storybook with the full chart QA suite (no backend required).
+- **Early implementation steps:**
+  1. Scaffold the `/analytics/v2` shell (rail + canvas + inspector) under a feature flag.
+  2. Hydrate a single Trend preset using `loadChartFixture` to drive `ChartRenderer` end-to-end.
+  3. Replace fixture plumbing with live API calls once the shell and controls are stable.
+- **Feature flags / configuration:** define an environment switch (e.g., `VITE_ENABLE_ANALYTICS_V2`) to isolate the new workspace during development and QA.

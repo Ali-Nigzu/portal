@@ -794,23 +794,23 @@ Phase 2 compiler currently runs fully against test fixtures. Live BigQuery execu
 
 #### Phase 2 completion summary (locked for frontend consumption)
 
-✅ **Phase 2 backend analytics foundation is complete (fixture-backed, frozen contract).**
+🏁 **Phase 2 complete – backend analytics foundation frozen for frontend consumption.**
 
-Delivered assets:
+**Delivered assets (ready for Phase 3 integration):**
 
-* `backend/app/analytics/compiler.py` – canonical spec→SQL compiler covering occupancy, activity, throughput, dwell, and retention pipelines with unified calendar semantics.
-* `backend/app/analytics/engine.py` – execution, normalisation, coverage/metadata attachment, and cache integration.
-* `backend/app/analytics/cache.py`, `backend/app/analytics/hashing.py` – deterministic spec hashing plus swappable cache backend (current default: in-process TTL).
-* `shared/analytics/fixtures/events_golden_client0.csv` & `backend/app/analytics/fixtures.py` – fixture datasets that mirror live BigQuery schemas.
-* `shared/analytics/examples/chartresult_phase2_example.json` – canonical example consumed by future frontend/QA work.
-* `handover/Phase2_Handover.md` – runbook covering compiler usage, regression commands, fixture locations, and UI-facing semantics.
+* [`backend/app/analytics/compiler.py`](backend/app/analytics/compiler.py) – canonical spec→SQL compiler covering occupancy, activity, throughput, dwell, and retention pipelines with the shared calendar.
+* [`backend/app/analytics/engine.py`](backend/app/analytics/engine.py) – execution harness, normaliser, coverage/rawCount enrichment, and cache orchestration.
+* [`backend/app/analytics/cache.py`](backend/app/analytics/cache.py) & [`backend/app/analytics/hashing.py`](backend/app/analytics/hashing.py) – deterministic spec hashing plus pluggable cache backend (in-process TTL default).
+* [`shared/analytics/fixtures/events_golden_client0.csv`](shared/analytics/fixtures/events_golden_client0.csv) & [`backend/app/analytics/fixtures.py`](backend/app/analytics/fixtures.py) – golden fixture inputs that mirror production schemas.
+* [`shared/analytics/examples/chartresult_phase2_example.json`](shared/analytics/examples/chartresult_phase2_example.json) – frozen ChartResult example for frontend QA and Storybook fixtures.
+* [`handover/Phase2_Handover.md`](handover/Phase2_Handover.md) – operational runbook covering compiler usage, regression commands, fixture locations, and UI semantics that Phase 3 must honour.
 
-🔜 **Phase 2.2 – Live BigQuery wiring (pending for next backend iteration):**
+**Pending for Phase 2.2 (live BigQuery wiring follow-up):**
 
-* Connect analytics execution to real BigQuery tables using service-account credentials and per-client routing.
-* Stand up `/analytics/run` + `/analytics/catalogue` HTTP endpoints.
-* Add Redis (or equivalent) cache backend configuration once live execution is proven stable.
-* Maintain fixture parity tests to guarantee no divergence between sandbox datasets and compiled SQL.
+* Connect analytics execution to production BigQuery datasets via the approved service account, validating parity with fixtures.
+* Expose `/analytics/run` and `/analytics/catalogue` HTTP endpoints that proxy the compiler/engine outputs.
+* Introduce a production-ready cache backend (Redis or equivalent) once live execution is validated.
+* Preserve fixture-based regression tests to guarantee no drift between sandbox datasets and compiled SQL results.
 
 The backend contract (spec schemas, ChartResult fields, calendar semantics, coverage/rawCount behaviour) is now considered frozen for Phase 3. Any deviations require explicit change-control notes before implementation.
 
@@ -863,113 +863,271 @@ The backend contract (spec schemas, ChartResult fields, calendar semantics, cove
 
 **What Phase 3 is**
 
-Phase 3 delivers the **shared frontend chart engine and card primitives** that will power both the Analytics Builder workspace (Phase 4) and the Dashboard redesign (Phase 5). This work builds the visual foundation only; it does **not** modify any existing client-facing pages yet. All outcomes must consume `ChartResult` objects exactly as produced in Phase 2.
+Phase 3 is **the construction of the shared frontend chart engine and card primitives that will power the Dashboard (Phase 5) and the Analytics Builder workspace (Phase 4).** This phase produces the reusable visual foundation only. It does **not** modify any existing client-facing pages; instead it builds the core visual engine that every future surface will consume. All components must ingest `ChartResult` objects exactly as emitted in Phase 2.
 
 #### Phase 3 deliverables
 
-**A. `<ChartRenderer />` (shared visual engine)**
+**A. Declarative `<ChartRenderer>` core**
 
-* Accepts a `ChartResult` payload and renders:
-  * Multi-series time charts (occupancy, activity, throughput, dwell).
-  * Split/grouped bar & column charts (demographics, categorical splits).
-  * Retention heatmaps (cohort × lag matrix).
-  * KPI tiles derived from point or aggregate data.
-* Enforces canonical bucket calendars, labels, units, rawCount, and coverage as provided by the backend—no client-side recomputation.
-* Supports interactions required across the product: hover tooltips, zoom & pan, per-series toggle/show-hide, dual-axis selection, keyboard navigation, and responsive layout adjustments.
-* Provides adaptive tooltips that surface value, unit, rawCount, coverage, and surge metadata verbatim from the backend.
-* Guarantees deterministic rendering (no metric-specific hacks) so identical inputs yield identical visuals across Dashboard and Builder.
+* The orchestrator in `frontend/src/analytics/components/ChartRenderer/ChartRenderer.tsx` renders purely declaratively: it receives a `ChartResult`, inspects `chartType` plus `series[].geometry`, and selects the matching primitive without performing any metric-specific maths, bucket interpolation, or value coercion.
+* Contract enforcement lives in `validation.ts`. Invalid payloads surface `ChartErrorState` (friendly card treatment) while empty/fully-null payloads surface `ChartEmptyState`; both reside in `ui/` alongside shared legend and tooltip components.
+* Required primitives (under `primitives/`) ship as first-class modules:
+  1. `TimeSeriesChart.tsx` – occupancy, entrances, exits, throughput, dwell (mean/p90), and activity series.
+  2. `FlowChart.tsx` – composed area+bar+line Live Flow configuration with mixed-unit handling.
+  3. `BarChart.tsx` – categorical/demographic splits.
+  4. `HeatmapChart.tsx` – retention cohort grids and future density/activity matrices with canonical row × column grids.
+  5. `KpiTile.tsx` – single-value KPI tiles with trend arrow, coloured delta, optional sparkline, coverage + rawCount surfacing.
+* Rendering foundation remains Recharts; all primitives pass through canonical `ChartResult` metadata (`coverage`, `rawCount`, labels, units) untouched.
 
-**B. Axis & series manager**
+**B. Axis, series, and palette management**
 
-* Implement unit-aware Y-axis bindings (e.g., people, events, events/min, minutes) with automatic grouping and formatting.
-* Auto-hide unused axes while preserving state for toggled-off series.
-* Handle mixed-unit charts (e.g., Live Flow occupancy + throughput) with clear axis labelling and colour cues.
-* Deliver a reusable colour palette + series identity map that stays consistent across all contexts (Dashboard, Builder, Storybook).
+* `managers/AxisManager.ts` groups series strictly by unit (`people`, `events`, `events/min`, `minutes`, `percentage`, `count`), auto-hides unused axes, and caps charts at **three** Y-axes with labels mirroring the unit token.
+* `managers/PaletteManager.ts` and `managers/SeriesManager.ts` provide deterministic colour assignments (occupancy blue, entrances green, exits red, dwell gold) and toggle state tracking shared across all primitives.
 
-**C. Card chrome & KPI primitives**
+**C. Interaction UI & formatting utilities**
 
-* Create the universal chart card shell containing title, subtitle, settings gear (placeholder actions), export button, date-range selector placeholder, and tag/pill container placeholder.
-* Build a KPI Tile component capable of rendering a large value, label + unit, +/- delta badge, optional sparkline (fed by the shared renderer), and coverage/low-confidence messaging.
-* Ensure these primitives are responsive, theme-aware, and match premium references (Victron, SOEnergy, FoxESS) in spacing and typographic rhythm.
+* `ui/SeriesLegend.tsx` offers keyboard-accessible series toggles that respect backend ordering and dynamically update axis visibility.
+* `ui/ChartTooltip.tsx` (paired with `utils/format.ts` and `primitives/utils.ts`) renders unit-formatted values, `rawCount` (when meaningful), and coverage labels that highlight low-confidence (`coverage < 1`) and critical (`coverage < 0.5`) states without re-ordering payloads.
+* Time-series/flow charts expose zoom via Recharts `Brush`; heatmaps explicitly disable zoom/pan per requirements.
 
-**D. Storybook visual catalogue**
+**D. Card chrome & KPI primitives**
 
-* Publish stories that render ChartResults sourced from Phase 2 fixtures/examples:
-  * Live Flow composite (occupancy + activity + throughput).
-  * Dwell averages with null-gap buckets.
-  * Retention heatmap with low-coverage cohorts.
-  * Split bar/column charts (demographics).
-  * KPI tiles showing deltas and sparklines.
-  * Empty-state and low-coverage scenarios.
-* Each story documents expected behaviours (e.g., how null dwell renders as a gap, how coverage badges appear).
+* `components/Card/Card.tsx` + `Card.css` provide the universal chrome (title, subtitle, settings, export, placeholder date selector, tag area) with responsive spacing and light/dark theming via existing design tokens.
+* `primitives/KpiTile.tsx` handles unit-aware big numbers, delta arrows (↑/↓/→), coloured deltas (green/red/neutral), optional sparklines, `rawCount`, and low-coverage messaging – forming the foundation for dashboard KPI cards.
 
-**E. Export wiring (frontend only)**
+**E. Storybook visual QA matrix**
 
-* Wire the export button in card chrome to assemble the correct payload (spec hash or original ChartSpec) and call a placeholder HTTP endpoint.
-* No backend change yet—log or surface a toast confirming the payload structure for later backend hook-up.
+* `frontend/src/analytics/stories/ChartRendererPlayground.stories.tsx` is the authoritative visual suite. It loads golden fixtures through `utils/loadChartFixture.ts`, applies lightweight transforms for edge cases, and showcases:
+  - Occupancy/activity/throughput multi-series time chart (low coverage included).
+  - Live Flow composite (area + bar + line).
+  - Dwell mean + p90 with null buckets and low coverage.
+  - Retention heatmap with small-cohort coverage warnings.
+  - Demographic split bars.
+  - KPI tile variants (positive delta, negative delta, null value, low coverage).
+  - Empty/no-data state and contract violation state (error surface).
+* A dedicated command `npm --prefix frontend run charts:preview` boots Storybook with fixtures for local QA.
 
-**F. Developer experience & tooling**
+**F. Export stub & fixture loaders**
 
-* Provide local commands to run the chart engine against fixture data without the backend (e.g., mock API loader in Storybook or Vite dev server).
-* Document Storybook startup, hot module reload expectations, and how to inject custom ChartSpecs/ChartResults for visual QA.
-* Ensure linting, type-checking, and testing scripts cover the new frontend packages.
+* `utils/exportChart.ts` packages `{ spec, specHash }` and posts to `/api/analytics/export-placeholder`, matching the Phase 6 backend contract.
+* `utils/loadChartFixture.ts` exposes typed dynamic imports of the golden JSON fixtures in `shared/analytics/examples/` for Storybook and local harness usage.
+
+**G. Developer experience & testing**
+
+* Documented workflows now include `npm --prefix frontend run charts:preview`, `npm --prefix frontend run lint`, and targeted Jest runs for chart utilities.
+* Unit coverage: `primitives/utils.ts` (via usage), AxisManager tests (`components/ChartRenderer/__tests__/AxisManager.test.ts`), and validation contract tests (`components/ChartRenderer/__tests__/validation.test.ts`).
+* `handover/Phase2_Handover.md` references the new directories, fixtures, scripts, and testing guidance so future Codex engineers can onboard rapidly.
+
+**H. Visual semantics & accessibility guardrails**
+
+* All typography/spacing/colour decisions consume existing VRM design tokens (`--vrm-*`). Legends wrap gracefully, tooltips/coverage badges signal low confidence, and coverage below 0.5 receives critical styling across charts and KPI tiles.
+* `rawCount` values surface when provided; null values render as intentional gaps (no interpolation). Heatmap cells highlight missing data rather than inferring values.
+* Error/empty states are card-based, maintain layout stability, and avoid crashing downstream surfaces.
+
+**I. File layout summary**
+
+```
+frontend/src/analytics/
+  components/
+    Card/
+      Card.tsx
+      Card.css
+      index.ts
+    ChartRenderer/
+      ChartRenderer.tsx
+      index.ts
+      managers/
+        AxisManager.ts
+        PaletteManager.ts
+        SeriesManager.ts
+        index.ts
+      primitives/
+        BarChart.tsx
+        FlowChart.tsx
+        HeatmapChart.tsx
+        KpiTile.tsx
+        TimeSeriesChart.tsx
+        index.ts
+        types.ts
+        utils.ts
+      ui/
+        ChartErrorState.tsx
+        ChartEmptyState.tsx
+        ChartTooltip.tsx
+        SeriesLegend.tsx
+      utils/
+        format.ts
+      styles.css
+      validation.ts
+  stories/
+    ChartRendererPlayground.stories.tsx
+  utils/
+    exportChart.ts
+    loadChartFixture.ts
+```
+
+* Components follow PascalCase naming; utilities camelCase. Types flow from `frontend/src/analytics/schemas/charting.ts`.
+
+#### Chart engine architecture (Phase 3)
+
+```
+Phase 2 backend
+   │
+   │  (ChartResult JSON)
+   ▼
+ChartRenderer orchestrator
+   │
+   ├─ validation.ts ──► error / empty state surfaces
+   ├─ AxisManager ──► Recharts axes (unit-based)
+   ├─ Palette/Series managers ─► colour + visibility
+   ├─ UI helpers ─────► tooltips, legends, formatting
+   └─ Primitives ───► TimeSeries / Flow / Bar / Heatmap / KPI
+                           │
+                           ▼
+                    Card chrome + KPI shells
+                           │
+                           ▼
+                    Storybook + downstream surfaces (Dashboard, Builder)
+```
+
+* All primitives consume the same `ChartResult` contract. Any future surfaces must route through this orchestrator—no bespoke chart logic per screen.
 
 #### Phase 3 done criteria
 
-* All Phase 2 ChartResult examples render pixel-perfect in Storybook (time-series, bars, heatmaps, KPI tiles).
-* Hover/zoom/toggle interactions behave consistently across chart types and preserve canonical data semantics (no inferred buckets).
-* Axis labels, units, and colours remain stable as series are toggled on/off.
-* Export buttons emit the correct payload schema for backend integration.
-* Accessibility baseline (axe/ARIA review) passes for core interactive components.
+* Every Phase 2 golden `ChartResult` (time series, Live Flow composite, dwell null-bucket, retention heatmap, demographic splits, KPI tiles) plus the additional low coverage / empty / contract-violation fixtures render correctly in Storybook via the `charts:preview` command.
+* Hover tooltips surface unit-formatted values, `rawCount`, and coverage indicators while preserving backend ordering; heatmaps disable zoom, other charts honour brush zoom.
+* Axis manager enforces unit grouping, hides unused axes, caps at three Y-axes, and palette assignments remain stable when toggling visibility.
+* Card chrome supports light/dark themes, tablet responsiveness, export/settings placeholders, and KPI tiles display delta arrows, coloured deltas, sparklines, and low-coverage messaging without layout jitter.
+* Validation rejects malformed payloads (missing buckets, unsupported units, coverage outside 0–1, malformed heatmaps) and surfaces `ChartErrorState`; empty datasets render `ChartEmptyState` instead of silent blanks.
+* Export stub posts `{ "spec": <ChartSpec>, "specHash": "<hash>" }` to `/api/analytics/export-placeholder` and is covered by unit tests alongside AxisManager and validation suites.
+* Developer documentation and `handover/Phase2_Handover.md` explain fixture loading, Storybook workflows, lint/test commands, and manual injection of `ChartResult` JSON with no backend.
+* Accessibility baseline (keyboard focus, ARIA labelling, contrast) validated across cards, legends, tooltips, and error/empty states.
 
 #### What Phase 3 does **not** include
 
 * No changes to existing Dashboard or Analytics pages yet.
-* No builder UI (inspectors, filters, presets catalogue) beyond Storybook fixtures.
-* No presets or preset management work.
-* No dashboard grid/layout logic.
-* No server-side pinning or saved views.
-* No BigQuery query execution changes or backend modifications.
+* No builder UI, inspectors, or configuration surfaces.
+* No presets.
+* No preset catalogues or saved-view workflows.
+* No dashboard grid or layout logic.
+* No server-side pinning, persistence, or saved views.
+* No BigQuery or backend query execution changes—Phase 3 is frontend engine only.
+* No modifications to `ChartResult` schema, backend compiler logic, or canonical bucket calendar.
+* No wholesale theming overhaul beyond using existing design tokens (add tokens only if gaps are documented).
 
-#### Critical Notes for the Next Codex (Phase 3 engineer)
+#### Critical Notes for the Next Codex (Phase 3 Engineer)
 
-* **Do not compute analytics in the frontend.** Render exactly what the backend supplies; coverage/rawCount/units/labels are authoritative.
-* Never infer or fabricate buckets. Phase 2 guarantees canonical timelines and full heatmap grids—render gaps (e.g., null dwell) as intentional absences.
-* Highlight low-coverage occupancy buckets visually (e.g., translucency or badges) rather than treating them as high-confidence data.
-* Retention heatmaps must display the full cohort × lag matrix with coverage signals—no sparse rendering.
-* Maintain a single modular, declarative chart engine; do not fork logic per screen or chart type. Dashboard, Builder, and future surfaces must all consume the same primitives.
-* Every chart surface in the product must migrate to this engine—treat duplication or bespoke rendering as a blocker.
-* Align colours, typography, and spacing with premium reference products (Victron, SOEnergy, FoxESS). Document palette/spacing tokens for reuse.
+* Do not compute analytics in the frontend—render only the values supplied by the backend `ChartResult`.
+* Never infer or fabricate missing buckets; Phase 2 already guarantees canonical calendars and bucket ordering.
+* Tooltips and legends must surface backend ordering, `rawCount`, `coverage`, and unit-formatted values without re-sorting.
+* Low-coverage occupancy points must appear visually “low confidence” (badge/faded treatment) across all primitives.
+* Null dwell buckets render as gaps—never interpolate, smooth, or backfill.
+* Retention heatmaps must display the complete cohort × lag grid even when `rawCount = 0`; missing cells are bugs.
+* Respect all metadata: coverage, rawCount, units, labels, and any series `meta` flags provided by the backend.
+* Axis bindings live exclusively in the axis manager; primitives must not create ad-hoc axes or override scaling.
+* Colours, axes, fonts, spacing should echo high-end references while strictly using existing design tokens unless a new token is documented.
+* All chart logic must stay inside the shared engine—no screen-specific forks or duplicated chart code.
+* Use Recharts as the rendering foundation; introducing alternative libraries is out of scope.
+* Export interactions may only send backend-authored `ChartSpec` payloads and `specHash`—do not rewrite specs in the frontend.
+* Every chart in the product will migrate onto this engine—optimise for configurability, testing, and reuse.
 
+#### Phase 3 execution checklist
 
-### Phase 4 – Analytics Builder & Presets
+- [x] Scaffold `ChartRenderer` orchestrator with primitive registry and shared types.
+- [x] Implement `AxisManager` and `SeriesPalette` enforcing unit rules, reserved colours, and ≤3 axes.
+- [x] Build interaction hooks/UI (`useChartInteractions`, legends, toolbars) with low-confidence indicator behaviour.
+- [x] Deliver card chrome + KPI primitives supporting light/dark themes, responsiveness, deltas, and sparklines.
+- [x] Wire export stub + utility emitting `{ spec, specHash }` and add unit tests.
+- [x] Create fixture loader utilities that pull golden examples from `shared/analytics/examples/`.
+- [x] Author comprehensive Storybook stories covering all required scenarios (Live Flow, dwell nulls, low coverage, heatmaps, KPI, empty).
+- [x] Update developer docs (plan + handover) with local commands, Storybook workflow, and spec injection guidance.
+- [x] Validate accessibility, keyboard navigation, ARIA labels, and responsive breakpoints across cards and charts.
 
-**Deliverables**
+#### Phase 3 integration status (post-hardening)
 
-* New analytics workspace shell (rail + canvas + inspector).
-* Preset galleries per tab with descriptions.
-* Filter pill builder with natural-language chips.
-* Saved View CRUD UI.
-* Gear menu actions (duplicate, save, pin).
-* Removal of legacy tree-based builder.
+* No production routes (`/dashboard`, `/analytics`, or legacy builder screens) import `ChartRenderer`, card chrome, or any new Phase 3 modules yet.
+* Existing dashboard and analytics pages remain untouched; behaviour is identical to the pre-Phase 3 state.
+* The only sanctioned entry point is Storybook via `npm --prefix frontend run charts:preview`, which consumes the golden Phase 2 fixtures through `loadChartFixture.ts`.
+* The `ChartResult` schema and metadata contract (units, coverage, `rawCount`, labels, geometry) are now frozen for Phase 4. Any proposed changes must go through explicit change control.
 
-**Done criteria**
+### Phase 4 – Analytics Workspace & Presets
 
-* User can open preset, tweak filters, save view, pin to dashboard.
-* All presets map to defined ChartSpecs and execute successfully.
-* Legacy builder code removed.
+**What Phase 4 is**
 
-**Ticket skeleton**
+Phase 4 delivers a **new analytics workspace shell** that is preset-first, opinionated, and entirely powered by the Phase 2 backend and Phase 3 chart engine. It introduces a rail + canvas + inspector layout where users launch curated presets, tweak them through guided controls, and view results rendered exclusively by the shared `ChartRenderer` inside the universal card chrome. The legacy JSON-tree builder is retired; all editing flows are declarative and UI-driven.
 
-1. Create analytics workspace layout (rail/canvas/inspector).
-2. Implement preset gallery components (Trends, Demographics, Patterns, Retention).
-3. Implement catalogue rail fetching from `/analytics/catalogue`.
-4. Implement chart canvas with summary pills & empty state guidance.
-5. Implement gear menu with actions.
-6. Implement inspector panels for Sites/Measures/Splits/Filters/Display.
-7. Implement filter pill builder with nested logic support.
-8. Implement Saved View CRUD integration.
-9. Remove legacy builder UI and routes.
+#### Phase 4 deliverables
+
+**A. Analytics workspace shell**
+
+* Route/layout: introduce `/analytics/v2` (behind a feature flag initially) with a persistent three-pane layout.
+* Left rail: preset gallery with tabbed sections (`Trends`, `Demographics`, `Patterns`, `Retention`). Each preset tile shows name, description, and iconography.
+* Main canvas: central card canvas hosting a single chart at a time using `ChartRenderer` + card chrome, accompanied by summary pills describing active site/time/split filters.
+* Right inspector: guided configuration grouped into collapsible panels – “What data?” (site/camera scope), “What are we measuring?” (metric/preset), “How do we break it down?” (splits), “Who’s included?” (demographics), “How should it look?” (visual toggles).
+* Responsive behaviour: layout must degrade gracefully to tablet (rail collapses to icon-only, inspector becomes drawer).
+
+**B. Preset catalogue wiring**
+
+* Source preset metadata from a structured catalogue (JSON/TS module) that provides: identifier, tab, title, description, icon, associated `ChartSpec` template ID, default filters/time range/granularity, and `ChartRenderer` expectations.
+* Selecting a preset hydrates its `ChartSpec`, requests a `ChartResult` (initially via fixtures or mocked transport), and renders it in the main canvas card.
+* Preset metadata must map 1:1 with backend-known `ChartSpec` identifiers so saved views/pins remain consistent across phases.
+
+**C. Guided filters & time controls**
+
+* Site/camera selectors: checkbox list with search/filter, writing into the active `ChartSpec` without exposing raw JSON.
+* Time range presets: Today, Last 7 Days, Last 30 Days, Custom (calendar picker) with granularity auto-suggestions (5 min, 15 min, hour, day) based on preset capabilities.
+* Split toggles: quick chips for sex, age, camera, event type, etc. Guard against unsupported splits per preset (disable with explanation).
+* Metric-specific options (e.g., dwell mean vs. p90) are provided through radio buttons or segmented controls that update the spec template fields.
+
+**D. Preset → spec → result pipeline**
+
+* Document `PresetDefinition` → `ChartSpecTemplate` mapping, including how UI controls mutate template parameters (filters, date range, granularity, breakdowns).
+* Enforce read-only handling of backend-authored fields (e.g., units, measure labels); the frontend may only alter filter/time/split parameters.
+* Execution path: preset selection → apply UI deltas → send `ChartSpec` to analytics API (or fixture loader in early dev) → receive `ChartResult` → validate via Phase 3 contract → render with `ChartRenderer`.
+* Provide a development harness to run presets against fixtures when backend connectivity is unavailable.
+
+**E. Workspace empty/error/data states**
+
+* Empty canvas when no preset is selected with onboarding guidance and quick-start buttons.
+* Use Phase 3 `ChartErrorState` for contract violations and network failures; include retry instructions.
+* “No data” state when backend returns zero coverage or empty buckets, surfacing reason (e.g., “No events for selected cameras between X and Y”).
+* Preserve low-coverage styling inside the rendered charts to maintain trust signals.
+
+**F. Commands & developer experience**
+
+* Document local development commands: `npm --prefix frontend run dev` (workspace shell with feature flag), `npm --prefix frontend run charts:preview` (Storybook), backend fixture servers if needed.
+* Provide instructions for toggling the `/analytics/v2` feature flag (environment variable or config file) and for swapping between fixture mode and live API calls.
+* Include guidance for injecting arbitrary `ChartSpec`/`ChartResult` payloads into the workspace for debugging (leveraging the Phase 3 fixture utilities).
+
+#### Phase 4 non-goals
+
+* No modifications to existing dashboard routes or cards.
+* No dashboard pinning, saved layout grid, or drag-and-drop management.
+* No persistence of saved views beyond stubbed placeholders; full CRUD can be deferred to Phase 4.2/Phase 5.
+* No new backend metrics or BigQuery queries beyond what Phase 2 already exposes (unless flagged as blockers).
+* No builder-from-scratch JSON editing or legacy tree UI resurrection.
+* No re-theming of global application chrome beyond workspace-specific layout.
+
+#### Critical Notes for Phase 4 (Analytics Workspace Engineer)
+
+* **Do not compute analytics in the frontend.** All values originate from backend-issued `ChartResult` payloads; UI controls may only request different specs.
+* **Respect the canonical bucket timeline.** Never fabricate or interpolate buckets; rely on the Phase 2 calendar guarantees.
+* **Use `ChartRenderer` exclusively.** Every chart within the workspace (including KPI tiles) must route through the shared engine and card chrome.
+* **Surface backend metadata verbatim.** Units, coverage, `rawCount`, labels, and confidence flags must appear exactly as delivered; low coverage remains visually distinct.
+* **Null dwell values remain gaps.** Do not smooth or fill nulls—render the absence per Phase 3 rules.
+* **Retention heatmaps display full grids.** Never drop cells or remap axes; honour the backend ordering.
+* **Guard against contract drift.** If validation fails, show the Phase 3 error card and log a change-control ticket rather than attempting to coerce data client-side.
+* **Feature-flag integrations carefully.** Keep `/analytics/v2` hidden until QA complete; wiring must not regress legacy analytics routes during rollout.
+
+#### Phase 4 execution checklist
+
+- [ ] Scaffold `/analytics/v2` layout with rail, canvas, inspector, and feature flag.
+- [ ] Implement preset catalogue module and connect it to rail UI.
+- [ ] Hydrate initial preset into `ChartRenderer` using fixtures, then hook backend API.
+- [ ] Build guided filter/time controls that mutate `ChartSpec` templates safely.
+- [ ] Implement empty/no-data/error states across the workspace shell.
+- [ ] Document developer commands, fixture usage, and feature-flag toggles.
+- [ ] Validate responsive behaviour and accessibility across the new layout.
 
 ### Phase 5 – Dashboard Refactor & Pinning
 
