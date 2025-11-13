@@ -1027,7 +1027,7 @@ Only update the checkboxes + notes.
 
 ### 16.1 Phase Checklist (Top-Level)
 
-- [ ] Phase 1 – Specification & Metric Foundations
+- [ ] Phase 1 – Specification & Metric Foundations *(schemas/fixtures complete; SQL template docs scheduled to land with Phase 2 compiler work)*
 - [ ] Phase 2 – Backend Analytics Engine on BigQuery
 - [ ] Phase 3 – Shared Chart Engine in Frontend
 - [ ] Phase 4 – Analytics Builder & Presets
@@ -1038,17 +1038,18 @@ Only update the checkboxes + notes.
 
 **Phase 1 – Specification & Metric Foundations**
 
-- [ ] Draft ChartSpec schema
-- [ ] Draft ChartResult schema
-- [ ] Validate BigQuery table structure
+- [x] Draft ChartSpec schema *(TS + JSON Schema committed in `shared/analytics/schemas` with mirrored types in `frontend/src/analytics/schemas/charting.ts` and validated by `backend/tests/test_chart_schemas.py`)*
+- [x] Draft ChartResult schema *(same locations/tests as above)*
+- [x] Validate BigQuery table structure *(see `backend/app/analytics/schema_validator.py` + `backend/tests/test_schema_validator.py`; supports per-client tables with canonical schema enforcement)*
 - [ ] Implement SQL templates (occupancy, throughput, dwell, demographics, retention)
-- [ ] Create golden dataset fixtures
-- [ ] Create expected JSON outputs
-- [ ] Implement schema validation tests
+- [x] Create golden dataset fixtures *(`shared/analytics/fixtures/events_golden_client0.csv` with workflow documented in `docs/analytics/foundations.md`)*
+- [x] Create expected JSON outputs *(generated via `backend/app/analytics/generate_expected.py`, stored under `shared/analytics/examples`)*
+- [x] Implement schema validation tests *(pytest suite in `backend/tests` covers schemas, fixtures, and validator behaviour)*
 
 Notes:
 
-...
+- Canonical schema + fixtures documented in `docs/analytics/foundations.md`; README links added in `README.md`.
+- SQL template narratives will be authored at the start of Phase 2 alongside the spec→SQL compiler per approved plan adjustment.
 
 **Phase 2 – Backend Analytics Engine**
 
