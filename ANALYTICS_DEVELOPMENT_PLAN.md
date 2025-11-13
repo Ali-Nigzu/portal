@@ -1027,7 +1027,7 @@ Only update the checkboxes + notes.
 
 ### 16.1 Phase Checklist (Top-Level)
 
-- [ ] Phase 1 – Specification & Metric Foundations *(schemas/fixtures complete; SQL template docs scheduled to land with Phase 2 compiler work)*
+- [x] Phase 1 – Specification & Metric Foundations *(completed; SQL template narratives intentionally move to Phase 2 to align with compiler implementation)*
 - [ ] Phase 2 – Backend Analytics Engine on BigQuery
 - [ ] Phase 3 – Shared Chart Engine in Frontend
 - [ ] Phase 4 – Analytics Builder & Presets
@@ -1041,7 +1041,7 @@ Only update the checkboxes + notes.
 - [x] Draft ChartSpec schema *(TS + JSON Schema committed in `shared/analytics/schemas` with mirrored types in `frontend/src/analytics/schemas/charting.ts` and validated by `backend/tests/test_chart_schemas.py`)*
 - [x] Draft ChartResult schema *(same locations/tests as above)*
 - [x] Validate BigQuery table structure *(see `backend/app/analytics/schema_validator.py` + `backend/tests/test_schema_validator.py`; supports per-client tables with canonical schema enforcement)*
-- [ ] Implement SQL templates (occupancy, throughput, dwell, demographics, retention)
+- [ ] Implement SQL templates (occupancy, throughput, dwell, demographics, retention) *(scheduled to ship alongside the Phase 2 spec→SQL compiler)*
 - [x] Create golden dataset fixtures *(`shared/analytics/fixtures/events_golden_client0.csv` with workflow documented in `docs/analytics/foundations.md`)*
 - [x] Create expected JSON outputs *(generated via `backend/app/analytics/generate_expected.py`, stored under `shared/analytics/examples`)*
 - [x] Implement schema validation tests *(pytest suite in `backend/tests` covers schemas, fixtures, and validator behaviour)*
@@ -1049,7 +1049,20 @@ Only update the checkboxes + notes.
 Notes:
 
 - Canonical schema + fixtures documented in `docs/analytics/foundations.md`; README links added in `README.md`.
-- SQL template narratives will be authored at the start of Phase 2 alongside the spec→SQL compiler per approved plan adjustment.
+- SQL template narratives intentionally deferred to Phase 2 so that documentation and implementation land together with the spec→SQL compiler.
+
+### Phase 1 Delivered
+
+- Canonical `ChartSpec` & `ChartResult` JSON Schemas stored in `shared/analytics/schemas/`, validated by Python (`backend/app/analytics/contracts.py`) and TypeScript (`frontend/src/analytics/schemas/charting.ts`) runtimes.
+- Deterministic golden fixture CSV (`shared/analytics/fixtures/events_golden_client0.csv`) with regeneration utilities in `backend/app/analytics/fixtures.py` and `backend/app/analytics/generate_expected.py`.
+- Golden `ChartResult` examples for regression protection in `shared/analytics/examples/`.
+- BigQuery per-client table schema validator (`backend/app/analytics/schema_validator.py`) confirming canonical columns, UTC timestamps, and client-specific routing without hard-coding table names.
+- Analytics foundations documentation (`docs/analytics/foundations.md`) detailing schema rules, fixture workflow, validation commands, and the Phase 2 execution outline.
+- UTC-only timestamp assumption documented and validated across fixtures and schemas; no local-time conversions yet required.
+- Phase 1 delivered backend/infrastructure groundwork only; the live dashboard and analytics UI remain unchanged.
+- Repository ready for Phase 2: next steps cover spec→SQL compiler, `/analytics/run`, result normalisation, cache abstraction, and BigQuery integration/validation against client tables.
+
+**Handover for next Codex:** Phase 1 assets live in `shared/analytics/schemas/`, `shared/analytics/examples/`, `shared/analytics/fixtures/`, and `docs/analytics/foundations.md` for immediate reuse.
 
 **Phase 2 – Backend Analytics Engine**
 
