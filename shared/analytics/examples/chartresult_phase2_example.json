@@ -123,6 +123,84 @@
           "rawCount": 4
         }
       ]
+    },
+    {
+      "id": "avg_dwell",
+      "label": "Average Dwell",
+      "geometry": "line",
+      "axis": "Y1",
+      "unit": "minutes",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 11.5,
+          "coverage": 1.0,
+          "rawCount": 4
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 12.0,
+          "coverage": 1.0,
+          "rawCount": 3
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 9.4,
+          "coverage": 0.5,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": null,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 13.2,
+          "coverage": 1.0,
+          "rawCount": 5
+        }
+      ]
+    },
+    {
+      "id": "session_count",
+      "label": "Sessions",
+      "geometry": "column",
+      "axis": "Y2",
+      "unit": "sessions",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 4.0,
+          "coverage": 1.0,
+          "rawCount": 4
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 3.0,
+          "coverage": 1.0,
+          "rawCount": 3
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 2.0,
+          "coverage": 0.5,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 5.0,
+          "coverage": 1.0,
+          "rawCount": 5
+        }
+      ]
     }
   ],
   "meta": {
@@ -157,11 +235,13 @@
       }
     ],
     "summary": {
-      "points": 15,
+      "points": 25,
       "measures": [
         "occupancy",
         "activity",
-        "throughput"
+        "throughput",
+        "avg_dwell",
+        "session_count"
       ]
     }
   }

@@ -187,3 +187,168 @@ def test_engine_executes_and_caches(chart_spec):
     # Bypass cache triggers another BigQuery call
     engine.execute(chart_spec, organisation="client0", bypass_cache=True)
     assert stub.calls == 2
+
+
+def test_compiler_generates_dwell_pipeline():
+    spec = {
+        "id": "dwell-series",
+        "dataset": "events",
+        "chartType": "composed_time",
+        "measures": [
+            {"id": "avg_dwell", "aggregation": "dwell_mean"},
+            {"id": "session_count", "aggregation": "sessions"},
+        ],
+        "dimensions": [{"id": "time", "column": "timestamp", "bucket": "HOUR"}],
+        "timeWindow": {
+            "from": "2024-02-01T00:00:00Z",
+            "to": "2024-02-01T06:00:00Z",
+            "bucket": "HOUR",
+            "timezone": "UTC",
+        },
+    }
+    compiler = SpecCompiler()
+    context = CompilerContext(table_name="nigzsu.analytics.client0")
+    compiled = compiler.compile(spec, context)
+
+    sql = compiled.sql
+    assert "avg_dwell_dwell_sessions AS" in sql
+    assert "APPROX_QUANTILES" in sql
+    assert "session_count AS raw_count" in sql
+    assert "SAFE_DIVIDE(window_seconds, bucket_seconds)" in sql
+
+
+def test_compiler_generates_retention_pipeline():
+    spec = {
+        "id": "retention-heatmap",
+        "dataset": "events",
+        "chartType": "heatmap",
+        "measures": [
+            {"id": "retention", "aggregation": "retention_rate"},
+        ],
+        "dimensions": [{"id": "cohort", "column": "timestamp", "bucket": "WEEK"}],
+        "timeWindow": {
+            "from": "2024-01-01T00:00:00Z",
+            "to": "2024-03-01T00:00:00Z",
+            "bucket": "WEEK",
+            "timezone": "UTC",
+        },
+    }
+    compiler = SpecCompiler()
+    context = CompilerContext(table_name="nigzsu.analytics.client0")
+    compiled = compiler.compile(spec, context)
+
+    sql = compiled.sql
+    assert "retention_calendar AS" in sql
+    assert "retention_returns AS" in sql
+    assert "SAFE_DIVIDE(returning, cohort_size)" in sql
+    assert "SAFE_DIVIDE(cohort_size, 100" in sql
+    assert "lag_weeks" in sql
+
+
+def test_engine_normalises_dwell_and_sessions():
+    spec = {
+        "id": "dwell-series",
+        "dataset": "events",
+        "chartType": "composed_time",
+        "measures": [
+            {"id": "avg_dwell", "aggregation": "dwell_mean"},
+            {"id": "session_count", "aggregation": "sessions"},
+        ],
+        "dimensions": [{"id": "time", "column": "timestamp", "bucket": "HOUR"}],
+        "timeWindow": {
+            "from": "2024-02-01T00:00:00Z",
+            "to": "2024-02-01T03:00:00Z",
+            "bucket": "HOUR",
+            "timezone": "UTC",
+        },
+    }
+    frame = pd.DataFrame(
+        [
+            {
+                "measure_id": "avg_dwell",
+                "bucket_start": pd.Timestamp("2024-02-01T00:00:00Z"),
+                "value": 12.5,
+                "coverage": 0.75,
+                "raw_count": 4,
+            },
+            {
+                "measure_id": "session_count",
+                "bucket_start": pd.Timestamp("2024-02-01T00:00:00Z"),
+                "value": 4,
+                "coverage": 0.75,
+                "raw_count": 4,
+            },
+        ]
+    )
+
+    stub = StubBigQueryClient(frame)
+    cache = SpecCache(LocalCacheBackend(), default_ttl=60)
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        bigquery_client=stub,
+        cache=cache,
+    )
+
+    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    assert result["chartType"] == "composed_time"
+    dwell_series = next(item for item in result["series"] if item["id"] == "avg_dwell")
+    assert dwell_series["unit"] == "minutes"
+    assert dwell_series["geometry"] == "line"
+    assert dwell_series["data"][0]["rawCount"] == 4
+    sessions_series = next(item for item in result["series"] if item["id"] == "session_count")
+    assert sessions_series["unit"] == "sessions"
+    assert sessions_series["geometry"] == "column"
+
+
+def test_engine_normalises_retention_heatmap():
+    spec = {
+        "id": "retention-heatmap",
+        "dataset": "events",
+        "chartType": "heatmap",
+        "measures": [
+            {"id": "retention", "aggregation": "retention_rate"},
+        ],
+        "dimensions": [{"id": "cohort", "column": "timestamp", "bucket": "WEEK"}],
+        "timeWindow": {
+            "from": "2024-01-01T00:00:00Z",
+            "to": "2024-02-12T00:00:00Z",
+            "bucket": "WEEK",
+            "timezone": "UTC",
+        },
+    }
+    frame = pd.DataFrame(
+        [
+            {
+                "measure_id": "retention",
+                "bucket_start": pd.Timestamp("2024-01-01T00:00:00Z"),
+                "lag_weeks": 0,
+                "value": 1.0,
+                "coverage": 1.0,
+                "raw_count": 120,
+            },
+            {
+                "measure_id": "retention",
+                "bucket_start": pd.Timestamp("2024-01-01T00:00:00Z"),
+                "lag_weeks": 1,
+                "value": 0.65,
+                "coverage": 0.8,
+                "raw_count": 78,
+            },
+        ]
+    )
+
+    stub = StubBigQueryClient(frame)
+    cache = SpecCache(LocalCacheBackend(), default_ttl=60)
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        bigquery_client=stub,
+        cache=cache,
+    )
+
+    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    assert result["chartType"] == "heatmap"
+    series = result["series"][0]
+    assert series["geometry"] == "heatmap"
+    assert series["unit"] == "rate"
+    assert series["data"][1]["group"] == "Week 1"
+    assert series["data"][1]["coverage"] == 0.8

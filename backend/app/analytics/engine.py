@@ -17,18 +17,29 @@ _GEOMETRY_MAP = {
     "occupancy_recursion": "area",
     "count": "column",
     "activity_rate": "line",
+    "dwell_mean": "line",
+    "dwell_p90": "line",
+    "sessions": "column",
+    "retention_rate": "heatmap",
 }
 
 _AXIS_MAP = {
     "occupancy_recursion": "Y1",
     "count": "Y2",
     "activity_rate": "Y2",
+    "dwell_mean": "Y1",
+    "dwell_p90": "Y1",
+    "sessions": "Y2",
 }
 
 _UNIT_MAP = {
     "occupancy_recursion": "people",
     "count": "events",
     "activity_rate": "events/min",
+    "dwell_mean": "minutes",
+    "dwell_p90": "minutes",
+    "sessions": "sessions",
+    "retention_rate": "rate",
 }
 
 
@@ -108,8 +119,15 @@ class AnalyticsEngine:
 
     def _normalise(self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame) -> Dict[str, Any]:
         chart_type = spec["chartType"]
-        if chart_type != "composed_time":
-            raise UnsupportedChartExecution(chart_type)
+        if chart_type == "composed_time":
+            return self._normalise_time_series(spec, compiled, frame)
+        if chart_type in {"heatmap", "retention"}:
+            return self._normalise_heatmap(spec, compiled, frame)
+        raise UnsupportedChartExecution(chart_type)
+
+    def _normalise_time_series(
+        self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame
+    ) -> Dict[str, Any]:
         measures = compiled.measures
         timezone = spec["timeWindow"].get("timezone", "UTC")
 
@@ -171,7 +189,80 @@ class AnalyticsEngine:
         }
 
         return {
-            "chartType": chart_type,
+            "chartType": "composed_time",
+            "xDimension": x_dimension,
+            "series": series,
+            "meta": meta,
+        }
+
+    def _normalise_heatmap(
+        self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame
+    ) -> Dict[str, Any]:
+        measures = compiled.measures
+        timezone = spec["timeWindow"].get("timezone", "UTC")
+
+        if frame.empty:
+            coverage_meta: List[Dict[str, Any]] = []
+        else:
+            coverage_meta = (
+                frame.groupby("bucket_start")["coverage"]
+                .mean()
+                .reset_index()
+                .to_dict("records")
+            )
+            for entry in coverage_meta:
+                entry["x"] = _to_iso(entry.pop("bucket_start"))
+                entry["value"] = float(entry.pop("coverage"))
+
+        series: List[Dict[str, Any]] = []
+        for measure_id, aggregation in measures.items():
+            subset = frame[frame["measure_id"] == measure_id]
+            data_points: List[Dict[str, Any]] = []
+            for record in subset.to_dict("records"):
+                lag_value = int(record.get("lag_weeks", 0))
+                if compiled.bucket == "MONTH":
+                    group_label = f"Month {lag_value}"
+                else:
+                    group_label = f"Week {lag_value}"
+                data_points.append(
+                    {
+                        "x": _to_iso(record["bucket_start"]),
+                        "group": group_label,
+                        "value": float(record["value"]) if record.get("value") is not None else None,
+                        "coverage": float(record["coverage"]) if record.get("coverage") is not None else None,
+                        "rawCount": int(record["raw_count"]) if record.get("raw_count") is not None else None,
+                    }
+                )
+            series.append(
+                {
+                    "id": measure_id,
+                    "label": _label_for_series(measure_id, aggregation),
+                    "geometry": _GEOMETRY_MAP.get(aggregation, "heatmap"),
+                    "unit": _UNIT_MAP.get(aggregation),
+                    "data": data_points,
+                }
+            )
+
+        dimension = spec["dimensions"][0]
+        x_dimension = {
+            "id": dimension["id"],
+            "type": "matrix",
+            "bucket": dimension.get("bucket", compiled.bucket if compiled.bucket != "RAW" else None),
+            "timezone": timezone,
+        }
+
+        meta: Dict[str, Any] = {
+            "timezone": timezone,
+            "coverage": coverage_meta,
+            "surges": [],
+            "summary": {
+                "points": len(frame),
+                "measures": list(measures.keys()),
+            },
+        }
+
+        return {
+            "chartType": "heatmap",
             "xDimension": x_dimension,
             "series": series,
             "meta": meta,
