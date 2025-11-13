@@ -783,7 +783,47 @@ Each phase has explicit deliverables and ticket-ready tasks. Phases must be comp
 * Dwell buckets with zero sessions emit `value = null` alongside `rawCount = 0`, signalling an explicit gap that frontend charts should display as missing rather than interpolated.
 * Retention heatmap cells scale coverage by cohort size versus `_RETENTION_MIN_COHORT` (100); small cohorts therefore surface as low-coverage even when retention rates are high.
 
+**Phase 2 finalisation items (pre-Phase 3 must-haves)**
+
+* Wire live BigQuery execution using the approved service account and confirm fixture parity in `pytest backend/tests/test_analytics_bigquery.py`.
+* Expose `/analytics/run` (and `/analytics/catalogue`) so frontend clients can request `ChartResult` payloads over HTTP.
+* Prepare the cache abstraction for a production backend (Redis adapter + configuration knobs) without altering key semantics.
+* Lock the canonical bucket calendar configuration (bucket sizing, timezone handling, coverage semantics) so Phase 3+ consumers can depend on it.
+
 Phase 2 compiler currently runs fully against test fixtures. Live BigQuery execution for occupancy/activity/throughput will be implemented in the next Phase 2 iteration.
+
+#### ChartResult contract for frontend & chart engine (applies from Phase 3 onward)
+
+**Series structure**
+
+* Every chart response contains `series: Series[]`; each `Series` has `id`, `label`, `unit`, `geometry`, `axis`, `points`, and optional `meta`.
+* `geometry` is one of `"line"`, `"column"`, `"area"`, `"heatmap"`, or `"stat"`, steering default rendering in the shared chart engine.
+* `axis` references either `"primary"`, `"secondary"`, or a named heatmap axis (`"rows"`, `"columns"`).
+
+**Point schema**
+
+* Time/ordinal points: `{ "bucket": ISO8601 timestamp, "value": number|null, "rawCount": number|null, "coverage": number, "surge": SurgeMeta|null }`.
+* Heatmap points: `{ "row": string, "column": string, "value": number|null, "rawCount": number|null, "coverage": number }`.
+* `coverage` is always between 0 and 1 and must be shown in tooltips/legends; `null` values indicate intentional gaps (never extrapolate client-side).
+* `rawCount` represents the unnormalised count (sessions, events, visitors); treat as required for analytics builder summaries.
+
+**Axes & units**
+
+* Primary axis defaults to the first quantitative series; secondary axes must be declared explicitly in the spec (e.g., throughput vs. occupancy).
+* Units are human-friendly strings (`"people"`, `"events"`, `"events/min"`, `"minutes"`, `%`) and should drive tick formatting and tooltip suffixes.
+
+**Canonical timelines**
+
+* Occupancy, activity, throughput, and dwell reference the shared `calendar` CTE and therefore return identical bucket boundaries for the same spec window.
+* Retention heatmaps return a cohort/lag grid with no missing cells; axis ordering is deterministic (cohort ascending, lag ascending).
+* Buckets are never omitted. Leading/trailing partial buckets surface lower coverage but remain present so frontend zoom/brush interactions stay aligned.
+
+**Metadata guarantees**
+
+* `metadata.coverageSummary` (if present) summarises the lowest coverage bucket; retain in cards/tooltips.
+* Surge metadata (when implemented) attaches to points via `surge` with `{ "kind": "surge"|"drop", "strength": number }`.
+* No field names, label text, or unit tokens will change without an explicit breaking-change note; treat this section as the binding contract for Phase 3+.
+* The backend analytics contract is now considered frozen for Phase 3 development; any divergence must go through the change-control log before implementation.
 
 **Ticket skeleton**
 

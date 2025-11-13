@@ -41,6 +41,15 @@
 - Occupancy buckets seeded solely by exit events maintain the carried occupancy value but downgrade coverage to ≤ 0.5; surface these points as low-confidence rather than authoritative counts.
 - Dwell buckets without any paired sessions return `value = null` and `rawCount = 0`, indicating an intentional gap the UI should render as missing data.
 - Retention heatmap cells scale coverage against the `_RETENTION_MIN_COHORT` (100) threshold so small cohorts appear with low coverage even when retention rates are high; preserve this signal in tooltips/legends.
+- All time-series metrics (occupancy, activity, throughput, dwell) consume the shared canonical bucket calendar so buckets are never skipped and leading/trailing partial windows only influence coverage.
+- Heatmap metrics (retention) return the full cohort × lag grid with deterministic ordering; cells are never omitted even when `rawCount = 0`.
+
+## ChartResult contract (frontend binding)
+- Each `series` entry exposes `id`, `label`, `unit`, `geometry`, `axis`, optional `meta`, and a `points` array.
+- Time/ordinal points contain `bucket`, `value`, `rawCount`, `coverage`, and optional `surge`; `null` values are intentional gaps, not errors.
+- Heatmap points contain `row`, `column`, `value`, `rawCount`, and `coverage`.
+- Units stay human-readable (`people`, `events`, `events/min`, `minutes`, `%`) and should drive tick formatting.
+- The backend contract is frozen for Phase 3: field names, bucket semantics, and coverage behaviour will not change without an explicit callout in the development plan.
 
 ## Next TODO items
 1. Connect the BigQuery client used by `AnalyticsEngine` to the real service account and execute compiled SQL against per-client tables.
