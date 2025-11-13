@@ -95,35 +95,74 @@ def event_time_buckets(
     if scoped.empty:
         raise ValueError("No events within the requested window")
 
+    scoped.sort_values(["timestamp", "index"], inplace=True)
     scoped["delta"] = scoped["event_type"].apply(lambda v: 1 if v == 1 else -1)
-    scoped["site_occupancy"] = scoped.groupby("site_id")["delta"].cumsum().clip(lower=0)
-    scoped["bucket"] = scoped["timestamp"].dt.floor(f"{bucket_minutes}min")
+    scoped["running"] = scoped.groupby(["site_id", "cam_id"])["delta"].cumsum()
+    scoped["occupancy"] = scoped["running"].clip(lower=0)
+    scoped["exit_seed"] = scoped["running"] < 0
 
-    bucket_summary = (
-        scoped.groupby("bucket")
-        .agg(
-            occupancy_end=("site_occupancy", "last"),
-            entrances=("event_type", lambda s: int((s == 1).sum())),
-            exits=("event_type", lambda s: int((s == 0).sum())),
-        )
-        .sort_index()
-    )
-
-    all_buckets = pd.date_range(
-        start=start.floor(f"{bucket_minutes}min"),
-        end=end.floor(f"{bucket_minutes}min"),
+    aligned_start = start.floor(f"{bucket_minutes}min")
+    calendar = pd.date_range(
+        start=aligned_start,
+        end=end,
         freq=f"{bucket_minutes}min",
         inclusive="left",
     )
-    bucket_summary = bucket_summary.reindex(all_buckets)
-    bucket_summary["occupancy_end"] = bucket_summary["occupancy_end"].ffill()
-    bucket_summary.fillna({"occupancy_end": 0, "entrances": 0, "exits": 0}, inplace=True)
-    bucket_summary["throughput"] = (
-        bucket_summary["entrances"] + bucket_summary["exits"]
-    ) / bucket_minutes
-    bucket_summary["coverage"] = bucket_summary[["entrances", "exits"]].sum(axis=1).gt(0).astype(float)
-    bucket_summary.index.name = "bucket"
-    return bucket_summary
+
+    rows = []
+    last_occupancy = 0.0
+    for bucket_start in calendar:
+        bucket_end = bucket_start + pd.Timedelta(minutes=bucket_minutes)
+        window_start = max(bucket_start, start)
+        window_end = min(bucket_end, end)
+        window_seconds = max((window_end - window_start).total_seconds(), 0)
+        bucket_seconds = max((bucket_end - bucket_start).total_seconds(), 0)
+
+        mask = (scoped["timestamp"] >= bucket_start) & (
+            scoped["timestamp"] < bucket_end
+        )
+        bucket_events = scoped[mask]
+        event_count = int(bucket_events.shape[0])
+        seeded_by_exit = bool(bucket_events["exit_seed"].any()) if event_count else False
+        occupancy_end = (
+            float(bucket_events.iloc[-1]["occupancy"]) if event_count else None
+        )
+        if occupancy_end is not None:
+            last_occupancy = occupancy_end
+
+        base_coverage = (
+            window_seconds / bucket_seconds if bucket_seconds > 0 else 0.0
+        )
+        if event_count == 0:
+            coverage = 0.0
+        elif seeded_by_exit:
+            coverage = float(min(base_coverage, 0.5))
+        else:
+            coverage = float(base_coverage)
+
+        entrances = int((bucket_events["event_type"] == 1).sum()) if event_count else 0
+        exits = int((bucket_events["event_type"] == 0).sum()) if event_count else 0
+        throughput = (
+            float((entrances + exits) * 60.0 / window_seconds)
+            if window_seconds > 0 and event_count
+            else 0.0
+        )
+
+        rows.append(
+            {
+                "bucket_start": bucket_start,
+                "occupancy_end": float(last_occupancy),
+                "coverage": coverage,
+                "entrances": entrances,
+                "exits": exits,
+                "raw_count": event_count,
+                "throughput": throughput,
+            }
+        )
+
+    frame = pd.DataFrame(rows).set_index("bucket_start")
+    frame.index.name = "bucket"
+    return frame
 
 
 def retention_matrix(events: pd.DataFrame, min_gap_minutes: int = 30) -> Dict[str, Dict[int, float]]:
