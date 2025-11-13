@@ -162,6 +162,7 @@ export interface DataPoint {
   value?: number | null;
   group?: string;
   coverage?: number | null;
+  rawCount?: number | null;
   comparison?: number | null;
   target?: number | null;
 }
