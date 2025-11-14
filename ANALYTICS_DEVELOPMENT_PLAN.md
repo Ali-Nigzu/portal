@@ -1159,37 +1159,38 @@ Phase 5 replaced the legacy dashboard with a manifest-driven experience that con
 **Phase 6 Handover Notes**
 
 * Default manifest + widget contract documented in `docs/analytics/phase5_closeout.md` and `handover/Phase5_Handover.md`.
-* Feature flag + transport toggles remain in place; removing them is a deliberate Phase 6 action.
+* Feature flag + transport toggles remain in place; removing them is a deliberate Phase 6 action. ✅ Updated routing governance now lives in `frontend/src/config.ts` with documentation in `docs/analytics/phase6_rollout.md`.
 * Manifest persistence currently uses in-memory storage; migrating to durable storage is Phase 6 scope.
 * Dashboard V2 uses fixtures by default (transport = fixtures) to simplify QA; switching to live BigQuery happens in Phase 6.
+* ✅ **Milestone 3 – Dashboard promotion:** `/dashboard` now mounts Dashboard V2 by default in all environments, legacy navigation is removed, and QA-only suffix access is gated via the Phase 6 experience flags. Tests cover gating defaults, manifest transport calls, and widget rendering states. See `frontend/src/__tests__/experienceConfig.test.ts`, `frontend/src/dashboard/v2/pages/DashboardV2Page.test.tsx`, and the new transport tests under `frontend/src/dashboard/v2/transport/`.
+* Manual smoke: `npm --prefix frontend start`, authenticate, navigate to `/dashboard`, confirm KPI band + Live Flow load, then pin a chart from `/analytics` to verify the widget appears instantly. Toggle `REACT_APP_EXPOSE_DASHBOARD_LEGACY=true` in dev to reach `/dashboard/legacy` for regression-only checks.
 
-### Phase 6 – QA, Performance, & Polish
+### Phase 6 – QA, Performance, & Polish *(ACTIVE)*
 
-**Deliverables**
+**Status**
 
-* BigQuery cost/performance monitoring dashboards.
-* Load tests for peak usage scenarios.
-* Surge detection tuning & alert thresholds validated.
-* Final accessibility audit.
-* Theming, spacing, typography refinements to match premium references.
-* Final sign-off demo with stakeholders.
-* Removal of deprecated code paths.
+* ✅ Manifest API hardened – schema validation, idempotent pin/unpin behaviour, structured FastAPI errors, and an in-memory repository abstraction ready for future durable storage. See `backend/app/analytics/dashboard_catalogue.py`, `backend/fastapi_app.py`, and the extended coverage in `backend/tests/test_dashboard_manifest.py`.
+* ✅ Analytics & dashboard QA matrix – documented smoke flows, feature-flag combinations, and coverage scenarios in `docs/analytics/phase6_rollout.md` with mirrored handover notes.
+* ✅ Guardrails & observability – shared error boundaries, abort/timeout handling, and logging hooks (`frontend/src/common/*`) wrap the analytics workspace and dashboard, feeding transport retries + structured console telemetry.
+* ✅ Frontend test expansion – `/analytics` and `/dashboard` happy paths, error states, pinning, and manifest reload scenarios covered via `frontend/src/analytics/v2/pages/AnalyticsV2Page.test.tsx` and updated dashboard transport/page suites.
+* 🚧 Durable manifest persistence remains a Phase 7 follow-up; repository interface + documentation highlight the swappable storage point.
 
-**Done criteria**
+**Phase 6 deliverables**
 
-* BigQuery queries stay within latency targets.
-* Accessibility AA compliance verified.
-* Stakeholders approve final UI & data accuracy.
+1. Manifest write validation & rollback guarantees (complete).
+2. Idempotent pin/unpin operations with explicit error envelopes (complete).
+3. Frontend guardrails (error boundaries, abort controllers, logging hooks) protecting `/analytics` and `/dashboard` (complete).
+4. Phase 6 QA matrix + smoke checklist for analytics, dashboard, and manifest API (complete).
+5. Production observability guidance (console logging namespaces, request diagnostics) documented for on-call engineers (complete).
+6. Durable storage implementation + advanced observability pipelines (**out of scope for Phase 6**, queued for next phase).
 
-**Ticket skeleton**
+**Validation checklist**
 
-1. Execute BigQuery performance profiling & caching adjustments.
-2. Run load tests on `/analytics/run` & dashboard flows.
-3. Tune surge detection thresholds & document outcomes.
-4. Conduct full accessibility audit & remediate.
-5. Polish theme (colours, spacing, typography) across dashboard & analytics.
-6. Prepare and deliver final stakeholder demo.
-7. Remove deprecated code paths & feature flags.
+* Run `pytest`, `npm --prefix frontend run lint`, `CI=true npm --prefix frontend test` – all must pass.
+* In development: `npm --prefix frontend start` → visit `/analytics` (preset auto-runs, inspector + pin) and `/dashboard` (KPI band + Live Flow load, pinned chart appears instantly).
+* Toggle `REACT_APP_EXPOSE_ANALYTICS_LEGACY` / `REACT_APP_EXPOSE_DASHBOARD_LEGACY` only in QA builds to reach suffix routes.
+* Observe console namespaces (`[dashboard.manifest]`, `[dashboard.widgets]`, `[analytics:v2]`) for diagnostics when reproducing incidents.
+* For backend validation, run `pytest backend/tests/test_dashboard_manifest.py` to verify schema enforcement and idempotent operations.
 
 ## 10. Preset Catalogue & Chart Library
 

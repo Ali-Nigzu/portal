@@ -41,6 +41,7 @@ from backend.app.models import (
     PinDashboardWidgetRequest,
 )
 from backend.app.analytics.dashboard_catalogue import (
+    ManifestValidationError,
     get_dashboard_manifest,
     pin_widget_to_manifest,
     remove_widget_from_manifest,
@@ -1215,7 +1216,10 @@ async def fetch_dashboard_manifest(
     try:
         return get_dashboard_manifest(org_id=org_id, dashboard_id=dashboard_id)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "manifest_not_found", "message": str(exc)},
+        )
 
 
 @app.post("/api/dashboards/{dashboard_id}/widgets", response_model=DashboardManifest)
@@ -1235,9 +1239,15 @@ async def pin_dashboard_widget(
         )
         return manifest
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "manifest_not_found", "message": str(exc)},
+        )
+    except ManifestValidationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "manifest_validation", "message": str(exc)},
+        )
 
 
 @app.delete("/api/dashboards/{dashboard_id}/widgets/{widget_id}", response_model=DashboardManifest)
@@ -1254,6 +1264,12 @@ async def unpin_dashboard_widget(
             dashboard_id=dashboard_id,
         )
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "manifest_not_found", "message": str(exc)},
+        )
+    except ManifestValidationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "manifest_validation", "message": str(exc)},
+        )
