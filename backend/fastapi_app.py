@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Optional, Dict, List, Any
 
 from cachetools import TTLCache
-from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -36,7 +36,14 @@ from backend.app.models import (
     CreateDeviceRequest,
     UpdateDeviceRequest,
     RegisterInterestRequest,
-    RegisterInterestResponse
+    RegisterInterestResponse,
+    DashboardManifest,
+    PinDashboardWidgetRequest,
+)
+from backend.app.analytics.dashboard_catalogue import (
+    get_dashboard_manifest,
+    pin_widget_to_manifest,
+    remove_widget_from_manifest,
 )
 from backend.app.auth import (
     hash_password,
@@ -1199,3 +1206,54 @@ if __name__ == "__main__":
     print(app.routes)  # <-- debug
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
+@app.get("/api/dashboards/{dashboard_id}", response_model=DashboardManifest)
+async def fetch_dashboard_manifest(
+    dashboard_id: str,
+    org_id: str = Query(..., alias="orgId"),
+):
+    """Return the dashboard manifest for the requested organisation."""
+    try:
+        return get_dashboard_manifest(org_id=org_id, dashboard_id=dashboard_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.post("/api/dashboards/{dashboard_id}/widgets", response_model=DashboardManifest)
+async def pin_dashboard_widget(
+    dashboard_id: str,
+    request: PinDashboardWidgetRequest,
+    org_id: str = Query(..., alias="orgId"),
+):
+    """Persist a widget inside the manifest for the given organisation."""
+    try:
+        manifest = pin_widget_to_manifest(
+            org_id=org_id,
+            dashboard_id=dashboard_id,
+            widget=request.widget.dict(exclude_none=True),
+            position=request.position or "end",
+            target_band=request.targetBand,
+        )
+        return manifest
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.delete("/api/dashboards/{dashboard_id}/widgets/{widget_id}", response_model=DashboardManifest)
+async def unpin_dashboard_widget(
+    dashboard_id: str,
+    widget_id: str,
+    org_id: str = Query(..., alias="orgId"),
+):
+    """Remove a widget from the manifest for the given organisation."""
+    try:
+        return remove_widget_from_manifest(
+            org_id=org_id,
+            widget_id=widget_id,
+            dashboard_id=dashboard_id,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

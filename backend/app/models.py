@@ -3,7 +3,7 @@ Pydantic Data Models for camOS Analytics API
 """
 
 from datetime import datetime
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Literal
 from pydantic import BaseModel
 
 
@@ -156,3 +156,42 @@ class UpdateDataSourceRequest(BaseModel):
     url: Optional[str] = None
     type: Optional[str] = None
     active: Optional[bool] = None
+
+
+class DashboardWidget(BaseModel):
+    id: str
+    title: str
+    kind: Literal["kpi", "chart"]
+    chartSpecId: Optional[str] = None
+    inlineSpec: Optional[Dict[str, Any]] = None
+    fixtureId: Optional[str] = None
+    layout: Optional[Dict[str, Any]] = None
+    subtitle: Optional[str] = None
+    locked: Optional[bool] = None
+
+
+class DashboardTimeRangeOption(BaseModel):
+    id: str
+    label: str
+    durationMinutes: int
+    bucket: Optional[str] = None
+
+
+class DashboardTimeControls(BaseModel):
+    defaultTimeRangeId: str
+    timezone: str
+    options: List[DashboardTimeRangeOption]
+
+
+class DashboardManifest(BaseModel):
+    id: str
+    orgId: str
+    widgets: List[DashboardWidget]
+    layout: Dict[str, Any]
+    timeControls: Optional[DashboardTimeControls] = None
+
+
+class PinDashboardWidgetRequest(BaseModel):
+    widget: DashboardWidget
+    position: Optional[str] = None
+    targetBand: Optional[str] = None

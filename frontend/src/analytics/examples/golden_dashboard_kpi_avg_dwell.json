@@ -1,0 +1,41 @@
+{
+  "chartType": "single_value",
+  "xDimension": {
+    "id": "timestamp",
+    "type": "time",
+    "bucket": "HOUR",
+    "timezone": "UTC"
+  },
+  "series": [
+    {
+      "id": "avg_dwell",
+      "label": "Avg Dwell",
+      "geometry": "metric",
+      "unit": "minutes",
+      "data": [
+        { "x": "2024-01-07T08:00:00Z", "value": 12.4, "coverage": 1.0, "rawCount": 98 },
+        { "x": "2024-01-07T09:00:00Z", "value": 12.9, "coverage": 1.0, "rawCount": 104 },
+        { "x": "2024-01-07T10:00:00Z", "value": 13.6, "coverage": 0.99, "rawCount": 96 },
+        { "x": "2024-01-07T11:00:00Z", "value": 13.9, "coverage": 0.97, "rawCount": 101 },
+        { "x": "2024-01-07T12:00:00Z", "value": 14.8, "coverage": 0.96, "rawCount": 108 },
+        { "x": "2024-01-07T13:00:00Z", "value": 14.6, "coverage": 0.95, "rawCount": 110 }
+      ],
+      "summary": { "delta": 0.06 }
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "coverage": [
+      { "x": "2024-01-07T08:00:00Z", "value": 1.0 },
+      { "x": "2024-01-07T09:00:00Z", "value": 1.0 },
+      { "x": "2024-01-07T10:00:00Z", "value": 0.99 },
+      { "x": "2024-01-07T11:00:00Z", "value": 0.97 },
+      { "x": "2024-01-07T12:00:00Z", "value": 0.96 },
+      { "x": "2024-01-07T13:00:00Z", "value": 0.95 }
+    ],
+    "summary": {
+      "points": 6,
+      "measures": ["avg_dwell"]
+    }
+  }
+}

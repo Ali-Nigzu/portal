@@ -1,0 +1,401 @@
+{
+  "id": "dashboard-default",
+  "layout": {
+    "grid": {
+      "columns": 12,
+      "placements": {
+        "live-flow": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    "kpiBand": [
+      "kpi-activity-today",
+      "kpi-entrances-today",
+      "kpi-exits-today",
+      "kpi-live-occupancy",
+      "kpi-avg-dwell",
+      "kpi-freshness"
+    ]
+  },
+  "orgId": "client0",
+  "timeControls": {
+    "defaultTimeRangeId": "last_24_hours",
+    "options": [
+      {
+        "bucket": "5_MIN",
+        "durationMinutes": 60,
+        "id": "last_60_minutes",
+        "label": "Last 60 minutes"
+      },
+      {
+        "bucket": "HOUR",
+        "durationMinutes": 1440,
+        "id": "last_24_hours",
+        "label": "Last 24 hours"
+      },
+      {
+        "bucket": "DAY",
+        "durationMinutes": 10080,
+        "id": "last_7_days",
+        "label": "Last 7 days"
+      }
+    ],
+    "timezone": "UTC"
+  },
+  "widgets": [
+    {
+      "chartSpecId": "dashboard.kpi.activity_today",
+      "fixtureId": "golden_dashboard_kpi_activity",
+      "id": "kpi-activity-today",
+      "inlineSpec": {
+        "chartType": "single_value",
+        "dataset": "events",
+        "dimensions": [
+          {
+            "bucket": "HOUR",
+            "column": "timestamp",
+            "id": "timestamp",
+            "sort": "asc"
+          }
+        ],
+        "displayHints": {
+          "carryForward": true
+        },
+        "id": "dashboard.kpi.activity_today",
+        "interactions": {
+          "export": [
+            "png",
+            "csv"
+          ]
+        },
+        "measures": [
+          {
+            "aggregation": "count",
+            "id": "activity_total"
+          }
+        ],
+        "notes": [
+          "Activity across entrances + exits"
+        ],
+        "timeWindow": {
+          "bucket": "HOUR",
+          "from": "{{TODAY_START}}",
+          "timezone": "UTC",
+          "to": "{{NOW}}"
+        }
+      },
+      "kind": "kpi",
+      "title": "Activity Today",
+      "locked": true
+    },
+    {
+      "chartSpecId": "dashboard.kpi.entrances_today",
+      "fixtureId": "golden_dashboard_kpi_entrances",
+      "id": "kpi-entrances-today",
+      "inlineSpec": {
+        "chartType": "single_value",
+        "dataset": "events",
+        "dimensions": [
+          {
+            "bucket": "HOUR",
+            "column": "timestamp",
+            "id": "timestamp",
+            "sort": "asc"
+          }
+        ],
+        "displayHints": {
+          "carryForward": true
+        },
+        "id": "dashboard.kpi.entrances_today",
+        "interactions": {
+          "export": [
+            "png",
+            "csv"
+          ]
+        },
+        "measures": [
+          {
+            "aggregation": "count",
+            "eventTypes": [
+              1
+            ],
+            "id": "entrances"
+          }
+        ],
+        "notes": [
+          "Entrances since local midnight"
+        ],
+        "timeWindow": {
+          "bucket": "HOUR",
+          "from": "{{TODAY_START}}",
+          "timezone": "UTC",
+          "to": "{{NOW}}"
+        }
+      },
+      "kind": "kpi",
+      "title": "Entrances Today",
+      "locked": true
+    },
+    {
+      "chartSpecId": "dashboard.kpi.exits_today",
+      "fixtureId": "golden_dashboard_kpi_exits",
+      "id": "kpi-exits-today",
+      "inlineSpec": {
+        "chartType": "single_value",
+        "dataset": "events",
+        "dimensions": [
+          {
+            "bucket": "HOUR",
+            "column": "timestamp",
+            "id": "timestamp",
+            "sort": "asc"
+          }
+        ],
+        "displayHints": {
+          "carryForward": true
+        },
+        "id": "dashboard.kpi.exits_today",
+        "interactions": {
+          "export": [
+            "png",
+            "csv"
+          ]
+        },
+        "measures": [
+          {
+            "aggregation": "count",
+            "eventTypes": [
+              0
+            ],
+            "id": "exits"
+          }
+        ],
+        "notes": [
+          "Exits since local midnight"
+        ],
+        "timeWindow": {
+          "bucket": "HOUR",
+          "from": "{{TODAY_START}}",
+          "timezone": "UTC",
+          "to": "{{NOW}}"
+        }
+      },
+      "kind": "kpi",
+      "title": "Exits Today",
+      "locked": true
+    },
+    {
+      "chartSpecId": "dashboard.kpi.live_occupancy",
+      "fixtureId": "golden_dashboard_kpi_live_occupancy",
+      "id": "kpi-live-occupancy",
+      "inlineSpec": {
+        "chartType": "single_value",
+        "dataset": "events",
+        "dimensions": [
+          {
+            "bucket": "5_MIN",
+            "column": "timestamp",
+            "id": "timestamp",
+            "sort": "asc"
+          }
+        ],
+        "displayHints": {
+          "carryForward": true
+        },
+        "id": "dashboard.kpi.live_occupancy",
+        "interactions": {
+          "export": [
+            "png",
+            "csv"
+          ]
+        },
+        "measures": [
+          {
+            "aggregation": "occupancy_recursion",
+            "id": "live_occupancy",
+            "label": "Live occupancy"
+          }
+        ],
+        "notes": [
+          "Live occupancy mirrors final Live Flow point"
+        ],
+        "timeWindow": {
+          "bucket": "5_MIN",
+          "from": "{{NOW_MINUS_60_MIN}}",
+          "timezone": "UTC",
+          "to": "{{NOW}}"
+        }
+      },
+      "kind": "kpi",
+      "title": "Live Occupancy",
+      "locked": true
+    },
+    {
+      "chartSpecId": "dashboard.kpi.avg_dwell_today",
+      "fixtureId": "golden_dashboard_kpi_avg_dwell",
+      "id": "kpi-avg-dwell",
+      "inlineSpec": {
+        "chartType": "single_value",
+        "dataset": "events",
+        "dimensions": [
+          {
+            "bucket": "HOUR",
+            "column": "timestamp",
+            "id": "timestamp",
+            "sort": "asc"
+          }
+        ],
+        "displayHints": {
+          "carryForward": true
+        },
+        "id": "dashboard.kpi.avg_dwell_today",
+        "interactions": {
+          "export": [
+            "png",
+            "csv"
+          ]
+        },
+        "measures": [
+          {
+            "aggregation": "dwell_mean",
+            "id": "avg_dwell"
+          }
+        ],
+        "notes": [
+          "Average dwell duration today"
+        ],
+        "timeWindow": {
+          "bucket": "HOUR",
+          "from": "{{TODAY_START}}",
+          "timezone": "UTC",
+          "to": "{{NOW}}"
+        }
+      },
+      "kind": "kpi",
+      "title": "Avg Dwell",
+      "locked": true
+    },
+    {
+      "chartSpecId": "dashboard.kpi.freshness_status",
+      "fixtureId": "golden_dashboard_kpi_freshness",
+      "id": "kpi-freshness",
+      "inlineSpec": {
+        "chartType": "single_value",
+        "dataset": "events",
+        "dimensions": [
+          {
+            "bucket": "5_MIN",
+            "column": "timestamp",
+            "id": "timestamp",
+            "sort": "asc"
+          }
+        ],
+        "displayHints": {
+          "carryForward": true
+        },
+        "id": "dashboard.kpi.freshness_status",
+        "interactions": {
+          "export": [
+            "png",
+            "csv"
+          ]
+        },
+        "measures": [
+          {
+            "aggregation": "count",
+            "id": "freshness_minutes",
+            "label": "Minutes since last event",
+            "options": {
+              "metric": "freshness"
+            }
+          }
+        ],
+        "notes": [
+          "Backend emits freshness value + thresholds"
+        ],
+        "timeWindow": {
+          "bucket": "5_MIN",
+          "from": "{{NOW_MINUS_120_MIN}}",
+          "timezone": "UTC",
+          "to": "{{NOW}}"
+        }
+      },
+      "kind": "kpi",
+      "title": "Freshness Status",
+      "locked": true
+    },
+    {
+      "chartSpecId": "dashboard.live_flow",
+      "fixtureId": "golden_dashboard_live_flow",
+      "id": "live-flow",
+      "inlineSpec": {
+        "chartType": "composed_time",
+        "dataset": "events",
+        "dimensions": [
+          {
+            "bucket": "5_MIN",
+            "column": "timestamp",
+            "id": "timestamp",
+            "sort": "asc"
+          }
+        ],
+        "displayHints": {
+          "carryForward": true,
+          "y1Label": "People",
+          "y2Label": "Events"
+        },
+        "id": "dashboard.live_flow",
+        "interactions": {
+          "export": [
+            "png",
+            "csv"
+          ],
+          "hoverSync": true,
+          "seriesToggle": true,
+          "zoom": true
+        },
+        "measures": [
+          {
+            "aggregation": "occupancy_recursion",
+            "id": "occupancy"
+          },
+          {
+            "aggregation": "count",
+            "eventTypes": [
+              1
+            ],
+            "id": "entrances"
+          },
+          {
+            "aggregation": "count",
+            "eventTypes": [
+              0
+            ],
+            "id": "exits"
+          },
+          {
+            "aggregation": "activity_rate",
+            "id": "throughput"
+          }
+        ],
+        "notes": [
+          "Live Flow chart used by dashboard + analytics presets"
+        ],
+        "timeWindow": {
+          "bucket": "5_MIN",
+          "from": "{{NOW_MINUS_60_MIN}}",
+          "timezone": "UTC",
+          "to": "{{NOW}}"
+        }
+      },
+      "kind": "chart",
+      "subtitle": "Live occupancy, entrances, exits and throughput",
+      "title": "Live Flow (Last 60 min)",
+      "locked": true
+    }
+  ]
+}

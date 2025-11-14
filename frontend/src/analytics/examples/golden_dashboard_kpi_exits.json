@@ -1,0 +1,41 @@
+{
+  "chartType": "single_value",
+  "xDimension": {
+    "id": "timestamp",
+    "type": "time",
+    "bucket": "HOUR",
+    "timezone": "UTC"
+  },
+  "series": [
+    {
+      "id": "exits",
+      "label": "Exits Today",
+      "geometry": "metric",
+      "unit": "events",
+      "data": [
+        { "x": "2024-01-07T08:00:00Z", "value": 150, "coverage": 1.0, "rawCount": 150 },
+        { "x": "2024-01-07T09:00:00Z", "value": 170, "coverage": 1.0, "rawCount": 170 },
+        { "x": "2024-01-07T10:00:00Z", "value": 190, "coverage": 0.99, "rawCount": 190 },
+        { "x": "2024-01-07T11:00:00Z", "value": 206, "coverage": 0.97, "rawCount": 206 },
+        { "x": "2024-01-07T12:00:00Z", "value": 216, "coverage": 0.96, "rawCount": 216 },
+        { "x": "2024-01-07T13:00:00Z", "value": 227, "coverage": 0.95, "rawCount": 227 }
+      ],
+      "summary": { "delta": 0.11 }
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "coverage": [
+      { "x": "2024-01-07T08:00:00Z", "value": 1.0 },
+      { "x": "2024-01-07T09:00:00Z", "value": 1.0 },
+      { "x": "2024-01-07T10:00:00Z", "value": 0.99 },
+      { "x": "2024-01-07T11:00:00Z", "value": 0.97 },
+      { "x": "2024-01-07T12:00:00Z", "value": 0.96 },
+      { "x": "2024-01-07T13:00:00Z", "value": 0.95 }
+    ],
+    "summary": {
+      "points": 6,
+      "measures": ["exits"]
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FEATURE_FLAGS, ANALYTICS_V2_TRANSPORT } from '../../../config';
+import type { ChartSpec } from '../../schemas/charting';
 import { Card } from '../../components/Card';
 import { ChartRenderer } from '../../components/ChartRenderer';
 import { ChartErrorState } from '../../components/ChartRenderer/ui/ChartErrorState';
@@ -24,6 +25,8 @@ import { SplitToggleControl } from '../controls/SplitToggleControl';
 import { MeasureControls } from '../controls/MeasureControls';
 import { SeriesLegendSummary } from '../components/SeriesLegendSummary';
 import { useWorkspaceIntegrityChecks } from '../utils/useWorkspaceIntegrityChecks';
+import { pinDashboardWidget } from '../../../dashboard/v2/transport/mutateDashboardManifest';
+import { determineOrgId } from '../../../dashboard/v2/utils/determineOrgId';
 
 const buildPresetMap = (presets: PresetDefinition[]): Record<string, PresetDefinition> => {
   return presets.reduce<Record<string, PresetDefinition>>((acc, preset) => {
@@ -39,7 +42,15 @@ const buildTransportIssues = (message: string, code?: string): ValidationIssue[]
   },
 ];
 
-export const AnalyticsV2Page = () => {
+const DASHBOARD_ID = 'dashboard-default';
+
+interface AnalyticsV2PageProps {
+  credentials?: { username: string; password: string };
+}
+
+type PinStatus = 'idle' | 'loading' | 'success' | 'error';
+
+export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
   const presets = useMemo(() => listPresets(), []);
   const presetMap = useMemo(() => buildPresetMap(presets), [presets]);
   const defaultPresetId = presets[0]?.id ?? null;
@@ -48,11 +59,14 @@ export const AnalyticsV2Page = () => {
     () => (defaultPreset ? buildDefaultOverrides(defaultPreset) : {}),
     [defaultPreset],
   );
+  const orgId = useMemo(() => determineOrgId(credentials ?? {}), [credentials]);
   const [state, dispatch] = useWorkspaceStore(defaultPreset, defaultOverrides, ANALYTICS_V2_TRANSPORT);
   const [runNonce, setRunNonce] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [legendVisibility, setLegendVisibility] = useState<SeriesVisibilityMap | null>(null);
   const sessionAnchorRef = useRef<Date>(new Date());
+  const [pinStatus, setPinStatus] = useState<PinStatus>('idle');
+  const [pinError, setPinError] = useState<string | null>(null);
 
   const activePreset = state.activePresetId ? presetMap[state.activePresetId] : undefined;
   const effectiveSpec = useMemo(() => {
@@ -61,6 +75,11 @@ export const AnalyticsV2Page = () => {
     }
     return buildSpecWithOverrides(activePreset, state.overrides, sessionAnchorRef.current);
   }, [activePreset, state.overrides]);
+
+  useEffect(() => {
+    setPinStatus('idle');
+    setPinError(null);
+  }, [state.spec, orgId]);
 
   useEffect(() => {
     if (!activePreset || !effectiveSpec) {
@@ -146,6 +165,44 @@ export const AnalyticsV2Page = () => {
   const handleCancelRun = () => {
     abortControllerRef.current?.abort();
     dispatch({ type: 'RUN_CANCELLED' });
+  };
+
+  const canPinToDashboard = Boolean(FEATURE_FLAGS.dashboardV2 && state.result && state.spec);
+
+  const handlePinToDashboard = async () => {
+    if (!canPinToDashboard || !state.result || !state.spec) {
+      return;
+    }
+    const kind = state.result.chartType === 'single_value' ? 'kpi' : 'chart';
+    const specClone = JSON.parse(JSON.stringify(state.spec)) as ChartSpec;
+    const baseId = state.specHash ?? activePreset?.id ?? 'chart';
+    const widgetId = `workspace-${baseId}-${Date.now()}`;
+    const gridWidth = state.result.chartType === 'composed_time' ? 12 : 6;
+    const gridHeight = state.result.chartType === 'heatmap' ? 10 : 8;
+
+    setPinStatus('loading');
+    setPinError(null);
+
+    try {
+      await pinDashboardWidget(orgId, DASHBOARD_ID, {
+        widget: {
+          id: widgetId,
+          title: activePreset?.title ?? 'Pinned chart',
+          subtitle: activePreset?.description,
+          kind,
+          inlineSpec: specClone,
+          chartSpecId: specClone.id ?? undefined,
+          layout: kind === 'chart' ? { grid: { w: gridWidth, h: gridHeight } } : undefined,
+          locked: false,
+        },
+        targetBand: kind === 'kpi' ? 'kpiBand' : 'grid',
+        position: 'end',
+      });
+      setPinStatus('success');
+    } catch (error) {
+      setPinStatus('error');
+      setPinError(error instanceof Error ? error.message : 'Unable to pin to dashboard');
+    }
   };
 
   const parameterBadges = useMemo(
@@ -291,6 +348,36 @@ export const AnalyticsV2Page = () => {
             dispatch({ type: 'UPDATE_OVERRIDES', overrides: { measureOptionId } })
           }
         />
+      ) : null}
+      {FEATURE_FLAGS.dashboardV2 ? (
+        <div className="analyticsV2Inspector__section">
+          <h4>Dashboard</h4>
+          <div className="analyticsV2Inspector__actions">
+            <button
+              type="button"
+              onClick={handlePinToDashboard}
+              disabled={!canPinToDashboard || pinStatus === 'loading'}
+            >
+              {pinStatus === 'loading' ? 'Pinning…' : 'Pin to dashboard'}
+            </button>
+          </div>
+          {pinStatus === 'success' ? (
+            <div
+              className="analyticsV2Inspector__badge analyticsV2Inspector__badge--status"
+              aria-live="polite"
+            >
+              Pinned to dashboard
+            </div>
+          ) : null}
+          {pinStatus === 'error' ? (
+            <div
+              className="analyticsV2Inspector__badge analyticsV2Inspector__badge--status analyticsV2Inspector__badgeWarning"
+              role="alert"
+            >
+              {pinError ?? 'Unable to pin to dashboard'}
+            </div>
+          ) : null}
+        </div>
       ) : null}
       <SeriesLegendSummary result={state.result} visibility={legendVisibility} />
     </InspectorPanel>

@@ -1,0 +1,41 @@
+{
+  "chartType": "single_value",
+  "xDimension": {
+    "id": "timestamp",
+    "type": "time",
+    "bucket": "5_MIN",
+    "timezone": "UTC"
+  },
+  "series": [
+    {
+      "id": "live_occupancy",
+      "label": "Live Occupancy",
+      "geometry": "metric",
+      "unit": "people",
+      "data": [
+        { "x": "2024-01-07T12:00:00Z", "value": 32, "coverage": 1.0, "rawCount": 32 },
+        { "x": "2024-01-07T12:05:00Z", "value": 34, "coverage": 1.0, "rawCount": 34 },
+        { "x": "2024-01-07T12:10:00Z", "value": 37, "coverage": 0.98, "rawCount": 37 },
+        { "x": "2024-01-07T12:15:00Z", "value": 41, "coverage": 0.96, "rawCount": 41 },
+        { "x": "2024-01-07T12:20:00Z", "value": 45, "coverage": 0.95, "rawCount": 45 },
+        { "x": "2024-01-07T12:25:00Z", "value": 47, "coverage": 0.94, "rawCount": 47 }
+      ],
+      "summary": { "delta": 0.05 }
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "coverage": [
+      { "x": "2024-01-07T12:00:00Z", "value": 1.0 },
+      { "x": "2024-01-07T12:05:00Z", "value": 1.0 },
+      { "x": "2024-01-07T12:10:00Z", "value": 0.98 },
+      { "x": "2024-01-07T12:15:00Z", "value": 0.96 },
+      { "x": "2024-01-07T12:20:00Z", "value": 0.95 },
+      { "x": "2024-01-07T12:25:00Z", "value": 0.94 }
+    ],
+    "summary": {
+      "points": 6,
+      "measures": ["live_occupancy"]
+    }
+  }
+}

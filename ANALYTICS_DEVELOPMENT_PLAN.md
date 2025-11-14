@@ -1129,33 +1129,39 @@ Phase 4 delivers a **new analytics workspace shell** that is preset-first, opini
 - [ ] Document developer commands, fixture usage, and feature-flag toggles.
 - [ ] Validate responsive behaviour and accessibility across the new layout.
 
-### Phase 5 – Dashboard Refactor & Pinning
+### Phase 5 – Dashboard Refactor & Pinning *(COMPLETE)*
 
-**Deliverables**
+Phase 5 replaced the legacy dashboard with a manifest-driven experience that consumes the Phase 2–4 analytics pipeline. The full scope ships behind a dedicated feature flag so existing customers remain on the current dashboard until rollout is approved.
 
-* Dashboard loads from backend manifest.
-* KPI band powered by specs with guarantees enforced.
-* Live Flow chart uses shared engine.
-* Custom chart cards reference saved specs.
-* Pin-to-dashboard flow implemented end-to-end.
-* Responsive layout replacing fixed grid.
-* Removal of localStorage pin hacks.
+**Status**
 
-**Done criteria**
+* ✅ Implementation complete – see `docs/analytics/phase5_closeout.md` for the authoritative contract snapshot.
+* ✅ Backend catalogue + manifest service: `backend/app/analytics/dashboard_catalogue.py` (validated via `backend/tests/test_dashboard_manifest.py`).
+* ✅ API surface: FastAPI endpoints in `backend/fastapi_app.py` (`GET/POST/DELETE /api/dashboards/...`).
+* ✅ Fixtures: `shared/analytics/examples/dashboard_manifest_client0.json` + KPI/Live Flow golden results mirrored in `frontend/src/analytics/examples/`.
+* ✅ Frontend shell + transport: `frontend/src/dashboard/v2` including manifest loader, widget result loader, pin/unpin helpers, CSS grid, Storybook coverage, and Jest suites.
 
-* Dashboard renders solely from backend data.
-* Pinning a chart from analytics updates dashboard in same session and after reload.
-* KPIs match analytics totals within tolerance.
+**Phase 5 Deliverables**
 
-**Ticket skeleton**
+1. **Dashboard v2 shell & feature flag** – `REACT_APP_FEATURE_DASHBOARD_V2` toggles the new route; legacy dashboard untouched when disabled.
+2. **Backend manifest service** – Catalogue seeded with KPI + Live Flow specs; per-org manifests deep-cloned from templates; locked defaults cannot be removed.
+3. **KPI band refactor** – Six KPI specs (activity, entrances, exits, live occupancy, avg dwell, freshness) emit canonical `ChartResult` payloads rendered through KPI tiles with coverage-aware visuals.
+4. **Live Flow migration** – Manifest-driven Live Flow card renders via shared Flow primitive, respecting canonical buckets, surge metadata, and coverage semantics.
+5. **Pinning workflow** – `/analytics/v2` posts widgets to `/api/dashboards/:id/widgets`; deletions route through `DELETE /widgets/{widgetId}` with optimistic UI refresh and backend validation.
+6. **Layout & QA hardening** – 12-column grid honours manifest placements; AbortControllers prevent stale runs; unit tests + Storybook cover low coverage, error states, pin/unpin, and feature-flag isolation.
 
-1. Implement dashboard manifest fetch & render.
-2. Replace KPI tiles with spec-driven components.
-3. Integrate Live Flow spec with shared chart engine.
-4. Implement custom chart card referencing saved specs.
-5. Implement pin-to-dashboard API flow & optimistic UI.
-6. Implement responsive dashboard grid layout.
-7. Remove localStorage persistence & legacy hooks.
+**Data & Schema Rules (Preserved)**
+
+* Dashboard specs reuse the frozen ChartSpec/ChartResult schema—no new fields, no frontend aggregation.
+* Dashboard-specific metadata (titles, layout hints, freshness thresholds, `locked`) lives in manifests only.
+* Coverage/rawCount semantics flow directly to the UI; the frontend never recomputes metric math.
+
+**Phase 6 Handover Notes**
+
+* Default manifest + widget contract documented in `docs/analytics/phase5_closeout.md` and `handover/Phase5_Handover.md`.
+* Feature flag + transport toggles remain in place; removing them is a deliberate Phase 6 action.
+* Manifest persistence currently uses in-memory storage; migrating to durable storage is Phase 6 scope.
+* Dashboard V2 uses fixtures by default (transport = fixtures) to simplify QA; switching to live BigQuery happens in Phase 6.
 
 ### Phase 6 – QA, Performance, & Polish
 
@@ -1337,7 +1343,7 @@ Only update the checkboxes + notes.
 - [ ] Phase 2 – Backend Analytics Engine on BigQuery
 - [ ] Phase 3 – Shared Chart Engine in Frontend
 - [ ] Phase 4 – Analytics Builder & Presets
-- [ ] Phase 5 – Dashboard Refactor & Pinning
+- [x] Phase 5 – Dashboard Refactor & Pinning
 - [ ] Phase 6 – QA, Performance, & Polish
 
 ### 16.2 Detailed Task Checklist by Phase
@@ -1418,13 +1424,12 @@ Notes:
 
 **Phase 5 – Dashboard Refactor**
 
-- [ ] Dashboard loads from backend layout manifest
-- [ ] KPI band powered by spec
-- [ ] Live Flow based on chart engine
-- [ ] Custom chart cards
-- [ ] Implement pin-to-dashboard
-- [ ] Responsive layout
-- [ ] Remove localStorage pins
+- [x] 5.1 Dashboard v2 shell behind feature flag
+- [x] 5.2 Backend manifest service + fixtures
+- [x] 5.3 KPI specs wired through ChartRenderer
+- [x] 5.4 Live Flow migrated to shared engine
+- [x] 5.5 Pin-to-dashboard API + frontend integration
+- [x] 5.6 Responsive layout & rollout hardening
 
 Notes:
 

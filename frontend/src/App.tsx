@@ -13,6 +13,7 @@ import './styles/VRMTheme.css';
 import { GlobalControlsProvider } from './context/GlobalControlsContext';
 import { FEATURE_FLAGS } from './config';
 import AnalyticsV2Page from './analytics/v2/pages/AnalyticsV2Page';
+import DashboardV2Page from './dashboard/v2/pages/DashboardV2Page';
 
 // Login Component
 const Login: React.FC<{onLogin: (username: string, password: string) => void}> = ({ onLogin }) => {
@@ -189,10 +190,13 @@ const App: React.FC = () => {
           <>
             <Route path="/dashboard" element={
               <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-                {userRole === 'admin' && !hasViewToken ? 
-                  <Navigate to="/admin" replace /> : 
+                {userRole === 'admin' && !hasViewToken ? (
+                  <Navigate to="/admin" replace />
+                ) : FEATURE_FLAGS.dashboardV2 ? (
+                  <DashboardV2Page credentials={credentials} />
+                ) : (
                   <DashboardPage credentials={credentials} />
-                }
+                )}
               </VRMLayout>
             } />
             <Route path="/event-logs" element={
@@ -232,7 +236,7 @@ const App: React.FC = () => {
                 <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
                   {userRole === 'admin' && !hasViewToken ?
                     <Navigate to="/admin" replace /> :
-                    <AnalyticsV2Page />
+                    <AnalyticsV2Page credentials={credentials} />
                   }
                 </VRMLayout>
               } />
