@@ -159,6 +159,7 @@ function validateHeatmap(series: ChartSeries[]): ValidationIssue[] {
   });
 
   const columnCount = columns.size;
+
   rows.forEach((rowColumns, rowKey) => {
     if (rowColumns.size !== columnCount) {
       issues.push({

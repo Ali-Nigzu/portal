@@ -11,6 +11,8 @@ import AdminPage from './pages/AdminPage';
 import LandingPage from './pages/LandingPage';
 import './styles/VRMTheme.css';
 import { GlobalControlsProvider } from './context/GlobalControlsContext';
+import { FEATURE_FLAGS } from './config';
+import AnalyticsV2Page from './analytics/v2/pages/AnalyticsV2Page';
 
 // Login Component
 const Login: React.FC<{onLogin: (username: string, password: string) => void}> = ({ onLogin }) => {
@@ -219,12 +221,22 @@ const App: React.FC = () => {
             } />
             <Route path="/analytics" element={
               <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-                {userRole === 'admin' && !hasViewToken ? 
-                  <Navigate to="/admin" replace /> : 
+                {userRole === 'admin' && !hasViewToken ?
+                  <Navigate to="/admin" replace /> :
                   <AnalyticsPage credentials={credentials} />
                 }
               </VRMLayout>
             } />
+            {FEATURE_FLAGS.analyticsV2 ? (
+              <Route path="/analytics/v2" element={
+                <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
+                  {userRole === 'admin' && !hasViewToken ?
+                    <Navigate to="/admin" replace /> :
+                    <AnalyticsV2Page />
+                  }
+                </VRMLayout>
+              } />
+            ) : null}
             <Route path="/reports" element={
               <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
                 {userRole === 'admin' && !hasViewToken ? 

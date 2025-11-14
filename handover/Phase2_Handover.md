@@ -84,3 +84,13 @@
   2. Hydrate a single Trend preset using `loadChartFixture` to drive `ChartRenderer` end-to-end.
   3. Replace fixture plumbing with live API calls once the shell and controls are stable.
 - **Feature flags / configuration:** define an environment switch (e.g., `VITE_ENABLE_ANALYTICS_V2`) to isolate the new workspace during development and QA.
+- **Feature flags / configuration:** define an environment switch (e.g., `VITE_ENABLE_ANALYTICS_V2`) to isolate the new workspace during development and QA.
+
+### Phase 4 workspace toggles (current status)
+
+- **Enable the workspace UI:** set `REACT_APP_FEATURE_ANALYTICS_V2=true` before running `npm --prefix frontend run dev`. When unset/false the `/analytics/v2` route is not registered and legacy `/analytics` remains untouched.
+- **Switch transport mode:** set `REACT_APP_ANALYTICS_V2_TRANSPORT=fixtures` (default) to load golden results via `loadChartFixture`, or `live` to proxy real `/analytics/run` calls once the backend endpoint is reachable.
+- **Available presets:** the rail currently wires three presets end-to-end – `Live Flow` (entries vs exits), `Average Dwell by Camera`, and `Retention Heatmap`. Each ships with frozen backend-authored `ChartSpec` templates plus the time/split/metric overrides documented in `docs/analytics/phase4_workspace_plan.md`.
+- **Override logging:** in dev mode the reducer logs every override mutation (`overrideApplied`) plus warnings (`overrideDenied`) if a component tries to touch a disallowed field. Use the browser console to verify overrides remain within the preset contracts when QAing new controls.
+- **Transport diagnostics:** the workspace now categorises failures as `NETWORK`, `INVALID_SPEC`, `INVALID_RESULT`, `PARTIAL_DATA`, or `ABORTED`. The inspector surfaces these labels in error/notice badges while the console logs `run:start`, `run:success`, or `run:error` events with `specHash` for cache debugging.
+- **Integrity guards:** the `/analytics/v2` page runs `useWorkspaceIntegrityChecks` during development to warn if parameter badges, legend visibility, or post-reset specs ever drift from their preset templates. Heed these console warnings while extending the workspace so overrides remain contract-safe.

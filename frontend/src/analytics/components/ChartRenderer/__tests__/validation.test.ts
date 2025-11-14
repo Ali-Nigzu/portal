@@ -90,6 +90,7 @@ describe("validateChartResult", () => {
           unit: "percentage",
           data: [
             { x: "Week 0", group: "Week 0", value: 1 },
+            { x: "Week 1", group: "Week 0", value: 0.82 },
             { x: "Week 0", group: "Week 1", value: 0.8 },
           ],
         },
