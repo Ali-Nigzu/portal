@@ -108,7 +108,12 @@ describe('workspaceReducer override guardrails', () => {
     const resultState = workspaceReducer(defaultState, {
       type: 'RUN_SUCCESS',
       payload: {
-        result: { chartType: 'single_value', xDimension: { id: 'x', type: 'index' }, series: [], meta: {} },
+        result: {
+          chartType: 'single_value',
+          xDimension: { id: 'x', type: 'index' },
+          series: [],
+          meta: { timezone: 'UTC' },
+        },
         spec: templateSpec,
         specHash: 'hash',
         diagnostics: { partialData: true },

@@ -2,6 +2,7 @@ import { runAnalyticsQuery } from './runAnalytics';
 import { listPresets } from '../presets/presetCatalogue';
 import { buildDefaultOverrides, buildSpecWithOverrides } from '../utils/specOverrides';
 import type { PresetDefinition } from '../presets/types';
+import type { ChartFixtureName } from '../../utils/loadChartFixture';
 
 describe('runAnalyticsQuery transport guardrails', () => {
   const preset = listPresets()[0];
@@ -34,7 +35,7 @@ describe('runAnalyticsQuery transport guardrails', () => {
     const invalidPreset: PresetDefinition = {
       ...preset,
       id: 'invalid_fixture',
-      fixture: undefined,
+      fixture: 'nonexistent_fixture' as ChartFixtureName,
       templateSpec: { ...preset.templateSpec },
     };
     const overrides = buildDefaultOverrides(invalidPreset);

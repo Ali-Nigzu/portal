@@ -3,23 +3,23 @@ import type { ChartResult } from "../schemas/charting";
 const FIXTURE_MODULES: Record<string, () => Promise<ChartResult>> = {
   "golden_dashboard_live_flow": () =>
     import("../examples/golden_dashboard_live_flow.json").then(
-      (module) => module.default as ChartResult
+      (module) => module.default as unknown as ChartResult
     ),
   "golden_dwell_by_camera": () =>
     import("../examples/golden_dwell_by_camera.json").then(
-      (module) => module.default as ChartResult
+      (module) => module.default as unknown as ChartResult
     ),
   "golden_demographics_by_age": () =>
     import("../examples/golden_demographics_by_age.json").then(
-      (module) => module.default as ChartResult
+      (module) => module.default as unknown as ChartResult
     ),
   "golden_retention_heatmap": () =>
     import("../examples/golden_retention_heatmap.json").then(
-      (module) => module.default as ChartResult
+      (module) => module.default as unknown as ChartResult
     ),
   "chartresult_phase2_example": () =>
     import("../examples/chartresult_phase2_example.json").then(
-      (module) => module.default as ChartResult
+      (module) => module.default as unknown as ChartResult
     ),
 };
 

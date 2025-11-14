@@ -137,6 +137,10 @@ const reducer = (state: WorkspaceState, action: WorkspaceAction): WorkspaceState
       }
       const allowed = new Set(state.allowedOverrideFields);
       const nextOverrides: WorkspaceOverrides = { ...state.overrides };
+      const mutableOverrides = nextOverrides as Record<
+        keyof WorkspaceOverrides,
+        WorkspaceOverrides[keyof WorkspaceOverrides]
+      >;
       (Object.entries(action.overrides) as [keyof WorkspaceOverrides, WorkspaceOverrides[keyof WorkspaceOverrides]][]).forEach(
         ([field, value]) => {
           if (!allowed.has(field)) {
@@ -152,7 +156,7 @@ const reducer = (state: WorkspaceState, action: WorkspaceAction): WorkspaceState
                 newValue: value,
               });
             }
-            nextOverrides[field] = value;
+            mutableOverrides[field] = value;
           }
         },
       );
