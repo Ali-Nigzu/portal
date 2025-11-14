@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+import type { MockedFunction } from 'jest-mock';
 import type { DashboardManifest } from '../types';
 
 const originalEnv = { ...process.env };
@@ -29,10 +31,11 @@ describe('fetchDashboardManifest', () => {
       layout: { kpiBand: [], grid: { columns: 12, placements: {} } },
     };
 
-    (global.fetch as jest.Mock).mockResolvedValue({
+    const fetchMock = global.fetch as MockedFunction<typeof global.fetch>;
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => manifest,
-    });
+    } as unknown as Response);
 
     const result = await fetchDashboardManifest('client0', 'dashboard-default');
 
@@ -43,7 +46,7 @@ describe('fetchDashboardManifest', () => {
         headers: { 'Content-Type': 'application/json' },
       }),
     );
-    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    const [, init] = (fetchMock.mock.calls[0] ?? []) as [RequestInfo | URL, RequestInit];
     expect(init.signal).toBeDefined();
     expect(result).toEqual(manifest);
   });
@@ -51,11 +54,12 @@ describe('fetchDashboardManifest', () => {
   it('throws when the manifest endpoint responds with an error', async () => {
     const { fetchDashboardManifest } = await import('./fetchDashboardManifest');
 
-    (global.fetch as jest.Mock).mockResolvedValue({
+    const fetchMock = global.fetch as MockedFunction<typeof global.fetch>;
+    fetchMock.mockResolvedValue({
       ok: false,
       status: 503,
       text: async () => 'unavailable',
-    });
+    } as unknown as Response);
 
     await expect(fetchDashboardManifest('client0', 'dashboard-default')).rejects.toThrow(
       /Failed to load dashboard manifest: 503 unavailable/,

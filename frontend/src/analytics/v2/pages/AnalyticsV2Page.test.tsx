@@ -17,19 +17,24 @@ jest.mock('../../components/ChartRenderer', () => ({
 }));
 
 const mockRunAnalytics = jest.fn<Promise<AnalyticsRunResponse>, Parameters<RunAnalyticsModule['runAnalyticsQuery']>>();
-const mockPinDashboardWidget = jest.fn();
-const mockUnpinDashboardWidget = jest.fn();
+const mockPinDashboardWidget = jest.fn<
+  ReturnType<MutationModule['pinDashboardWidget']>,
+  Parameters<MutationModule['pinDashboardWidget']>
+>();
+const mockUnpinDashboardWidget = jest.fn<
+  ReturnType<MutationModule['unpinDashboardWidget']>,
+  Parameters<MutationModule['unpinDashboardWidget']>
+>();
 
-jest.mock('../transport/runAnalytics', (): RunAnalyticsModule => ({
-  AnalyticsTransportError: class MockTransportError extends Error {
-    category: string;
-    constructor(category: string, message: string) {
-      super(message);
-      this.category = category;
-    }
-  },
-  runAnalyticsQuery: (...args: Parameters<RunAnalyticsModule['runAnalyticsQuery']>) => mockRunAnalytics(...args),
-}));
+jest.mock('../transport/runAnalytics', (): RunAnalyticsModule => {
+  const { jest: jestRef } = globalThis as typeof globalThis & { jest: typeof jest };
+  const actual = jestRef.requireActual('../transport/runAnalytics') as RunAnalyticsModule;
+  return {
+    ...actual,
+    runAnalyticsQuery: (...args: Parameters<RunAnalyticsModule['runAnalyticsQuery']>) =>
+      mockRunAnalytics(...args),
+  };
+});
 
 jest.mock('../../../dashboard/v2/transport/mutateDashboardManifest', (): MutationModule => ({
   pinDashboardWidget: (...args: Parameters<MutationModule['pinDashboardWidget']>) =>
@@ -85,7 +90,10 @@ describe('AnalyticsV2Page', () => {
 
     const measureButtons = tree!
       .root
-      .findAll((node) => node.type === 'button' && node.props.className?.includes('analyticsV2Chip'));
+      .findAll((node: unknown) => {
+        const instance = node as { type: unknown; props?: { className?: string } };
+        return instance.type === 'button' && Boolean(instance.props?.className?.includes('analyticsV2Chip'));
+      });
     expect(measureButtons.length).toBeGreaterThan(0);
 
     await act(async () => {
@@ -94,7 +102,10 @@ describe('AnalyticsV2Page', () => {
 
     const pinButtons = tree!
       .root
-      .findAll((node) => node.type === 'button' && node.children?.includes('Pin to dashboard'));
+      .findAll((node: unknown) => {
+        const instance = node as { type: unknown; children?: unknown[] };
+        return instance.type === 'button' && instance.children?.includes('Pin to dashboard');
+      });
     expect(pinButtons).toHaveLength(1);
 
     await act(async () => {
@@ -117,9 +128,10 @@ describe('AnalyticsV2Page', () => {
 
     const errorNodes = tree!
       .root
-      .findAll(
-        (node) => typeof node.props.className === 'string' && node.props.className.includes('analytics-chart-error'),
-      );
+      .findAll((node: unknown) => {
+        const instance = node as { props?: { className?: string } };
+        return typeof instance.props?.className === 'string' && instance.props.className.includes('analytics-chart-error');
+      });
     expect(errorNodes.length).toBeGreaterThan(0);
   });
 });

@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+
 describe('EXPERIENCE_GATES', () => {
   const originalEnv = { ...process.env };
 

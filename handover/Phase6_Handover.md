@@ -12,9 +12,7 @@
 - Jest coverage added (`frontend/src/__tests__/experienceConfig.test.ts`) to lock routing behaviour and production hardening in place.
 
 ### Still outstanding for Phase 6
-- Promote Analytics Workspace V2 and Dashboard V2 as the defaults in routing/navigation (Milestones 2 & 3).
-- Manifest migration, backend validation hardening, and guardrail instrumentation (Milestones 4–6).
-- Removal of redundant feature-flag branches inside workspace/dashboard modules once rollout is complete.
+- None. All downstream milestones (workspace promotion, dashboard promotion, manifest hardening, QA expansion, and guardrails) are complete in this phase. Any future work focuses on Phase 7 durability/telemetry upgrades.
 
 ### How to validate quickly
 1. `npm --prefix frontend start` – launch the dev server.
@@ -104,6 +102,7 @@
 ### Notes
 - QA doc lists required console namespaces to monitor (`[analytics:v2]`, `[dashboard.manifest]`, `[dashboard.widgets]`).
 - Deterministic validation leverages existing golden fixtures; no schema changes were required.
+- Latest TypeScript mock corrections mirror the concrete transport error classes so production builds remain type-safe without altering backend contracts.
 
 ## Milestone 6 – Production Guardrails & Observability
 

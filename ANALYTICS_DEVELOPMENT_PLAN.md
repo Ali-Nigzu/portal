@@ -1165,7 +1165,7 @@ Phase 5 replaced the legacy dashboard with a manifest-driven experience that con
 * ✅ **Milestone 3 – Dashboard promotion:** `/dashboard` now mounts Dashboard V2 by default in all environments, legacy navigation is removed, and QA-only suffix access is gated via the Phase 6 experience flags. Tests cover gating defaults, manifest transport calls, and widget rendering states. See `frontend/src/__tests__/experienceConfig.test.ts`, `frontend/src/dashboard/v2/pages/DashboardV2Page.test.tsx`, and the new transport tests under `frontend/src/dashboard/v2/transport/`.
 * Manual smoke: `npm --prefix frontend start`, authenticate, navigate to `/dashboard`, confirm KPI band + Live Flow load, then pin a chart from `/analytics` to verify the widget appears instantly. Toggle `REACT_APP_EXPOSE_DASHBOARD_LEGACY=true` in dev to reach `/dashboard/legacy` for regression-only checks.
 
-### Phase 6 – QA, Performance, & Polish *(ACTIVE)*
+### Phase 6 – QA, Performance, & Polish *(COMPLETE)*
 
 **Status**
 
@@ -1173,6 +1173,7 @@ Phase 5 replaced the legacy dashboard with a manifest-driven experience that con
 * ✅ Analytics & dashboard QA matrix – documented smoke flows, feature-flag combinations, and coverage scenarios in `docs/analytics/phase6_rollout.md` with mirrored handover notes.
 * ✅ Guardrails & observability – shared error boundaries, abort/timeout handling, and logging hooks (`frontend/src/common/*`) wrap the analytics workspace and dashboard, feeding transport retries + structured console telemetry.
 * ✅ Frontend test expansion – `/analytics` and `/dashboard` happy paths, error states, pinning, and manifest reload scenarios covered via `frontend/src/analytics/v2/pages/AnalyticsV2Page.test.tsx` and updated dashboard transport/page suites.
+* ✅ Build pipeline alignment – TypeScript mocks now extend the concrete transport error classes, keeping production builds (`npm run build`) type-safe without altering analytics/dashboard contracts.
 * 🚧 Durable manifest persistence remains a Phase 7 follow-up; repository interface + documentation highlight the swappable storage point.
 
 **Phase 6 deliverables**
@@ -1186,7 +1187,7 @@ Phase 5 replaced the legacy dashboard with a manifest-driven experience that con
 
 **Validation checklist**
 
-* Run `pytest`, `npm --prefix frontend run lint`, `CI=true npm --prefix frontend test` – all must pass.
+* Run `pytest`, `npm --prefix frontend run lint`, `CI=true npm --prefix frontend test`, and `npm --prefix frontend run build` – all must pass.
 * In development: `npm --prefix frontend start` → visit `/analytics` (preset auto-runs, inspector + pin) and `/dashboard` (KPI band + Live Flow load, pinned chart appears instantly).
 * Toggle `REACT_APP_EXPOSE_ANALYTICS_LEGACY` / `REACT_APP_EXPOSE_DASHBOARD_LEGACY` only in QA builds to reach suffix routes.
 * Observe console namespaces (`[dashboard.manifest]`, `[dashboard.widgets]`, `[analytics:v2]`) for diagnostics when reproducing incidents.
@@ -1345,7 +1346,7 @@ Only update the checkboxes + notes.
 - [ ] Phase 3 – Shared Chart Engine in Frontend
 - [ ] Phase 4 – Analytics Builder & Presets
 - [x] Phase 5 – Dashboard Refactor & Pinning
-- [ ] Phase 6 – QA, Performance, & Polish
+- [x] Phase 6 – QA, Performance, & Polish
 
 ### 16.2 Detailed Task Checklist by Phase
 
