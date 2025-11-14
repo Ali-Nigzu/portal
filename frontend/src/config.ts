@@ -29,3 +29,22 @@ export const API_ENDPOINTS = {
   SEARCH_EVENTS: `${API_BASE_URL}/api/search-events`,
   USERS: `${API_BASE_URL}/api/users`,
 } as const;
+
+export type AnalyticsTransportMode = "fixtures" | "live";
+
+const resolveAnalyticsV2Transport = (): AnalyticsTransportMode => {
+  const envValue = process.env.REACT_APP_ANALYTICS_V2_TRANSPORT?.toLowerCase();
+  if (envValue === "live") {
+    return "live";
+  }
+  return "fixtures";
+};
+
+export const FEATURE_FLAGS = {
+  analyticsV2:
+    process.env.REACT_APP_FEATURE_ANALYTICS_V2 === "true" ||
+    process.env.REACT_APP_FEATURE_ANALYTICS_V2 === "1",
+} as const;
+
+export const ANALYTICS_V2_TRANSPORT: AnalyticsTransportMode =
+  resolveAnalyticsV2Transport();
