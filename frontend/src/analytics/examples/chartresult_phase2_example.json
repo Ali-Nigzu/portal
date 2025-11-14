@@ -1,0 +1,248 @@
+{
+  "chartType": "composed_time",
+  "xDimension": {
+    "id": "time",
+    "type": "time",
+    "bucket": "15_MIN",
+    "timezone": "UTC"
+  },
+  "series": [
+    {
+      "id": "occupancy",
+      "label": "Occupancy",
+      "geometry": "area",
+      "axis": "Y1",
+      "unit": "people",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 3.0,
+          "coverage": 1.0,
+          "rawCount": 3
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 5.0,
+          "coverage": 1.0,
+          "rawCount": 5
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 4.0,
+          "coverage": 0.5,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 4.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 6.0,
+          "coverage": 1.0,
+          "rawCount": 4
+        }
+      ]
+    },
+    {
+      "id": "activity",
+      "label": "Activity",
+      "geometry": "column",
+      "axis": "Y2",
+      "unit": "events",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 4.0,
+          "coverage": 1.0,
+          "rawCount": 4
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 3.0,
+          "coverage": 1.0,
+          "rawCount": 3
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 2.0,
+          "coverage": 0.5,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 4.0,
+          "coverage": 1.0,
+          "rawCount": 4
+        }
+      ]
+    },
+    {
+      "id": "throughput",
+      "label": "Throughput",
+      "geometry": "line",
+      "axis": "Y2",
+      "unit": "events/min",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 0.27,
+          "coverage": 1.0,
+          "rawCount": 4
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 3
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 0.13,
+          "coverage": 0.5,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 0.27,
+          "coverage": 1.0,
+          "rawCount": 4
+        }
+      ]
+    },
+    {
+      "id": "avg_dwell",
+      "label": "Average Dwell",
+      "geometry": "line",
+      "axis": "Y1",
+      "unit": "minutes",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 11.5,
+          "coverage": 1.0,
+          "rawCount": 4
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 12.0,
+          "coverage": 1.0,
+          "rawCount": 3
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 9.4,
+          "coverage": 0.5,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": null,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 13.2,
+          "coverage": 1.0,
+          "rawCount": 5
+        }
+      ]
+    },
+    {
+      "id": "session_count",
+      "label": "Sessions",
+      "geometry": "column",
+      "axis": "Y2",
+      "unit": "sessions",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 4.0,
+          "coverage": 1.0,
+          "rawCount": 4
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 3.0,
+          "coverage": 1.0,
+          "rawCount": 3
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 2.0,
+          "coverage": 0.5,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 5.0,
+          "coverage": 1.0,
+          "rawCount": 5
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "coverage": [
+      {
+        "x": "2024-01-01T09:00:00Z",
+        "value": 1.0
+      },
+      {
+        "x": "2024-01-01T09:15:00Z",
+        "value": 1.0
+      },
+      {
+        "x": "2024-01-01T09:30:00Z",
+        "value": 0.5
+      },
+      {
+        "x": "2024-01-01T09:45:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T10:00:00Z",
+        "value": 1.0
+      }
+    ],
+    "surges": [
+      {
+        "measure": "occupancy",
+        "x": "2024-01-01T10:00:00Z",
+        "value": 6.0
+      }
+    ],
+    "summary": {
+      "points": 25,
+      "measures": [
+        "occupancy",
+        "activity",
+        "throughput",
+        "avg_dwell",
+        "session_count"
+      ]
+    }
+  }
+}

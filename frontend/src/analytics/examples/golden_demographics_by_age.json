@@ -1,0 +1,88 @@
+{
+  "chartType": "categorical",
+  "xDimension": {
+    "id": "age_bucket",
+    "type": "category"
+  },
+  "series": [
+    {
+      "id": "count_f",
+      "label": "F",
+      "geometry": "column",
+      "stack": "demographics",
+      "data": [
+        {
+          "x": "0-4",
+          "y": 0
+        },
+        {
+          "x": "5-13",
+          "y": 0
+        },
+        {
+          "x": "14-25",
+          "y": 2
+        },
+        {
+          "x": "26-45",
+          "y": 4
+        },
+        {
+          "x": "46-65",
+          "y": 0
+        },
+        {
+          "x": "66+",
+          "y": 0
+        },
+        {
+          "x": "Unknown",
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "count_m",
+      "label": "M",
+      "geometry": "column",
+      "stack": "demographics",
+      "data": [
+        {
+          "x": "0-4",
+          "y": 0
+        },
+        {
+          "x": "5-13",
+          "y": 0
+        },
+        {
+          "x": "14-25",
+          "y": 0
+        },
+        {
+          "x": "26-45",
+          "y": 4
+        },
+        {
+          "x": "46-65",
+          "y": 2
+        },
+        {
+          "x": "66+",
+          "y": 0
+        },
+        {
+          "x": "Unknown",
+          "y": 0
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "summary": {
+      "total_events": 12,
+      "unique_visitors": 4
+    }
+  }
+}

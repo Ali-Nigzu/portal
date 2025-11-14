@@ -1,0 +1,54 @@
+{
+  "chartType": "categorical",
+  "xDimension": {
+    "id": "cam_id",
+    "type": "category"
+  },
+  "series": [
+    {
+      "id": "avg_dwell",
+      "label": "Average dwell",
+      "unit": "minutes",
+      "geometry": "bar",
+      "data": [
+        {
+          "x": "CAM_A",
+          "y": 17.4,
+          "coverage": 1.0
+        },
+        {
+          "x": "CAM_B",
+          "y": 8.0,
+          "coverage": 1.0
+        }
+      ],
+      "summary": {
+        "overall_mean": 15.83,
+        "sessions": 6
+      }
+    },
+    {
+      "id": "p90_dwell",
+      "label": "P90 dwell",
+      "axis": "Y2",
+      "unit": "minutes",
+      "geometry": "line",
+      "data": [
+        {
+          "x": "CAM_A",
+          "y": 26.0
+        },
+        {
+          "x": "CAM_B",
+          "y": 8.0
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "summary": {
+      "session_count": 6
+    }
+  }
+}
