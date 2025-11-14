@@ -7,6 +7,7 @@ import type { DashboardManifest, DashboardWidget } from "../types";
 import DashboardV2Page from "./DashboardV2Page";
 import activityResult from "../../../analytics/examples/golden_dashboard_kpi_activity.json";
 import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_flow.json";
+import type { FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
 
 class ResizeObserverMock {
@@ -33,6 +34,14 @@ jest.mock("../../../analytics/components/ChartRenderer", () => ({
 
 const activityChart = activityResult as unknown as ChartResult;
 const liveFlowChart = liveFlowResult as unknown as ChartResult;
+
+type ManifestLoader = (
+  orgId: string,
+  dashboardId?: string,
+  options?: FetchDashboardManifestOptions,
+) => Promise<DashboardManifest>;
+type WidgetResultLoader = (widget: DashboardWidget, options?: LoadWidgetOptions) => Promise<ChartResult>;
+type UnpinMutator = (orgId: string, dashboardId: string, widgetId: string) => Promise<DashboardManifest>;
 
 const baseWidgets: DashboardWidget[] = [
   {
@@ -90,11 +99,11 @@ async function flushEffects(times = 3) {
 
 describe("DashboardV2Page", () => {
   it("loads manifest and renders widgets", async () => {
-    const manifestLoader = jest.fn(async () => cloneManifest());
-    const widgetLoader = jest.fn(async (widget: DashboardWidget) =>
-      widget.kind === "kpi" ? activityChart : liveFlowChart,
-    );
-    const unpin = jest.fn(async () => cloneManifest());
+    const manifestLoader = jest.fn<ReturnType<ManifestLoader>, Parameters<ManifestLoader>>(async () => cloneManifest());
+    const widgetLoader = jest.fn<ReturnType<WidgetResultLoader>, Parameters<WidgetResultLoader>>(async (
+      widget: DashboardWidget,
+    ) => (widget.kind === "kpi" ? activityChart : liveFlowChart));
+    const unpin = jest.fn<ReturnType<UnpinMutator>, Parameters<UnpinMutator>>(async () => cloneManifest());
 
     let tree: TestRenderer;
     await act(async () => {
@@ -109,7 +118,11 @@ describe("DashboardV2Page", () => {
     });
     await flushEffects();
 
-    expect(manifestLoader).toHaveBeenCalledWith("client0", "dashboard-default");
+    expect(manifestLoader).toHaveBeenCalled();
+    const [orgId, dashboardId, options] = manifestLoader.mock.calls[0]!;
+    expect(orgId).toBe("client0");
+    expect(dashboardId).toBe("dashboard-default");
+    expect(options).toBeDefined();
     const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
     expect(new Set(widgetIds)).toEqual(new Set(["kpi-activity", "live-flow"]));
 
@@ -120,11 +133,15 @@ describe("DashboardV2Page", () => {
   });
 
   it("invokes unpin handler when clicking remove", async () => {
-    const manifestLoader = jest.fn(async () => cloneManifest());
-    const widgetLoader = jest.fn(async (widget: DashboardWidget) =>
-      widget.kind === "kpi" ? activityChart : liveFlowChart,
-    );
-    const unpin = jest.fn(async (_orgId: string, _dashboardId: string, widgetId: string) => {
+    const manifestLoader = jest.fn<ReturnType<ManifestLoader>, Parameters<ManifestLoader>>(async () => cloneManifest());
+    const widgetLoader = jest.fn<ReturnType<WidgetResultLoader>, Parameters<WidgetResultLoader>>(async (
+      widget: DashboardWidget,
+    ) => (widget.kind === "kpi" ? activityChart : liveFlowChart));
+    const unpin = jest.fn<ReturnType<UnpinMutator>, Parameters<UnpinMutator>>(async (
+      _orgId: string,
+      _dashboardId: string,
+      widgetId: string,
+    ) => {
       const next = cloneManifest();
       next.widgets = next.widgets.filter((widget) => widget.id !== widgetId);
       next.layout.kpiBand = next.layout.kpiBand.filter((id) => id !== widgetId);

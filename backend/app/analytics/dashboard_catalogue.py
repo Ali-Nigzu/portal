@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, Iterable, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Dict, Iterable, Mapping, MutableMapping, Optional, Protocol, Tuple
 
 from .contracts import validate_chart_spec
 
@@ -302,28 +302,63 @@ _MANIFEST_TEMPLATES: Mapping[str, Manifest] = {
 
 
 ManifestKey = Tuple[str, str]
-_MANIFEST_STORE: MutableMapping[ManifestKey, Manifest] = {}
 
 
-def _manifest_key(org_id: str, dashboard_id: str) -> ManifestKey:
-    return org_id, dashboard_id
+class ManifestValidationError(ValueError):
+    """Raised when a manifest or widget payload violates the schema contract."""
 
 
-def _ensure_manifest(org_id: str, dashboard_id: str) -> Manifest:
-    key = _manifest_key(org_id, dashboard_id)
-    if key not in _MANIFEST_STORE:
-        template = _MANIFEST_TEMPLATES.get(dashboard_id)
-        if template is None:
-            raise KeyError(f"Unknown dashboard manifest: {dashboard_id}")
-        manifest = deepcopy(template)
-        manifest["orgId"] = org_id
-        # Deep copy widgets so per-org mutations don't bleed
-        manifest["widgets"] = [deepcopy(widget) for widget in template.get("widgets", [])]
-        manifest["layout"] = deepcopy(template.get("layout", {}))
-        if template.get("timeControls"):
-            manifest["timeControls"] = deepcopy(template["timeControls"])
-        _MANIFEST_STORE[key] = manifest
-    return _MANIFEST_STORE[key]
+class ManifestRepository(Protocol):
+    """Storage abstraction for dashboard manifests."""
+
+    def load(self, org_id: str, dashboard_id: str) -> Manifest:
+        """Return the stored manifest for the dashboard, bootstrapping from template if needed."""
+
+    def save(self, org_id: str, dashboard_id: str, manifest: Manifest) -> None:
+        """Persist the manifest for the dashboard."""
+
+    def list(self) -> Dict[str, Manifest]:
+        """Return all manifests keyed by repository identifier."""
+
+
+class InMemoryManifestRepository:
+    """Default in-memory repository used during Phase 6 rollout."""
+
+    def __init__(self, templates: Mapping[str, Manifest]):
+        self._templates = {key: deepcopy(value) for key, value in templates.items()}
+        self._store: MutableMapping[ManifestKey, Manifest] = {}
+
+    def _key(self, org_id: str, dashboard_id: str) -> ManifestKey:
+        return org_id, dashboard_id
+
+    def _bootstrap(self, org_id: str, dashboard_id: str) -> Manifest:
+        key = self._key(org_id, dashboard_id)
+        if key not in self._store:
+            template = self._templates.get(dashboard_id)
+            if template is None:
+                raise KeyError(f"Unknown dashboard manifest: {dashboard_id}")
+            manifest = deepcopy(template)
+            manifest["orgId"] = org_id
+            manifest["widgets"] = [deepcopy(widget) for widget in template.get("widgets", [])]
+            manifest["layout"] = deepcopy(template.get("layout", {}))
+            if template.get("timeControls"):
+                manifest["timeControls"] = deepcopy(template["timeControls"])
+            self._store[key] = manifest
+        return self._store[key]
+
+    def load(self, org_id: str, dashboard_id: str) -> Manifest:
+        manifest = self._bootstrap(org_id, dashboard_id)
+        return deepcopy(manifest)
+
+    def save(self, org_id: str, dashboard_id: str, manifest: Manifest) -> None:
+        key = self._key(org_id, dashboard_id)
+        self._store[key] = deepcopy(manifest)
+
+    def list(self) -> Dict[str, Manifest]:
+        return {"::".join(key): deepcopy(value) for key, value in self._store.items()}
+
+
+MANIFEST_REPOSITORY: ManifestRepository = InMemoryManifestRepository(_MANIFEST_TEMPLATES)
 
 
 def _clone_for_response(manifest: Manifest, org_id: str) -> Manifest:
@@ -335,16 +370,28 @@ def _clone_for_response(manifest: Manifest, org_id: str) -> Manifest:
     return clone
 
 
+def _load_manifest(org_id: str, dashboard_id: str) -> Manifest:
+    return MANIFEST_REPOSITORY.load(org_id, dashboard_id)
+
+
+def _save_manifest(org_id: str, dashboard_id: str, manifest: Manifest) -> None:
+    MANIFEST_REPOSITORY.save(org_id, dashboard_id, manifest)
+
+
 def _validate_widget(widget: Widget) -> None:
-    if widget.get("kind") not in {"kpi", "chart"}:
-        raise ValueError(f"Unsupported widget kind: {widget.get('kind')}")
+    widget_id = widget.get("id")
+    if not widget_id or not isinstance(widget_id, str):
+        raise ManifestValidationError("Widget must include a string id")
+    kind = widget.get("kind")
+    if kind not in {"kpi", "chart"}:
+        raise ManifestValidationError(f"Unsupported widget kind: {kind}")
     inline_spec = widget.get("inlineSpec")
     spec_id = widget.get("chartSpecId")
     locked = widget.get("locked")
     if locked is not None and not isinstance(locked, bool):
-        raise ValueError("Widget locked flag must be a boolean when provided")
+        raise ManifestValidationError("Widget locked flag must be a boolean when provided")
     if inline_spec is None and not spec_id:
-        raise ValueError("Widget must include chartSpecId or inlineSpec")
+        raise ManifestValidationError("Widget must include chartSpecId or inlineSpec")
     if inline_spec is not None:
         validate_chart_spec(inline_spec)
     elif spec_id:
@@ -359,6 +406,72 @@ def _ensure_layout_scaffolding(manifest: Manifest) -> None:
     grid = layout["grid"]
     grid.setdefault("columns", _DEFAULT_GRID_COLUMNS)
     grid.setdefault("placements", {})
+
+
+def _validate_manifest(manifest: Manifest) -> None:
+    _ensure_layout_scaffolding(manifest)
+    widgets = manifest.setdefault("widgets", [])
+    if not isinstance(widgets, list):
+        raise ManifestValidationError("Manifest widgets must be an array")
+
+    widget_lookup: Dict[str, Widget] = {}
+    for raw_widget in widgets:
+        if not isinstance(raw_widget, dict):
+            raise ManifestValidationError("Widgets must be objects")
+        widget = deepcopy(raw_widget)
+        _validate_widget(widget)
+        widget_id = widget["id"]
+        if widget_id in widget_lookup:
+            raise ManifestValidationError(f"Duplicate widget id: {widget_id}")
+        widget_lookup[widget_id] = widget
+
+    layout = manifest["layout"]
+    kpi_band = layout.get("kpiBand", [])
+    if not isinstance(kpi_band, list):
+        raise ManifestValidationError("layout.kpiBand must be an array of widget ids")
+
+    grid = layout.get("grid", {})
+    if not isinstance(grid, dict):
+        raise ManifestValidationError("layout.grid must be an object")
+
+    columns = grid.get("columns", _DEFAULT_GRID_COLUMNS)
+    if not isinstance(columns, int) or columns != _DEFAULT_GRID_COLUMNS:
+        raise ManifestValidationError("layout.grid.columns must equal 12")
+
+    placements = grid.get("placements", {})
+    if not isinstance(placements, dict):
+        raise ManifestValidationError("layout.grid.placements must be an object")
+
+    for widget_id in kpi_band:
+        if widget_id not in widget_lookup:
+            raise ManifestValidationError(f"Unknown widget id in kpiBand: {widget_id}")
+        if widget_lookup[widget_id].get("kind") != "kpi":
+            raise ManifestValidationError(f"Non-KPI widget referenced in kpiBand: {widget_id}")
+
+    for widget_id, placement in placements.items():
+        if widget_id not in widget_lookup:
+            raise ManifestValidationError(f"Unknown widget id in grid placements: {widget_id}")
+        widget = widget_lookup[widget_id]
+        if widget.get("kind") != "chart":
+            raise ManifestValidationError(f"Non-chart widget cannot have a grid placement: {widget_id}")
+        if not isinstance(placement, Mapping):
+            raise ManifestValidationError(f"Invalid placement for widget: {widget_id}")
+        for dimension in ("x", "y", "w", "h"):
+            value = placement.get(dimension)
+            if not isinstance(value, int):
+                raise ManifestValidationError(
+                    f"Grid placement value {dimension} must be an integer for widget {widget_id}"
+                )
+        if placement["w"] < 1 or placement["w"] > columns:
+            raise ManifestValidationError(f"Grid width out of bounds for widget {widget_id}")
+        if placement["h"] < 1:
+            raise ManifestValidationError(f"Grid height must be >= 1 for widget {widget_id}")
+
+    for widget_id, widget in widget_lookup.items():
+        if widget.get("kind") == "chart" and widget_id not in placements:
+            raise ManifestValidationError(f"Chart widget missing grid placement: {widget_id}")
+        if widget.get("kind") == "kpi" and widget_id in placements:
+            raise ManifestValidationError(f"KPI widget cannot have grid placement: {widget_id}")
 
 
 def _infer_next_grid_slot(placements: Mapping[str, Dict[str, int]]) -> Dict[str, int]:
@@ -376,7 +489,7 @@ def get_dashboard_spec(spec_id: str) -> ChartSpec:
 
 
 def get_dashboard_manifest(org_id: str, dashboard_id: str = "dashboard-default") -> Manifest:
-    manifest = _ensure_manifest(org_id, dashboard_id)
+    manifest = _load_manifest(org_id, dashboard_id)
     return _clone_for_response(manifest, org_id)
 
 
@@ -388,43 +501,52 @@ def pin_widget_to_manifest(
     position: str = "end",
     target_band: Optional[str] = None,
 ) -> Manifest:
-    manifest = _ensure_manifest(org_id, dashboard_id)
+    manifest = _load_manifest(org_id, dashboard_id)
     _ensure_layout_scaffolding(manifest)
 
     widget_copy = deepcopy(widget)
     widget_copy.setdefault("locked", False)
     _validate_widget(widget_copy)
 
-    if any(existing.get("id") == widget_copy.get("id") for existing in manifest.get("widgets", [])):
-        raise ValueError(f"Widget id already exists: {widget_copy.get('id')}")
+    existing_ids = {existing.get("id") for existing in manifest.get("widgets", [])}
+    widget_id = widget_copy["id"]
+    if widget_id in existing_ids:
+        # Idempotent: return without mutating state.
+        return get_dashboard_manifest(org_id, dashboard_id)
 
-    manifest.setdefault("widgets", [])
+    widgets = manifest.setdefault("widgets", [])
     if position == "start":
-        manifest["widgets"].insert(0, widget_copy)
+        widgets.insert(0, widget_copy)
     else:
-        manifest["widgets"].append(widget_copy)
+        widgets.append(widget_copy)
 
     layout = manifest["layout"]
     band_target = target_band or ("kpiBand" if widget_copy.get("kind") == "kpi" else "grid")
 
     if band_target == "kpiBand":
+        if widget_copy.get("kind") != "kpi":
+            raise ManifestValidationError("Only KPI widgets can be placed in the KPI band")
         band = layout.get("kpiBand", [])
+        band = [wid for wid in band if wid != widget_id]
         if position == "start":
-            band.insert(0, widget_copy["id"])
+            band.insert(0, widget_id)
         else:
-            band.append(widget_copy["id"])
+            band.append(widget_id)
+        layout["kpiBand"] = band
     else:
         placements = layout.get("grid", {}).get("placements", {})
         placement = widget_copy.get("layout", {}).get("grid") if widget_copy.get("layout") else None
         if placement is None:
             placement = _infer_next_grid_slot(placements)
-        placements[widget_copy["id"]] = {
+        placements[widget_id] = {
             "x": int(placement.get("x", 0)),
             "y": int(placement.get("y", 0)),
             "w": int(placement.get("w", _DEFAULT_GRID_COLUMNS)),
             "h": int(placement.get("h", _DEFAULT_GRID_HEIGHT)),
         }
 
+    _validate_manifest(manifest)
+    _save_manifest(org_id, dashboard_id, manifest)
     return get_dashboard_manifest(org_id, dashboard_id)
 
 
@@ -434,15 +556,16 @@ def remove_widget_from_manifest(
     widget_id: str,
     dashboard_id: str = "dashboard-default",
 ) -> Manifest:
-    manifest = _ensure_manifest(org_id, dashboard_id)
+    manifest = _load_manifest(org_id, dashboard_id)
     _ensure_layout_scaffolding(manifest)
 
     widgets = manifest.get("widgets", [])
     target_widget = next((widget for widget in widgets if widget.get("id") == widget_id), None)
     if target_widget is None:
-        raise KeyError(f"Widget not found: {widget_id}")
+        # Idempotent removal of missing widgets.
+        return get_dashboard_manifest(org_id, dashboard_id)
     if target_widget.get("locked"):
-        raise ValueError(f"Widget is locked and cannot be removed: {widget_id}")
+        raise ManifestValidationError(f"Widget is locked and cannot be removed: {widget_id}")
 
     manifest["widgets"] = [widget for widget in widgets if widget.get("id") != widget_id]
 
@@ -452,6 +575,8 @@ def remove_widget_from_manifest(
     if widget_id in placements:
         placements.pop(widget_id)
 
+    _validate_manifest(manifest)
+    _save_manifest(org_id, dashboard_id, manifest)
     return get_dashboard_manifest(org_id, dashboard_id)
 
 
@@ -460,4 +585,4 @@ def list_dashboard_specs() -> Dict[str, ChartSpec]:
 
 
 def list_manifests() -> Dict[str, Manifest]:
-    return {"::".join(key): deepcopy(value) for key, value in _MANIFEST_STORE.items()}
+    return MANIFEST_REPOSITORY.list()

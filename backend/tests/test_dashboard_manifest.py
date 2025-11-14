@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from backend.app.analytics.dashboard_catalogue import (
     DASHBOARD_SPEC_CATALOGUE,
+    ManifestValidationError,
     get_dashboard_manifest,
     get_dashboard_spec,
     pin_widget_to_manifest,
@@ -69,8 +70,63 @@ def test_locked_widgets_cannot_be_removed():
     manifest = get_dashboard_manifest("client0")
     locked_widget = manifest["widgets"][0]
     assert locked_widget.get("locked") is True
-    with pytest.raises(ValueError):
+    with pytest.raises(ManifestValidationError):
         remove_widget_from_manifest(org_id="client0", widget_id=locked_widget["id"])
+
+
+def test_pin_widget_is_idempotent():
+    widget = {
+        "id": "duplicate-check",
+        "title": "Duplicate",
+        "kind": "kpi",
+        "inlineSpec": get_dashboard_spec("dashboard.kpi.activity_today"),
+    }
+
+    first = pin_widget_to_manifest(org_id="client0", widget=widget)
+    assert any(w["id"] == "duplicate-check" for w in first["widgets"])
+
+    second = pin_widget_to_manifest(org_id="client0", widget=widget)
+    occurrences = [w for w in second["widgets"] if w["id"] == "duplicate-check"]
+    assert len(occurrences) == 1
+    assert second["layout"]["kpiBand"].count("duplicate-check") == 1
+
+    remove_widget_from_manifest(org_id="client0", widget_id="duplicate-check")
+
+
+def test_remove_missing_widget_is_noop():
+    manifest_before = get_dashboard_manifest("client0")
+    result = remove_widget_from_manifest(org_id="client0", widget_id="missing-widget")
+    assert result == manifest_before
+
+
+def test_chart_widgets_require_grid_placement():
+    with pytest.raises(ManifestValidationError):
+        pin_widget_to_manifest(
+            org_id="client0",
+            widget={
+                "id": "invalid-chart",
+                "title": "Invalid Chart",
+                "kind": "chart",
+                "inlineSpec": get_dashboard_spec("dashboard.live_flow"),
+            },
+            target_band="kpiBand",
+        )
+
+
+def test_manifest_state_rolls_back_on_error():
+    manifest_before = get_dashboard_manifest("client0")
+    duplicate_manifest = pin_widget_to_manifest(
+        org_id="client0",
+        widget={
+            "id": manifest_before["widgets"][0]["id"],
+            "title": "Collision",
+            "kind": "kpi",
+            "inlineSpec": get_dashboard_spec("dashboard.kpi.activity_today"),
+        },
+    )
+    manifest_after = get_dashboard_manifest("client0")
+    assert duplicate_manifest == manifest_before
+    assert manifest_after == manifest_before
 
 
 @pytest.mark.parametrize("spec_id", sorted(DASHBOARD_SPEC_CATALOGUE.keys()))
