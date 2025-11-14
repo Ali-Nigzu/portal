@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "../../../analytics/components/Card";
 import { ChartRenderer } from "../../../analytics/components/ChartRenderer";
+import ErrorBoundary from "../../../common/components/ErrorBoundary";
+import { logError, logInfo } from "../../../common/utils/logger";
 import type {
   DashboardGridPlacement,
   DashboardManifest,
   DashboardWidget,
   DashboardWidgetState,
 } from "../types";
-import { fetchDashboardManifest } from "../transport/fetchDashboardManifest";
+import { fetchDashboardManifest, type FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import {
   loadWidgetResult,
   type LoadWidgetOptions,
@@ -21,6 +23,7 @@ const GRID_ROW_HEIGHT = 96;
 type ManifestLoader = (
   orgId: string,
   dashboardId?: string,
+  options?: FetchDashboardManifestOptions,
 ) => Promise<DashboardManifest>;
 type WidgetResultLoader = (
   widget: DashboardWidget,
@@ -185,14 +188,43 @@ const DashboardV2Page = ({
     setStatus("loading");
     setError(null);
     abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    logInfo("dashboard.manifest", "ui_fetch_start", {
+      orgId,
+      dashboardId: resolvedDashboardId,
+    });
     try {
-      const data = await manifestLoaderImpl(orgId, resolvedDashboardId);
+      const data = await manifestLoaderImpl(orgId, resolvedDashboardId, { signal: controller.signal });
+      if (controller.signal.aborted) {
+        return;
+      }
+      logInfo("dashboard.manifest", "ui_fetch_success", {
+        orgId,
+        dashboardId: resolvedDashboardId,
+      });
       setManifest(data);
     } catch (err) {
+      if (controller.signal.aborted) {
+        logInfo("dashboard.manifest", "ui_fetch_aborted", {
+          orgId,
+          dashboardId: resolvedDashboardId,
+        });
+        return;
+      }
       const message = err instanceof Error ? err.message : "Unable to load dashboard";
+      logError("dashboard.manifest", "ui_fetch_error", {
+        orgId,
+        dashboardId: resolvedDashboardId,
+        message,
+      });
       setManifest(null);
       setError(message);
       setStatus("error");
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
     }
   }, [manifestLoaderImpl, orgId, resolvedDashboardId]);
 
@@ -292,6 +324,10 @@ const DashboardV2Page = ({
             }
             encounteredError = true;
             const message = err instanceof Error ? err.message : "Unknown widget error";
+            logError("dashboard.widgets", "ui_widget_error", {
+              widgetId: widget.id,
+              message,
+            });
             setWidgetState((previous) => ({
               ...previous,
               [widget.id]: {
@@ -311,9 +347,14 @@ const DashboardV2Page = ({
       if (encounteredError) {
         setStatus("error");
         setError("Some widgets failed to load");
+        logError("dashboard.widgets", "ui_batch_error", {
+          manifestId: manifest.id,
+          message: "Some widgets failed to load",
+        });
       } else {
         setStatus("ready");
         setError(null);
+        logInfo("dashboard.widgets", "ui_batch_success", { manifestId: manifest.id });
       }
     };
 
@@ -324,6 +365,10 @@ const DashboardV2Page = ({
       const message = err instanceof Error ? err.message : "Unable to load dashboard widgets";
       setError(message);
       setStatus("error");
+      logError("dashboard.widgets", "ui_batch_failure", {
+        manifestId: manifest?.id,
+        message,
+      });
     });
 
     return () => {
@@ -400,9 +445,9 @@ const DashboardV2Page = ({
     <div className="dashboard-v2" aria-busy={status === "loading"}>
       <header className="dashboard-v2__header">
         <div>
-          <h1>Dashboard (Preview)</h1>
+          <h1>Dashboard</h1>
           <p className="dashboard-v2__subtitle">
-            Manifest-driven dashboard wired to analytics engine. Toggle feature flag to control rollout.
+            Manifest-driven dashboard powered by the shared analytics engine and live manifests.
           </p>
         </div>
         <div className="dashboard-v2__controls">
@@ -496,4 +541,11 @@ const DashboardV2Page = ({
   );
 };
 
-export default DashboardV2Page;
+const DashboardV2PageWithBoundary = (props: DashboardV2PageProps) => (
+  <ErrorBoundary name="dashboard-v2" fallbackMessage="Dashboard is temporarily unavailable.">
+    <DashboardV2Page {...props} />
+  </ErrorBoundary>
+);
+
+export { DashboardV2Page };
+export default DashboardV2PageWithBoundary;

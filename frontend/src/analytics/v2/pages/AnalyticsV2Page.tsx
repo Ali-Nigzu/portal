@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FEATURE_FLAGS, ANALYTICS_V2_TRANSPORT } from '../../../config';
+import ErrorBoundary from '../../../common/components/ErrorBoundary';
 import type { ChartSpec } from '../../schemas/charting';
 import { Card } from '../../components/Card';
 import { ChartRenderer } from '../../components/ChartRenderer';
@@ -392,4 +393,10 @@ export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
   return <WorkspaceShell leftRail={leftRail} canvas={canvas} inspector={inspector} />;
 };
 
-export default AnalyticsV2Page;
+const AnalyticsV2PageWithBoundary = (props: AnalyticsV2PageProps) => (
+  <ErrorBoundary name="analytics-workspace" fallbackMessage="Analytics workspace is temporarily unavailable.">
+    <AnalyticsV2Page {...props} />
+  </ErrorBoundary>
+);
+
+export default AnalyticsV2PageWithBoundary;

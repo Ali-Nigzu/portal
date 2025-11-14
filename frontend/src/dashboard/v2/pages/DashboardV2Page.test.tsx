@@ -109,7 +109,10 @@ describe("DashboardV2Page", () => {
     });
     await flushEffects();
 
-    expect(manifestLoader).toHaveBeenCalledWith("client0", "dashboard-default");
+    const manifestCall = manifestLoader.mock.calls[0];
+    expect(manifestCall[0]).toBe("client0");
+    expect(manifestCall[1]).toBe("dashboard-default");
+    expect(manifestCall[2]).toBeDefined();
     const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
     expect(new Set(widgetIds)).toEqual(new Set(["kpi-activity", "live-flow"]));
 
