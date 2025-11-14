@@ -5,6 +5,30 @@ const FIXTURE_MODULES: Record<string, () => Promise<ChartResult>> = {
     import("../examples/golden_dashboard_live_flow.json").then(
       (module) => module.default as unknown as ChartResult
     ),
+  "golden_dashboard_kpi_activity": () =>
+    import("../examples/golden_dashboard_kpi_activity.json").then(
+      (module) => module.default as unknown as ChartResult
+    ),
+  "golden_dashboard_kpi_entrances": () =>
+    import("../examples/golden_dashboard_kpi_entrances.json").then(
+      (module) => module.default as unknown as ChartResult
+    ),
+  "golden_dashboard_kpi_exits": () =>
+    import("../examples/golden_dashboard_kpi_exits.json").then(
+      (module) => module.default as unknown as ChartResult
+    ),
+  "golden_dashboard_kpi_live_occupancy": () =>
+    import("../examples/golden_dashboard_kpi_live_occupancy.json").then(
+      (module) => module.default as unknown as ChartResult
+    ),
+  "golden_dashboard_kpi_avg_dwell": () =>
+    import("../examples/golden_dashboard_kpi_avg_dwell.json").then(
+      (module) => module.default as unknown as ChartResult
+    ),
+  "golden_dashboard_kpi_freshness": () =>
+    import("../examples/golden_dashboard_kpi_freshness.json").then(
+      (module) => module.default as unknown as ChartResult
+    ),
   "golden_dwell_by_camera": () =>
     import("../examples/golden_dwell_by_camera.json").then(
       (module) => module.default as unknown as ChartResult

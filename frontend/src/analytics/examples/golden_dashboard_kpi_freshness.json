@@ -1,0 +1,45 @@
+{
+  "chartType": "single_value",
+  "xDimension": {
+    "id": "timestamp",
+    "type": "time",
+    "bucket": "5_MIN",
+    "timezone": "UTC"
+  },
+  "series": [
+    {
+      "id": "freshness_minutes",
+      "label": "Freshness (min)",
+      "geometry": "metric",
+      "unit": "minutes",
+      "data": [
+        { "x": "2024-01-07T12:00:00Z", "value": 6.4, "coverage": 1.0, "rawCount": 6 },
+        { "x": "2024-01-07T12:05:00Z", "value": 5.8, "coverage": 1.0, "rawCount": 6 },
+        { "x": "2024-01-07T12:10:00Z", "value": 4.9, "coverage": 0.98, "rawCount": 5 },
+        { "x": "2024-01-07T12:15:00Z", "value": 4.2, "coverage": 0.96, "rawCount": 4 },
+        { "x": "2024-01-07T12:20:00Z", "value": 3.9, "coverage": 0.95, "rawCount": 4 },
+        { "x": "2024-01-07T12:25:00Z", "value": 3.5, "coverage": 0.94, "rawCount": 4 }
+      ],
+      "summary": { "delta": -0.22, "status": "green" }
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "coverage": [
+      { "x": "2024-01-07T12:00:00Z", "value": 1.0 },
+      { "x": "2024-01-07T12:05:00Z", "value": 1.0 },
+      { "x": "2024-01-07T12:10:00Z", "value": 0.98 },
+      { "x": "2024-01-07T12:15:00Z", "value": 0.96 },
+      { "x": "2024-01-07T12:20:00Z", "value": 0.95 },
+      { "x": "2024-01-07T12:25:00Z", "value": 0.94 }
+    ],
+    "summary": {
+      "points": 6,
+      "measures": ["freshness_minutes"],
+      "thresholds": {
+        "green": 2,
+        "amber": 10
+      }
+    }
+  }
+}

@@ -44,6 +44,9 @@ export const FEATURE_FLAGS = {
   analyticsV2:
     process.env.REACT_APP_FEATURE_ANALYTICS_V2 === "true" ||
     process.env.REACT_APP_FEATURE_ANALYTICS_V2 === "1",
+  dashboardV2:
+    process.env.REACT_APP_FEATURE_DASHBOARD_V2 === "true" ||
+    process.env.REACT_APP_FEATURE_DASHBOARD_V2 === "1",
 } as const;
 
 export const ANALYTICS_V2_TRANSPORT: AnalyticsTransportMode =

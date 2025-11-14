@@ -19,7 +19,7 @@ declare module "react-test-renderer" {
     toJSON(): ReactTestRendererJSON | ReactTestRendererJSON[] | null;
     update(element: ReactElement): void;
     unmount(nextElement?: ReactElement): void;
-    root: unknown;
+    root: any;
   }
 
   export function create(
@@ -28,4 +28,8 @@ declare module "react-test-renderer" {
       createNodeMock?: (element: ReactElement) => unknown;
     }
   ): TestRenderer;
+
+  export function act(
+    callback: () => void | Promise<void>,
+  ): void | Promise<void>;
 }
