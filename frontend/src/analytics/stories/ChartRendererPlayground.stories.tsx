@@ -84,6 +84,18 @@ const useFixture = (fixture: ChartFixtureName, transform?: FixtureTransform) => 
   return result;
 };
 
+const StaticResultCard = ({ result, title, subtitle, height = 360 }: Omit<FixtureCardProps, 'fixture'> & { result: ChartResult }) => {
+  return (
+    <Card
+      title={title}
+      subtitle={subtitle}
+      onExport={() => triggerExport({ result, spec: null, specHash: null })}
+    >
+      <ChartRenderer result={result} height={height} />
+    </Card>
+  );
+};
+
 const FixtureCard = ({ fixture, title, subtitle, height = 360, transform }: FixtureCardProps) => {
   const result = useFixture(fixture, transform);
   const cardSubtitle = useMemo(() => subtitle, [subtitle]);
@@ -193,6 +205,134 @@ export const RetentionHeatmapLowCoverage = {
       title="Retention Heatmap"
       subtitle="Small cohorts flagged as low confidence"
       transform={withRetentionCoverage}
+      height={420}
+    />
+  ),
+};
+
+const invalidResult: ChartResult = {
+  chartType: 'composed_time',
+  xDimension: { id: 'timestamp', type: 'time', bucket: 'HOUR', timezone: 'UTC' },
+  series: [],
+  meta: { timezone: 'UTC' },
+};
+
+const emptyResult: ChartResult = {
+  ...invalidResult,
+  series: [
+    {
+      id: 'entries',
+      label: 'Entries',
+      geometry: 'line',
+      unit: 'people',
+      data: [
+        { x: '2024-01-01T00:00:00Z', y: null },
+        { x: '2024-01-01T01:00:00Z', y: null },
+      ],
+    },
+  ],
+};
+
+const kpiResult: ChartResult = {
+  chartType: 'single_value',
+  xDimension: { id: 'timestamp', type: 'time', bucket: 'DAY', timezone: 'UTC' },
+  series: [
+    {
+      id: 'occupancy_kpi',
+      label: 'Occupancy',
+      geometry: 'line',
+      unit: 'people',
+      data: [
+        { x: '2024-01-01', value: 120, coverage: 0.9 },
+        { x: '2024-01-02', value: 118, coverage: 0.92 },
+      ],
+      summary: { delta: -0.015 },
+    },
+  ],
+  meta: { timezone: 'UTC' },
+};
+
+const splitSeriesResult: ChartResult = {
+  chartType: 'composed_time',
+  xDimension: { id: 'timestamp', type: 'time', bucket: 'HOUR', timezone: 'UTC' },
+  series: [
+    {
+      id: 'site_a',
+      label: 'Site A',
+      geometry: 'line',
+      unit: 'people',
+      data: [
+        { x: '2024-01-01T00:00:00Z', y: 4 },
+        { x: '2024-01-01T01:00:00Z', y: 6 },
+      ],
+    },
+    {
+      id: 'site_b',
+      label: 'Site B',
+      geometry: 'line',
+      unit: 'people',
+      data: [
+        { x: '2024-01-01T00:00:00Z', y: 7 },
+        { x: '2024-01-01T01:00:00Z', y: 5 },
+      ],
+    },
+    {
+      id: 'site_c',
+      label: 'Site C',
+      geometry: 'line',
+      unit: 'people',
+      data: [
+        { x: '2024-01-01T00:00:00Z', y: 3 },
+        { x: '2024-01-01T01:00:00Z', y: 4 },
+      ],
+    },
+  ],
+  meta: { timezone: 'UTC' },
+};
+
+export const InvalidSpecShowsError = {
+  render: () => (
+    <StaticResultCard
+      result={invalidResult}
+      title="ChartErrorState"
+      subtitle="Invalid spec surfaces validator issues"
+    />
+  ),
+};
+
+export const EmptySpecShowsEmptyState = {
+  render: () => (
+    <StaticResultCard
+      result={emptyResult}
+      title="Empty state"
+      subtitle="Null-only series surface canonical empty state"
+    />
+  ),
+};
+
+export const KpiTileRendering = {
+  render: () => (
+    <StaticResultCard result={kpiResult} title="KPI tile" subtitle="Single value preset" height={260} />
+  ),
+};
+
+export const SplitPaletteConsistency = {
+  render: () => (
+    <StaticResultCard
+      result={splitSeriesResult}
+      title="Split palette"
+      subtitle="Series colors remain stable"
+      height={360}
+    />
+  ),
+};
+
+export const RetentionHeatmapGuardrails = {
+  render: () => (
+    <FixtureCard
+      fixture="golden_retention_heatmap"
+      title="Retention guardrails"
+      subtitle="Canonical cohort grid without missing columns"
       height={420}
     />
   ),

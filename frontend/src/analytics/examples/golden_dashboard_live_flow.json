@@ -1,0 +1,484 @@
+{
+  "chartType": "composed_time",
+  "xDimension": {
+    "id": "time",
+    "type": "time",
+    "bucket": "5_MIN",
+    "timezone": "UTC"
+  },
+  "series": [
+    {
+      "id": "occupancy",
+      "label": "Occupancy",
+      "axis": "Y1",
+      "unit": "people",
+      "geometry": "area",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 1.0,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:05:00Z",
+          "y": 1.0,
+          "coverage": 1.0,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:10:00Z",
+          "y": 1.0,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 0.0,
+          "coverage": 1.0,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:20:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:25:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:35:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:40:00Z",
+          "y": 1.0,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 1.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:50:00Z",
+          "y": 1.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:55:00Z",
+          "y": 1.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 1.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:05:00Z",
+          "y": 1.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:10:00Z",
+          "y": 0.0,
+          "coverage": 1.0,
+          "rawCount": 1
+        }
+      ],
+      "summary": {
+        "max": 1.0,
+        "end": 0.0
+      }
+    },
+    {
+      "id": "throughput",
+      "label": "Throughput",
+      "axis": "Y2",
+      "unit": "events/min",
+      "geometry": "line",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:05:00Z",
+          "y": 0.4,
+          "coverage": 1.0,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:10:00Z",
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 0.4,
+          "coverage": 1.0,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:20:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:25:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:35:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:40:00Z",
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:50:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:55:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:05:00Z",
+          "y": 0.0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:10:00Z",
+          "y": 0.2,
+          "coverage": 1.0,
+          "rawCount": 1
+        }
+      ]
+    },
+    {
+      "id": "entrances",
+      "label": "Entrances",
+      "axis": "Y3",
+      "unit": "events",
+      "geometry": "column",
+      "stack": "flow",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:05:00Z",
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:10:00Z",
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:20:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:25:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:35:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:40:00Z",
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:50:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:55:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:05:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:10:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        }
+      ]
+    },
+    {
+      "id": "exits",
+      "label": "Exits",
+      "axis": "Y3",
+      "unit": "events",
+      "geometry": "column",
+      "stack": "flow",
+      "data": [
+        {
+          "x": "2024-01-01T09:00:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:05:00Z",
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
+        },
+        {
+          "x": "2024-01-01T09:10:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:15:00Z",
+          "y": 2,
+          "coverage": 1.0,
+          "rawCount": 2
+        },
+        {
+          "x": "2024-01-01T09:20:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:25:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:30:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:35:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:40:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:45:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:50:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T09:55:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:00:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:05:00Z",
+          "y": 0,
+          "coverage": 0.0,
+          "rawCount": 0
+        },
+        {
+          "x": "2024-01-01T10:10:00Z",
+          "y": 1,
+          "coverage": 1.0,
+          "rawCount": 1
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "bucketMinutes": 5,
+    "timezone": "UTC",
+    "coverage": [
+      {
+        "x": "2024-01-01T09:00:00Z",
+        "value": 1.0
+      },
+      {
+        "x": "2024-01-01T09:05:00Z",
+        "value": 1.0
+      },
+      {
+        "x": "2024-01-01T09:10:00Z",
+        "value": 1.0
+      },
+      {
+        "x": "2024-01-01T09:15:00Z",
+        "value": 1.0
+      },
+      {
+        "x": "2024-01-01T09:20:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T09:25:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T09:30:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T09:35:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T09:40:00Z",
+        "value": 1.0
+      },
+      {
+        "x": "2024-01-01T09:45:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T09:50:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T09:55:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T10:00:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T10:05:00Z",
+        "value": 0.0
+      },
+      {
+        "x": "2024-01-01T10:10:00Z",
+        "value": 1.0
+      }
+    ],
+    "surges": [],
+    "summary": {
+      "occupancy_max": 1.0,
+      "occupancy_end": 0.0
+    }
+  }
+}

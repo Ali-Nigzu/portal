@@ -18,6 +18,7 @@ export interface ChartRendererProps {
   result: ChartResult;
   height?: number;
   className?: string;
+  onVisibilityChange?: (visibility: SeriesVisibilityMap) => void;
 }
 
 function buildInitialVisibility(series: ChartSeries[]): SeriesVisibilityMap {
@@ -27,7 +28,12 @@ function buildInitialVisibility(series: ChartSeries[]): SeriesVisibilityMap {
   }, {});
 }
 
-export const ChartRenderer = ({ result, height = 320, className }: ChartRendererProps) => {
+export const ChartRenderer = ({
+  result,
+  height = 320,
+  className,
+  onVisibilityChange,
+}: ChartRendererProps) => {
   const [visibility, setVisibility] = useState<SeriesVisibilityMap>(() =>
     buildInitialVisibility(result.series)
   );
@@ -61,8 +67,12 @@ export const ChartRenderer = ({ result, height = 320, className }: ChartRenderer
   }, [result]);
 
   useEffect(() => {
-    setVisibility(buildInitialVisibility(result.series));
-  }, [result]);
+    const nextVisibility = buildInitialVisibility(result.series);
+    setVisibility(nextVisibility);
+    if (onVisibilityChange) {
+      onVisibilityChange(nextVisibility);
+    }
+  }, [result, onVisibilityChange]);
 
   const paletteKey = useMemo(
     () => result.series.map((series) => series.id).join("|"),
@@ -104,7 +114,11 @@ export const ChartRenderer = ({ result, height = 320, className }: ChartRenderer
     setVisibility((prev) => {
       const manager = new SeriesManager(decoratedSeries, prev);
       manager.toggle(seriesId);
-      return manager.toObject();
+      const next = manager.toObject();
+      if (onVisibilityChange) {
+        onVisibilityChange(next);
+      }
+      return next;
     });
   };
 

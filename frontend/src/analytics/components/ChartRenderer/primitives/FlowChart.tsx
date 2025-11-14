@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { ReactElement } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -11,6 +12,7 @@ import {
   Bar,
   Brush,
 } from "recharts";
+import type { ActiveDotProps } from "recharts/types/util/types";
 import type { ChartSeries } from "../../../schemas/charting";
 import type { ChartPrimitiveProps } from "./types";
 import { buildCartesianDataset } from "./utils";
@@ -60,17 +62,22 @@ export const FlowChart = ({
             const hasLowCoverage = seriesItem.data.some(
               (point) => (point.coverage ?? 1) < 1
             );
-            const dotRenderer = (props: unknown) => {
-              const { cx, cy, payload } = props as {
-                cx: number;
-                cy: number;
-                payload: { x: string };
-              };
-              const metaForPoint =
-                dataset.meta[String(payload.x)]?.[seriesItem.id] ?? {};
+            const dotRenderer = (props: ActiveDotProps): ReactElement<SVGElement> => {
+              const { cx = 0, cy = 0 } = props;
+              const payload = props.payload as { x?: string } | undefined;
+              const bucketKey = payload?.x ?? "";
+              const metaForPoint = dataset.meta[bucketKey]?.[seriesItem.id] ?? {};
               const coverage = metaForPoint.coverage ?? 1;
               if (coverage >= 1) {
-                return null;
+                return (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={0}
+                    fill="transparent"
+                    stroke="none"
+                  />
+                );
               }
               return (
                 <circle

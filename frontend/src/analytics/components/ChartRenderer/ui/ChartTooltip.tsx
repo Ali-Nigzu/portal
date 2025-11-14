@@ -1,12 +1,12 @@
-import type { TooltipProps } from "recharts";
+import type { TooltipContentProps } from "recharts";
 import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesMetaEntry } from "../primitives/utils";
 import { formatCoverage, formatValue, shouldShowRawCount } from "../utils/format";
 
-interface ChartTooltipProps extends TooltipProps<number, string> {
+type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;
-}
+};
 
 export const ChartTooltip = ({
   active,
