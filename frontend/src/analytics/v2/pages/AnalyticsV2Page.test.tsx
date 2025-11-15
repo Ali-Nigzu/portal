@@ -60,7 +60,7 @@ describe('AnalyticsV2Page', () => {
     jest.clearAllMocks();
   });
 
-  it('loads the default preset, allows override changes, and pins to the dashboard', async () => {
+  it('loads the default preset and pins to the dashboard', async () => {
     const chart = timeSeriesResult as unknown as ChartResult;
     mockRunAnalytics.mockResolvedValue({
       result: chart,
@@ -88,18 +88,6 @@ describe('AnalyticsV2Page', () => {
 
     expect(mockRunAnalytics).toHaveBeenCalled();
 
-    const measureButtons = tree!
-      .root
-      .findAll((node: unknown) => {
-        const instance = node as { type: unknown; props?: { className?: string } };
-        return instance.type === 'button' && Boolean(instance.props?.className?.includes('analyticsV2Chip'));
-      });
-    expect(measureButtons.length).toBeGreaterThan(0);
-
-    await act(async () => {
-      measureButtons[0].props.onClick();
-    });
-
     const pinButtons = tree!
       .root
       .findAll((node: unknown) => {
@@ -113,6 +101,80 @@ describe('AnalyticsV2Page', () => {
     });
 
     expect(mockPinDashboardWidget).toHaveBeenCalled();
+  });
+
+  it('disables preset controls when transport mode is fixtures', async () => {
+    const chart = timeSeriesResult as unknown as ChartResult;
+    mockRunAnalytics.mockResolvedValue({
+      result: chart,
+      spec: { id: 'spec', chartType: 'composed_time' } as unknown as AnalyticsRunResponse['spec'],
+      specHash: 'hash-2',
+      mode: 'fixtures',
+      diagnostics: { partialData: false },
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <AnalyticsV2PageBase
+          credentials={{ username: 'client0', password: 'secret' }}
+          transportModeOverride="fixtures"
+        />,
+      );
+    });
+    await flushEffects();
+
+    const controlButtons = tree!
+      .root
+      .findAll((node: unknown) => {
+        const instance = node as { type?: unknown; props?: { className?: string } };
+        return instance.type === 'button' && Boolean(instance.props?.className?.includes('analyticsV2Chip'));
+      });
+    expect(controlButtons.length).toBeGreaterThan(0);
+    controlButtons.forEach((button) => {
+      expect(button.props.disabled).toBe(true);
+    });
+  });
+
+  it('re-runs the preset when a live time range is selected', async () => {
+    const chart = timeSeriesResult as unknown as ChartResult;
+    mockRunAnalytics.mockResolvedValue({
+      result: chart,
+      spec: { id: 'spec', chartType: 'composed_time' } as unknown as AnalyticsRunResponse['spec'],
+      specHash: 'hash-3',
+      mode: 'live',
+      diagnostics: { partialData: false },
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <AnalyticsV2PageBase
+          credentials={{ username: 'client0', password: 'secret' }}
+          transportModeOverride="live"
+        />,
+      );
+    });
+    await flushEffects();
+    expect(mockRunAnalytics).toHaveBeenCalledTimes(1);
+
+    const timeRangeButton = tree!
+      .root
+      .find((node: unknown) => {
+        const instance = node as { type?: unknown; props?: { children?: unknown } };
+        return (
+          instance.type === 'button' &&
+          Array.isArray(instance.props?.children) &&
+          instance.props.children.includes('Last 7 days')
+        );
+      });
+
+    await act(async () => {
+      timeRangeButton.props.onClick();
+    });
+    await flushEffects();
+
+    expect(mockRunAnalytics).toHaveBeenCalledTimes(2);
   });
 
   it('renders an error state when analytics transport fails', async () => {
