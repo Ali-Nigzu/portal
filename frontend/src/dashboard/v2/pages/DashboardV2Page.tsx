@@ -306,6 +306,7 @@ const DashboardV2Page = ({
               signal: controller.signal,
               timeRange: selectedTimeRange ?? undefined,
               timezone,
+              orgId,
             });
             if (controller.signal.aborted) {
               return;
@@ -374,7 +375,7 @@ const DashboardV2Page = ({
     return () => {
       controller.abort();
     };
-  }, [manifest, selectedTimeRange, runNonce, widgetResultLoaderImpl]);
+  }, [manifest, selectedTimeRange, runNonce, widgetResultLoaderImpl, orgId]);
 
   const kpiWidgets = useMemo(() => {
     if (!manifest) {

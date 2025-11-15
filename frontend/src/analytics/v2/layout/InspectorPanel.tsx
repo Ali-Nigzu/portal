@@ -77,7 +77,7 @@ export const InspectorPanel = ({
       <div className="analyticsV2Inspector__section">
         <h4>Transport</h4>
         <div className="analyticsV2Inspector__badge" aria-live="polite">
-          <span>{transportMode === 'live' ? 'Live /analytics/run' : 'Fixture mode'}</span>
+          <span>{transportMode === 'live' ? 'Live /api/analytics/run' : 'Fixture mode'}</span>
         </div>
       </div>
       {status ? (

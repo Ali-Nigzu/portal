@@ -14,6 +14,7 @@ from typing import Optional, Dict, List, Any, Tuple
 
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -39,6 +40,11 @@ from backend.app.models import (
     RegisterInterestResponse,
     DashboardManifest,
     PinDashboardWidgetRequest,
+)
+from backend.app.analytics import AnalyticsEngine, LocalCacheBackend, SpecCache, TableRouter
+from backend.app.analytics.contracts import (
+    validate_chart_spec,
+    ValidationError as ContractValidationError,
 )
 from backend.app.analytics.dashboard_catalogue import (
     ManifestValidationError,
@@ -95,6 +101,9 @@ app = FastAPI(
 
 ANALYTICS_CACHE_TTL = int(os.getenv("ANALYTICS_CACHE_TTL", "120"))
 analytics_cache: TTLCache = TTLCache(maxsize=128, ttl=ANALYTICS_CACHE_TTL)
+
+ANALYTICS_RUN_CACHE_TTL = int(os.getenv("ANALYTICS_RUN_CACHE_TTL", "300"))
+analytics_spec_cache = SpecCache(LocalCacheBackend(), default_ttl=ANALYTICS_RUN_CACHE_TTL)
 
 ALLOWED_ORIGINS = get_allowed_origins()
 
@@ -293,6 +302,55 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials"
             )
+
+
+class AnalyticsRunRequest(BaseModel):
+    spec: Dict[str, Any]
+    org_id: Optional[str] = Field(default=None, alias="orgId")
+    view_token: Optional[str] = Field(default=None, alias="viewToken")
+    bypass_cache: bool = Field(default=False, alias="bypassCache")
+    cache_ttl_seconds: Optional[int] = Field(default=None, alias="cacheTtlSeconds")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+def _resolve_table_for_org(org_id: str) -> str:
+    users = load_users()
+    table_name = get_active_table_name(org_id, users)
+    if not table_name:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "unknown_org",
+                "message": f"No table configured for organisation '{org_id}'",
+            },
+        )
+    return table_name
+
+
+def _resolve_analytics_context(
+    request: Request, payload: AnalyticsRunRequest
+) -> Tuple[str, str]:
+    explicit_org = payload.org_id or request.query_params.get("orgId")
+    if explicit_org:
+        return explicit_org, _resolve_table_for_org(explicit_org)
+
+    view_token = (
+        payload.view_token
+        or request.query_params.get("viewToken")
+        or request.query_params.get("view_token")
+    )
+    try:
+        return _authenticate_chart_data_request(request, view_token)
+    except HTTPException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "error": "auth_required",
+                "message": "Authentication required for analytics run",
+            },
+        ) from exc
 
 
 @app.get("/api/chart-data", response_model=ChartDataResponse)
@@ -562,6 +620,77 @@ async def search_events(
     except Exception as exc:
         logger.error("Event search error: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to search events: {exc}")
+
+
+@app.post("/analytics/run")
+@app.post("/api/analytics/run")
+async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
+    logger.info(
+        "analytics.run.start",
+        extra={"spec_id": payload.spec.get("id"), "org": payload.org_id},
+    )
+    try:
+        validate_chart_spec(payload.spec)
+    except ContractValidationError as exc:
+        logger.warning("Analytics spec validation failed: %s", exc)
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "invalid_spec", "message": str(exc)},
+        ) from exc
+
+    org_id, table_name = _resolve_analytics_context(request, payload)
+    engine = AnalyticsEngine(
+        table_router=TableRouter({org_id: table_name}),
+        bigquery_client=bigquery_client,
+        cache=analytics_spec_cache,
+    )
+
+    try:
+        result = engine.execute(
+            payload.spec,
+            organisation=org_id,
+            bypass_cache=payload.bypass_cache,
+            cache_ttl=payload.cache_ttl_seconds,
+        )
+    except ContractValidationError as exc:
+        logger.warning("Analytics execution rejected spec for %s: %s", org_id, exc)
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "invalid_spec", "message": str(exc)},
+        ) from exc
+    except BigQueryDataFrameError as exc:
+        logger.error(
+            "Analytics run failed for %s (job_id=%s): %s", org_id, exc.job_id, exc
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "bigquery_error",
+                "message": str(exc),
+                "jobId": exc.job_id,
+            },
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Analytics run execution error for %s", org_id)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "analytics_execution_failed",
+                "message": str(exc),
+            },
+        ) from exc
+
+    return result
+
+
+@app.get("/analytics/run")
+@app.get("/api/analytics/run")
+async def analytics_run_get():
+    raise HTTPException(status_code=405, detail="Method Not Allowed")
+
+
 @app.get("/api/admin/users")
 async def get_users(user: dict = Depends(authenticate_user)):
     """Get all users (admin only)"""

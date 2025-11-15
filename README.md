@@ -11,7 +11,7 @@ results they care about.
 - ChartSpec/ChartResult schemas live in `shared/analytics` with mirrored TypeScript types so backend and frontend stay aligned.
 - Analytics engine compiles presets into parameterised SQL, normalises results, validates payloads, and caches responses.
 - Dashboard V2 ships with a seeded manifest (KPI band + Live Flow) plus pin/unpin flows that hydrate inline specs for the UI.
-- Analytics workspace exposes a curated preset catalogue with guarded overrides, fixture/live transport modes, and pin-to-dashboard support.
+- Analytics workspace exposes a curated preset catalogue with guarded overrides, defaults to live `/api/analytics/run`, and only uses fixtures when explicitly toggled for development.
 - A documented data contract (`docs/analytics/data_contract.md`) and `backend/app/analytics/data_contract.py` ensure every metric, dimension, and time range resolves through the same BigQuery query builder.
 
 ## Architecture Overview
@@ -86,8 +86,8 @@ npm install
 REACT_APP_API_URL=http://localhost:8000 npm start
 ```
 
-- Fixture mode (default): do nothing and the workspace will load curated JSON responses.
-- Live mode: `REACT_APP_ANALYTICS_V2_TRANSPORT=live REACT_APP_API_URL=http://localhost:8000 npm start` to hit `/analytics/run`.
+- Live transport (default): `REACT_APP_API_URL=http://localhost:8000 npm start` hits `/api/analytics/run` for every preset.
+- Fixture transport (dev/QA only): set `REACT_APP_ANALYTICS_V2_TRANSPORT=fixtures` before `npm start` to replay the curated JSON fixtures.
 - Dashboard + analytics v2 routes are already the defaults; no extra flags are required.
 
 ### Pinning round-trip
@@ -107,14 +107,14 @@ CI=true npm --prefix frontend test
 npm --prefix frontend run build
 ```
 
-Manual smoke checklist (using fixture mode unless otherwise noted):
+Manual smoke checklist (live transport by default):
 
-- `/dashboard` loads without errors and shows KPI widgets + Live Flow.
-- `/analytics` presets render:
-  - Live Flow chart with fixture data.
-  - Average Dwell by Camera chart.
-  - Retention Heatmap heatmap (no validation banner).
-- Switch `REACT_APP_ANALYTICS_V2_TRANSPORT=live` to exercise inspector controls; switch back to fixtures to confirm the controls visibly lock.
+- `/dashboard` loads without errors and shows KPI widgets + Live Flow; pinning from the analytics workspace appears after a refresh.
+- `/analytics` presets render live data:
+  - Live Flow clearly changes span and values between 6h, 24h, and 7d.
+  - Average Dwell by Camera updates dwell minutes between 7d and 30d.
+  - Retention Heatmap adds/removes cohort columns between 12w and 24w while passing validation.
+- For fixture-only demos, set `REACT_APP_ANALYTICS_V2_TRANSPORT=fixtures`; the inspector chips will surface the locked-state warning.
 
 ## Deployment Notes
 
