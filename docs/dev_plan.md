@@ -6,7 +6,7 @@
 - ChartSpec/ChartResult contracts live in `shared/analytics` and are shared with the frontend via generated TypeScript types.
 - Analytics engine compiles ChartSpecs into parameterised SQL, executes queries through the BigQuery client, normalises results, and caches responses.
 - Dashboard catalogue seeds KPI widgets and the Live Flow chart; manifests can be fetched, pinned to, and mutated via the API with fixture fallbacks for demos.
-- React frontend exposes the analytics workspace and dashboard surfaces, both powered by the shared `ChartRenderer` and defaulting to the live BigQuery transport (fixtures only appear when explicitly requested for dev/QA).
+- React frontend exposes the analytics workspace and dashboard surfaces, both powered by the shared `ChartRenderer`, defaulting to the live BigQuery transport (fixtures only appear when explicitly requested for dev/QA), and querying per-organisation tables resolved through the new `backend/app/analytics/org_config.py` mapping.
 
 ## 2. Completed Phases (Reality, not original plan)
 
@@ -48,7 +48,7 @@
 
 ### Phase 9 – Live Analytics Transport
 
-- Exposed `POST /api/analytics/run` (with legacy `/analytics/run` alias) in `backend/fastapi_app.py`, wiring the `AnalyticsEngine` to resolve organisation tables, execute ChartSpecs, and return validated ChartResults with caching.
+- Exposed `POST /api/analytics/run` (with legacy `/analytics/run` alias) in `backend/fastapi_app.py`, wiring the `AnalyticsEngine` to resolve organisation tables via `backend/app/analytics/org_config.py`, execute ChartSpecs, and return validated ChartResults with caching.
 - Updated analytics workspace and dashboard transports to default to live mode, posting `{ spec, orgId }` payloads and rerunning when inspector controls change.
 - Added contract-level tests covering transport selection, workspace override reducers, and dashboard widget loaders; refreshed documentation to spell out live vs fixture toggles and manual QA steps.
 

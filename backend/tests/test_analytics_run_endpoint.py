@@ -10,6 +10,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from backend.fastapi_app import app, analytics_spec_cache
 from backend.app.bigquery_client import bigquery_client
+from backend.app.analytics import org_config
 
 
 @pytest.fixture(autouse=True)
@@ -21,11 +22,10 @@ def clear_analytics_cache():
 
 @pytest.fixture
 def client(monkeypatch):
-    def fake_load_users():
-        return {"client0": {"table_name": "project.dataset.client0"}}
-
-    monkeypatch.setattr("backend.app.database.load_users", fake_load_users)
-    monkeypatch.setattr("backend.fastapi_app.load_users", fake_load_users)
+    monkeypatch.setenv("BQ_PROJECT", "project")
+    monkeypatch.setenv("BQ_DATASET", "dataset")
+    original_map = dict(org_config.ORG_TABLE_MAP)
+    org_config.override_org_table_map({"client0": "client0"})
 
     calls = {"count": 0}
 
@@ -47,7 +47,10 @@ def client(monkeypatch):
 
     monkeypatch.setattr(bigquery_client, "query_dataframe", fake_query_dataframe)
     client = TestClient(app)
-    yield client, calls
+    try:
+        yield client, calls
+    finally:
+        org_config.override_org_table_map(original_map)
 
 
 def _build_spec() -> dict:
@@ -85,3 +88,16 @@ def test_analytics_run_endpoint_rejects_wrong_method(client, endpoint):
     http_client, _ = client
     response = http_client.get(endpoint)
     assert response.status_code == 405
+
+
+@pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
+def test_analytics_run_endpoint_returns_unknown_org_for_missing_mapping(client, endpoint):
+    http_client, _ = client
+    response = http_client.post(
+        endpoint,
+        json={"spec": _build_spec(), "orgId": "missing"},
+    )
+
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload["detail"]["error"] == "unknown_org"

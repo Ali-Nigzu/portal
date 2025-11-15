@@ -65,7 +65,6 @@ from backend.app.database import (
     save_alarm_logs,
     load_device_lists,
     save_device_lists,
-    get_active_table_name
 )
 from backend.app.config import (
     get_allowed_origins,
@@ -85,6 +84,11 @@ from backend.app.analytics.data_contract import (
     QueryContext,
     TimeRangeKey,
     compile_contract_query,
+)
+from backend.app.analytics.org_config import (
+    BigQueryConfigurationError,
+    OrganisationNotConfiguredError,
+    resolve_table_for_org,
 )
 from backend.app.data_processor import DataProcessor, _resolve_time_bounds
 from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
@@ -267,9 +271,12 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
         if client_id not in users:
             raise HTTPException(status_code=404, detail="Client not found")
 
-        table_name = get_active_table_name(client_id, users)
-        if not table_name:
-            raise HTTPException(status_code=400, detail="No table configured for this client")
+        try:
+            table_name = resolve_table_for_org(client_id)
+        except OrganisationNotConfiguredError:
+            raise HTTPException(status_code=404, detail="Client not found")
+        except BigQueryConfigurationError as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
         return client_id, table_name
 
     else:
@@ -291,9 +298,12 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                     detail="Invalid credentials"
                 )
 
-            table_name = get_active_table_name(username, users)
-            if not table_name:
+            try:
+                table_name = resolve_table_for_org(username)
+            except OrganisationNotConfiguredError:
                 raise HTTPException(status_code=400, detail="No table configured for this user")
+            except BigQueryConfigurationError as exc:
+                raise HTTPException(status_code=500, detail=str(exc))
             return username, table_name
         except HTTPException:
             raise
@@ -316,9 +326,9 @@ class AnalyticsRunRequest(BaseModel):
 
 
 def _resolve_table_for_org(org_id: str) -> str:
-    users = load_users()
-    table_name = get_active_table_name(org_id, users)
-    if not table_name:
+    try:
+        return resolve_table_for_org(org_id)
+    except OrganisationNotConfiguredError:
         raise HTTPException(
             status_code=404,
             detail={
@@ -326,7 +336,8 @@ def _resolve_table_for_org(org_id: str) -> str:
                 "message": f"No table configured for organisation '{org_id}'",
             },
         )
-    return table_name
+    except BigQueryConfigurationError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 def _resolve_analytics_context(

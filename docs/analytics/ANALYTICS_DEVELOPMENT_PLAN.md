@@ -8,6 +8,7 @@
 
 ## Phase 9 status
 
+- Introduced `backend/app/analytics/org_config.py` as the canonical organisation → table mapping (e.g. `client0` → `{project}.{dataset}.client0`), which feeds `/api/analytics/run` and the dashboard manifest loaders.
 - `/analytics` now defaults to the live BigQuery transport; set `REACT_APP_ANALYTICS_V2_TRANSPORT=fixtures` to opt into fixture mode for Storybook/dev demos.
 - Inspector overrides (time ranges, splits, measure toggles) rebuild the underlying ChartSpec, produce a new spec hash, and trigger a fresh `/api/analytics/run` request for every curated preset.
 - `/dashboard` widgets call the same `/api/analytics/run` endpoint (with `/analytics/run` alias for backwards compatibility), so KPI tiles and charts reflect the selected time range/site and update after pins or refreshes.
