@@ -40,11 +40,17 @@
 - Pin/unpin flows connect the analytics workspace to the manifest API; locked widgets and default layouts ensure `/dashboard` is populated by default.
 - Outstanding: manifests persist in memory only and durable storage is deferred.
 
-### Phase 7 – Live Analytics Surfaces
+### Phase 7 – Manifest & Fixture Baseline
 
-- Defaulted the analytics workspace transport to live BigQuery execution with fixture mode only available via an explicit developer flag.
-- Ensured inspector overrides (time ranges, splits, measures) rebuild ChartSpecs, trigger new runs, and surface spec hash changes for every preset.
-- Verified `/dashboard` consumes manifest endpoints, respects pin/unpin flows from the workspace, and remains aligned with the analytics presets after refreshes.
+- Finalised the dashboard manifest API and fixture-powered analytics workspace so QA could validate end-to-end flows without depending on live BigQuery.
+- Kept live transport behind `REACT_APP_ANALYTICS_V2_TRANSPORT=live` while the data contract and table routing stabilised.
+- Confirmed `/dashboard` pins/unpins persisted via the manifest endpoints and rendered fixture results consistently after refreshes.
+
+### Phase 9 – Live Analytics Transport
+
+- Exposed `POST /api/analytics/run` (with legacy `/analytics/run` alias) in `backend/fastapi_app.py`, wiring the `AnalyticsEngine` to resolve organisation tables, execute ChartSpecs, and return validated ChartResults with caching.
+- Updated analytics workspace and dashboard transports to default to live mode, posting `{ spec, orgId }` payloads and rerunning when inspector controls change.
+- Added contract-level tests covering transport selection, workspace override reducers, and dashboard widget loaders; refreshed documentation to spell out live vs fixture toggles and manual QA steps.
 
 ### Phase 8 – Data Contract + BigQuery Alignment
 

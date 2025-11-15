@@ -1,7 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 import type { TestRenderer } from 'react-test-renderer';
 import type { ChartResult, ChartSeries, ChartSpec } from '../../schemas/charting';
-import type { AnalyticsRunResponse } from '../transport/runAnalytics';
+import type { AnalyticsRunResponse, RunAnalyticsQueryOptions } from '../transport/runAnalytics';
 import type { AnalyticsTransportMode } from '../../../config';
 import { hashChartSpec } from '../transport/hashChartSpec';
 import AnalyticsV2Page, { AnalyticsV2Page as AnalyticsV2PageBase } from './AnalyticsV2Page';
@@ -153,8 +153,8 @@ describe('AnalyticsV2Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRunAnalytics.mockImplementation(
-      async (_preset, spec, modeArg?: AnalyticsTransportMode) => {
-        const mode: AnalyticsTransportMode = modeArg ?? 'live';
+      async (_preset, spec, options?: RunAnalyticsQueryOptions) => {
+        const mode: AnalyticsTransportMode = options?.mode ?? 'live';
         const result = buildResultForSpec(spec);
         return {
           result,
@@ -187,6 +187,8 @@ describe('AnalyticsV2Page', () => {
     await flushEffects();
 
     expect(mockRunAnalytics).toHaveBeenCalledTimes(1);
+    const runOptions = mockRunAnalytics.mock.calls[0]?.[2];
+    expect(runOptions?.orgId).toBe('client0');
     const controlButtons = findChipButtons(tree!);
     expect(controlButtons.length).toBeGreaterThan(0);
     controlButtons.forEach((button) => {
