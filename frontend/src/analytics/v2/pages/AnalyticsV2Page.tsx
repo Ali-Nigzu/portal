@@ -27,7 +27,8 @@ import { MeasureControls } from '../controls/MeasureControls';
 import { SeriesLegendSummary } from '../components/SeriesLegendSummary';
 import { useWorkspaceIntegrityChecks } from '../utils/useWorkspaceIntegrityChecks';
 import { pinDashboardWidget } from '../../../dashboard/v2/transport/mutateDashboardManifest';
-import { determineOrgId } from '../../../dashboard/v2/utils/determineOrgId';
+import { determineOrgId } from '../../../utils/org';
+import { Credentials } from '../../../types/credentials';
 
 const buildPresetMap = (presets: PresetDefinition[]): Record<string, PresetDefinition> => {
   return presets.reduce<Record<string, PresetDefinition>>((acc, preset) => {
@@ -46,7 +47,7 @@ const buildTransportIssues = (message: string, code?: string): ValidationIssue[]
 const DASHBOARD_ID = 'dashboard-default';
 
 interface AnalyticsV2PageProps {
-  credentials?: { username: string; password: string };
+  credentials?: Credentials;
   transportModeOverride?: AnalyticsTransportMode;
 }
 
@@ -102,8 +103,11 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
         const payload = await runAnalyticsQuery(
           activePreset,
           effectiveSpec,
-          state.transportMode,
-          controller.signal,
+          {
+            mode: state.transportMode,
+            signal: controller.signal,
+            orgId,
+          },
         );
         if (!canceled) {
           dispatch({ type: 'RUN_SUCCESS', payload });
@@ -134,7 +138,7 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
       canceled = true;
       controller.abort();
     };
-  }, [activePreset, effectiveSpec, dispatch, state.transportMode, runNonce]);
+  }, [activePreset, effectiveSpec, dispatch, orgId, state.transportMode, runNonce]);
 
   const handlePresetSelect = (presetId: string) => {
     const preset = presetMap[presetId];

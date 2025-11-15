@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '../config';
+import { Credentials } from '../types/credentials';
 
 interface AlarmEvent {
   id: string;
@@ -18,7 +19,7 @@ interface User {
 }
 
 interface AlarmLogsPageProps {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
 }
 
 const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {

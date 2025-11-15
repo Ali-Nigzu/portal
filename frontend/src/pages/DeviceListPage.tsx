@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '../config';
+import { Credentials } from '../types/credentials';
 
 interface DeviceInfo {
   id: string;
@@ -28,7 +29,7 @@ interface User {
 }
 
 interface DeviceListPageProps {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
 }
 
 const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {

@@ -12,9 +12,10 @@ export interface LoadWidgetOptions {
   mode?: AnalyticsTransportMode;
   timeRange?: DashboardTimeRangeOption;
   timezone?: string;
+  orgId?: string;
 }
 
-const DASHBOARD_RUN_ENDPOINT = "/analytics/run";
+const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
 
 const isAbortError = (error: unknown): boolean => {
   if (error instanceof DOMException) {
@@ -56,7 +57,7 @@ export async function loadWidgetResult(
   widget: DashboardWidget,
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
-  const { signal, timeRange, timezone, mode } = options;
+  const { signal, timeRange, timezone, mode, orgId } = options;
   const spec = buildWidgetSpec(widget, { timeRange, timezone });
   const selectedMode = resolveMode(widget, mode);
 
@@ -74,7 +75,7 @@ export async function loadWidgetResult(
       }
       result = await loadChartFixture(widget.fixtureId as ChartFixtureName);
     } else {
-      result = await runLiveQuery({ spec }, signal);
+      result = await runLiveQuery({ spec, orgId }, signal);
     }
   } catch (error) {
     if (isAbortError(error)) {

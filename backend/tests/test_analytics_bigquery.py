@@ -15,6 +15,8 @@ from backend.fastapi_app import app, analytics_cache, bigquery_client
 
 @pytest.fixture(autouse=True)
 def mock_bigquery(monkeypatch):
+    monkeypatch.setenv("BQ_PROJECT", "project")
+    monkeypatch.setenv("BQ_DATASET", "dataset")
     stats_df = pd.DataFrame([
         {
             "total_records": 100,

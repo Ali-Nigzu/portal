@@ -1,11 +1,13 @@
 """Analytics execution engine wiring the compiler, BigQuery, and caching."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 
+from ..bigquery_client import BigQueryDataFrameError
 from .cache import SpecCache
 from .compiler import CompiledQuery, CompilerContext, SpecCompiler
 from .contracts import validate_chart_result
@@ -41,6 +43,9 @@ _UNIT_MAP = {
     "sessions": "sessions",
     "retention_rate": "rate",
 }
+
+
+logger = logging.getLogger(__name__)
 
 
 def _label_for_series(measure_id: str, aggregation: str) -> str:
@@ -107,11 +112,23 @@ class AnalyticsEngine:
                 return cached
 
         compiled = self.compiler.compile(spec, CompilerContext(table_name=table_name))
-        frame = self.bigquery_client.query_dataframe(
-            compiled.sql,
-            compiled.params,
-            job_context=spec.get("id"),
-        )
+        try:
+            frame = self.bigquery_client.query_dataframe(
+                compiled.sql,
+                compiled.params,
+                job_context=spec.get("id"),
+            )
+        except BigQueryDataFrameError:
+            logger.error(
+                "analytics.run.bigquery_error",
+                extra={
+                    "spec_id": spec.get("id"),
+                    "org": organisation,
+                    "table": table_name,
+                    "sql": compiled.sql,
+                },
+            )
+            raise
         result = self._normalise(spec, compiled, frame)
         validate_chart_result(result)
         self.cache.set(cache_key, result, ttl=cache_ttl)

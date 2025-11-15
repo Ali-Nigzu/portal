@@ -11,6 +11,7 @@ import dwellResult from "../../../analytics/examples/golden_dashboard_kpi_avg_dw
 import occupancyResult from "../../../analytics/examples/golden_dashboard_kpi_live_occupancy.json";
 import freshnessResult from "../../../analytics/examples/golden_dashboard_kpi_freshness.json";
 import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_flow.json";
+import { Credentials } from "../../../types/credentials";
 
 const fixtureManifest = manifestFixture as DashboardManifest;
 
@@ -25,7 +26,7 @@ const fixtureResults: Record<string, ChartResult> = {
 };
 
 interface DashboardStoryArgs {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
   initialManifest: DashboardManifest;
   resultOverrides?: Partial<Record<string, ChartResult>>;
   failingWidgets?: string[];

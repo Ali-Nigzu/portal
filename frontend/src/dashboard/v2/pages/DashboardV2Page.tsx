@@ -15,7 +15,8 @@ import {
   type LoadWidgetOptions,
 } from "../transport/loadWidgetResult";
 import { unpinDashboardWidget } from "../transport/mutateDashboardManifest";
-import { determineOrgId } from "../utils/determineOrgId";
+import { determineOrgId } from "../../../utils/org";
+import { Credentials } from "../../../types/credentials";
 import "../styles/DashboardV2Page.css";
 
 const GRID_ROW_HEIGHT = 96;
@@ -36,7 +37,7 @@ type UnpinMutator = (
 ) => Promise<DashboardManifest>;
 
 interface DashboardV2PageProps {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
   manifestLoader?: ManifestLoader;
   widgetResultLoader?: WidgetResultLoader;
   unpinWidget?: UnpinMutator;
@@ -306,6 +307,7 @@ const DashboardV2Page = ({
               signal: controller.signal,
               timeRange: selectedTimeRange ?? undefined,
               timezone,
+              orgId,
             });
             if (controller.signal.aborted) {
               return;
@@ -374,7 +376,7 @@ const DashboardV2Page = ({
     return () => {
       controller.abort();
     };
-  }, [manifest, selectedTimeRange, runNonce, widgetResultLoaderImpl]);
+  }, [manifest, selectedTimeRange, runNonce, widgetResultLoaderImpl, orgId]);
 
   const kpiWidgets = useMemo(() => {
     if (!manifest) {

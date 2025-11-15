@@ -4,6 +4,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import { API_ENDPOINTS } from '../config';
+import { Credentials } from '../types/credentials';
 
 interface EventData {
   index: number;
@@ -18,7 +19,7 @@ interface EventData {
 }
 
 interface ReportsPageProps {
-  credentials?: { username: string; password: string };
+  credentials?: Credentials;
 }
 
 const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
