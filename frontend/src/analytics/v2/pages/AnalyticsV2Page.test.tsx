@@ -60,6 +60,31 @@ const flushEffects = async (times = 3) => {
   }
 };
 
+type ChipButtonInstance = {
+  type?: unknown;
+  props: {
+    className?: string;
+    disabled?: boolean;
+    onClick?: () => void;
+    children?: unknown;
+  };
+};
+
+const isChipButtonInstance = (instance: unknown): instance is ChipButtonInstance => {
+  if (typeof instance !== 'object' || instance === null) {
+    return false;
+  }
+  const candidate = instance as { type?: unknown; props?: ChipButtonInstance['props'] };
+  return (
+    candidate.type === 'button' &&
+    typeof candidate.props?.className === 'string' &&
+    candidate.props.className.includes('analyticsV2Chip')
+  );
+};
+
+const findChipButtons = (tree: TestRenderer): ChipButtonInstance[] =>
+  tree.root.findAll((instance: unknown) => isChipButtonInstance(instance)) as ChipButtonInstance[];
+
 describe('AnalyticsV2Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -93,12 +118,7 @@ describe('AnalyticsV2Page', () => {
 
     expect(mockRunAnalytics).toHaveBeenCalled();
 
-    const pinButtons = tree!
-      .root
-      .findAll((node: unknown) => {
-        const instance = node as { type?: unknown; props?: { className?: string } };
-        return instance.type === 'button' && Boolean(instance.props?.className?.includes('analyticsV2Chip'));
-      });
+    const controlButtons = findChipButtons(tree!);
     expect(controlButtons.length).toBeGreaterThan(0);
     controlButtons.forEach((button) => {
       expect(button.props.disabled).toBe(true);
@@ -127,19 +147,17 @@ describe('AnalyticsV2Page', () => {
     await flushEffects();
     expect(mockRunAnalytics).toHaveBeenCalledTimes(1);
 
-    const timeRangeButton = tree!
-      .root
-      .find((node: unknown) => {
-        const instance = node as { type?: unknown; props?: { children?: unknown } };
-        return (
-          instance.type === 'button' &&
-          Array.isArray(instance.props?.children) &&
-          instance.props.children.includes('Last 7 days')
-        );
-      });
+    const timeRangeButton = findChipButtons(tree!).find((button) => {
+      const { children } = button.props;
+      if (Array.isArray(children)) {
+        return children.includes('Last 7 days');
+      }
+      return children === 'Last 7 days';
+    });
+    expect(timeRangeButton).toBeDefined();
 
     await act(async () => {
-      timeRangeButton.props.onClick();
+      timeRangeButton!.props.onClick?.();
     });
     await flushEffects();
 
@@ -167,16 +185,9 @@ describe('AnalyticsV2Page', () => {
     });
     await flushEffects();
 
-    type ChipInstance = { props: { disabled?: boolean } };
-
-    const controlButtons = tree!
-      .root
-      .findAll((node: unknown) => {
-        const instance = node as { type?: unknown; props?: { className?: string } };
-        return instance.type === 'button' && Boolean(instance.props?.className?.includes('analyticsV2Chip'));
-      }) as ChipInstance[];
+    const controlButtons = findChipButtons(tree!);
     expect(controlButtons.length).toBeGreaterThan(0);
-    controlButtons.forEach((button: ChipInstance) => {
+    controlButtons.forEach((button) => {
       expect(button.props.disabled).toBe(true);
     });
   });
@@ -203,18 +214,12 @@ describe('AnalyticsV2Page', () => {
     await flushEffects();
     expect(mockRunAnalytics).toHaveBeenCalledTimes(1);
 
-    type TimeRangeButton = { props: { onClick: () => void } };
-    const timeRangeButtons = tree!
-      .root
-      .findAll((node: unknown) => {
-        const instance = node as { type?: unknown; props?: { className?: string } };
-        return instance.type === 'button' && instance.props?.className?.includes('analyticsV2Chip');
-      }) as TimeRangeButton[];
+    const timeRangeButtons = findChipButtons(tree!).filter((button) => typeof button.props.onClick === 'function');
     expect(timeRangeButtons.length).toBeGreaterThan(0);
     const [timeRangeButton] = timeRangeButtons;
 
     await act(async () => {
-      timeRangeButton.props.onClick();
+      timeRangeButton.props.onClick?.();
     });
     await flushEffects();
 
