@@ -284,8 +284,8 @@ class SpecCompiler:
                     site_id,
                     cam_id,
                     IFNULL(index, 0) AS event_index,
-                    track_no,
-                    event_type,
+                    track_id,
+                    event,
                     timestamp,
                     COALESCE(sex, '{_UNKNOWN_DIMENSION_VALUE}') AS sex,
                     COALESCE(age_bucket, '{_UNKNOWN_DIMENSION_VALUE}') AS age_bucket
@@ -443,9 +443,9 @@ class SpecCompiler:
                     event_index,
                     site_id,
                     cam_id,
-                    event_type,
-                    IF(event_type = 1, 1, -1) AS delta,
-                    SUM(IF(event_type = 1, 1, -1)) OVER (
+                    event,
+                    IF(event = 1, 1, -1) AS delta,
+                    SUM(IF(event = 1, 1, -1)) OVER (
                         PARTITION BY site_id, cam_id
                         ORDER BY timestamp, event_index
                     ) AS running_total
@@ -607,7 +607,7 @@ class SpecCompiler:
         if event_types:
             param_name = f"{measure_id}_event_types"
             params[param_name] = event_types
-            filter_sql = f" AND scoped.event_type IN UNNEST(@{param_name})"
+            filter_sql = f" AND scoped.event IN UNNEST(@{param_name})"
         counts_cte = dedent(
             f"""
             {prefix} AS (
@@ -642,14 +642,14 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    track_no,
+                    track_id,
                     timestamp AS entrance_ts,
                     ROW_NUMBER() OVER (
-                        PARTITION BY site_id, cam_id, track_no
+                        PARTITION BY site_id, cam_id, track_id
                         ORDER BY timestamp, event_index
                     ) AS rn
                 FROM scoped
-                WHERE event_type = 1
+                WHERE event = 1
             )
             """
         ).strip()
@@ -660,14 +660,14 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    track_no,
+                    track_id,
                     timestamp AS exit_ts,
                     ROW_NUMBER() OVER (
-                        PARTITION BY site_id, cam_id, track_no
+                        PARTITION BY site_id, cam_id, track_id
                         ORDER BY timestamp, event_index
                     ) AS rn
                 FROM scoped
-                WHERE event_type = 0
+                WHERE event = 0
             )
             """
         ).strip()
@@ -678,7 +678,7 @@ class SpecCompiler:
                 SELECT
                     e.site_id,
                     e.cam_id,
-                    e.track_no,
+                    e.track_id,
                     e.entrance_ts,
                     x.exit_ts,
                     TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, SECOND) / 60.0 AS dwell_minutes
@@ -686,7 +686,7 @@ class SpecCompiler:
                 LEFT JOIN {prefix}_exits AS x
                     ON e.site_id = x.site_id
                     AND e.cam_id = x.cam_id
-                    AND e.track_no = x.track_no
+                    AND e.track_id = x.track_id
                     AND e.rn = x.rn
                 WHERE x.exit_ts IS NOT NULL
                     AND TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, MINUTE) BETWEEN 0 AND 360
@@ -800,14 +800,14 @@ class SpecCompiler:
             {prefix}_entrances AS (
                 SELECT
                     site_id,
-                    track_no,
+                    track_id,
                     timestamp,
                     LAG(timestamp) OVER (
-                        PARTITION BY site_id, track_no
+                        PARTITION BY site_id, track_id
                         ORDER BY timestamp, event_index
                     ) AS prev_timestamp
                 FROM scoped
-                WHERE event_type = 1
+                WHERE event = 1
             )
             """
         ).strip()
@@ -817,7 +817,7 @@ class SpecCompiler:
             {prefix}_visits AS (
                 SELECT
                     site_id,
-                    track_no,
+                    track_id,
                     timestamp AS visit_ts,
                     {cohort_trunc} AS cohort_week
                 FROM {prefix}_entrances
@@ -832,7 +832,7 @@ class SpecCompiler:
             {prefix}_cohort_sizes AS (
                 SELECT
                     cohort_week,
-                    COUNT(DISTINCT track_no) AS cohort_size
+                    COUNT(DISTINCT track_id) AS cohort_size
                 FROM {prefix}_visits
                 GROUP BY cohort_week
             )
@@ -845,11 +845,11 @@ class SpecCompiler:
                 SELECT
                     first.cohort_week,
                     {lag_expression} AS lag_weeks,
-                    later.track_no
+                    later.track_id
                 FROM {prefix}_visits AS first
                 JOIN {prefix}_visits AS later
                     ON first.site_id = later.site_id
-                    AND first.track_no = later.track_no
+                    AND first.track_id = later.track_id
                     AND later.visit_ts >= first.visit_ts
             )
             """
@@ -861,7 +861,7 @@ class SpecCompiler:
                 SELECT
                     cohort_week,
                     lag_weeks,
-                    COUNT(DISTINCT track_no) AS returning
+                    COUNT(DISTINCT track_id) AS returning
                 FROM {prefix}_returns
                 WHERE lag_weeks BETWEEN 0 AND 52
                 GROUP BY cohort_week, lag_weeks

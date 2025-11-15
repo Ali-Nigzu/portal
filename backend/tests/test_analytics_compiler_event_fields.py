@@ -1,4 +1,4 @@
-"""Regression tests guarding event_type projection throughout compiler outputs."""
+"""Regression tests guarding canonical event and track identifiers in SQL compilation."""
 
 from __future__ import annotations
 
@@ -39,22 +39,25 @@ def _extract_ctes(sql: str) -> dict[str, str]:
     return ctes
 
 
-def _assert_event_type_scope(sql: str) -> None:
+def _assert_canonical_event_scope(sql: str) -> None:
     ctes = _extract_ctes(sql)
     assert "scoped" in ctes, "scoped CTE missing from compiled SQL"
     scoped_body = ctes["scoped"]
-    assert "event_type" in scoped_body, "scoped CTE must project event_type"
+    assert " event " in scoped_body or "event," in scoped_body, "scoped CTE must project event"
+    assert "track_id" in scoped_body, "scoped CTE must project track_id"
+    assert re.search(r"\bevent_type\b", sql) is None
+    assert re.search(r"\btrack_no\b", sql) is None
 
     for name, body in ctes.items():
         if name == "scoped":
             continue
-        if "event_type" not in body:
+        if "event " not in body and "event=" not in body and "event," not in body:
             continue
         assert (
             "FROM scoped" in body
             or "JOIN scoped" in body
             or "scoped." in body
-        ), f"{name} references event_type without scoped context"
+        ), f"{name} references event without scoped context"
 
 
 def _context(bucket: str) -> QueryContext:
@@ -67,34 +70,34 @@ def _context(bucket: str) -> QueryContext:
     )
 
 
-def test_dashboard_live_flow_preserves_event_type_scope() -> None:
+def test_dashboard_live_flow_preserves_canonical_event_scope() -> None:
     spec = DASHBOARD_SPEC_CATALOGUE["dashboard.live_flow"]
     compiler = SpecCompiler()
     compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
-    _assert_event_type_scope(compiled.sql)
+    _assert_canonical_event_scope(compiled.sql)
 
 
 @pytest.mark.parametrize(
     "metric",
     [Metric.OCCUPANCY, Metric.ENTRANCES, Metric.EXITS],
 )
-def test_contract_activity_metrics_reference_event_type_from_scoped(metric: Metric) -> None:
+def test_contract_activity_metrics_reference_event_from_scoped(metric: Metric) -> None:
     ctx = _context(bucket="HOUR")
     plan = compile_contract_query(metric, [Dimension.TIME], ctx)
-    _assert_event_type_scope(plan.sql)
+    _assert_canonical_event_scope(plan.sql)
 
 
-def test_dwell_pipeline_keeps_event_type_in_scope() -> None:
+def test_dwell_pipeline_keeps_event_in_scope() -> None:
     ctx = _context(bucket="HOUR")
     plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME], ctx)
-    _assert_event_type_scope(plan.sql)
+    _assert_canonical_event_scope(plan.sql)
 
 
-def test_retention_pipeline_keeps_event_type_in_scope() -> None:
+def test_retention_pipeline_keeps_event_in_scope() -> None:
     ctx = _context(bucket="WEEK")
     plan = compile_contract_query(
         Metric.RETENTION_RATE,
         [Dimension.TIME, Dimension.RETENTION_LAG],
         ctx,
     )
-    _assert_event_type_scope(plan.sql)
+    _assert_canonical_event_scope(plan.sql)

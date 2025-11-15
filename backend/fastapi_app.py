@@ -562,7 +562,7 @@ async def search_events(
     request: Request,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    event_type: Optional[str] = None,
+    event: Optional[str] = None,
     sex: Optional[str] = None,
     age: Optional[str] = None,
     track_id: Optional[str] = None,
@@ -580,9 +580,9 @@ async def search_events(
         }
         bounds = _resolve_time_bounds(filters)
 
-        resolved_event_types: Optional[List[int]] = None
-        if event_type and event_type.lower() != 'all':
-            resolved_event_types = [1 if event_type.lower() == 'entry' else 0]
+        resolved_events: Optional[List[int]] = None
+        if event and event.lower() != 'all':
+            resolved_events = [1 if event.lower() == 'entry' else 0]
 
         resolved_sex = sex if sex and sex.lower() != 'all' else None
         resolved_age = age if age and age.lower() != 'all' else None
@@ -593,10 +593,10 @@ async def search_events(
             start=bounds['start_ts'],
             end=bounds['end_ts'],
             time_range=TimeRangeKey.CUSTOM,
-            event_types=resolved_event_types,
+            events=resolved_events,
             sexes=[resolved_sex] if resolved_sex else None,
             age_buckets=[resolved_age] if resolved_age else None,
-            track_like=f"%{track_id}%" if track_id else None,
+            track_id_like=f"%{track_id}%" if track_id else None,
         )
 
         summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], base_ctx)
@@ -623,7 +623,7 @@ async def search_events(
             timestamp = pd.to_datetime(row['timestamp'])
             events.append({
                 'track_number': row['track_id'],
-                'event': 'entry' if row['event_type'] == 1 else 'exit',
+                'event': 'entry' if row['event'] == 1 else 'exit',
                 'timestamp': timestamp.isoformat(),
                 'sex': row['sex'],
                 'age_estimate': row['age_bucket'],

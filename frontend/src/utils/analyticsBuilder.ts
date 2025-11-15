@@ -35,7 +35,7 @@ export type AnalyticsChartType =
 export type AnalyticsAxisKey = 'people' | 'events' | 'throughput' | 'dwell';
 
 export type AnalyticsFilterField =
-  | 'event_type'
+  | 'event'
   | 'sex'
   | 'age_band'
   | 'camera_id'
@@ -228,14 +228,14 @@ export const createFilterGroup = (logic: 'AND' | 'OR' = 'AND'): AnalyticsFilterG
 });
 
 export const createFilterCondition = (
-  field: AnalyticsFilterField = 'event_type',
+  field: AnalyticsFilterField = 'event',
 ): AnalyticsFilterCondition => ({
   id: generateId(),
   type: 'condition',
   field,
   operator: field === 'timestamp' ? 'between' : field === 'index' ? 'gte' : field === 'weekday' ? 'in' : 'equals',
   value:
-    field === 'event_type'
+    field === 'event'
       ? 'entry'
       : field === 'timestamp'
       ? { from: new Date().toISOString(), to: new Date().toISOString() }
@@ -307,7 +307,7 @@ const computeRelativeRange = (preset: RelativePreset, amount?: number): { from: 
 
 const resolveFieldValue = (item: ChartData, field: AnalyticsFilterField): string | number | Date | null => {
   switch (field) {
-    case 'event_type':
+    case 'event':
       return item.event ?? null;
     case 'sex':
       return item.sex ?? null;
