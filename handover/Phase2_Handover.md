@@ -53,7 +53,7 @@
 
 ## Next TODO items
 1. Connect the BigQuery client used by `AnalyticsEngine` to the real service account and execute compiled SQL against per-client tables.
-2. Expose the `/analytics/run` API endpoint so frontend consumers can request ChartResults over HTTP.
+2. Expose the `/api/analytics/run` API endpoint (with `/analytics/run` alias for backward compatibility) so frontend consumers can request ChartResults over HTTP.
 3. Extend caching beyond the local in-process backend (e.g., prepare Redis adapter) once live execution is stable.
 
 ## Handover summary for the next Codex (Phase 3 kickoff)
@@ -89,7 +89,7 @@
 ### Phase 4 workspace toggles (current status)
 
 - **Enable the workspace UI:** set `REACT_APP_FEATURE_ANALYTICS_V2=true` before running `npm --prefix frontend run dev`. When unset/false the `/analytics/v2` route is not registered and legacy `/analytics` remains untouched.
-- **Switch transport mode:** set `REACT_APP_ANALYTICS_V2_TRANSPORT=fixtures` (default) to load golden results via `loadChartFixture`, or `live` to proxy real `/analytics/run` calls once the backend endpoint is reachable.
+- **Switch transport mode:** set `REACT_APP_ANALYTICS_V2_TRANSPORT=fixtures` (default) to load golden results via `loadChartFixture`, or `live` to proxy real `/api/analytics/run` calls once the backend endpoint is reachable.
 - **Available presets:** the rail currently wires three presets end-to-end – `Live Flow` (entries vs exits), `Average Dwell by Camera`, and `Retention Heatmap`. Each ships with frozen backend-authored `ChartSpec` templates plus the time/split/metric overrides documented in `docs/analytics/phase4_workspace_plan.md`.
 - **Override logging:** in dev mode the reducer logs every override mutation (`overrideApplied`) plus warnings (`overrideDenied`) if a component tries to touch a disallowed field. Use the browser console to verify overrides remain within the preset contracts when QAing new controls.
 - **Transport diagnostics:** the workspace now categorises failures as `NETWORK`, `INVALID_SPEC`, `INVALID_RESULT`, `PARTIAL_DATA`, or `ABORTED`. The inspector surfaces these labels in error/notice badges while the console logs `run:start`, `run:success`, or `run:error` events with `specHash` for cache debugging.

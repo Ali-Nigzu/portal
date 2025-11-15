@@ -24,6 +24,10 @@ _BUCKET_SECONDS = {
 _RETENTION_MIN_COHORT = 100
 _UNKNOWN_DIMENSION_VALUE = "Unknown"
 
+# BigQuery reserves WINDOW as a keyword, so we use descriptive aliases instead.
+WINDOW_BOUNDS_CTE = "window_bounds"
+RETENTION_WINDOW_CTE = "retention_window_bounds"
+
 def _bucket_expression(bucket: str) -> str:
     if bucket == "RAW":
         return "timestamp"
@@ -301,7 +305,7 @@ class SpecCompiler:
         calendar = dedent(
             f"""
             calendar AS (
-                WITH window AS (
+                WITH {WINDOW_BOUNDS_CTE} AS (
                     SELECT
                         @start_ts AS window_start,
                         @end_ts AS window_end,
@@ -322,7 +326,7 @@ class SpecCompiler:
                         ),
                         0
                     ) AS window_seconds
-                FROM window,
+                FROM {WINDOW_BOUNDS_CTE},
                 UNNEST(
                     GENERATE_TIMESTAMP_ARRAY(
                         aligned_start,
@@ -759,7 +763,7 @@ class SpecCompiler:
         calendar = dedent(
             f"""
             retention_calendar AS (
-                WITH window AS (
+                WITH {RETENTION_WINDOW_CTE} AS (
                     SELECT
                         {trunc_expr} AS aligned_start,
                         @end_ts AS window_end,
@@ -768,7 +772,7 @@ class SpecCompiler:
                 SELECT
                     cohort_start AS bucket_start,
                     lag_index AS lag_weeks
-                FROM window,
+                FROM {RETENTION_WINDOW_CTE},
                 UNNEST(
                     GENERATE_TIMESTAMP_ARRAY(
                         aligned_start,

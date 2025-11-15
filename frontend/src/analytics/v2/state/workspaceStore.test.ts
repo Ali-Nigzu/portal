@@ -2,6 +2,8 @@ import type { PresetDefinition } from '../presets/types';
 import type { ChartSpec } from '../../schemas/charting';
 import type { WorkspaceOverrides, WorkspaceState } from './workspaceStore';
 import { workspaceReducer } from './workspaceStore';
+import { buildSpecWithOverrides } from '../utils/specOverrides';
+import { hashChartSpec } from '../transport/hashChartSpec';
 
 const templateSpec: ChartSpec = {
   id: 'test_spec',
@@ -133,5 +135,18 @@ describe('workspaceReducer override guardrails', () => {
 
     expect(failed.errorCategory).toBe('NETWORK');
     expect(failed.isLoading).toBe(false);
+  });
+
+  it('yields a different spec hash when the time range override changes', () => {
+    const anchor = new Date('2024-02-01T00:00:00Z');
+    const initialSpec = buildSpecWithOverrides(presetWithOptions, defaultState.overrides, anchor);
+    const updatedState = workspaceReducer(defaultState, {
+      type: 'UPDATE_OVERRIDES',
+      overrides: { timeRangeId: '24h' },
+    });
+    const nextSpec = buildSpecWithOverrides(presetWithOptions, updatedState.overrides, anchor);
+
+    expect(nextSpec.timeWindow.from).not.toEqual(initialSpec.timeWindow.from);
+    expect(hashChartSpec(nextSpec)).not.toEqual(hashChartSpec(initialSpec));
   });
 });

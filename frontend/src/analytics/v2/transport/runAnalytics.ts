@@ -35,7 +35,16 @@ export interface AnalyticsRunResponse {
   diagnostics: AnalyticsRunDiagnostics;
 }
 
-const ANALYTICS_RUN_ENDPOINT = '/analytics/run';
+export interface RunAnalyticsQueryOptions {
+  mode?: AnalyticsTransportMode;
+  signal?: AbortSignal;
+  orgId?: string;
+  viewToken?: string;
+  bypassCache?: boolean;
+  cacheTtlSeconds?: number;
+}
+
+const ANALYTICS_RUN_ENDPOINT = '/api/analytics/run';
 const DEV_MAX_RETRIES = process.env.NODE_ENV === 'production' ? 0 : 2;
 const BASE_RETRY_DELAY_MS = 250;
 
@@ -62,12 +71,18 @@ const isAbortError = (error: unknown): boolean => {
   return error instanceof DOMException && error.name === 'AbortError';
 };
 
-async function runLiveQueryOnce(spec: ChartSpec, signal?: AbortSignal): Promise<ChartResult> {
+async function runLiveQueryOnce(spec: ChartSpec, options: RunAnalyticsQueryOptions): Promise<ChartResult> {
   const response = await fetch(`${API_BASE_URL}${ANALYTICS_RUN_ENDPOINT}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ spec }),
-    signal,
+    body: JSON.stringify({
+      spec,
+      orgId: options.orgId,
+      viewToken: options.viewToken,
+      bypassCache: options.bypassCache,
+      cacheTtlSeconds: options.cacheTtlSeconds,
+    }),
+    signal: options.signal,
   });
 
   if (!response.ok) {
@@ -81,11 +96,11 @@ async function runLiveQueryOnce(spec: ChartSpec, signal?: AbortSignal): Promise<
   return (await response.json()) as ChartResult;
 }
 
-async function runLiveQuery(spec: ChartSpec, signal?: AbortSignal): Promise<ChartResult> {
+async function runLiveQuery(spec: ChartSpec, options: RunAnalyticsQueryOptions): Promise<ChartResult> {
   let attempt = 0;
   while (true) {
     try {
-      return await runLiveQueryOnce(spec, signal);
+      return await runLiveQueryOnce(spec, options);
     } catch (error) {
       if (isAbortError(error) || error instanceof AnalyticsTransportError) {
         throw error;
@@ -93,7 +108,7 @@ async function runLiveQuery(spec: ChartSpec, signal?: AbortSignal): Promise<Char
       if (attempt >= DEV_MAX_RETRIES) {
         throw error;
       }
-      await wait(BASE_RETRY_DELAY_MS * Math.pow(2, attempt), signal);
+      await wait(BASE_RETRY_DELAY_MS * Math.pow(2, attempt), options.signal);
       attempt += 1;
     }
   }
@@ -136,20 +151,19 @@ const normalizeError = (error: unknown): AnalyticsTransportError => {
 export async function runAnalyticsQuery(
   preset: PresetDefinition,
   spec: ChartSpec,
-  mode: AnalyticsTransportMode = ANALYTICS_V2_TRANSPORT,
-  signal?: AbortSignal,
+  options: RunAnalyticsQueryOptions = {},
 ): Promise<AnalyticsRunResponse> {
   const specHash = hashChartSpec(spec);
-  const selectedMode = mode;
+  const selectedMode = options.mode ?? ANALYTICS_V2_TRANSPORT;
   const logContext = { presetId: preset.id, specHash, mode: selectedMode };
   console.info('[analytics:v2] run:start', logContext);
   try {
     const result =
       selectedMode === 'live'
-        ? await runLiveQuery(spec, signal)
-        : await runFixtureQuery(preset, signal);
+        ? await runLiveQuery(spec, options)
+        : await runFixtureQuery(preset, options.signal);
 
-    if (signal?.aborted) {
+    if (options.signal?.aborted) {
       throw new DOMException('Aborted', 'AbortError');
     }
 

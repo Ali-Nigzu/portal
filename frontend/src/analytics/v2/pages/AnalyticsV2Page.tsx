@@ -102,8 +102,11 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
         const payload = await runAnalyticsQuery(
           activePreset,
           effectiveSpec,
-          state.transportMode,
-          controller.signal,
+          {
+            mode: state.transportMode,
+            signal: controller.signal,
+            orgId,
+          },
         );
         if (!canceled) {
           dispatch({ type: 'RUN_SUCCESS', payload });
@@ -134,7 +137,7 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
       canceled = true;
       controller.abort();
     };
-  }, [activePreset, effectiveSpec, dispatch, state.transportMode, runNonce]);
+  }, [activePreset, effectiveSpec, dispatch, orgId, state.transportMode, runNonce]);
 
   const handlePresetSelect = (presetId: string) => {
     const preset = presetMap[presetId];

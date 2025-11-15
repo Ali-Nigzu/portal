@@ -95,8 +95,8 @@ Phase 5 is complete. Dashboard V2 now renders entirely from backend manifests an
 ## 5. Transport Modes (Fixtures vs Live)
 
 * Default is fixtures (`REACT_APP_ANALYTICS_V2_TRANSPORT` unset → `fixtures`).
-* Set `REACT_APP_ANALYTICS_V2_TRANSPORT=live` to hit `/analytics/run`.
-* Dashboard transport shares the analytics workspace endpoint and schema; ensure backend `/analytics/run` stays spec-compatible.
+* Set `REACT_APP_ANALYTICS_V2_TRANSPORT=live` to hit `/api/analytics/run` (legacy `/analytics/run` alias remains available).
+* Dashboard transport shares the analytics workspace endpoint and schema; ensure backend `/api/analytics/run` stays spec-compatible.
 * Feature flag `REACT_APP_FEATURE_DASHBOARD_V2` must be enabled to view the new dashboard route.
 
 ## 6. Pin / Unpin Testing
@@ -137,7 +137,7 @@ Phase 5 is complete. Dashboard V2 now renders entirely from backend manifests an
 ## 9. Cautions & Follow-ups
 
 * `_MANIFEST_STORE` is in-memory. Restarting the backend resets all custom pins. Phase 6 must introduce durable persistence.
-* Dashboard and analytics workspace share `/analytics/run`; schema changes in Phase 6 must keep the contract stable.
+* Dashboard and analytics workspace share `/api/analytics/run`; schema changes in Phase 6 must keep the contract stable.
 * Keep `locked` semantics intact—Phase 6 should preserve default widgets until product approves changes.
 * Mobile breakpoints are not fully polished; Phase 6 handles responsive refinement.
 * Avoid mutating manifest `inlineSpec` in place on the frontend; always clone via `buildWidgetSpec`.

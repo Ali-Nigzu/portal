@@ -26,7 +26,7 @@ describe('runAnalyticsQuery transport guardrails', () => {
     const overrides = buildDefaultOverrides(preset);
     const spec = buildSpecWithOverrides(preset, overrides, new Date('2024-02-01T00:00:00Z'));
     const controller = new AbortController();
-    const promise = runAnalyticsQuery(preset, spec, 'fixtures', controller.signal);
+    const promise = runAnalyticsQuery(preset, spec, { mode: 'fixtures', signal: controller.signal });
     controller.abort();
     await expect(promise).rejects.toMatchObject({ category: 'ABORTED' });
   });
@@ -40,7 +40,7 @@ describe('runAnalyticsQuery transport guardrails', () => {
     };
     const overrides = buildDefaultOverrides(invalidPreset);
     const spec = buildSpecWithOverrides(invalidPreset, overrides, new Date('2024-02-01T00:00:00Z'));
-    await expect(runAnalyticsQuery(invalidPreset, spec, 'fixtures')).rejects.toMatchObject({
+    await expect(runAnalyticsQuery(invalidPreset, spec, { mode: 'fixtures' })).rejects.toMatchObject({
       category: 'INVALID_RESULT',
     });
   });

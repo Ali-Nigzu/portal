@@ -103,6 +103,38 @@ def _scoped_projection(sql: str) -> str:
     return " ".join(match.group(1).split())
 
 
+def _assert_no_reserved_window_alias(sql: str) -> None:
+    upper = sql.upper()
+    assert "WITH WINDOW AS" not in upper
+    assert re.search(r"\bFROM\s+WINDOW\b", upper) is None
+    assert re.search(r"\bJOIN\s+WINDOW\b", upper) is None
+
+
+def test_calendar_queries_use_safe_window_alias() -> None:
+    ctx = _context(bucket="HOUR")
+    plan = compile_contract_query(Metric.OCCUPANCY, [Dimension.TIME], ctx)
+    _assert_no_reserved_window_alias(plan.sql)
+    assert "window_bounds" in plan.sql
+
+
+def test_dwell_queries_use_safe_window_alias() -> None:
+    ctx = _context(bucket="HOUR")
+    plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME], ctx)
+    _assert_no_reserved_window_alias(plan.sql)
+    assert "window_bounds" in plan.sql
+
+
+def test_retention_queries_use_safe_window_alias() -> None:
+    ctx = _context(bucket="WEEK")
+    plan = compile_contract_query(
+        Metric.RETENTION_RATE,
+        [Dimension.TIME, Dimension.RETENTION_LAG],
+        ctx,
+    )
+    _assert_no_reserved_window_alias(plan.sql)
+    assert "retention_window_bounds" in plan.sql
+
+
 def test_scoped_cte_projects_canonical_columns() -> None:
     ctx = _context(bucket="HOUR")
     plan = compile_contract_query(Metric.OCCUPANCY, [Dimension.TIME], ctx)
