@@ -169,6 +169,7 @@ describe('AnalyticsV2Page', () => {
         );
       });
 
+    let tree: TestRenderer;
     await act(async () => {
       timeRangeButton.props.onClick();
     });
