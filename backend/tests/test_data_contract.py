@@ -140,8 +140,8 @@ def test_scoped_cte_projects_canonical_columns() -> None:
     plan = compile_contract_query(Metric.OCCUPANCY, [Dimension.TIME], ctx)
     projection = _scoped_projection(plan.sql)
     expected = (
-        "timestamp, event_type, IFNULL(index, 0) AS event_index, site_id, cam_id, "
-        "track_no, COALESCE(sex, 'Unknown') AS sex, COALESCE(age_bucket, 'Unknown') AS age_bucket"
+        "site_id, cam_id, IFNULL(index, 0) AS event_index, track_no, event_type, timestamp, "
+        "COALESCE(sex, 'Unknown') AS sex, COALESCE(age_bucket, 'Unknown') AS age_bucket"
     )
     assert projection == " ".join(expected.split())
 

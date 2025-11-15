@@ -281,12 +281,12 @@ class SpecCompiler:
             f"""
             scoped AS (
                 SELECT
-                    timestamp,
-                    event_type,
-                    IFNULL(index, 0) AS event_index,
                     site_id,
                     cam_id,
+                    IFNULL(index, 0) AS event_index,
                     track_no,
+                    event_type,
+                    timestamp,
                     COALESCE(sex, '{_UNKNOWN_DIMENSION_VALUE}') AS sex,
                     COALESCE(age_bucket, '{_UNKNOWN_DIMENSION_VALUE}') AS age_bucket
                 FROM `{table_name}`
@@ -646,7 +646,7 @@ class SpecCompiler:
                     timestamp AS entrance_ts,
                     ROW_NUMBER() OVER (
                         PARTITION BY site_id, cam_id, track_no
-                        ORDER BY timestamp, index
+                        ORDER BY timestamp, event_index
                     ) AS rn
                 FROM scoped
                 WHERE event_type = 1
@@ -664,7 +664,7 @@ class SpecCompiler:
                     timestamp AS exit_ts,
                     ROW_NUMBER() OVER (
                         PARTITION BY site_id, cam_id, track_no
-                        ORDER BY timestamp, index
+                        ORDER BY timestamp, event_index
                     ) AS rn
                 FROM scoped
                 WHERE event_type = 0
@@ -804,7 +804,7 @@ class SpecCompiler:
                     timestamp,
                     LAG(timestamp) OVER (
                         PARTITION BY site_id, track_no
-                        ORDER BY timestamp, index
+                        ORDER BY timestamp, event_index
                     ) AS prev_timestamp
                 FROM scoped
                 WHERE event_type = 1
