@@ -64,8 +64,8 @@ const presets: Record<string, PresetDefinition> = {
       id: 'preset_live_flow',
       dataset: 'events',
       measures: [
-        { id: 'entries', label: 'Entries', aggregation: 'count', eventTypes: [0] },
-        { id: 'exits', label: 'Exits', aggregation: 'count', eventTypes: [1] },
+        { id: 'entries', label: 'Entries', aggregation: 'count', eventTypes: [1] },
+        { id: 'exits', label: 'Exits', aggregation: 'count', eventTypes: [0] },
       ],
       dimensions: [{ id: 'timestamp', column: 'timestamp', bucket: '5_MIN', sort: 'asc' }],
       splits: [{ id: 'site_id', column: 'site_id', limit: 5, sort: 'desc' }],
@@ -81,8 +81,8 @@ const presets: Record<string, PresetDefinition> = {
     }),
     overrides: {
       allowedBuckets: LIVE_BUCKETS,
-      allowedFilterFields: ['site_id', 'camera_id'],
-      allowedSplitDimensions: ['site_id', 'camera_id'],
+      allowedFilterFields: ['site_id', 'cam_id'],
+      allowedSplitDimensions: ['site_id', 'cam_id'],
       timeRangeOptions: LIVE_TIME_RANGES,
       defaultTimeRangeId: '24h',
       splitToggle: {
@@ -106,7 +106,7 @@ const presets: Record<string, PresetDefinition> = {
       dataset: 'events',
       measures: [{ id: 'avg_dwell', label: 'Avg dwell (s)', aggregation: 'dwell_mean' }],
       dimensions: [{ id: 'timestamp', column: 'timestamp', bucket: 'HOUR', sort: 'asc' }],
-      splits: [{ id: 'camera_id', column: 'camera_id', limit: 6, sort: 'desc' }],
+      splits: [{ id: 'cam_id', column: 'cam_id', limit: 6, sort: 'desc' }],
       timeWindow: {
         from: '2024-01-01T00:00:00Z',
         to: '2024-01-08T00:00:00Z',
@@ -119,12 +119,12 @@ const presets: Record<string, PresetDefinition> = {
     }),
     overrides: {
       allowedBuckets: HOURLY_BUCKETS,
-      allowedFilterFields: ['site_id', 'camera_id', 'zone'],
-      allowedSplitDimensions: ['camera_id'],
+      allowedFilterFields: ['site_id', 'cam_id', 'zone'],
+      allowedSplitDimensions: ['cam_id'],
       timeRangeOptions: STANDARD_TIME_RANGES,
       defaultTimeRangeId: '7d',
       splitToggle: {
-        dimensionId: 'camera_id',
+        dimensionId: 'cam_id',
         label: 'Split by camera',
         enabledByDefault: true,
       },
@@ -142,7 +142,7 @@ const presets: Record<string, PresetDefinition> = {
       dataset: 'events',
       measures: [{ id: 'retention_rate', label: 'Retention %', aggregation: 'retention_rate' }],
       dimensions: [{ id: 'cohort_week', column: 'cohort_week', bucket: 'WEEK', sort: 'asc' }],
-      splits: [{ id: 'retention_week', column: 'retention_week', sort: 'asc' }],
+      splits: [{ id: 'retention_lag', column: 'lag_weeks', sort: 'asc' }],
       timeWindow: {
         from: '2023-10-01T00:00:00Z',
         to: '2024-01-01T00:00:00Z',
@@ -156,7 +156,7 @@ const presets: Record<string, PresetDefinition> = {
     overrides: {
       allowedBuckets: RETENTION_BUCKETS,
       allowedFilterFields: ['site_id', 'segment'],
-      allowedSplitDimensions: ['retention_week'],
+      allowedSplitDimensions: ['retention_lag'],
       timeRangeOptions: RETENTION_TIME_RANGES,
       defaultTimeRangeId: '24w',
     },

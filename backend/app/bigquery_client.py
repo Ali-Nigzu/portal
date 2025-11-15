@@ -133,6 +133,20 @@ class BigQueryClient:
                 query_parameters.append(bigquery.ScalarQueryParameter(name, "INT64", value))
             elif isinstance(value, float):
                 query_parameters.append(bigquery.ScalarQueryParameter(name, "FLOAT64", value))
+            elif isinstance(value, (list, tuple)):
+                sequence = [item for item in value if item is not None]
+                if not sequence:
+                    continue
+                if all(isinstance(item, bool) for item in sequence):
+                    array_type = "BOOL"
+                elif all(isinstance(item, int) for item in sequence):
+                    array_type = "INT64"
+                elif all(isinstance(item, float) for item in sequence):
+                    array_type = "FLOAT64"
+                else:
+                    array_type = "STRING"
+                    sequence = [str(item) for item in sequence]
+                query_parameters.append(bigquery.ArrayQueryParameter(name, array_type, sequence))
             elif value is None:
                 # Skip None-valued params—they should not be referenced in the SQL
                 continue

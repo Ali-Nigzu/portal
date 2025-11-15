@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
+import re
 from textwrap import dedent
 from typing import Dict, Iterable, List, Tuple
 
@@ -21,6 +22,7 @@ _BUCKET_SECONDS = {
 }
 
 _RETENTION_MIN_COHORT = 100
+_UNKNOWN_DIMENSION_VALUE = "Unknown"
 
 def _bucket_expression(bucket: str) -> str:
     if bucket == "RAW":
@@ -279,7 +281,10 @@ class SpecCompiler:
                     event_type,
                     IFNULL(index, 0) AS event_index,
                     site_id,
-                    cam_id
+                    cam_id,
+                    track_no,
+                    COALESCE(sex, '{_UNKNOWN_DIMENSION_VALUE}') AS sex,
+                    COALESCE(age_bucket, '{_UNKNOWN_DIMENSION_VALUE}') AS age_bucket
                 FROM `{table_name}`
                 WHERE timestamp BETWEEN @start_ts AND @end_ts{filters_sql}
             )
@@ -361,60 +366,64 @@ class SpecCompiler:
 
     def _compile_condition(self, condition: Dict[str, object], params: Dict[str, object]) -> str:
         field = condition["field"]
+        if field in {"sex", "age_bucket"}:
+            field_expr = f"COALESCE({field}, '{_UNKNOWN_DIMENSION_VALUE}')"
+        else:
+            field_expr = field
         operator = condition["op"]
         value = condition.get("value")
-        param_base = field.replace(".", "_")
+        param_base = re.sub(r"[^0-9A-Za-z_]", "_", field)
         index = sum(1 for key in params if key.startswith(param_base))
         if operator == "equals":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} = @{param_name}"
+            return f"{field_expr} = @{param_name}"
         if operator == "not_equals":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} != @{param_name}"
+            return f"{field_expr} != @{param_name}"
         if operator == "in":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} IN UNNEST(@{param_name})"
+            return f"{field_expr} IN UNNEST(@{param_name})"
         if operator == "not_in":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} NOT IN UNNEST(@{param_name})"
+            return f"{field_expr} NOT IN UNNEST(@{param_name})"
         if operator == "contains":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"STRPOS(CAST({field} AS STRING), @{param_name}) > 0"
+            return f"STRPOS(CAST({field_expr} AS STRING), @{param_name}) > 0"
         if operator == "starts_with":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"STARTS_WITH(CAST({field} AS STRING), @{param_name})"
+            return f"STARTS_WITH(CAST({field_expr} AS STRING), @{param_name})"
         if operator == "ends_with":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"ENDS_WITH(CAST({field} AS STRING), @{param_name})"
+            return f"ENDS_WITH(CAST({field_expr} AS STRING), @{param_name})"
         if operator == "between" and isinstance(value, list) and len(value) == 2:
             lower_name = f"{param_base}_{index}_lower"
             upper_name = f"{param_base}_{index}_upper"
             params[lower_name] = value[0]
             params[upper_name] = value[1]
-            return f"{field} BETWEEN @{lower_name} AND @{upper_name}"
+            return f"{field_expr} BETWEEN @{lower_name} AND @{upper_name}"
         if operator == "gte":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} >= @{param_name}"
+            return f"{field_expr} >= @{param_name}"
         if operator == "lte":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} <= @{param_name}"
+            return f"{field_expr} <= @{param_name}"
         if operator == "gt":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} > @{param_name}"
+            return f"{field_expr} > @{param_name}"
         if operator == "lt":
             param_name = f"{param_base}_{index}"
             params[param_name] = value
-            return f"{field} < @{param_name}"
+            return f"{field_expr} < @{param_name}"
         raise ValidationError(f"Unsupported filter operator: {operator}")
 
     def _render_occupancy(self, *, measure: Dict[str, object], bucket: str, params: Dict[str, object]) -> MeasureCompilation:

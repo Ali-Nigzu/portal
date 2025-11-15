@@ -17,14 +17,14 @@ export interface EntityCatalogueProvider {
 }
 
 const FIXTURE_SITES: SiteSummary[] = [
-  { id: 'site_north', name: 'North Flagship', region: 'NA' },
-  { id: 'site_eu', name: 'Central Europe', region: 'EU' },
+  { id: 'fixture_site_alpha', name: 'Fixture Site Alpha', region: 'NA' },
+  { id: 'fixture_site_beta', name: 'Fixture Site Beta', region: 'EU' },
 ];
 
 const FIXTURE_CAMERAS: CameraSummary[] = [
-  { id: 'cam_north_entry', name: 'North Entry', siteId: 'site_north', zone: 'Entry' },
-  { id: 'cam_north_floor', name: 'North Floor', siteId: 'site_north', zone: 'Floor' },
-  { id: 'cam_eu_entry', name: 'EU Entry', siteId: 'site_eu', zone: 'Entry' },
+  { id: 'fixture_cam_alpha_entry', name: 'Fixture Alpha Entry', siteId: 'fixture_site_alpha', zone: 'Entry' },
+  { id: 'fixture_cam_alpha_floor', name: 'Fixture Alpha Floor', siteId: 'fixture_site_alpha', zone: 'Floor' },
+  { id: 'fixture_cam_beta_entry', name: 'Fixture Beta Entry', siteId: 'fixture_site_beta', zone: 'Entry' },
 ];
 
 export const fixtureEntityCatalogue: EntityCatalogueProvider = {

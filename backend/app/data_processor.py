@@ -9,10 +9,16 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
-import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 
+from .analytics.data_contract import (
+    Dimension,
+    Metric,
+    QueryContext,
+    TimeRangeKey,
+    compile_contract_query,
+)
 from .bigquery_client import BigQueryDataFrameError, bigquery_client
 from .models import DataIntelligence
 
@@ -64,155 +70,87 @@ class DataProcessor:
     """Intelligent data processor that issues aggregation queries to BigQuery."""
 
     @staticmethod
+    def _build_context(
+        *,
+        table_name: str,
+        org_id: str,
+        filters: Dict[str, Optional[str]],
+    ) -> QueryContext:
+        bounds = _resolve_time_bounds(filters)
+        sexes = [filters["gender"]] if filters.get("gender") else None
+        age_buckets = [filters["age_group"]] if filters.get("age_group") else None
+        event_filter = filters.get("event")
+        if event_filter:
+            event_types = [1 if event_filter == "entry" else 0]
+        else:
+            event_types = None
+        return QueryContext(
+            org_id=org_id,
+            table_name=table_name,
+            start=bounds["start_ts"],
+            end=bounds["end_ts"],
+            time_range=TimeRangeKey.CUSTOM,
+            site_ids=[filters["site_id"]] if filters.get("site_id") else None,
+            camera_ids=[filters["camera_id"]] if filters.get("camera_id") else None,
+            sexes=sexes,
+            age_buckets=age_buckets,
+            event_types=event_types,
+        )
+
+    @staticmethod
+    def _execute(plan, *, table_name: str, job: str) -> pd.DataFrame:
+        return bigquery_client.query_dataframe(plan.sql, plan.params, job_context=f"{table_name}::{job}")
+
+    @classmethod
     def get_aggregated_analytics(
-        table_name: str, filters: Dict[str, Optional[str]] = None
+        cls, table_name: str, filters: Dict[str, Optional[str]] = None, *, org_id: str
     ) -> Dict[str, pd.DataFrame]:
         """Run the suite of BigQuery aggregation queries backing the analytics views."""
         try:
             filters = filters or {}
-            params = _resolve_time_bounds(filters)
+            context = cls._build_context(table_name=table_name, org_id=org_id, filters=filters)
 
-            table_identifier = f"`{table_name}`"
+            summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], context)
+            stats_df = cls._execute(summary_plan, table_name=table_name, job="stats")
+            if not stats_df.empty and "entrances" in stats_df.columns:
+                stats_df = stats_df.rename(columns={"entrances": "entries"})
 
-            base_conditions = ["timestamp BETWEEN @start_ts AND @end_ts"]
-            dwell_conditions = ["timestamp BETWEEN @start_ts AND @end_ts"]
-            entry_conditions = ["event = 1", "timestamp BETWEEN @start_ts AND @end_ts"]
+            demographics_plan = compile_contract_query(Metric.DEMOGRAPHICS, [], context)
+            demo_df = cls._execute(demographics_plan, table_name=table_name, job="demographics")
 
-            if filters.get("gender"):
-                params["gender"] = filters["gender"]
-                base_conditions.append("sex = @gender")
-                dwell_conditions.append("sex = @gender")
-                entry_conditions.append("sex = @gender")
+            hourly_ctx = context.model_copy(update={"bucket": "HOUR"})
+            hourly_plan = compile_contract_query(Metric.ACTIVITY, [Dimension.TIME], hourly_ctx)
+            hourly_df = cls._execute(hourly_plan, table_name=table_name, job="hourly")
+            if not hourly_df.empty:
+                hourly_df = hourly_df[hourly_df["measure_id"] == hourly_plan.measure_id].copy()
+                hourly_df["hour"] = hourly_df["bucket_start"].dt.tz_convert("UTC").dt.hour
+                hourly_df.rename(columns={"value": "count"}, inplace=True)
 
-            if filters.get("age_group"):
-                params["age_group"] = filters["age_group"]
-                base_conditions.append("age_bucket = @age_group")
-                dwell_conditions.append("age_bucket = @age_group")
-                entry_conditions.append("age_bucket = @age_group")
+            records_plan = compile_contract_query(Metric.RAW_EVENTS, [], context)
+            records_df = cls._execute(records_plan, table_name=table_name, job="records")
+            if not records_df.empty:
+                records_df["event"] = records_df["event_type"].apply(lambda v: "entry" if int(v) == 1 else "exit")
+                records_df.drop(columns=["event_type"], inplace=True, errors="ignore")
 
-            if filters.get("event"):
-                event_val = 1 if filters["event"] == "entry" else 0
-                params["event"] = event_val
-                base_conditions.append("event = @event")
-
-            where_sql = "WHERE " + " AND ".join(base_conditions)
-            dwell_where_sql = "WHERE " + " AND ".join(dwell_conditions)
-            entry_where_sql = " AND ".join(entry_conditions)
-
-            # Query 1: KPI totals and min/max timestamps
-            stats_query = f"""
-                SELECT
-                    COUNT(*) AS total_records,
-                    MIN(timestamp) AS min_timestamp,
-                    MAX(timestamp) AS max_timestamp,
-                    COUNTIF(event = 1) AS entries,
-                    COUNTIF(event = 0) AS exits
-                FROM {table_identifier}
-                {where_sql}
-            """
-            stats_df = bigquery_client.query_dataframe(
-                stats_query, params, job_context=f"{table_name}::stats"
-            )
-
-            # Query 2: Gender x age aggregation
-            demo_query = f"""
-                SELECT
-                    sex,
-                    age_bucket,
-                    COUNT(*) AS count
-                FROM {table_identifier}
-                {where_sql}
-                GROUP BY sex, age_bucket
-            """
-            demo_df = bigquery_client.query_dataframe(
-                demo_query, params, job_context=f"{table_name}::demographics"
-            )
-
-            # Query 3: Hourly distribution
-            hourly_query = f"""
-                SELECT
-                    EXTRACT(HOUR FROM timestamp) AS hour,
-                    COUNT(*) AS count
-                FROM {table_identifier}
-                {where_sql}
-                GROUP BY hour
-                ORDER BY hour
-            """
-            hourly_df = bigquery_client.query_dataframe(
-                hourly_query, params, job_context=f"{table_name}::hourly"
-            )
-
-            # Query 4: Raw event sample (10k rows max)
-            records_query = f"""
-                SELECT
-                    track_id,
-                    event,
-                    timestamp,
-                    sex,
-                    age_bucket
-                FROM {table_identifier}
-                {where_sql}
-                ORDER BY timestamp DESC
-                LIMIT 10000
-            """
-            records_df = bigquery_client.query_dataframe(
-                records_query, params, job_context=f"{table_name}::records"
-            )
-
-            # Query 5: Dwell-time calculation using occupancy deltas
-            dwell_query = f"""
-                WITH ordered_events AS (
-                    SELECT
-                        timestamp,
-                        IF(event = 1, 1, -1) AS occupancy_change
-                    FROM {table_identifier}
-                    {dwell_where_sql}
-                    ORDER BY timestamp
-                ),
-                occupancy_periods AS (
-                    SELECT
-                        timestamp AS start_time,
-                        LEAD(timestamp) OVER (ORDER BY timestamp) AS end_time,
-                        SUM(occupancy_change) OVER (
-                            ORDER BY timestamp
-                            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                        ) AS occupancy
-                    FROM ordered_events
-                ),
-                person_minutes AS (
-                    SELECT
-                        SUM(
-                            IF(
-                                end_time IS NOT NULL AND occupancy > 0,
-                                occupancy * TIMESTAMP_DIFF(end_time, start_time, SECOND) / 60.0,
-                                0
-                            )
-                        ) AS total_person_minutes
-                    FROM occupancy_periods
-                ),
-                total_entries AS (
-                    SELECT COUNT(*) AS entry_count
-                    FROM {table_identifier}
-                    WHERE {entry_where_sql}
-                )
-                SELECT
-                    IF(entry_count > 0, total_person_minutes / entry_count, 0) AS avg_dwell_minutes
-                FROM person_minutes, total_entries
-            """
-            dwell_params = dict(params)
-            dwell_params.pop("event", None)
-            dwell_df = bigquery_client.query_dataframe(
-                dwell_query,
-                dwell_params,
-                job_context=f"{table_name}::dwell",
-            )
+            dwell_ctx = context.model_copy(update={"bucket": "HOUR"})
+            dwell_plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME], dwell_ctx)
+            dwell_frame = cls._execute(dwell_plan, table_name=table_name, job="dwell")
+            if not dwell_frame.empty:
+                dwell_subset = dwell_frame[dwell_frame["measure_id"] == dwell_plan.measure_id].copy()
+                dwell_subset["raw_count"] = dwell_subset["raw_count"].fillna(0)
+                numerator = (dwell_subset["value"].fillna(0.0) * dwell_subset["raw_count"]).sum()
+                denominator = dwell_subset["raw_count"].sum()
+                avg_dwell = float(numerator / denominator) if denominator else 0.0
+            else:
+                avg_dwell = 0.0
+            dwell_df = pd.DataFrame([{"avg_dwell_minutes": avg_dwell}])
 
             logger.info("Loaded aggregated analytics for %s", table_name)
 
             return {
                 "stats": stats_df,
                 "demographics": demo_df,
-                "hourly": hourly_df,
+                "hourly": hourly_df[["hour", "count"]] if not hourly_df.empty else hourly_df,
                 "records": records_df,
                 "dwell": dwell_df,
             }
@@ -248,7 +186,7 @@ class DataProcessor:
 
         required_columns = ["index", "track_number", "event", "timestamp", "sex", "age_estimate"]
         if "index" not in df.columns:
-            df["index"] = np.arange(len(df))
+            df["index"] = range(len(df))
 
         df = df[required_columns]
 
