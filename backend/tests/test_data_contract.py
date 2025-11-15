@@ -140,7 +140,7 @@ def test_scoped_cte_projects_canonical_columns() -> None:
     plan = compile_contract_query(Metric.OCCUPANCY, [Dimension.TIME], ctx)
     projection = _scoped_projection(plan.sql)
     expected = (
-        "site_id, cam_id, IFNULL(index, 0) AS event_index, track_id, event, timestamp, "
+        "site_id, cam_id, COALESCE(index, 0) AS index, track_id, event, timestamp, "
         "COALESCE(sex, 'Unknown') AS sex, COALESCE(age_bucket, 'Unknown') AS age_bucket"
     )
     assert projection == " ".join(expected.split())
@@ -149,7 +149,7 @@ def test_scoped_cte_projects_canonical_columns() -> None:
 def test_metric_queries_use_timestamp_bounds() -> None:
     ctx = _context(bucket="HOUR")
     plan = compile_contract_query(Metric.ENTRANCES, [Dimension.TIME], ctx)
-    assert "timestamp BETWEEN @start_ts AND @end_ts" in plan.sql
+    assert "timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)" in plan.sql
 
 
 def test_event_summary_filters_apply_coalesce() -> None:

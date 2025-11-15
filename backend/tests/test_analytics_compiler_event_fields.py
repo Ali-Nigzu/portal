@@ -43,8 +43,10 @@ def _assert_canonical_event_scope(sql: str) -> None:
     ctes = _extract_ctes(sql)
     assert "scoped" in ctes, "scoped CTE missing from compiled SQL"
     scoped_body = ctes["scoped"]
+    assert " index" in scoped_body or "index," in scoped_body, "scoped CTE must project index"
     assert " event " in scoped_body or "event," in scoped_body, "scoped CTE must project event"
     assert "track_id" in scoped_body, "scoped CTE must project track_id"
+    assert re.search(r"\bevent_index\b", sql) is None
     assert re.search(r"\bevent_type\b", sql) is None
     assert re.search(r"\btrack_no\b", sql) is None
 
@@ -101,3 +103,12 @@ def test_retention_pipeline_keeps_event_in_scope() -> None:
         ctx,
     )
     _assert_canonical_event_scope(plan.sql)
+
+
+def test_calendar_uses_timestamp_bounds() -> None:
+    ctx = _context(bucket="HOUR")
+    plan = compile_contract_query(Metric.ACTIVITY, [Dimension.TIME], ctx)
+    assert "GENERATE_TIMESTAMP_ARRAY" in plan.sql
+    assert "TIMESTAMP(@start_ts)" in plan.sql
+    assert "TIMESTAMP(@end_ts)" in plan.sql
+    assert re.search(r"GENERATE_TIMESTAMP_ARRAY\([^,]+,\s*'[^']+'", plan.sql) is None

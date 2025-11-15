@@ -288,7 +288,7 @@ def _build_event_summary_query(ctx: QueryContext) -> ContractQuery:
         " COUNTIF(event = 1) AS entrances,"
         " COUNTIF(event = 0) AS exits"
         f" FROM `{ctx.table_name}`"
-        " WHERE timestamp BETWEEN @start_ts AND @end_ts"
+        " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
     )
     return ContractQuery(
@@ -310,7 +310,7 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
         f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
-        " WHERE timestamp BETWEEN @start_ts AND @end_ts"
+        " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
         " GROUP BY sex, age_bucket"
     )
@@ -336,7 +336,7 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
         f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
         f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket"
         f" FROM `{ctx.table_name}`"
-        " WHERE timestamp BETWEEN @start_ts AND @end_ts"
+        " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
         " ORDER BY timestamp DESC"
         " LIMIT @limit OFFSET @offset"
