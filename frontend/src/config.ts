@@ -72,7 +72,10 @@ const resolveAnalyticsV2Transport = (): AnalyticsTransportMode => {
   if (envValue === 'live') {
     return 'live';
   }
-  return 'fixtures';
+  if (envValue === 'fixtures') {
+    return 'fixtures';
+  }
+  return 'live';
 };
 
 const analyticsExperienceFromEnv = parseExperienceVersion(process.env.REACT_APP_ANALYTICS_EXPERIENCE);

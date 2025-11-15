@@ -6,7 +6,7 @@
 - ChartSpec/ChartResult contracts live in `shared/analytics` and are shared with the frontend via generated TypeScript types.
 - Analytics engine compiles ChartSpecs into parameterised SQL, executes queries through the BigQuery client, normalises results, and caches responses.
 - Dashboard catalogue seeds KPI widgets and the Live Flow chart; manifests can be fetched, pinned to, and mutated via the API with fixture fallbacks for demos.
-- React frontend exposes the analytics workspace and dashboard surfaces, both powered by the shared `ChartRenderer` and capable of switching between fixture and live transports.
+- React frontend exposes the analytics workspace and dashboard surfaces, both powered by the shared `ChartRenderer` and defaulting to the live BigQuery transport (fixtures only appear when explicitly requested for dev/QA).
 
 ## 2. Completed Phases (Reality, not original plan)
 
@@ -39,6 +39,12 @@
 - Frontend dashboard (`frontend/src/dashboard/v2`) renders KPI and chart widgets from manifest responses and honours layout metadata.
 - Pin/unpin flows connect the analytics workspace to the manifest API; locked widgets and default layouts ensure `/dashboard` is populated by default.
 - Outstanding: manifests persist in memory only and durable storage is deferred.
+
+### Phase 7 – Live Analytics Surfaces
+
+- Defaulted the analytics workspace transport to live BigQuery execution with fixture mode only available via an explicit developer flag.
+- Ensured inspector overrides (time ranges, splits, measures) rebuild ChartSpecs, trigger new runs, and surface spec hash changes for every preset.
+- Verified `/dashboard` consumes manifest endpoints, respects pin/unpin flows from the workspace, and remains aligned with the analytics presets after refreshes.
 
 ### Phase 8 – Data Contract + BigQuery Alignment
 
