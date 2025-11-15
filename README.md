@@ -1,54 +1,64 @@
 # camOS Business Intelligence Dashboard
 
-A preset-first analytics experience for CCTV-derived metrics. The system is now driven entirely by `ChartSpec` → BigQuery → `ChartResult` contracts and exposes two production surfaces:
+camOS delivers preset-driven CCTV analytics built on a shared ChartSpec/ChartResult
+contract. The system pairs a manifest-driven dashboard with an operator-facing
+analytics workspace so teams can view KPIs, explore vetted presets, and pin the
+results they care about.
 
-* `/analytics` – a curated workspace where operators run vetted presets one at a time, tweak a guarded set of controls, and pin interesting results to the dashboard.
-* `/dashboard` – a manifest-driven KPI + chart layout that reads the same backend specs and renders via the shared `ChartRenderer` primitives.
+## What this project does today
 
-There are no hidden "v2" routes. Everything described below is what ships in production today.
+- FastAPI backend authenticates users, executes ChartSpecs against BigQuery, and serves dashboard manifest APIs.
+- ChartSpec/ChartResult schemas live in `shared/analytics` with mirrored TypeScript types so backend and frontend stay aligned.
+- Analytics engine compiles presets into parameterised SQL, normalises results, validates payloads, and caches responses.
+- Dashboard V2 ships with a seeded manifest (KPI band + Live Flow) plus pin/unpin flows that hydrate inline specs for the UI.
+- Analytics workspace exposes a curated preset catalogue with guarded overrides, fixture/live transport modes, and pin-to-dashboard support.
 
-## Current Product Surfaces
+## Architecture Overview
+
+- **Backend:** FastAPI application (`backend/fastapi_app.py`) with modular analytics packages for compilation, caching, and manifest management.
+- **Data:** Google BigQuery is the system of record; per-organisation tables are resolved through the table router and queried via the official client.
+- **Frontend:** React + TypeScript SPA built with Create React App. Analytics workspace lives under `frontend/src/analytics/v2`, dashboard under `frontend/src/dashboard/v2`.
+- **Shared contracts:** `shared/analytics` defines JSON Schemas, fixtures, and golden ChartResults that power regression tests on both sides.
+- **Deployment:** Dockerfile performs a multi-stage build (React static assets baked into the Python image) and targets Cloud Run-style environments.
+
+## Development Plan
+
+See [docs/dev_plan.md](docs/dev_plan.md) for the truthful summary of completed work
+and the placeholder roadmap. That document is the single source of truth for the
+project phases.
+
+## Key Product Surfaces
 
 ### Analytics workspace (`/analytics`)
-* Left rail lists presets from `frontend/src/analytics/v2/presets/presetCatalogue.ts`.
-* Canvas renders a single `ChartResult` through `ChartRenderer` and surfaces validation/empty states.
-* Inspector controls:
-  * Time-range chips, split toggle, and metric selector mutate the preset spec **only when the transport is `live`**.
-  * When transport = `fixtures` (the default for local demo), those chips are visibly disabled and explain that live data is required for overrides. This avoids pretending that fixture data responds to the controls.
-* Pins go through `pinDashboardWidget` so the same spec appears on `/dashboard`.
+- Preset rail is sourced from `frontend/src/analytics/v2/presets/presetCatalogue.ts`.
+- Chart canvas renders a single `ChartResult` via `ChartRenderer`, including loading, empty, and error states.
+- Inspector controls (time chips, splits, measures) mutate presets only when the transport is set to `live`; fixture mode disables unsupported overrides.
+- Pins route through `pinDashboardWidget`, mirroring backend specs on the dashboard when live transport is available.
 
 ### Dashboard V2 (`/dashboard`)
-* Loads a manifest from `GET /api/dashboards/<dashboard_id>?orgId=<org>` (default `dashboard-default` + `client0`).
-* Default manifest always returns six KPI widgets and the Live Flow chart so `/dashboard` is never empty on a fresh install.
-* Widgets are rendered through the shared `Card` + `ChartRenderer` stack; validation errors appear in-card.
-* Users can unpin non-locked widgets; new pins originate from the analytics workspace.
-
-## Architecture snapshot
-
-| Layer | Details |
-| --- | --- |
-| Frontend | React + TypeScript SPA. Shared `ChartRenderer` lives under `frontend/src/analytics/components/ChartRenderer`. Workspace + dashboard V2 code sits under `frontend/src/analytics/v2` and `frontend/src/dashboard/v2`. |
-| Backend | FastAPI app (`backend/fastapi_app.py`). `/analytics/run` compiles `ChartSpec` objects via `backend/app/analytics/*`, runs BigQuery queries, normalises into `ChartResult`, and caches responses. Dashboard manifests live in `backend/app/analytics/dashboard_catalogue.py` with an in-memory repository that seeds `client0`. |
-| Data | Google BigQuery per-organisation tables accessed via the service account in `sa.json`. Contracts and fixtures are stored under `shared/analytics`. |
+- Fetches manifests from `GET /api/dashboards/<dashboard_id>?orgId=<org>` (default `dashboard-default` + `client0`).
+- Default manifest provides six KPI widgets and the Live Flow chart so `/dashboard` is populated on first run.
+- Widgets render through shared `Card` + `ChartRenderer` primitives with validation-driven error messaging.
+- Operators can unpin non-locked widgets; new pins originate from the analytics workspace.
 
 ## APIs & Fixtures
 
-* `ChartSpec`/`ChartResult` schemas live in `shared/analytics/schemas` (mirrored in `frontend/src/analytics/schemas/charting.ts`).
-* Golden `ChartResult` fixtures live in `frontend/src/analytics/examples/` (frontend) and `shared/analytics/examples/` (shared/backend tests).
-* Dashboard manifest endpoints:
-  * `GET /api/dashboards/{dashboard_id}?orgId=client0`
-  * `POST /api/dashboards/{dashboard_id}/widgets?orgId=client0`
-  * `DELETE /api/dashboards/{dashboard_id}/widgets/{widget_id}?orgId=client0`
-* The catch-all SPA route now sits **after** these manifest endpoints, so the frontend never receives the old `API or static route not found` 404 during normal operation.
+- `ChartSpec`/`ChartResult` schemas live in `shared/analytics/schemas` (mirrored in `frontend/src/analytics/schemas/charting.ts`).
+- Golden `ChartResult` fixtures live in `frontend/src/analytics/examples/` (frontend) and `shared/analytics/examples/` (shared/backend tests).
+- Dashboard manifest endpoints:
+  - `GET /api/dashboards/{dashboard_id}?orgId=client0`
+  - `POST /api/dashboards/{dashboard_id}/widgets?orgId=client0`
+  - `DELETE /api/dashboards/{dashboard_id}/widgets/{widget_id}?orgId=client0`
+- SPA fallback routes are registered after manifest/analytics APIs so frontend routes no longer receive erroneous 404s.
 
 ## Local Development
 
 ### Prerequisites
 
-* Python 3.11+
-* Node.js 20+
-* npm 9+
-* Google Cloud service account (`sa.json`) with access to the CCTV BigQuery datasets
+- Python 3.11+
+- Node.js 20+
+- npm 9+
+- Google Cloud service account (`sa.json`) with access to the CCTV BigQuery datasets
 
 ### Backend
 
@@ -60,7 +70,7 @@ python3 -m uvicorn backend.fastapi_app:app --host 0.0.0.0 --port 8000 --reload
 
 Set these environment variables if you need live data:
 
-```
+```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
 export BQ_PROJECT=nigzsu
 export BQ_DATASET=client_events
@@ -75,9 +85,9 @@ npm install
 REACT_APP_API_URL=http://localhost:8000 npm start
 ```
 
-* Fixture mode (default): do nothing and the workspace will load curated JSON responses.
-* Live mode: `REACT_APP_ANALYTICS_V2_TRANSPORT=live REACT_APP_API_URL=http://localhost:8000 npm start` to hit `/analytics/run`.
-* Dashboard + analytics v2 routes are already the defaults; no extra flags are required.
+- Fixture mode (default): do nothing and the workspace will load curated JSON responses.
+- Live mode: `REACT_APP_ANALYTICS_V2_TRANSPORT=live REACT_APP_API_URL=http://localhost:8000 npm start` to hit `/analytics/run`.
+- Dashboard + analytics v2 routes are already the defaults; no extra flags are required.
 
 ### Pinning round-trip
 
@@ -98,16 +108,16 @@ npm --prefix frontend run build
 
 Manual smoke checklist (using fixture mode unless otherwise noted):
 
-* `/dashboard` loads without errors and shows KPI widgets + Live Flow.
-* `/analytics` presets render:
-  * Live Flow chart with fixture data.
-  * Average Dwell by Camera chart.
-  * Retention Heatmap heatmap (no validation banner).
-* Switch `REACT_APP_ANALYTICS_V2_TRANSPORT=live` to exercise inspector controls; switch back to fixtures to confirm the controls visibly lock.
+- `/dashboard` loads without errors and shows KPI widgets + Live Flow.
+- `/analytics` presets render:
+  - Live Flow chart with fixture data.
+  - Average Dwell by Camera chart.
+  - Retention Heatmap heatmap (no validation banner).
+- Switch `REACT_APP_ANALYTICS_V2_TRANSPORT=live` to exercise inspector controls; switch back to fixtures to confirm the controls visibly lock.
 
 ## Deployment Notes
 
-* Dockerfile builds both frontend and backend. Run `docker build -t camos-analytics .` then `docker run -p 8080:8080 camos-analytics` for a local container.
-* Cloud Run deployment requires the same BigQuery env vars plus `GOOGLE_APPLICATION_CREDENTIALS` (or workload identity) for the analytics engine.
-* Static assets are mounted under `/static`, `/dashboard` and `/analytics` are handled by the SPA fallback, and manifest/analytics API routes are explicitly registered before the fallback to avoid the previous 404s.
-* Default organisation for demos remains `client0`; adjust `backend/data/users.json` if you need more accounts.
+- Dockerfile builds both frontend and backend. Run `docker build -t camos-analytics .` then `docker run -p 8080:8080 camos-analytics` for a local container.
+- Cloud Run deployment requires the same BigQuery env vars plus `GOOGLE_APPLICATION_CREDENTIALS` (or workload identity) for the analytics engine.
+- Static assets are mounted under `/static`, `/dashboard` and `/analytics` are handled by the SPA fallback, and manifest/analytics API routes are explicitly registered before the fallback to avoid the previous 404s.
+- Default organisation for demos remains `client0`; adjust `backend/data/users.json` if you need more accounts.
