@@ -62,7 +62,22 @@ describe('fetchDashboardManifest', () => {
     } as unknown as Response);
 
     await expect(fetchDashboardManifest('client0', 'dashboard-default')).rejects.toThrow(
-      /Failed to load dashboard manifest: 503 unavailable/,
+      /Server error while loading dashboard manifest \(status 503\)\. unavailable/,
+    );
+  });
+
+  it('normalizes 404 responses into a user-friendly error', async () => {
+    const { fetchDashboardManifest } = await import('./fetchDashboardManifest');
+
+    const fetchMock = global.fetch as MockedFunction<typeof global.fetch>;
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: async () => 'API or static route not found',
+    } as unknown as Response);
+
+    await expect(fetchDashboardManifest('client0', 'dashboard-default')).rejects.toThrow(
+      /Dashboard manifest not found for this organisation \(status 404\)\./,
     );
   });
 });
