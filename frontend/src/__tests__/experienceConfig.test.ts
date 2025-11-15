@@ -72,3 +72,39 @@ describe('EXPERIENCE_GATES', () => {
     expect(EXPERIENCE_GATES.dashboard.routes.legacy).toBe(true);
   });
 });
+
+describe('ANALYTICS_V2_TRANSPORT', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  const importTransport = async () => {
+    const module = await import('../config');
+    return module.ANALYTICS_V2_TRANSPORT;
+  };
+
+  test('defaults to live transport when no override is provided', async () => {
+    delete process.env.REACT_APP_ANALYTICS_V2_TRANSPORT;
+    const transport = await importTransport();
+    expect(transport).toBe('live');
+  });
+
+  test('honours explicit fixture override for development tooling', async () => {
+    process.env.REACT_APP_ANALYTICS_V2_TRANSPORT = 'fixtures';
+    const transport = await importTransport();
+    expect(transport).toBe('fixtures');
+  });
+
+  test('treats mixed-case overrides as valid values', async () => {
+    process.env.REACT_APP_ANALYTICS_V2_TRANSPORT = 'LiVe';
+    const transport = await importTransport();
+    expect(transport).toBe('live');
+  });
+});
