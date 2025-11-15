@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import renderer, { act } from 'react-test-renderer';
-import type { TestRenderer } from 'react-test-renderer';
+import type { ReactTestInstance, TestRenderer } from 'react-test-renderer';
 import type { ChartResult } from '../../schemas/charting';
 import type { AnalyticsRunResponse } from '../transport/runAnalytics';
 import AnalyticsV2Page, { AnalyticsV2Page as AnalyticsV2PageBase } from './AnalyticsV2Page';
@@ -129,9 +129,9 @@ describe('AnalyticsV2Page', () => {
       .findAll((node: unknown) => {
         const instance = node as { type?: unknown; props?: { className?: string } };
         return instance.type === 'button' && Boolean(instance.props?.className?.includes('analyticsV2Chip'));
-      });
+      }) as ReactTestInstance[];
     expect(controlButtons.length).toBeGreaterThan(0);
-    controlButtons.forEach((button) => {
+    controlButtons.forEach((button: ReactTestInstance) => {
       expect(button.props.disabled).toBe(true);
     });
   });
@@ -169,6 +169,7 @@ describe('AnalyticsV2Page', () => {
         );
       });
 
+    let tree: TestRenderer;
     await act(async () => {
       timeRangeButton.props.onClick();
     });
