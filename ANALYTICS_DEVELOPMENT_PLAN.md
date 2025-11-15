@@ -711,6 +711,17 @@ All endpoints enforce authentication/authorisation consistent with existing sess
 
 Each phase has explicit deliverables and ticket-ready tasks. Phases must be completed sequentially; later phases depend on earlier outputs.
 
+### Completed phases (1–6) snapshot
+
+- **Phase 1 – Specification & Metric Foundations** → Canonical CCTV schema, `ChartSpec`/`ChartResult` contracts, fixture workflow, and validation tooling.
+- **Phase 2 – Backend Analytics Engine on BigQuery** → Spec compiler, table router, cache, `/analytics/run` transport, and golden result validation tied to BigQuery service accounts.
+- **Phase 3 – Shared Frontend Chart Engine & Card Primitives** → `ChartRenderer`, KPI tiles, error/empty states, validation utilities, and Storybook coverage for every geometry.
+- **Phase 4 – Analytics Workspace & Presets** → `/analytics` preset workspace with left rail, inspector controls, guarded overrides, fixture/live transport abstraction, and pin-to-dashboard entry point.
+- **Phase 5 – Dashboard Refactor & Manifest System** → Manifest catalogue + API, KPI band + grid layout, widget pin/unpin flows, and shared ChartRenderer usage on `/dashboard`.
+- **Phase 6 – QA, Performance & Polish** → Feature flag governance, manifest validation guards, expanded logging/tests, and rollout notes for analytics + dashboard v2 defaults.
+
+Phases 1–6 are considered **done** and describe the system that shipped before Phase 7 began.
+
 ### Phase 1 – Specification & Metric Foundations
 
 **Deliverables**
@@ -1185,6 +1196,21 @@ Phase 5 replaced the legacy dashboard with a manifest-driven experience that con
 5. Production observability guidance (console logging namespaces, request diagnostics) documented for on-call engineers (complete).
 6. Durable storage implementation + advanced observability pipelines (**out of scope for Phase 6**, queued for next phase).
 
+### Phase 7 – Cleanup & Truth Alignment *(CURRENT)*
+
+**Objectives**
+
+1. **Dashboard manifest availability** – `/api/dashboards/{dashboard_id}` is now mounted ahead of the SPA catch-all so `/dashboard` never receives the `API or static route not found` 404. The default manifest for `client0` seeds six KPI widgets + Live Flow, and backend tests hit the real FastAPI route.
+2. **Retention preset validation** – The retention heatmap fixture has a complete cohort × lag grid, frontend validation accepts it, and ChartRenderer renders it without errors. Jest fixtures guard both success and failure cases.
+3. **Honest inspector controls** – Time-range, split, and metric chips are disabled (with inline messaging) whenever the analytics transport is running in fixture mode. Live mode continues to dispatch overrides and re-run specs. This prevents users from thinking fixture data reflects their control tweaks.
+4. **Documentation alignment** – README + development plan now describe the actual `/analytics` and `/dashboard` surfaces, manifest routes, fixture vs live toggles, and the “no hidden v2” rule going forward. A Phase 7 handover note explains how to reproduce the historical bugs, where the manifest API lives, and how to flip transports.
+
+**Rules of engagement**
+
+- No new dashboards, feature flags, or secret v2 routes during this phase.
+- Any intentionally disabled control must be documented (fixture lock for presets is the current exception).
+- All fixes are intended for the live `/analytics` and `/dashboard` entry points; we are done shipping changes behind hidden routes.
+
 **Validation checklist**
 
 * Run `pytest`, `npm --prefix frontend run lint`, `CI=true npm --prefix frontend test`, and `npm --prefix frontend run build` – all must pass.
@@ -1342,11 +1368,12 @@ Only update the checkboxes + notes.
 ### 16.1 Phase Checklist (Top-Level)
 
 - [x] Phase 1 – Specification & Metric Foundations *(completed; SQL template narratives intentionally move to Phase 2 to align with compiler implementation)*
-- [ ] Phase 2 – Backend Analytics Engine on BigQuery
-- [ ] Phase 3 – Shared Chart Engine in Frontend
-- [ ] Phase 4 – Analytics Builder & Presets
+- [x] Phase 2 – Backend Analytics Engine on BigQuery
+- [x] Phase 3 – Shared Chart Engine in Frontend
+- [x] Phase 4 – Analytics Builder & Presets
 - [x] Phase 5 – Dashboard Refactor & Pinning
 - [x] Phase 6 – QA, Performance, & Polish
+- [x] Phase 7 – Cleanup & Truth Alignment
 
 ### 16.2 Detailed Task Checklist by Phase
 

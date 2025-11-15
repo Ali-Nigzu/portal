@@ -10,25 +10,23 @@
       "id": "retention_rate",
       "label": "Weekly retention",
       "geometry": "heatmap",
+      "unit": "percentage",
       "data": [
-        {
-          "x": "2023-12-26T00:00:00Z",
-          "group": "Week 0",
-          "value": 1.0
-        },
-        {
-          "x": "2024-01-02T00:00:00Z",
-          "group": "Week 0",
-          "value": 1.0
-        },
-        {
-          "x": "2024-01-02T00:00:00Z",
-          "group": "Week 1",
-          "value": 1.0
-        }
+        { "x": "2023-12-26T00:00:00Z", "group": "Week 0", "value": 1.0 },
+        { "x": "2024-01-02T00:00:00Z", "group": "Week 0", "value": 0.86 },
+        { "x": "2024-01-09T00:00:00Z", "group": "Week 0", "value": 0.68 },
+        { "x": "2024-01-16T00:00:00Z", "group": "Week 0", "value": 0.53 },
+        { "x": "2023-12-26T00:00:00Z", "group": "Week 1", "value": 1.0 },
+        { "x": "2024-01-02T00:00:00Z", "group": "Week 1", "value": 0.82 },
+        { "x": "2024-01-09T00:00:00Z", "group": "Week 1", "value": 0.63 },
+        { "x": "2024-01-16T00:00:00Z", "group": "Week 1", "value": 0.49 },
+        { "x": "2023-12-26T00:00:00Z", "group": "Week 2", "value": 1.0 },
+        { "x": "2024-01-02T00:00:00Z", "group": "Week 2", "value": 0.74 },
+        { "x": "2024-01-09T00:00:00Z", "group": "Week 2", "value": 0.55 },
+        { "x": "2024-01-16T00:00:00Z", "group": "Week 2", "value": 0.42 }
       ],
       "summary": {
-        "cohorts": 2
+        "cohorts": 3
       }
     }
   ],

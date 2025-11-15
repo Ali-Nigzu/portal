@@ -15,7 +15,7 @@ from typing import Optional, Dict, List, Any
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from backend.app import auth
 
@@ -1166,47 +1166,11 @@ async def delete_device(
                 save_device_lists(device_data)
                 logger.info(f"Admin deleted device: {device_id}")
                 return {'success': True, 'message': f'Device {device_id} deleted successfully'}
-    
+
     raise HTTPException(status_code=404, detail="Device not found")
 
-from fastapi.responses import FileResponse  # add at top with other imports if not present
 
-# Serve static assets from /static
-app.mount("/static", StaticFiles(directory="backend/frontend_build/static"), name="static")
-
-# Serve root index
-@app.get("/")
-async def serve_index():
-    index_path = os.path.join("backend/frontend_build", "index.html")
-    if not os.path.exists(index_path):
-        raise HTTPException(status_code=500, detail="index.html not found")
-    return FileResponse(index_path)
-
-# Catch-all for non-API, non-static paths -> return index.html so React router handles it
-@app.get("/{full_path:path}")
-async def serve_spa(full_path: str):
-    # Prevent API/static paths from being handled by SPA fallback
-    if full_path.startswith("api") or full_path.startswith("static"):
-        raise HTTPException(status_code=404, detail="API or static route not found")
-    index_path = os.path.join("backend/frontend_build", "index.html")
-    if not os.path.exists(index_path):
-        raise HTTPException(status_code=500, detail="index.html not found")
-    return FileResponse(index_path)
-
-
-import os
-
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASS = os.getenv("DB_PASS", "")
-DB_NAME = os.getenv("DB_NAME", "postgres")
-INSTANCE_CONNECTION_NAME = os.getenv("INSTANCE_CONNECTION_NAME", "")
-
-
-if __name__ == "__main__":
-    import uvicorn
-    print(app.routes)  # <-- debug
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+# Dashboard manifest API
 @app.get("/api/dashboards/{dashboard_id}", response_model=DashboardManifest)
 async def fetch_dashboard_manifest(
     dashboard_id: str,
@@ -1273,3 +1237,35 @@ async def unpin_dashboard_widget(
             status_code=400,
             detail={"error": "manifest_validation", "message": str(exc)},
         )
+
+
+# Serve static assets from /static
+app.mount("/static", StaticFiles(directory="backend/frontend_build/static"), name="static")
+
+# Serve root index
+@app.get("/")
+async def serve_index():
+    index_path = os.path.join("backend/frontend_build", "index.html")
+    if not os.path.exists(index_path):
+        raise HTTPException(status_code=500, detail="index.html not found")
+    return FileResponse(index_path)
+
+# Catch-all for non-API, non-static paths -> return index.html so React router handles it
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    # Prevent API/static paths from being handled by SPA fallback
+    if full_path.startswith("api") or full_path.startswith("static"):
+        raise HTTPException(status_code=404, detail="API or static route not found")
+    index_path = os.path.join("backend/frontend_build", "index.html")
+    if not os.path.exists(index_path):
+        raise HTTPException(status_code=500, detail="index.html not found")
+    return FileResponse(index_path)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
+

@@ -1,5 +1,6 @@
 import { validateChartResult } from "../validation";
 import type { ChartResult } from "../../../schemas/charting";
+import retentionFixture from "../../../examples/golden_retention_heatmap.json";
 
 describe("validateChartResult", () => {
   const baseTimeResult: ChartResult = {
@@ -75,6 +76,11 @@ describe("validateChartResult", () => {
     };
 
     const issues = validateChartResult(heatmap);
+    expect(issues).toHaveLength(0);
+  });
+
+  it("accepts the retention heatmap preset fixture", () => {
+    const issues = validateChartResult(retentionFixture as ChartResult);
     expect(issues).toHaveLength(0);
   });
 
