@@ -125,6 +125,9 @@ describe("DashboardV2Page", () => {
     expect(options).toBeDefined();
     const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
     expect(new Set(widgetIds)).toEqual(new Set(["kpi-activity", "live-flow"]));
+    widgetLoader.mock.calls.forEach(([, opts]) => {
+      expect(opts?.orgId).toBe("client0");
+    });
 
     const removeButtons = tree!.root.findAllByProps({ className: "dashboard-v2__remove-button" });
     // Only the chart widget is removable by default.
@@ -207,6 +210,7 @@ describe("DashboardV2Page", () => {
     expect(widgetLoader).toHaveBeenCalled();
     const callArgs = widgetLoader.mock.calls[0][1];
     expect(callArgs?.timeRange?.id).toBe("last_60_minutes");
+    expect(callArgs?.orgId).toBe("client0");
   });
 
   it("surfaces widget errors in state", async () => {
