@@ -125,7 +125,7 @@ describe('AnalyticsV2Page', () => {
     });
   });
 
-  it('re-runs the preset when a live time range is selected', async () => {
+  it('re-runs the preset when a live time range is selected via the inspector chip', async () => {
     const chart = timeSeriesResult as unknown as ChartResult;
     mockRunAnalytics.mockResolvedValue({
       result: chart,
@@ -192,7 +192,7 @@ describe('AnalyticsV2Page', () => {
     });
   });
 
-  it('re-runs the preset when a live time range is selected', async () => {
+  it('re-runs the preset when a live time range is selected from the preset toolbar', async () => {
     const chart = timeSeriesResult as unknown as ChartResult;
     mockRunAnalytics.mockResolvedValue({
       result: chart,
