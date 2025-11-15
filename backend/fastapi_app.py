@@ -10,7 +10,7 @@ import base64
 import logging
 import pandas as pd
 from datetime import datetime
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Tuple
 
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
@@ -73,6 +73,12 @@ from backend.app.view_tokens import (
     create_view_token,
     validate_view_token,
     view_tokens
+)
+from backend.app.analytics.data_contract import (
+    Metric,
+    QueryContext,
+    TimeRangeKey,
+    compile_contract_query,
 )
 from backend.app.data_processor import DataProcessor, _resolve_time_bounds
 from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
@@ -239,24 +245,24 @@ async def get_view_dashboard_info(token: str):
     }
 
 
-def _authenticate_chart_data_request(request: Request, view_token: Optional[str]) -> str:
+def _authenticate_chart_data_request(request: Request, view_token: Optional[str]) -> Tuple[str, str]:
     """Helper function to authenticate chart data requests (view token or Basic auth)"""
     if view_token:
         token_data = validate_view_token(view_token)
         if not token_data:
             raise HTTPException(status_code=401, detail="Invalid or expired view token")
-        
+
         users = load_users()
         client_id = token_data['client_id']
-        
+
         if client_id not in users:
             raise HTTPException(status_code=404, detail="Client not found")
-        
+
         table_name = get_active_table_name(client_id, users)
         if not table_name:
             raise HTTPException(status_code=400, detail="No table configured for this client")
-        return table_name
-    
+        return client_id, table_name
+
     else:
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Basic '):
@@ -275,11 +281,11 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid credentials"
                 )
-            
+
             table_name = get_active_table_name(username, users)
             if not table_name:
                 raise HTTPException(status_code=400, detail="No table configured for this user")
-            return table_name
+            return username, table_name
         except HTTPException:
             raise
         except Exception as e:
@@ -303,7 +309,7 @@ async def get_chart_data(
 ):
     """Return analytics payload backed by BigQuery aggregations."""
     try:
-        table_name = _authenticate_chart_data_request(request, view_token)
+        org_id, table_name = _authenticate_chart_data_request(request, view_token)
 
         kpi_filters = {
             'start_date': kpi_start_date or start_date,
@@ -335,7 +341,7 @@ async def get_chart_data(
             logger.debug("Analytics cache hit for key %s", cache_key)
             return cached_response
 
-        agg_data = DataProcessor.get_aggregated_analytics(table_name, kpi_filters)
+        agg_data = DataProcessor.get_aggregated_analytics(table_name, kpi_filters, org_id=org_id)
 
         stats_df = agg_data['stats']
         stats = stats_df.iloc[0] if not stats_df.empty else None
@@ -475,63 +481,50 @@ async def search_events(
 ):
     """Search BigQuery event logs with pagination."""
     try:
-        table_name = _authenticate_chart_data_request(request, view_token)
+        _org_id, table_name = _authenticate_chart_data_request(request, view_token)
 
         filters: Dict[str, Optional[str]] = {
             'start_date': start_date,
             'end_date': end_date,
         }
-        params = _resolve_time_bounds(filters)
+        bounds = _resolve_time_bounds(filters)
 
-        where_conditions = ['timestamp BETWEEN @start_ts AND @end_ts']
-
+        resolved_event_types: Optional[List[int]] = None
         if event_type and event_type.lower() != 'all':
-            params['event'] = 1 if event_type.lower() == 'entry' else 0
-            where_conditions.append('event = @event')
-        if sex and sex.lower() != 'all':
-            params['sex'] = sex
-            where_conditions.append('sex = @sex')
-        if age and age.lower() != 'all':
-            params['age'] = age
-            where_conditions.append('age_bucket = @age')
-        if track_id:
-            params['track_id'] = f"%{track_id}%"
-            where_conditions.append('track_id LIKE @track_id')
+            resolved_event_types = [1 if event_type.lower() == 'entry' else 0]
 
-        where_sql = 'WHERE ' + ' AND '.join(where_conditions)
+        resolved_sex = sex if sex and sex.lower() != 'all' else None
+        resolved_age = age if age and age.lower() != 'all' else None
+
+        base_ctx = QueryContext(
+            org_id=_org_id,
+            table_name=table_name,
+            start=bounds['start_ts'],
+            end=bounds['end_ts'],
+            time_range=TimeRangeKey.CUSTOM,
+            event_types=resolved_event_types,
+            sexes=[resolved_sex] if resolved_sex else None,
+            age_buckets=[resolved_age] if resolved_age else None,
+            track_like=f"%{track_id}%" if track_id else None,
+        )
+
+        summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], base_ctx)
+        summary_df = bigquery_client.query_dataframe(
+            summary_plan.sql,
+            summary_plan.params,
+            job_context=f"{table_name}::search_summary",
+        )
+        total_count = (
+            int(summary_df.iloc[0]['total_records']) if not summary_df.empty else 0
+        )
 
         offset = max(page - 1, 0) * per_page
-
-        table_identifier = f"`{table_name}`"
-
-        count_query = f"""
-            SELECT COUNT(*) AS total
-            FROM {table_identifier}
-            {where_sql}
-        """
-        count_df = bigquery_client.query_dataframe(
-            count_query, params, job_context=f"{table_name}::search_count"
-        )
-        total_count = int(count_df.iloc[0]['total']) if not count_df.empty else 0
-
-        search_params = dict(params)
-        search_params['limit'] = per_page
-        search_params['offset'] = offset
-
-        search_query = f"""
-            SELECT
-                track_id,
-                event,
-                timestamp,
-                sex,
-                age_bucket
-            FROM {table_identifier}
-            {where_sql}
-            ORDER BY timestamp DESC
-            LIMIT @limit OFFSET @offset
-        """
+        paged_ctx = base_ctx.model_copy(update={'limit': per_page, 'offset': offset})
+        events_plan = compile_contract_query(Metric.RAW_EVENTS, [], paged_ctx)
         results_df = bigquery_client.query_dataframe(
-            search_query, search_params, job_context=f"{table_name}::search_results"
+            events_plan.sql,
+            events_plan.params,
+            job_context=f"{table_name}::search_results",
         )
 
         events: List[Dict[str, Any]] = []
@@ -539,7 +532,7 @@ async def search_events(
             timestamp = pd.to_datetime(row['timestamp'])
             events.append({
                 'track_number': row['track_id'],
-                'event': 'entry' if row['event'] == 1 else 'exit',
+                'event': 'entry' if row['event_type'] == 1 else 'exit',
                 'timestamp': timestamp.isoformat(),
                 'sex': row['sex'],
                 'age_estimate': row['age_bucket'],

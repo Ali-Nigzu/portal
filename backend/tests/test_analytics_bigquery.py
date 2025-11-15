@@ -30,67 +30,84 @@ def mock_bigquery(monkeypatch):
         {"sex": "female", "age_bucket": "18-24", "count": 20},
     ])
 
-    hourly_df = pd.DataFrame([
-        {"hour": 9, "count": 12},
-        {"hour": 10, "count": 24},
-        {"hour": 11, "count": 6},
+    hourly_contract_df = pd.DataFrame([
+        {
+            "measure_id": "activity_total",
+            "bucket_start": pd.Timestamp("2024-01-01T09:00:00Z"),
+            "value": 12,
+            "coverage": 1.0,
+            "raw_count": 12,
+        },
+        {
+            "measure_id": "activity_total",
+            "bucket_start": pd.Timestamp("2024-01-01T10:00:00Z"),
+            "value": 24,
+            "coverage": 1.0,
+            "raw_count": 24,
+        },
+        {
+            "measure_id": "activity_total",
+            "bucket_start": pd.Timestamp("2024-01-01T11:00:00Z"),
+            "value": 6,
+            "coverage": 1.0,
+            "raw_count": 6,
+        },
     ])
 
     records_df = pd.DataFrame([
         {
             "track_id": "abc",
-            "event": 1,
+            "event_type": 1,
             "timestamp": pd.Timestamp("2024-01-02T02:15:00Z"),
             "sex": "male",
             "age_bucket": "25-34",
         },
         {
             "track_id": "xyz",
-            "event": 0,
+            "event_type": 0,
             "timestamp": pd.Timestamp("2024-01-02T01:45:00Z"),
             "sex": "female",
             "age_bucket": "18-24",
         },
     ])
 
-    dwell_df = pd.DataFrame([
-        {"avg_dwell_minutes": 12.5},
-    ])
-
-    search_results_df = pd.DataFrame([
+    dwell_contract_df = pd.DataFrame([
         {
-            "track_id": "abc",
-            "event": 1,
-            "timestamp": pd.Timestamp("2024-01-02T02:15:00Z"),
-            "sex": "male",
-            "age_bucket": "25-34",
-        },
-        {
-            "track_id": "xyz",
-            "event": 0,
-            "timestamp": pd.Timestamp("2024-01-02T01:45:00Z"),
-            "sex": "female",
-            "age_bucket": "18-24",
-        },
+            "measure_id": "avg_dwell",
+            "bucket_start": pd.Timestamp("2024-01-01T09:00:00Z"),
+            "value": 12.5,
+            "coverage": 1.0,
+            "raw_count": 10,
+        }
     ])
 
     def fake_query_dataframe(sql: str, params: Dict[str, Any], job_context: Any = None):
         if "COUNT(*) AS total_records" in sql:
+            if job_context and "search_summary" in str(job_context):
+                entrances = int((records_df["event_type"] == 1).sum())
+                exits = int((records_df["event_type"] == 0).sum())
+                return pd.DataFrame(
+                    [
+                        {
+                            "total_records": len(records_df),
+                            "min_timestamp": records_df["timestamp"].min(),
+                            "max_timestamp": records_df["timestamp"].max(),
+                            "entrances": entrances,
+                            "exits": exits,
+                        }
+                    ]
+                )
             return stats_df
         if "GROUP BY sex, age_bucket" in sql:
             return demographics_df
-        if "EXTRACT(HOUR FROM timestamp)" in sql:
-            return hourly_df
-        if "LIMIT 10000" in sql:
-            return records_df
-        if "avg_dwell_minutes" in sql:
-            return dwell_df
-        if "SELECT COUNT(*) AS total" in sql and "LIMIT @limit" not in sql:
-            return pd.DataFrame([{"total": len(search_results_df)}])
-        if "LIMIT @limit OFFSET @offset" in sql:
-            offset = params.get('offset', 0)
-            limit = params.get('limit', len(search_results_df))
-            return search_results_df.iloc[offset:offset + limit]
+        if "activity_total_activity_series" in sql:
+            return hourly_contract_df
+        if "track_no AS track_id" in sql:
+            offset = int(params.get('offset', 0) or 0)
+            limit = int(params.get('limit', len(records_df)))
+            return records_df.iloc[offset:offset + limit]
+        if "dwell_minutes" in sql:
+            return dwell_contract_df
         raise AssertionError(f"Unexpected SQL received: {sql}")
 
     monkeypatch.setattr(bigquery_client, "query_dataframe", fake_query_dataframe)

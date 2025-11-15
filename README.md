@@ -12,6 +12,7 @@ results they care about.
 - Analytics engine compiles presets into parameterised SQL, normalises results, validates payloads, and caches responses.
 - Dashboard V2 ships with a seeded manifest (KPI band + Live Flow) plus pin/unpin flows that hydrate inline specs for the UI.
 - Analytics workspace exposes a curated preset catalogue with guarded overrides, fixture/live transport modes, and pin-to-dashboard support.
+- A documented data contract (`docs/analytics/data_contract.md`) and `backend/app/analytics/data_contract.py` ensure every metric, dimension, and time range resolves through the same BigQuery query builder.
 
 ## Architecture Overview
 
