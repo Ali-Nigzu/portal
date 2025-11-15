@@ -15,7 +15,7 @@ FIXTURE_PATH = ROOT / "shared" / "analytics" / "fixtures" / "events_golden_clien
 class FixtureSession:
     site_id: str
     cam_id: str
-    track_no: str
+    track_id: str
     entrance_ts: pd.Timestamp
     exit_ts: pd.Timestamp
     dwell_minutes: float
@@ -30,8 +30,8 @@ def load_events() -> pd.DataFrame:
             "site_id": "string",
             "cam_id": "string",
             "index": "int64",
-            "track_no": "string",
-            "event_type": "int64",
+            "track_id": "string",
+            "event": "int64",
             "sex": "string",
             "age_bucket": "string",
         },
@@ -46,14 +46,14 @@ def load_events() -> pd.DataFrame:
 
 def derive_sessions(events: pd.DataFrame) -> List[FixtureSession]:
     """Pair entrances/exits per the development plan rules."""
-    entrances = events[events["event_type"] == 1].copy()
-    exits = events[events["event_type"] == 0].copy()
-    entrances["rn"] = entrances.groupby(["site_id", "cam_id", "track_no"]).cumcount()
-    exits["rn"] = exits.groupby(["site_id", "cam_id", "track_no"]).cumcount()
+    entrances = events[events["event"] == 1].copy()
+    exits = events[events["event"] == 0].copy()
+    entrances["rn"] = entrances.groupby(["site_id", "cam_id", "track_id"]).cumcount()
+    exits["rn"] = exits.groupby(["site_id", "cam_id", "track_id"]).cumcount()
 
     merged = entrances.merge(
         exits,
-        on=["site_id", "cam_id", "track_no", "rn"],
+        on=["site_id", "cam_id", "track_id", "rn"],
         suffixes=("_entrance", "_exit"),
         how="left",
     )
@@ -70,7 +70,7 @@ def derive_sessions(events: pd.DataFrame) -> List[FixtureSession]:
             FixtureSession(
                 site_id=row.site_id,
                 cam_id=row.cam_id,
-                track_no=row.track_no,
+                track_id=row.track_id,
                 entrance_ts=row.timestamp_entrance,
                 exit_ts=row.timestamp_exit,
                 dwell_minutes=float(round(row.dwell_minutes, 6)),
@@ -96,7 +96,7 @@ def event_time_buckets(
         raise ValueError("No events within the requested window")
 
     scoped.sort_values(["timestamp", "index"], inplace=True)
-    scoped["delta"] = scoped["event_type"].apply(lambda v: 1 if v == 1 else -1)
+    scoped["delta"] = scoped["event"].apply(lambda v: 1 if v == 1 else -1)
     scoped["running"] = scoped.groupby(["site_id", "cam_id"])["delta"].cumsum()
     scoped["occupancy"] = scoped["running"].clip(lower=0)
     scoped["exit_seed"] = scoped["running"] < 0
@@ -140,8 +140,8 @@ def event_time_buckets(
         else:
             coverage = float(base_coverage)
 
-        entrances = int((bucket_events["event_type"] == 1).sum()) if event_count else 0
-        exits = int((bucket_events["event_type"] == 0).sum()) if event_count else 0
+        entrances = int((bucket_events["event"] == 1).sum()) if event_count else 0
+        exits = int((bucket_events["event"] == 0).sum()) if event_count else 0
         throughput = (
             float((entrances + exits) * 60.0 / window_seconds)
             if window_seconds > 0 and event_count
@@ -167,9 +167,9 @@ def event_time_buckets(
 
 def retention_matrix(events: pd.DataFrame, min_gap_minutes: int = 30) -> Dict[str, Dict[int, float]]:
     """Compute retention rates keyed by cohort week and lag weeks."""
-    entrances = events[events["event_type"] == 1].copy()
-    entrances.sort_values(["site_id", "track_no", "timestamp"], inplace=True)
-    entrances["prev_ts"] = entrances.groupby(["site_id", "track_no"])["timestamp"].shift()
+    entrances = events[events["event"] == 1].copy()
+    entrances.sort_values(["site_id", "track_id", "timestamp"], inplace=True)
+    entrances["prev_ts"] = entrances.groupby(["site_id", "track_id"])["timestamp"].shift()
     entrances["minutes_since_prev"] = (
         (entrances["timestamp"] - entrances["prev_ts"]).dt.total_seconds() / 60.0
     )
@@ -190,7 +190,7 @@ def retention_matrix(events: pd.DataFrame, min_gap_minutes: int = 30) -> Dict[st
     cohort_sizes = visits.groupby("cohort_week").size()
     retention: Dict[str, Dict[int, float]] = {}
 
-    for (site_id, track_no), track_visits in visits.groupby(["site_id", "track_no"]):
+    for (site_id, track_id), track_visits in visits.groupby(["site_id", "track_id"]):
         track_visits = track_visits.sort_values("timestamp")
         if track_visits.empty:
             continue
