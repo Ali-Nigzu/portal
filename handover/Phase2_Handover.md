@@ -58,7 +58,7 @@
 
 ## Handover summary for the next Codex (Phase 3 kickoff)
 - **Phase 3 scope:** build and harden the shared `<ChartRenderer>` engine, unit-aware axis/series manager, and reusable card/KPI chrome that power the forthcoming Analytics Builder (Phase 4) and Dashboard (Phase 5). Existing pages remain untouched.
-- **Read first:** `ANALYTICS_DEVELOPMENT_PLAN.md` Phase 3 section (deliverables, architecture, done criteria) plus `frontend/src/analytics/schemas/charting.ts` for the frozen `ChartResult` contract.
+- **Read first:** `docs/dev_plan.md` Phase 3 section (deliverables, architecture, done criteria) plus `frontend/src/analytics/schemas/charting.ts` for the frozen `ChartResult` contract.
 - **Storybook + fixtures:**
   - Run `npm --prefix frontend run charts:preview` to inspect fixtures without a backend.
   - Load `golden_dashboard_live_flow.json`, `chartresult_phase2_example.json`, `golden_dwell_by_camera.json`, `golden_demographics_by_age.json`, and `golden_retention_heatmap.json` via the Storybook controls.

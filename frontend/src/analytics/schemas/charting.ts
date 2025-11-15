@@ -2,7 +2,7 @@
  * Canonical analytics contracts shared between the backend compiler and the
  * frontend renderer. The shapes mirror the JSON Schemas defined in
  * `shared/analytics/schemas` and the specification outlined in
- * `ANALYTICS_DEVELOPMENT_PLAN.md` Phase 1.
+ * `docs/dev_plan.md` Phase 1.
  */
 
 export type ChartDatasetId = "events";
