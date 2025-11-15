@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
@@ -15,6 +16,7 @@ from backend.app.analytics.dashboard_catalogue import (
     remove_widget_from_manifest,
 )
 from backend.app.analytics.contracts import validate_chart_spec
+from backend.fastapi_app import app
 
 
 _FIXTURE_PATH = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "examples" / "dashboard_manifest_client0.json"
@@ -23,6 +25,11 @@ _FIXTURE_PATH = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "
 def load_fixture() -> dict:
     with _FIXTURE_PATH.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+@pytest.fixture()
+def api_client() -> TestClient:
+    return TestClient(app)
 
 
 def test_dashboard_manifest_matches_fixture():
@@ -135,3 +142,13 @@ def test_dashboard_specs_validate(spec_id: str):
     # validate_chart_spec will raise on invalid spec
     validate_chart_spec(spec)
     assert spec["id"] == spec_id
+
+
+def test_manifest_endpoint_serves_default_manifest(api_client: TestClient):
+    response = api_client.get("/api/dashboards/dashboard-default", params={"orgId": "client0"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["orgId"] == "client0"
+    widget_kinds = {widget.get("kind") for widget in payload.get("widgets", [])}
+    assert "kpi" in widget_kinds
+    assert "chart" in widget_kinds

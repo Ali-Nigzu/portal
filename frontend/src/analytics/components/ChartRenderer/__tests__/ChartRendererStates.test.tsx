@@ -1,5 +1,6 @@
 import renderer from 'react-test-renderer';
 import type { ChartResult } from '../../../schemas/charting';
+import retentionHeatmap from '../../../examples/golden_retention_heatmap.json';
 import { ChartRenderer } from '../ChartRenderer';
 
 const baseTimeResult: ChartResult = {
@@ -71,5 +72,13 @@ describe('ChartRenderer high-level states', () => {
       (node) => node.props?.className === 'kpi-value',
     )[0];
     expect(kpiValue?.children?.join('')).toContain('2');
+  });
+
+  it('renders the retention heatmap fixture without error', () => {
+    let tree: ReturnType<typeof renderer.create> | undefined;
+    expect(() => {
+      tree = renderer.create(<ChartRenderer result={retentionHeatmap as ChartResult} height={360} />);
+    }).not.toThrow();
+    expect(JSON.stringify(tree!.toJSON())).not.toContain('Unable to render chart');
   });
 });

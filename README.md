@@ -1,262 +1,113 @@
 # camOS Business Intelligence Dashboard
 
-A modern React and FastAPI business intelligence dashboard that converts CCTV-derived data into actionable insights. The analytics stack now follows the LINE development plan with canonical ChartSpec/ChartResult contracts, deterministic BigQuery math, and strict per-client table isolation.
+A preset-first analytics experience for CCTV-derived metrics. The system is now driven entirely by `ChartSpec` → BigQuery → `ChartResult` contracts and exposes two production surfaces:
 
-> **Note**
-> The application intentionally focuses on analytics workflows only—no greeting or welcome-message feature is provided or required for its operation.
+* `/analytics` – a curated workspace where operators run vetted presets one at a time, tweak a guarded set of controls, and pin interesting results to the dashboard.
+* `/dashboard` – a manifest-driven KPI + chart layout that reads the same backend specs and renders via the shared `ChartRenderer` primitives.
 
-## 🏗️ Architecture
+There are no hidden "v2" routes. Everything described below is what ships in production today.
 
-**Frontend**: React SPA with TypeScript and a shared chart renderer that consumes `ChartResult` payloads produced by the backend.
-**Backend**: FastAPI REST API with modular design, HTTP Basic Auth, SHA-256 password hashing, and analytics services that translate `ChartSpec` requests into tested SQL templates.
-**Data**: Google BigQuery per-client datasets (`client0`, `client1`, …) that all implement the shared CCTV event schema. User metadata remains in JSON during the rebuild.
-**Deployment**: Docker multi-stage builds with Nginx, optimized for Google Cloud Run
+## Current Product Surfaces
 
-## 📐 Analytics Contracts & Fixtures
+### Analytics workspace (`/analytics`)
+* Left rail lists presets from `frontend/src/analytics/v2/presets/presetCatalogue.ts`.
+* Canvas renders a single `ChartResult` through `ChartRenderer` and surfaces validation/empty states.
+* Inspector controls:
+  * Time-range chips, split toggle, and metric selector mutate the preset spec **only when the transport is `live`**.
+  * When transport = `fixtures` (the default for local demo), those chips are visibly disabled and explain that live data is required for overrides. This avoids pretending that fixture data responds to the controls.
+* Pins go through `pinDashboardWidget` so the same spec appears on `/dashboard`.
 
-- Canonical `ChartSpec` and `ChartResult` JSON Schemas live in `shared/analytics/schemas` and are mirrored as TypeScript types in `frontend/src/analytics/schemas/charting.ts`.
-- Example payloads and golden ChartResults reside in `shared/analytics/examples`.
-- The deterministic fixture dataset (`shared/analytics/fixtures/events_golden_client0.csv`) powers both CI tests and BigQuery fixture tables. Regenerate the JSON outputs with:
+### Dashboard V2 (`/dashboard`)
+* Loads a manifest from `GET /api/dashboards/<dashboard_id>?orgId=<org>` (default `dashboard-default` + `client0`).
+* Default manifest always returns six KPI widgets and the Live Flow chart so `/dashboard` is never empty on a fresh install.
+* Widgets are rendered through the shared `Card` + `ChartRenderer` stack; validation errors appear in-card.
+* Users can unpin non-locked widgets; new pins originate from the analytics workspace.
 
-  ```bash
-  python backend/app/analytics/generate_expected.py
-  ```
+## Architecture snapshot
 
-- Schema validation tests (`backend/tests/test_chart_schemas.py`) guarantee that the examples remain aligned with the JSON Schemas.
-- See `docs/analytics/foundations.md` for the full Phase 1 summary, validated assumptions, and Phase 2 readiness plan.
+| Layer | Details |
+| --- | --- |
+| Frontend | React + TypeScript SPA. Shared `ChartRenderer` lives under `frontend/src/analytics/components/ChartRenderer`. Workspace + dashboard V2 code sits under `frontend/src/analytics/v2` and `frontend/src/dashboard/v2`. |
+| Backend | FastAPI app (`backend/fastapi_app.py`). `/analytics/run` compiles `ChartSpec` objects via `backend/app/analytics/*`, runs BigQuery queries, normalises into `ChartResult`, and caches responses. Dashboard manifests live in `backend/app/analytics/dashboard_catalogue.py` with an in-memory repository that seeds `client0`. |
+| Data | Google BigQuery per-organisation tables accessed via the service account in `sa.json`. Contracts and fixtures are stored under `shared/analytics`. |
 
-## 📋 Prerequisites
+## APIs & Fixtures
 
-- **Python 3.11+** (for backend)
-- **Node.js 20+** (for frontend)
-- **Docker** (for containerized deployment)
-- **Google Cloud CLI** (for Cloud Run deployment)
+* `ChartSpec`/`ChartResult` schemas live in `shared/analytics/schemas` (mirrored in `frontend/src/analytics/schemas/charting.ts`).
+* Golden `ChartResult` fixtures live in `frontend/src/analytics/examples/` (frontend) and `shared/analytics/examples/` (shared/backend tests).
+* Dashboard manifest endpoints:
+  * `GET /api/dashboards/{dashboard_id}?orgId=client0`
+  * `POST /api/dashboards/{dashboard_id}/widgets?orgId=client0`
+  * `DELETE /api/dashboards/{dashboard_id}/widgets/{widget_id}?orgId=client0`
+* The catch-all SPA route now sits **after** these manifest endpoints, so the frontend never receives the old `API or static route not found` 404 during normal operation.
 
-## 🚀 Local Development
-
-### Backend Setup
-
-1. **Navigate to backend directory**
-   ```bash
-   cd backend
-   ```
-
-2. **Install Python dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the FastAPI server**
-   ```bash
-   cd ..
-   python3 -m uvicorn backend.fastapi_app:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-   Backend API will be available at `http://localhost:8000`  
-   API documentation at `http://localhost:8000/docs`
-
-### Frontend Setup
-
-1. **Navigate to frontend directory**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install Node dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server**
-   ```bash
-   HOST=0.0.0.0 npm start
-   ```
-
-   Frontend will be available at `http://localhost:5000`
-
-### Running Both Services
-
-For development, run both commands in separate terminals:
-
-```bash
-# Terminal 1: Backend
-python3 -m uvicorn backend.fastapi_app:app --host 0.0.0.0 --port 8000 --reload
-
-# Terminal 2: Frontend  
-cd frontend && HOST=0.0.0.0 npm start
-```
-
-## 🐳 Docker Build & Testing
-
-### Build the Docker image
-
-```bash
-docker build -t camOS-analytics .
-```
-
-### Run locally with Docker
-
-```bash
-docker run -p 8080:8080 camOS-analytics
-```
-
-Application will be available at `http://localhost:8080`
-
-### Verify the build
-
-```bash
-# Check container health
-curl http://localhost:8080/health
-
-# Test API
-curl http://localhost:8080/api/
-```
-
-## ☁️ Google Cloud Run Deployment
+## Local Development
 
 ### Prerequisites
 
-1. **Install Google Cloud CLI**
-   ```bash
-   curl https://sdk.cloud.google.com | bash
-   exec -l $SHELL
-   ```
+* Python 3.11+
+* Node.js 20+
+* npm 9+
+* Google Cloud service account (`sa.json`) with access to the CCTV BigQuery datasets
 
-2. **Authenticate and configure**
-   ```bash
-   gcloud auth login
-   gcloud config set project YOUR_PROJECT_ID
-   ```
-
-### Deploy to Cloud Run
-
-**Option 1: Direct deployment from source**
-```bash
-gcloud run deploy camOS-analytics \
-  --source . \
-  --region us-central1 \
-  --port 8080 \
-  --allow-unauthenticated \
-  --memory 1Gi \
-  --cpu 1 \
-  --max-instances 10
-```
-
-**Option 2: Build and deploy from Docker image**
-```bash
-# Build and push to Google Container Registry
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/camOS-analytics
-
-# Deploy the image
-gcloud run deploy camOS-analytics \
-  --image gcr.io/YOUR_PROJECT_ID/camOS-analytics \
-  --region us-central1 \
-  --port 8080 \
-  --allow-unauthenticated \
-  --memory 1Gi \
-  --cpu 1
-```
-
-### Environment Variables (Optional)
-
-Set environment variables during deployment if needed:
+### Backend
 
 ```bash
-gcloud run deploy camOS-analytics \
-  --source . \
-  --region us-central1 \
-  --set-env-vars="NODE_ENV=production"
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r backend/requirements.txt
+python3 -m uvicorn backend.fastapi_app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### BigQuery configuration
+Set these environment variables if you need live data:
 
-Set the following runtime variables so the backend can reach BigQuery:
+```
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
+export BQ_PROJECT=nigzsu
+export BQ_DATASET=client_events
+export BQ_LOCATION=EU
+```
 
-- `BQ_PROJECT`: GCP project that owns the datasets (e.g. `nigzsu`).
-- `BQ_DATASET`: Logical dataset alias that maps to per-client tables (e.g. `client_events`).
-- `BQ_LOCATION`: Region for all queries (e.g. `EU`).
-- Provide credentials either by pointing `GOOGLE_APPLICATION_CREDENTIALS` to the downloaded `sa.json` or by exporting `BQ_SERVICE_ACCOUNT_JSON` with the raw key contents.
-
-The default user mapping resolves `client1` → `nigzsu.client_events.client0` and `client2` → `nigzsu.client_events.client1`. Adjust `backend/data/users.json` if you add more accounts. Each authenticated organisation must only ever hit its own table; no cross-client joins are performed.
-
-Caching defaults to an in-process TTL cache for development. Future Cloud Memorystore support will be toggled via:
+### Frontend
 
 ```bash
-export CACHE_BACKEND=redis
-export REDIS_URL=redis://HOST:PORT
+cd frontend
+npm install
+REACT_APP_API_URL=http://localhost:8000 npm start
 ```
 
-Leave `CACHE_BACKEND=local` until infrastructure is provisioned.
+* Fixture mode (default): do nothing and the workspace will load curated JSON responses.
+* Live mode: `REACT_APP_ANALYTICS_V2_TRANSPORT=live REACT_APP_API_URL=http://localhost:8000 npm start` to hit `/analytics/run`.
+* Dashboard + analytics v2 routes are already the defaults; no extra flags are required.
 
-Analytics data stays read-only in BigQuery. User metadata continues to live in local JSON files while the rebuild is in progress.
+### Pinning round-trip
 
-### Post-Deployment
+1. Run both servers.
+2. Visit `http://localhost:5000/analytics`, pick a preset, and hit **Pin to dashboard**.
+3. Visit `http://localhost:5000/dashboard`; the pinned widget appears inside the manifest returned from `GET /api/dashboards/dashboard-default?orgId=client0`.
 
-After deployment, Cloud Run will provide a URL like:
-```
-https://camOS-analytics-xxxxxx-uc.a.run.app
-```
+## Testing & QA
 
-Access your application at this URL.
+All four commands must pass before shipping:
 
-## 📁 Project Structure
-
-```
-camOS/
-├── backend/              # FastAPI backend
-│   ├── app/             # Core modules (auth, database, models)
-│   ├── data/            # JSON data files
-│   └── fastapi_app.py   # Main application entry
-├── frontend/            # React TypeScript frontend
-│   ├── src/            # Source code
-│   │   ├── components/ # Reusable components
-│   │   ├── pages/      # Page components
-│   │   └── styles/     # CSS styles
-│   └── package.json    # Frontend dependencies
-├── Dockerfile          # Multi-stage Docker build
-├── app.yaml           # Cloud Run configuration examples
-└── .gcloudignore     # Files to exclude from deployment
+```bash
+pytest
+npm --prefix frontend run lint
+CI=true npm --prefix frontend test
+npm --prefix frontend run build
 ```
 
-## 🔐 Default Credentials
+Manual smoke checklist (using fixture mode unless otherwise noted):
 
-**Admin Account:**
-- Username: `admin`
-- Password: `admin123`
+* `/dashboard` loads without errors and shows KPI widgets + Live Flow.
+* `/analytics` presets render:
+  * Live Flow chart with fixture data.
+  * Average Dwell by Camera chart.
+  * Retention Heatmap heatmap (no validation banner).
+* Switch `REACT_APP_ANALYTICS_V2_TRANSPORT=live` to exercise inspector controls; switch back to fixtures to confirm the controls visibly lock.
 
-**Client Account:**
-- Username: `client1`
-- Password: `client123`
+## Deployment Notes
 
-⚠️ **Change these credentials in production!**
-
-## 🔧 Configuration Files
-
-- **`backend/requirements.txt`** - Python dependencies
-- **`frontend/package.json`** - Node.js dependencies
-- **`frontend/.env`** - Development environment variables
-- **`frontend/.env.production`** - Production build configuration
-- **`Dockerfile`** - Container build instructions
-- **`.gcloudignore`** - Deployment exclusions
-
-## 📊 Key Features
-
-- **Role-Based Access Control** - Admin and client user roles
-- **Spec-driven Analytics** - Shared ChartSpec/ChartResult engine backed by tested SQL templates
-- **View Token System** - Secure data sharing with expiring tokens
-- **Export Functionality** - PDF, Excel, and CSV export options
-- **Advanced Filtering** - Date range and search capabilities
-- **Responsive Design** - Professional dark theme UI
-
-## 🛠️ Development Notes
-
-- Backend uses **Pandas** for fixture generation and BigQuery result normalisation
-- Frontend uses **ECharts** and **Recharts** for data visualization while migrating to the shared chart engine
-- Authentication uses **SHA-256** password hashing
-- Production deployment uses **Nginx** as reverse proxy
-- Multi-stage Docker build optimizes image size
-- Cloud Run auto-scales based on traffic
-
-## 📝 License
-
-Proprietary - All rights reserved
+* Dockerfile builds both frontend and backend. Run `docker build -t camos-analytics .` then `docker run -p 8080:8080 camos-analytics` for a local container.
+* Cloud Run deployment requires the same BigQuery env vars plus `GOOGLE_APPLICATION_CREDENTIALS` (or workload identity) for the analytics engine.
+* Static assets are mounted under `/static`, `/dashboard` and `/analytics` are handled by the SPA fallback, and manifest/analytics API routes are explicitly registered before the fallback to avoid the previous 404s.
+* Default organisation for demos remains `client0`; adjust `backend/data/users.json` if you need more accounts.

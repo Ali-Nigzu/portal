@@ -222,6 +222,19 @@
   background: rgba(98, 233, 165, 0.16);
 }
 
+.analyticsV2Chip--disabled,
+.analyticsV2Chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.analyticsV2ControlGroup__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #9aa4ba;
+}
+
 .analyticsV2Inspector__section h4 {
   margin: 0 0 4px;
   font-size: 0.9rem;

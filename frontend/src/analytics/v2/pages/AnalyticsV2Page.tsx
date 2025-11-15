@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FEATURE_FLAGS, ANALYTICS_V2_TRANSPORT } from '../../../config';
+import { FEATURE_FLAGS, ANALYTICS_V2_TRANSPORT, type AnalyticsTransportMode } from '../../../config';
 import ErrorBoundary from '../../../common/components/ErrorBoundary';
 import type { ChartSpec } from '../../schemas/charting';
 import { Card } from '../../components/Card';
@@ -47,11 +47,12 @@ const DASHBOARD_ID = 'dashboard-default';
 
 interface AnalyticsV2PageProps {
   credentials?: { username: string; password: string };
+  transportModeOverride?: AnalyticsTransportMode;
 }
 
 type PinStatus = 'idle' | 'loading' | 'success' | 'error';
 
-export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
+export const AnalyticsV2Page = ({ credentials, transportModeOverride }: AnalyticsV2PageProps) => {
   const presets = useMemo(() => listPresets(), []);
   const presetMap = useMemo(() => buildPresetMap(presets), [presets]);
   const defaultPresetId = presets[0]?.id ?? null;
@@ -61,7 +62,11 @@ export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
     [defaultPreset],
   );
   const orgId = useMemo(() => determineOrgId(credentials ?? {}), [credentials]);
-  const [state, dispatch] = useWorkspaceStore(defaultPreset, defaultOverrides, ANALYTICS_V2_TRANSPORT);
+  const [state, dispatch] = useWorkspaceStore(
+    defaultPreset,
+    defaultOverrides,
+    transportModeOverride ?? ANALYTICS_V2_TRANSPORT,
+  );
   const [runNonce, setRunNonce] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [legendVisibility, setLegendVisibility] = useState<SeriesVisibilityMap | null>(null);
@@ -213,6 +218,10 @@ export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
 
   const hasSeries = Boolean(state.result && state.result.series.length > 0);
   const showPartialWarning = Boolean(state.diagnostics?.partialData);
+  const presetControlsDisabled = state.transportMode === 'fixtures';
+  const presetControlsHint = presetControlsDisabled
+    ? 'Preset overrides are disabled while using fixture transport. Switch to live data to edit time ranges, splits, or metrics.'
+    : undefined;
 
   useWorkspaceIntegrityChecks({
     preset: activePreset,
@@ -323,6 +332,13 @@ export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
           <p className="analyticsV2Inspector__description">{activePreset.description}</p>
         </div>
       ) : null}
+      {presetControlsDisabled ? (
+        <div className="analyticsV2Inspector__section" role="note">
+          <div className="analyticsV2Inspector__badge analyticsV2Inspector__badge--status">
+            Fixture mode: preset controls locked
+          </div>
+        </div>
+      ) : null}
       {activePreset?.overrides.timeRangeOptions ? (
         <TimeControls
           options={activePreset.overrides.timeRangeOptions}
@@ -330,6 +346,8 @@ export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
           onSelect={(optionId) =>
             dispatch({ type: 'UPDATE_OVERRIDES', overrides: { timeRangeId: optionId } })
           }
+          disabled={presetControlsDisabled}
+          disabledReason={presetControlsHint}
         />
       ) : null}
       {activePreset?.overrides.splitToggle ? (
@@ -339,6 +357,8 @@ export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
           onToggle={(enabled) =>
             dispatch({ type: 'UPDATE_OVERRIDES', overrides: { splitEnabled: enabled } })
           }
+          disabled={presetControlsDisabled}
+          disabledReason={presetControlsHint}
         />
       ) : null}
       {activePreset?.overrides.measureOptions ? (
@@ -348,6 +368,8 @@ export const AnalyticsV2Page = ({ credentials }: AnalyticsV2PageProps) => {
           onSelect={(measureOptionId) =>
             dispatch({ type: 'UPDATE_OVERRIDES', overrides: { measureOptionId } })
           }
+          disabled={presetControlsDisabled}
+          disabledReason={presetControlsHint}
         />
       ) : null}
       {FEATURE_FLAGS.dashboardV2 ? (
