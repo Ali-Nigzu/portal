@@ -57,7 +57,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         searchParams.append('end_date', endDate.toISOString().split('T')[0]);
       }
       if (filter.event) {
-        searchParams.append('event_type', filter.event);
+        searchParams.append('event', filter.event);
       }
       if (filter.sex) {
         searchParams.append('sex', filter.sex);

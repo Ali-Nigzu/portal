@@ -63,12 +63,12 @@ _TIME_RANGE_WINDOWS: Dict[TimeRangeKey, Tuple[timedelta, str]] = {
 
 
 EVENT_TABLE_COLUMNS: Sequence[str] = (
-    "timestamp",
-    "event_type",
-    "index",
     "site_id",
     "cam_id",
-    "track_no",
+    "index",
+    "track_id",
+    "event",
+    "timestamp",
     "sex",
     "age_bucket",
 )
@@ -91,8 +91,8 @@ class QueryContext(BaseModel):
     camera_ids: Optional[List[str]] = None
     sexes: Optional[List[str]] = None
     age_buckets: Optional[List[str]] = None
-    event_types: Optional[List[int]] = None
-    track_like: Optional[str] = None
+    events: Optional[List[int]] = None
+    track_id_like: Optional[str] = None
     time_range: TimeRangeKey = TimeRangeKey.CUSTOM
     start: Optional[datetime] = Field(default=None)
     end: Optional[datetime] = Field(default=None)
@@ -110,7 +110,7 @@ class QueryContext(BaseModel):
             return None
         return [str(item) for item in value if item is not None]
 
-    @field_validator("event_types", mode="before")
+    @field_validator("events", mode="before")
     @classmethod
     def _normalise_int_sequence(cls, value: Optional[Iterable[int]]) -> Optional[List[int]]:
         if value is None:
@@ -170,8 +170,8 @@ class QueryContext(BaseModel):
             conditions.append({"field": "sex", "op": "in", "value": list(self.sexes)})
         if self.age_buckets:
             conditions.append({"field": "age_bucket", "op": "in", "value": list(self.age_buckets)})
-        if self.event_types:
-            conditions.append({"field": "event_type", "op": "in", "value": list(self.event_types)})
+        if self.events:
+            conditions.append({"field": "event", "op": "in", "value": list(self.events)})
         if conditions:
             filters.append({"logic": "AND", "conditions": conditions})
         return filters
@@ -285,10 +285,10 @@ def _build_event_summary_query(ctx: QueryContext) -> ContractQuery:
         "SELECT COUNT(*) AS total_records,"
         " MIN(timestamp) AS min_timestamp,"
         " MAX(timestamp) AS max_timestamp,"
-        " COUNTIF(event_type = 1) AS entrances,"
-        " COUNTIF(event_type = 0) AS exits"
+        " COUNTIF(event = 1) AS entrances,"
+        " COUNTIF(event = 0) AS exits"
         f" FROM `{ctx.table_name}`"
-        " WHERE timestamp BETWEEN @start_ts AND @end_ts"
+        " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
     )
     return ContractQuery(
@@ -310,7 +310,7 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
         f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
-        " WHERE timestamp BETWEEN @start_ts AND @end_ts"
+        " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
         " GROUP BY sex, age_bucket"
     )
@@ -332,11 +332,11 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
     params["limit"] = resolved_limit
     params["offset"] = resolved_offset
     sql = (
-        "SELECT track_no AS track_id, event_type, timestamp,"
+        "SELECT track_id, event, timestamp,"
         f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
         f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket"
         f" FROM `{ctx.table_name}`"
-        " WHERE timestamp BETWEEN @start_ts AND @end_ts"
+        " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
         " ORDER BY timestamp DESC"
         " LIMIT @limit OFFSET @offset"
@@ -374,12 +374,12 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
         clauses.append(
             f"COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@age_filters)"
         )
-    if ctx.event_types:
-        params["event_filters"] = ctx.event_types
-        clauses.append("event_type IN UNNEST(@event_filters)")
-    if ctx.track_like:
-        params["track_like"] = ctx.track_like
-        clauses.append("track_no LIKE @track_like")
+    if ctx.events:
+        params["event_filters"] = ctx.events
+        clauses.append("event IN UNNEST(@event_filters)")
+    if ctx.track_id_like:
+        params["track_like"] = ctx.track_id_like
+        clauses.append("track_id LIKE @track_like")
     if not clauses:
         return "", params
     return " AND " + " AND ".join(clauses), params

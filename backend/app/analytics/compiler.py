@@ -43,19 +43,19 @@ def _bucket_expression(bucket: str) -> str:
 
 def _bucket_trunc_expression(bucket: str) -> str:
     if bucket == "5_MIN":
-        return "TIMESTAMP_TRUNC(@start_ts, MINUTE, 5)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 5)"
     if bucket == "15_MIN":
-        return "TIMESTAMP_TRUNC(@start_ts, MINUTE, 15)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 15)"
     if bucket == "30_MIN":
-        return "TIMESTAMP_TRUNC(@start_ts, MINUTE, 30)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 30)"
     if bucket == "HOUR":
-        return "TIMESTAMP_TRUNC(@start_ts, HOUR)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), HOUR)"
     if bucket == "DAY":
-        return "TIMESTAMP_TRUNC(@start_ts, DAY)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), DAY)"
     if bucket == "WEEK":
-        return "TIMESTAMP_TRUNC(@start_ts, WEEK)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), WEEK)"
     if bucket == "MONTH":
-        return "TIMESTAMP_TRUNC(@start_ts, MONTH)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MONTH)"
     raise ValidationError(f"Unsupported bucket for truncation: {bucket}")
 
 
@@ -281,16 +281,16 @@ class SpecCompiler:
             f"""
             scoped AS (
                 SELECT
-                    timestamp,
-                    event_type,
-                    IFNULL(index, 0) AS event_index,
                     site_id,
                     cam_id,
-                    track_no,
+                    COALESCE(index, 0) AS index,
+                    track_id,
+                    event,
+                    timestamp,
                     COALESCE(sex, '{_UNKNOWN_DIMENSION_VALUE}') AS sex,
                     COALESCE(age_bucket, '{_UNKNOWN_DIMENSION_VALUE}') AS age_bucket
                 FROM `{table_name}`
-                WHERE timestamp BETWEEN @start_ts AND @end_ts{filters_sql}
+                WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts){filters_sql}
             )
             """
         ).strip()
@@ -307,8 +307,8 @@ class SpecCompiler:
             calendar AS (
                 WITH {WINDOW_BOUNDS_CTE} AS (
                     SELECT
-                        @start_ts AS window_start,
-                        @end_ts AS window_end,
+                        TIMESTAMP(@start_ts) AS window_start,
+                        TIMESTAMP(@end_ts) AS window_end,
                         {trunc_expr} AS aligned_start
                 )
                 SELECT
@@ -440,14 +440,14 @@ class SpecCompiler:
             {prefix}_ordered AS (
                 SELECT
                     timestamp,
-                    event_index,
+                    index,
                     site_id,
                     cam_id,
-                    event_type,
-                    IF(event_type = 1, 1, -1) AS delta,
-                    SUM(IF(event_type = 1, 1, -1)) OVER (
+                    event,
+                    IF(event = 1, 1, -1) AS delta,
+                    SUM(IF(event = 1, 1, -1)) OVER (
                         PARTITION BY site_id, cam_id
-                        ORDER BY timestamp, event_index
+                        ORDER BY timestamp, index
                     ) AS running_total
                 FROM scoped
             )
@@ -486,7 +486,7 @@ class SpecCompiler:
                     bounds.window_seconds,
                     COUNT(clamped.timestamp) AS event_count,
                     LOGICAL_OR(clamped.seeded_by_exit) AS seeded_by_exit,
-                    ANY_VALUE(clamped.occupancy ORDER BY clamped.timestamp DESC, clamped.event_index DESC) AS occupancy_end
+                    ANY_VALUE(clamped.occupancy ORDER BY clamped.timestamp DESC, clamped.index DESC) AS occupancy_end
                 FROM {prefix}_bucket_bounds AS bounds
                 LEFT JOIN {prefix}_clamped AS clamped
                     ON clamped.timestamp >= bounds.bucket_start
@@ -607,7 +607,7 @@ class SpecCompiler:
         if event_types:
             param_name = f"{measure_id}_event_types"
             params[param_name] = event_types
-            filter_sql = f" AND scoped.event_type IN UNNEST(@{param_name})"
+            filter_sql = f" AND scoped.event IN UNNEST(@{param_name})"
         counts_cte = dedent(
             f"""
             {prefix} AS (
@@ -642,14 +642,14 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    track_no,
+                    track_id,
                     timestamp AS entrance_ts,
                     ROW_NUMBER() OVER (
-                        PARTITION BY site_id, cam_id, track_no
+                        PARTITION BY site_id, cam_id, track_id
                         ORDER BY timestamp, index
                     ) AS rn
                 FROM scoped
-                WHERE event_type = 1
+                WHERE event = 1
             )
             """
         ).strip()
@@ -660,14 +660,14 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    track_no,
+                    track_id,
                     timestamp AS exit_ts,
                     ROW_NUMBER() OVER (
-                        PARTITION BY site_id, cam_id, track_no
+                        PARTITION BY site_id, cam_id, track_id
                         ORDER BY timestamp, index
                     ) AS rn
                 FROM scoped
-                WHERE event_type = 0
+                WHERE event = 0
             )
             """
         ).strip()
@@ -678,7 +678,7 @@ class SpecCompiler:
                 SELECT
                     e.site_id,
                     e.cam_id,
-                    e.track_no,
+                    e.track_id,
                     e.entrance_ts,
                     x.exit_ts,
                     TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, SECOND) / 60.0 AS dwell_minutes
@@ -686,7 +686,7 @@ class SpecCompiler:
                 LEFT JOIN {prefix}_exits AS x
                     ON e.site_id = x.site_id
                     AND e.cam_id = x.cam_id
-                    AND e.track_no = x.track_no
+                    AND e.track_id = x.track_id
                     AND e.rn = x.rn
                 WHERE x.exit_ts IS NOT NULL
                     AND TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, MINUTE) BETWEEN 0 AND 360
@@ -753,9 +753,9 @@ class SpecCompiler:
 
     def _render_retention_calendar(self, bucket: str) -> str:
         if bucket == "WEEK":
-            trunc_expr = "TIMESTAMP_TRUNC(@start_ts, WEEK(MONDAY))"
+            trunc_expr = "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), WEEK(MONDAY))"
         elif bucket == "MONTH":
-            trunc_expr = "TIMESTAMP_TRUNC(@start_ts, MONTH)"
+            trunc_expr = "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MONTH)"
         else:
             raise ValidationError(f"Unsupported retention bucket: {bucket}")
         interval_expr = _bucket_interval_expression(bucket)
@@ -766,7 +766,7 @@ class SpecCompiler:
                 WITH {RETENTION_WINDOW_CTE} AS (
                     SELECT
                         {trunc_expr} AS aligned_start,
-                        @end_ts AS window_end,
+                        TIMESTAMP(@end_ts) AS window_end,
                         {max_lag_expr} AS max_lag
                 )
                 SELECT
@@ -800,14 +800,14 @@ class SpecCompiler:
             {prefix}_entrances AS (
                 SELECT
                     site_id,
-                    track_no,
+                    track_id,
                     timestamp,
                     LAG(timestamp) OVER (
-                        PARTITION BY site_id, track_no
+                        PARTITION BY site_id, track_id
                         ORDER BY timestamp, index
                     ) AS prev_timestamp
                 FROM scoped
-                WHERE event_type = 1
+                WHERE event = 1
             )
             """
         ).strip()
@@ -817,7 +817,7 @@ class SpecCompiler:
             {prefix}_visits AS (
                 SELECT
                     site_id,
-                    track_no,
+                    track_id,
                     timestamp AS visit_ts,
                     {cohort_trunc} AS cohort_week
                 FROM {prefix}_entrances
@@ -832,7 +832,7 @@ class SpecCompiler:
             {prefix}_cohort_sizes AS (
                 SELECT
                     cohort_week,
-                    COUNT(DISTINCT track_no) AS cohort_size
+                    COUNT(DISTINCT track_id) AS cohort_size
                 FROM {prefix}_visits
                 GROUP BY cohort_week
             )
@@ -845,11 +845,11 @@ class SpecCompiler:
                 SELECT
                     first.cohort_week,
                     {lag_expression} AS lag_weeks,
-                    later.track_no
+                    later.track_id
                 FROM {prefix}_visits AS first
                 JOIN {prefix}_visits AS later
                     ON first.site_id = later.site_id
-                    AND first.track_no = later.track_no
+                    AND first.track_id = later.track_id
                     AND later.visit_ts >= first.visit_ts
             )
             """
@@ -861,7 +861,7 @@ class SpecCompiler:
                 SELECT
                     cohort_week,
                     lag_weeks,
-                    COUNT(DISTINCT track_no) AS returning
+                    COUNT(DISTINCT track_id) AS returning
                 FROM {prefix}_returns
                 WHERE lag_weeks BETWEEN 0 AND 52
                 GROUP BY cohort_week, lag_weeks

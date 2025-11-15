@@ -219,7 +219,7 @@ def build_demographics(events: pd.DataFrame) -> Dict:
             "timezone": "UTC",
             "summary": {
                 "total_events": int(events.shape[0]),
-                "unique_visitors": int(events[events["event_type"] == 1]["track_no"].nunique()),
+                "unique_visitors": int(events[events["event"] == 1]["track_id"].nunique()),
             },
         },
     }
