@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import base64
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -101,3 +104,39 @@ def test_analytics_run_endpoint_returns_unknown_org_for_missing_mapping(client, 
     assert response.status_code == 404
     payload = response.json()
     assert payload["detail"]["error"] == "unknown_org"
+
+
+def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
+    http_client, calls = client
+
+    fake_users = {
+        "client1": {
+            "password": "secret",
+            "role": "client",
+            "name": "Test Client 1",
+            "table_name": "nigzsu.demodata.client0",
+        }
+    }
+
+    monkeypatch.setattr("backend.fastapi_app.load_users", lambda: fake_users)
+    monkeypatch.setattr("backend.fastapi_app.verify_password", lambda plain, stored: plain == stored)
+    monkeypatch.setattr("backend.fastapi_app.save_users", lambda users: None)
+
+    captured: dict[str, str] = {}
+
+    def fake_resolve(org_id: str) -> str:
+        captured["org_id"] = org_id
+        return "project.dataset.client0"
+
+    monkeypatch.setattr("backend.fastapi_app._resolve_table_for_org", fake_resolve)
+
+    auth_header = "Basic " + base64.b64encode(b"client1:secret").decode("ascii")
+    response = http_client.post(
+        "/api/analytics/run",
+        json={"spec": _build_spec()},
+        headers={"Authorization": auth_header},
+    )
+
+    assert response.status_code == 200
+    assert captured.get("org_id") == "client0"
+    assert calls["count"] == 1

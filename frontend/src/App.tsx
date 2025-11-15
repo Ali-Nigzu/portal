@@ -14,9 +14,11 @@ import { GlobalControlsProvider } from './context/GlobalControlsContext';
 import { EXPERIENCE_GATES } from './config';
 import AnalyticsV2Page from './analytics/v2/pages/AnalyticsV2Page';
 import DashboardV2Page from './dashboard/v2/pages/DashboardV2Page';
+import { Credentials } from './types/credentials';
+import { deriveOrgIdFromTableName, determineOrgId } from './utils/org';
 
 // Login Component
-const Login: React.FC<{onLogin: (username: string, password: string) => void}> = ({ onLogin }) => {
+const Login: React.FC<{onLogin: (credentials: Credentials) => void}> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
@@ -37,8 +39,16 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
       });
 
       if (response.ok) {
-        await response.json();
-        onLogin(username, password);
+        const data = await response.json();
+        const orgFromResponse =
+          data?.user?.orgId ??
+          data?.user?.org_id ??
+          deriveOrgIdFromTableName(data?.user?.table_name);
+        onLogin({
+          username,
+          password,
+          orgId: orgFromResponse ?? determineOrgId({ username }),
+        });
       } else if (response.status === 401) {
         setError('Invalid username or password');
       } else {
@@ -125,7 +135,7 @@ const Login: React.FC<{onLogin: (username: string, password: string) => void}> =
 // Main App Component  
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState<Credentials>({ username: '', password: '' });
   const [userRole, setUserRole] = useState<'client' | 'admin'>('client');
 
   // Restore session from sessionStorage on app load
@@ -133,8 +143,9 @@ const App: React.FC = () => {
     const savedCredentials = sessionStorage.getItem('camOS_credentials');
     if (savedCredentials) {
       try {
-        const { username, password } = JSON.parse(savedCredentials);
-        setCredentials({ username, password });
+        const { username, password, orgId } = JSON.parse(savedCredentials);
+        const resolvedOrgId = orgId ?? determineOrgId({ username });
+        setCredentials({ username, password, orgId: resolvedOrgId });
         setUserRole(username === 'admin' ? 'admin' : 'client');
         setIsLoggedIn(true);
       } catch (error) {
@@ -144,13 +155,17 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleLogin = (username: string, password: string) => {
-    setCredentials({ username, password });
-    setUserRole(username === 'admin' ? 'admin' : 'client');
+  const handleLogin = (nextCreds: Credentials) => {
+    const resolvedOrgId = nextCreds.orgId ?? determineOrgId({ username: nextCreds.username });
+    setCredentials({ ...nextCreds, orgId: resolvedOrgId });
+    setUserRole(nextCreds.username === 'admin' ? 'admin' : 'client');
     setIsLoggedIn(true);
-    
+
     // Persist credentials to sessionStorage
-    sessionStorage.setItem('camOS_credentials', JSON.stringify({ username, password }));
+    sessionStorage.setItem(
+      'camOS_credentials',
+      JSON.stringify({ ...nextCreds, orgId: resolvedOrgId })
+    );
   };
 
   const handleLogout = () => {
@@ -170,7 +185,7 @@ const App: React.FC = () => {
     } else {
       // Normal logout - clear state
       setIsLoggedIn(false);
-      setCredentials({ username: '', password: '' });
+      setCredentials({ username: '', password: '', orgId: undefined });
       setUserRole('client');
     }
   };

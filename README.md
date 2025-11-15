@@ -7,7 +7,7 @@ results they care about.
 
 ## What this project does today
 
-- FastAPI backend authenticates users, executes ChartSpecs against BigQuery, and serves dashboard manifest APIs.
+- FastAPI backend authenticates users, maps each login to its canonical organisation/table, executes ChartSpecs against BigQuery, and serves dashboard manifest APIs.
 - ChartSpec/ChartResult schemas live in `shared/analytics` with mirrored TypeScript types so backend and frontend stay aligned.
 - Analytics engine compiles presets into parameterised SQL, normalises results, validates payloads, and caches responses.
 - Dashboard V2 ships with a seeded manifest (KPI band + Live Flow) plus pin/unpin flows that hydrate inline specs for the UI.
@@ -74,7 +74,7 @@ Set these environment variables if you need live data:
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
 export BQ_PROJECT=nigzsu
-export BQ_DATASET=client_events
+export BQ_DATASET=demodata
 export BQ_LOCATION=EU
 ```
 
@@ -114,6 +114,7 @@ Manual smoke checklist (live transport by default):
   - Live Flow clearly changes span and values between 6h, 24h, and 7d.
   - Average Dwell by Camera updates dwell minutes between 7d and 30d.
   - Retention Heatmap adds/removes cohort columns between 12w and 24w while passing validation.
+- Logging in as **client1/client123** should drive org `client0` (default dataset) while **client2** maps to `client1`; verify both profiles load `/dashboard` and `/analytics` without BigQuery errors.
 - For fixture-only demos, set `REACT_APP_ANALYTICS_V2_TRANSPORT=fixtures`; the inspector chips will surface the locked-state warning.
 
 ## Deployment Notes

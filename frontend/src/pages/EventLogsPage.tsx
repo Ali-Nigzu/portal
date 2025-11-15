@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { API_ENDPOINTS } from '../config';
+import { Credentials } from '../types/credentials';
 
 interface EventData {
   index: number;
@@ -16,7 +17,7 @@ interface EventData {
 }
 
 interface EventLogsPageProps {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
 }
 
 const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {

@@ -50,6 +50,7 @@
 
 - Exposed `POST /api/analytics/run` (with legacy `/analytics/run` alias) in `backend/fastapi_app.py`, wiring the `AnalyticsEngine` to resolve organisation tables via `backend/app/analytics/org_config.py`, execute ChartSpecs, and return validated ChartResults with caching.
 - Updated analytics workspace and dashboard transports to default to live mode, posting `{ spec, orgId }` payloads and rerunning when inspector controls change.
+- Shared helpers now derive organisation IDs from login responses, usernames, or table names so that `client1` → `client0`, `client2` → `client1`, and `admin` → `client0` consistently across backend auth, dashboard manifests, and workspace transports.
 - Added contract-level tests covering transport selection, workspace override reducers, and dashboard widget loaders; refreshed documentation to spell out live vs fixture toggles and manual QA steps.
 
 ### Phase 8 – Data Contract + BigQuery Alignment

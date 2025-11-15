@@ -27,7 +27,8 @@ import { MeasureControls } from '../controls/MeasureControls';
 import { SeriesLegendSummary } from '../components/SeriesLegendSummary';
 import { useWorkspaceIntegrityChecks } from '../utils/useWorkspaceIntegrityChecks';
 import { pinDashboardWidget } from '../../../dashboard/v2/transport/mutateDashboardManifest';
-import { determineOrgId } from '../../../dashboard/v2/utils/determineOrgId';
+import { determineOrgId } from '../../../utils/org';
+import { Credentials } from '../../../types/credentials';
 
 const buildPresetMap = (presets: PresetDefinition[]): Record<string, PresetDefinition> => {
   return presets.reduce<Record<string, PresetDefinition>>((acc, preset) => {
@@ -46,7 +47,7 @@ const buildTransportIssues = (message: string, code?: string): ValidationIssue[]
 const DASHBOARD_ID = 'dashboard-default';
 
 interface AnalyticsV2PageProps {
-  credentials?: { username: string; password: string };
+  credentials?: Credentials;
   transportModeOverride?: AnalyticsTransportMode;
 }
 

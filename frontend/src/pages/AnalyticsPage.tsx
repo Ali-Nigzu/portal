@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '../config';
 import { ChartData } from '../utils/dataProcessing';
 import { IntelligencePayload } from '../types/analytics';
 import { InteractionProvider } from '../context/InteractionContext';
+import { Credentials } from '../types/credentials';
 
 interface ApiResponse {
   data: ChartData[];
@@ -20,7 +21,7 @@ interface ApiResponse {
 }
 
 interface AnalyticsPageProps {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
 }
 
 const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {

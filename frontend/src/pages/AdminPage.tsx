@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
+import { Credentials } from '../types/credentials';
 
 interface User {
   username: string;
@@ -43,7 +44,7 @@ interface DataSource {
 }
 
 interface AdminPageProps {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {

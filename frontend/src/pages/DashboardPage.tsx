@@ -17,6 +17,7 @@ import { useGlobalControls } from '../context/GlobalControlsContext';
 import { filterDataByControls, getDateRangeFromPreset, deriveComparisonRange } from '../utils/rangeUtils';
 import { CardControlState } from '../hooks/useCardControls';
 import { InteractionProvider } from '../context/InteractionContext';
+import { Credentials } from '../types/credentials';
 
 interface ApiResponse {
   data: ChartData[];
@@ -33,7 +34,7 @@ interface ApiResponse {
 }
 
 interface DashboardPageProps {
-  credentials: { username: string; password: string };
+  credentials: Credentials;
 }
 
 const buildGlobalCardState = (global: ReturnType<typeof useGlobalControls>): CardControlState => ({

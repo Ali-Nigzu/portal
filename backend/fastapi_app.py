@@ -192,12 +192,15 @@ async def login(login_request: LoginRequest):
         
         users[username]['last_login'] = datetime.now().isoformat()
         save_users(users)
-        
+
+        org_id = _org_id_for_user_record(username, user_data)
         safe_user = {
             'username': username,
             'role': user_data['role'],
             'name': user_data['name'],
-            'table_name': user_data.get('table_name', '')
+            'table_name': user_data.get('table_name', ''),
+            'orgId': org_id,
+            'org_id': org_id,
         }
         
         return LoginResponse(
@@ -271,13 +274,10 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
         if client_id not in users:
             raise HTTPException(status_code=404, detail="Client not found")
 
-        try:
-            table_name = resolve_table_for_org(client_id)
-        except OrganisationNotConfiguredError:
-            raise HTTPException(status_code=404, detail="Client not found")
-        except BigQueryConfigurationError as exc:
-            raise HTTPException(status_code=500, detail=str(exc))
-        return client_id, table_name
+        user_record = users[client_id]
+        org_id = _org_id_for_user_record(client_id, user_record)
+        table_name = _resolve_table_for_org(org_id)
+        return org_id, table_name
 
     else:
         auth_header = request.headers.get('Authorization')
@@ -298,13 +298,10 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                     detail="Invalid credentials"
                 )
 
-            try:
-                table_name = resolve_table_for_org(username)
-            except OrganisationNotConfiguredError:
-                raise HTTPException(status_code=400, detail="No table configured for this user")
-            except BigQueryConfigurationError as exc:
-                raise HTTPException(status_code=500, detail=str(exc))
-            return username, table_name
+            user_record = users[username]
+            org_id = _org_id_for_user_record(username, user_record)
+            table_name = _resolve_table_for_org(org_id)
+            return org_id, table_name
         except HTTPException:
             raise
         except Exception as e:
@@ -338,6 +335,31 @@ def _resolve_table_for_org(org_id: str) -> str:
         )
     except BigQueryConfigurationError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+def _derive_org_id_from_table_name(table_name: Optional[str]) -> Optional[str]:
+    if not table_name:
+        return None
+    slug = table_name.split(".")[-1].strip()
+    return slug or None
+
+
+_USERNAME_ORG_OVERRIDES = {
+    "admin": "client0",
+}
+
+
+def _org_id_for_user_record(username: str, user_record: Dict[str, Any]) -> str:
+    explicit = user_record.get("orgId") or user_record.get("org_id")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+    derived = _derive_org_id_from_table_name(user_record.get("table_name"))
+    if derived:
+        return derived
+    override = _USERNAME_ORG_OVERRIDES.get(username)
+    if override:
+        return override
+    return username
 
 
 def _resolve_analytics_context(
