@@ -96,16 +96,54 @@ describe('AnalyticsV2Page', () => {
     const pinButtons = tree!
       .root
       .findAll((node: unknown) => {
-        const instance = node as { type: unknown; children?: unknown[] };
-        return instance.type === 'button' && instance.children?.includes('Pin to dashboard');
+        const instance = node as { type?: unknown; props?: { className?: string } };
+        return instance.type === 'button' && Boolean(instance.props?.className?.includes('analyticsV2Chip'));
       });
-    expect(pinButtons).toHaveLength(1);
+    expect(controlButtons.length).toBeGreaterThan(0);
+    controlButtons.forEach((button) => {
+      expect(button.props.disabled).toBe(true);
+    });
+  });
 
-    await act(async () => {
-      await pinButtons[0].props.onClick();
+  it('re-runs the preset when a live time range is selected', async () => {
+    const chart = timeSeriesResult as unknown as ChartResult;
+    mockRunAnalytics.mockResolvedValue({
+      result: chart,
+      spec: { id: 'spec', chartType: 'composed_time' } as unknown as AnalyticsRunResponse['spec'],
+      specHash: 'hash-3',
+      mode: 'live',
+      diagnostics: { partialData: false },
     });
 
-    expect(mockPinDashboardWidget).toHaveBeenCalled();
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <AnalyticsV2PageBase
+          credentials={{ username: 'client0', password: 'secret' }}
+          transportModeOverride="live"
+        />,
+      );
+    });
+    await flushEffects();
+    expect(mockRunAnalytics).toHaveBeenCalledTimes(1);
+
+    const timeRangeButton = tree!
+      .root
+      .find((node: unknown) => {
+        const instance = node as { type?: unknown; props?: { children?: unknown } };
+        return (
+          instance.type === 'button' &&
+          Array.isArray(instance.props?.children) &&
+          instance.props.children.includes('Last 7 days')
+        );
+      });
+
+    await act(async () => {
+      timeRangeButton.props.onClick();
+    });
+    await flushEffects();
+
+    expect(mockRunAnalytics).toHaveBeenCalledTimes(2);
   });
 
   it('disables preset controls when transport mode is fixtures', async () => {
