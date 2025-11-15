@@ -486,7 +486,7 @@ class SpecCompiler:
                     bounds.window_seconds,
                     COUNT(clamped.timestamp) AS event_count,
                     LOGICAL_OR(clamped.seeded_by_exit) AS seeded_by_exit,
-                    ANY_VALUE(clamped.occupancy ORDER BY clamped.timestamp DESC, clamped.index DESC) AS occupancy_end
+                    ARRAY_AGG(clamped.occupancy ORDER BY clamped.timestamp DESC, clamped.index DESC)[SAFE_OFFSET(0)] AS occupancy_end
                 FROM {prefix}_bucket_bounds AS bounds
                 LEFT JOIN {prefix}_clamped AS clamped
                     ON clamped.timestamp >= bounds.bucket_start

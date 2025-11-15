@@ -136,11 +136,43 @@ class AnalyticsEngine:
 
     def _normalise(self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame) -> Dict[str, Any]:
         chart_type = spec["chartType"]
+        if chart_type == "single_value":
+            return self._normalise_single_value(spec, compiled, frame)
         if chart_type == "composed_time":
             return self._normalise_time_series(spec, compiled, frame)
         if chart_type in {"heatmap", "retention"}:
             return self._normalise_heatmap(spec, compiled, frame)
         raise UnsupportedChartExecution(chart_type)
+
+    def _normalise_single_value(
+        self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame
+    ) -> Dict[str, Any]:
+        measures = compiled.measures
+        if len(measures) != 1:
+            raise UnsupportedChartExecution("single_value requires exactly one measure")
+
+        base = self._normalise_time_series(spec, compiled, frame)
+        primary_measure_id = next(iter(measures.keys()))
+
+        for series in base["series"]:
+            series["geometry"] = "metric"
+            series.pop("axis", None)
+            if series.get("data"):
+                for point in series["data"]:
+                    if "y" in point and "value" not in point:
+                        point["value"] = point["y"]
+
+        primary_series = next((s for s in base["series"] if s.get("id") == primary_measure_id), base["series"][0])
+        numeric_points = [
+            float(point.get("value"))
+            for point in primary_series.get("data", [])
+            if point.get("value") is not None
+        ]
+        if len(numeric_points) >= 2 and numeric_points[-2] != 0:
+            delta = (numeric_points[-1] - numeric_points[-2]) / abs(numeric_points[-2])
+            primary_series.setdefault("summary", {})["delta"] = delta
+
+        return {**base, "chartType": "single_value"}
 
     def _normalise_time_series(
         self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame
