@@ -771,7 +771,8 @@ class SpecCompiler:
                 )
                 SELECT
                     cohort_start AS bucket_start,
-                    lag_index AS lag_weeks
+                    lag_index AS lag_weeks,
+                    window_end
                 FROM {RETENTION_WINDOW_CTE},
                 UNNEST(
                     GENERATE_TIMESTAMP_ARRAY(

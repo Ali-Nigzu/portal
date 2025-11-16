@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+import re
 
 import pytest
 
 from backend.app.analytics.compiler import CompilerContext, SpecCompiler
 from backend.app.analytics.dashboard_catalogue import DASHBOARD_SPEC_CATALOGUE
 from backend.app.analytics.data_contract import (
+    ALL_TIME_START,
     Dimension,
     Metric,
     QueryContext,
+    TimeRangeKey,
     compile_contract_query,
 )
 
@@ -112,3 +115,15 @@ def test_calendar_uses_timestamp_bounds() -> None:
     assert "TIMESTAMP(@start_ts)" in plan.sql
     assert "TIMESTAMP(@end_ts)" in plan.sql
     assert re.search(r"GENERATE_TIMESTAMP_ARRAY\([^,]+,\s*'[^']+'", plan.sql) is None
+
+
+def test_all_time_range_defaults_to_epoch_start() -> None:
+    ctx = QueryContext(
+        org_id="client0",
+        table_name="project.dataset.client0",
+        time_range=TimeRangeKey.ALL_TIME,
+    )
+    plan = compile_contract_query(Metric.ACTIVITY, [Dimension.TIME], ctx)
+    assert plan.params["start_ts"] == ALL_TIME_START.isoformat()
+    assert plan.params["end_ts"] >= ALL_TIME_START.isoformat()
+    assert plan.params["start_ts"] < plan.params["end_ts"]

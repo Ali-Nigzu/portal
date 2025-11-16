@@ -36,8 +36,9 @@ export interface DashboardWidgetLayout {
 export interface DashboardTimeRangeOption {
   id: string;
   label: string;
-  durationMinutes: number;
+  durationMinutes?: number | null;
   bucket?: TimeBucket;
+  allTime?: boolean;
 }
 
 export interface DashboardTimeControls {

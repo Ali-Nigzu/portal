@@ -34,8 +34,13 @@ const buildTimeWindow = (
   if (!option) {
     return template;
   }
+  if (!option.allTime && !option.duration) {
+    return template;
+  }
   const to = new Date(anchor.getTime());
-  const from = subtractDuration(to, option.duration.amount, option.duration.unit);
+  const from = option.allTime
+    ? new Date(0)
+    : subtractDuration(to, option.duration!.amount, option.duration!.unit);
   return {
     ...template,
     from: from.toISOString(),

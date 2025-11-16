@@ -52,14 +52,18 @@ class TimeRangeKey(str, Enum):
     LAST_24_HOURS = "last_24_hours"
     LAST_7_DAYS = "last_7_days"
     LAST_30_DAYS = "last_30_days"
+    ALL_TIME = "all_time"
     CUSTOM = "custom"
 
 
-_TIME_RANGE_WINDOWS: Dict[TimeRangeKey, Tuple[timedelta, str]] = {
+_TIME_RANGE_WINDOWS: Dict[TimeRangeKey, Tuple[Optional[timedelta], str]] = {
     TimeRangeKey.LAST_24_HOURS: (timedelta(hours=24), "HOUR"),
     TimeRangeKey.LAST_7_DAYS: (timedelta(days=7), "DAY"),
     TimeRangeKey.LAST_30_DAYS: (timedelta(days=30), "DAY"),
+    TimeRangeKey.ALL_TIME: (None, "DAY"),
 }
+
+ALL_TIME_START = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 EVENT_TABLE_COLUMNS: Sequence[str] = (
@@ -124,7 +128,10 @@ class QueryContext(BaseModel):
                 duration, default_bucket = _TIME_RANGE_WINDOWS[values.time_range]
                 now = datetime.now(tz=UTC)
                 values.end = now
-                values.start = now - duration
+                if duration is None:
+                    values.start = ALL_TIME_START
+                else:
+                    values.start = now - duration
                 if values.bucket is None:
                     values.bucket = default_bucket
         if values.start is not None and values.end is not None:

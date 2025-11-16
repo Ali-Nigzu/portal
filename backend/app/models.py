@@ -173,8 +173,9 @@ class DashboardWidget(BaseModel):
 class DashboardTimeRangeOption(BaseModel):
     id: str
     label: str
-    durationMinutes: int
+    durationMinutes: Optional[int] = None
     bucket: Optional[str] = None
+    allTime: Optional[bool] = False
 
 
 class DashboardTimeControls(BaseModel):
