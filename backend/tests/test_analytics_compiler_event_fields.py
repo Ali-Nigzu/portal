@@ -127,3 +127,36 @@ def test_all_time_range_defaults_to_epoch_start() -> None:
     assert plan.params["start_ts"] == ALL_TIME_START.isoformat()
     assert plan.params["end_ts"] >= ALL_TIME_START.isoformat()
     assert plan.params["start_ts"] < plan.params["end_ts"]
+
+
+def test_time_series_calendar_never_uses_week_interval_for_timestamps() -> None:
+    ctx = QueryContext(
+        org_id="client0",
+        table_name="project.dataset.client0",
+        start=datetime(2024, 1, 1, tzinfo=UTC),
+        end=datetime(2024, 6, 1, tzinfo=UTC),
+        bucket="WEEK",
+    )
+    plan = compile_contract_query(Metric.ACTIVITY, [Dimension.TIME], ctx)
+    assert "GENERATE_TIMESTAMP_ARRAY" in plan.sql
+    assert "INTERVAL 1 WEEK" not in plan.sql
+    assert "INTERVAL 7 DAY" in plan.sql
+
+
+def test_kpi_compilation_omits_calendar_generation() -> None:
+    compiler = SpecCompiler()
+    spec = {
+        "id": "kpi.test",
+        "dataset": "events",
+        "chartType": "single_value",
+        "measures": [{"id": "activity_total", "aggregation": "count"}],
+        "dimensions": [{"id": "timestamp", "column": "timestamp"}],
+        "timeWindow": {
+            "from": "2024-01-01T00:00:00Z",
+            "to": "2024-01-02T00:00:00Z",
+        },
+        "filters": [],
+    }
+    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
+    assert "GENERATE_TIMESTAMP_ARRAY" not in compiled.sql
+    assert "calendar AS" not in compiled.sql
