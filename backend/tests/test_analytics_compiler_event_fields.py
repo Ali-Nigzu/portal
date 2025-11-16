@@ -8,7 +8,7 @@ import re
 
 import pytest
 
-from backend.app.analytics.compiler import CompilerContext, SpecCompiler
+from backend.app.analytics.compiler import CompilerContext, RETENTION_WINDOW_CTE, SpecCompiler
 from backend.app.analytics.dashboard_catalogue import DASHBOARD_SPEC_CATALOGUE
 from backend.app.analytics.data_contract import (
     ALL_TIME_START,
@@ -182,7 +182,24 @@ def test_retention_calendar_exports_window_bounds() -> None:
     ctes = _extract_ctes(plan.sql)
     assert "retention_calendar" in ctes
     assert "window_end" in ctes["retention_calendar"]
-    assert "TIMESTAMP_SUB(window_end" in ctes["retention_calendar"]
+    assert "TIMESTAMP_SUB(bounds.window_end" in ctes["retention_calendar"]
+
+
+def test_retention_window_bounds_exports_limits() -> None:
+    ctx = _context(bucket="WEEK")
+    plan = compile_contract_query(
+        Metric.RETENTION_RATE,
+        [Dimension.TIME, Dimension.RETENTION_LAG],
+        ctx,
+    )
+    ctes = _extract_ctes(plan.sql)
+    assert RETENTION_WINDOW_CTE in ctes
+    window_bounds = ctes[RETENTION_WINDOW_CTE]
+    assert "window_start" in window_bounds
+    assert "window_end" in window_bounds
+    calendar_body = ctes.get("retention_calendar", "")
+    assert "FROM retention_window_bounds" in calendar_body
+    assert "bounds.window_end" in calendar_body
 
 
 def test_dwell_all_time_grouping_avoids_calendar_cross_join() -> None:
@@ -194,3 +211,16 @@ def test_dwell_all_time_grouping_avoids_calendar_cross_join() -> None:
     plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME, Dimension.CAMERA], ctx)
     assert "calendar AS" not in plan.sql
     assert "GENERATE_TIMESTAMP_ARRAY" not in plan.sql
+
+
+def test_dwell_bucketed_selects_do_not_reference_raw_entrance_ts() -> None:
+    ctx = QueryContext(
+        org_id="client0",
+        table_name="project.dataset.client0",
+        time_range=TimeRangeKey.ALL_TIME,
+    )
+    plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME, Dimension.CAMERA], ctx)
+    ctes = _extract_ctes(plan.sql)
+    bucketed_body = ctes["avg_dwell_dwell_bucketed"]
+    outer_select = bucketed_body.split("FROM", 1)[0]
+    assert "entrance_ts" not in outer_select

@@ -105,10 +105,10 @@ def _retention_max_lag_expr(bucket: str) -> str:
     if bucket == "WEEK":
         seconds = _BUCKET_SECONDS["WEEK"]
         return (
-            f"CAST(DIV(TIMESTAMP_DIFF(window_end, aligned_start, SECOND) + {seconds} - 1, {seconds}) AS INT64)"
+            f"CAST(DIV(TIMESTAMP_DIFF(window_end, window_start, SECOND) + {seconds} - 1, {seconds}) AS INT64)"
         )
     if bucket == "MONTH":
-        return "CAST(DATE_DIFF(DATE(window_end), DATE(aligned_start), MONTH) AS INT64)"
+        return "CAST(DATE_DIFF(DATE(window_end), DATE(window_start), MONTH) AS INT64)"
     raise ValidationError(f"Unsupported retention bucket: {bucket}")
 
 
@@ -337,10 +337,8 @@ class SpecCompiler:
 
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
-        base_ctes = [
-            self._render_scoped(context.table_name, filters_sql),
-            self._render_retention_calendar(bucket),
-        ]
+        base_ctes = [self._render_scoped(context.table_name, filters_sql)]
+        base_ctes.extend(self._render_retention_calendar(bucket))
 
         for measure in measures:
             aggregation = measure["aggregation"]
@@ -1123,20 +1121,23 @@ class SpecCompiler:
                 f"""
                 {prefix}_bucketed AS (
                     SELECT
-                        {bucket_expr} AS bucket_start,
-                        TIMESTAMP_DIFF(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), {bucket_expr}, SECOND) AS bucket_seconds,
+                        bucket_start,
+                        TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
                         GREATEST(
                             TIMESTAMP_DIFF(
-                                LEAST(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), TIMESTAMP(@end_ts)),
-                                GREATEST({bucket_expr}, TIMESTAMP(@start_ts)),
+                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                GREATEST(bucket_start, TIMESTAMP(@start_ts)),
                                 SECOND
                             ),
                             0
                         ) AS window_seconds,
-                        COUNT(sessions.dwell_minutes) AS session_count,
-                        AVG(sessions.dwell_minutes) AS dwell_mean,
-                        APPROX_QUANTILES(sessions.dwell_minutes, 101)[OFFSET(90)] AS dwell_p90
-                    FROM {prefix}_sessions AS sessions
+                        COUNT(dwell_minutes) AS session_count,
+                        AVG(dwell_minutes) AS dwell_mean,
+                        APPROX_QUANTILES(dwell_minutes, 101)[OFFSET(90)] AS dwell_p90
+                    FROM (
+                        SELECT {bucket_expr} AS bucket_start, dwell_minutes
+                        FROM {prefix}_sessions AS sessions
+                    )
                     GROUP BY bucket_start
                     ORDER BY bucket_start
                 )
@@ -1180,7 +1181,7 @@ class SpecCompiler:
             select_sql=select_sql,
         )
 
-    def _render_retention_calendar(self, bucket: str) -> str:
+    def _render_retention_calendar(self, bucket: str) -> List[str]:
         if bucket == "WEEK":
             trunc_expr = "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), WEEK(MONDAY))"
         elif bucket == "MONTH":
@@ -1194,34 +1195,38 @@ class SpecCompiler:
             if bucket == "WEEK"
             else f"INTERVAL {_RETENTION_MAX_COHORTS[bucket]} MONTH"
         )
-        calendar = dedent(
+        window_bounds = dedent(
             f"""
-            retention_calendar AS (
-                WITH {RETENTION_WINDOW_CTE} AS (
-                    SELECT
-                        {trunc_expr} AS aligned_start,
-                        TIMESTAMP(@end_ts) AS window_end,
-                        {max_lag_expr} AS max_lag
-                )
+            {RETENTION_WINDOW_CTE} AS (
                 SELECT
-                    cohort_start AS bucket_start,
-                    lag_index AS lag_weeks,
-                    window_end
-                FROM {RETENTION_WINDOW_CTE},
-                UNNEST(
-                    GENERATE_TIMESTAMP_ARRAY(
-                        aligned_start,
-                        window_end,
-                        {interval_expr}
-                    )
-                    ) AS cohort_start,
-                    UNNEST(GENERATE_ARRAY(0, GREATEST(max_lag, 0))) AS lag_index
-                WHERE cohort_start < window_end
-                    AND cohort_start >= TIMESTAMP_SUB(window_end, {max_cohort_interval})
+                    {trunc_expr} AS window_start,
+                    TIMESTAMP(@end_ts) AS window_end,
+                    {max_lag_expr} AS max_lag
             )
             """
         ).strip()
-        return calendar
+        calendar = dedent(
+            f"""
+            retention_calendar AS (
+                SELECT
+                    cohort_start AS bucket_start,
+                    lag_index AS lag_weeks,
+                    bounds.window_end
+                FROM {RETENTION_WINDOW_CTE} AS bounds,
+                UNNEST(
+                    GENERATE_TIMESTAMP_ARRAY(
+                        bounds.window_start,
+                        bounds.window_end,
+                        {interval_expr}
+                    )
+                    ) AS cohort_start,
+                    UNNEST(GENERATE_ARRAY(0, GREATEST(bounds.max_lag, 0))) AS lag_index
+                WHERE cohort_start < bounds.window_end
+                    AND cohort_start >= TIMESTAMP_SUB(bounds.window_end, {max_cohort_interval})
+            )
+            """
+        ).strip()
+        return [window_bounds, calendar]
 
     def _render_retention(
         self, *, measure: Dict[str, object], bucket: str, params: Dict[str, object]
