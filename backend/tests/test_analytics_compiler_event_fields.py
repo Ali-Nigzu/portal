@@ -203,6 +203,19 @@ def test_retention_window_bounds_exports_limits() -> None:
     assert "bounds.window_end" in calendar_body
 
 
+def test_retention_final_select_includes_matrix_columns() -> None:
+    ctx = _context(bucket="WEEK")
+    plan = compile_contract_query(
+        Metric.RETENTION_RATE,
+        [Dimension.TIME, Dimension.RETENTION_LAG],
+        ctx,
+    )
+    select_clause = plan.sql.split("final AS", 1)[-1]
+    assert "bucket_start" in select_clause
+    assert "lag_weeks" in select_clause
+    assert "coverage" in select_clause
+
+
 def test_dwell_all_time_grouping_avoids_calendar_cross_join() -> None:
     ctx = QueryContext(
         org_id="client0",

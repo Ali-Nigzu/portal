@@ -66,6 +66,24 @@ def _to_iso(value: Any) -> str:
     return str(value)
 
 
+def _coerce_number(value: Any, cast=float) -> Optional[float]:
+    """Return a numeric value or ``None`` for missing/NA placeholders."""
+
+    try:
+        if value is None or (hasattr(pd, "isna") and pd.isna(value)):
+            return None
+    except Exception:
+        # Fall back to a best-effort conversion for unusual objects
+        if value is None:
+            return None
+
+    try:
+        coerced = cast(value)
+    except Exception:
+        return None
+    return coerced
+
+
 def _detect_surges(measure_id: str, points: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     values = [float(point["y"]) for point in points if point.get("y") is not None]
     if len(values) < 2:
@@ -183,15 +201,19 @@ class AnalyticsEngine:
         if frame.empty:
             coverage_meta: List[Dict[str, Any]] = []
         else:
-            coverage_meta = (
-                frame.groupby("bucket_start")["coverage"]
-                .mean()
-                .reset_index()
-                .to_dict("records")
-            )
-            for entry in coverage_meta:
-                entry["x"] = _to_iso(entry.pop("bucket_start"))
-                entry["value"] = float(entry.pop("coverage"))
+            if {"bucket_start", "coverage"}.issubset(frame.columns):
+                coverage_meta = (
+                    frame.groupby("bucket_start")["coverage"]
+                    .mean()
+                    .reset_index()
+                    .to_dict("records")
+                )
+                for entry in coverage_meta:
+                    entry["x"] = _to_iso(entry.pop("bucket_start"))
+                    coerced = _coerce_number(entry.pop("coverage"))
+                    entry["value"] = float(coerced) if coerced is not None else None
+            else:
+                coverage_meta = []
 
         series: List[Dict[str, Any]] = []
         surges: List[Dict[str, Any]] = []
@@ -199,12 +221,19 @@ class AnalyticsEngine:
             subset = frame[frame["measure_id"] == measure_id]
             data_points: List[Dict[str, Any]] = []
             for record in subset.to_dict("records"):
+                bucket = record.get("bucket_start")
+                if bucket is None or (hasattr(pd, "isna") and pd.isna(bucket)):
+                    continue
+                value = _coerce_number(record.get("value"))
+                coverage_value = _coerce_number(record.get("coverage"))
+                raw_count_value = _coerce_number(record.get("raw_count"), cast=int)
+
                 data_points.append(
                     {
-                        "x": _to_iso(record["bucket_start"]),
-                        "y": float(record["value"]) if record.get("value") is not None else None,
-                        "coverage": float(record["coverage"]) if record.get("coverage") is not None else None,
-                        "rawCount": int(record["raw_count"]) if record.get("raw_count") is not None else None,
+                        "x": _to_iso(bucket),
+                        "y": float(value) if value is not None else None,
+                        "coverage": float(coverage_value) if coverage_value is not None else None,
+                        "rawCount": int(raw_count_value) if raw_count_value is not None else None,
                     }
                 )
             series.append(
@@ -253,33 +282,45 @@ class AnalyticsEngine:
         if frame.empty:
             coverage_meta: List[Dict[str, Any]] = []
         else:
-            coverage_meta = (
-                frame.groupby("bucket_start")["coverage"]
-                .mean()
-                .reset_index()
-                .to_dict("records")
-            )
-            for entry in coverage_meta:
-                entry["x"] = _to_iso(entry.pop("bucket_start"))
-                entry["value"] = float(entry.pop("coverage"))
+            if {"bucket_start", "coverage"}.issubset(frame.columns):
+                coverage_meta = (
+                    frame.groupby("bucket_start")["coverage"]
+                    .mean()
+                    .reset_index()
+                    .to_dict("records")
+                )
+                for entry in coverage_meta:
+                    entry["x"] = _to_iso(entry.pop("bucket_start"))
+                    coerced = _coerce_number(entry.pop("coverage"))
+                    entry["value"] = float(coerced) if coerced is not None else None
+            else:
+                coverage_meta = []
 
         series: List[Dict[str, Any]] = []
         for measure_id, aggregation in measures.items():
             subset = frame[frame["measure_id"] == measure_id]
             data_points: List[Dict[str, Any]] = []
             for record in subset.to_dict("records"):
-                lag_value = int(record.get("lag_weeks", 0))
+                lag_raw = record.get("lag_weeks", 0)
+                lag_value = _coerce_number(lag_raw, cast=int) or 0
                 if compiled.bucket == "MONTH":
                     group_label = f"Month {lag_value}"
                 else:
                     group_label = f"Week {lag_value}"
+                bucket = record.get("bucket_start")
+                if bucket is None or (hasattr(pd, "isna") and pd.isna(bucket)):
+                    continue
+                value = _coerce_number(record.get("value"))
+                coverage_value = _coerce_number(record.get("coverage"))
+                raw_count_value = _coerce_number(record.get("raw_count"), cast=int)
+
                 data_points.append(
                     {
-                        "x": _to_iso(record["bucket_start"]),
+                        "x": _to_iso(bucket),
                         "group": group_label,
-                        "value": float(record["value"]) if record.get("value") is not None else None,
-                        "coverage": float(record["coverage"]) if record.get("coverage") is not None else None,
-                        "rawCount": int(record["raw_count"]) if record.get("raw_count") is not None else None,
+                        "value": float(value) if value is not None else None,
+                        "coverage": float(coverage_value) if coverage_value is not None else None,
+                        "rawCount": int(raw_count_value) if raw_count_value is not None else None,
                     }
                 )
             series.append(
