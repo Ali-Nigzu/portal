@@ -50,6 +50,22 @@ describe("buildWidgetSpec", () => {
     expect(baseSpec.timeWindow?.from).toBe("{{TODAY_START}}");
   });
 
+  it("supports all-time ranges", () => {
+    const anchor = new Date("2024-03-01T12:00:00.000Z");
+    const option = {
+      id: "all_time",
+      label: "All time",
+      durationMinutes: null,
+      bucket: "DAY" as const,
+      allTime: true,
+    };
+
+    const spec = buildWidgetSpec(widget, { timeRange: option, timezone: "UTC", anchor });
+
+    expect(spec.timeWindow?.from).toBe(new Date(0).toISOString());
+    expect(spec.timeWindow?.bucket).toBe("DAY");
+  });
+
   it("throws when inline spec is missing", () => {
     expect(() => buildWidgetSpec({ ...widget, inlineSpec: undefined })).toThrow(
       /missing inline spec/,

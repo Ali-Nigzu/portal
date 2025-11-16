@@ -77,9 +77,10 @@ function cloneManifest(overrides?: Partial<DashboardManifest>): DashboardManifes
       },
     },
     timeControls: {
-      defaultTimeRangeId: "last_24_hours",
+      defaultTimeRangeId: "all_time",
       timezone: "UTC",
       options: [
+        { id: "all_time", label: "All time", durationMinutes: null, bucket: "DAY", allTime: true },
         { id: "last_24_hours", label: "Last 24 hours", durationMinutes: 24 * 60, bucket: "HOUR" },
         { id: "last_60_minutes", label: "Last 60 minutes", durationMinutes: 60, bucket: "5_MIN" },
       ],

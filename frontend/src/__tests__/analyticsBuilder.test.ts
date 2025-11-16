@@ -157,7 +157,7 @@ describe('analyticsBuilder integration', () => {
   it('applies nested AND/OR filters with relative time windows', () => {
     const root = createFilterGroup('OR');
     const left = createFilterGroup('AND');
-    left.children.push(createFilterCondition('event_type'));
+    left.children.push(createFilterCondition('event'));
     left.children.push({ ...createFilterCondition('sex'), value: 'female' });
 
     const right = createFilterGroup('AND');

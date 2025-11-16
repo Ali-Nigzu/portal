@@ -233,7 +233,7 @@ describe('AnalyticsV2Page', () => {
     expect(mockRunAnalytics).toHaveBeenCalledTimes(1);
     const initialSpec = mockRunAnalytics.mock.calls[0][1] as ChartSpec;
     const initialHash = hashChartSpec(initialSpec);
-    expect(initialSpec.timeWindow.bucket).toBe('HOUR');
+    expect(initialSpec.timeWindow.bucket).toBe('DAY');
 
     const nextButton = findChipButtonByLabel(tree!, 'Last 7 days');
     expect(nextButton).toBeDefined();

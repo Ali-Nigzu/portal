@@ -81,9 +81,9 @@ class DataProcessor:
         age_buckets = [filters["age_group"]] if filters.get("age_group") else None
         event_filter = filters.get("event")
         if event_filter:
-            event_types = [1 if event_filter == "entry" else 0]
+            events = [1 if event_filter == "entry" else 0]
         else:
-            event_types = None
+            events = None
         return QueryContext(
             org_id=org_id,
             table_name=table_name,
@@ -94,7 +94,7 @@ class DataProcessor:
             camera_ids=[filters["camera_id"]] if filters.get("camera_id") else None,
             sexes=sexes,
             age_buckets=age_buckets,
-            event_types=event_types,
+            events=events,
         )
 
     @staticmethod
@@ -129,8 +129,7 @@ class DataProcessor:
             records_plan = compile_contract_query(Metric.RAW_EVENTS, [], context)
             records_df = cls._execute(records_plan, table_name=table_name, job="records")
             if not records_df.empty:
-                records_df["event"] = records_df["event_type"].apply(lambda v: "entry" if int(v) == 1 else "exit")
-                records_df.drop(columns=["event_type"], inplace=True, errors="ignore")
+                records_df["event"] = records_df["event"].apply(lambda v: "entry" if int(v) == 1 else "exit")
 
             dwell_ctx = context.model_copy(update={"bucket": "HOUR"})
             dwell_plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME], dwell_ctx)

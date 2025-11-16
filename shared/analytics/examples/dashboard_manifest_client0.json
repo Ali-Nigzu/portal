@@ -23,8 +23,15 @@
   },
   "orgId": "client0",
   "timeControls": {
-    "defaultTimeRangeId": "last_24_hours",
+    "defaultTimeRangeId": "all_time",
     "options": [
+      {
+        "bucket": "DAY",
+        "durationMinutes": null,
+        "id": "all_time",
+        "label": "All time",
+        "allTime": true
+      },
       {
         "bucket": "5_MIN",
         "durationMinutes": 60,

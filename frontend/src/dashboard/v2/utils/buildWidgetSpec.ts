@@ -24,7 +24,9 @@ function applyTimeRange(
     ...(spec.timeWindow ?? { from: "", to: "" }),
   };
   const to = anchor.toISOString();
-  const from = new Date(anchor.getTime() - option.durationMinutes * MINUTE_IN_MS).toISOString();
+  const from = option.allTime
+    ? new Date(0).toISOString()
+    : new Date(anchor.getTime() - (option.durationMinutes ?? 0) * MINUTE_IN_MS).toISOString();
   timeWindow.from = from;
   timeWindow.to = to;
   if (option.bucket) {

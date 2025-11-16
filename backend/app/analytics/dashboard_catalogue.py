@@ -265,9 +265,16 @@ DEFAULT_LAYOUT: Dict[str, Any] = {
 
 
 DEFAULT_TIME_CONTROLS: Dict[str, Any] = {
-    "defaultTimeRangeId": "last_24_hours",
+    "defaultTimeRangeId": "all_time",
     "timezone": _DEFAULT_TIMEZONE,
     "options": [
+        {
+            "id": "all_time",
+            "label": "All time",
+            "durationMinutes": None,
+            "bucket": "DAY",
+            "allTime": True,
+        },
         {
             "id": "last_60_minutes",
             "label": "Last 60 minutes",

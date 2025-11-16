@@ -18,8 +18,9 @@ export interface RelativeDuration {
 export interface PresetTimeRangeOption {
   id: string;
   label: string;
-  duration: RelativeDuration;
+  duration?: RelativeDuration;
   bucket: TimeBucket;
+  allTime?: boolean;
 }
 
 export interface PresetSplitToggleConfig {
