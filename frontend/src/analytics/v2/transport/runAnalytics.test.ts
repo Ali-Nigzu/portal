@@ -3,6 +3,7 @@ import { listPresets } from '../presets/presetCatalogue';
 import { buildDefaultOverrides, buildSpecWithOverrides } from '../utils/specOverrides';
 import type { PresetDefinition } from '../presets/types';
 import type { ChartFixtureName } from '../../utils/loadChartFixture';
+import activityResult from '../../examples/golden_dashboard_kpi_activity.json';
 
 describe('runAnalyticsQuery transport guardrails', () => {
   const preset = listPresets()[0];
@@ -43,5 +44,29 @@ describe('runAnalyticsQuery transport guardrails', () => {
     await expect(runAnalyticsQuery(invalidPreset, spec, { mode: 'fixtures' })).rejects.toMatchObject({
       category: 'INVALID_RESULT',
     });
+  });
+
+  it('sends view tokens instead of orgIds for live runs', async () => {
+    const overrides = buildDefaultOverrides(preset);
+    const spec = buildSpecWithOverrides(preset, overrides, new Date('2024-02-01T00:00:00Z'));
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => activityResult,
+    } as Response);
+
+    try {
+      await runAnalyticsQuery(preset, spec, {
+        mode: 'live',
+        orgId: 'client0',
+        viewToken: 'token-123',
+      });
+
+      const [, options] = fetchMock.mock.calls[0]!;
+      const body = JSON.parse((options?.body ?? '{}') as string);
+      expect(body.viewToken).toBe('token-123');
+      expect(body.orgId).toBeUndefined();
+    } finally {
+      fetchMock.mockRestore();
+    }
   });
 });
