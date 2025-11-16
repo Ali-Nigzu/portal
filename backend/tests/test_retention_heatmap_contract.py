@@ -36,6 +36,45 @@ def _retention_spec() -> dict:
     }
 
 
+SUPPORTED_UNITS = {"people", "events", "events/min", "minutes", "percentage", "count", None}
+
+
+def _frontend_validate_heatmap(result: dict) -> list[str]:
+    issues: list[str] = []
+
+    for series in result.get("series", []):
+        if series.get("unit") not in SUPPORTED_UNITS:
+            issues.append(f"Unsupported unit {series.get('unit')} for series {series.get('id')}")
+
+    if result.get("chartType") in {"heatmap", "retention"} and result.get("series"):
+        heatmap = result["series"][0]
+        rows: dict[str, set[str]] = {}
+        columns: set[str] = set()
+        for point in heatmap.get("data", []):
+            row = point.get("group")
+            column = point.get("x")
+            if row is None or row == "":
+                issues.append("Heatmap point missing row group")
+                continue
+            if column is None or column == "":
+                issues.append("Heatmap point missing column")
+                continue
+            row_key = str(row)
+            col_key = str(column)
+            columns.add(col_key)
+            rows.setdefault(row_key, set())
+            if col_key in rows[row_key]:
+                issues.append(f"Duplicate heatmap cell {row_key}/{col_key}")
+            rows[row_key].add(col_key)
+
+        column_count = len(columns)
+        for row_key, row_columns in rows.items():
+            if len(row_columns) != column_count:
+                issues.append(f"Heatmap row {row_key} is missing one or more cohort columns")
+
+    return issues
+
+
 def test_retention_heatmap_chartresult_passes_validator():
     frame = pd.DataFrame(
         [
@@ -74,8 +113,10 @@ def test_retention_heatmap_chartresult_passes_validator():
     result = engine.execute(_retention_spec(), organisation="client0", bypass_cache=True)
 
     validate_chart_result(result)
+    assert _frontend_validate_heatmap(result) == []
     series = result["series"][0]
     assert result["chartType"] == "retention"
+    assert series.get("unit") == "percentage"
     assert series["summary"]["cohorts"] == 2
     assert series["summary"]["lags"] == 2
     assert len(series["data"]) == 4
@@ -151,6 +192,7 @@ def test_retention_heatmap_all_time_range_fills_matrix():
     result = engine.execute(spec, organisation="client0", bypass_cache=True)
 
     validate_chart_result(result)
+    assert _frontend_validate_heatmap(result) == []
     series = result["series"][0]
     cohorts = {"2023-12-25T00:00:00Z", "2024-01-01T00:00:00Z", "2024-01-08T00:00:00Z"}
     groups = {"Week 0", "Week 1", "Week 2"}

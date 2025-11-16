@@ -250,6 +250,7 @@ def build_retention(events: pd.DataFrame) -> Dict:
                 "id": "retention_rate",
                 "label": "Weekly retention",
                 "geometry": "heatmap",
+                "unit": "percentage",
                 "data": data_points,
                 "summary": {
                     "cohorts": len(cohorts),

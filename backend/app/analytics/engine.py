@@ -40,8 +40,8 @@ _UNIT_MAP = {
     "activity_rate": "events/min",
     "dwell_mean": "minutes",
     "dwell_p90": "minutes",
-    "sessions": "sessions",
-    "retention_rate": "rate",
+    "sessions": "count",
+    "retention_rate": "percentage",
 }
 
 
@@ -350,7 +350,6 @@ class AnalyticsEngine:
             "surges": [],
             "summary": {
                 "points": len(frame),
-                "measures": list(measures.keys()),
             },
         }
 
@@ -446,7 +445,6 @@ class AnalyticsEngine:
                 "points": len(data_points),
                 "cohorts": len(cohort_labels),
                 "lags": len(set(lags)),
-                "measures": list(measures.keys()),
             }
 
             series.append(
@@ -460,15 +458,14 @@ class AnalyticsEngine:
                 }
             )
 
-        meta: Dict[str, Any] = {
-            "timezone": timezone,
-            "coverage": coverage_meta,
-            "surges": [],
-            "summary": {
-                "points": sum(len(series_item.get("data", [])) for series_item in series),
-                "measures": list(measures.keys()),
-            },
-        }
+            meta: Dict[str, Any] = {
+                "timezone": timezone,
+                "coverage": coverage_meta,
+                "surges": [],
+                "summary": {
+                    "points": sum(len(series_item.get("data", [])) for series_item in series),
+                },
+            }
 
         return {
             "chartType": "retention",

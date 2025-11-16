@@ -296,7 +296,7 @@ def test_engine_normalises_dwell_and_sessions():
     assert dwell_series["geometry"] == "line"
     assert dwell_series["data"][0]["rawCount"] == 4
     sessions_series = next(item for item in result["series"] if item["id"] == "session_count")
-    assert sessions_series["unit"] == "sessions"
+    assert sessions_series["unit"] == "count"
     assert sessions_series["geometry"] == "column"
 
 
@@ -352,7 +352,7 @@ def test_engine_normalises_retention_heatmap():
     assert result["chartType"] == "retention"
     series = result["series"][0]
     assert series["geometry"] == "heatmap"
-    assert series["unit"] == "rate"
+    assert series["unit"] == "percentage"
     assert series["data"][0]["group"] == "Week 0"
     assert series["data"][1]["group"] == "Week 1"
     assert series["data"][1]["coverage"] == 0.8
