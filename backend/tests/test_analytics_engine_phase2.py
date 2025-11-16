@@ -352,3 +352,48 @@ def test_engine_normalises_retention_heatmap():
     assert series["unit"] == "rate"
     assert series["data"][1]["group"] == "Week 1"
     assert series["data"][1]["coverage"] == 0.8
+    assert "rawCount" not in series["data"][0]
+    assert series["summary"]["cohorts"] == 1
+    assert series["summary"]["lags"] == 2
+
+
+def test_engine_handles_missing_retention_lag_values():
+    spec = {
+        "id": "retention-heatmap",
+        "dataset": "events",
+        "chartType": "heatmap",
+        "measures": [
+            {"id": "retention_rate", "aggregation": "retention_rate"},
+        ],
+        "dimensions": [{"id": "cohort", "column": "timestamp", "bucket": "WEEK"}],
+        "timeWindow": {
+            "from": "2024-01-01T00:00:00Z",
+            "to": "2024-02-12T00:00:00Z",
+            "bucket": "WEEK",
+            "timezone": "UTC",
+        },
+    }
+
+    frame = pd.DataFrame(
+        [
+            {
+                "measure_id": "retention_rate",
+                "bucket_start": pd.Timestamp("2024-01-01T00:00:00Z"),
+                "lag_weeks": pd.NA,
+                "value": 1.0,
+                "coverage": 1.0,
+            }
+        ]
+    )
+
+    stub = StubBigQueryClient(frame)
+    cache = SpecCache(LocalCacheBackend(), default_ttl=60)
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        bigquery_client=stub,
+        cache=cache,
+    )
+
+    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    series = result["series"][0]
+    assert series["data"] == []

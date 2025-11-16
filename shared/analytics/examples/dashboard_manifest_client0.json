@@ -401,7 +401,7 @@
       },
       "kind": "chart",
       "subtitle": "Live occupancy, entrances, exits and throughput",
-      "title": "Live Flow (Last 60 min)",
+      "title": "Live Flow",
       "locked": true
     }
   ]
