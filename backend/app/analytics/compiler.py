@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from datetime import datetime
 from dataclasses import dataclass
 import re
 from textwrap import dedent
@@ -23,6 +24,8 @@ _BUCKET_SECONDS = {
 
 _RETENTION_MIN_COHORT = 100
 _UNKNOWN_DIMENSION_VALUE = "Unknown"
+
+_BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
 
 # BigQuery reserves WINDOW as a keyword, so we use descriptive aliases instead.
 WINDOW_BOUNDS_CTE = "window_bounds"
@@ -75,6 +78,22 @@ def _bucket_interval_expression(bucket: str) -> str:
     if bucket == "MONTH":
         return "INTERVAL 1 MONTH"
     raise ValidationError(f"Unsupported bucket for interval: {bucket}")
+
+
+def _parse_iso8601(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _bucket_rank(bucket: str) -> int:
+    try:
+        return _BUCKET_ORDER.index(bucket)
+    except ValueError:
+        return len(_BUCKET_ORDER)
 
 
 def _retention_cohort_trunc(bucket: str) -> str:
@@ -165,9 +184,12 @@ class SpecCompiler:
             return self._compile_retention_chart(spec, context)
 
         time_window = spec["timeWindow"]
-        bucket = time_window.get("bucket", "RAW")
-        if bucket not in _BUCKET_SECONDS:
-            raise ValidationError(f"Unsupported bucket value: {bucket}")
+        bucket = self._auto_bucket(
+            preferred=time_window.get("bucket", "RAW"),
+            start=time_window.get("from"),
+            end=time_window.get("to"),
+            chart_type=chart_type,
+        )
 
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
@@ -201,6 +223,36 @@ class SpecCompiler:
         )
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
+
+    def _auto_bucket(
+        self, *, preferred: str, start: object, end: object, chart_type: str
+    ) -> str:
+        if preferred not in _BUCKET_SECONDS:
+            raise ValidationError(f"Unsupported bucket value: {preferred}")
+        if chart_type == "single_value" and preferred == "RAW":
+            preferred = "DAY"
+
+        start_dt = _parse_iso8601(start)
+        end_dt = _parse_iso8601(end)
+        if not start_dt or not end_dt:
+            return preferred
+
+        span_seconds = (end_dt - start_dt).total_seconds()
+        if span_seconds <= 0:
+            return preferred
+
+        if span_seconds <= 2 * 24 * 3600:
+            recommended = "5_MIN"
+        elif span_seconds <= 14 * 24 * 3600:
+            recommended = "HOUR"
+        elif span_seconds <= 90 * 24 * 3600:
+            recommended = "DAY"
+        else:
+            recommended = "WEEK"
+
+        if _bucket_rank(preferred) < _bucket_rank(recommended):
+            return preferred
+        return recommended
 
     def _compile_retention_chart(
         self, spec: Dict[str, object], context: CompilerContext

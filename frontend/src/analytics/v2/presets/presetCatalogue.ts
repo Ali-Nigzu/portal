@@ -29,14 +29,14 @@ const HOURLY_BUCKETS: TimeBucket[] = ['HOUR', 'DAY', 'WEEK'];
 const RETENTION_BUCKETS: TimeBucket[] = ['WEEK', 'MONTH'];
 
 const STANDARD_TIME_RANGES: PresetTimeRangeOption[] = [
-  { id: 'all_time', label: 'All time', allTime: true, bucket: 'DAY' },
+  { id: 'all_time', label: 'All time', allTime: true, bucket: 'WEEK' },
   { id: '24h', label: 'Last 24 hours', duration: { amount: 24, unit: 'hour' }, bucket: 'HOUR' },
   { id: '7d', label: 'Last 7 days', duration: { amount: 7, unit: 'day' }, bucket: 'DAY' },
   { id: '30d', label: 'Last 30 days', duration: { amount: 30, unit: 'day' }, bucket: 'DAY' },
 ];
 
 const LIVE_TIME_RANGES: PresetTimeRangeOption[] = [
-  { id: 'all_time', label: 'All time', allTime: true, bucket: 'DAY' },
+  { id: 'all_time', label: 'All time', allTime: true, bucket: 'WEEK' },
   { id: '6h', label: 'Last 6 hours', duration: { amount: 6, unit: 'hour' }, bucket: '15_MIN' },
   { id: '24h', label: 'Last 24 hours', duration: { amount: 24, unit: 'hour' }, bucket: 'HOUR' },
   { id: '7d', label: 'Last 7 days', duration: { amount: 7, unit: 'day' }, bucket: 'DAY' },

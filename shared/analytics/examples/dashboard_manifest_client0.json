@@ -26,7 +26,7 @@
     "defaultTimeRangeId": "all_time",
     "options": [
       {
-        "bucket": "DAY",
+      "bucket": "WEEK",
         "durationMinutes": null,
         "id": "all_time",
         "label": "All time",

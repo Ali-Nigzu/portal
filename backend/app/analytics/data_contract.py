@@ -60,7 +60,7 @@ _TIME_RANGE_WINDOWS: Dict[TimeRangeKey, Tuple[Optional[timedelta], str]] = {
     TimeRangeKey.LAST_24_HOURS: (timedelta(hours=24), "HOUR"),
     TimeRangeKey.LAST_7_DAYS: (timedelta(days=7), "DAY"),
     TimeRangeKey.LAST_30_DAYS: (timedelta(days=30), "DAY"),
-    TimeRangeKey.ALL_TIME: (None, "DAY"),
+    TimeRangeKey.ALL_TIME: (None, "WEEK"),
 }
 
 ALL_TIME_START = datetime(1970, 1, 1, tzinfo=UTC)

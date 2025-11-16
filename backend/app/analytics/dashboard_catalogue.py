@@ -272,7 +272,7 @@ DEFAULT_TIME_CONTROLS: Dict[str, Any] = {
             "id": "all_time",
             "label": "All time",
             "durationMinutes": None,
-            "bucket": "DAY",
+            "bucket": "WEEK",
             "allTime": True,
         },
         {
