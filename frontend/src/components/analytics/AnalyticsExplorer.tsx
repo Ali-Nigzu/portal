@@ -57,7 +57,7 @@ const RELATIVE_PRESETS: { label: string; value: { preset: RelativePreset; amount
 const WEEKDAY_OPTIONS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const DEFAULT_OPERATOR_BY_FIELD: Record<AnalyticsFilterField, AnalyticsFilterOperator> = {
-  event_type: 'equals',
+  event: 'equals',
   sex: 'equals',
   age_band: 'equals',
   camera_id: 'equals',
@@ -69,7 +69,7 @@ const DEFAULT_OPERATOR_BY_FIELD: Record<AnalyticsFilterField, AnalyticsFilterOpe
 };
 
 const OPERATORS_BY_FIELD: Record<AnalyticsFilterField, AnalyticsFilterOperator[]> = {
-  event_type: ['equals', 'not_equals', 'in', 'not_in'],
+  event: ['equals', 'not_equals', 'in', 'not_in'],
   sex: ['equals', 'not_equals', 'in', 'not_in'],
   age_band: ['equals', 'not_equals', 'in', 'not_in'],
   camera_id: ['equals', 'not_equals', 'in', 'not_in'],
@@ -350,7 +350,7 @@ const FilterNodeEditor: React.FC<{
           onUpdate(baseCondition);
         }}
       >
-        <option value="event_type">Event type</option>
+        <option value="event">Event type</option>
         <option value="sex">Sex</option>
         <option value="age_band">Age band</option>
         <option value="camera_id">Camera</option>

@@ -1,4 +1,4 @@
-site_id,cam_id,index,track_no,event_type,timestamp,sex,age_bucket
+site_id,cam_id,index,track_id,event,timestamp,sex,age_bucket
 SITE_01,CAM_A,1,T1,1,2024-01-01T09:00:00Z,M,26-45
 SITE_01,CAM_A,2,T2,1,2024-01-01T09:05:00Z,F,14-25
 SITE_01,CAM_A,3,T1,0,2024-01-01T09:07:00Z,M,26-45

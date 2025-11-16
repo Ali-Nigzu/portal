@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from datetime import datetime
 from dataclasses import dataclass
 import re
 from textwrap import dedent
@@ -24,6 +25,8 @@ _BUCKET_SECONDS = {
 _RETENTION_MIN_COHORT = 100
 _UNKNOWN_DIMENSION_VALUE = "Unknown"
 
+_BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
+
 # BigQuery reserves WINDOW as a keyword, so we use descriptive aliases instead.
 WINDOW_BOUNDS_CTE = "window_bounds"
 RETENTION_WINDOW_CTE = "retention_window_bounds"
@@ -43,19 +46,19 @@ def _bucket_expression(bucket: str) -> str:
 
 def _bucket_trunc_expression(bucket: str) -> str:
     if bucket == "5_MIN":
-        return "TIMESTAMP_TRUNC(@start_ts, MINUTE, 5)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 5)"
     if bucket == "15_MIN":
-        return "TIMESTAMP_TRUNC(@start_ts, MINUTE, 15)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 15)"
     if bucket == "30_MIN":
-        return "TIMESTAMP_TRUNC(@start_ts, MINUTE, 30)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 30)"
     if bucket == "HOUR":
-        return "TIMESTAMP_TRUNC(@start_ts, HOUR)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), HOUR)"
     if bucket == "DAY":
-        return "TIMESTAMP_TRUNC(@start_ts, DAY)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), DAY)"
     if bucket == "WEEK":
-        return "TIMESTAMP_TRUNC(@start_ts, WEEK)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), WEEK)"
     if bucket == "MONTH":
-        return "TIMESTAMP_TRUNC(@start_ts, MONTH)"
+        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MONTH)"
     raise ValidationError(f"Unsupported bucket for truncation: {bucket}")
 
 
@@ -71,10 +74,26 @@ def _bucket_interval_expression(bucket: str) -> str:
     if bucket == "DAY":
         return "INTERVAL 1 DAY"
     if bucket == "WEEK":
-        return "INTERVAL 1 WEEK"
+        return "INTERVAL 7 DAY"
     if bucket == "MONTH":
-        return "INTERVAL 1 MONTH"
+        return "INTERVAL 30 DAY"
     raise ValidationError(f"Unsupported bucket for interval: {bucket}")
+
+
+def _parse_iso8601(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _bucket_rank(bucket: str) -> int:
+    try:
+        return _BUCKET_ORDER.index(bucket)
+    except ValueError:
+        return len(_BUCKET_ORDER)
 
 
 def _retention_cohort_trunc(bucket: str) -> str:
@@ -161,13 +180,19 @@ class SpecCompiler:
         if chart_type not in self._supported_charts:
             raise UnsupportedChartError(f"Unsupported chart type: {chart_type}")
 
+        if chart_type == "single_value":
+            return self._compile_single_value(spec, context)
+
         if chart_type in {"heatmap", "retention"}:
             return self._compile_retention_chart(spec, context)
 
         time_window = spec["timeWindow"]
-        bucket = time_window.get("bucket", "RAW")
-        if bucket not in _BUCKET_SECONDS:
-            raise ValidationError(f"Unsupported bucket value: {bucket}")
+        bucket = self._auto_bucket(
+            preferred=time_window.get("bucket", "RAW"),
+            start=time_window.get("from"),
+            end=time_window.get("to"),
+            chart_type=chart_type,
+        )
 
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
@@ -201,6 +226,71 @@ class SpecCompiler:
         )
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
+
+    def _compile_single_value(
+        self, spec: Dict[str, object], context: CompilerContext
+    ) -> CompiledQuery:
+        time_window = spec["timeWindow"]
+        params: Dict[str, object] = {
+            "start_ts": time_window["from"],
+            "end_ts": time_window["to"],
+        }
+
+        filters_sql = self._build_filters(spec.get("filters", []), params)
+        measures = spec["measures"]
+
+        if not measures:
+            raise UnsupportedMeasureError("single_value requires at least one measure")
+
+        cte_registry: OrderedDict[str, str] = OrderedDict()
+        select_statements: List[str] = []
+        base_ctes = [self._render_scoped(context.table_name, filters_sql)]
+
+        for measure in measures:
+            compilation = self._render_single_value_measure(measure=measure, params=params)
+            for fragment in compilation.ctes:
+                name = fragment.split(" AS", 1)[0].strip()
+                cte_registry[name] = fragment
+            select_statements.append(compilation.select_sql)
+
+        sql = self._assemble_sql(
+            base_ctes=base_ctes,
+            measure_ctes=cte_registry.values(),
+            select_statements=select_statements,
+            order_by="measure_id",
+        )
+        measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
+        return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket="RAW")
+
+    def _auto_bucket(
+        self, *, preferred: str, start: object, end: object, chart_type: str
+    ) -> str:
+        if preferred not in _BUCKET_SECONDS:
+            raise ValidationError(f"Unsupported bucket value: {preferred}")
+        if chart_type == "single_value" and preferred == "RAW":
+            preferred = "DAY"
+
+        start_dt = _parse_iso8601(start)
+        end_dt = _parse_iso8601(end)
+        if not start_dt or not end_dt:
+            return preferred
+
+        span_seconds = (end_dt - start_dt).total_seconds()
+        if span_seconds <= 0:
+            return preferred
+
+        if span_seconds <= 2 * 24 * 3600:
+            recommended = "5_MIN"
+        elif span_seconds <= 14 * 24 * 3600:
+            recommended = "HOUR"
+        elif span_seconds <= 90 * 24 * 3600:
+            recommended = "DAY"
+        else:
+            recommended = "WEEK"
+
+        if _bucket_rank(preferred) < _bucket_rank(recommended):
+            return preferred
+        return recommended
 
     def _compile_retention_chart(
         self, spec: Dict[str, object], context: CompilerContext
@@ -281,16 +371,16 @@ class SpecCompiler:
             f"""
             scoped AS (
                 SELECT
-                    timestamp,
-                    event_type,
-                    IFNULL(index, 0) AS event_index,
                     site_id,
                     cam_id,
-                    track_no,
+                    COALESCE(index, 0) AS index,
+                    track_id,
+                    event,
+                    timestamp,
                     COALESCE(sex, '{_UNKNOWN_DIMENSION_VALUE}') AS sex,
                     COALESCE(age_bucket, '{_UNKNOWN_DIMENSION_VALUE}') AS age_bucket
                 FROM `{table_name}`
-                WHERE timestamp BETWEEN @start_ts AND @end_ts{filters_sql}
+                WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts){filters_sql}
             )
             """
         ).strip()
@@ -307,8 +397,8 @@ class SpecCompiler:
             calendar AS (
                 WITH {WINDOW_BOUNDS_CTE} AS (
                     SELECT
-                        @start_ts AS window_start,
-                        @end_ts AS window_end,
+                        TIMESTAMP(@start_ts) AS window_start,
+                        TIMESTAMP(@end_ts) AS window_end,
                         {trunc_expr} AS aligned_start
                 )
                 SELECT
@@ -440,14 +530,14 @@ class SpecCompiler:
             {prefix}_ordered AS (
                 SELECT
                     timestamp,
-                    event_index,
+                    index,
                     site_id,
                     cam_id,
-                    event_type,
-                    IF(event_type = 1, 1, -1) AS delta,
-                    SUM(IF(event_type = 1, 1, -1)) OVER (
+                    event,
+                    IF(event = 1, 1, -1) AS delta,
+                    SUM(IF(event = 1, 1, -1)) OVER (
                         PARTITION BY site_id, cam_id
-                        ORDER BY timestamp, event_index
+                        ORDER BY timestamp, index
                     ) AS running_total
                 FROM scoped
             )
@@ -486,7 +576,7 @@ class SpecCompiler:
                     bounds.window_seconds,
                     COUNT(clamped.timestamp) AS event_count,
                     LOGICAL_OR(clamped.seeded_by_exit) AS seeded_by_exit,
-                    ANY_VALUE(clamped.occupancy ORDER BY clamped.timestamp DESC, clamped.event_index DESC) AS occupancy_end
+                    ARRAY_AGG(clamped.occupancy ORDER BY clamped.timestamp DESC, clamped.index DESC)[SAFE_OFFSET(0)] AS occupancy_end
                 FROM {prefix}_bucket_bounds AS bounds
                 LEFT JOIN {prefix}_clamped AS clamped
                     ON clamped.timestamp >= bounds.bucket_start
@@ -599,6 +689,196 @@ class SpecCompiler:
         )
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
 
+    def _render_single_value_measure(
+        self, *, measure: Dict[str, object], params: Dict[str, object]
+    ) -> MeasureCompilation:
+        aggregation = measure["aggregation"]
+        measure_id = measure["id"]
+        bucket_start_expr = "TIMESTAMP(@end_ts)"
+
+        if aggregation == "count":
+            event_types = measure.get("eventTypes")
+            options = measure.get("options") or {}
+            if options.get("metric") == "freshness":
+                prefix = f"{measure_id}_freshness"
+                cte = dedent(
+                    f"""
+                    {prefix} AS (
+                        SELECT
+                            {bucket_start_expr} AS bucket_start,
+                            CASE
+                                WHEN COUNT(*) = 0 THEN NULL
+                                ELSE TIMESTAMP_DIFF(TIMESTAMP(@end_ts), MAX(timestamp), MINUTE)
+                            END AS value,
+                            1.0 AS coverage,
+                            COUNT(*) AS raw_count
+                        FROM scoped
+                    )
+                    """
+                ).strip()
+                select_sql = (
+                    f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}"
+                )
+                return MeasureCompilation(ctes=[cte], select_sql=select_sql)
+
+            filter_sql = ""
+            if event_types:
+                param_name = f"{measure_id}_event_types"
+                params[param_name] = event_types
+                filter_sql = f" WHERE scoped.event IN UNNEST(@{param_name})"
+
+            prefix = f"{measure_id}_count"
+            cte = dedent(
+                f"""
+                {prefix} AS (
+                    SELECT
+                        {bucket_start_expr} AS bucket_start,
+                        COUNT(*) AS raw_count,
+                        COUNT(*) AS event_count
+                    FROM scoped{filter_sql}
+                )
+                """
+            ).strip()
+            select_sql = dedent(
+                f"""
+                SELECT
+                    '{measure_id}' AS measure_id,
+                    bucket_start,
+                    event_count AS value,
+                    1.0 AS coverage,
+                    raw_count
+                FROM {prefix}
+                """
+            ).strip()
+            return MeasureCompilation(ctes=[cte], select_sql=select_sql)
+
+        if aggregation == "occupancy_recursion":
+            prefix = f"{measure_id}_single"
+            deltas = dedent(
+                f"""
+                {prefix}_deltas AS (
+                    SELECT
+                        timestamp,
+                        index,
+                        CASE WHEN event = 1 THEN 1 ELSE -1 END AS delta
+                    FROM scoped
+                )
+                """
+            ).strip()
+            cumulative = dedent(
+                f"""
+                {prefix}_cumulative AS (
+                    SELECT
+                        SUM(delta) OVER (ORDER BY timestamp, index ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS occupancy,
+                        ROW_NUMBER() OVER (ORDER BY timestamp DESC, index DESC) AS rn
+                    FROM {prefix}_deltas
+                )
+                """
+            ).strip()
+            latest = dedent(
+                f"""
+                {prefix}_latest AS (
+                    SELECT
+                        {bucket_start_expr} AS bucket_start,
+                        COALESCE((SELECT occupancy FROM {prefix}_cumulative WHERE rn = 1), 0) AS value,
+                        raw_count,
+                        CASE WHEN raw_count = 0 THEN 0.0 ELSE 1.0 END AS coverage
+                    FROM (
+                        SELECT (SELECT COUNT(*) FROM {prefix}_cumulative) AS raw_count
+                    )
+                )
+                """
+            ).strip()
+            select_sql = (
+                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_latest"
+            )
+            return MeasureCompilation(ctes=[deltas, cumulative, latest], select_sql=select_sql)
+
+        if aggregation in {"dwell_mean", "dwell_p90", "sessions"}:
+            prefix = f"{measure_id}_dwell_single"
+            entrances = dedent(
+                f"""
+                {prefix}_entrances AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        track_id,
+                        timestamp AS entrance_ts,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY site_id, cam_id, track_id
+                            ORDER BY timestamp, index
+                        ) AS rn
+                    FROM scoped
+                    WHERE event = 1
+                )
+                """
+            ).strip()
+            exits = dedent(
+                f"""
+                {prefix}_exits AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        track_id,
+                        timestamp AS exit_ts,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY site_id, cam_id, track_id
+                            ORDER BY timestamp, index
+                        ) AS rn
+                    FROM scoped
+                    WHERE event = 0
+                )
+                """
+            ).strip()
+            sessions = dedent(
+                f"""
+                {prefix}_sessions AS (
+                    SELECT
+                        e.site_id,
+                        e.cam_id,
+                        e.track_id,
+                        e.entrance_ts,
+                        x.exit_ts,
+                        TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, SECOND) / 60.0 AS dwell_minutes
+                    FROM {prefix}_entrances AS e
+                    LEFT JOIN {prefix}_exits AS x
+                        ON e.site_id = x.site_id
+                        AND e.cam_id = x.cam_id
+                        AND e.track_id = x.track_id
+                        AND e.rn = x.rn
+                    WHERE x.exit_ts IS NOT NULL
+                        AND TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, MINUTE) BETWEEN 0 AND 360
+                )
+                """
+            ).strip()
+            aggregates = dedent(
+                f"""
+                {prefix}_aggregate AS (
+                    SELECT
+                        {bucket_start_expr} AS bucket_start,
+                        COUNT(*) AS session_count,
+                        AVG(dwell_minutes) AS dwell_mean,
+                        APPROX_QUANTILES(dwell_minutes, 101)[OFFSET(90)] AS dwell_p90
+                    FROM {prefix}_sessions
+                )
+                """
+            ).strip()
+            value_expr = "dwell_mean" if aggregation == "dwell_mean" else "dwell_p90"
+            select_sql = dedent(
+                f"""
+                SELECT
+                    '{measure_id}' AS measure_id,
+                    bucket_start,
+                    {value_expr} AS value,
+                    CASE WHEN session_count = 0 THEN 0.0 ELSE 1.0 END AS coverage,
+                    session_count AS raw_count
+                FROM {prefix}_aggregate
+                """
+            ).strip()
+            return MeasureCompilation(ctes=[entrances, exits, sessions, aggregates], select_sql=select_sql)
+
+        raise UnsupportedMeasureError(aggregation)
+
     def _activity_counts_cte(self, measure: Dict[str, object], params: Dict[str, object]) -> Tuple[str, str]:
         measure_id = measure["id"]
         prefix = f"{measure_id}_activity_counts"
@@ -607,7 +887,7 @@ class SpecCompiler:
         if event_types:
             param_name = f"{measure_id}_event_types"
             params[param_name] = event_types
-            filter_sql = f" AND scoped.event_type IN UNNEST(@{param_name})"
+            filter_sql = f" AND scoped.event IN UNNEST(@{param_name})"
         counts_cte = dedent(
             f"""
             {prefix} AS (
@@ -642,14 +922,14 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    track_no,
+                    track_id,
                     timestamp AS entrance_ts,
                     ROW_NUMBER() OVER (
-                        PARTITION BY site_id, cam_id, track_no
+                        PARTITION BY site_id, cam_id, track_id
                         ORDER BY timestamp, index
                     ) AS rn
                 FROM scoped
-                WHERE event_type = 1
+                WHERE event = 1
             )
             """
         ).strip()
@@ -660,14 +940,14 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    track_no,
+                    track_id,
                     timestamp AS exit_ts,
                     ROW_NUMBER() OVER (
-                        PARTITION BY site_id, cam_id, track_no
+                        PARTITION BY site_id, cam_id, track_id
                         ORDER BY timestamp, index
                     ) AS rn
                 FROM scoped
-                WHERE event_type = 0
+                WHERE event = 0
             )
             """
         ).strip()
@@ -678,7 +958,7 @@ class SpecCompiler:
                 SELECT
                     e.site_id,
                     e.cam_id,
-                    e.track_no,
+                    e.track_id,
                     e.entrance_ts,
                     x.exit_ts,
                     TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, SECOND) / 60.0 AS dwell_minutes
@@ -686,7 +966,7 @@ class SpecCompiler:
                 LEFT JOIN {prefix}_exits AS x
                     ON e.site_id = x.site_id
                     AND e.cam_id = x.cam_id
-                    AND e.track_no = x.track_no
+                    AND e.track_id = x.track_id
                     AND e.rn = x.rn
                 WHERE x.exit_ts IS NOT NULL
                     AND TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, MINUTE) BETWEEN 0 AND 360
@@ -753,9 +1033,9 @@ class SpecCompiler:
 
     def _render_retention_calendar(self, bucket: str) -> str:
         if bucket == "WEEK":
-            trunc_expr = "TIMESTAMP_TRUNC(@start_ts, WEEK(MONDAY))"
+            trunc_expr = "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), WEEK(MONDAY))"
         elif bucket == "MONTH":
-            trunc_expr = "TIMESTAMP_TRUNC(@start_ts, MONTH)"
+            trunc_expr = "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MONTH)"
         else:
             raise ValidationError(f"Unsupported retention bucket: {bucket}")
         interval_expr = _bucket_interval_expression(bucket)
@@ -766,12 +1046,13 @@ class SpecCompiler:
                 WITH {RETENTION_WINDOW_CTE} AS (
                     SELECT
                         {trunc_expr} AS aligned_start,
-                        @end_ts AS window_end,
+                        TIMESTAMP(@end_ts) AS window_end,
                         {max_lag_expr} AS max_lag
                 )
                 SELECT
                     cohort_start AS bucket_start,
-                    lag_index AS lag_weeks
+                    lag_index AS lag_weeks,
+                    window_end
                 FROM {RETENTION_WINDOW_CTE},
                 UNNEST(
                     GENERATE_TIMESTAMP_ARRAY(
@@ -800,14 +1081,14 @@ class SpecCompiler:
             {prefix}_entrances AS (
                 SELECT
                     site_id,
-                    track_no,
+                    track_id,
                     timestamp,
                     LAG(timestamp) OVER (
-                        PARTITION BY site_id, track_no
+                        PARTITION BY site_id, track_id
                         ORDER BY timestamp, index
                     ) AS prev_timestamp
                 FROM scoped
-                WHERE event_type = 1
+                WHERE event = 1
             )
             """
         ).strip()
@@ -817,7 +1098,7 @@ class SpecCompiler:
             {prefix}_visits AS (
                 SELECT
                     site_id,
-                    track_no,
+                    track_id,
                     timestamp AS visit_ts,
                     {cohort_trunc} AS cohort_week
                 FROM {prefix}_entrances
@@ -832,7 +1113,7 @@ class SpecCompiler:
             {prefix}_cohort_sizes AS (
                 SELECT
                     cohort_week,
-                    COUNT(DISTINCT track_no) AS cohort_size
+                    COUNT(DISTINCT track_id) AS cohort_size
                 FROM {prefix}_visits
                 GROUP BY cohort_week
             )
@@ -845,11 +1126,11 @@ class SpecCompiler:
                 SELECT
                     first.cohort_week,
                     {lag_expression} AS lag_weeks,
-                    later.track_no
+                    later.track_id
                 FROM {prefix}_visits AS first
                 JOIN {prefix}_visits AS later
                     ON first.site_id = later.site_id
-                    AND first.track_no = later.track_no
+                    AND first.track_id = later.track_id
                     AND later.visit_ts >= first.visit_ts
             )
             """
@@ -861,7 +1142,7 @@ class SpecCompiler:
                 SELECT
                     cohort_week,
                     lag_weeks,
-                    COUNT(DISTINCT track_no) AS returning
+                    COUNT(DISTINCT track_id) AS returning
                 FROM {prefix}_returns
                 WHERE lag_weeks BETWEEN 0 AND 52
                 GROUP BY cohort_week, lag_weeks

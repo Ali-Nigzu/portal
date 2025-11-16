@@ -59,14 +59,14 @@ def mock_bigquery(monkeypatch):
     records_df = pd.DataFrame([
         {
             "track_id": "abc",
-            "event_type": 1,
+            "event": 1,
             "timestamp": pd.Timestamp("2024-01-02T02:15:00Z"),
             "sex": "male",
             "age_bucket": "25-34",
         },
         {
             "track_id": "xyz",
-            "event_type": 0,
+            "event": 0,
             "timestamp": pd.Timestamp("2024-01-02T01:45:00Z"),
             "sex": "female",
             "age_bucket": "18-24",
@@ -86,8 +86,8 @@ def mock_bigquery(monkeypatch):
     def fake_query_dataframe(sql: str, params: Dict[str, Any], job_context: Any = None):
         if "COUNT(*) AS total_records" in sql:
             if job_context and "search_summary" in str(job_context):
-                entrances = int((records_df["event_type"] == 1).sum())
-                exits = int((records_df["event_type"] == 0).sum())
+                entrances = int((records_df["event"] == 1).sum())
+                exits = int((records_df["event"] == 0).sum())
                 return pd.DataFrame(
                     [
                         {
@@ -104,7 +104,7 @@ def mock_bigquery(monkeypatch):
             return demographics_df
         if "activity_total_activity_series" in sql:
             return hourly_contract_df
-        if "track_no AS track_id" in sql:
+        if "LIMIT @limit" in sql and "OFFSET @offset" in sql:
             offset = int(params.get('offset', 0) or 0)
             limit = int(params.get('limit', len(records_df)))
             return records_df.iloc[offset:offset + limit]
