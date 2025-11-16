@@ -197,6 +197,7 @@ def test_retention_window_bounds_exports_limits() -> None:
     window_bounds = ctes[RETENTION_WINDOW_CTE]
     assert "window_start" in window_bounds
     assert "window_end" in window_bounds
+    assert "FROM (\n        SELECT" in window_bounds
     calendar_body = ctes.get("retention_calendar", "")
     assert "FROM retention_window_bounds" in calendar_body
     assert "bounds.window_end" in calendar_body

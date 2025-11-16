@@ -1199,9 +1199,14 @@ class SpecCompiler:
             f"""
             {RETENTION_WINDOW_CTE} AS (
                 SELECT
-                    {trunc_expr} AS window_start,
-                    TIMESTAMP(@end_ts) AS window_end,
+                    window_start,
+                    window_end,
                     {max_lag_expr} AS max_lag
+                FROM (
+                    SELECT
+                        {trunc_expr} AS window_start,
+                        TIMESTAMP(@end_ts) AS window_end
+                )
             )
             """
         ).strip()

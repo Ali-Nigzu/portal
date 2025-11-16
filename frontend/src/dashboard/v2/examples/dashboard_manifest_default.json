@@ -26,7 +26,7 @@
     "defaultTimeRangeId": "all_time",
     "options": [
       {
-        "bucket": "DAY",
+        "bucket": "WEEK",
         "durationMinutes": null,
         "id": "all_time",
         "label": "All time",
@@ -401,7 +401,7 @@
       },
       "kind": "chart",
       "subtitle": "Live occupancy, entrances, exits and throughput",
-      "title": "Live Flow (Last 60 min)",
+      "title": "Live Flow",
       "locked": true
     }
   ]

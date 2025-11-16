@@ -25,7 +25,7 @@ export const isAbortError = (error: unknown): boolean => {
 };
 
 async function runLiveQuery(body: unknown, signal?: AbortSignal): Promise<ChartResult> {
-  const { signal: requestSignal, cleanup } = createAbortSignal({ parent: signal, timeoutMs: 20000 });
+  const { signal: requestSignal, cleanup } = createAbortSignal({ parent: signal, timeoutMs: 45000 });
   try {
     const response = await fetch(`${API_BASE_URL}${DASHBOARD_RUN_ENDPOINT}`, {
       method: "POST",
