@@ -296,7 +296,7 @@ def test_engine_normalises_dwell_and_sessions():
     assert dwell_series["geometry"] == "line"
     assert dwell_series["data"][0]["rawCount"] == 4
     sessions_series = next(item for item in result["series"] if item["id"] == "session_count")
-    assert sessions_series["unit"] == "sessions"
+    assert sessions_series["unit"] == "count"
     assert sessions_series["geometry"] == "column"
 
 
@@ -304,11 +304,14 @@ def test_engine_normalises_retention_heatmap():
     spec = {
         "id": "retention-heatmap",
         "dataset": "events",
-        "chartType": "heatmap",
+        "chartType": "retention",
         "measures": [
             {"id": "retention", "aggregation": "retention_rate"},
         ],
-        "dimensions": [{"id": "cohort", "column": "timestamp", "bucket": "WEEK"}],
+        "dimensions": [
+            {"id": "cohort_week", "column": "cohort_week", "bucket": "WEEK", "sort": "asc"}
+        ],
+        "splits": [{"id": "retention_lag", "column": "lag_weeks", "sort": "asc"}],
         "timeWindow": {
             "from": "2024-01-01T00:00:00Z",
             "to": "2024-02-12T00:00:00Z",
@@ -346,10 +349,11 @@ def test_engine_normalises_retention_heatmap():
     )
 
     result = engine.execute(spec, organisation="client0", bypass_cache=True)
-    assert result["chartType"] == "heatmap"
+    assert result["chartType"] == "retention"
     series = result["series"][0]
     assert series["geometry"] == "heatmap"
-    assert series["unit"] == "rate"
+    assert series["unit"] == "percentage"
+    assert series["data"][0]["group"] == "Week 0"
     assert series["data"][1]["group"] == "Week 1"
     assert series["data"][1]["coverage"] == 0.8
     assert "rawCount" not in series["data"][0]
@@ -361,11 +365,14 @@ def test_engine_handles_missing_retention_lag_values():
     spec = {
         "id": "retention-heatmap",
         "dataset": "events",
-        "chartType": "heatmap",
+        "chartType": "retention",
         "measures": [
             {"id": "retention_rate", "aggregation": "retention_rate"},
         ],
-        "dimensions": [{"id": "cohort", "column": "timestamp", "bucket": "WEEK"}],
+        "dimensions": [
+            {"id": "cohort_week", "column": "cohort_week", "bucket": "WEEK", "sort": "asc"}
+        ],
+        "splits": [{"id": "retention_lag", "column": "lag_weeks", "sort": "asc"}],
         "timeWindow": {
             "from": "2024-01-01T00:00:00Z",
             "to": "2024-02-12T00:00:00Z",

@@ -6,6 +6,7 @@ import type { DashboardManifest } from "../types";
 export interface FetchDashboardManifestOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
+  viewToken?: string;
 }
 
 const isAbortError = (error: unknown): boolean => {
@@ -41,12 +42,20 @@ const buildManifestErrorMessage = (status: number, detail?: string | null): stri
 };
 
 export async function fetchDashboardManifest(
-  orgId: string,
+  orgId: string | undefined,
   dashboardId = "dashboard-default",
   options: FetchDashboardManifestOptions = {},
 ): Promise<DashboardManifest> {
   const { signal, cleanup } = createAbortSignal({ parent: options.signal, timeoutMs: options.timeoutMs ?? 15000 });
-  const url = `${API_BASE_URL}/api/dashboards/${dashboardId}?orgId=${encodeURIComponent(orgId)}`;
+  const params = new URLSearchParams();
+  if (options.viewToken) {
+    params.append("viewToken", options.viewToken);
+  } else if (orgId) {
+    params.append("orgId", orgId);
+  } else {
+    throw new Error("orgId or viewToken is required to load dashboard manifest");
+  }
+  const url = `${API_BASE_URL}/api/dashboards/${dashboardId}?${params.toString()}`;
 
   logInfo("dashboard.manifest", "fetch_start", { orgId, dashboardId });
 

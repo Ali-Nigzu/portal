@@ -13,6 +13,7 @@ export interface LoadWidgetOptions {
   timeRange?: DashboardTimeRangeOption;
   timezone?: string;
   orgId?: string;
+  viewToken?: string;
 }
 
 const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
@@ -62,7 +63,7 @@ export async function loadWidgetResult(
   widget: DashboardWidget,
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
-  const { signal, timeRange, timezone, mode, orgId } = options;
+  const { signal, timeRange, timezone, mode, orgId, viewToken } = options;
   const spec = buildWidgetSpec(widget, { timeRange, timezone });
   const selectedMode = resolveMode(widget, mode);
 
@@ -80,7 +81,8 @@ export async function loadWidgetResult(
       }
       result = await loadChartFixture(widget.fixtureId as ChartFixtureName);
     } else {
-      result = await runLiveQuery({ spec, orgId }, signal);
+      const payload = viewToken ? { spec, viewToken } : { spec, orgId };
+      result = await runLiveQuery(payload, signal);
     }
   } catch (error) {
     if (isAbortError(error)) {

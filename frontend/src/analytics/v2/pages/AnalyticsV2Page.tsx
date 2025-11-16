@@ -28,6 +28,7 @@ import { SeriesLegendSummary } from '../components/SeriesLegendSummary';
 import { useWorkspaceIntegrityChecks } from '../utils/useWorkspaceIntegrityChecks';
 import { pinDashboardWidget } from '../../../dashboard/v2/transport/mutateDashboardManifest';
 import { determineOrgId } from '../../../utils/org';
+import { getViewTokenFromLocation } from '../../../utils/viewToken';
 import { Credentials } from '../../../types/credentials';
 
 const buildPresetMap = (presets: PresetDefinition[]): Record<string, PresetDefinition> => {
@@ -62,7 +63,8 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
     () => (defaultPreset ? buildDefaultOverrides(defaultPreset) : {}),
     [defaultPreset],
   );
-  const orgId = useMemo(() => determineOrgId(credentials ?? {}), [credentials]);
+  const viewToken = useMemo(() => getViewTokenFromLocation(), []);
+  const orgId = useMemo(() => (viewToken ? undefined : determineOrgId(credentials ?? {})), [credentials, viewToken]);
   const [state, dispatch] = useWorkspaceStore(
     defaultPreset,
     defaultOverrides,
@@ -107,6 +109,7 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
             mode: state.transportMode,
             signal: controller.signal,
             orgId,
+            viewToken,
           },
         );
         if (!canceled) {
@@ -138,7 +141,7 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
       canceled = true;
       controller.abort();
     };
-  }, [activePreset, effectiveSpec, dispatch, orgId, state.transportMode, runNonce]);
+  }, [activePreset, effectiveSpec, dispatch, orgId, state.transportMode, runNonce, viewToken]);
 
   const handlePresetSelect = (presetId: string) => {
     const preset = presetMap[presetId];
@@ -192,6 +195,12 @@ export const AnalyticsV2Page = ({ credentials, transportModeOverride }: Analytic
 
     setPinStatus('loading');
     setPinError(null);
+
+    if (!orgId) {
+      setPinStatus('error');
+      setPinError('Cannot pin charts without an organisation context.');
+      return;
+    }
 
     try {
       await pinDashboardWidget(orgId, DASHBOARD_ID, {

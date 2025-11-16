@@ -51,6 +51,34 @@ describe('fetchDashboardManifest', () => {
     expect(result).toEqual(manifest);
   });
 
+  it('requests the manifest with a view token when supplied', async () => {
+    const { fetchDashboardManifest } = await import('./fetchDashboardManifest');
+
+    const manifest: DashboardManifest = {
+      id: 'dashboard-default',
+      orgId: 'client1',
+      widgets: [],
+      layout: { kpiBand: [], grid: { columns: 12, placements: {} } },
+    };
+
+    const fetchMock = global.fetch as MockedFunction<typeof global.fetch>;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => manifest,
+    } as unknown as Response);
+
+    const result = await fetchDashboardManifest(undefined, 'dashboard-default', { viewToken: 'abc-123' });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.example.com/api/dashboards/dashboard-default?viewToken=abc-123',
+      expect.objectContaining({
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    expect(result).toEqual(manifest);
+  });
+
   it('throws when the manifest endpoint responds with an error', async () => {
     const { fetchDashboardManifest } = await import('./fetchDashboardManifest');
 

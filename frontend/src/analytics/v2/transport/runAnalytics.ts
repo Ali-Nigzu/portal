@@ -72,16 +72,21 @@ const isAbortError = (error: unknown): boolean => {
 };
 
 async function runLiveQueryOnce(spec: ChartSpec, options: RunAnalyticsQueryOptions): Promise<ChartResult> {
+  const payload: Record<string, unknown> = {
+    spec,
+    bypassCache: options.bypassCache,
+    cacheTtlSeconds: options.cacheTtlSeconds,
+  };
+  if (options.viewToken) {
+    payload.viewToken = options.viewToken;
+  } else if (options.orgId) {
+    payload.orgId = options.orgId;
+  }
+
   const response = await fetch(`${API_BASE_URL}${ANALYTICS_RUN_ENDPOINT}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      spec,
-      orgId: options.orgId,
-      viewToken: options.viewToken,
-      bypassCache: options.bypassCache,
-      cacheTtlSeconds: options.cacheTtlSeconds,
-    }),
+    body: JSON.stringify(payload),
     signal: options.signal,
   });
 

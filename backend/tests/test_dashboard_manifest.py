@@ -16,6 +16,7 @@ from backend.app.analytics.dashboard_catalogue import (
     remove_widget_from_manifest,
 )
 from backend.app.analytics.contracts import validate_chart_spec
+from backend.app.view_tokens import create_view_token, view_tokens
 from backend.fastapi_app import app
 
 
@@ -152,3 +153,16 @@ def test_manifest_endpoint_serves_default_manifest(api_client: TestClient):
     widget_kinds = {widget.get("kind") for widget in payload.get("widgets", [])}
     assert "kpi" in widget_kinds
     assert "chart" in widget_kinds
+
+
+def test_manifest_endpoint_accepts_view_token(api_client: TestClient):
+    view_tokens.clear()
+    token = create_view_token("client2")["token"]
+    response = api_client.get(
+        "/api/dashboards/dashboard-default",
+        params={"viewToken": token},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    # client2 maps to the client1 org slug via table name derivation
+    assert payload["orgId"] == "client1"
