@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import re
+from copy import deepcopy
 from datetime import datetime, timezone
 import re
 
@@ -160,3 +160,37 @@ def test_kpi_compilation_omits_calendar_generation() -> None:
     compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
     assert "GENERATE_TIMESTAMP_ARRAY" not in compiled.sql
     assert "calendar AS" not in compiled.sql
+
+
+def test_live_flow_all_time_avoids_dense_calendar() -> None:
+    spec = deepcopy(DASHBOARD_SPEC_CATALOGUE["dashboard.live_flow"])
+    spec["timeWindow"]["from"] = "1970-01-01T00:00:00Z"
+    spec["timeWindow"]["to"] = "2024-01-01T00:00:00Z"
+    compiler = SpecCompiler()
+    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
+    assert "GENERATE_TIMESTAMP_ARRAY" not in compiled.sql
+    assert "calendar AS" not in compiled.sql
+
+
+def test_retention_calendar_exports_window_bounds() -> None:
+    ctx = _context(bucket="WEEK")
+    plan = compile_contract_query(
+        Metric.RETENTION_RATE,
+        [Dimension.TIME, Dimension.RETENTION_LAG],
+        ctx,
+    )
+    ctes = _extract_ctes(plan.sql)
+    assert "retention_calendar" in ctes
+    assert "window_end" in ctes["retention_calendar"]
+    assert "TIMESTAMP_SUB(window_end" in ctes["retention_calendar"]
+
+
+def test_dwell_all_time_grouping_avoids_calendar_cross_join() -> None:
+    ctx = QueryContext(
+        org_id="client0",
+        table_name="project.dataset.client0",
+        time_range=TimeRangeKey.ALL_TIME,
+    )
+    plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME, Dimension.CAMERA], ctx)
+    assert "calendar AS" not in plan.sql
+    assert "GENERATE_TIMESTAMP_ARRAY" not in plan.sql
