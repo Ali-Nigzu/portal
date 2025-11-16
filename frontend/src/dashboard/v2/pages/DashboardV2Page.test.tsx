@@ -36,7 +36,7 @@ const activityChart = activityResult as unknown as ChartResult;
 const liveFlowChart = liveFlowResult as unknown as ChartResult;
 
 type ManifestLoader = (
-  orgId: string,
+  orgId: string | undefined,
   dashboardId?: string,
   options?: FetchDashboardManifestOptions,
 ) => Promise<DashboardManifest>;
@@ -177,6 +177,40 @@ describe("DashboardV2Page", () => {
     await flushEffects();
 
     expect(unpin).toHaveBeenCalledWith("client0", "dashboard-default", "live-flow");
+  });
+
+  it("passes view tokens to manifest and widget loaders", async () => {
+    const manifestLoader = jest.fn<ReturnType<ManifestLoader>, Parameters<ManifestLoader>>(async () => cloneManifest());
+    const widgetLoader = jest.fn<ReturnType<WidgetResultLoader>, Parameters<WidgetResultLoader>>(async (
+      widget: DashboardWidget,
+    ) => (widget.kind === "kpi" ? activityChart : liveFlowChart));
+
+    const url = new URL(window.location.href);
+    url.search = "?view_token=test-token";
+    window.history.replaceState({}, "", url.toString());
+
+    await act(async () => {
+      renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "admin", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    expect(manifestLoader).toHaveBeenCalled();
+    const [orgId, , options] = manifestLoader.mock.calls[0]!;
+    expect(orgId).toBeUndefined();
+    expect(options?.viewToken).toBe("test-token");
+
+    widgetLoader.mock.calls.forEach(([, opts]) => {
+      expect(opts?.viewToken).toBe("test-token");
+      expect(opts?.orgId).toBeUndefined();
+    });
+
+    window.history.replaceState({}, "", "/");
   });
 
   it("re-runs widget loader when time range changes", async () => {

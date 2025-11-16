@@ -40,8 +40,8 @@ _UNIT_MAP = {
     "activity_rate": "events/min",
     "dwell_mean": "minutes",
     "dwell_p90": "minutes",
-    "sessions": "sessions",
-    "retention_rate": "rate",
+    "sessions": "count",
+    "retention_rate": "percentage",
 }
 
 
@@ -350,7 +350,6 @@ class AnalyticsEngine:
             "surges": [],
             "summary": {
                 "points": len(frame),
-                "measures": list(measures.keys()),
             },
         }
 
@@ -396,9 +395,9 @@ class AnalyticsEngine:
         series: List[Dict[str, Any]] = []
         for measure_id, aggregation in measures.items():
             subset = frame[frame["measure_id"] == measure_id]
-            cohorts: List[str] = []
+            cell_map: Dict[tuple[str, int], tuple[Optional[float], Optional[float]]] = {}
+            cohorts: Dict[str, Any] = {}
             lags: List[int] = []
-            data_points: List[Dict[str, Any]] = []
 
             for record in subset.to_dict("records"):
                 bucket = record.get("bucket_start")
@@ -413,27 +412,39 @@ class AnalyticsEngine:
                 coverage_value = _coerce_number(record.get("coverage"))
 
                 bucket_iso = _to_iso(bucket)
-                cohorts.append(bucket_iso)
+                cohorts[bucket_iso] = bucket
                 lags.append(int(lag_value))
+                cell_map[(bucket_iso, int(lag_value))] = (value, coverage_value)
 
-                point: Dict[str, Any] = {
-                    "x": bucket_iso,
-                    "group": (
-                        f"Month {lag_value}" if compiled.bucket == "MONTH" else f"Week {lag_value}"
-                    ),
-                    "value": float(value) if value is not None else None,
-                }
-                if coverage_value is not None:
-                    point["coverage"] = float(coverage_value)
+            # Ensure a complete matrix for all observed cohorts and lags.
+            cohort_labels = [
+                _to_iso(value)
+                for value in sorted(set(cohorts.values()))
+                if value is not None and not (hasattr(pd, "isna") and pd.isna(value))
+            ]
+            lag_indexes = sorted(set(lags))
 
-                data_points.append(point)
+            data_points: List[Dict[str, Any]] = []
+            for lag_value in lag_indexes:
+                group_label = (
+                    f"Month {lag_value}" if compiled.bucket == "MONTH" else f"Week {lag_value}"
+                )
+                for cohort_label in cohort_labels:
+                    value, coverage_value = cell_map.get((cohort_label, lag_value), (None, None))
+                    point: Dict[str, Any] = {
+                        "x": cohort_label,
+                        "group": group_label,
+                        "value": float(value) if value is not None else None,
+                    }
+                    if coverage_value is not None:
+                        point["coverage"] = float(coverage_value)
 
-            data_points.sort(key=lambda item: (item["x"], item["group"]))
+                    data_points.append(point)
+
             summary = {
                 "points": len(data_points),
-                "cohorts": len(set(cohorts)),
+                "cohorts": len(cohort_labels),
                 "lags": len(set(lags)),
-                "measures": list(measures.keys()),
             }
 
             series.append(
@@ -447,18 +458,17 @@ class AnalyticsEngine:
                 }
             )
 
-        meta: Dict[str, Any] = {
-            "timezone": timezone,
-            "coverage": coverage_meta,
-            "surges": [],
-            "summary": {
-                "points": sum(len(series_item.get("data", [])) for series_item in series),
-                "measures": list(measures.keys()),
-            },
-        }
+            meta: Dict[str, Any] = {
+                "timezone": timezone,
+                "coverage": coverage_meta,
+                "surges": [],
+                "summary": {
+                    "points": sum(len(series_item.get("data", [])) for series_item in series),
+                },
+            }
 
         return {
-            "chartType": "heatmap",
+            "chartType": "retention",
             "xDimension": x_dimension,
             "series": series,
             "meta": meta,

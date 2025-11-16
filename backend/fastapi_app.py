@@ -261,23 +261,27 @@ async def get_view_dashboard_info(token: str):
     }
 
 
+def _resolve_view_token_context(view_token: str, *, resolve_table: bool = True) -> Tuple[str, Optional[str]]:
+    token_data = validate_view_token(view_token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid or expired view token")
+
+    users = load_users()
+    client_id = token_data['client_id']
+
+    if client_id not in users:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    user_record = users[client_id]
+    org_id = _org_id_for_user_record(client_id, user_record)
+    table_name = _resolve_table_for_org(org_id) if resolve_table else None
+    return org_id, table_name
+
+
 def _authenticate_chart_data_request(request: Request, view_token: Optional[str]) -> Tuple[str, str]:
     """Helper function to authenticate chart data requests (view token or Basic auth)"""
     if view_token:
-        token_data = validate_view_token(view_token)
-        if not token_data:
-            raise HTTPException(status_code=401, detail="Invalid or expired view token")
-
-        users = load_users()
-        client_id = token_data['client_id']
-
-        if client_id not in users:
-            raise HTTPException(status_code=404, detail="Client not found")
-
-        user_record = users[client_id]
-        org_id = _org_id_for_user_record(client_id, user_record)
-        table_name = _resolve_table_for_org(org_id)
-        return org_id, table_name
+        return _resolve_view_token_context(view_token)
 
     else:
         auth_header = request.headers.get('Authorization')
@@ -1329,9 +1333,21 @@ async def delete_device(
 @app.get("/api/dashboards/{dashboard_id}", response_model=DashboardManifest)
 async def fetch_dashboard_manifest(
     dashboard_id: str,
-    org_id: str = Query(..., alias="orgId"),
+    request: Request,
+    org_id: Optional[str] = Query(None, alias="orgId"),
+    view_token: Optional[str] = Query(None, alias="viewToken"),
 ):
     """Return the dashboard manifest for the requested organisation."""
+    resolved_view_token = view_token or request.query_params.get("view_token")
+    if resolved_view_token:
+        org_id, _ = _resolve_view_token_context(resolved_view_token, resolve_table=False)
+
+    if not org_id:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "missing_org", "message": "orgId or viewToken is required"},
+        )
+
     try:
         return get_dashboard_manifest(org_id=org_id, dashboard_id=dashboard_id)
     except KeyError as exc:

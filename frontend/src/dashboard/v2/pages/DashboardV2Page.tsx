@@ -16,13 +16,14 @@ import {
 } from "../transport/loadWidgetResult";
 import { unpinDashboardWidget } from "../transport/mutateDashboardManifest";
 import { determineOrgId } from "../../../utils/org";
+import { getViewTokenFromLocation } from "../../../utils/viewToken";
 import { Credentials } from "../../../types/credentials";
 import "../styles/DashboardV2Page.css";
 
 const GRID_ROW_HEIGHT = 96;
 
 type ManifestLoader = (
-  orgId: string,
+  orgId: string | undefined,
   dashboardId?: string,
   options?: FetchDashboardManifestOptions,
 ) => Promise<DashboardManifest>;
@@ -171,7 +172,8 @@ const DashboardV2Page = ({
   unpinWidget,
   dashboardId,
 }: DashboardV2PageProps) => {
-  const orgId = determineOrgId(credentials);
+  const viewToken = useMemo(() => getViewTokenFromLocation(), []);
+  const orgId = viewToken ? undefined : determineOrgId(credentials);
   const resolvedDashboardId = dashboardId ?? "dashboard-default";
   const manifestLoaderImpl = manifestLoader ?? fetchDashboardManifest;
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
@@ -193,15 +195,20 @@ const DashboardV2Page = ({
     abortControllerRef.current = controller;
     logInfo("dashboard.manifest", "ui_fetch_start", {
       orgId,
+      viewToken,
       dashboardId: resolvedDashboardId,
     });
     try {
-      const data = await manifestLoaderImpl(orgId, resolvedDashboardId, { signal: controller.signal });
+      const data = await manifestLoaderImpl(orgId, resolvedDashboardId, {
+        signal: controller.signal,
+        viewToken,
+      });
       if (controller.signal.aborted) {
         return;
       }
       logInfo("dashboard.manifest", "ui_fetch_success", {
         orgId,
+        viewToken,
         dashboardId: resolvedDashboardId,
       });
       setManifest(data);
@@ -209,6 +216,7 @@ const DashboardV2Page = ({
       if (controller.signal.aborted) {
         logInfo("dashboard.manifest", "ui_fetch_aborted", {
           orgId,
+          viewToken,
           dashboardId: resolvedDashboardId,
         });
         return;
@@ -216,6 +224,7 @@ const DashboardV2Page = ({
       const message = err instanceof Error ? err.message : "Unable to load dashboard";
       logError("dashboard.manifest", "ui_fetch_error", {
         orgId,
+        viewToken,
         dashboardId: resolvedDashboardId,
         message,
       });
@@ -227,7 +236,7 @@ const DashboardV2Page = ({
         abortControllerRef.current = null;
       }
     }
-  }, [manifestLoaderImpl, orgId, resolvedDashboardId]);
+  }, [manifestLoaderImpl, orgId, resolvedDashboardId, viewToken]);
 
   useEffect(() => {
     loadManifest();
@@ -308,6 +317,7 @@ const DashboardV2Page = ({
               timeRange: selectedTimeRange ?? undefined,
               timezone,
               orgId,
+              viewToken,
             });
             if (controller.signal.aborted) {
               return;
@@ -376,7 +386,7 @@ const DashboardV2Page = ({
     return () => {
       controller.abort();
     };
-  }, [manifest, selectedTimeRange, runNonce, widgetResultLoaderImpl, orgId]);
+  }, [manifest, selectedTimeRange, runNonce, widgetResultLoaderImpl, orgId, viewToken]);
 
   const kpiWidgets = useMemo(() => {
     if (!manifest) {
@@ -425,6 +435,11 @@ const DashboardV2Page = ({
       setStatus("loading");
       setError(null);
       abortControllerRef.current?.abort();
+      if (!orgId) {
+        setError("Cannot modify dashboard without an organisation context.");
+        setStatus("error");
+        return;
+      }
       try {
         const updated = await unpinWidgetImpl(
           orgId,

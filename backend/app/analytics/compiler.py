@@ -43,11 +43,14 @@ def _bucket_expression(bucket: str, *, field: str = "timestamp") -> str:
 
 def _bucket_trunc_expression(bucket: str) -> str:
     if bucket == "5_MIN":
-        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 5)"
+        seconds = _BUCKET_SECONDS["5_MIN"]
+        return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(TIMESTAMP(@start_ts)), {seconds}) * {seconds})"
     if bucket == "15_MIN":
-        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 15)"
+        seconds = _BUCKET_SECONDS["15_MIN"]
+        return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(TIMESTAMP(@start_ts)), {seconds}) * {seconds})"
     if bucket == "30_MIN":
-        return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), MINUTE, 30)"
+        seconds = _BUCKET_SECONDS["30_MIN"]
+        return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(TIMESTAMP(@start_ts)), {seconds}) * {seconds})"
     if bucket == "HOUR":
         return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), HOUR)"
     if bucket == "DAY":
