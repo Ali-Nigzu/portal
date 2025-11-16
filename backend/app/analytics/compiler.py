@@ -23,6 +23,7 @@ _BUCKET_SECONDS = {
 }
 
 _RETENTION_MIN_COHORT = 100
+_RETENTION_MAX_COHORTS = {"WEEK": 52, "MONTH": 24}
 _UNKNOWN_DIMENSION_VALUE = "Unknown"
 
 _BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
@@ -31,17 +32,13 @@ _BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
 WINDOW_BOUNDS_CTE = "window_bounds"
 RETENTION_WINDOW_CTE = "retention_window_bounds"
 
-def _bucket_expression(bucket: str) -> str:
+def _bucket_expression(bucket: str, *, field: str = "timestamp") -> str:
     if bucket == "RAW":
-        return "timestamp"
+        return field
     if bucket in {"DAY", "WEEK", "MONTH"}:
-        return f"TIMESTAMP_TRUNC(timestamp, {bucket})"
+        return f"TIMESTAMP_TRUNC({field}, {bucket})"
     seconds = _BUCKET_SECONDS[bucket]
-    return (
-        "TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(timestamp), {seconds}) * {seconds})".format(
-            seconds=seconds
-        )
-    )
+    return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS({field}), {seconds}) * {seconds})"
 
 
 def _bucket_trunc_expression(bucket: str) -> str:
@@ -194,6 +191,13 @@ class SpecCompiler:
             chart_type=chart_type,
         )
 
+        use_calendar = self._should_render_calendar(
+            bucket=bucket,
+            start=time_window.get("from"),
+            end=time_window.get("to"),
+            chart_type=chart_type,
+        )
+
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
@@ -205,7 +209,7 @@ class SpecCompiler:
         select_statements: List[str] = []
 
         base_ctes = [self._render_scoped(context.table_name, filters_sql)]
-        if bucket != "RAW":
+        if bucket != "RAW" and use_calendar:
             base_ctes.append(self._render_calendar(bucket))
 
         for measure in measures:
@@ -213,7 +217,12 @@ class SpecCompiler:
             renderer = self._time_series_measures.get(aggregation)
             if renderer is None:
                 raise UnsupportedMeasureError(aggregation)
-            compilation = renderer(measure=measure, bucket=bucket, params=params)
+            compilation = renderer(
+                measure=measure,
+                bucket=bucket,
+                params=params,
+                use_calendar=use_calendar,
+            )
             for fragment in compilation.ctes:
                 name = fragment.split(" AS", 1)[0].strip()
                 cte_registry[name] = fragment
@@ -291,6 +300,25 @@ class SpecCompiler:
         if _bucket_rank(preferred) < _bucket_rank(recommended):
             return preferred
         return recommended
+
+    def _should_render_calendar(
+        self, *, bucket: str, start: object, end: object, chart_type: str
+    ) -> bool:
+        if bucket == "RAW" or chart_type == "single_value":
+            return False
+
+        start_dt = _parse_iso8601(start)
+        end_dt = _parse_iso8601(end)
+        if not start_dt or not end_dt:
+            return True
+
+        span_seconds = (end_dt - start_dt).total_seconds()
+        if span_seconds <= 0:
+            return True
+
+        if span_seconds <= 200 * 24 * 3600:
+            return True
+        return False
 
     def _compile_retention_chart(
         self, spec: Dict[str, object], context: CompilerContext
@@ -520,7 +548,14 @@ class SpecCompiler:
             return f"{field_expr} < @{param_name}"
         raise ValidationError(f"Unsupported filter operator: {operator}")
 
-    def _render_occupancy(self, *, measure: Dict[str, object], bucket: str, params: Dict[str, object]) -> MeasureCompilation:
+    def _render_occupancy(
+        self,
+        *,
+        measure: Dict[str, object],
+        bucket: str,
+        params: Dict[str, object],
+        use_calendar: bool = True,
+    ) -> MeasureCompilation:
         if bucket == "RAW":
             raise ValidationError("occupancy_recursion requires bucketed time series")
         measure_id = measure["id"]
@@ -554,18 +589,43 @@ class SpecCompiler:
             )
             """
         ).strip()
-        bucket_bounds = dedent(
-            f"""
-            {prefix}_bucket_bounds AS (
-                SELECT
-                    bucket_start,
-                    bucket_end,
-                    bucket_seconds,
-                    window_seconds
-                FROM calendar
-            )
-            """
-        ).strip()
+        if use_calendar:
+            bucket_bounds = dedent(
+                f"""
+                {prefix}_bucket_bounds AS (
+                    SELECT
+                        bucket_start,
+                        bucket_end,
+                        bucket_seconds,
+                        window_seconds
+                    FROM calendar
+                )
+                """
+            ).strip()
+        else:
+            interval_expr = _bucket_interval_expression(bucket)
+            bucket_bounds = dedent(
+                f"""
+                {prefix}_bucket_bounds AS (
+                    SELECT
+                        bucket_start,
+                        TIMESTAMP_ADD(bucket_start, {interval_expr}) AS bucket_end,
+                        TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
+                        GREATEST(
+                            TIMESTAMP_DIFF(
+                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                GREATEST(bucket_start, TIMESTAMP(@start_ts)),
+                                SECOND
+                            ),
+                            0
+                        ) AS window_seconds
+                    FROM (
+                        SELECT DISTINCT {_bucket_expression(bucket)} AS bucket_start
+                        FROM scoped
+                    )
+                )
+                """
+            ).strip()
         occupancy_buckets = dedent(
             f"""
             {prefix}_buckets AS (
@@ -634,11 +694,20 @@ class SpecCompiler:
             select_sql=select_sql,
         )
 
-    def _render_activity(self, *, measure: Dict[str, object], bucket: str, params: Dict[str, object]) -> MeasureCompilation:
+    def _render_activity(
+        self,
+        *,
+        measure: Dict[str, object],
+        bucket: str,
+        params: Dict[str, object],
+        use_calendar: bool = True,
+    ) -> MeasureCompilation:
         if bucket == "RAW":
             raise ValidationError("count requires bucketed time series")
         measure_id = measure["id"]
-        counts_cte_name, counts_cte_sql = self._activity_counts_cte(measure, params)
+        counts_cte_name, counts_cte_sql = self._activity_counts_cte(
+            measure, params, use_calendar=use_calendar, bucket=bucket
+        )
         series = dedent(
             f"""
             {measure_id}_activity_series AS (
@@ -660,11 +729,20 @@ class SpecCompiler:
         )
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
 
-    def _render_activity_rate(self, *, measure: Dict[str, object], bucket: str, params: Dict[str, object]) -> MeasureCompilation:
+    def _render_activity_rate(
+        self,
+        *,
+        measure: Dict[str, object],
+        bucket: str,
+        params: Dict[str, object],
+        use_calendar: bool = True,
+    ) -> MeasureCompilation:
         if bucket == "RAW":
             raise ValidationError("activity_rate requires bucketed time series")
         measure_id = measure["id"]
-        counts_cte_name, counts_cte_sql = self._activity_counts_cte(measure, params)
+        counts_cte_name, counts_cte_sql = self._activity_counts_cte(
+            measure, params, use_calendar=use_calendar, bucket=bucket
+        )
         series = dedent(
             f"""
             {measure_id}_activity_rate_series AS (
@@ -879,36 +957,80 @@ class SpecCompiler:
 
         raise UnsupportedMeasureError(aggregation)
 
-    def _activity_counts_cte(self, measure: Dict[str, object], params: Dict[str, object]) -> Tuple[str, str]:
+    def _activity_counts_cte(
+        self,
+        measure: Dict[str, object],
+        params: Dict[str, object],
+        *,
+        use_calendar: bool = True,
+        bucket: str = "DAY",
+    ) -> Tuple[str, str]:
         measure_id = measure["id"]
         prefix = f"{measure_id}_activity_counts"
         event_types = measure.get("eventTypes")
         filter_sql = ""
+        filter_condition = ""
         if event_types:
             param_name = f"{measure_id}_event_types"
             params[param_name] = event_types
-            filter_sql = f" AND scoped.event IN UNNEST(@{param_name})"
-        counts_cte = dedent(
-            f"""
-            {prefix} AS (
-                SELECT
-                    calendar.bucket_start,
-                    calendar.bucket_seconds,
-                    calendar.window_seconds,
-                    COUNT(scoped.timestamp) AS event_count
-                FROM calendar
-                LEFT JOIN scoped
-                    ON scoped.timestamp >= calendar.bucket_start
-                    AND scoped.timestamp < calendar.bucket_end{filter_sql}
-                GROUP BY calendar.bucket_start, calendar.bucket_seconds, calendar.window_seconds
-                ORDER BY calendar.bucket_start
-            )
-            """
-        ).strip()
+            filter_condition = f"scoped.event IN UNNEST(@{param_name})"
+            filter_sql = f" AND {filter_condition}"
+
+        if use_calendar:
+            counts_cte = dedent(
+                f"""
+                {prefix} AS (
+                    SELECT
+                        calendar.bucket_start,
+                        calendar.bucket_seconds,
+                        calendar.window_seconds,
+                        COUNT(scoped.timestamp) AS event_count
+                    FROM calendar
+                    LEFT JOIN scoped
+                        ON scoped.timestamp >= calendar.bucket_start
+                        AND scoped.timestamp < calendar.bucket_end{filter_sql}
+                    GROUP BY calendar.bucket_start, calendar.bucket_seconds, calendar.window_seconds
+                    ORDER BY calendar.bucket_start
+                )
+                """
+            ).strip()
+        else:
+            interval_expr = _bucket_interval_expression(bucket)
+            bucket_expr = _bucket_expression(bucket)
+            where_clause = f" WHERE {filter_condition}" if filter_condition else ""
+            counts_cte = dedent(
+                f"""
+                {prefix} AS (
+                    SELECT
+                        bucket_start,
+                        TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
+                        GREATEST(
+                            TIMESTAMP_DIFF(
+                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                GREATEST(bucket_start, TIMESTAMP(@start_ts)),
+                                SECOND
+                            ),
+                            0
+                        ) AS window_seconds,
+                        COUNT(timestamp) AS event_count
+                    FROM (
+                        SELECT {bucket_expr} AS bucket_start, timestamp
+                        FROM scoped{where_clause}
+                    )
+                    GROUP BY bucket_start
+                    ORDER BY bucket_start
+                )
+                """
+            ).strip()
         return prefix, counts_cte
 
     def _render_dwell(
-        self, *, measure: Dict[str, object], bucket: str, params: Dict[str, object]
+        self,
+        *,
+        measure: Dict[str, object],
+        bucket: str,
+        params: Dict[str, object],
+        use_calendar: bool = True,
     ) -> MeasureCompilation:
         if bucket == "RAW":
             raise ValidationError("dwell metrics require bucketed time series")
@@ -974,25 +1096,52 @@ class SpecCompiler:
             """
         ).strip()
 
-        bucketed = dedent(
-            f"""
-            {prefix}_bucketed AS (
-                SELECT
-                    calendar.bucket_start,
-                    calendar.bucket_seconds,
-                    calendar.window_seconds,
-                    COUNT(sessions.dwell_minutes) AS session_count,
-                    AVG(sessions.dwell_minutes) AS dwell_mean,
-                    APPROX_QUANTILES(sessions.dwell_minutes, 101)[OFFSET(90)] AS dwell_p90
-                FROM calendar
-                LEFT JOIN {prefix}_sessions AS sessions
-                    ON sessions.entrance_ts >= calendar.bucket_start
-                    AND sessions.entrance_ts < calendar.bucket_end
-                GROUP BY calendar.bucket_start, calendar.bucket_seconds, calendar.window_seconds
-                ORDER BY calendar.bucket_start
-            )
-            """
-        ).strip()
+        if use_calendar:
+            bucketed = dedent(
+                f"""
+                {prefix}_bucketed AS (
+                    SELECT
+                        calendar.bucket_start,
+                        calendar.bucket_seconds,
+                        calendar.window_seconds,
+                        COUNT(sessions.dwell_minutes) AS session_count,
+                        AVG(sessions.dwell_minutes) AS dwell_mean,
+                        APPROX_QUANTILES(sessions.dwell_minutes, 101)[OFFSET(90)] AS dwell_p90
+                    FROM calendar
+                    LEFT JOIN {prefix}_sessions AS sessions
+                        ON sessions.entrance_ts >= calendar.bucket_start
+                        AND sessions.entrance_ts < calendar.bucket_end
+                    GROUP BY calendar.bucket_start, calendar.bucket_seconds, calendar.window_seconds
+                    ORDER BY calendar.bucket_start
+                )
+                """
+            ).strip()
+        else:
+            interval_expr = _bucket_interval_expression(bucket)
+            bucket_expr = _bucket_expression(bucket, field="entrance_ts")
+            bucketed = dedent(
+                f"""
+                {prefix}_bucketed AS (
+                    SELECT
+                        {bucket_expr} AS bucket_start,
+                        TIMESTAMP_DIFF(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), {bucket_expr}, SECOND) AS bucket_seconds,
+                        GREATEST(
+                            TIMESTAMP_DIFF(
+                                LEAST(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), TIMESTAMP(@end_ts)),
+                                GREATEST({bucket_expr}, TIMESTAMP(@start_ts)),
+                                SECOND
+                            ),
+                            0
+                        ) AS window_seconds,
+                        COUNT(sessions.dwell_minutes) AS session_count,
+                        AVG(sessions.dwell_minutes) AS dwell_mean,
+                        APPROX_QUANTILES(sessions.dwell_minutes, 101)[OFFSET(90)] AS dwell_p90
+                    FROM {prefix}_sessions AS sessions
+                    GROUP BY bucket_start
+                    ORDER BY bucket_start
+                )
+                """
+            ).strip()
 
         value_column = {
             "dwell_mean": "dwell_mean",
@@ -1040,6 +1189,11 @@ class SpecCompiler:
             raise ValidationError(f"Unsupported retention bucket: {bucket}")
         interval_expr = _bucket_interval_expression(bucket)
         max_lag_expr = _retention_max_lag_expr(bucket)
+        max_cohort_interval = (
+            f"INTERVAL {_RETENTION_MAX_COHORTS[bucket]} WEEK"
+            if bucket == "WEEK"
+            else f"INTERVAL {_RETENTION_MAX_COHORTS[bucket]} MONTH"
+        )
         calendar = dedent(
             f"""
             retention_calendar AS (
@@ -1060,9 +1214,10 @@ class SpecCompiler:
                         window_end,
                         {interval_expr}
                     )
-                ) AS cohort_start,
-                UNNEST(GENERATE_ARRAY(0, GREATEST(max_lag, 0))) AS lag_index
+                    ) AS cohort_start,
+                    UNNEST(GENERATE_ARRAY(0, GREATEST(max_lag, 0))) AS lag_index
                 WHERE cohort_start < window_end
+                    AND cohort_start >= TIMESTAMP_SUB(window_end, {max_cohort_interval})
             )
             """
         ).strip()
