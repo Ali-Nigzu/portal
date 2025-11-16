@@ -236,7 +236,7 @@ DEFAULT_DASHBOARD_WIDGETS = [
     },
     {
         "id": "live-flow",
-        "title": "Live Flow (Last 60 min)",
+        "title": "Live Flow",
         "kind": "chart",
         "chartSpecId": "dashboard.live_flow",
         "fixtureId": "golden_dashboard_live_flow",

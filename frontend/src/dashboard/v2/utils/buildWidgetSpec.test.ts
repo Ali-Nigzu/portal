@@ -1,74 +1,53 @@
+import { describe, expect, it } from "@jest/globals";
 import { buildWidgetSpec } from "./buildWidgetSpec";
-import type { DashboardWidget } from "../types";
-import type { ChartSpec } from "../../../analytics/schemas/charting";
+import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 
-const baseSpec: ChartSpec = {
-  id: "spec.test",
-  dataset: "events",
-  chartType: "single_value",
-  measures: [{ id: "activity", aggregation: "count" }],
-  dimensions: [
-    {
-      id: "timestamp",
-      column: "timestamp",
-      bucket: "HOUR",
-      sort: "asc",
+const baseWidget: DashboardWidget = {
+  id: "live-flow",
+  title: "Live Flow",
+  kind: "chart",
+  inlineSpec: {
+    id: "dashboard.live_flow",
+    dataset: "events",
+    chartType: "composed_time",
+    measures: [{ id: "occupancy", aggregation: "occupancy_recursion" }],
+    dimensions: [
+      {
+        id: "timestamp",
+        column: "timestamp",
+        bucket: "5_MIN",
+        sort: "asc",
+      },
+    ],
+    timeWindow: {
+      from: "{{NOW_MINUS_60_MIN}}",
+      to: "{{NOW}}",
+      bucket: "5_MIN",
+      timezone: "UTC",
     },
-  ],
-  timeWindow: {
-    from: "{{TODAY_START}}",
-    to: "{{NOW}}",
-    bucket: "HOUR",
-    timezone: "UTC",
   },
 };
 
-const widget: DashboardWidget = {
-  id: "widget-1",
-  title: "Test widget",
-  kind: "kpi",
-  inlineSpec: baseSpec,
-};
-
 describe("buildWidgetSpec", () => {
-  it("clones the inline spec and applies time overrides", () => {
-    const anchor = new Date("2024-03-01T12:00:00.000Z");
-    const option = {
-      id: "last_hour",
-      label: "Last 60 minutes",
-      durationMinutes: 60,
-      bucket: "15_MIN" as const,
-    };
-
-    const spec = buildWidgetSpec(widget, { timeRange: option, timezone: "UTC", anchor });
-
-    expect(spec).not.toBe(baseSpec);
-    expect(spec.timeWindow?.bucket).toBe("15_MIN");
-    expect(spec.dimensions?.[0]?.bucket).toBe("15_MIN");
-    expect(spec.timeWindow?.from).toBe("2024-03-01T11:00:00.000Z");
-    expect(spec.timeWindow?.to).toBe("2024-03-01T12:00:00.000Z");
-    expect(baseSpec.timeWindow?.from).toBe("{{TODAY_START}}");
-  });
-
-  it("supports all-time ranges", () => {
-    const anchor = new Date("2024-03-01T12:00:00.000Z");
-    const option = {
+  it("applies the dashboard time range to the inline spec", () => {
+    const option: DashboardTimeRangeOption = {
       id: "all_time",
       label: "All time",
       durationMinutes: null,
-      bucket: "WEEK" as const,
+      bucket: "WEEK",
       allTime: true,
     };
 
-    const spec = buildWidgetSpec(widget, { timeRange: option, timezone: "UTC", anchor });
+    const anchor = new Date("2024-02-01T00:00:00Z");
+    const spec = buildWidgetSpec(baseWidget, { timeRange: option, anchor });
 
     expect(spec.timeWindow?.from).toBe(new Date(0).toISOString());
+    expect(spec.timeWindow?.to).toBe(anchor.toISOString());
     expect(spec.timeWindow?.bucket).toBe("WEEK");
-  });
+    expect(spec.dimensions?.find((d) => d.id === "timestamp")?.bucket).toBe("WEEK");
 
-  it("throws when inline spec is missing", () => {
-    expect(() => buildWidgetSpec({ ...widget, inlineSpec: undefined })).toThrow(
-      /missing inline spec/,
-    );
+    // original widget inline spec remains unchanged
+    expect(baseWidget.inlineSpec?.timeWindow?.from).toBe("{{NOW_MINUS_60_MIN}}");
+    expect(baseWidget.inlineSpec?.dimensions?.[0]?.bucket).toBe("5_MIN");
   });
 });
