@@ -1191,9 +1191,9 @@ class SpecCompiler:
         interval_expr = _bucket_interval_expression(bucket)
         max_lag_expr = _retention_max_lag_expr(bucket)
         max_cohort_interval = (
-            f"INTERVAL {_RETENTION_MAX_COHORTS[bucket]} WEEK"
+            f"INTERVAL {_RETENTION_MAX_COHORTS[bucket] * 7} DAY"
             if bucket == "WEEK"
-            else f"INTERVAL {_RETENTION_MAX_COHORTS[bucket]} MONTH"
+            else f"INTERVAL {_RETENTION_MAX_COHORTS[bucket] * 30} DAY"
         )
         window_bounds = dedent(
             f"""
