@@ -1,5 +1,5 @@
 {
-  "chartType": "heatmap",
+  "chartType": "retention",
   "xDimension": {
     "id": "cohort_week",
     "type": "matrix",
@@ -22,13 +22,19 @@
           "value": 1.0
         },
         {
+          "x": "2023-12-26T00:00:00Z",
+          "group": "Week 1",
+          "value": null
+        },
+        {
           "x": "2024-01-02T00:00:00Z",
           "group": "Week 1",
           "value": 1.0
         }
       ],
       "summary": {
-        "cohorts": 2
+        "cohorts": 2,
+        "lags": 2
       }
     }
   ],
