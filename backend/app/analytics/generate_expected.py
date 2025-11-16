@@ -227,19 +227,23 @@ def build_demographics(events: pd.DataFrame) -> Dict:
 
 def build_retention(events: pd.DataFrame) -> Dict:
     matrix = retention_matrix(events)
+    cohorts = sorted(matrix.keys())
+    lag_indexes = sorted({lag for lags in matrix.values() for lag in lags.keys()})
     data_points: List[Dict] = []
-    for cohort, lags in sorted(matrix.items()):
-        for lag, rate in sorted(lags.items()):
+    for lag in lag_indexes:
+        group_label = f"Week {lag}"
+        for cohort in cohorts:
+            value = matrix.get(cohort, {}).get(lag)
             data_points.append(
                 {
                     "x": cohort,
-                    "group": f"Week {lag}",
-                    "value": _round(rate),
+                    "group": group_label,
+                    "value": _round(value) if value is not None else None,
                 }
             )
 
     return {
-        "chartType": "heatmap",
+        "chartType": "retention",
         "xDimension": {"id": "cohort_week", "type": "matrix", "label": "Cohort week"},
         "series": [
             {
@@ -248,7 +252,8 @@ def build_retention(events: pd.DataFrame) -> Dict:
                 "geometry": "heatmap",
                 "data": data_points,
                 "summary": {
-                    "cohorts": len(matrix),
+                    "cohorts": len(cohorts),
+                    "lags": len(lag_indexes),
                 },
             }
         ],
