@@ -11,8 +11,8 @@ folder are intended to be loaded into temporary BigQuery tables
   exit events for `SITE_01` covering:
   - Multiple cameras (`CAM_A`, `CAM_B`).
   - Entrance/exit pairing for dwell metrics.
-  - Repeated visitor (`track_no = T1`) returning later the same day.
-  - Weekly repeat visitor (`track_no = T4`) to support retention curves.
+  - Repeated visitor (`track_id = T1`) returning later the same day.
+  - Weekly repeat visitor (`track_id = T4`) to support retention curves.
   - Demographic variety across `sex` and `age_bucket` values.
 
 ## Loading into BigQuery

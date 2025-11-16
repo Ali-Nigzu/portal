@@ -17,7 +17,7 @@ export interface LoadWidgetOptions {
 
 const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
 
-const isAbortError = (error: unknown): boolean => {
+export const isAbortError = (error: unknown): boolean => {
   if (error instanceof DOMException) {
     return error.name === "AbortError";
   }
@@ -40,6 +40,11 @@ async function runLiveQuery(body: unknown, signal?: AbortSignal): Promise<ChartR
     }
 
     return (await response.json()) as ChartResult;
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error("Analytics request timed out or was cancelled");
+    }
+    throw error instanceof Error ? error : new Error(String(error));
   } finally {
     cleanup();
   }

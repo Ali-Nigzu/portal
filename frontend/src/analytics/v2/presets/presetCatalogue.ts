@@ -29,18 +29,21 @@ const HOURLY_BUCKETS: TimeBucket[] = ['HOUR', 'DAY', 'WEEK'];
 const RETENTION_BUCKETS: TimeBucket[] = ['WEEK', 'MONTH'];
 
 const STANDARD_TIME_RANGES: PresetTimeRangeOption[] = [
+  { id: 'all_time', label: 'All time', allTime: true, bucket: 'WEEK' },
   { id: '24h', label: 'Last 24 hours', duration: { amount: 24, unit: 'hour' }, bucket: 'HOUR' },
   { id: '7d', label: 'Last 7 days', duration: { amount: 7, unit: 'day' }, bucket: 'DAY' },
   { id: '30d', label: 'Last 30 days', duration: { amount: 30, unit: 'day' }, bucket: 'DAY' },
 ];
 
 const LIVE_TIME_RANGES: PresetTimeRangeOption[] = [
+  { id: 'all_time', label: 'All time', allTime: true, bucket: 'WEEK' },
   { id: '6h', label: 'Last 6 hours', duration: { amount: 6, unit: 'hour' }, bucket: '15_MIN' },
   { id: '24h', label: 'Last 24 hours', duration: { amount: 24, unit: 'hour' }, bucket: 'HOUR' },
   { id: '7d', label: 'Last 7 days', duration: { amount: 7, unit: 'day' }, bucket: 'DAY' },
 ];
 
 const RETENTION_TIME_RANGES: PresetTimeRangeOption[] = [
+  { id: 'all_time', label: 'All time', allTime: true, bucket: 'WEEK' },
   { id: '12w', label: 'Last 12 weeks', duration: { amount: 12, unit: 'week' }, bucket: 'WEEK' },
   { id: '24w', label: 'Last 24 weeks', duration: { amount: 24, unit: 'week' }, bucket: 'WEEK' },
   { id: '6m', label: 'Last 6 months', duration: { amount: 6, unit: 'month' }, bucket: 'MONTH' },
@@ -84,7 +87,7 @@ const presets: Record<string, PresetDefinition> = {
       allowedFilterFields: ['site_id', 'cam_id'],
       allowedSplitDimensions: ['site_id', 'cam_id'],
       timeRangeOptions: LIVE_TIME_RANGES,
-      defaultTimeRangeId: '24h',
+      defaultTimeRangeId: 'all_time',
       splitToggle: {
         dimensionId: 'site_id',
         label: 'Split by site',
@@ -122,7 +125,7 @@ const presets: Record<string, PresetDefinition> = {
       allowedFilterFields: ['site_id', 'cam_id', 'zone'],
       allowedSplitDimensions: ['cam_id'],
       timeRangeOptions: STANDARD_TIME_RANGES,
-      defaultTimeRangeId: '7d',
+      defaultTimeRangeId: 'all_time',
       splitToggle: {
         dimensionId: 'cam_id',
         label: 'Split by camera',
@@ -158,7 +161,7 @@ const presets: Record<string, PresetDefinition> = {
       allowedFilterFields: ['site_id', 'segment'],
       allowedSplitDimensions: ['retention_lag'],
       timeRangeOptions: RETENTION_TIME_RANGES,
-      defaultTimeRangeId: '24w',
+      defaultTimeRangeId: 'all_time',
     },
   },
 };
