@@ -36,7 +36,7 @@ def load_users():
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "table_name": "nigzsu.demodata0.client0_compat",
+                "table_name": "nigzsu.demodata0.client0",
                 "last_login": None,
                 "data_sources": []
             },
@@ -44,7 +44,7 @@ def load_users():
                 "password": hash_password("client456"),
                 "role": "client",
                 "name": "Test Client 2",
-                "table_name": "nigzsu.demodata0.client1_compat",
+                "table_name": "nigzsu.demodata0.client1",
                 "last_login": None,
                 "data_sources": []
             }

@@ -6,8 +6,8 @@ A manifest-driven analytics portal that turns CCTV event streams into charts and
 
 All analytics come from canonical BigQuery event tables — no frontend math or synthetic rows. Each client maps to a single table:
 
-- `client0` → `nigzsu.demodata0.client0_compat`
-- `client1` → `nigzsu.demodata0.client1_compat`
+- `client0` → `nigzsu.${BQ_DATASET}.client0`
+- `client1` → `nigzsu.${BQ_DATASET}.client1`
 
 Canonical schema (all columns are referenced by the compiler and nothing else):
 

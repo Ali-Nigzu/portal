@@ -20,6 +20,7 @@ def test_resolved_table_query_surfaces_not_found(monkeypatch):
 
     try:
         table = org_config.resolve_table_for_org("client0")
+        assert table == "nigzsu.demodata0.client0"
 
         captured_sql: dict[str, str] = {}
 

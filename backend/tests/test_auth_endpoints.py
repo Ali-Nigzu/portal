@@ -24,7 +24,7 @@ def test_login_response_includes_org_id(login_client: TestClient, monkeypatch):
             "password": "secret",
             "role": "client",
             "name": "Client 1",
-            "table_name": "nigzsu.demodata0.client0_compat",
+            "table_name": "nigzsu.demodata0.client0",
         }
     }
     monkeypatch.setattr("backend.fastapi_app.load_users", lambda: fake_users)

@@ -6,10 +6,10 @@ Canonical rules for how analytics data is sourced, compiled, validated, and deli
 
 One BigQuery events table per client:
 
-- `client0` → `nigzsu.demodata0.client0_compat`
-- `client1` → `nigzsu.demodata0.client1_compat`
+- `client0` → `nigzsu.${BQ_DATASET}.client0`
+- `client1` → `nigzsu.${BQ_DATASET}.client1`
 
-Columns (no others are referenced; provided via compatibility views over `demodata0`):
+Columns (no others are referenced; the compiler adapts demodata0 tables into this canonical shape):
 
 ```
 site_id     INTEGER
@@ -22,11 +22,11 @@ sex         STRING
 age_bucket  STRING
 ```
 
-All analytics computations must originate from these columns. The compatibility views:
+All analytics computations must originate from these columns. The scoped events CTE in the compiler:
 
-- Map integer-coded demographics to canonical strings (`sex`: `0 → 'Male'`, `1 → 'Female'`; `age_bucket`: `0 → '0-4'`, `1 → '5-13'`, `2 → '14-25'`, `3 → '26-45'`, `4 → '46-65'`, `5 → '66+'`).
-- Reconstruct `index` via `ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id)`.
-- Enforce `timestamp < @now` (where `@now` is bound per query as `min(requested_end_ts, current_time_in_timezone)`).
+- Maps integer-coded demographics to canonical strings (`sex`: `0 → 'Male'`, `1 → 'Female'`; `age_bucket`: `0 → '0-4'`, `1 → '5-13'`, `2 → '14-25'`, `3 → '26-45'`, `4 → '46-65'`, `5 → '66+'`).
+- Reconstructs `index` via `ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id)`.
+- Enforces `timestamp < @now` (where `@now` is bound per query as `min(requested_end_ts, current_time_in_timezone)`).
 
 ## Analytics contract
 

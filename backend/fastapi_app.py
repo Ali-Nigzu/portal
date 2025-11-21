@@ -348,7 +348,7 @@ def _derive_org_id_from_table_name(table_name: Optional[str]) -> Optional[str]:
     slug = table_name.split(".")[-1].strip()
     if not slug:
         return None
-    return slug.replace("_compat", "") or None
+    return slug or None
 
 
 _USERNAME_ORG_OVERRIDES = {

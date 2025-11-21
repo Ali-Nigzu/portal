@@ -16,11 +16,11 @@ def test_default_org_table_mapping_is_per_client(monkeypatch):
         org_config.override_org_table_map(mapping)
         assert (
             org_config.resolve_table_for_org("client0")
-            == "nigzsu.demodata0.client0_compat"
+            == "nigzsu.demodata0.client0"
         )
         assert (
             org_config.resolve_table_for_org("client1")
-            == "nigzsu.demodata0.client1_compat"
+            == "nigzsu.demodata0.client1"
         )
     finally:
         org_config.override_org_table_map(original)

@@ -22,7 +22,7 @@ export const deriveOrgIdFromTableName = (tableName?: string | null): string | un
   if (!slug) {
     return undefined;
   }
-  return slug.replace(/_compat$/, '') || undefined;
+  return slug || undefined;
 };
 
 export const determineOrgId = (credentials?: Partial<Credentials>): string => {

@@ -422,12 +422,23 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    COALESCE(index, 0) AS index,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY site_id, cam_id, track_id
+                        ORDER BY timestamp, event DESC, track_id
+                    ) AS index,
                     track_id,
                     event,
                     timestamp,
-                    COALESCE(sex, '{_UNKNOWN_DIMENSION_VALUE}') AS sex,
-                    COALESCE(age_bucket, '{_UNKNOWN_DIMENSION_VALUE}') AS age_bucket
+                    CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' END AS sex,
+                    CASE
+                        age_bucket
+                        WHEN 0 THEN '0-4'
+                        WHEN 1 THEN '5-13'
+                        WHEN 2 THEN '14-25'
+                        WHEN 3 THEN '26-45'
+                        WHEN 4 THEN '46-65'
+                        WHEN 5 THEN '66+'
+                    END AS age_bucket
                 FROM `{table_name}`
                 WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
                     AND timestamp < TIMESTAMP(@now){filters_sql}
