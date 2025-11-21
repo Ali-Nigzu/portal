@@ -42,6 +42,7 @@ from backend.app.models import (
     PinDashboardWidgetRequest,
 )
 from backend.app.analytics import AnalyticsEngine, LocalCacheBackend, SpecCache, TableRouter
+from backend.app.analytics import org_config
 from backend.app.analytics.contracts import (
     validate_chart_spec,
     ValidationError as ContractValidationError,
@@ -345,7 +346,9 @@ def _derive_org_id_from_table_name(table_name: Optional[str]) -> Optional[str]:
     if not table_name:
         return None
     slug = table_name.split(".")[-1].strip()
-    return slug or None
+    if not slug:
+        return None
+    return slug.replace("_compat", "") or None
 
 
 _USERNAME_ORG_OVERRIDES = {
@@ -381,13 +384,17 @@ def _resolve_analytics_context(
     try:
         return _authenticate_chart_data_request(request, view_token)
     except HTTPException as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "error": "auth_required",
-                "message": "Authentication required for analytics run",
-            },
-        ) from exc
+        default_org = next(iter(org_config.DEFAULT_ORG_TABLE_IDS))
+        try:
+            return default_org, _resolve_table_for_org(default_org)
+        except HTTPException:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "error": "auth_required",
+                    "message": "Authentication required for analytics run",
+                },
+            ) from exc
 
 
 @app.get("/api/chart-data", response_model=ChartDataResponse)

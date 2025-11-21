@@ -114,7 +114,7 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
             "password": "secret",
             "role": "client",
             "name": "Test Client 1",
-            "table_name": "nigzsu.demodata.client0",
+            "table_name": "nigzsu.demodata0.client0_compat",
         }
     }
 

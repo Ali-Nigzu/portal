@@ -19,7 +19,10 @@ export const deriveOrgIdFromTableName = (tableName?: string | null): string | un
   }
   const segments = trimmed.split('.');
   const slug = segments[segments.length - 1]?.trim();
-  return slug || undefined;
+  if (!slug) {
+    return undefined;
+  }
+  return slug.replace(/_compat$/, '') || undefined;
 };
 
 export const determineOrgId = (credentials?: Partial<Credentials>): string => {
