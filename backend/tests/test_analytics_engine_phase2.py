@@ -112,6 +112,7 @@ def test_compiler_generates_expected_sql(chart_spec):
     assert "UNION ALL" in compiled.sql
     assert compiled.params["start_ts"] == "2024-01-01T00:00:00Z"
     assert compiled.params["end_ts"] == "2024-01-01T03:00:00Z"
+    assert "now" in compiled.params
     assert compiled.params["site_id_0"] == "SITE_01"
     assert compiled.params["cam_id_0"] == ["CAM_1", "CAM_2"]
 

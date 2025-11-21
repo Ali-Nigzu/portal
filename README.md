@@ -6,8 +6,8 @@ A manifest-driven analytics portal that turns CCTV event streams into charts and
 
 All analytics come from canonical BigQuery event tables — no frontend math or synthetic rows. Each client maps to a single table:
 
-- `client0` → `nigzsu.demodata.client0`
-- `client1` → `nigzsu.demodata.client1`
+- `client0` → `nigzsu.demodata0.client0_compat`
+- `client1` → `nigzsu.demodata0.client1_compat`
 
 Canonical schema (all columns are referenced by the compiler and nothing else):
 
@@ -60,7 +60,7 @@ All values originate from BigQuery rows; coverage/freshness is derived server-si
    ```bash
    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
    export BQ_PROJECT=nigzsu
-   export BQ_DATASET=demodata
+   export BQ_DATASET=demodata0
    export BQ_LOCATION=EU
    ```
 
