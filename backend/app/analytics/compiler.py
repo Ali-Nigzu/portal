@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from dataclasses import dataclass
 import re
 from textwrap import dedent
@@ -87,6 +88,19 @@ def _parse_iso8601(value: object) -> datetime | None:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _current_time(timezone: str, end_ts: object) -> str:
+    tzinfo = ZoneInfo(timezone)
+    now_in_tz = datetime.now(tzinfo)
+    parsed_end = _parse_iso8601(end_ts)
+    if parsed_end is not None:
+        if parsed_end.tzinfo is None:
+            parsed_end = parsed_end.replace(tzinfo=tzinfo)
+        else:
+            parsed_end = parsed_end.astimezone(tzinfo)
+        now_in_tz = min(now_in_tz, parsed_end)
+    return now_in_tz.isoformat()
 
 
 def _bucket_rank(bucket: str) -> int:
@@ -187,6 +201,7 @@ class SpecCompiler:
             return self._compile_retention_chart(spec, context)
 
         time_window = spec["timeWindow"]
+        timezone = time_window.get("timezone", context.timezone)
         bucket = self._auto_bucket(
             preferred=time_window.get("bucket", "RAW"),
             start=time_window.get("from"),
@@ -204,6 +219,7 @@ class SpecCompiler:
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
+            "now": _current_time(timezone, time_window.get("to")),
         }
 
         filters_sql = self._build_filters(spec.get("filters", []), params)
@@ -243,9 +259,11 @@ class SpecCompiler:
         self, spec: Dict[str, object], context: CompilerContext
     ) -> CompiledQuery:
         time_window = spec["timeWindow"]
+        timezone = time_window.get("timezone", context.timezone)
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
+            "now": _current_time(timezone, time_window.get("to")),
         }
 
         filters_sql = self._build_filters(spec.get("filters", []), params)
@@ -327,6 +345,7 @@ class SpecCompiler:
         self, spec: Dict[str, object], context: CompilerContext
     ) -> CompiledQuery:
         time_window = spec["timeWindow"]
+        timezone = time_window.get("timezone", context.timezone)
         bucket = time_window.get("bucket", "WEEK")
         if bucket not in {"WEEK", "MONTH"}:
             raise ValidationError("Retention charts require WEEK or MONTH bucket")
@@ -334,6 +353,7 @@ class SpecCompiler:
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
+            "now": _current_time(timezone, time_window.get("to")),
         }
         filters_sql = self._build_filters(spec.get("filters", []), params)
         measures = spec["measures"]
@@ -402,14 +422,26 @@ class SpecCompiler:
                 SELECT
                     site_id,
                     cam_id,
-                    COALESCE(index, 0) AS index,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY site_id, cam_id, track_id
+                        ORDER BY timestamp, event DESC, track_id
+                    ) AS index,
                     track_id,
                     event,
                     timestamp,
-                    COALESCE(sex, '{_UNKNOWN_DIMENSION_VALUE}') AS sex,
-                    COALESCE(age_bucket, '{_UNKNOWN_DIMENSION_VALUE}') AS age_bucket
+                    CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' END AS sex,
+                    CASE
+                        age_bucket
+                        WHEN 0 THEN '0-4'
+                        WHEN 1 THEN '5-13'
+                        WHEN 2 THEN '14-25'
+                        WHEN 3 THEN '26-45'
+                        WHEN 4 THEN '46-65'
+                        WHEN 5 THEN '66+'
+                    END AS age_bucket
                 FROM `{table_name}`
-                WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts){filters_sql}
+                WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
+                    AND timestamp < TIMESTAMP(@now){filters_sql}
             )
             """
         ).strip()

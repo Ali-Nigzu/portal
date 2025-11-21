@@ -19,6 +19,9 @@ export const deriveOrgIdFromTableName = (tableName?: string | null): string | un
   }
   const segments = trimmed.split('.');
   const slug = segments[segments.length - 1]?.trim();
+  if (!slug) {
+    return undefined;
+  }
   return slug || undefined;
 };
 
