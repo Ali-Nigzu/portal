@@ -28,7 +28,26 @@ def client(monkeypatch):
     original_map = dict(org_config.ORG_TABLE_MAP)
     org_config.override_org_table_map(org_config.build_org_table_map())
 
+    user_store = {
+        "admin": {
+            "password": "admin123",
+            "role": "admin",
+            "name": "Admin",
+            "data_sources": [],
+            "last_login": None,
+        },
+        "client1": {
+            "password": "client123",
+            "role": "client",
+            "name": "Client 1",
+            "table_name": "nigzsu.demodata0.client0_compat",
+            "data_sources": [],
+            "last_login": None,
+        },
+    }
+
     calls: dict[str, int] = {"count": 0}
+    resolved: dict[str, str] = {}
 
     def fake_query_dataframe(sql: str, params: dict, job_context: str | None = None):
         calls["count"] += 1
@@ -46,12 +65,33 @@ def client(monkeypatch):
             ]
         )
 
+    def fake_load_users():
+        return user_store
+
+    def fake_save_users(users):
+        user_store.update(users)
+
+    original_resolve = org_config.resolve_table_for_org
+
+    def capture_resolve(org_id: str) -> str:
+        table_name = original_resolve(org_id)
+        resolved["table"] = table_name
+        resolved["org"] = org_id
+        return table_name
+
     monkeypatch.setattr(bigquery_client, "query_dataframe", fake_query_dataframe)
+    monkeypatch.setattr("backend.fastapi_app.load_users", fake_load_users)
+    monkeypatch.setattr("backend.fastapi_app.save_users", fake_save_users)
+    monkeypatch.setattr(org_config, "resolve_table_for_org", capture_resolve)
+    monkeypatch.setattr("backend.fastapi_app.resolve_table_for_org", capture_resolve)
+
     client = TestClient(app)
     try:
-        yield client, calls
+        yield client, calls, resolved
     finally:
         org_config.override_org_table_map(original_map)
+        monkeypatch.setattr(org_config, "resolve_table_for_org", original_resolve)
+        monkeypatch.setattr("backend.fastapi_app.resolve_table_for_org", original_resolve)
 
 
 def _build_spec() -> dict:
@@ -75,7 +115,7 @@ def _build_spec() -> dict:
 
 
 def test_analytics_run_honours_view_token_flow(client):
-    http_client, calls = client
+    http_client, calls, resolved = client
 
     # Admin-style auth used by the dashboard flow
     auth_header = "Basic " + base64.b64encode(b"admin:admin123").decode("ascii")
@@ -98,3 +138,4 @@ def test_analytics_run_honours_view_token_flow(client):
     assert payload["chartType"] == "composed_time"
     assert payload["series"][0]["data"][0]["y"] == pytest.approx(1.0)
     assert calls["count"] == 1
+    assert resolved["table"].endswith(".client0")

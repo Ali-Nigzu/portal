@@ -346,6 +346,8 @@ def _derive_org_id_from_table_name(table_name: Optional[str]) -> Optional[str]:
     if not table_name:
         return None
     slug = table_name.split(".")[-1].strip()
+    if slug.endswith("_compat"):
+        slug = slug[: -len("_compat")]
     if not slug:
         return None
     return slug or None

@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Dict
+
+
+logger = logging.getLogger(__name__)
 
 
 class OrganisationNotConfiguredError(KeyError):
@@ -19,8 +23,19 @@ DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
 }
 
 
+def _strip_compat_suffix(table_id: str) -> str:
+    """Remove trailing ``_compat`` references to avoid view usage at runtime."""
+
+    suffix = "_compat"
+    if table_id.endswith(suffix):
+        return table_id[: -len(suffix)]
+    return table_id
+
+
 def _qualify_table_name(table_id: str) -> str:
     """Return a fully-qualified BigQuery table name for ``table_id``."""
+
+    table_id = _strip_compat_suffix(table_id)
 
     if table_id.count(".") == 2:
         return table_id
@@ -54,11 +69,13 @@ def resolve_table_for_org(organisation: str) -> str:
         table_id = ORG_TABLE_MAP[organisation]
     except KeyError as exc:
         raise OrganisationNotConfiguredError(organisation) from exc
-    if "_compat" in table_id:
-        raise BigQueryConfigurationError(
-            f"Compatibility view references are not allowed (found '{table_id}')"
+
+    stripped_table_id = _strip_compat_suffix(table_id)
+    if stripped_table_id != table_id:
+        logger.warning(
+            "analytics.org_table.sanitised_compat", extra={"original": table_id, "sanitised": stripped_table_id}
         )
-    return _qualify_table_name(table_id)
+    return _qualify_table_name(stripped_table_id)
 
 
 def override_org_table_map(mapping: Dict[str, str]) -> None:

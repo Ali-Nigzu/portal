@@ -26,7 +26,7 @@ def test_default_org_table_mapping_is_per_client(monkeypatch):
         org_config.override_org_table_map(original)
 
 
-def test_compat_table_names_raise(monkeypatch):
+def test_compat_table_names_are_sanitised(monkeypatch):
     monkeypatch.setenv("BQ_PROJECT", "nigzsu")
     monkeypatch.setenv("BQ_DATASET", "demodata0")
     org_config = importlib.import_module("backend.app.analytics.org_config")
@@ -35,11 +35,7 @@ def test_compat_table_names_raise(monkeypatch):
     original = dict(org_config.ORG_TABLE_MAP)
     try:
         org_config.override_org_table_map({"client0": "client0_compat"})
-        try:
-            org_config.resolve_table_for_org("client0")
-        except org_config.BigQueryConfigurationError:
-            pass
-        else:  # pragma: no cover - safeguard
-            raise AssertionError("compat tables should be rejected")
+        resolved = org_config.resolve_table_for_org("client0")
+        assert resolved.endswith(".client0")
     finally:
         org_config.override_org_table_map(original)
