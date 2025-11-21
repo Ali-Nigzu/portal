@@ -61,3 +61,46 @@ def test_compiled_sql_targets_direct_table(monkeypatch):
         assert "nigzsu.demodata0.client0" in sql
     finally:
         org_config.override_org_table_map(original)
+
+
+def test_analytics_run_pipeline_uses_direct_table(monkeypatch):
+    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
+    monkeypatch.setenv("BQ_DATASET", "demodata0")
+
+    import importlib
+    import pandas as pd
+    from fastapi.testclient import TestClient
+
+    import backend.fastapi_app as fastapi_app
+    importlib.reload(fastapi_app)
+    import backend.app.analytics.org_config as org_config
+    importlib.reload(org_config)
+
+    original_map = dict(org_config.ORG_TABLE_MAP)
+    org_config.override_org_table_map(org_config.build_org_table_map())
+
+    try:
+        captured: dict[str, object] = {}
+
+        class CapturingClient:
+            def query_dataframe(self, sql: str, params: dict, job_context: str | None = None):
+                captured["sql"] = sql
+                captured["params"] = params
+                return pd.DataFrame(
+                    columns=["measure_id", "bucket_start", "value", "coverage", "raw_count"]
+                )
+
+        fastapi_app.bigquery_client = CapturingClient()
+        client = TestClient(fastapi_app.app)
+
+        response = client.post(
+            "/api/analytics/run",
+            json={"spec": _build_spec(), "orgId": "client0", "bypassCache": True},
+        )
+
+        assert response.status_code == 200
+        sql = captured.get("sql") or ""
+        assert "client0_compat" not in sql
+        assert "nigzsu.demodata0.client0" in sql
+    finally:
+        org_config.override_org_table_map(original_map)

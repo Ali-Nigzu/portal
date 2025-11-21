@@ -124,7 +124,9 @@ class AnalyticsEngine:
     ) -> Dict[str, Any]:
         table_name = self.table_router.resolve(organisation)
         logger.info(
-            "analytics.run.resolved_table",
+            "analytics.run.resolved_table org=%s table=%s",
+            organisation,
+            table_name,
             extra={"spec_id": spec.get("id"), "org": organisation, "table": table_name},
         )
         cache_key = build_cache_key(spec, table_name=table_name)
