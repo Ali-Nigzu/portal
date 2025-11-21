@@ -14,8 +14,8 @@ class BigQueryConfigurationError(RuntimeError):
 
 
 DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
-    "client0": "client0",
-    "client1": "client1",
+    "client0": "client0_compat",
+    "client1": "client1_compat",
 }
 
 
