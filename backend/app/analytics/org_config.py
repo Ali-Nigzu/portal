@@ -54,6 +54,10 @@ def resolve_table_for_org(organisation: str) -> str:
         table_id = ORG_TABLE_MAP[organisation]
     except KeyError as exc:
         raise OrganisationNotConfiguredError(organisation) from exc
+    if "_compat" in table_id:
+        raise BigQueryConfigurationError(
+            f"Compatibility view references are not allowed (found '{table_id}')"
+        )
     return _qualify_table_name(table_id)
 
 
