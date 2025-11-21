@@ -11,7 +11,7 @@ FIXTURE = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "fixtur
 def _materialise_compatibility_view(now: pd.Timestamp) -> pd.DataFrame:
     frame = pd.read_csv(FIXTURE, parse_dates=["timestamp"])
     filtered = frame[frame["timestamp"] < now].copy()
-    filtered["sex"] = filtered["sex"].map({0: "M", 1: "F"})
+    filtered["sex"] = filtered["sex"].map({0: "Male", 1: "Female"})
     filtered["age_bucket"] = filtered["age_bucket"].map(
         {0: "0-4", 1: "5-13", 2: "14-25", 3: "26-45", 4: "46-65", 5: "66+"}
     )
@@ -27,7 +27,7 @@ def test_demographics_map_without_unknowns():
     result = _materialise_compatibility_view(now)
 
     assert "T4" not in set(result["track_id"])  # future row filtered out
-    assert set(result["sex"].unique()) == {"M", "F"}
+    assert set(result["sex"].unique()) == {"Male", "Female"}
     assert all(bucket in {"0-4", "5-13", "14-25", "26-45", "46-65", "66+"} for bucket in result["age_bucket"])
 
 

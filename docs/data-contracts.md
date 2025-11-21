@@ -24,7 +24,7 @@ age_bucket  STRING
 
 All analytics computations must originate from these columns. The compatibility views:
 
-- Map integer-coded demographics to canonical strings (`sex`: `0 → 'M'`, `1 → 'F'`; `age_bucket`: `0 → '0-4'`, `1 → '5-13'`, `2 → '14-25'`, `3 → '26-45'`, `4 → '46-65'`, `5 → '66+'`).
+- Map integer-coded demographics to canonical strings (`sex`: `0 → 'Male'`, `1 → 'Female'`; `age_bucket`: `0 → '0-4'`, `1 → '5-13'`, `2 → '14-25'`, `3 → '26-45'`, `4 → '46-65'`, `5 → '66+'`).
 - Reconstruct `index` via `ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id)`.
 - Enforce `timestamp < @now` (where `@now` is bound per query as `min(requested_end_ts, current_time_in_timezone)`).
 

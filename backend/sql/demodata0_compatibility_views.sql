@@ -13,8 +13,8 @@ SELECT
     ORDER BY timestamp, event DESC, track_id
   ) AS index,
   CASE sex
-    WHEN 0 THEN 'M'
-    WHEN 1 THEN 'F'
+    WHEN 0 THEN 'Male'
+    WHEN 1 THEN 'Female'
   END AS sex,
   CASE age_bucket
     WHEN 0 THEN '0-4'
@@ -39,8 +39,8 @@ SELECT
     ORDER BY timestamp, event DESC, track_id
   ) AS index,
   CASE sex
-    WHEN 0 THEN 'M'
-    WHEN 1 THEN 'F'
+    WHEN 0 THEN 'Male'
+    WHEN 1 THEN 'Female'
   END AS sex,
   CASE age_bucket
     WHEN 0 THEN '0-4'
