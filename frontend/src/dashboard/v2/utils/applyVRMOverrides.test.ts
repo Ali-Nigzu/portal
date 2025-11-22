@@ -202,7 +202,7 @@ describe("applyVRMOverrides", () => {
     expect(capacityHeadline.currentUsage).toBe(90);
     expect(capacityHeadline.peakToday).toBe(100);
     expect(capacityResult.meta?.summary?.headlineValue).toBe(90);
-    expect(capacityResult.meta?.summary?.secondaryText).toContain("Peak today:");
+    expect(capacityResult.meta?.summary?.secondaryText).toContain("Today’s peak:");
     expect(capacityResult.meta?.summary?.hideDelta).toBeTruthy();
   });
 

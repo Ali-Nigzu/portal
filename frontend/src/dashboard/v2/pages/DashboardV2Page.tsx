@@ -79,8 +79,16 @@ const KpiTile = ({
 }) => {
   const summary = result?.meta?.summary ?? {};
   const headline = typeof summary.headline === "string" ? summary.headline : null;
-  const secondary = typeof summary.secondaryText === "string" ? summary.secondaryText : null;
-  const isVrmWidget = (Object.values(VRM_KPI_IDS) as string[]).includes(state.widget.id);
+  const renderedResult = result
+    ? ({
+        ...result,
+        meta: {
+          ...(result.meta ?? { timezone: "UTC" }),
+          summary: { ...(result.meta?.summary ?? {}), title },
+        },
+      } as Parameters<typeof ChartRenderer>[0]["result"])
+    : result;
+
   let content: JSX.Element;
   if (state.status === "loading") {
     content = renderLoading(title);
@@ -91,7 +99,7 @@ const KpiTile = ({
   } else {
     content = (
       <ChartRenderer
-        result={result}
+        result={renderedResult!}
         height={168}
         className="dashboard-v2__kpi-renderer"
       />
@@ -207,7 +215,7 @@ const DashboardV2Page = ({
   }, []);
 
   const clientContextId = useMemo(
-    () => manifest?.orgId ?? credentials.orgId ?? credentials.username ?? orgId,
+    () => credentials.orgId ?? credentials.username ?? manifest?.orgId ?? orgId,
     [manifest?.orgId, credentials.orgId, credentials.username, orgId],
   );
 
@@ -339,7 +347,6 @@ const DashboardV2Page = ({
     const timezone = manifest.timeControls?.timezone;
 
     const run = async () => {
-      const decorateOrgId = orgId ?? manifest?.orgId;
       await Promise.all(
         manifest.widgets.map(async (widget) => {
           try {

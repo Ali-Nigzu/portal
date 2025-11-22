@@ -442,7 +442,7 @@ describe("DashboardV2Page", () => {
     );
     expect(
       (capacityResult?.meta?.summary as Record<string, string> | undefined)?.secondaryText ?? "",
-    ).toContain("Peak today:");
+    ).toContain("Today’s peak:");
 
     const errorTiles = tree!.root.findAllByProps({ className: "dashboard-v2__error" });
     expect(errorTiles.length).toBe(0);
