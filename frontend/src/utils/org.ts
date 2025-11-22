@@ -4,8 +4,8 @@ const DEFAULT_ORG_ID = 'client0';
 
 const USERNAME_TO_ORG_MAP: Record<string, string> = {
   client0: 'client0',
-  client1: 'client0',
-  client2: 'client1',
+  client1: 'client1',
+  client2: 'client2',
   admin: 'client0',
 };
 

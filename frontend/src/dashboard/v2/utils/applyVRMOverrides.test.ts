@@ -83,6 +83,10 @@ describe("applyVRMOverrides", () => {
       expect(widget.title).toBe(VRM_KPI_TITLES[widget.id]);
       expect(widget.inlineSpec?.timeWindow?.bucket).toBe("15_MIN");
       expect(widget.inlineSpec?.timeWindow?.from).toBe("{{NOW_MINUS_24_HOURS}}");
+      if (widget.id === VRM_KPI_IDS.traffic) {
+        expect(widget.inlineSpec?.splits?.[0]?.id).toBe("camera_id");
+        expect(widget.inlineSpec?.dimensions?.[0]?.id).toBe("timestamp");
+      }
     });
   });
 

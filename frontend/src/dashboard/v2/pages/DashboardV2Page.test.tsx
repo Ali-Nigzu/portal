@@ -126,15 +126,25 @@ const buildChartResult = (
 });
 
 const trafficDistributionResult: ChartResult = {
-  chartType: "categorical",
-  xDimension: { id: "camera_id", type: "category" },
+  chartType: "composed_time",
+  xDimension: { id: "timestamp", type: "time", bucket: "15_MIN", timezone: "UTC" },
   series: [
     {
-      id: "events",
-      label: "Events",
-      geometry: "bar",
+      id: "cam0",
+      label: "Cam 0",
+      geometry: "line",
       data: [
-        { x: "Camera 1", y: 100 },
+        { x: "2024-01-01T00:00:00Z", y: 10 },
+        { x: "2024-01-01T00:15:00Z", y: 20 },
+      ],
+    },
+    {
+      id: "cam1",
+      label: "Cam 1",
+      geometry: "line",
+      data: [
+        { x: "2024-01-01T00:00:00Z", y: 5 },
+        { x: "2024-01-01T00:15:00Z", y: 10 },
       ],
     },
   ],
@@ -212,10 +222,10 @@ describe("DashboardV2Page", () => {
       VRM_KPI_IDS.footfall,
       VRM_KPI_IDS.dwell,
       VRM_KPI_IDS.capacity,
+      VRM_KPI_IDS.traffic,
       "live-flow",
     ]);
     expect(new Set(widgetIds)).toEqual(expectedIds);
-    expect(widgetIds).not.toContain(VRM_KPI_IDS.traffic);
     widgetLoader.mock.calls.forEach(([, opts]) => {
       expect(opts?.orgId).toBe("client0");
     });
@@ -319,7 +329,7 @@ describe("DashboardV2Page", () => {
     window.history.replaceState({}, "", "/");
   });
 
-  it("re-runs widget loader when time range changes", async () => {
+  it("hides toolbar controls for VRM dashboards", async () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async (widget: DashboardWidget, options?: LoadWidgetOptions) => {
       if (widget.kind === "kpi") {
@@ -340,29 +350,10 @@ describe("DashboardV2Page", () => {
     });
     await flushEffects();
 
-    widgetLoader.mockClear();
-
-    const select = tree!.root.findByType("select");
-    await act(async () => {
-      select.props.onChange({ target: { value: "last_60_minutes" } });
-    });
-    await flushEffects();
-
-    expect(widgetLoader).toHaveBeenCalled();
-    const callArgs = widgetLoader.mock.calls[0][1];
-    expect(callArgs?.timeRange?.id).toBe("last_60_minutes");
-    expect(callArgs?.orgId).toBe("client0");
-
-    const vrmIds = (
-      Object.values(VRM_KPI_IDS).filter((id) => id !== VRM_KPI_IDS.traffic) as DashboardWidget["id"][]
-    );
-    const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
-    vrmIds.forEach((id) => expect(widgetIds).toContain(id));
-    widgetLoader.mock.calls
-      .filter(([widget]) => vrmIds.includes(widget.id))
-      .forEach(([widget]) => {
-        expect(widget.fixedTimeWindow).toEqual({ bucket: "15_MIN", durationMinutes: 1440 });
-      });
+    expect(tree!.root.findAllByType("select")).toHaveLength(0);
+    expect(tree!.root.findAllByProps({ className: "dashboard-v2__controls" })).toHaveLength(0);
+    const refreshButtons = tree!.root.findAllByProps({ className: "dashboard-v2__button" });
+    expect(refreshButtons).toHaveLength(0);
   });
 
   it("renders only the VRM KPI tiles in the band", async () => {
@@ -427,7 +418,9 @@ describe("DashboardV2Page", () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
       if (widget.kind === "kpi") {
-        return buildChartResult([10, 15, 20]);
+        return buildChartResult([10, 15, 20], {
+          meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+        });
       }
       return liveFlowChart;
     });
@@ -483,6 +476,42 @@ describe("DashboardV2Page", () => {
     expect(errorBanner.children.join(" ")).toContain("Some widgets failed to load");
   });
 
+  it("hides outer VRM captions while preserving summary metadata", async () => {
+    renderedResults.length = 0;
+    const manifestLoader = jest.fn(async () => cloneManifest());
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.kind === "kpi") {
+        return buildChartResult([1, 2, 3], {
+          meta: {
+            timezone: "UTC",
+            summary: { headline: `headline-${widget.id}`, secondaryText: `secondary-${widget.id}` },
+          },
+        });
+      }
+      return liveFlowChart;
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client1", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    expect(tree!.root.findAllByProps({ className: "dashboard-v2__kpi-subtitle" })).toHaveLength(0);
+    expect(tree!.root.findAllByProps({ className: "dashboard-v2__kpi-secondary" })).toHaveLength(0);
+
+    const headlines = renderedResults.flatMap((result) =>
+      Object.values(result.meta?.summary ?? {}).filter((value) => typeof value === "string" && value.startsWith("headline-")),
+    );
+    expect(headlines.length).toBeGreaterThan(0);
+  });
+
   it("renders empty states when manifest has no widgets", async () => {
     const manifestLoader = jest.fn(async () =>
       cloneManifest({
@@ -505,6 +534,76 @@ describe("DashboardV2Page", () => {
 
     const emptyMessages = tree!.root.findAllByProps({ className: "dashboard-v2__empty" });
     expect(emptyMessages).toHaveLength(1);
+  });
+
+  it("uses the org context for headers and capacity lookup", async () => {
+    renderedResults.length = 0;
+    const manifestLoader = jest.fn(async () => cloneManifest({ orgId: "client2" }));
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.kind === "kpi") {
+        const values = widget.id === VRM_KPI_IDS.capacity ? [50, 60] : [1, 2, 3];
+        return buildChartResult(values, {
+          label: widget.id,
+          meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+        });
+      }
+      return liveFlowChart;
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client2", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    const title = tree!.root.findByProps({ className: "dashboard-v2__title" });
+    expect(title.children.join(" ")).toContain("client2 – client2");
+
+    const capacityResult = renderedResults.find(
+      (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
+    );
+    expect(lastBucketValue(capacityResult?.series?.[0])).toBeCloseTo(60);
+  });
+
+  it("prefers credential org over manifest org when decorating VRM results", async () => {
+    renderedResults.length = 0;
+    const manifestLoader = jest.fn(async () => cloneManifest({ orgId: "client1" }));
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.kind === "kpi") {
+        const values = widget.id === VRM_KPI_IDS.capacity ? [50, 100] : [1, 2, 3];
+        return buildChartResult(values, {
+          label: widget.id,
+          meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+        });
+      }
+      return liveFlowChart;
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client2", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    const title = tree!.root.findByProps({ className: "dashboard-v2__title" });
+    expect(title.children.join(" ")).toContain("client2 – client2");
+
+    const capacityResult = renderedResults.find(
+      (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
+    );
+    expect(capacityResult?.meta?.summary?.headlineValue).toBe(100);
   });
 
   it("derives VRM KPI headlines from the latest bucket values instead of 24h totals", () => {
