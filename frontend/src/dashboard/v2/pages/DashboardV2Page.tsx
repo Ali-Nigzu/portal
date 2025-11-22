@@ -24,7 +24,7 @@ import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
 
 const GRID_ROW_HEIGHT = 96;
 
-const FIXED_KPI_IDS = new Set(Object.values(VRM_KPI_IDS));
+const FIXED_KPI_IDS = new Set<string>(Object.values(VRM_KPI_IDS));
 
 const CAPACITY_MAP: Record<string, number> = {
   client0: 100,

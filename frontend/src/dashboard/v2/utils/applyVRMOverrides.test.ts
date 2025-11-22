@@ -5,9 +5,45 @@ const buildManifest = (): DashboardManifest => ({
   id: "dashboard-default",
   orgId: "client0",
   widgets: [
-    { id: "kpi-activity", title: "Activity Today", kind: "kpi", inlineSpec: { chartType: "single_value" } },
-    { id: "kpi-entrances", title: "Entrances Today", kind: "kpi", inlineSpec: { chartType: "single_value" } },
-    { id: "chart-1", title: "Chart", kind: "chart", inlineSpec: { chartType: "line" } },
+    {
+      id: "kpi-activity",
+      title: "Activity Today",
+      kind: "kpi",
+      inlineSpec: {
+        id: "kpi-activity",
+        dataset: "events",
+        measures: [{ aggregation: "count", id: "activity" }],
+        dimensions: [{ id: "time", column: "timestamp", bucket: "15_MIN" }],
+        timeWindow: { from: "{{NOW_MINUS_24_HOURS}}", to: "{{NOW}}", bucket: "15_MIN" },
+        chartType: "single_value",
+      },
+    },
+    {
+      id: "kpi-entrances",
+      title: "Entrances Today",
+      kind: "kpi",
+      inlineSpec: {
+        id: "kpi-entrances",
+        dataset: "events",
+        measures: [{ aggregation: "count", id: "entrances" }],
+        dimensions: [{ id: "time", column: "timestamp", bucket: "15_MIN" }],
+        timeWindow: { from: "{{NOW_MINUS_24_HOURS}}", to: "{{NOW}}", bucket: "15_MIN" },
+        chartType: "single_value",
+      },
+    },
+    {
+      id: "chart-1",
+      title: "Chart",
+      kind: "chart",
+      inlineSpec: {
+        id: "chart-1",
+        dataset: "events",
+        measures: [{ aggregation: "count", id: "events" }],
+        dimensions: [{ id: "time", column: "timestamp", bucket: "15_MIN" }],
+        timeWindow: { from: "{{NOW_MINUS_24_HOURS}}", to: "{{NOW}}", bucket: "15_MIN" },
+        chartType: "composed_time",
+      },
+    },
   ],
   layout: {
     kpiBand: ["kpi-activity", "kpi-entrances"],
@@ -28,11 +64,13 @@ describe("applyVRMOverrides", () => {
     const manifest = buildManifest();
     const updated = applyVRMOverrides(manifest);
 
+    const vrmIds = Object.values(VRM_KPI_IDS) as string[];
+
     expect(updated.layout.kpiBand).toEqual(Object.values(VRM_KPI_IDS));
     const widgetIds = updated.widgets.map((widget) => widget.id);
     Object.values(VRM_KPI_IDS).forEach((id) => expect(widgetIds).toContain(id));
 
-    const vrmWidgets = updated.widgets.filter((widget) => Object.values(VRM_KPI_IDS).includes(widget.id));
+    const vrmWidgets = updated.widgets.filter((widget) => vrmIds.includes(widget.id));
     expect(vrmWidgets).toHaveLength(7);
     vrmWidgets.forEach((widget) => {
       expect(widget.fixedTimeWindow).toEqual({ bucket: "15_MIN", durationMinutes: 1440 });

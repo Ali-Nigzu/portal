@@ -5,7 +5,6 @@ import type { TestRenderer } from "react-test-renderer";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 import type { DashboardManifest, DashboardWidget } from "../types";
 import DashboardV2Page from "./DashboardV2Page";
-import activityResult from "../../../analytics/examples/golden_dashboard_kpi_activity.json";
 import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_flow.json";
 import type { FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
@@ -33,7 +32,6 @@ jest.mock("../../../analytics/components/ChartRenderer", () => ({
   ),
 }));
 
-const activityChart = activityResult as unknown as ChartResult;
 const liveFlowChart = liveFlowResult as unknown as ChartResult;
 
 type ManifestLoader = (
@@ -52,9 +50,7 @@ const baseWidgets: DashboardWidget[] = [
     chartSpecId: "dashboard.kpi.activity_today",
     fixtureId: "golden_dashboard_kpi_activity",
     locked: true,
-    inlineSpec: (activityResult as unknown as { id: string }).id
-      ? (activityResult as unknown as { id: string })
-      : undefined,
+    inlineSpec: undefined,
   },
   {
     id: "live-flow",
@@ -105,10 +101,12 @@ const buildSeriesPoints = (values: number[]) => {
 
 const buildChartResult = (values: number[]): ChartResult => ({
   chartType: "single_value",
+  xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
   series: [
     {
       id: "primary",
       label: "primary",
+      geometry: "line",
       data: buildSeriesPoints(values),
     },
   ],
@@ -117,6 +115,7 @@ const buildChartResult = (values: number[]): ChartResult => ({
 
 const trafficDistributionResult: ChartResult = {
   chartType: "categorical",
+  xDimension: { id: "camera_id", type: "category" },
   series: [
     {
       id: "events",
@@ -315,10 +314,11 @@ describe("DashboardV2Page", () => {
     expect(callArgs?.timeRange?.id).toBe("last_60_minutes");
     expect(callArgs?.orgId).toBe("client0");
 
+    const vrmIds = Object.values(VRM_KPI_IDS) as DashboardWidget["id"][];
     const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
-    Object.values(VRM_KPI_IDS).forEach((id) => expect(widgetIds).toContain(id));
+    vrmIds.forEach((id) => expect(widgetIds).toContain(id));
     widgetLoader.mock.calls
-      .filter(([widget]) => Object.values(VRM_KPI_IDS).includes(widget.id))
+      .filter(([widget]) => vrmIds.includes(widget.id))
       .forEach(([widget]) => {
         expect(widget.fixedTimeWindow).toEqual({ bucket: "15_MIN", durationMinutes: 1440 });
       });
@@ -348,7 +348,7 @@ describe("DashboardV2Page", () => {
     const titles = tree!
       .root
       .findAllByProps({ className: "dashboard-v2__kpi-title" })
-      .map((node) => node.children.join(" "));
+      .map((node: { children: (string | number)[] }) => node.children.join(" "));
 
     Object.values(VRM_KPI_TITLES).forEach((label) => expect(titles).toContain(label));
     expect(titles).not.toContain("Activity Today");

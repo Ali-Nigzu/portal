@@ -42,13 +42,24 @@ const baseTimeWindow = {
   timezone: "UTC",
 };
 
-const singleValueSpec = (overrides: Partial<ChartSpec>): ChartSpec => ({
+type SingleValueOverrides = Partial<
+  Omit<ChartSpec, "id" | "dataset" | "dimensions" | "timeWindow" | "chartType" | "measures">
+> & {
+  id: string;
+  measures: ChartSpec["measures"];
+  notes?: string[];
+};
+
+const singleValueSpec = ({ id, measures, notes, ...overrides }: SingleValueOverrides): ChartSpec => ({
   chartType: "single_value",
   dataset: "events",
   dimensions: [timestampDimension],
   displayHints: { carryForward: true },
   interactions: { export: ["png", "csv"] },
   timeWindow: baseTimeWindow,
+  id,
+  measures,
+  notes,
   ...overrides,
 });
 
