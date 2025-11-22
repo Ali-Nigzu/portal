@@ -102,23 +102,16 @@ const KpiTile = ({
 
   return (
     <div className="dashboard-v2__kpi-tile" data-state={state.status}>
-      <div className="dashboard-v2__kpi-head">
-        <div className="dashboard-v2__kpi-title-block">
-          <div className="dashboard-v2__kpi-title">{title}</div>
-          {headline ? <div className="dashboard-v2__kpi-subtitle">{headline}</div> : null}
-          {secondary ? <div className="dashboard-v2__kpi-secondary">{secondary}</div> : null}
-        </div>
-        {showRemove ? (
-          <button
-            type="button"
-            className="dashboard-v2__remove-button"
-            onClick={onRemove}
-          >
+      {showRemove ? (
+        <div className="dashboard-v2__kpi-controls">
+          <button type="button" className="dashboard-v2__remove-button" onClick={onRemove}>
             Unpin
           </button>
-        ) : null}
+        </div>
+      ) : null}
+      <div className="dashboard-v2__kpi-content" aria-label={title} data-headline={headline ?? undefined}>
+        {content}
       </div>
-      {content}
     </div>
   );
 };
@@ -212,6 +205,11 @@ const DashboardV2Page = ({
     const params = new URLSearchParams(window.location.search);
     return params.has("vrmDebug");
   }, []);
+
+  const clientContextId = useMemo(
+    () => manifest?.orgId ?? credentials.orgId ?? credentials.username ?? orgId,
+    [manifest?.orgId, credentials.orgId, credentials.username, orgId],
+  );
 
   useEffect(() => {
     const interval = setInterval(() => setLocalTime(new Date()), 60_000);
@@ -366,7 +364,7 @@ const DashboardV2Page = ({
             if (controller.signal.aborted) {
               return;
             }
-            const decorated = decorateResult(widget.id, result, orgId);
+            const decorated = decorateResult(widget.id, result, clientContextId);
             setWidgetState((previous) => ({
               ...previous,
               [widget.id]: {
@@ -431,7 +429,15 @@ const DashboardV2Page = ({
     return () => {
       controller.abort();
     };
-  }, [manifest, selectedTimeRange, runNonce, widgetResultLoaderImpl, orgId, viewToken]);
+  }, [
+    manifest,
+    selectedTimeRange,
+    runNonce,
+    widgetResultLoaderImpl,
+    orgId,
+    viewToken,
+    clientContextId,
+  ]);
 
   const kpiWidgets = useMemo(() => {
     if (!manifest) {

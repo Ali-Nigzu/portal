@@ -66,6 +66,11 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     typeof result.meta?.summary?.secondaryText === "string"
       ? (result.meta?.summary?.secondaryText as string)
       : undefined;
+  const tertiaryText =
+    typeof result.meta?.summary?.tertiaryText === "string"
+      ? (result.meta?.summary?.tertiaryText as string)
+      : undefined;
+  const hideDelta = Boolean(result.meta?.summary?.hideDelta);
 
   const formatLabel = (label?: string | number) => {
     if (!label) {
@@ -90,12 +95,13 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       <div className="kpi-value">{formatKpiValue(value, primarySeries?.unit)}</div>
       {showRaw ? <div className="kpi-meta">raw: {rawCount}</div> : null}
       {secondaryText ? <div className="kpi-meta">{secondaryText}</div> : null}
+      {tertiaryText ? <div className="kpi-tertiary">{tertiaryText}</div> : null}
       {!compact && coverageInfo.label !== "—" ? (
         <div className={`kpi-coverage ${coverageInfo.tone}`}>
           coverage: {coverageInfo.label}
         </div>
       ) : null}
-      {delta !== null ? (
+      {!hideDelta && delta !== null ? (
         <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
       ) : null}
       {sparklineData.length > 1 ? (

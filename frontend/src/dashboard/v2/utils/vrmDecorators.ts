@@ -2,6 +2,7 @@ import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/sch
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
 
 const CAPACITY_BY_CLIENT: Record<string, number> = {
+  client0: 10,
   client1: 10,
   client2: 100,
 };
@@ -26,6 +27,11 @@ const ensureSummary = (result: ChartResult) => {
     result.meta = { timezone: "UTC" } as ChartResult["meta"];
   }
   result.meta.summary = result.meta.summary ?? {};
+};
+
+const suppressDelta = (result: ChartResult) => {
+  ensureSummary(result);
+  result.meta.summary!.hideDelta = 1 as unknown as string | number | null;
 };
 
 export const markCompact = (result: ChartResult) => {
@@ -79,6 +85,10 @@ const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   result.meta.summary![key] = value;
 };
 
+const addTertiaryText = (result: ChartResult, value?: string) => {
+  addSummaryText(result, "tertiaryText", value);
+};
+
 export const sumSeries = (series?: ChartSeries) => {
   if (!series) {
     return 0;
@@ -98,14 +108,6 @@ const getLastTwoValues = (series?: ChartSeries): { last: number | null; previous
   const last = (lastPoint?.value ?? lastPoint?.y ?? null) as number | null;
   const previous = (previousPoint?.value ?? previousPoint?.y ?? null) as number | null;
   return { last, previous };
-};
-
-const formatDeltaText = (value: number | null) => {
-  if (value === null) {
-    return undefined;
-  }
-  const sign = value > 0 ? "+" : value < 0 ? "" : "±";
-  return `${sign}${Math.round(value)}`;
 };
 
 const getStartOfToday = () => {
@@ -177,7 +179,12 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
     },
   ],
   meta: {
-    summary: { headline: "Camera – 100% of events", compact: 1 as unknown as number },
+    summary: {
+      headline: "Camera – 100% of events",
+      compact: 1 as unknown as number,
+      hideDelta: 1 as unknown as number,
+      chartSubType: "traffic_distribution",
+    },
     timezone: "UTC",
   },
 });
@@ -185,6 +192,8 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
 export const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
   const next = cloneResult(result);
   markCompact(next);
+  suppressDelta(next);
+  ensureSummary(next);
   const series = next.series[0];
   if (!series) {
     return buildTrafficPlaceholderResult();
@@ -203,12 +212,15 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
   });
   setHeadlineValue(next, topShare);
   addSummaryText(next, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
+  addSummaryText(next, "chartSubType", "traffic_distribution");
+  addSummaryText(next, "legendTitle", "Camera");
   return next;
 };
 
 export const applyCapacityUsage = (result: ChartResult, orgId: string | undefined): ChartResult => {
   const next = cloneResult(result);
   markCompact(next);
+  suppressDelta(next);
   const series = next.series[0];
   const capacity = lookupCapacity(orgId);
   if (!series || !capacity) {
@@ -275,9 +287,23 @@ export const applyFootfallTotal = (result: ChartResult): ChartResult => {
   const primary = next.series[0];
   const total = sumSeries(primary);
   const lastValue = lastBucketValue(primary);
+  const startOfDay = getStartOfToday();
+  const totalToday = primary
+    ? primary.data.reduce((sum, point) => {
+        const timestamp = point.x ? new Date(point.x) : null;
+        const withinDay = timestamp ? timestamp >= startOfDay : true;
+        const value = point.value ?? point.y ?? 0;
+        if (!withinDay) {
+          return sum;
+        }
+        return sum + (typeof value === "number" ? Number(value) : 0);
+      }, 0)
+    : 0;
   setHeadlineValue(next, lastValue);
   logVrmDebug(VRM_KPI_IDS.footfall, primary, lastValue);
-  addSummaryText(next, "secondaryText", `24h total: ${Math.round(total)}`);
+  addSummaryText(next, "secondaryText", `Today’s footfall: ${Math.round(totalToday)}`);
+  addTertiaryText(next, `24h total: ${Math.round(total)}`);
+  suppressDelta(next);
   return next;
 };
 
@@ -285,19 +311,16 @@ export const applyOccupancyDelta = (result: ChartResult): ChartResult => {
   const next = cloneResult(result);
   markCompact(next);
   const series = next.series[0];
-  const { last, previous } = getLastTwoValues(series);
-  const deltaText = formatDeltaText(
-    typeof last === "number" && typeof previous === "number" ? last - previous : null,
-  );
+  const { last } = getLastTwoValues(series);
   setHeadlineValue(next, typeof last === "number" ? last : null);
   logVrmDebug(VRM_KPI_IDS.occupancy, series, typeof last === "number" ? last : null);
-  addSummaryText(next, "secondaryText", deltaText ? `Δ vs 15m ago: ${deltaText}` : undefined);
   return next;
 };
 
 const applyBasicVrmHeadline = (widgetId: string, result: ChartResult) => {
   const next = cloneResult(result);
   markCompact(next);
+  suppressDelta(next);
   applyLastBucketHeadline(widgetId, next);
   return next;
 };

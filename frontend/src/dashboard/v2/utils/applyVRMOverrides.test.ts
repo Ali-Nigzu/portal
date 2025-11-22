@@ -191,12 +191,73 @@ describe("applyVRMOverrides", () => {
     expect(footfallHeadline.lastBucket).toBe(9);
     expect(footfallHeadline.total24h).toBe(15);
     expect(footfallResult.meta?.summary?.headlineValue).toBe(9);
-    expect(footfallResult.meta?.summary?.secondaryText).toContain("24h total: 15");
+    expect(footfallResult.meta?.summary?.secondaryText).toContain("Today’s footfall: 15");
+    expect(footfallResult.meta?.summary?.tertiaryText).toContain("24h total: 15");
 
     const capacityHeadline = getCapacityUsageHeadline(rawCapacityResult as any, "client1");
     expect(capacityHeadline.currentUsage).toBe(90);
     expect(capacityHeadline.peakToday).toBe(100);
     expect(capacityResult.meta?.summary?.headlineValue).toBe(90);
     expect(capacityResult.meta?.summary?.secondaryText).toContain("Peak today:");
+    expect(capacityResult.meta?.summary?.hideDelta).toBeTruthy();
+  });
+
+  it("uses UI client identifiers for capacity mapping", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+    const capacityResult = decorateResult(
+      VRM_KPI_IDS.capacity,
+      {
+        chartType: "single_value",
+        xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "occupancy",
+            label: "Occupancy",
+            geometry: "line",
+            unit: "people",
+            data: [
+              { x: prev.toISOString(), y: 320 },
+              { x: now.toISOString(), y: 327 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: {} },
+      },
+      "client2",
+    );
+
+    const headline = getCapacityUsageHeadline(capacityResult as any, "client2");
+    expect(Math.round(headline.currentUsage ?? 0)).toBe(327);
+    expect(capacityResult.meta?.summary?.peak_capacity_usage_today).toBeGreaterThan(0);
+  });
+
+  it("converts traffic distribution into per-camera shares", () => {
+    const traffic = decorateResult(
+      VRM_KPI_IDS.traffic,
+      {
+        chartType: "categorical",
+        xDimension: { id: "camera_id", type: "category" },
+        series: [
+          {
+            id: "events",
+            label: "Events",
+            geometry: "bar",
+            data: [
+              { x: "cam0", y: 10 },
+              { x: "cam1", y: 5 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: {} },
+      },
+      "client1",
+    );
+
+    const data = traffic.series[0]?.data ?? [];
+    expect(Math.round(data[0]?.value ?? 0)).toBe(67);
+    expect(Math.round(data[1]?.value ?? 0)).toBe(33);
+    expect(traffic.meta?.summary?.chartSubType).toBe("traffic_distribution");
+    expect(traffic.meta?.summary?.hideDelta).toBeTruthy();
   });
 });

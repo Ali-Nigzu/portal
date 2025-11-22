@@ -8,6 +8,7 @@ import {
   BarChart,
   HeatmapChart,
   KpiTile,
+  TrafficDistribution,
 } from "./primitives";
 import { ChartErrorState } from "./ui/ChartErrorState";
 import { ChartEmptyState } from "./ui/ChartEmptyState";
@@ -152,6 +153,9 @@ export const ChartRenderer = ({
   }
 
   if (result.chartType === "single_value") {
+    if (result.meta?.summary?.chartSubType === "traffic_distribution") {
+      return <TrafficDistribution {...chartProps} height={height} />;
+    }
     return <KpiTile {...chartProps} />;
   }
 
@@ -160,6 +164,9 @@ export const ChartRenderer = ({
   }
 
   if (result.chartType === "categorical") {
+    if (result.meta?.summary?.chartSubType === "traffic_distribution") {
+      return <TrafficDistribution {...chartProps} height={height} />;
+    }
     return <BarChart {...chartProps} />;
   }
 

@@ -260,6 +260,20 @@ class SpecCompiler:
     ) -> CompiledQuery:
         time_window = spec["timeWindow"]
         timezone = time_window.get("timezone", context.timezone)
+        bucket = self._auto_bucket(
+            preferred=time_window.get("bucket", "RAW"),
+            start=time_window.get("from"),
+            end=time_window.get("to"),
+            chart_type=spec["chartType"],
+        )
+
+        use_calendar = self._should_render_calendar(
+            bucket=bucket,
+            start=time_window.get("from"),
+            end=time_window.get("to"),
+            chart_type=spec["chartType"],
+        )
+
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
@@ -275,9 +289,16 @@ class SpecCompiler:
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
         base_ctes = [self._render_scoped(context.table_name, filters_sql)]
+        if bucket != "RAW" and use_calendar:
+            base_ctes.append(self._render_calendar(bucket))
 
         for measure in measures:
-            compilation = self._render_single_value_measure(measure=measure, params=params)
+            compilation = self._render_single_value_measure(
+                measure=measure,
+                params=params,
+                bucket=bucket,
+                use_calendar=use_calendar,
+            )
             for fragment in compilation.ctes:
                 name = fragment.split(" AS", 1)[0].strip()
                 cte_registry[name] = fragment
@@ -287,10 +308,9 @@ class SpecCompiler:
             base_ctes=base_ctes,
             measure_ctes=cte_registry.values(),
             select_statements=select_statements,
-            order_by="measure_id",
         )
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
-        return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket="RAW")
+        return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
 
     def _auto_bucket(
         self, *, preferred: str, start: object, end: object, chart_type: str
@@ -318,6 +338,9 @@ class SpecCompiler:
         else:
             recommended = "WEEK"
 
+        if chart_type == "single_value":
+            return preferred
+
         if _bucket_rank(preferred) < _bucket_rank(recommended):
             return preferred
         return recommended
@@ -325,7 +348,7 @@ class SpecCompiler:
     def _should_render_calendar(
         self, *, bucket: str, start: object, end: object, chart_type: str
     ) -> bool:
-        if bucket == "RAW" or chart_type == "single_value":
+        if bucket == "RAW":
             return False
 
         start_dt = _parse_iso8601(start)
@@ -812,7 +835,12 @@ class SpecCompiler:
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
 
     def _render_single_value_measure(
-        self, *, measure: Dict[str, object], params: Dict[str, object]
+        self,
+        *,
+        measure: Dict[str, object],
+        params: Dict[str, object],
+        bucket: str,
+        use_calendar: bool = True,
     ) -> MeasureCompilation:
         aggregation = measure["aggregation"]
         measure_id = measure["id"]
@@ -843,161 +871,19 @@ class SpecCompiler:
                 )
                 return MeasureCompilation(ctes=[cte], select_sql=select_sql)
 
-            filter_sql = ""
-            if event_types:
-                param_name = f"{measure_id}_event_types"
-                params[param_name] = event_types
-                filter_sql = f" WHERE scoped.event IN UNNEST(@{param_name})"
-
-            prefix = f"{measure_id}_count"
-            cte = dedent(
-                f"""
-                {prefix} AS (
-                    SELECT
-                        {bucket_start_expr} AS bucket_start,
-                        COUNT(*) AS raw_count,
-                        COUNT(*) AS event_count
-                    FROM scoped{filter_sql}
-                )
-                """
-            ).strip()
-            select_sql = dedent(
-                f"""
-                SELECT
-                    '{measure_id}' AS measure_id,
-                    bucket_start,
-                    event_count AS value,
-                    1.0 AS coverage,
-                    raw_count
-                FROM {prefix}
-                """
-            ).strip()
-            return MeasureCompilation(ctes=[cte], select_sql=select_sql)
+            return self._render_activity(
+                measure=measure, bucket=bucket, params=params, use_calendar=use_calendar
+            )
 
         if aggregation == "occupancy_recursion":
-            prefix = f"{measure_id}_single"
-            deltas = dedent(
-                f"""
-                {prefix}_deltas AS (
-                    SELECT
-                        timestamp,
-                        index,
-                        CASE WHEN event = 1 THEN 1 ELSE -1 END AS delta
-                    FROM scoped
-                )
-                """
-            ).strip()
-            cumulative = dedent(
-                f"""
-                {prefix}_cumulative AS (
-                    SELECT
-                        SUM(delta) OVER (ORDER BY timestamp, index ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS occupancy,
-                        ROW_NUMBER() OVER (ORDER BY timestamp DESC, index DESC) AS rn
-                    FROM {prefix}_deltas
-                )
-                """
-            ).strip()
-            latest = dedent(
-                f"""
-                {prefix}_latest AS (
-                    SELECT
-                        {bucket_start_expr} AS bucket_start,
-                        COALESCE((SELECT occupancy FROM {prefix}_cumulative WHERE rn = 1), 0) AS value,
-                        raw_count,
-                        CASE WHEN raw_count = 0 THEN 0.0 ELSE 1.0 END AS coverage
-                    FROM (
-                        SELECT (SELECT COUNT(*) FROM {prefix}_cumulative) AS raw_count
-                    )
-                )
-                """
-            ).strip()
-            select_sql = (
-                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_latest"
+            return self._render_occupancy(
+                measure=measure, bucket=bucket, params=params, use_calendar=use_calendar
             )
-            return MeasureCompilation(ctes=[deltas, cumulative, latest], select_sql=select_sql)
 
         if aggregation in {"dwell_mean", "dwell_p90", "sessions"}:
-            prefix = f"{measure_id}_dwell_single"
-            entrances = dedent(
-                f"""
-                {prefix}_entrances AS (
-                    SELECT
-                        site_id,
-                        cam_id,
-                        track_id,
-                        timestamp AS entrance_ts,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY site_id, cam_id, track_id
-                            ORDER BY timestamp, index
-                        ) AS rn
-                    FROM scoped
-                    WHERE event = 1
-                )
-                """
-            ).strip()
-            exits = dedent(
-                f"""
-                {prefix}_exits AS (
-                    SELECT
-                        site_id,
-                        cam_id,
-                        track_id,
-                        timestamp AS exit_ts,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY site_id, cam_id, track_id
-                            ORDER BY timestamp, index
-                        ) AS rn
-                    FROM scoped
-                    WHERE event = 0
-                )
-                """
-            ).strip()
-            sessions = dedent(
-                f"""
-                {prefix}_sessions AS (
-                    SELECT
-                        e.site_id,
-                        e.cam_id,
-                        e.track_id,
-                        e.entrance_ts,
-                        x.exit_ts,
-                        TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, SECOND) / 60.0 AS dwell_minutes
-                    FROM {prefix}_entrances AS e
-                    LEFT JOIN {prefix}_exits AS x
-                        ON e.site_id = x.site_id
-                        AND e.cam_id = x.cam_id
-                        AND e.track_id = x.track_id
-                        AND e.rn = x.rn
-                    WHERE x.exit_ts IS NOT NULL
-                        AND TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, MINUTE) BETWEEN 0 AND 360
-                )
-                """
-            ).strip()
-            aggregates = dedent(
-                f"""
-                {prefix}_aggregate AS (
-                    SELECT
-                        {bucket_start_expr} AS bucket_start,
-                        COUNT(*) AS session_count,
-                        AVG(dwell_minutes) AS dwell_mean,
-                        APPROX_QUANTILES(dwell_minutes, 101)[OFFSET(90)] AS dwell_p90
-                    FROM {prefix}_sessions
-                )
-                """
-            ).strip()
-            value_expr = "dwell_mean" if aggregation == "dwell_mean" else "dwell_p90"
-            select_sql = dedent(
-                f"""
-                SELECT
-                    '{measure_id}' AS measure_id,
-                    bucket_start,
-                    {value_expr} AS value,
-                    CASE WHEN session_count = 0 THEN 0.0 ELSE 1.0 END AS coverage,
-                    session_count AS raw_count
-                FROM {prefix}_aggregate
-                """
-            ).strip()
-            return MeasureCompilation(ctes=[entrances, exits, sessions, aggregates], select_sql=select_sql)
+            return self._render_dwell(
+                measure=measure, bucket=bucket, params=params, use_calendar=use_calendar
+            )
 
         raise UnsupportedMeasureError(aggregation)
 
