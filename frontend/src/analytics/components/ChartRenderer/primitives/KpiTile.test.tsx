@@ -54,17 +54,30 @@ describe("KpiTile", () => {
     expect(text).not.toContain("coverage:");
   });
 
-  it("formats percentage units with a % suffix", () => {
-    const props = buildProps();
-    props.series = [
-      {
-        id: "primary",
-        label: "Primary",
-        geometry: "metric",
-        unit: "percentage",
-        data: [{ x: "2024-01-01T00:00:00Z", value: 37 }],
-      },
-    ];
+  it("shows numeric-only KPI values with uppercase unit label", () => {
+    const tree = renderer.create(<KpiTile {...buildProps()} />).root;
+    const valueNode = tree.findByProps({ className: "kpi-value" });
+    const unitNode = tree.findByProps({ className: "kpi-unit" });
+    expect(valueNode.children.join(" ")).toBe("12");
+    expect(unitNode.children.join(" ")).toBe("EVENTS");
+    expect(valueNode.children.join(" ")).not.toContain("events");
+  });
+
+  it("renders minutes KPIs without repeating the unit", () => {
+    const props = buildProps({
+      series: [
+        {
+          id: "primary",
+          label: "Dwell",
+          geometry: "metric",
+          unit: "minutes",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: 20 },
+            { x: "2024-01-01T00:15:00Z", value: 23.87 },
+          ],
+        },
+      ],
+    });
     props.result = {
       chartType: "single_value",
       series: props.series,
@@ -74,6 +87,62 @@ describe("KpiTile", () => {
 
     const tree = renderer.create(<KpiTile {...props} />).root;
     const valueNode = tree.findByProps({ className: "kpi-value" });
-    expect(valueNode.children.join(" ")).toContain("%");
+    const unitNode = tree.findByProps({ className: "kpi-unit" });
+    expect(valueNode.children.join(" ")).toBe("23.87");
+    expect(unitNode.children.join(" ")).toBe("MINUTES");
+    expect(valueNode.children.join(" ")).not.toContain("minutes");
+  });
+
+  it("formats percentage KPIs with a % suffix and uppercase label", () => {
+    const props = buildProps({
+      series: [
+        {
+          id: "primary",
+          label: "Capacity usage",
+          geometry: "metric",
+          unit: "percentage",
+          data: [{ x: "2024-01-01T00:15:00Z", value: 53 }],
+        },
+      ],
+    });
+    props.result = {
+      chartType: "single_value",
+      series: props.series,
+      xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      meta: { timezone: "UTC" },
+    } as ChartResult;
+
+    const tree = renderer.create(<KpiTile {...props} />).root;
+    const valueNode = tree.findByProps({ className: "kpi-value" });
+    const unitNode = tree.findByProps({ className: "kpi-unit" });
+    expect(valueNode.children.join(" ")).toBe("53%");
+    expect(unitNode.children.join(" ")).toBe("PERCENTAGE");
+  });
+
+  it("prefers an explicit headlineValue override for VRM KPIs", () => {
+    const props = buildProps({
+      series: [
+        {
+          id: "primary",
+          label: "Entrances",
+          geometry: "metric",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: 9 },
+            { x: "2024-01-01T00:15:00Z", value: 18 },
+          ],
+        },
+      ],
+    });
+    props.result = {
+      chartType: "single_value",
+      xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      series: props.series,
+      meta: { timezone: "UTC", summary: { headlineValue: 4 } as any },
+    } as ChartResult;
+
+    const tree = renderer.create(<KpiTile {...props} />).root;
+    const valueNode = tree.findByProps({ className: "kpi-value" });
+    expect(valueNode.children.join(" ")).toBe("4");
   });
 });
