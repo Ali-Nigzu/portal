@@ -216,16 +216,6 @@ const deriveCameraLabel = (series: ChartSeries, index: number): string => {
   return (cleaned && cleaned.length > 0 ? cleaned : lastToken) || `Camera ${index + 1}`;
 };
 
-const deriveCameraLabel = (series: ChartSeries, index: number): string => {
-  const labelCandidate = series.label && series.label.toLowerCase() !== "events" ? series.label : null;
-  const source = labelCandidate ?? series.id ?? `Camera ${index + 1}`;
-  const normalized = String(source).trim();
-  const tokens = normalized.split(/\||:|=/);
-  const lastToken = tokens[tokens.length - 1]?.trim();
-  const cleaned = lastToken?.replace(/camera[_\s-]?id[:\s-]*/i, "").replace(/^cam\s*/i, "").trim();
-  return (cleaned && cleaned.length > 0 ? cleaned : lastToken) || `Camera ${index + 1}`;
-};
-
 export const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
   const trafficDistributionResult = cloneResult(result);
   markCompact(trafficDistributionResult);
