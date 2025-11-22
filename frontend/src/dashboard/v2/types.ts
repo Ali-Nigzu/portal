@@ -12,6 +12,11 @@ export interface DashboardWidget {
   inlineSpec?: ChartSpec;
   layout?: DashboardWidgetLayout;
   locked?: boolean;
+  /**
+   * When present, the widget ignores global time-range controls and instead
+   * always runs with the provided fixed window (relative to "now").
+   */
+  fixedTimeWindow?: { durationMinutes: number; bucket: TimeBucket };
 }
 
 export interface DashboardGridPlacement {

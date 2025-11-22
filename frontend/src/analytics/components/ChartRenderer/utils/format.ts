@@ -10,6 +10,9 @@ export function formatValue(
     return "—";
   }
   const formatted = decimalFormatter.format(value);
+  if (unit === "percentage") {
+    return `${formatted}%`;
+  }
   return unit ? `${formatted} ${unit}` : formatted;
 }
 

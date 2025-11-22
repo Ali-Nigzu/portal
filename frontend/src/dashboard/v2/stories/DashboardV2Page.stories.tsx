@@ -10,6 +10,7 @@ import exitsResult from "../../../analytics/examples/golden_dashboard_kpi_exits.
 import dwellResult from "../../../analytics/examples/golden_dashboard_kpi_avg_dwell.json";
 import occupancyResult from "../../../analytics/examples/golden_dashboard_kpi_live_occupancy.json";
 import freshnessResult from "../../../analytics/examples/golden_dashboard_kpi_freshness.json";
+import trafficDistributionResult from "../../../analytics/examples/golden_dashboard_kpi_traffic_distribution.json";
 import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_flow.json";
 import { Credentials } from "../../../types/credentials";
 
@@ -22,6 +23,7 @@ const fixtureResults: Record<string, ChartResult> = {
   golden_dashboard_kpi_avg_dwell: dwellResult as unknown as ChartResult,
   golden_dashboard_kpi_live_occupancy: occupancyResult as unknown as ChartResult,
   golden_dashboard_kpi_freshness: freshnessResult as unknown as ChartResult,
+  golden_dashboard_kpi_traffic_distribution: trafficDistributionResult as unknown as ChartResult,
   golden_dashboard_live_flow: liveFlowResult as unknown as ChartResult,
 };
 
