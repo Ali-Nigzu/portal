@@ -36,3 +36,9 @@ The default manifest (`dashboard_manifest_default.json`) defines six KPI widgets
 
 ## Layout/styling
 - KPI band rendered as a horizontal list within `.dashboard-v2__kpi-band`; each tile uses `.dashboard-v2__kpi-tile` with head/title and embedded `KpiTile` markup. The main layout uses CSS grid for charts (`gridTemplateColumns` from manifest columns, row height 96px). Styles live in `dashboard/v2/styles/DashboardV2Page.css`.
+
+## VRM KPI band semantics
+- VRM overrides inject seven KPI tiles (Entrances, Occupancy, Exits, Footfall, Dwell Time, Traffic Distribution, Capacity Usage) with a fixed 24h/15m time window. The headline number for every tile is **always the latest 15-minute bucket**; sparklines and totals use the full 24-hour series.
+- Footfall = entrances + exits; the subtitle shows the 24h total while the headline is the most recent 15-minute bucket.
+- Traffic Distribution is currently frontend-only: one camera renders `100%` with the subtitle `Camera – 100% of events`, still interpreted as a last-15-minutes share.
+- Capacity Usage reuses occupancy data; headline = `(latest occupancy ÷ capacity) × 100`, subtitle = `Peak today: <percent>`. Capacity map: `client1 → 10`, `client2 → 100` (fallback 10 with a console warning).

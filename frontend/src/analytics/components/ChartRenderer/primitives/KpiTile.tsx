@@ -6,7 +6,17 @@ import {
   Tooltip,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
-import { formatCoverage, formatValue, shouldShowRawCount } from "../utils/format";
+import { formatCoverage, formatNumeric, formatValue, shouldShowRawCount } from "../utils/format";
+
+const formatKpiValue = (value: number | null | undefined, unit?: string) => {
+  const numeric = formatNumeric(value);
+  if (numeric === "—") {
+    return numeric;
+  }
+  return unit === "percentage" ? `${numeric}%` : numeric;
+};
+
+const formatUnitLabel = (unit?: string | null) => (unit ? unit.toUpperCase() : null);
 
 function formatDelta(delta: number | null | undefined): { text: string; tone: "positive" | "negative" | "neutral" } {
   if (delta === null || delta === undefined) {
@@ -68,11 +78,11 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     <div className={`kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
       <div className="kpi-header">
         <div className="kpi-label">{primarySeries?.label ?? primarySeries?.id}</div>
-        {primarySeries?.unit ? (
-          <div className="kpi-unit">{primarySeries.unit}</div>
+        {formatUnitLabel(primarySeries?.unit) ? (
+          <div className="kpi-unit">{formatUnitLabel(primarySeries?.unit)}</div>
         ) : null}
       </div>
-      <div className="kpi-value">{formatValue(value, primarySeries?.unit)}</div>
+      <div className="kpi-value">{formatKpiValue(value, primarySeries?.unit)}</div>
       {showRaw ? <div className="kpi-meta">raw: {rawCount}</div> : null}
       {secondaryText ? <div className="kpi-meta">{secondaryText}</div> : null}
       {!compact && coverageInfo.label !== "—" ? (

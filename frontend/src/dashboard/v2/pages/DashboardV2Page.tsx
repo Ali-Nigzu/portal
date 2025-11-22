@@ -26,10 +26,21 @@ const GRID_ROW_HEIGHT = 96;
 
 const FIXED_KPI_IDS = new Set<string>(Object.values(VRM_KPI_IDS));
 
-const CAPACITY_MAP: Record<string, number> = {
-  client0: 100,
-  client1: 100,
-  client2: 1000,
+const CAPACITY_BY_CLIENT: Record<string, number> = {
+  client1: 10,
+  client2: 100,
+};
+
+export const lookupCapacity = (orgId: string | undefined): number => {
+  const capacity = orgId ? CAPACITY_BY_CLIENT[orgId] : undefined;
+  if (capacity !== undefined) {
+    return capacity;
+  }
+  // VRM capacity usage assumes a known site capacity; fall back to 10 to avoid
+  // divide-by-zero while keeping the widget usable.
+  // eslint-disable-next-line no-console
+  console.warn("Unknown client for capacity usage, falling back to 10", { orgId });
+  return 10;
 };
 
 const cloneResult = (result: ChartResult): ChartResult =>
@@ -47,6 +58,11 @@ const markCompact = (result: ChartResult) => {
   result.meta.summary!.compact = 1 as unknown as string | number | null;
 };
 
+// VRM KPI band semantics:
+// - All headline KPI values are taken from the latest 15-minute bucket within a 24h/15m
+//   series (or the derived "now" occupancy point for capacity usage).
+// - Sparklines and totals can use the full 24-hour series, but the main number is always
+//   the most recent bucket.
 const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   if (!value) {
     return;
@@ -136,7 +152,7 @@ const applyCapacityUsage = (result: ChartResult, orgId: string | undefined): Cha
   const next = cloneResult(result);
   markCompact(next);
   const series = next.series[0];
-  const capacity = CAPACITY_MAP[orgId ?? "client0"] ?? 100;
+  const capacity = lookupCapacity(orgId);
   if (!series || !capacity) {
     return next;
   }
