@@ -26,10 +26,13 @@ Object.defineProperty(global.HTMLElement.prototype, "getBoundingClientRect", {
   value: () => ({ width: 800, height: 400, top: 0, left: 0, bottom: 400, right: 800 }),
 });
 
+const renderedResults: ChartResult[] = [];
+
 jest.mock("../../../analytics/components/ChartRenderer", () => ({
-  ChartRenderer: ({ result }: { result: ChartResult }) => (
-    <div data-testid={`chart-${result.chartType}`}>{result.chartType}</div>
-  ),
+  ChartRenderer: ({ result }: { result: ChartResult }) => {
+    renderedResults.push(result);
+    return <div data-testid={`chart-${result.chartType}`}>{result.chartType}</div>;
+  },
 }));
 
 const liveFlowChart = liveFlowResult as unknown as ChartResult;
@@ -99,18 +102,26 @@ const buildSeriesPoints = (values: number[]) => {
   }));
 };
 
-const buildChartResult = (values: number[]): ChartResult => ({
+const buildChartResult = (
+  values: number[],
+  options?: {
+    label?: string;
+    unit?: string;
+    meta?: ChartResult["meta"];
+  },
+): ChartResult => ({
   chartType: "single_value",
   xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
   series: [
     {
       id: "primary",
-      label: "primary",
+      label: options?.label ?? "primary",
       geometry: "line",
+      unit: options?.unit,
       data: buildSeriesPoints(values),
     },
   ],
-  meta: { timezone: "UTC" },
+  meta: options?.meta ?? { timezone: "UTC" },
 });
 
 const trafficDistributionResult: ChartResult = {
@@ -128,6 +139,10 @@ const trafficDistributionResult: ChartResult = {
   ],
   meta: { timezone: "UTC" },
 };
+
+afterEach(() => {
+  renderedResults.length = 0;
+});
 
 async function flushEffects(times = 3) {
   for (let i = 0; i < times; i += 1) {
@@ -495,4 +510,65 @@ describe("DashboardV2Page", () => {
     const emptyMessages = tree!.root.findAllByProps({ className: "dashboard-v2__empty" });
     expect(emptyMessages).toHaveLength(1);
   });
+
+  it("uses the latest 15-minute bucket for VRM KPI headlines", async () => {
+    const manifestLoader = jest.fn(async () => cloneManifest());
+    const vrmSeries: Record<string, number[]> = {
+      [VRM_KPI_IDS.entrances]: [2, 5],
+      [VRM_KPI_IDS.exits]: [3, 8],
+      [VRM_KPI_IDS.footfall]: [6, 9],
+      [VRM_KPI_IDS.dwell]: [1.25, 3.5],
+      [VRM_KPI_IDS.occupancy]: [45, 60],
+      [VRM_KPI_IDS.capacity]: [7, 9],
+    };
+
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.id === VRM_KPI_IDS.traffic) {
+        return trafficDistributionResult;
+      }
+      if (widget.kind === "kpi") {
+        return buildChartResult(vrmSeries[widget.id] ?? [1], {
+          label: widget.id,
+          meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+        });
+      }
+      return liveFlowChart;
+    });
+
+    await act(async () => {
+      renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client1", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    const resultsByWidgetId: Record<string, ChartResult> = {};
+    renderedResults.forEach((result) => {
+      const widgetId = (result.meta?.summary as Record<string, string> | undefined)?.widgetId;
+      if (widgetId) {
+        resultsByWidgetId[widgetId] = result;
+      }
+    });
+
+    const getLastValue = (result?: ChartResult) => {
+      const series = result?.series?.[0];
+      if (!series || !series.data?.length) {
+        return null;
+      }
+      const last = series.data[series.data.length - 1];
+      return (last.value ?? last.y ?? null) as number | null;
+    };
+
+    expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.entrances])).toBe(5);
+    expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.exits])).toBe(8);
+    expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.footfall])).toBe(9);
+    expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.dwell])).toBeCloseTo(3.5);
+    expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.occupancy])).toBe(60);
+    expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.capacity])).toBe(90);
+  });
 });
+
