@@ -2,21 +2,38 @@ import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/sch
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
 
 const CAPACITY_BY_CLIENT: Record<string, number> = {
-  client0: 10,
   client1: 10,
   client2: 100,
 };
 
-export const lookupCapacity = (orgId: string | undefined): number => {
-  const capacity = orgId ? CAPACITY_BY_CLIENT[orgId] : undefined;
-  if (capacity !== undefined) {
-    return capacity;
+const TABLE_TO_UI_CLIENT: Record<string, string> = {
+  client0: "client1",
+  client1: "client2",
+};
+
+const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "");
+
+export const resolveUiClient = (orgId: string | undefined): string | undefined => {
+  const normalized = normalizeOrgId(orgId);
+  if (!normalized) {
+    return undefined;
   }
-  // VRM capacity usage assumes a known site capacity; fall back to 10 to avoid
-  // divide-by-zero while keeping the widget usable.
-  // eslint-disable-next-line no-console
-  console.warn("Unknown client for capacity usage, falling back to 10", { orgId });
-  return 10;
+  const mapped = TABLE_TO_UI_CLIENT[normalized] ?? normalized;
+  if (CAPACITY_BY_CLIENT[mapped] !== undefined) {
+    return mapped;
+  }
+  return undefined;
+};
+
+export const lookupCapacity = (orgId: string | undefined): number => {
+  const uiClient = resolveUiClient(orgId);
+  const capacity = uiClient ? CAPACITY_BY_CLIENT[uiClient] : undefined;
+  if (capacity === undefined) {
+    // eslint-disable-next-line no-console
+    console.error("VRM capacity usage: unknown client", { orgId, uiClientCandidate: uiClient });
+    throw new Error(`Unknown client for capacity usage: ${orgId ?? "<none>"}`);
+  }
+  return capacity;
 };
 
 export const cloneResult = (result: ChartResult): ChartResult =>
@@ -84,10 +101,6 @@ const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   }
   ensureSummary(result);
   result.meta.summary![key] = value;
-};
-
-const addTertiaryText = (result: ChartResult, value?: string) => {
-  addSummaryText(result, "tertiaryText", value);
 };
 
 export const sumSeries = (series?: ChartSeries) => {
@@ -173,7 +186,7 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
   series: [
     {
       id: "traffic_share",
-      label: "Traffic distribution",
+      label: "Traffic by Camera",
       geometry: "bar",
       unit: "percentage",
       data: [{ x: "Camera", value: 100, y: 100 }],
@@ -181,10 +194,13 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
   ],
   meta: {
     summary: {
-      headline: "Camera – 100% of events",
+      headline: "Camera – 100%",
+      presentation: "vrm",
       compact: 1 as unknown as number,
       hideDelta: 1 as unknown as number,
+      chartStyle: "traffic_distribution",
       chartSubType: "traffic_distribution",
+      title: "Traffic by Camera",
     },
     timezone: "UTC",
   },
@@ -206,22 +222,38 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
   markCompact(trafficDistributionResult);
   suppressDelta(trafficDistributionResult);
   ensureSummary(trafficDistributionResult);
-  const series = trafficDistributionResult.series[0];
-  if (!series) {
+  const seriesList = trafficDistributionResult.series ?? [];
+  if (seriesList.length === 0) {
     return buildTrafficPlaceholderResult();
   }
 
-  const latestTimestamp = getLatestTimestamp(seriesList);
-  if (!latestTimestamp) {
+  const hasTimestampBuckets = seriesList.some((series) =>
+    series.data.some((point) => {
+      if (!point?.x) {
+        return false;
+      }
+      const parsed = new Date(point.x as string | number);
+      return !Number.isNaN(parsed.valueOf());
+    }),
+  );
+
+  const latestTimestamp = hasTimestampBuckets ? getLatestTimestamp(seriesList) : null;
+
+  if (hasTimestampBuckets && !latestTimestamp) {
     return buildTrafficPlaceholderResult();
   }
 
-  const cameraShares = seriesList.map((series) => {
-    const latestPoint =
-      series.data.find((point) => point.x === latestTimestamp) ?? series.data[series.data.length - 1];
-    const raw = latestPoint?.value ?? latestPoint?.y ?? 0;
-    return { camera: series.label ?? series.id, value: Number(raw) };
-  });
+  const cameraShares = hasTimestampBuckets
+    ? seriesList.map((series) => {
+        const latestPoint =
+          series.data.find((point) => point.x === latestTimestamp) ?? series.data[series.data.length - 1];
+        const raw = latestPoint?.value ?? latestPoint?.y ?? 0;
+        return { camera: series.label ?? series.id, value: Number(raw) };
+      })
+    : seriesList[0].data.map((point, index) => ({
+        camera: String(point.x ?? seriesList[0].label ?? `Camera ${index + 1}`),
+        value: Number(point.value ?? point.y ?? 0),
+      }));
 
   const total = cameraShares.reduce((sum, { value }) => sum + value, 0);
   let topCamera = cameraShares[0]?.camera ?? "Camera";
@@ -235,10 +267,24 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
     }
     return { x: camera, value: share, y: share } as DataPoint;
   });
+
+  trafficDistributionResult.chartType = "categorical";
+  trafficDistributionResult.xDimension = { id: "camera", type: "category" } as ChartResult["xDimension"];
+  trafficDistributionResult.series = [
+    {
+      id: "traffic_share",
+      label: "Traffic by Camera",
+      geometry: "bar",
+      unit: "percentage",
+      data: shareData,
+    },
+  ];
   setHeadlineValue(trafficDistributionResult, topShare);
-  addSummaryText(trafficDistributionResult, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
+  addSummaryText(trafficDistributionResult, "headline", `${topCamera} – ${Math.round(topShare)}%`);
   addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
   addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
+  addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
+  addSummaryText(trafficDistributionResult, "title", "Traffic by Camera");
   return trafficDistributionResult;
 };
 
@@ -246,18 +292,40 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   const next = cloneResult(result);
   markCompact(next);
   suppressDelta(next);
+  ensureSummary(next);
   const series = next.series[0];
   const capacity = lookupCapacity(orgId);
   if (!series || !capacity) {
     return next;
   }
 
+  const summary = next.meta!.summary as Record<string, unknown>;
+
   const occupancyPoints = [...series.data];
-  const { last, previous } = getLastTwoValues(series);
-  const deltaOccupancy = typeof last === "number" && typeof previous === "number" ? last - previous : null;
-  const occupancyNow = typeof last === "number" ? last : null;
+  const normalizedSeries: DataPoint[] = occupancyPoints.map((point) => {
+    const raw = point.value ?? point.y ?? 0;
+    const usage = capacity > 0 ? (Number(raw) / capacity) * 100 : 0;
+    return { ...point, value: usage, y: usage } as DataPoint;
+  });
+
+  series.unit = "percentage";
+  series.label = "Capacity usage";
+  series.data = normalizedSeries;
+
+  const { last, previous } = getLastTwoValues({ ...series, data: normalizedSeries });
+  const deltaUsage = typeof last === "number" && typeof previous === "number" ? last - previous : null;
+  const usageNow = typeof last === "number" ? last : null;
 
   const startOfDay = getStartOfToday();
+  const peakUsage = normalizedSeries.reduce((peak, point) => {
+    const timestamp = point.x ? new Date(point.x) : null;
+    const withinDay = timestamp ? timestamp >= startOfDay : true;
+    const value = point.value ?? point.y ?? null;
+    if (!withinDay || typeof value !== "number") {
+      return peak;
+    }
+    return Math.max(peak, value);
+  }, 0);
 
   const peakOccupancy = occupancyPoints.reduce((peak, point) => {
     const timestamp = point.x ? new Date(point.x) : null;
@@ -269,39 +337,14 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
     return Math.max(peak, Number(value));
   }, 0);
 
-  const currentUsage =
-    typeof occupancyNow === "number" && capacity > 0 ? (occupancyNow / capacity) * 100 : null;
-  const peakToday = capacity > 0 ? (peakOccupancy / capacity) * 100 : 0;
+  summary.capacity_usage_now = usageNow;
+  summary.peak_capacity_usage_today = peakUsage;
+  summary.occupancy_delta_15m = deltaUsage;
+  summary.peak_occupancy_today = peakOccupancy;
 
-  const lastPoint = occupancyPoints[occupancyPoints.length - 1];
-  const lastUsagePoint: DataPoint | undefined = lastPoint
-    ? ({ x: lastPoint.x, value: currentUsage, y: currentUsage } as DataPoint)
-    : undefined;
-
-  series.unit = "percentage";
-  series.label = "Capacity usage";
-  series.data = lastUsagePoint ? [lastUsagePoint] : [];
-
-  if (!next.meta.summary) {
-    next.meta.summary = {};
-  }
-
-  next.meta.summary.capacity_usage_now = currentUsage;
-  next.meta.summary.peak_capacity_usage_today = peakToday;
-  next.meta.summary.occupancy_delta_15m = deltaOccupancy;
-
-  const peakWithinDay = occupancyPoints
-    .filter((point) => {
-      const ts = point.x ? new Date(point.x) : null;
-      return ts ? ts >= startOfDay : true;
-    })
-    .reduce((peak, point) => Math.max(peak, Number(point.value ?? point.y ?? 0)), 0);
-
-  next.meta.summary.peak_occupancy_today = peakWithinDay;
-
-  addSummaryText(next, "secondaryText", `Peak today: ${Math.round(peakToday)}%`);
-  setHeadlineValue(next, currentUsage);
-  logVrmDebug(VRM_KPI_IDS.capacity, series, currentUsage);
+  addSummaryText(next, "vrmChipText", `peak: ${Math.round(peakUsage)}%`);
+  setHeadlineValue(next, usageNow);
+  logVrmDebug(VRM_KPI_IDS.capacity, series, usageNow);
   return next;
 };
 
@@ -310,7 +353,6 @@ export const applyFootfallTotal = (result: ChartResult): ChartResult => {
   markCompact(next);
   ensureSummary(next);
   const primary = next.series[0];
-  const total = sumSeries(primary);
   const lastValue = lastBucketValue(primary);
   const startOfDay = getStartOfToday();
   const totalToday = primary
@@ -326,8 +368,7 @@ export const applyFootfallTotal = (result: ChartResult): ChartResult => {
     : 0;
   setHeadlineValue(next, lastValue);
   logVrmDebug(VRM_KPI_IDS.footfall, primary, lastValue);
-  addSummaryText(next, "secondaryText", `Today’s footfall: ${Math.round(totalToday)}`);
-  addTertiaryText(next, `24h total: ${Math.round(total)}`);
+  addSummaryText(next, "vrmChipText", `today: ${Math.round(totalToday)}`);
   suppressDelta(next);
   return next;
 };

@@ -166,15 +166,13 @@ async function flushEffects(times = 3) {
 
 describe("lookupCapacity", () => {
   it("returns configured capacity for known clients", () => {
-    expect(lookupCapacity("client1")).toBe(10);
+    expect(lookupCapacity("client0")).toBe(10);
+    expect(lookupCapacity("client1")).toBe(100);
     expect(lookupCapacity("client2")).toBe(100);
   });
 
-  it("falls back to 10 and logs a warning for unknown clients", () => {
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-    expect(lookupCapacity("unknown-client")).toBe(10);
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
+  it("throws for unknown clients", () => {
+    expect(() => lookupCapacity("unknown-client")).toThrow("Unknown client for capacity usage");
   });
 });
 
@@ -441,8 +439,8 @@ describe("DashboardV2Page", () => {
       Boolean((result.meta?.summary as Record<string, unknown> | undefined)?.peak_capacity_usage_today),
     );
     expect(
-      (capacityResult?.meta?.summary as Record<string, string> | undefined)?.secondaryText ?? "",
-    ).toContain("Peak today:");
+      (capacityResult?.meta?.summary as Record<string, string> | undefined)?.vrmChipText ?? "",
+    ).toContain("peak:");
 
     const errorTiles = tree!.root.findAllByProps({ className: "dashboard-v2__error" });
     expect(errorTiles.length).toBe(0);
@@ -621,7 +619,7 @@ describe("DashboardV2Page", () => {
     const footfall = buildWithTotals([6, 9], VRM_KPI_IDS.footfall);
     const dwell = buildWithTotals([1.25, 3.5], VRM_KPI_IDS.dwell);
     const occupancy = buildWithTotals([45, 60], VRM_KPI_IDS.occupancy);
-    const capacity = buildWithTotals([7, 9], VRM_KPI_IDS.capacity);
+    const capacity = buildWithTotals([70, 90], VRM_KPI_IDS.capacity);
 
     expect(lastBucketValue(entrances.series[0])).toBe(5);
     expect(lastBucketValue(entrances.series[0])).not.toBe(7);
@@ -650,7 +648,7 @@ describe("DashboardV2Page", () => {
       [VRM_KPI_IDS.footfall]: [6, 9],
       [VRM_KPI_IDS.dwell]: [1.25, 3.5],
       [VRM_KPI_IDS.occupancy]: [45, 60],
-      [VRM_KPI_IDS.capacity]: [7, 9],
+      [VRM_KPI_IDS.capacity]: [70, 90],
     };
 
     const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
