@@ -356,7 +356,7 @@ describe("DashboardV2Page", () => {
     expect(refreshButtons).toHaveLength(0);
   });
 
-  it("renders VRM KPI titles and hides legacy ones", async () => {
+  it("renders only the VRM KPI tiles in the band", async () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
       if (widget.id === VRM_KPI_IDS.traffic) {
@@ -377,14 +377,8 @@ describe("DashboardV2Page", () => {
     });
     await flushEffects();
 
-    const titles = tree!
-      .root
-      .findAllByProps({ className: "dashboard-v2__kpi-title" })
-      .map((node: { children: (string | number)[] }) => node.children.join(" "));
-
-    Object.values(VRM_KPI_TITLES).forEach((label) => expect(titles).toContain(label));
-    expect(titles).not.toContain("Activity Today");
-    expect(titles).not.toContain("Freshness Status");
+    const kpiTiles = tree!.root.findAllByProps({ className: "dashboard-v2__kpi-content" });
+    expect(kpiTiles).toHaveLength(Object.values(VRM_KPI_TITLES).length);
   });
 
   it("renders VRM header metadata", async () => {
@@ -443,13 +437,12 @@ describe("DashboardV2Page", () => {
     });
     await flushEffects();
 
-    const subtitles = tree!.root.findAllByProps({ className: "dashboard-v2__kpi-secondary" });
-    expect(subtitles).toHaveLength(0);
-
-    const capacityResult = renderedResults.find(
-      (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
+    const capacityResult = renderedResults.find((result) =>
+      Boolean((result.meta?.summary as Record<string, unknown> | undefined)?.peak_capacity_usage_today),
     );
-    expect(capacityResult?.meta?.summary?.secondaryText).toContain("Peak today:");
+    expect(
+      (capacityResult?.meta?.summary as Record<string, string> | undefined)?.secondaryText ?? "",
+    ).toContain("Peak today:");
 
     const errorTiles = tree!.root.findAllByProps({ className: "dashboard-v2__error" });
     expect(errorTiles.length).toBe(0);

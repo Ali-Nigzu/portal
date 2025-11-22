@@ -61,7 +61,14 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const coverageInfo = formatCoverage(coverage);
   const showRaw = !compact && shouldShowRawCount(rawCount);
   const secondaryText =
-    typeof summary?.secondaryText === "string" ? (summary?.secondaryText as string) : undefined;
+    typeof result.meta?.summary?.secondaryText === "string"
+      ? (result.meta?.summary?.secondaryText as string)
+      : undefined;
+  const tertiaryText =
+    typeof result.meta?.summary?.tertiaryText === "string"
+      ? (result.meta?.summary?.tertiaryText as string)
+      : undefined;
+  const hideDelta = Boolean(result.meta?.summary?.hideDelta);
 
   const formatLabel = (label?: string | number) => {
     if (!label) {
@@ -108,30 +115,16 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       <div className="kpi-value">{formatHeadline()}</div>
       {showRaw ? <div className="kpi-meta">raw: {rawCount}</div> : null}
       {secondaryText ? <div className="kpi-meta">{secondaryText}</div> : null}
+      {tertiaryText ? <div className="kpi-tertiary">{tertiaryText}</div> : null}
       {!compact && coverageInfo.label !== "—" ? (
         <div className={`kpi-coverage ${coverageInfo.tone}`}>
           coverage: {coverageInfo.label}
         </div>
       ) : null}
-      {!isVrm && deltaChip}
-      {isTraffic ? (
-        <div className="kpi-traffic">
-          {primarySeries.data.map((point) => {
-            const label = String(point.x ?? "Camera");
-            const rawValue = point.value ?? point.y ?? 0;
-            const percent = typeof rawValue === "number" ? Math.round(rawValue) : 0;
-            return (
-              <div key={label} className="kpi-traffic-row">
-                <span className="kpi-traffic-label">{label}</span>
-                <div className="kpi-traffic-bar">
-                  <span style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
-                </div>
-                <span className="kpi-traffic-value">{percent}%</span>
-              </div>
-            );
-          })}
-        </div>
-      ) : sparklineData.length > 1 ? (
+      {!hideDelta && delta !== null ? (
+        <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
+      ) : null}
+      {sparklineData.length > 1 ? (
         <div className="kpi-sparkline">
           <ResponsiveContainer width="100%" height={48}>
             <AreaChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
