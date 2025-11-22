@@ -9,6 +9,7 @@ import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_fl
 import type { FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "../utils/applyVRMOverrides";
+import { decorateResult, lastBucketValue } from "../utils/vrmDecorators";
 
 class ResizeObserverMock {
   observe(): void {}
@@ -509,6 +510,42 @@ describe("DashboardV2Page", () => {
 
     const emptyMessages = tree!.root.findAllByProps({ className: "dashboard-v2__empty" });
     expect(emptyMessages).toHaveLength(1);
+  });
+
+  it("derives VRM KPI headlines from the latest bucket values instead of 24h totals", () => {
+    const buildWithTotals = (values: number[], widgetId: string) =>
+      decorateResult(
+        widgetId,
+        buildChartResult(values, {
+          meta: { timezone: "UTC", summary: { total: values.reduce((a, b) => a + b, 0) } },
+        }),
+        "client1",
+      );
+
+    const entrances = buildWithTotals([2, 5], VRM_KPI_IDS.entrances);
+    const exits = buildWithTotals([3, 7], VRM_KPI_IDS.exits);
+    const footfall = buildWithTotals([6, 9], VRM_KPI_IDS.footfall);
+    const dwell = buildWithTotals([1.25, 3.5], VRM_KPI_IDS.dwell);
+    const occupancy = buildWithTotals([45, 60], VRM_KPI_IDS.occupancy);
+    const capacity = buildWithTotals([7, 9], VRM_KPI_IDS.capacity);
+
+    expect(lastBucketValue(entrances.series[0])).toBe(5);
+    expect(lastBucketValue(entrances.series[0])).not.toBe(7);
+
+    expect(lastBucketValue(exits.series[0])).toBe(7);
+    expect(lastBucketValue(exits.series[0])).not.toBe(10);
+
+    expect(lastBucketValue(footfall.series[0])).toBe(9);
+    expect(lastBucketValue(footfall.series[0])).not.toBe(15);
+
+    expect(lastBucketValue(dwell.series[0])).toBeCloseTo(3.5);
+    expect(lastBucketValue(dwell.series[0])).not.toBeCloseTo(4.75);
+
+    expect(lastBucketValue(occupancy.series[0])).toBe(60);
+    expect(lastBucketValue(occupancy.series[0])).not.toBe(105);
+
+    expect(lastBucketValue(capacity.series[0])).toBe(90);
+    expect(lastBucketValue(capacity.series[0])).not.toBe(160);
   });
 
   it("uses the latest 15-minute bucket for VRM KPI headlines", async () => {
