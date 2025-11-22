@@ -70,7 +70,9 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       : undefined;
   const hideDelta = Boolean(result.meta?.summary?.hideDelta);
   const headerLabel = isVrm
-    ? (typeof summary.title === "string" ? (summary.title as string) : null)
+    ? (typeof summary.title === "string"
+        ? (summary.title as string)
+        : primarySeries?.label ?? primarySeries?.id)
     : primarySeries?.label ?? primarySeries?.id;
 
   const formatLabel = (label?: string | number) => {
@@ -78,6 +80,12 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       return "";
     }
     const date = new Date(label);
+    if (Number.isNaN(date.valueOf())) {
+      return "";
+    }
+    if (isVrm) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
     const timePart = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const now = new Date();
     const includeDate = date.toDateString() !== now.toDateString();
@@ -103,6 +111,9 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
     ) : null;
   const showHeaderDelta = isVrm && !isTraffic && !hideDelta && delta !== null;
+  const vrmChipText =
+    isVrm && typeof summary.vrmChipText === "string" ? (summary.vrmChipText as string) : null;
+  const showVrmChip = Boolean(vrmChipText) && !showHeaderDelta;
 
   const trafficRows =
     isTraffic && primarySeries?.data?.length
@@ -136,6 +147,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
         <div className="kpi-header-right">
           {showHeaderDelta ? deltaChip : null}
+          {showVrmChip ? <div className="kpi-delta tone-neutral">{vrmChipText}</div> : null}
           {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
         </div>
       </div>
@@ -161,10 +173,19 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           <ResponsiveContainer width="100%" height={48}>
             <AreaChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <Tooltip
-                formatter={(tooltipValue) => [
-                  formatValue(tooltipValue as number, primarySeries.unit),
-                  primarySeries.label ?? primarySeries.id ?? "",
-                ]}
+                formatter={(tooltipValue) => {
+                  if (isVrm) {
+                    const numeric = formatNumeric(tooltipValue as number);
+                    const formattedValue =
+                      primarySeries.unit === "percentage" ? `${numeric}%` : numeric;
+                    const label = headerLabel ?? "";
+                    return [formattedValue, label];
+                  }
+                  return [
+                    formatValue(tooltipValue as number, primarySeries.unit),
+                    primarySeries.label ?? primarySeries.id ?? "",
+                  ];
+                }}
                 labelFormatter={(label) => formatLabel(label as string | number)}
               />
               <Area

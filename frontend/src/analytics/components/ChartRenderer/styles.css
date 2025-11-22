@@ -422,6 +422,12 @@
   color: var(--vrm-color-text-primary, #ffffff);
 }
 
+.traffic-distribution__center {
+  fill: var(--vrm-color-text-primary, #ffffff);
+  font-size: var(--vrm-typography-font-size-title, 18px);
+  font-weight: 700;
+}
+
 .traffic-distribution__empty {
   font-size: var(--vrm-typography-font-size-caption, 12px);
   color: var(--vrm-color-text-muted, #8290a6);

@@ -27,14 +27,10 @@ export const resolveUiClient = (orgId: string | undefined): string | undefined =
 export const lookupCapacity = (orgId: string | undefined): number => {
   const uiClient = resolveUiClient(orgId);
   const capacity = uiClient ? CAPACITY_BY_CLIENT[uiClient] : undefined;
-  if (capacity !== undefined) {
-    return capacity;
+  if (capacity === undefined) {
+    throw new Error(`Unknown client for capacity usage: ${orgId ?? "<none>"}`);
   }
-  // VRM capacity usage assumes a known site capacity; fall back to 10 to avoid
-  // divide-by-zero while keeping the widget usable.
-  // eslint-disable-next-line no-console
-  console.warn("Unknown client for capacity usage, falling back to 10", { orgId, uiClient });
-  return 10;
+  return capacity;
 };
 
 export const cloneResult = (result: ChartResult): ChartResult =>
@@ -102,10 +98,6 @@ const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   }
   ensureSummary(result);
   result.meta.summary![key] = value;
-};
-
-const addTertiaryText = (result: ChartResult, value?: string) => {
-  addSummaryText(result, "tertiaryText", value);
 };
 
 export const sumSeries = (series?: ChartSeries) => {
@@ -191,7 +183,7 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
   series: [
     {
       id: "traffic_share",
-      label: "Traffic distribution",
+      label: "Traffic by Camera",
       geometry: "bar",
       unit: "percentage",
       data: [{ x: "Camera", value: 100, y: 100 }],
@@ -199,12 +191,13 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
   ],
   meta: {
     summary: {
-      headline: "Camera – 100% of events",
+      headline: "Camera – 100%",
       presentation: "vrm",
       compact: 1 as unknown as number,
       hideDelta: 1 as unknown as number,
       chartStyle: "traffic_distribution",
       chartSubType: "traffic_distribution",
+      title: "Traffic by Camera",
     },
     timezone: "UTC",
   },
@@ -277,17 +270,18 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
   trafficDistributionResult.series = [
     {
       id: "traffic_share",
-      label: "Traffic distribution",
+      label: "Traffic by Camera",
       geometry: "bar",
       unit: "percentage",
       data: shareData,
     },
   ];
   setHeadlineValue(trafficDistributionResult, topShare);
-  addSummaryText(trafficDistributionResult, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
+  addSummaryText(trafficDistributionResult, "headline", `${topCamera} – ${Math.round(topShare)}%`);
   addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
   addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
   addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
+  addSummaryText(trafficDistributionResult, "title", "Traffic by Camera");
   return trafficDistributionResult;
 };
 
@@ -345,7 +339,7 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   summary.occupancy_delta_15m = deltaUsage;
   summary.peak_occupancy_today = peakOccupancy;
 
-  addSummaryText(next, "secondaryText", `Today’s peak: ${Math.round(peakUsage)}%`);
+  addSummaryText(next, "vrmChipText", `peak: ${Math.round(peakUsage)}%`);
   setHeadlineValue(next, usageNow);
   logVrmDebug(VRM_KPI_IDS.capacity, series, usageNow);
   return next;
@@ -356,7 +350,6 @@ export const applyFootfallTotal = (result: ChartResult): ChartResult => {
   markCompact(next);
   ensureSummary(next);
   const primary = next.series[0];
-  const total = sumSeries(primary);
   const lastValue = lastBucketValue(primary);
   const startOfDay = getStartOfToday();
   const totalToday = primary
@@ -372,8 +365,7 @@ export const applyFootfallTotal = (result: ChartResult): ChartResult => {
     : 0;
   setHeadlineValue(next, lastValue);
   logVrmDebug(VRM_KPI_IDS.footfall, primary, lastValue);
-  addSummaryText(next, "secondaryText", `Today’s footfall: ${Math.round(totalToday)}`);
-  addTertiaryText(next, `24h total: ${Math.round(total)}`);
+  addSummaryText(next, "vrmChipText", `today: ${Math.round(totalToday)}`);
   suppressDelta(next);
   return next;
 };

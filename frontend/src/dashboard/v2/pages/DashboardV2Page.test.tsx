@@ -170,11 +170,8 @@ describe("lookupCapacity", () => {
     expect(lookupCapacity("client2")).toBe(100);
   });
 
-  it("falls back to 10 and logs a warning for unknown clients", () => {
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-    expect(lookupCapacity("unknown-client")).toBe(10);
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
+  it("throws for unknown clients", () => {
+    expect(() => lookupCapacity("unknown-client")).toThrow("Unknown client for capacity usage");
   });
 });
 
@@ -441,8 +438,8 @@ describe("DashboardV2Page", () => {
       Boolean((result.meta?.summary as Record<string, unknown> | undefined)?.peak_capacity_usage_today),
     );
     expect(
-      (capacityResult?.meta?.summary as Record<string, string> | undefined)?.secondaryText ?? "",
-    ).toContain("Today’s peak:");
+      (capacityResult?.meta?.summary as Record<string, string> | undefined)?.vrmChipText ?? "",
+    ).toContain("peak:");
 
     const errorTiles = tree!.root.findAllByProps({ className: "dashboard-v2__error" });
     expect(errorTiles.length).toBe(0);
