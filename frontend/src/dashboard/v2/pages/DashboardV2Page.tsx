@@ -21,7 +21,6 @@ import { Credentials } from "../../../types/credentials";
 import "../styles/DashboardV2Page.css";
 import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
 import {
-  buildTrafficPlaceholderResult,
   decorateResult,
   lastBucketValue,
 } from "../utils/vrmDecorators";
@@ -346,21 +345,9 @@ const DashboardV2Page = ({
     const timezone = manifest.timeControls?.timezone;
 
     const run = async () => {
-      const decorateOrgId = manifest?.orgId ?? orgId;
+      const decorateOrgId = orgId ?? manifest?.orgId;
       await Promise.all(
         manifest.widgets.map(async (widget) => {
-          if (widget.id === VRM_KPI_IDS.traffic) {
-            const trafficResult = buildTrafficPlaceholderResult();
-            setWidgetState((previous) => ({
-              ...previous,
-              [widget.id]: {
-                widget,
-                result: trafficResult,
-                status: "ready",
-              },
-            }));
-            return;
-          }
           try {
             const result = await widgetResultLoaderImpl(widget, {
               signal: controller.signal,
@@ -512,9 +499,17 @@ const DashboardV2Page = ({
     () => localTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     [localTime],
   );
-  const siteOrgId = manifest?.orgId ?? orgId;
+  const siteOrgId = orgId ?? manifest?.orgId;
   const siteLabel = siteOrgId ?? "Site";
   const siteId = siteOrgId ?? "—";
+  const isVrmDashboard = useMemo(() => {
+    const ids = manifest?.layout?.kpiBand ?? [];
+    if (!ids.length) {
+      return false;
+    }
+    const vrmIds = new Set<string>(Object.values(VRM_KPI_IDS));
+    return ids.every((id) => vrmIds.has(id));
+  }, [manifest?.layout?.kpiBand]);
 
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
@@ -527,32 +522,34 @@ const DashboardV2Page = ({
             <span>• Local time: {localTimeLabel}</span>
           </div>
         </div>
-        <div className="dashboard-v2__controls">
-          <div className="dashboard-v2__org">Site ID: {siteId}</div>
-          <div className="dashboard-v2__control-group">
-            {manifest?.timeControls?.options?.length ? (
-              <label className="dashboard-v2__control">
-                <span>Time range</span>
-                <select
-                  value={selectedTimeRangeId ?? manifest.timeControls?.options?.[0]?.id ?? ""}
-                  onChange={handleTimeRangeChange}
-                >
-                  {(manifest.timeControls.options ?? []).map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <button type="button" className="dashboard-v2__button" onClick={handleRefresh}>
-              Refresh data
-            </button>
-            <button type="button" className="dashboard-v2__button" onClick={handleReloadManifest}>
-              Reload manifest
-            </button>
+        {!isVrmDashboard ? (
+          <div className="dashboard-v2__controls">
+            <div className="dashboard-v2__org">Site ID: {siteId}</div>
+            <div className="dashboard-v2__control-group">
+              {manifest?.timeControls?.options?.length ? (
+                <label className="dashboard-v2__control">
+                  <span>Time range</span>
+                  <select
+                    value={selectedTimeRangeId ?? manifest.timeControls?.options?.[0]?.id ?? ""}
+                    onChange={handleTimeRangeChange}
+                  >
+                    {(manifest.timeControls.options ?? []).map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <button type="button" className="dashboard-v2__button" onClick={handleRefresh}>
+                Refresh data
+              </button>
+              <button type="button" className="dashboard-v2__button" onClick={handleReloadManifest}>
+                Reload manifest
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
       </header>
 
       {status === "error" && error ? (
