@@ -29,6 +29,10 @@ const FIXTURE_MODULES: Record<string, () => Promise<ChartResult>> = {
     import("../examples/golden_dashboard_kpi_freshness.json").then(
       (module) => module.default as unknown as ChartResult
     ),
+  "golden_dashboard_kpi_traffic_distribution": () =>
+    import("../examples/golden_dashboard_kpi_traffic_distribution.json").then(
+      (module) => module.default as unknown as ChartResult,
+    ),
   "golden_dwell_by_camera": () =>
     import("../examples/golden_dwell_by_camera.json").then(
       (module) => module.default as unknown as ChartResult

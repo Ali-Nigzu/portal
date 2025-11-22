@@ -51,6 +51,36 @@ function applyTimeRange(
   }
 }
 
+function applyFixedTimeWindow(
+  spec: ChartSpec,
+  durationMinutes: number,
+  bucket: ChartSpec["timeWindow"]["bucket"],
+  timezone: string | undefined,
+  anchor: Date,
+): void {
+  const timeWindow: ChartSpec["timeWindow"] = { ...(spec.timeWindow ?? { from: "", to: "" }) };
+  const to = anchor.toISOString();
+  const from = new Date(anchor.getTime() - durationMinutes * MINUTE_IN_MS).toISOString();
+  timeWindow.from = from;
+  timeWindow.to = to;
+  timeWindow.bucket = bucket;
+  if (timezone) {
+    timeWindow.timezone = timezone;
+  }
+  spec.timeWindow = timeWindow;
+
+  if (Array.isArray(spec.dimensions)) {
+    spec.dimensions = spec.dimensions.map((dimension) => {
+      if ((dimension as { id?: string }).id === TIMESTAMP_DIMENSION_ID) {
+        const nextDimension = { ...dimension } as ChartSpec["dimensions"][number];
+        (nextDimension as ChartDimension).bucket = bucket;
+        return nextDimension;
+      }
+      return dimension;
+    });
+  }
+}
+
 export function buildWidgetSpec(
   widget: DashboardWidget,
   options: BuildWidgetSpecOptions = {},
@@ -61,7 +91,15 @@ export function buildWidgetSpec(
 
   const spec = cloneSpec(widget.inlineSpec);
 
-  if (options.timeRange) {
+  if (widget.fixedTimeWindow) {
+    applyFixedTimeWindow(
+      spec,
+      widget.fixedTimeWindow.durationMinutes,
+      widget.fixedTimeWindow.bucket,
+      options.timezone,
+      options.anchor ?? new Date(),
+    );
+  } else if (options.timeRange) {
     applyTimeRange(spec, options.timeRange, options.timezone, options.anchor ?? new Date());
   }
 
