@@ -4,12 +4,12 @@ A manifest-driven analytics portal that turns CCTV event streams into charts and
 
 ## Data source
 
-All analytics come from canonical BigQuery event tables — no frontend math or synthetic rows. Each client maps to a single table:
+All analytics come from canonical BigQuery event tables — no frontend math or synthetic rows. Each client maps to a single table backed by `nigzsu.demodata0` (integer-coded demographics, unused `Race` column):
 
 - `client0` → `nigzsu.${BQ_DATASET}.client0`
 - `client1` → `nigzsu.${BQ_DATASET}.client1`
 
-Canonical schema (all columns are referenced by the compiler and nothing else):
+Canonical schema (all columns are referenced by the compiler and nothing else — the scoped CTE handles index synthesis, demographic mapping, and `timestamp < @now` filtering):
 
 ```
 site_id     INTEGER

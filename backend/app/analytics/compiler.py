@@ -416,6 +416,17 @@ class SpecCompiler:
         return "\n".join(line.rstrip() for line in final_sql.splitlines() if line.strip())
 
     def _render_scoped(self, table_name: str, filters_sql: str) -> str:
+        """Canonical events CTE over the resolved org table.
+
+        This preserves the legacy analytics contract while reading directly from
+        demodata0 tables:
+        - Base table is resolved via org routing (e.g. `nigzsu.demodata0.client0`).
+        - Synthetic index reconstructs ordering with
+          ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id).
+        - Demographics map integer codes to canonical strings (sex: Male/Female; age buckets: 0-4 … 66+).
+        - Race exists in the source but is intentionally not projected.
+        - "No future" rule enforced with `timestamp < @now` alongside the requested window.
+        """
         scoped = dedent(
             f"""
             scoped AS (

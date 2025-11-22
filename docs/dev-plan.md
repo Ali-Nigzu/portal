@@ -12,7 +12,7 @@ A multi-tenant analytics portal for CCTV-derived events. Clients and admins use:
 
 Browser → React app → `POST /api/analytics/run` → Analytics engine → BigQuery → validated `ChartResult` → rendered chart/KPI.
 
-Org mapping lives in the backend (`backend/app/analytics/org_config.py`) and resolves `client0`/`client1` to fully qualified BigQuery tables. Shared contracts in `shared/analytics` keep backend Pydantic models and frontend TypeScript types aligned.
+Org mapping lives in the backend (`backend/app/analytics/org_config.py`) and resolves `client0`/`client1` to fully qualified BigQuery tables (`nigzsu.${BQ_DATASET}.client*`). The compiler’s scoped events CTE adapts those integer-coded demodata0 tables into the canonical schema (synthetic index, demographic string mapping, no-future `timestamp < @now`, Race ignored). Shared contracts in `shared/analytics` keep backend Pydantic models and frontend TypeScript types aligned.
 
 ## Modules & responsibilities
 
