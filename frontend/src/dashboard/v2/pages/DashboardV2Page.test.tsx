@@ -433,7 +433,9 @@ describe("DashboardV2Page", () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
       if (widget.kind === "kpi") {
-        return buildChartResult([10, 15, 20]);
+        return buildChartResult([10, 15, 20], {
+          meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+        });
       }
       return liveFlowChart;
     });
@@ -450,11 +452,13 @@ describe("DashboardV2Page", () => {
     });
     await flushEffects();
 
-    const subtitles = tree!
-      .root
-      .findAllByProps({ className: "dashboard-v2__kpi-secondary" })
-      .map((node: { children: (string | number)[] }) => node.children.join(" "));
-    expect(subtitles.some((text: string) => text.includes("Peak today:"))).toBe(true);
+    const subtitles = tree!.root.findAllByProps({ className: "dashboard-v2__kpi-secondary" });
+    expect(subtitles).toHaveLength(0);
+
+    const capacityResult = renderedResults.find(
+      (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
+    );
+    expect(capacityResult?.meta?.summary?.secondaryText).toContain("Peak today:");
 
     const errorTiles = tree!.root.findAllByProps({ className: "dashboard-v2__error" });
     expect(errorTiles.length).toBe(0);
@@ -488,6 +492,42 @@ describe("DashboardV2Page", () => {
     expect(errorBanner.children.join(" ")).toContain("Some widgets failed to load");
   });
 
+  it("hides outer VRM captions while preserving summary metadata", async () => {
+    renderedResults.length = 0;
+    const manifestLoader = jest.fn(async () => cloneManifest());
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.kind === "kpi") {
+        return buildChartResult([1, 2, 3], {
+          meta: {
+            timezone: "UTC",
+            summary: { headline: `headline-${widget.id}`, secondaryText: `secondary-${widget.id}` },
+          },
+        });
+      }
+      return liveFlowChart;
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client1", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    expect(tree!.root.findAllByProps({ className: "dashboard-v2__kpi-subtitle" })).toHaveLength(0);
+    expect(tree!.root.findAllByProps({ className: "dashboard-v2__kpi-secondary" })).toHaveLength(0);
+
+    const headlines = renderedResults.flatMap((result) =>
+      Object.values(result.meta?.summary ?? {}).filter((value) => typeof value === "string" && value.startsWith("headline-")),
+    );
+    expect(headlines.length).toBeGreaterThan(0);
+  });
+
   it("renders empty states when manifest has no widgets", async () => {
     const manifestLoader = jest.fn(async () =>
       cloneManifest({
@@ -510,6 +550,41 @@ describe("DashboardV2Page", () => {
 
     const emptyMessages = tree!.root.findAllByProps({ className: "dashboard-v2__empty" });
     expect(emptyMessages).toHaveLength(1);
+  });
+
+  it("uses the org context for headers and capacity lookup", async () => {
+    renderedResults.length = 0;
+    const manifestLoader = jest.fn(async () => cloneManifest({ orgId: "client2" }));
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.kind === "kpi") {
+        const values = widget.id === VRM_KPI_IDS.capacity ? [50, 60] : [1, 2, 3];
+        return buildChartResult(values, {
+          label: widget.id,
+          meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+        });
+      }
+      return liveFlowChart;
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client2", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    const title = tree!.root.findByProps({ className: "dashboard-v2__title" });
+    expect(title.children.join(" ")).toContain("client2 – client2");
+
+    const capacityResult = renderedResults.find(
+      (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
+    );
+    expect(lastBucketValue(capacityResult?.series?.[0])).toBeCloseTo(60);
   });
 
   it("derives VRM KPI headlines from the latest bucket values instead of 24h totals", () => {
