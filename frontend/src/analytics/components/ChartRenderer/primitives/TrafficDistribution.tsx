@@ -9,6 +9,20 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
   const data = primary?.data ?? [];
   const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
   const title = typeof summary.title === "string" ? (summary.title as string) : "Traffic by Camera";
+  const isVrmTraffic =
+    typeof summary.presentation === "string" &&
+    summary.presentation === "vrm" &&
+    summary.chartSubType === "traffic_distribution";
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("TrafficDistribution: entry", {
+      isVrmTraffic,
+      seriesLength: series.length,
+      dataLength: data.length,
+      summary,
+    });
+  }
 
   if (!primary || data.length === 0) {
     return (
@@ -21,15 +35,39 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
     );
   }
 
-  const legend = data.map((point, index) => ({
-    label: String(point.x ?? `Cam ${index + 1}`),
-    value: typeof point.value === "number" ? point.value : typeof point.y === "number" ? point.y : 0,
-    color: sliceColors[index % sliceColors.length],
-  }));
+  const legend = data.map((point, index) => {
+    const rawCamera = point.x ?? `Cam ${index + 1}`;
+    const normalizedCameraId = String(rawCamera).replace(/^Cam\s*/i, "").trim();
+    const cameraId = normalizedCameraId !== "" ? normalizedCameraId : String(index + 1);
+    return {
+      label: `Cam ${cameraId}`,
+      camId: cameraId,
+      value: typeof point.value === "number" ? point.value : typeof point.y === "number" ? point.y : 0,
+      color: sliceColors[index % sliceColors.length],
+    };
+  });
 
   const topSlice = legend.reduce((winner, candidate) =>
     candidate.value >= winner.value ? candidate : winner,
   legend[0]);
+
+  const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
+  }
+
+  if (!legend.length || totalValue <= 0) {
+    return (
+      <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
+        <div className="traffic-distribution__title">{title}</div>
+        <div className="traffic-distribution__content">
+          <div className="traffic-distribution__empty">No traffic data available.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
@@ -49,6 +87,17 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
               innerRadius={40}
               outerRadius={60}
               paddingAngle={2}
+              label={
+                isVrmTraffic
+                  ? ({ payload, value }) => {
+                      const camId = (payload as { camId?: string })?.camId ?? (payload as { label?: string })?.label;
+                      const share = typeof value === "number" ? Math.round(value) : 0;
+                      const cameraLabel = camId ? `Cam ${camId.replace(/^Cam\s*/i, "").trim()}` : "Cam";
+                      return `${cameraLabel} ${share}%`;
+                    }
+                  : undefined
+              }
+              labelLine={isVrmTraffic ? false : undefined}
             >
               {legend.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} />
@@ -59,19 +108,21 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        <div className="traffic-distribution__annotations" aria-label="Traffic by camera annotations">
-          {legend.map((entry) => (
-            <div className="traffic-distribution__annotation" key={entry.label}>
-              <span
-                className="traffic-distribution__annotation-swatch"
-                style={{ backgroundColor: entry.color }}
-                aria-hidden
-              />
-              <span className="traffic-distribution__annotation-label">{entry.label}</span>
-              <span className="traffic-distribution__annotation-value">{`${Math.round(entry.value)}%`}</span>
-            </div>
-          ))}
-        </div>
+        {!isVrmTraffic ? (
+          <div className="traffic-distribution__annotations" aria-label="Traffic by camera annotations">
+            {legend.map((entry) => (
+              <div className="traffic-distribution__annotation" key={entry.label}>
+                <span
+                  className="traffic-distribution__annotation-swatch"
+                  style={{ backgroundColor: entry.color }}
+                  aria-hidden
+                />
+                <span className="traffic-distribution__annotation-label">{entry.label}</span>
+                <span className="traffic-distribution__annotation-value">{`${Math.round(entry.value)}%`}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
