@@ -145,4 +145,70 @@ describe("KpiTile", () => {
     const valueNode = tree.findByProps({ className: "kpi-value" });
     expect(valueNode.children.join(" ")).toBe("4");
   });
+
+  it("suppresses unit labels and rounds dwell minutes for VRM tiles", () => {
+    const props = buildProps({
+      series: [
+        {
+          id: "primary",
+          label: "Dwell",
+          geometry: "metric",
+          unit: "minutes",
+          summary: { delta: -0.14 },
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: 20 },
+            { x: "2024-01-01T00:15:00Z", value: 23.87 },
+          ],
+        },
+      ],
+    });
+    props.result = {
+      chartType: "single_value",
+      xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      series: props.series,
+      meta: { timezone: "UTC", summary: { presentation: "vrm" } as any },
+    } as ChartResult;
+
+    const tree = renderer.create(<KpiTile {...props} />).root;
+    expect(tree.findAllByProps({ className: "kpi-unit" })).toHaveLength(0);
+    const valueNode = tree.findByProps({ className: "kpi-value" });
+    expect(valueNode.children.join(" ")).toBe("24 min");
+    const headerRight = tree.findByProps({ className: "kpi-header-right" });
+    const deltaNode = headerRight.findByProps({ className: "kpi-delta tone-negative" });
+    expect(deltaNode.children.join(" ")).toContain("↓ 14%");
+  });
+
+  it("renders traffic distribution rows when chartStyle is traffic_distribution", () => {
+    const props = buildProps({
+      series: [
+        {
+          id: "traffic_share",
+          label: "Traffic distribution",
+          geometry: "bar",
+          unit: "percentage",
+          data: [
+            { x: "Cam 0", value: 66.7 },
+            { x: "Cam 1", value: 33.3 },
+          ],
+        },
+      ],
+    });
+    props.result = {
+      chartType: "categorical",
+      series: props.series,
+      xDimension: { id: "camera", type: "category" },
+      meta: { timezone: "UTC", summary: { presentation: "vrm", chartStyle: "traffic_distribution" } as any },
+    } as ChartResult;
+
+    const tree = renderer.create(<KpiTile {...props} />).root;
+    const rows = tree.findAllByProps({ className: "kpi-traffic-row" });
+    expect(rows).toHaveLength(2);
+    const labelText = rows[0].findByProps({ className: "kpi-traffic-label" }).children.join(" ");
+    const valueText = rows[0]
+      .findByProps({ className: "kpi-traffic-value" })
+      .children.join("")
+      .replace(/\s+/g, "");
+    expect(labelText).toBe("Cam 0");
+    expect(valueText).toBe("67%");
+  });
 });

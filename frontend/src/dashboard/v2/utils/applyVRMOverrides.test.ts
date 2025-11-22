@@ -83,6 +83,10 @@ describe("applyVRMOverrides", () => {
       expect(widget.title).toBe(VRM_KPI_TITLES[widget.id]);
       expect(widget.inlineSpec?.timeWindow?.bucket).toBe("15_MIN");
       expect(widget.inlineSpec?.timeWindow?.from).toBe("{{NOW_MINUS_24_HOURS}}");
+      if (widget.id === VRM_KPI_IDS.traffic) {
+        expect(widget.inlineSpec?.splits?.[0]?.id).toBe("camera_id");
+        expect(widget.inlineSpec?.dimensions?.[0]?.id).toBe("timestamp");
+      }
     });
   });
 
@@ -198,5 +202,49 @@ describe("applyVRMOverrides", () => {
     expect(capacityHeadline.peakToday).toBe(100);
     expect(capacityResult.meta?.summary?.headlineValue).toBe(90);
     expect(capacityResult.meta?.summary?.secondaryText).toContain("Peak today:");
+  });
+
+  it("computes top camera share for traffic distribution from the last bucket", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+
+    const trafficResult = decorateResult(
+      VRM_KPI_IDS.traffic,
+      {
+        chartType: "composed_time",
+        xDimension: { id: "timestamp", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "cam0",
+            label: "Cam 0",
+            geometry: "line",
+            unit: "events",
+            data: [
+              { x: prev.toISOString(), y: 5 },
+              { x: now.toISOString(), y: 10 },
+            ],
+          },
+          {
+            id: "cam1",
+            label: "Cam 1",
+            geometry: "line",
+            unit: "events",
+            data: [
+              { x: prev.toISOString(), y: 5 },
+              { x: now.toISOString(), y: 5 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: { total: 30 } },
+      } as any,
+      "client1",
+    );
+
+    expect(trafficResult.chartType).toBe("categorical");
+    const series = trafficResult.series[0];
+    expect(series.data).toHaveLength(2);
+    expect(series.data.map((point) => Math.round((point.y ?? point.value ?? 0) as number))).toEqual([67, 33]);
+    expect(trafficResult.meta?.summary?.headlineValue).toBeCloseTo(66.6667);
+    expect((trafficResult.meta?.summary as any)?.chartStyle).toBe("traffic_distribution");
   });
 });

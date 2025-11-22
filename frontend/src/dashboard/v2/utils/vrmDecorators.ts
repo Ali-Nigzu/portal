@@ -30,6 +30,7 @@ const ensureSummary = (result: ChartResult) => {
 
 export const markCompact = (result: ChartResult) => {
   ensureSummary(result);
+  result.meta.summary!.presentation = "vrm";
   result.meta.summary!.compact = 1 as unknown as string | number | null;
 };
 
@@ -165,44 +166,92 @@ export const getCapacityUsageHeadline = (
 };
 
 export const buildTrafficPlaceholderResult = (): ChartResult => ({
-  chartType: "single_value",
-  xDimension: { id: "timestamp", type: "time", bucket: "15_MIN", timezone: "UTC" },
+  chartType: "categorical",
+  xDimension: { id: "camera", type: "category" },
   series: [
     {
       id: "traffic_share",
       label: "Traffic distribution",
-      geometry: "metric",
+      geometry: "bar",
       unit: "percentage",
-      data: [{ x: new Date().toISOString(), value: 100, y: 100 }],
+      data: [{ x: "Camera", value: 100, y: 100 }],
     },
   ],
   meta: {
-    summary: { headline: "Camera – 100% of events", compact: 1 as unknown as number },
+    summary: {
+      headline: "Camera – 100% of events",
+      compact: 1 as unknown as number,
+      presentation: "vrm",
+      chartStyle: "traffic_distribution",
+    },
     timezone: "UTC",
   },
 });
 
+const getLatestTimestamp = (seriesList: ChartSeries[]): string | null => {
+  let latest: string | null = null;
+  seriesList.forEach((series) => {
+    const lastPoint = series.data[series.data.length - 1];
+    if (lastPoint?.x && (!latest || new Date(lastPoint.x) > new Date(latest))) {
+      latest = lastPoint.x;
+    }
+  });
+  return latest;
+};
+
 export const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
-  const next = cloneResult(result);
-  markCompact(next);
-  const series = next.series[0];
-  if (!series) {
+  const baseResult = cloneResult(result);
+  markCompact(baseResult);
+  const seriesList = baseResult.series ?? [];
+  if (!seriesList.length) {
     return buildTrafficPlaceholderResult();
   }
-  const total = series.data.reduce((sum, point) => sum + Number(point.value ?? point.y ?? 0), 0);
-  let topCamera = String(series.data[0]?.x ?? "Camera");
+
+  const latestTimestamp = getLatestTimestamp(seriesList);
+  if (!latestTimestamp) {
+    return buildTrafficPlaceholderResult();
+  }
+
+  const cameraShares = seriesList.map((series) => {
+    const latestPoint =
+      series.data.find((point) => point.x === latestTimestamp) ?? series.data[series.data.length - 1];
+    const raw = latestPoint?.value ?? latestPoint?.y ?? 0;
+    return { camera: series.label ?? series.id, value: Number(raw) };
+  });
+
+  const total = cameraShares.reduce((sum, { value }) => sum + value, 0);
+  let topCamera = cameraShares[0]?.camera ?? "Camera";
   let topShare = 0;
-  series.data = series.data.map((point) => {
-    const raw = point.value ?? point.y ?? 0;
-    const share = total > 0 ? (Number(raw) / total) * 100 : 0;
+
+  const shareData: DataPoint[] = cameraShares.map(({ camera, value }) => {
+    const share = total > 0 ? (value / total) * 100 : 0;
     if (share >= topShare) {
       topShare = share;
-      topCamera = String(point.x ?? "Camera");
+      topCamera = camera;
     }
-    return { ...point, value: share, y: share } as DataPoint;
+    return { x: camera, value: share, y: share } as DataPoint;
   });
-  setHeadlineValue(next, topShare);
+
+  const next: ChartResult = {
+    chartType: "categorical",
+    xDimension: { id: "camera", type: "category" },
+    series: [
+      {
+        id: "traffic_share",
+        label: "Traffic distribution",
+        geometry: "bar",
+        unit: "percentage",
+        data: shareData,
+      },
+    ],
+    meta: { ...baseResult.meta },
+  };
+
+  ensureSummary(next);
+  next.meta!.summary!.presentation = "vrm";
+  next.meta!.summary!.chartStyle = "traffic_distribution";
   addSummaryText(next, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
+  setHeadlineValue(next, topShare);
   return next;
 };
 
