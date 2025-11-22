@@ -137,6 +137,18 @@ export const ChartRenderer = ({
   const isTrafficDistribution =
     summary?.chartStyle === "traffic_distribution" || result.meta?.summary?.chartSubType === "traffic_distribution";
 
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("ChartRenderer: traffic distribution check", {
+      chartType: result.chartType,
+      chartStyle: summary?.chartStyle,
+      chartSubType: result.meta?.summary?.chartSubType,
+      seriesLength: result.series.length,
+      isEmpty,
+      isTrafficDistribution,
+    });
+  }
+
   if (validationIssues.length > 0) {
     return (
       <ChartErrorState
@@ -157,6 +169,15 @@ export const ChartRenderer = ({
   }
 
   if (isTrafficDistribution) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("ChartRenderer: rendering TrafficDistribution", {
+        chartType: result.chartType,
+        chartStyle: summary?.chartStyle,
+        chartSubType: result.meta?.summary?.chartSubType,
+        seriesLength: result.series.length,
+      });
+    }
     return <TrafficDistribution {...chartProps} height={height} />;
   }
 

@@ -14,6 +14,16 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
     summary.presentation === "vrm" &&
     summary.chartSubType === "traffic_distribution";
 
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("TrafficDistribution: entry", {
+      isVrmTraffic,
+      seriesLength: series.length,
+      dataLength: data.length,
+      summary,
+    });
+  }
+
   if (!primary || data.length === 0) {
     return (
       <div
@@ -40,6 +50,24 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
   const topSlice = legend.reduce((winner, candidate) =>
     candidate.value >= winner.value ? candidate : winner,
   legend[0]);
+
+  const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
+  }
+
+  if (!legend.length || totalValue <= 0) {
+    return (
+      <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
+        <div className="traffic-distribution__title">{title}</div>
+        <div className="traffic-distribution__content">
+          <div className="traffic-distribution__empty">No traffic data available.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
