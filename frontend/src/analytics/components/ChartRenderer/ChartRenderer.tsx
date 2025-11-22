@@ -134,8 +134,8 @@ export const ChartRenderer = ({
   };
 
   const summary = result.meta?.summary as { presentation?: string; chartStyle?: string } | undefined;
-  const isVrmTraffic =
-    summary?.presentation === "vrm" && summary?.chartStyle === "traffic_distribution";
+  const isTrafficDistribution =
+    summary?.chartStyle === "traffic_distribution" || result.meta?.summary?.chartSubType === "traffic_distribution";
 
   if (validationIssues.length > 0) {
     return (
@@ -156,14 +156,11 @@ export const ChartRenderer = ({
     );
   }
 
-  if (isVrmTraffic) {
-    return <KpiTile {...chartProps} />;
+  if (isTrafficDistribution) {
+    return <TrafficDistribution {...chartProps} height={height} />;
   }
 
   if (result.chartType === "single_value") {
-    if (result.meta?.summary?.chartSubType === "traffic_distribution") {
-      return <TrafficDistribution {...chartProps} height={height} />;
-    }
     return <KpiTile {...chartProps} />;
   }
 
@@ -172,9 +169,6 @@ export const ChartRenderer = ({
   }
 
   if (result.chartType === "categorical") {
-    if (result.meta?.summary?.chartSubType === "traffic_distribution") {
-      return <TrafficDistribution {...chartProps} height={height} />;
-    }
     return <BarChart {...chartProps} />;
   }
 

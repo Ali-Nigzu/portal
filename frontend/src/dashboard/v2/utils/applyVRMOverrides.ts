@@ -19,7 +19,7 @@ export const VRM_KPI_TITLES: Record<string, string> = {
   [VRM_KPI_IDS.exits]: "Exits",
   [VRM_KPI_IDS.footfall]: "Footfall",
   [VRM_KPI_IDS.dwell]: "Dwell Time",
-  [VRM_KPI_IDS.traffic]: "Traffic Distribution",
+  [VRM_KPI_IDS.traffic]: "Traffic by Camera",
   [VRM_KPI_IDS.capacity]: "Capacity Usage",
 };
 
