@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "../../../analytics/components/Card";
 import { ChartRenderer } from "../../../analytics/components/ChartRenderer";
-import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/schemas/charting";
 import ErrorBoundary from "../../../common/components/ErrorBoundary";
 import { logError, logInfo } from "../../../common/utils/logger";
 import type {
@@ -21,222 +20,15 @@ import { getViewTokenFromLocation } from "../../../utils/viewToken";
 import { Credentials } from "../../../types/credentials";
 import "../styles/DashboardV2Page.css";
 import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
+import {
+  buildTrafficPlaceholderResult,
+  decorateResult,
+  lastBucketValue,
+} from "../utils/vrmDecorators";
+
+export { lookupCapacity } from "../utils/vrmDecorators";
 
 const GRID_ROW_HEIGHT = 96;
-
-const FIXED_KPI_IDS = new Set<string>(Object.values(VRM_KPI_IDS));
-
-const CAPACITY_MAP: Record<string, number> = {
-  client0: 100,
-  client1: 100,
-  client2: 1000,
-};
-
-const cloneResult = (result: ChartResult): ChartResult =>
-  JSON.parse(JSON.stringify(result)) as ChartResult;
-
-const ensureSummary = (result: ChartResult) => {
-  if (!result.meta) {
-    result.meta = { timezone: "UTC" } as ChartResult["meta"];
-  }
-  result.meta.summary = result.meta.summary ?? {};
-};
-
-const markCompact = (result: ChartResult) => {
-  ensureSummary(result);
-  result.meta.summary!.compact = 1 as unknown as string | number | null;
-};
-
-const addSummaryText = (result: ChartResult, key: string, value?: string) => {
-  if (!value) {
-    return;
-  }
-  ensureSummary(result);
-  result.meta.summary![key] = value;
-};
-
-const sumSeries = (series?: ChartSeries) => {
-  if (!series) {
-    return 0;
-  }
-  return series.data.reduce((total, point) => {
-    const value = point.value ?? point.y ?? 0;
-    return total + (typeof value === "number" ? value : 0);
-  }, 0);
-};
-
-const getLastTwoValues = (series?: ChartSeries): { last: number | null; previous: number | null } => {
-  if (!series || !series.data.length) {
-    return { last: null, previous: null };
-  }
-  const lastPoint = series.data[series.data.length - 1];
-  const previousPoint = series.data[series.data.length - 2];
-  const last = (lastPoint?.value ?? lastPoint?.y ?? null) as number | null;
-  const previous = (previousPoint?.value ?? previousPoint?.y ?? null) as number | null;
-  return { last, previous };
-};
-
-const formatDeltaText = (value: number | null) => {
-  if (value === null) {
-    return undefined;
-  }
-  const sign = value > 0 ? "+" : value < 0 ? "" : "±";
-  return `${sign}${Math.round(value)}`;
-};
-
-const getStartOfToday = () => {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return now;
-};
-
-const buildTrafficPlaceholderResult = (): ChartResult => ({
-  chartType: "single_value",
-  xDimension: { id: "timestamp", type: "time", bucket: "15_MIN", timezone: "UTC" },
-  series: [
-    {
-      id: "traffic_share",
-      label: "Traffic distribution",
-      geometry: "metric",
-      unit: "percentage",
-      data: [{ x: new Date().toISOString(), value: 100, y: 100 }],
-    },
-  ],
-  meta: {
-    summary: { headline: "Camera – 100% of events", compact: 1 as unknown as number },
-    timezone: "UTC",
-  },
-});
-
-const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
-  const next = cloneResult(result);
-  markCompact(next);
-  const series = next.series[0];
-  ensureSummary(next);
-  if (!series) {
-    return next;
-  }
-  const total = sumSeries(series);
-  let topCamera = "";
-  let topShare = 0;
-  series.data = series.data.map((point) => {
-    const raw = point.value ?? point.y ?? 0;
-    const share = total > 0 ? (Number(raw) / total) * 100 : 0;
-    if (share >= topShare) {
-      topShare = share;
-      topCamera = String(point.x ?? "Camera");
-    }
-    return { ...point, value: share, y: share } as DataPoint;
-  });
-  addSummaryText(next, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
-  return next;
-};
-
-const applyCapacityUsage = (result: ChartResult, orgId: string | undefined): ChartResult => {
-  const next = cloneResult(result);
-  markCompact(next);
-  const series = next.series[0];
-  const capacity = CAPACITY_MAP[orgId ?? "client0"] ?? 100;
-  if (!series || !capacity) {
-    return next;
-  }
-
-  const occupancyPoints = [...series.data];
-  const { last, previous } = getLastTwoValues(series);
-  const deltaOccupancy = typeof last === "number" && typeof previous === "number" ? last - previous : null;
-  const occupancyNow = typeof last === "number" ? last : null;
-
-  const startOfDay = getStartOfToday();
-
-  const peakOccupancy = occupancyPoints.reduce((peak, point) => {
-    const timestamp = point.x ? new Date(point.x) : null;
-    const withinDay = timestamp ? timestamp >= startOfDay : true;
-    const value = point.value ?? point.y ?? 0;
-    if (!withinDay) {
-      return peak;
-    }
-    return Math.max(peak, Number(value));
-  }, 0);
-
-  const currentUsage =
-    typeof occupancyNow === "number" && capacity > 0 ? (occupancyNow / capacity) * 100 : null;
-  const peakToday = capacity > 0 ? (peakOccupancy / capacity) * 100 : 0;
-
-  const lastPoint = occupancyPoints[occupancyPoints.length - 1];
-  const lastUsagePoint: DataPoint | undefined = lastPoint
-    ? ({ x: lastPoint.x, value: currentUsage, y: currentUsage } as DataPoint)
-    : undefined;
-
-  series.unit = "percentage";
-  series.label = "Capacity usage";
-  series.data = lastUsagePoint ? [lastUsagePoint] : [];
-
-  if (!next.meta.summary) {
-    next.meta.summary = {};
-  }
-
-  next.meta.summary.capacity_usage_now = currentUsage;
-  next.meta.summary.peak_capacity_usage_today = peakToday;
-  next.meta.summary.occupancy_delta_15m = deltaOccupancy;
-
-  const peakWithinDay = occupancyPoints
-    .filter((point) => {
-      const ts = point.x ? new Date(point.x) : null;
-      return ts ? ts >= startOfDay : true;
-    })
-    .reduce((peak, point) => Math.max(peak, Number(point.value ?? point.y ?? 0)), 0);
-
-  next.meta.summary.peak_occupancy_today = peakWithinDay;
-
-  addSummaryText(next, "secondaryText", `Peak today: ${Math.round(peakToday)}%`);
-  return next;
-};
-
-const applyFootfallTotal = (result: ChartResult): ChartResult => {
-  const next = cloneResult(result);
-  markCompact(next);
-  ensureSummary(next);
-  const primary = next.series[0];
-  const total = sumSeries(primary);
-  addSummaryText(next, "secondaryText", `24h total: ${Math.round(total)}`);
-  return next;
-};
-
-const applyOccupancyDelta = (result: ChartResult): ChartResult => {
-  const next = cloneResult(result);
-  markCompact(next);
-  const series = next.series[0];
-  const { last, previous } = getLastTwoValues(series);
-  const deltaText = formatDeltaText(
-    typeof last === "number" && typeof previous === "number" ? last - previous : null,
-  );
-  addSummaryText(next, "secondaryText", deltaText ? `Δ vs 15m ago: ${deltaText}` : undefined);
-  return next;
-};
-
-const decorateResult = (
-  widgetId: string,
-  result: ChartResult,
-  orgId: string | undefined,
-): ChartResult => {
-  if (!FIXED_KPI_IDS.has(widgetId)) {
-    return result;
-  }
-  markCompact(result);
-  if (widgetId === VRM_KPI_IDS.traffic) {
-    return applyTrafficDistributionShare(result);
-  }
-  if (widgetId === VRM_KPI_IDS.capacity) {
-    return applyCapacityUsage(result, orgId);
-  }
-  if (widgetId === VRM_KPI_IDS.footfall) {
-    return applyFootfallTotal(result);
-  }
-  if (widgetId === VRM_KPI_IDS.occupancy) {
-    return applyOccupancyDelta(result);
-  }
-  return result;
-};
 
 type ManifestLoader = (
   orgId: string | undefined,
@@ -410,6 +202,16 @@ const DashboardV2Page = ({
   const [runNonce, setRunNonce] = useState(0);
   const [localTime, setLocalTime] = useState<Date>(() => new Date());
   const abortControllerRef = useRef<AbortController | null>(null);
+  const vrmDebugEnabled = useMemo(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    if (process.env.NODE_ENV === "production") {
+      return false;
+    }
+    const params = new URLSearchParams(window.location.search);
+    return params.has("vrmDebug");
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => setLocalTime(new Date()), 60_000);
@@ -772,6 +574,53 @@ const DashboardV2Page = ({
           ))
         )}
       </section>
+
+      {vrmDebugEnabled && kpiWidgets.length > 0 ? (
+        <section className="dashboard-v2__debug" aria-label="VRM debug panel">
+          <h2>VRM KPI debug (last bucket vs summary)</h2>
+          <ul>
+            {kpiWidgets.map((state) => {
+              const series = state.result?.series?.[0];
+              const lastBucket = lastBucketValue(series);
+              const sum =
+                series?.data.reduce((total, point) => {
+                  const value = point.value ?? point.y ?? 0;
+                  return total + (typeof value === "number" ? value : 0);
+                }, 0) ?? 0;
+              const headlineOverride = state.result?.meta?.summary
+                ? (state.result.meta.summary as Record<string, unknown>).headlineValue
+                : undefined;
+              const usedHeadline =
+                typeof headlineOverride === "number"
+                  ? headlineOverride
+                  : series?.data?.[series.data.length - 1]?.value ??
+                    series?.data?.[series.data.length - 1]?.y ??
+                    null;
+              const summaryTotals = (state.result as { summary?: unknown } | undefined)?.summary;
+              return (
+                <li key={state.widget.id}>
+                  <strong>{state.widget.title}</strong>
+                  <pre>{
+                    JSON.stringify(
+                      {
+                        widgetId: state.widget.id,
+                        seriesY: series?.data?.map((point) => point.value ?? point.y) ?? [],
+                        lastBucket,
+                        sum24h: sum,
+                        headlineOverride,
+                        usedHeadline,
+                        summaryTotals,
+                      },
+                      null,
+                      2,
+                    )
+                  }</pre>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <section
         className="dashboard-v2__grid"
