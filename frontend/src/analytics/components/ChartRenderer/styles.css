@@ -387,37 +387,36 @@
 
 .traffic-distribution__content {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--vrm-spacing-3, 12px);
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--vrm-spacing-4, 16px);
 }
 
-.traffic-distribution__legend {
-  display: flex;
-  flex-direction: column;
+.traffic-distribution__annotations {
+  display: grid;
   gap: var(--vrm-spacing-2, 8px);
 }
 
-.traffic-distribution__legend-item {
+.traffic-distribution__annotation {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: var(--vrm-spacing-2, 8px);
   align-items: center;
   font-size: var(--vrm-typography-font-size-caption, 12px);
-  color: var(--vrm-color-text-muted, #8290a6);
 }
 
-.traffic-distribution__legend-swatch {
+.traffic-distribution__annotation-swatch {
   width: 10px;
   height: 10px;
   border-radius: 999px;
   display: inline-block;
 }
 
-.traffic-distribution__legend-label {
+.traffic-distribution__annotation-label {
   color: var(--vrm-color-text-primary, #ffffff);
 }
 
-.traffic-distribution__legend-value {
+.traffic-distribution__annotation-value {
   justify-self: end;
   color: var(--vrm-color-text-primary, #ffffff);
 }

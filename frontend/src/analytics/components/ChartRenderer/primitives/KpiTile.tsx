@@ -6,7 +6,13 @@ import {
   Tooltip,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
-import { formatCoverage, formatNumeric, formatValue, shouldShowRawCount } from "../utils/format";
+import {
+  formatCoverage,
+  formatNumeric,
+  formatTimeOfDay,
+  formatValue,
+  shouldShowRawCount,
+} from "../utils/format";
 
 const formatKpiValue = (value: number | null | undefined, unit?: string) => {
   const numeric = formatNumeric(value);
@@ -34,10 +40,13 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     if (!primarySeries) {
       return [];
     }
-    return primarySeries.data?.map((point) => ({
-      x: point.x,
-      value: point.value ?? point.y ?? null,
-    })) ?? [];
+    return (
+      primarySeries.data?.map((point, index) => ({
+        x: point.x,
+        value: point.value ?? point.y ?? null,
+        index,
+      })) ?? []
+    );
   }, [primarySeries]);
 
   if (!primarySeries) {
@@ -74,22 +83,44 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         ? (summary.title as string)
         : primarySeries?.label ?? primarySeries?.id)
     : primarySeries?.label ?? primarySeries?.id;
+  const timezone = typeof result.meta?.timezone === "string" ? (result.meta?.timezone as string) : "UTC";
 
-  const formatLabel = (label?: string | number) => {
-    if (!label) {
-      return "";
+  const parseLabelDate = (label?: string | number) => {
+    if (label === null || label === undefined || label === "") {
+      return null;
     }
-    const date = new Date(label);
-    if (Number.isNaN(date.valueOf())) {
-      return "";
-    }
+    const parsed = new Date(label);
+    return Number.isNaN(parsed.valueOf()) ? null : parsed;
+  };
+
+  const formatLabel = (label?: string | number, payload?: unknown) => {
+    const parsedDate = parseLabelDate(label);
     if (isVrm) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      if (parsedDate) {
+        return formatTimeOfDay(parsedDate, timezone);
+      }
+
+      const tooltipEntries = Array.isArray(payload) ? (payload as Array<{ payload?: { index?: number } }>) : [];
+      const indexCandidate = tooltipEntries[0]?.payload?.index;
+      const index = typeof indexCandidate === "number" ? indexCandidate : null;
+      const totalPoints = sparklineData.length;
+      if (index === null || totalPoints === 0) {
+        return "";
+      }
+      const bucketMs = 15 * 60 * 1000;
+      const end = Date.now();
+      const start = end - Math.max(totalPoints - 1, 0) * bucketMs;
+      const reconstructed = new Date(start + index * bucketMs);
+      return formatTimeOfDay(reconstructed, timezone);
     }
-    const timePart = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    if (!parsedDate) {
+      return "";
+    }
+    const timePart = parsedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const now = new Date();
-    const includeDate = date.toDateString() !== now.toDateString();
-    const datePart = includeDate ? `${date.toLocaleDateString()} ` : "";
+    const includeDate = parsedDate.toDateString() !== now.toDateString();
+    const datePart = includeDate ? `${parsedDate.toLocaleDateString()} ` : "";
     return `${datePart}${timePart}`;
   };
 
@@ -186,7 +217,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     primarySeries.label ?? primarySeries.id ?? "",
                   ];
                 }}
-                labelFormatter={(label) => formatLabel(label as string | number)}
+                labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
               />
               <Area
                 type="monotone"

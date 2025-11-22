@@ -23,6 +23,17 @@ export function formatNumeric(value: number | null | undefined): string {
   return decimalFormatter.format(value);
 }
 
+export function formatTimeOfDay(date: Date | null, timezone?: string): string {
+  if (!date) {
+    return "";
+  }
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: timezone ?? undefined,
+  });
+}
+
 export function formatCoverage(coverage: number | null | undefined): {
   label: string;
   tone: "critical" | "low" | "normal";

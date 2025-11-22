@@ -18,16 +18,19 @@ export const resolveUiClient = (orgId: string | undefined): string | undefined =
   if (!normalized) {
     return undefined;
   }
-  if (CAPACITY_BY_CLIENT[normalized] !== undefined) {
-    return normalized;
+  const mapped = TABLE_TO_UI_CLIENT[normalized] ?? normalized;
+  if (CAPACITY_BY_CLIENT[mapped] !== undefined) {
+    return mapped;
   }
-  return TABLE_TO_UI_CLIENT[normalized] ?? normalized;
+  return undefined;
 };
 
 export const lookupCapacity = (orgId: string | undefined): number => {
   const uiClient = resolveUiClient(orgId);
   const capacity = uiClient ? CAPACITY_BY_CLIENT[uiClient] : undefined;
   if (capacity === undefined) {
+    // eslint-disable-next-line no-console
+    console.error("VRM capacity usage: unknown client", { orgId, uiClientCandidate: uiClient });
     throw new Error(`Unknown client for capacity usage: ${orgId ?? "<none>"}`);
   }
   return capacity;

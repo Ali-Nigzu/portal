@@ -59,16 +59,16 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        <div className="traffic-distribution__legend" aria-label="Traffic distribution legend">
+        <div className="traffic-distribution__annotations" aria-label="Traffic by camera annotations">
           {legend.map((entry) => (
-            <div className="traffic-distribution__legend-item" key={entry.label}>
+            <div className="traffic-distribution__annotation" key={entry.label}>
               <span
-                className="traffic-distribution__legend-swatch"
+                className="traffic-distribution__annotation-swatch"
                 style={{ backgroundColor: entry.color }}
                 aria-hidden
               />
-              <span className="traffic-distribution__legend-label">{entry.label}</span>
-              <span className="traffic-distribution__legend-value">{`${Math.round(entry.value)}%`}</span>
+              <span className="traffic-distribution__annotation-label">{entry.label}</span>
+              <span className="traffic-distribution__annotation-value">{`${Math.round(entry.value)}%`}</span>
             </div>
           ))}
         </div>

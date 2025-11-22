@@ -181,8 +181,8 @@ describe("applyVRMOverrides", () => {
           geometry: "line",
           unit: "people",
           data: [
-            { x: prev.toISOString(), y: 10 },
-            { x: now.toISOString(), y: 9 },
+            { x: prev.toISOString(), y: 100 },
+            { x: now.toISOString(), y: 90 },
           ],
         },
       ],
