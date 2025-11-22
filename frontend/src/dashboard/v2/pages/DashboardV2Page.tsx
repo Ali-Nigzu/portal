@@ -81,6 +81,7 @@ const KpiTile = ({
   const summary = result?.meta?.summary ?? {};
   const headline = typeof summary.headline === "string" ? summary.headline : null;
   const secondary = typeof summary.secondaryText === "string" ? summary.secondaryText : null;
+  const isVrmWidget = (Object.values(VRM_KPI_IDS) as string[]).includes(state.widget.id);
   let content: JSX.Element;
   if (state.status === "loading") {
     content = renderLoading(title);
@@ -105,8 +106,12 @@ const KpiTile = ({
       <div className="dashboard-v2__kpi-head">
         <div className="dashboard-v2__kpi-title-block">
           <div className="dashboard-v2__kpi-title">{title}</div>
-          {headline ? <div className="dashboard-v2__kpi-subtitle">{headline}</div> : null}
-          {secondary ? <div className="dashboard-v2__kpi-secondary">{secondary}</div> : null}
+          {!isVrmWidget && headline ? (
+            <div className="dashboard-v2__kpi-subtitle">{headline}</div>
+          ) : null}
+          {!isVrmWidget && secondary ? (
+            <div className="dashboard-v2__kpi-secondary">{secondary}</div>
+          ) : null}
         </div>
         {showRemove ? (
           <button
@@ -341,6 +346,7 @@ const DashboardV2Page = ({
     const timezone = manifest.timeControls?.timezone;
 
     const run = async () => {
+      const decorateOrgId = manifest?.orgId ?? orgId;
       await Promise.all(
         manifest.widgets.map(async (widget) => {
           if (widget.id === VRM_KPI_IDS.traffic) {
@@ -366,7 +372,7 @@ const DashboardV2Page = ({
             if (controller.signal.aborted) {
               return;
             }
-            const decorated = decorateResult(widget.id, result, orgId);
+            const decorated = decorateResult(widget.id, result, decorateOrgId);
             setWidgetState((previous) => ({
               ...previous,
               [widget.id]: {
@@ -506,8 +512,9 @@ const DashboardV2Page = ({
     () => localTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     [localTime],
   );
-  const siteLabel = manifest?.orgId ?? orgId ?? "Site";
-  const siteId = orgId ?? manifest?.orgId ?? "—";
+  const siteOrgId = manifest?.orgId ?? orgId;
+  const siteLabel = siteOrgId ?? "Site";
+  const siteId = siteOrgId ?? "—";
 
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>

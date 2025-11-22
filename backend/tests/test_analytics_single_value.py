@@ -16,6 +16,49 @@ class StubBigQueryClient:
         return self._frame
 
 
+class CalendarAwareStubClient:
+    def __init__(self, measure_id: str, bucket_seconds: int = 900):
+        self.measure_id = measure_id
+        self.bucket_seconds = bucket_seconds
+        self.calls = []
+
+    def query_dataframe(self, sql: str, params, job_context=None):
+        self.calls.append({"sql": sql, "params": params})
+        if "GENERATE_TIMESTAMP_ARRAY" not in sql:
+            return pd.DataFrame(
+                [
+                    {
+                        "measure_id": self.measure_id,
+                        "bucket_start": pd.to_datetime(params["end_ts"]),
+                        "value": 999,
+                        "coverage": 1.0,
+                        "raw_count": 999,
+                    }
+                ]
+            )
+
+        start = pd.to_datetime(params["start_ts"])
+        end = pd.to_datetime(params["end_ts"])
+        buckets = pd.date_range(
+            start=start,
+            end=end,
+            freq=pd.Timedelta(seconds=self.bucket_seconds),
+            inclusive="right",
+        )
+        data = [
+            {
+                "measure_id": self.measure_id,
+                "bucket_start": timestamp,
+                "value": index + 1,
+                "coverage": 1.0,
+                "raw_count": index + 1,
+            }
+            for index, timestamp in enumerate(buckets)
+        ]
+
+        return pd.DataFrame(data)
+
+
 def test_single_value_kpis_normalise_to_metric_series():
     spec = get_dashboard_spec("dashboard.kpi.activity_today")
     frame = pd.DataFrame(
@@ -136,3 +179,77 @@ def test_single_value_respects_bucketed_window():
 
     assert len(series) == 2
     assert series[-1]["value"] == 2
+
+
+def test_single_value_engine_returns_multiple_buckets_for_counts():
+    spec = {
+        "chartType": "single_value",
+        "dataset": "events",
+        "timeWindow": {
+            "from": "2024-01-01T00:00:00Z",
+            "to": "2024-01-01T01:00:00Z",
+            "bucket": "15_MIN",
+        },
+        "dimensions": [
+            {
+                "id": "timestamp",
+                "column": "timestamp",
+                "bucket": "15_MIN",
+                "sort": "asc",
+            }
+        ],
+        "measures": [
+            {"id": "vrm_count", "aggregation": "count", "eventTypes": [1]},
+        ],
+    }
+
+    stub_client = CalendarAwareStubClient("vrm_count")
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"org": "project.dataset.table"}),
+        bigquery_client=stub_client,
+        cache=SpecCache(LocalCacheBackend()),
+    )
+
+    result = engine.execute(spec, organisation="org", bypass_cache=True)
+
+    series = result["series"][0]["data"]
+    assert len(series) == 4
+    assert series[-1]["value"] == 4
+    assert "GENERATE_TIMESTAMP_ARRAY" in stub_client.calls[0]["sql"]
+
+
+def test_single_value_engine_returns_multiple_buckets_for_occupancy():
+    spec = {
+        "chartType": "single_value",
+        "dataset": "events",
+        "timeWindow": {
+            "from": "2024-01-01T00:00:00Z",
+            "to": "2024-01-01T01:00:00Z",
+            "bucket": "15_MIN",
+        },
+        "dimensions": [
+            {
+                "id": "timestamp",
+                "column": "timestamp",
+                "bucket": "15_MIN",
+                "sort": "asc",
+            }
+        ],
+        "measures": [
+            {"id": "occupancy", "aggregation": "occupancy_recursion"},
+        ],
+    }
+
+    stub_client = CalendarAwareStubClient("occupancy")
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"org": "project.dataset.table"}),
+        bigquery_client=stub_client,
+        cache=SpecCache(LocalCacheBackend()),
+    )
+
+    result = engine.execute(spec, organisation="org", bypass_cache=True)
+
+    series = result["series"][0]["data"]
+    assert len(series) == 4
+    assert series[-1]["value"] == 4
+    assert result["series"][0]["geometry"] == "metric"

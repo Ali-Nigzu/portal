@@ -6,8 +6,8 @@ describe('org utils', () => {
   });
 
   it('maps client usernames to their configured orgs', () => {
-    expect(determineOrgId({ username: 'client1' })).toBe('client0');
-    expect(determineOrgId({ username: 'client2' })).toBe('client1');
+    expect(determineOrgId({ username: 'client1' })).toBe('client1');
+    expect(determineOrgId({ username: 'client2' })).toBe('client2');
   });
 
   it('falls back to default org for unknown usernames', () => {
