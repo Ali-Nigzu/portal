@@ -11,7 +11,7 @@ const TABLE_TO_UI_CLIENT: Record<string, string> = {
   client1: "client2",
 };
 
-const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "");
+const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "").toLowerCase();
 
 export const resolveUiClient = (orgId: string | undefined): string | undefined => {
   const normalized = normalizeOrgId(orgId);

@@ -23,6 +23,7 @@ import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
 import {
   decorateResult,
   lastBucketValue,
+  resolveUiClient,
 } from "../utils/vrmDecorators";
 
 export { lookupCapacity } from "../utils/vrmDecorators";
@@ -214,10 +215,13 @@ const DashboardV2Page = ({
     return params.has("vrmDebug");
   }, []);
 
-  const clientContextId = useMemo(
-    () => credentials.orgId ?? credentials.username ?? manifest?.orgId ?? orgId,
-    [manifest?.orgId, credentials.orgId, credentials.username, orgId],
-  );
+  const clientContextId = useMemo(() => {
+    const candidates = [credentials.orgId, credentials.username, manifest?.orgId, orgId];
+    const resolvedCandidate = candidates.find((candidate) => resolveUiClient(candidate));
+    return (
+      resolvedCandidate ?? credentials.orgId ?? credentials.username ?? manifest?.orgId ?? orgId
+    );
+  }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
 
   useEffect(() => {
     const interval = setInterval(() => setLocalTime(new Date()), 60_000);
