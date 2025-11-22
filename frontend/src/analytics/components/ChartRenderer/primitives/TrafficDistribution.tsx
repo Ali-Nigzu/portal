@@ -4,9 +4,11 @@ import { formatNumeric } from "../utils/format";
 
 const sliceColors = ["#2d6cdf", "#4bcf9f", "#f4b63d", "#f97066", "#7c3aed", "#0ea5e9"];
 
-export const TrafficDistribution = ({ series, height, className }: ChartPrimitiveProps) => {
+export const TrafficDistribution = ({ result, series, height, className }: ChartPrimitiveProps) => {
   const primary = series[0];
   const data = primary?.data ?? [];
+  const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
+  const title = typeof summary.title === "string" ? (summary.title as string) : "Traffic by Camera";
 
   if (!primary || data.length === 0) {
     return (
@@ -25,13 +27,20 @@ export const TrafficDistribution = ({ series, height, className }: ChartPrimitiv
     color: sliceColors[index % sliceColors.length],
   }));
 
+  const topSlice = legend.reduce((winner, candidate) =>
+    candidate.value >= winner.value ? candidate : winner,
+  legend[0]);
+
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
-      <div className="traffic-distribution__title">Traffic Distribution</div>
+      <div className="traffic-distribution__title">{title}</div>
       <div className="traffic-distribution__content">
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
-            <Tooltip formatter={(value) => `${formatNumeric(value as number)}%`} />
+            <Tooltip
+              formatter={(value) => `${formatNumeric(value as number)}%`}
+              labelFormatter={() => ""}
+            />
             <Pie
               dataKey="value"
               data={legend}
@@ -44,19 +53,22 @@ export const TrafficDistribution = ({ series, height, className }: ChartPrimitiv
               {legend.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} />
               ))}
+              <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="traffic-distribution__center">
+                {`${Math.round(topSlice.value)}%`}
+              </text>
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        <div className="traffic-distribution__legend" aria-label="Traffic distribution legend">
+        <div className="traffic-distribution__annotations" aria-label="Traffic by camera annotations">
           {legend.map((entry) => (
-            <div className="traffic-distribution__legend-item" key={entry.label}>
+            <div className="traffic-distribution__annotation" key={entry.label}>
               <span
-                className="traffic-distribution__legend-swatch"
+                className="traffic-distribution__annotation-swatch"
                 style={{ backgroundColor: entry.color }}
                 aria-hidden
               />
-              <span className="traffic-distribution__legend-label">{entry.label}</span>
-              <span className="traffic-distribution__legend-value">{`${Math.round(entry.value)}%`}</span>
+              <span className="traffic-distribution__annotation-label">{entry.label}</span>
+              <span className="traffic-distribution__annotation-value">{`${Math.round(entry.value)}%`}</span>
             </div>
           ))}
         </div>

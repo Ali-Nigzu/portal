@@ -6,7 +6,13 @@ import {
   Tooltip,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
-import { formatCoverage, formatNumeric, formatValue, shouldShowRawCount } from "../utils/format";
+import {
+  formatCoverage,
+  formatNumeric,
+  formatTimeOfDay,
+  formatValue,
+  shouldShowRawCount,
+} from "../utils/format";
 
 const formatKpiValue = (value: number | null | undefined, unit?: string) => {
   const numeric = formatNumeric(value);
@@ -34,10 +40,13 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     if (!primarySeries) {
       return [];
     }
-    return primarySeries.data?.map((point) => ({
-      x: point.x,
-      value: point.value ?? point.y ?? null,
-    })) ?? [];
+    return (
+      primarySeries.data?.map((point, index) => ({
+        x: point.x,
+        value: point.value ?? point.y ?? null,
+        index,
+      })) ?? []
+    );
   }, [primarySeries]);
 
   if (!primarySeries) {
@@ -69,16 +78,49 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       ? (result.meta?.summary?.tertiaryText as string)
       : undefined;
   const hideDelta = Boolean(result.meta?.summary?.hideDelta);
+  const headerLabel = isVrm
+    ? (typeof summary.title === "string"
+        ? (summary.title as string)
+        : primarySeries?.label ?? primarySeries?.id)
+    : primarySeries?.label ?? primarySeries?.id;
+  const timezone = typeof result.meta?.timezone === "string" ? (result.meta?.timezone as string) : "UTC";
 
-  const formatLabel = (label?: string | number) => {
-    if (!label) {
+  const parseLabelDate = (label?: string | number) => {
+    if (label === null || label === undefined || label === "") {
+      return null;
+    }
+    const parsed = new Date(label);
+    return Number.isNaN(parsed.valueOf()) ? null : parsed;
+  };
+
+  const formatLabel = (label?: string | number, payload?: unknown) => {
+    const parsedDate = parseLabelDate(label);
+    if (isVrm) {
+      if (parsedDate) {
+        return formatTimeOfDay(parsedDate, timezone);
+      }
+
+      const tooltipEntries = Array.isArray(payload) ? (payload as Array<{ payload?: { index?: number } }>) : [];
+      const indexCandidate = tooltipEntries[0]?.payload?.index;
+      const index = typeof indexCandidate === "number" ? indexCandidate : null;
+      const totalPoints = sparklineData.length;
+      if (index === null || totalPoints === 0) {
+        return "";
+      }
+      const bucketMs = 15 * 60 * 1000;
+      const end = Date.now();
+      const start = end - Math.max(totalPoints - 1, 0) * bucketMs;
+      const reconstructed = new Date(start + index * bucketMs);
+      return formatTimeOfDay(reconstructed, timezone);
+    }
+
+    if (!parsedDate) {
       return "";
     }
-    const date = new Date(label);
-    const timePart = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const timePart = parsedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const now = new Date();
-    const includeDate = date.toDateString() !== now.toDateString();
-    const datePart = includeDate ? `${date.toLocaleDateString()} ` : "";
+    const includeDate = parsedDate.toDateString() !== now.toDateString();
+    const datePart = includeDate ? `${parsedDate.toLocaleDateString()} ` : "";
     return `${datePart}${timePart}`;
   };
 
@@ -99,6 +141,33 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     delta !== null ? (
       <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
     ) : null;
+  const showHeaderDelta = isVrm && !isTraffic && !hideDelta && delta !== null;
+  const vrmChipText =
+    isVrm && typeof summary.vrmChipText === "string" ? (summary.vrmChipText as string) : null;
+  const showVrmChip = Boolean(vrmChipText) && !showHeaderDelta;
+
+  const trafficRows =
+    isTraffic && primarySeries?.data?.length
+      ? primarySeries.data.map((point, index) => {
+          const label = String(point.x ?? `Cam ${index + 1}`);
+          const share =
+            typeof point.value === "number"
+              ? point.value
+              : typeof point.y === "number"
+              ? point.y
+              : 0;
+          const width = Math.max(0, Math.min(100, Number(share)));
+          return (
+            <div className="kpi-traffic-row" key={`${label}-${index}`}>
+              <div className="kpi-traffic-label">{label}</div>
+              <div className="kpi-traffic-bar">
+                <span style={{ width: `${width}%` }} />
+              </div>
+              <div className="kpi-traffic-value">{`${Math.round(Number(share))}%`}</div>
+            </div>
+          );
+        })
+      : [];
 
   return (
     <div
@@ -106,9 +175,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       style={{ minHeight: height }}
     >
       <div className="kpi-header">
-        <div className="kpi-label">{primarySeries?.label ?? primarySeries?.id}</div>
+        {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
         <div className="kpi-header-right">
-          {isVrm ? deltaChip : null}
+          {showHeaderDelta ? deltaChip : null}
+          {showVrmChip ? <div className="kpi-delta tone-neutral">{vrmChipText}</div> : null}
           {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
         </div>
       </div>
@@ -121,19 +191,33 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           coverage: {coverageInfo.label}
         </div>
       ) : null}
-      {!hideDelta && delta !== null ? (
+      {!isVrm && !hideDelta && delta !== null ? (
         <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
       ) : null}
-      {sparklineData.length > 1 ? (
+      {trafficRows.length > 0 ? (
+        <div className="kpi-traffic" aria-label="Traffic distribution rows">
+          {trafficRows}
+        </div>
+      ) : null}
+      {!isTraffic && sparklineData.length > 1 ? (
         <div className="kpi-sparkline">
           <ResponsiveContainer width="100%" height={48}>
             <AreaChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <Tooltip
-                formatter={(tooltipValue) => [
-                  formatValue(tooltipValue as number, primarySeries.unit),
-                  primarySeries.label ?? primarySeries.id ?? "",
-                ]}
-                labelFormatter={(label) => formatLabel(label as string | number)}
+                formatter={(tooltipValue) => {
+                  if (isVrm) {
+                    const numeric = formatNumeric(tooltipValue as number);
+                    const formattedValue =
+                      primarySeries.unit === "percentage" ? `${numeric}%` : numeric;
+                    const label = headerLabel ?? "";
+                    return [formattedValue, label];
+                  }
+                  return [
+                    formatValue(tooltipValue as number, primarySeries.unit),
+                    primarySeries.label ?? primarySeries.id ?? "",
+                  ];
+                }}
+                labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
               />
               <Area
                 type="monotone"
