@@ -11,7 +11,7 @@ const TABLE_TO_UI_CLIENT: Record<string, string> = {
   client1: "client2",
 };
 
-const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "");
+const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "").toLowerCase();
 
 export const resolveUiClient = (orgId: string | undefined): string | undefined => {
   const normalized = normalizeOrgId(orgId);
@@ -294,12 +294,15 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   suppressDelta(next);
   ensureSummary(next);
   const series = next.series[0];
+  const uiClient = resolveUiClient(orgId);
   const capacity = lookupCapacity(orgId);
-  if (!series || !capacity) {
+  if (!series) {
     return next;
   }
 
   const summary = next.meta!.summary as Record<string, unknown>;
+  summary.vrmResolvedClient = uiClient ?? null;
+  summary.vrmCapacity = capacity;
 
   const occupancyPoints = [...series.data];
   const normalizedSeries: DataPoint[] = occupancyPoints.map((point) => {
