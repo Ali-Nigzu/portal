@@ -5,10 +5,10 @@ import type { TestRenderer } from "react-test-renderer";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 import type { DashboardManifest, DashboardWidget } from "../types";
 import DashboardV2Page from "./DashboardV2Page";
-import activityResult from "../../../analytics/examples/golden_dashboard_kpi_activity.json";
 import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_flow.json";
 import type { FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
+import { VRM_KPI_IDS, VRM_KPI_TITLES } from "../utils/applyVRMOverrides";
 
 class ResizeObserverMock {
   observe(): void {}
@@ -32,7 +32,6 @@ jest.mock("../../../analytics/components/ChartRenderer", () => ({
   ),
 }));
 
-const activityChart = activityResult as unknown as ChartResult;
 const liveFlowChart = liveFlowResult as unknown as ChartResult;
 
 type ManifestLoader = (
@@ -51,6 +50,7 @@ const baseWidgets: DashboardWidget[] = [
     chartSpecId: "dashboard.kpi.activity_today",
     fixtureId: "golden_dashboard_kpi_activity",
     locked: true,
+    inlineSpec: undefined,
   },
   {
     id: "live-flow",
@@ -89,6 +89,46 @@ function cloneManifest(overrides?: Partial<DashboardManifest>): DashboardManifes
   return { ...manifest, ...overrides };
 }
 
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
+const buildSeriesPoints = (values: number[]) => {
+  const now = Date.now();
+  return values.map((value, index) => ({
+    x: new Date(now - (values.length - index - 1) * FIFTEEN_MINUTES).toISOString(),
+    y: value,
+  }));
+};
+
+const buildChartResult = (values: number[]): ChartResult => ({
+  chartType: "single_value",
+  xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+  series: [
+    {
+      id: "primary",
+      label: "primary",
+      geometry: "line",
+      data: buildSeriesPoints(values),
+    },
+  ],
+  meta: { timezone: "UTC" },
+});
+
+const trafficDistributionResult: ChartResult = {
+  chartType: "categorical",
+  xDimension: { id: "camera_id", type: "category" },
+  series: [
+    {
+      id: "events",
+      label: "Events",
+      geometry: "bar",
+      data: [
+        { x: "Camera 1", y: 100 },
+      ],
+    },
+  ],
+  meta: { timezone: "UTC" },
+};
+
 async function flushEffects(times = 3) {
   for (let i = 0; i < times; i += 1) {
     // eslint-disable-next-line no-await-in-loop
@@ -100,10 +140,20 @@ async function flushEffects(times = 3) {
 
 describe("DashboardV2Page", () => {
   it("loads manifest and renders widgets", async () => {
-    const manifestLoader = jest.fn<ReturnType<ManifestLoader>, Parameters<ManifestLoader>>(async () => cloneManifest());
+    const manifestLoader = jest.fn<ReturnType<ManifestLoader>, Parameters<ManifestLoader>>(async () =>
+      cloneManifest(),
+    );
     const widgetLoader = jest.fn<ReturnType<WidgetResultLoader>, Parameters<WidgetResultLoader>>(async (
       widget: DashboardWidget,
-    ) => (widget.kind === "kpi" ? activityChart : liveFlowChart));
+    ) => {
+      if (widget.id === VRM_KPI_IDS.traffic) {
+        return trafficDistributionResult;
+      }
+      if (widget.kind === "kpi") {
+        return buildChartResult([1, 2, 3]);
+      }
+      return liveFlowChart;
+    });
     const unpin = jest.fn<ReturnType<UnpinMutator>, Parameters<UnpinMutator>>(async () => cloneManifest());
 
     let tree: TestRenderer;
@@ -125,7 +175,8 @@ describe("DashboardV2Page", () => {
     expect(dashboardId).toBe("dashboard-default");
     expect(options).toBeDefined();
     const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
-    expect(new Set(widgetIds)).toEqual(new Set(["kpi-activity", "live-flow"]));
+    const expectedIds = new Set([...Object.values(VRM_KPI_IDS), "live-flow"]);
+    expect(new Set(widgetIds)).toEqual(expectedIds);
     widgetLoader.mock.calls.forEach(([, opts]) => {
       expect(opts?.orgId).toBe("client0");
     });
@@ -140,7 +191,15 @@ describe("DashboardV2Page", () => {
     const manifestLoader = jest.fn<ReturnType<ManifestLoader>, Parameters<ManifestLoader>>(async () => cloneManifest());
     const widgetLoader = jest.fn<ReturnType<WidgetResultLoader>, Parameters<WidgetResultLoader>>(async (
       widget: DashboardWidget,
-    ) => (widget.kind === "kpi" ? activityChart : liveFlowChart));
+    ) => {
+      if (widget.id === VRM_KPI_IDS.traffic) {
+        return trafficDistributionResult;
+      }
+      if (widget.kind === "kpi") {
+        return buildChartResult([2, 4, 6]);
+      }
+      return liveFlowChart;
+    });
     const unpin = jest.fn<ReturnType<UnpinMutator>, Parameters<UnpinMutator>>(async (
       _orgId: string,
       _dashboardId: string,
@@ -183,7 +242,15 @@ describe("DashboardV2Page", () => {
     const manifestLoader = jest.fn<ReturnType<ManifestLoader>, Parameters<ManifestLoader>>(async () => cloneManifest());
     const widgetLoader = jest.fn<ReturnType<WidgetResultLoader>, Parameters<WidgetResultLoader>>(async (
       widget: DashboardWidget,
-    ) => (widget.kind === "kpi" ? activityChart : liveFlowChart));
+    ) => {
+      if (widget.id === VRM_KPI_IDS.traffic) {
+        return trafficDistributionResult;
+      }
+      if (widget.kind === "kpi") {
+        return buildChartResult([3, 4, 5]);
+      }
+      return liveFlowChart;
+    });
 
     const url = new URL(window.location.href);
     url.search = "?view_token=test-token";
@@ -217,7 +284,7 @@ describe("DashboardV2Page", () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async (widget: DashboardWidget, options?: LoadWidgetOptions) => {
       if (widget.kind === "kpi") {
-        return activityChart;
+        return buildChartResult([5, 6, 7]);
       }
       return liveFlowChart;
     });
@@ -246,13 +313,89 @@ describe("DashboardV2Page", () => {
     const callArgs = widgetLoader.mock.calls[0][1];
     expect(callArgs?.timeRange?.id).toBe("last_60_minutes");
     expect(callArgs?.orgId).toBe("client0");
+
+    const vrmIds = Object.values(VRM_KPI_IDS) as DashboardWidget["id"][];
+    const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
+    vrmIds.forEach((id) => expect(widgetIds).toContain(id));
+    widgetLoader.mock.calls
+      .filter(([widget]) => vrmIds.includes(widget.id))
+      .forEach(([widget]) => {
+        expect(widget.fixedTimeWindow).toEqual({ bucket: "15_MIN", durationMinutes: 1440 });
+      });
+  });
+
+  it("renders VRM KPI titles and hides legacy ones", async () => {
+    const manifestLoader = jest.fn(async () => cloneManifest());
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.id === VRM_KPI_IDS.traffic) {
+        return trafficDistributionResult;
+      }
+      return buildChartResult([1, 2, 3]);
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client0", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    const titles = tree!
+      .root
+      .findAllByProps({ className: "dashboard-v2__kpi-title" })
+      .map((node: { children: (string | number)[] }) => node.children.join(" "));
+
+    Object.values(VRM_KPI_TITLES).forEach((label) => expect(titles).toContain(label));
+    expect(titles).not.toContain("Activity Today");
+    expect(titles).not.toContain("Freshness Status");
+  });
+
+  it("renders VRM header metadata", async () => {
+    const manifestLoader = jest.fn(async () => cloneManifest());
+    const widgetLoader = jest.fn(async () => buildChartResult([1, 2, 3]));
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client0", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    const header = tree!.root.findByProps({ className: "dashboard-v2__meta-row" });
+    const headerText = header.children
+      .map((child: any) => {
+        if (typeof child === "string") {
+          return child;
+        }
+        if (Array.isArray(child?.props?.children)) {
+          return child.props.children.join(" ");
+        }
+        return String(child?.props?.children ?? child);
+      })
+      .join(" ");
+    expect(headerText).toContain("Last updated: Realtime");
+    expect(headerText).toContain("Status: OK");
+    expect(headerText).toContain("Local time:");
   });
 
   it("surfaces widget errors in state", async () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
       if (widget.kind === "kpi") {
-        return activityChart;
+        if (widget.id === VRM_KPI_IDS.traffic) {
+          return trafficDistributionResult;
+        }
+        return buildChartResult([1, 1, 1]);
       }
       throw new Error("fixture failure");
     });
@@ -294,6 +437,6 @@ describe("DashboardV2Page", () => {
     await flushEffects();
 
     const emptyMessages = tree!.root.findAllByProps({ className: "dashboard-v2__empty" });
-    expect(emptyMessages).toHaveLength(2);
+    expect(emptyMessages).toHaveLength(1);
   });
 });

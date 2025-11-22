@@ -1,0 +1,24 @@
+{
+  "chartType": "categorical",
+  "xDimension": {
+    "id": "camera_id",
+    "type": "category",
+    "label": "Camera"
+  },
+  "series": [
+    {
+      "id": "events",
+      "label": "Events",
+      "geometry": "bar",
+      "color": "#2d6cdf",
+      "data": [
+        { "x": "Camera 1", "y": 120 },
+        { "x": "Camera 2", "y": 80 }
+      ]
+    }
+  ],
+  "meta": {
+    "timezone": "UTC",
+    "summary": {}
+  }
+}
