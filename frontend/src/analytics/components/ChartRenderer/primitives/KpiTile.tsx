@@ -36,14 +36,17 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
 
   const latestPoint = primarySeries.data[primarySeries.data.length - 1];
   const value = latestPoint?.value ?? latestPoint?.y ?? null;
-  const coverage = latestPoint?.coverage ?? null;
-  const rawCount = (latestPoint as unknown as { rawCount?: number | null })?.rawCount ?? null;
+  const compact = Boolean((result.meta?.summary as Record<string, unknown> | undefined)?.compact);
+  const coverage = compact ? null : latestPoint?.coverage ?? null;
+  const rawCount = compact
+    ? null
+    : (latestPoint as unknown as { rawCount?: number | null })?.rawCount ?? null;
   const deltaCandidate = primarySeries.summary?.delta;
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
 
   const formattedDelta = formatDelta(delta);
   const coverageInfo = formatCoverage(coverage);
-  const showRaw = shouldShowRawCount(rawCount);
+  const showRaw = !compact && shouldShowRawCount(rawCount);
   const secondaryText =
     typeof result.meta?.summary?.secondaryText === "string"
       ? (result.meta?.summary?.secondaryText as string)
@@ -70,11 +73,9 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         ) : null}
       </div>
       <div className="kpi-value">{formatValue(value, primarySeries?.unit)}</div>
-      {showRaw ? (
-        <div className="kpi-meta">raw: {rawCount}</div>
-      ) : null}
+      {showRaw ? <div className="kpi-meta">raw: {rawCount}</div> : null}
       {secondaryText ? <div className="kpi-meta">{secondaryText}</div> : null}
-      {coverageInfo.label !== "—" ? (
+      {!compact && coverageInfo.label !== "—" ? (
         <div className={`kpi-coverage ${coverageInfo.tone}`}>
           coverage: {coverageInfo.label}
         </div>

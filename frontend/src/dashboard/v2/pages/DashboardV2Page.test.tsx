@@ -175,8 +175,17 @@ describe("DashboardV2Page", () => {
     expect(dashboardId).toBe("dashboard-default");
     expect(options).toBeDefined();
     const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
-    const expectedIds = new Set([...Object.values(VRM_KPI_IDS), "live-flow"]);
+    const expectedIds = new Set([
+      VRM_KPI_IDS.entrances,
+      VRM_KPI_IDS.occupancy,
+      VRM_KPI_IDS.exits,
+      VRM_KPI_IDS.footfall,
+      VRM_KPI_IDS.dwell,
+      VRM_KPI_IDS.capacity,
+      "live-flow",
+    ]);
     expect(new Set(widgetIds)).toEqual(expectedIds);
+    expect(widgetIds).not.toContain(VRM_KPI_IDS.traffic);
     widgetLoader.mock.calls.forEach(([, opts]) => {
       expect(opts?.orgId).toBe("client0");
     });
@@ -314,7 +323,9 @@ describe("DashboardV2Page", () => {
     expect(callArgs?.timeRange?.id).toBe("last_60_minutes");
     expect(callArgs?.orgId).toBe("client0");
 
-    const vrmIds = Object.values(VRM_KPI_IDS) as DashboardWidget["id"][];
+    const vrmIds = (
+      Object.values(VRM_KPI_IDS).filter((id) => id !== VRM_KPI_IDS.traffic) as DashboardWidget["id"][]
+    );
     const widgetIds = widgetLoader.mock.calls.map(([widget]) => widget.id);
     vrmIds.forEach((id) => expect(widgetIds).toContain(id));
     widgetLoader.mock.calls
@@ -386,6 +397,37 @@ describe("DashboardV2Page", () => {
     expect(headerText).toContain("Last updated: Realtime");
     expect(headerText).toContain("Status: OK");
     expect(headerText).toContain("Local time:");
+  });
+
+  it("renders capacity usage subtitle without surfacing errors", async () => {
+    const manifestLoader = jest.fn(async () => cloneManifest());
+    const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+      if (widget.kind === "kpi") {
+        return buildChartResult([10, 15, 20]);
+      }
+      return liveFlowChart;
+    });
+
+    let tree: TestRenderer;
+    await act(async () => {
+      tree = renderer.create(
+        <DashboardV2Page
+          credentials={{ username: "client0", password: "secret" }}
+          manifestLoader={manifestLoader}
+          widgetResultLoader={widgetLoader}
+        />,
+      );
+    });
+    await flushEffects();
+
+    const subtitles = tree!
+      .root
+      .findAllByProps({ className: "dashboard-v2__kpi-secondary" })
+      .map((node: { children: (string | number)[] }) => node.children.join(" "));
+    expect(subtitles.some((text: string) => text.includes("Peak today:"))).toBe(true);
+
+    const errorTiles = tree!.root.findAllByProps({ className: "dashboard-v2__error" });
+    expect(errorTiles.length).toBe(0);
   });
 
   it("surfaces widget errors in state", async () => {

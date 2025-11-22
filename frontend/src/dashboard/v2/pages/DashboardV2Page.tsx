@@ -42,6 +42,11 @@ const ensureSummary = (result: ChartResult) => {
   result.meta.summary = result.meta.summary ?? {};
 };
 
+const markCompact = (result: ChartResult) => {
+  ensureSummary(result);
+  result.meta.summary!.compact = 1 as unknown as string | number | null;
+};
+
 const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   if (!value) {
     return;
@@ -85,8 +90,27 @@ const getStartOfToday = () => {
   return now;
 };
 
+const buildTrafficPlaceholderResult = (): ChartResult => ({
+  chartType: "single_value",
+  xDimension: { id: "timestamp", type: "time", bucket: "15_MIN", timezone: "UTC" },
+  series: [
+    {
+      id: "traffic_share",
+      label: "Traffic distribution",
+      geometry: "metric",
+      unit: "percentage",
+      data: [{ x: new Date().toISOString(), value: 100, y: 100 }],
+    },
+  ],
+  meta: {
+    summary: { headline: "Camera – 100% of events", compact: 1 as unknown as number },
+    timezone: "UTC",
+  },
+});
+
 const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
   const next = cloneResult(result);
+  markCompact(next);
   const series = next.series[0];
   ensureSummary(next);
   if (!series) {
@@ -110,34 +134,42 @@ const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
 
 const applyCapacityUsage = (result: ChartResult, orgId: string | undefined): ChartResult => {
   const next = cloneResult(result);
-  ensureSummary(next);
+  markCompact(next);
   const series = next.series[0];
   const capacity = CAPACITY_MAP[orgId ?? "client0"] ?? 100;
   if (!series || !capacity) {
     return next;
   }
 
-  series.unit = "%";
-  series.data = series.data.map((point) => {
-    const raw = point.value ?? point.y ?? 0;
-    const pct = (Number(raw) / capacity) * 100;
-    return { ...point, value: pct, y: pct } as DataPoint;
-  });
-
+  const occupancyPoints = [...series.data];
   const { last, previous } = getLastTwoValues(series);
   const deltaOccupancy = typeof last === "number" && typeof previous === "number" ? last - previous : null;
-  const currentUsage = typeof last === "number" ? last : null;
+  const occupancyNow = typeof last === "number" ? last : null;
 
   const startOfDay = getStartOfToday();
-  const peakToday = series.data.reduce((peak, point) => {
+
+  const peakOccupancy = occupancyPoints.reduce((peak, point) => {
     const timestamp = point.x ? new Date(point.x) : null;
     const withinDay = timestamp ? timestamp >= startOfDay : true;
+    const value = point.value ?? point.y ?? 0;
     if (!withinDay) {
       return peak;
     }
-    const value = point.value ?? point.y ?? 0;
     return Math.max(peak, Number(value));
   }, 0);
+
+  const currentUsage =
+    typeof occupancyNow === "number" && capacity > 0 ? (occupancyNow / capacity) * 100 : null;
+  const peakToday = capacity > 0 ? (peakOccupancy / capacity) * 100 : 0;
+
+  const lastPoint = occupancyPoints[occupancyPoints.length - 1];
+  const lastUsagePoint: DataPoint | undefined = lastPoint
+    ? ({ x: lastPoint.x, value: currentUsage, y: currentUsage } as DataPoint)
+    : undefined;
+
+  series.unit = "percentage";
+  series.label = "Capacity usage";
+  series.data = lastUsagePoint ? [lastUsagePoint] : [];
 
   if (!next.meta.summary) {
     next.meta.summary = {};
@@ -147,12 +179,22 @@ const applyCapacityUsage = (result: ChartResult, orgId: string | undefined): Cha
   next.meta.summary.peak_capacity_usage_today = peakToday;
   next.meta.summary.occupancy_delta_15m = deltaOccupancy;
 
+  const peakWithinDay = occupancyPoints
+    .filter((point) => {
+      const ts = point.x ? new Date(point.x) : null;
+      return ts ? ts >= startOfDay : true;
+    })
+    .reduce((peak, point) => Math.max(peak, Number(point.value ?? point.y ?? 0)), 0);
+
+  next.meta.summary.peak_occupancy_today = peakWithinDay;
+
   addSummaryText(next, "secondaryText", `Peak today: ${Math.round(peakToday)}%`);
   return next;
 };
 
 const applyFootfallTotal = (result: ChartResult): ChartResult => {
   const next = cloneResult(result);
+  markCompact(next);
   ensureSummary(next);
   const primary = next.series[0];
   const total = sumSeries(primary);
@@ -162,6 +204,7 @@ const applyFootfallTotal = (result: ChartResult): ChartResult => {
 
 const applyOccupancyDelta = (result: ChartResult): ChartResult => {
   const next = cloneResult(result);
+  markCompact(next);
   const series = next.series[0];
   const { last, previous } = getLastTwoValues(series);
   const deltaText = formatDeltaText(
@@ -179,6 +222,7 @@ const decorateResult = (
   if (!FIXED_KPI_IDS.has(widgetId)) {
     return result;
   }
+  markCompact(result);
   if (widgetId === VRM_KPI_IDS.traffic) {
     return applyTrafficDistributionShare(result);
   }
@@ -497,6 +541,18 @@ const DashboardV2Page = ({
     const run = async () => {
       await Promise.all(
         manifest.widgets.map(async (widget) => {
+          if (widget.id === VRM_KPI_IDS.traffic) {
+            const trafficResult = buildTrafficPlaceholderResult();
+            setWidgetState((previous) => ({
+              ...previous,
+              [widget.id]: {
+                widget,
+                result: trafficResult,
+                status: "ready",
+              },
+            }));
+            return;
+          }
           try {
             const result = await widgetResultLoaderImpl(widget, {
               signal: controller.signal,
