@@ -202,11 +202,11 @@ const getLatestTimestamp = (seriesList: ChartSeries[]): string | null => {
 };
 
 export const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
-  const next = cloneResult(result);
-  markCompact(next);
-  suppressDelta(next);
-  ensureSummary(next);
-  const series = next.series[0];
+  const trafficDistributionResult = cloneResult(result);
+  markCompact(trafficDistributionResult);
+  suppressDelta(trafficDistributionResult);
+  ensureSummary(trafficDistributionResult);
+  const series = trafficDistributionResult.series[0];
   if (!series) {
     return buildTrafficPlaceholderResult();
   }
@@ -235,29 +235,11 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
     }
     return { x: camera, value: share, y: share } as DataPoint;
   });
-
-  const next: ChartResult = {
-    chartType: "categorical",
-    xDimension: { id: "camera", type: "category" },
-    series: [
-      {
-        id: "traffic_share",
-        label: "Traffic distribution",
-        geometry: "bar",
-        unit: "percentage",
-        data: shareData,
-      },
-    ],
-    meta: { ...baseResult.meta },
-  };
-
-  ensureSummary(next);
-  next.meta!.summary!.presentation = "vrm";
-  next.meta!.summary!.chartStyle = "traffic_distribution";
-  addSummaryText(next, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
-  addSummaryText(next, "chartSubType", "traffic_distribution");
-  addSummaryText(next, "legendTitle", "Camera");
-  return next;
+  setHeadlineValue(trafficDistributionResult, topShare);
+  addSummaryText(trafficDistributionResult, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
+  addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
+  addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
+  return trafficDistributionResult;
 };
 
 export const applyCapacityUsage = (result: ChartResult, orgId: string | undefined): ChartResult => {
