@@ -43,19 +43,17 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   if (!primarySeries) {
     return null;
   }
-
   const latestPoint = primarySeries.data[primarySeries.data.length - 1];
-  const headlineOverride = (result.meta?.summary as Record<string, unknown> | undefined)
-    ?.headlineValue;
-  const value =
-    typeof headlineOverride === "number"
-      ? headlineOverride
-      : latestPoint?.value ?? latestPoint?.y ?? null;
-  const compact = Boolean((result.meta?.summary as Record<string, unknown> | undefined)?.compact);
+  const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
+  const presentation = typeof summary.presentation === "string" ? summary.presentation : null;
+  const isVrm = presentation === "vrm";
+  const chartStyle = typeof summary.chartStyle === "string" ? summary.chartStyle : null;
+  const isTraffic = chartStyle === "traffic_distribution";
+  const headlineOverride = summary?.headlineValue as number | undefined;
+  const value = typeof headlineOverride === "number" ? headlineOverride : latestPoint?.value ?? latestPoint?.y ?? null;
+  const compact = Boolean(summary?.compact);
   const coverage = compact ? null : latestPoint?.coverage ?? null;
-  const rawCount = compact
-    ? null
-    : (latestPoint as unknown as { rawCount?: number | null })?.rawCount ?? null;
+  const rawCount = compact ? null : (latestPoint as unknown as { rawCount?: number | null })?.rawCount ?? null;
   const deltaCandidate = primarySeries.summary?.delta;
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
 
@@ -84,15 +82,37 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     return `${datePart}${timePart}`;
   };
 
+  const formatHeadline = () => {
+    if (value === null || value === undefined) {
+      return formatKpiValue(value, primarySeries?.unit);
+    }
+    if (isVrm && primarySeries?.unit === "minutes") {
+      const rounded = Math.round(value);
+      return `${rounded} min`;
+    }
+    return formatKpiValue(value, primarySeries?.unit);
+  };
+
+  const unitLabel = formatUnitLabel(primarySeries?.unit);
+  const showUnit = Boolean(unitLabel && !isVrm);
+  const deltaChip =
+    delta !== null ? (
+      <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
+    ) : null;
+
   return (
-    <div className={`kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
+    <div
+      className={["kpi-tile", className ?? "", isVrm ? "kpi-tile--vrm" : ""].filter(Boolean).join(" ")}
+      style={{ minHeight: height }}
+    >
       <div className="kpi-header">
         <div className="kpi-label">{primarySeries?.label ?? primarySeries?.id}</div>
-        {formatUnitLabel(primarySeries?.unit) ? (
-          <div className="kpi-unit">{formatUnitLabel(primarySeries?.unit)}</div>
-        ) : null}
+        <div className="kpi-header-right">
+          {isVrm ? deltaChip : null}
+          {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
+        </div>
       </div>
-      <div className="kpi-value">{formatKpiValue(value, primarySeries?.unit)}</div>
+      <div className="kpi-value">{formatHeadline()}</div>
       {showRaw ? <div className="kpi-meta">raw: {rawCount}</div> : null}
       {secondaryText ? <div className="kpi-meta">{secondaryText}</div> : null}
       {tertiaryText ? <div className="kpi-tertiary">{tertiaryText}</div> : null}

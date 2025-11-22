@@ -146,9 +146,10 @@ const vrmWidgets: DashboardWidget[] = [
     chartSpecId: "dashboard.kpi.vrm.traffic_distribution",
     fixtureId: "golden_dashboard_kpi_traffic_distribution",
     inlineSpec: {
-      chartType: "categorical",
+      chartType: "composed_time",
       dataset: "events",
-      dimensions: [{ column: "camera_id", id: "camera_id", sort: "desc" }],
+      dimensions: [timestampDimension],
+      splits: [{ column: "camera_id", id: "camera_id", sort: "desc" }],
       displayHints: { carryForward: true },
       id: "dashboard.kpi.vrm.traffic_distribution",
       interactions: { export: ["png", "csv"] },

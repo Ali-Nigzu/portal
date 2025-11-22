@@ -16,6 +16,49 @@ class StubBigQueryClient:
         return self._frame
 
 
+class CalendarAwareStubClient:
+    def __init__(self, measure_id: str, bucket_seconds: int = 900):
+        self.measure_id = measure_id
+        self.bucket_seconds = bucket_seconds
+        self.calls = []
+
+    def query_dataframe(self, sql: str, params, job_context=None):
+        self.calls.append({"sql": sql, "params": params})
+        if "GENERATE_TIMESTAMP_ARRAY" not in sql:
+            return pd.DataFrame(
+                [
+                    {
+                        "measure_id": self.measure_id,
+                        "bucket_start": pd.to_datetime(params["end_ts"]),
+                        "value": 999,
+                        "coverage": 1.0,
+                        "raw_count": 999,
+                    }
+                ]
+            )
+
+        start = pd.to_datetime(params["start_ts"])
+        end = pd.to_datetime(params["end_ts"])
+        buckets = pd.date_range(
+            start=start,
+            end=end,
+            freq=pd.Timedelta(seconds=self.bucket_seconds),
+            inclusive="right",
+        )
+        data = [
+            {
+                "measure_id": self.measure_id,
+                "bucket_start": timestamp,
+                "value": index + 1,
+                "coverage": 1.0,
+                "raw_count": index + 1,
+            }
+            for index, timestamp in enumerate(buckets)
+        ]
+
+        return pd.DataFrame(data)
+
+
 def test_single_value_kpis_normalise_to_metric_series():
     spec = get_dashboard_spec("dashboard.kpi.activity_today")
     frame = pd.DataFrame(

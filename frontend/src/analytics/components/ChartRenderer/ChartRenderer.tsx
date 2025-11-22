@@ -133,6 +133,10 @@ export const ChartRenderer = ({
     className: resolvedClassName,
   };
 
+  const summary = result.meta?.summary as { presentation?: string; chartStyle?: string } | undefined;
+  const isVrmTraffic =
+    summary?.presentation === "vrm" && summary?.chartStyle === "traffic_distribution";
+
   if (validationIssues.length > 0) {
     return (
       <ChartErrorState
@@ -150,6 +154,10 @@ export const ChartRenderer = ({
         className={resolvedClassName}
       />
     );
+  }
+
+  if (isVrmTraffic) {
+    return <KpiTile {...chartProps} />;
   }
 
   if (result.chartType === "single_value") {
