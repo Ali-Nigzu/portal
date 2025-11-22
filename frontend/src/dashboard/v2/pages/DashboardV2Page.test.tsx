@@ -566,7 +566,7 @@ describe("DashboardV2Page", () => {
       if (widget.kind === "kpi") {
         return buildChartResult(vrmSeries[widget.id] ?? [1], {
           label: widget.id,
-          meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+          meta: { timezone: "UTC", summary: { widgetId: widget.id, total: 9999 } },
         });
       }
       return liveFlowChart;

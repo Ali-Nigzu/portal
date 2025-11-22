@@ -118,4 +118,31 @@ describe("KpiTile", () => {
     expect(valueNode.children.join(" ")).toBe("53%");
     expect(unitNode.children.join(" ")).toBe("PERCENTAGE");
   });
+
+  it("prefers an explicit headlineValue override for VRM KPIs", () => {
+    const props = buildProps({
+      series: [
+        {
+          id: "primary",
+          label: "Entrances",
+          geometry: "metric",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: 9 },
+            { x: "2024-01-01T00:15:00Z", value: 18 },
+          ],
+        },
+      ],
+    });
+    props.result = {
+      chartType: "single_value",
+      xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      series: props.series,
+      meta: { timezone: "UTC", summary: { headlineValue: 4 } as any },
+    } as ChartResult;
+
+    const tree = renderer.create(<KpiTile {...props} />).root;
+    const valueNode = tree.findByProps({ className: "kpi-value" });
+    expect(valueNode.children.join(" ")).toBe("4");
+  });
 });

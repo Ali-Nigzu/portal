@@ -1,4 +1,10 @@
 import { applyVRMOverrides, VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
+import {
+  decorateResult,
+  getCapacityUsageHeadline,
+  getFootfallHeadline,
+  lastBucketValue,
+} from "./vrmDecorators";
 import type { DashboardManifest } from "../types";
 
 const buildManifest = (): DashboardManifest => ({
@@ -78,5 +84,119 @@ describe("applyVRMOverrides", () => {
       expect(widget.inlineSpec?.timeWindow?.bucket).toBe("15_MIN");
       expect(widget.inlineSpec?.timeWindow?.from).toBe("{{NOW_MINUS_24_HOURS}}");
     });
+  });
+
+  it("forces VRM KPI headlines to come from the last 15-minute bucket instead of summary totals", () => {
+    const buildResult = (values: number[], widgetId: string) =>
+      decorateResult(
+        widgetId,
+        {
+          chartType: "single_value",
+          xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+          series: [
+            {
+              id: widgetId,
+              label: widgetId,
+              geometry: "line",
+              unit: "events",
+              data: [
+                { x: "2024-01-01T00:00:00Z", y: values[0] },
+                { x: "2024-01-01T00:15:00Z", y: values[1] },
+              ],
+            },
+          ],
+          meta: { timezone: "UTC", summary: { total: 9999 } },
+        },
+        "client1",
+      );
+
+    const entrances = buildResult([2, 5], VRM_KPI_IDS.entrances);
+    const exits = buildResult([3, 7], VRM_KPI_IDS.exits);
+    const dwell = decorateResult(
+      VRM_KPI_IDS.dwell,
+      {
+        chartType: "single_value",
+        xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "dwell",
+            label: "dwell",
+            geometry: "line",
+            unit: "minutes",
+            data: [
+              { x: "2024-01-01T00:00:00Z", y: 1.25 },
+              { x: "2024-01-01T00:15:00Z", y: 3.5 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: { total: 9999 } },
+      },
+      "client1",
+    );
+
+    expect(entrances.meta?.summary?.headlineValue).toBe(5);
+    expect(lastBucketValue(entrances.series[0])).toBe(5);
+    expect(exits.meta?.summary?.headlineValue).toBe(7);
+    expect(lastBucketValue(exits.series[0])).toBe(7);
+    expect(dwell.meta?.summary?.headlineValue).toBeCloseTo(3.5);
+  });
+
+  it("derives footfall and capacity usage from last bucket values", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+
+    const footfallResult = decorateResult(
+      VRM_KPI_IDS.footfall,
+      {
+        chartType: "single_value",
+        xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "footfall",
+            label: "Footfall",
+            geometry: "line",
+            unit: "events",
+            data: [
+              { x: prev.toISOString(), y: 6 },
+              { x: now.toISOString(), y: 9 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: { total: 9999 } },
+      },
+      "client1",
+    );
+
+    const rawCapacityResult = {
+      chartType: "single_value",
+      xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      series: [
+        {
+          id: "occupancy",
+          label: "Occupancy",
+          geometry: "line",
+          unit: "people",
+          data: [
+            { x: prev.toISOString(), y: 10 },
+            { x: now.toISOString(), y: 9 },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC", summary: { total: 9999 } },
+    } as const;
+
+    const capacityResult = decorateResult(VRM_KPI_IDS.capacity, rawCapacityResult as any, "client1");
+
+    const footfallHeadline = getFootfallHeadline(footfallResult);
+    expect(footfallHeadline.lastBucket).toBe(9);
+    expect(footfallHeadline.total24h).toBe(15);
+    expect(footfallResult.meta?.summary?.headlineValue).toBe(9);
+    expect(footfallResult.meta?.summary?.secondaryText).toContain("24h total: 15");
+
+    const capacityHeadline = getCapacityUsageHeadline(rawCapacityResult as any, "client1");
+    expect(capacityHeadline.currentUsage).toBe(90);
+    expect(capacityHeadline.peakToday).toBe(100);
+    expect(capacityResult.meta?.summary?.headlineValue).toBe(90);
+    expect(capacityResult.meta?.summary?.secondaryText).toContain("Peak today:");
   });
 });

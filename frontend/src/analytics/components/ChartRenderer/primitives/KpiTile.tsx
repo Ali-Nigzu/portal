@@ -45,7 +45,12 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   }
 
   const latestPoint = primarySeries.data[primarySeries.data.length - 1];
-  const value = latestPoint?.value ?? latestPoint?.y ?? null;
+  const headlineOverride = (result.meta?.summary as Record<string, unknown> | undefined)
+    ?.headlineValue;
+  const value =
+    typeof headlineOverride === "number"
+      ? headlineOverride
+      : latestPoint?.value ?? latestPoint?.y ?? null;
   const compact = Boolean((result.meta?.summary as Record<string, unknown> | undefined)?.compact);
   const coverage = compact ? null : latestPoint?.coverage ?? null;
   const rawCount = compact

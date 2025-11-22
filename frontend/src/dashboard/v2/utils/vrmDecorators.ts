@@ -47,6 +47,30 @@ export const lastBucketValue = (series?: ChartSeries): number | null => {
   return typeof value === "number" ? value : null;
 };
 
+const setHeadlineValue = (result: ChartResult, value: number | null) => {
+  ensureSummary(result);
+  result.meta.summary!.headlineValue = value ?? null;
+};
+
+const logVrmDebug = (widgetId: string, series?: ChartSeries, headline?: number | null) => {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+  // eslint-disable-next-line no-console
+  console.log("VRM KPI debug", {
+    widgetId,
+    headline,
+    seriesPreview: series?.data?.map((point) => point.value ?? point.y) ?? [],
+  });
+};
+
+const applyLastBucketHeadline = (widgetId: string, result: ChartResult) => {
+  const series = result.series?.[0];
+  const lastValue = lastBucketValue(series);
+  setHeadlineValue(result, lastValue);
+  logVrmDebug(widgetId, series, lastValue);
+};
+
 const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   if (!value) {
     return;
@@ -55,7 +79,7 @@ const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   result.meta.summary![key] = value;
 };
 
-const sumSeries = (series?: ChartSeries) => {
+export const sumSeries = (series?: ChartSeries) => {
   if (!series) {
     return 0;
   }
@@ -88,6 +112,56 @@ const getStartOfToday = () => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   return now;
+};
+
+export const getEntrancesHeadline = (result: ChartResult): number | null =>
+  lastBucketValue(result.series?.[0]);
+
+export const getExitsHeadline = (result: ChartResult): number | null =>
+  lastBucketValue(result.series?.[0]);
+
+export const getDwellHeadline = (result: ChartResult): number | null =>
+  lastBucketValue(result.series?.[0]);
+
+export const getOccupancyHeadline = (result: ChartResult): number | null =>
+  lastBucketValue(result.series?.[0]);
+
+export const getFootfallHeadline = (result: ChartResult): {
+  lastBucket: number | null;
+  total24h: number;
+} => {
+  const series = result.series?.[0];
+  return { lastBucket: lastBucketValue(series), total24h: sumSeries(series) };
+};
+
+export const getCapacityUsageHeadline = (
+  result: ChartResult,
+  orgId: string | undefined,
+): { currentUsage: number | null; peakToday: number } => {
+  const series = result.series?.[0];
+  const capacity = lookupCapacity(orgId);
+  if (!series || !capacity) {
+    return { currentUsage: null, peakToday: 0 };
+  }
+  const startOfDay = getStartOfToday();
+  const { last } = getLastTwoValues(series);
+  const occupancyPoints = [...series.data];
+  const occupancyNow = typeof last === "number" ? last : null;
+  const peakOccupancy = occupancyPoints.reduce((peak, point) => {
+    const timestamp = point.x ? new Date(point.x) : null;
+    const withinDay = timestamp ? timestamp >= startOfDay : true;
+    const value = point.value ?? point.y ?? 0;
+    if (!withinDay) {
+      return peak;
+    }
+    return Math.max(peak, Number(value));
+  }, 0);
+
+  const currentUsage =
+    typeof occupancyNow === "number" && capacity > 0 ? (occupancyNow / capacity) * 100 : null;
+  const peakToday = capacity > 0 ? (peakOccupancy / capacity) * 100 : 0;
+
+  return { currentUsage, peakToday };
 };
 
 export const buildTrafficPlaceholderResult = (): ChartResult => ({
@@ -127,6 +201,7 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
     }
     return { ...point, value: share, y: share } as DataPoint;
   });
+  setHeadlineValue(next, topShare);
   addSummaryText(next, "headline", `${topCamera} – ${Math.round(topShare)}% of events`);
   return next;
 };
@@ -188,6 +263,8 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   next.meta.summary.peak_occupancy_today = peakWithinDay;
 
   addSummaryText(next, "secondaryText", `Peak today: ${Math.round(peakToday)}%`);
+  setHeadlineValue(next, currentUsage);
+  logVrmDebug(VRM_KPI_IDS.capacity, series, currentUsage);
   return next;
 };
 
@@ -197,6 +274,9 @@ export const applyFootfallTotal = (result: ChartResult): ChartResult => {
   ensureSummary(next);
   const primary = next.series[0];
   const total = sumSeries(primary);
+  const lastValue = lastBucketValue(primary);
+  setHeadlineValue(next, lastValue);
+  logVrmDebug(VRM_KPI_IDS.footfall, primary, lastValue);
   addSummaryText(next, "secondaryText", `24h total: ${Math.round(total)}`);
   return next;
 };
@@ -209,7 +289,16 @@ export const applyOccupancyDelta = (result: ChartResult): ChartResult => {
   const deltaText = formatDeltaText(
     typeof last === "number" && typeof previous === "number" ? last - previous : null,
   );
+  setHeadlineValue(next, typeof last === "number" ? last : null);
+  logVrmDebug(VRM_KPI_IDS.occupancy, series, typeof last === "number" ? last : null);
   addSummaryText(next, "secondaryText", deltaText ? `Δ vs 15m ago: ${deltaText}` : undefined);
+  return next;
+};
+
+const applyBasicVrmHeadline = (widgetId: string, result: ChartResult) => {
+  const next = cloneResult(result);
+  markCompact(next);
+  applyLastBucketHeadline(widgetId, next);
   return next;
 };
 
@@ -234,6 +323,9 @@ export const decorateResult = (
   }
   if (widgetId === VRM_KPI_IDS.occupancy) {
     return applyOccupancyDelta(result);
+  }
+  if (widgetId === VRM_KPI_IDS.entrances || widgetId === VRM_KPI_IDS.exits || widgetId === VRM_KPI_IDS.dwell) {
+    return applyBasicVrmHeadline(widgetId, result);
   }
   return result;
 };
