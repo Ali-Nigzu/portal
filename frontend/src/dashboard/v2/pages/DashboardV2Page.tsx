@@ -20,18 +20,9 @@ import { determineOrgId } from "../../../utils/org";
 import { getViewTokenFromLocation } from "../../../utils/viewToken";
 import { Credentials } from "../../../types/credentials";
 import "../styles/DashboardV2Page.css";
+import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
 
 const GRID_ROW_HEIGHT = 96;
-
-const VRM_KPI_IDS = {
-  entrances: "kpi-vrm-entrances",
-  occupancy: "kpi-vrm-occupancy",
-  exits: "kpi-vrm-exits",
-  footfall: "kpi-vrm-footfall",
-  dwell: "kpi-vrm-dwell",
-  traffic: "kpi-vrm-traffic",
-  capacity: "kpi-vrm-capacity",
-};
 
 const FIXED_KPI_IDS = new Set(Object.values(VRM_KPI_IDS));
 
@@ -400,12 +391,13 @@ const DashboardV2Page = ({
       if (controller.signal.aborted) {
         return;
       }
+      const vrmManifest = applyVRMOverrides(data);
       logInfo("dashboard.manifest", "ui_fetch_success", {
         orgId,
         viewToken,
         dashboardId: resolvedDashboardId,
       });
-      setManifest(data);
+      setManifest(vrmManifest);
     } catch (err) {
       if (controller.signal.aborted) {
         logInfo("dashboard.manifest", "ui_fetch_aborted", {
