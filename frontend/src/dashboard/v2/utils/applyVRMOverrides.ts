@@ -117,7 +117,9 @@ const vrmWidgets: DashboardWidget[] = [
     fixtureId: "golden_dashboard_kpi_activity",
     inlineSpec: singleValueSpec({
       id: "dashboard.kpi.vrm.footfall",
-      measures: [{ aggregation: "count", id: "footfall", label: "Footfall" }],
+      measures: [
+        { aggregation: "count", id: "footfall", label: "Footfall", eventTypes: [0, 1] },
+      ],
       notes: ["Footfall (entrances + exits) every 15 minutes"],
     }),
     fixedTimeWindow: fixedWindow,

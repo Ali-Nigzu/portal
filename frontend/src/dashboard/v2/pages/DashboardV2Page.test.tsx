@@ -4,7 +4,7 @@ import renderer, { act } from "react-test-renderer";
 import type { TestRenderer } from "react-test-renderer";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 import type { DashboardManifest, DashboardWidget } from "../types";
-import DashboardV2Page from "./DashboardV2Page";
+import DashboardV2Page, { lookupCapacity } from "./DashboardV2Page";
 import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_flow.json";
 import type { FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
@@ -137,6 +137,20 @@ async function flushEffects(times = 3) {
     });
   }
 }
+
+describe("lookupCapacity", () => {
+  it("returns configured capacity for known clients", () => {
+    expect(lookupCapacity("client1")).toBe(10);
+    expect(lookupCapacity("client2")).toBe(100);
+  });
+
+  it("falls back to 10 and logs a warning for unknown clients", () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    expect(lookupCapacity("unknown-client")).toBe(10);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+});
 
 describe("DashboardV2Page", () => {
   it("loads manifest and renders widgets", async () => {
