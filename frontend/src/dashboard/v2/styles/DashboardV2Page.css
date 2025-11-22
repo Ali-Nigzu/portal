@@ -119,48 +119,25 @@
 }
 
 .dashboard-v2__kpi-tile {
-  background: var(--vrm-surface, #fff);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  background: none;
+  padding: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 180px;
-}
-
-.dashboard-v2__kpi-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.dashboard-v2__kpi-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--vrm-text-primary, #1f2937);
-}
-
-.dashboard-v2__kpi-title-block {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dashboard-v2__kpi-subtitle {
-  font-size: 0.85rem;
-  color: var(--vrm-text-subtle, #5f6b7a);
-}
-
-.dashboard-v2__kpi-secondary {
-  font-size: 0.8rem;
-  color: var(--vrm-text-subtle, #5f6b7a);
 }
 
 .dashboard-v2__kpi-renderer .kpi-tile {
   box-shadow: none;
   padding: 0;
+}
+
+.dashboard-v2__kpi-content {
+  min-height: 180px;
+}
+
+.dashboard-v2__kpi-controls {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .dashboard-v2__remove-button {
