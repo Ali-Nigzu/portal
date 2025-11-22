@@ -20,7 +20,7 @@
 - Traffic Distribution uses the last bucket per-camera counts to compute shares; Capacity Usage derives `(latest occupancy ÷ capacity) × 100`.
 
 ## KPI tile rendering behavior
-- `KpiTile` displays the primary series label as the card title for legacy dashboards. In VRM compact mode the label and unit chip are suppressed, the main value uses `meta.summary.headlineValue` (last bucket), deltas are hidden except Occupancy, and dwell KPIs render as whole minutes (e.g., `24 min`). Sparklines use the series values unless a traffic pie is rendered.
+- `KpiTile` displays the primary series label as the card title for legacy dashboards. In VRM compact mode the label and unit chip are suppressed, the main value uses `meta.summary.headlineValue` (last bucket), deltas are hidden except Occupancy, and dwell KPIs render as whole minutes (e.g., `24 min`). Sparklines use the series values unless a traffic pie is rendered, and VRM sparkline tooltips show time-of-day only in the site timezone (no date, no “events” wording).
 - Colors default to the series color or `#2d6cdf`; sparklines are `AreaChart` (Recharts) without animation.
 
 ## Live KPI widgets (VRM override)
@@ -31,17 +31,17 @@
 | `kpi-vrm-entrances` | Entrances | `count` (`eventTypes: [1]`) | Headline = latest 15-minute bucket. Top-right delta chip hidden. |
 | `kpi-vrm-occupancy` | Occupancy | `occupancy_recursion` | Headline = latest occupancy bucket; top-right delta chip shows Δ vs previous 15-minute bucket. Inline delta text is removed. |
 | `kpi-vrm-exits` | Exits | `count` (`eventTypes: [0]`) | Headline = latest 15-minute bucket. Delta chip hidden. |
-| `kpi-vrm-footfall` | Footfall | `count` (`eventTypes: [0, 1]`) | Headline = entrances + exits in latest bucket. Secondary text: “Today’s footfall: <midnight→now total>”; tertiary text keeps `24h total: …`. Delta chip hidden. |
+| `kpi-vrm-footfall` | Footfall | `count` (`eventTypes: [0, 1]`) | Headline = entrances + exits in latest bucket. Top-right chip: `today: <midnight→now total>`. No tertiary/24h total text. Delta chip hidden. |
 | `kpi-vrm-dwell` | Dwell Time | `dwell_mean` | Headline = latest bucket average dwell time (whole minutes). Delta chip hidden. |
-| `kpi-vrm-traffic` | Traffic Distribution | `count` grouped by camera | Headline = top camera share from last bucket. UI renders a per-camera share pie and legend; no 100% placeholder/progress bar. |
-| `kpi-vrm-capacity` | Capacity Usage | `occupancy_recursion` | Headline = `(latest occupancy ÷ capacity) × 100`; secondary text “Peak today: <percent>”. Capacity map: `client1 → 10`, `client2 → 100`, fallback 10. Delta chip hidden. |
+| `kpi-vrm-traffic` | Traffic by Camera | `count` grouped by camera | Headline = top camera share from last bucket. UI renders a per-camera share pie with slice annotations (no bottom legend). |
+| `kpi-vrm-capacity` | Capacity Usage | `occupancy_recursion` | Headline = `(latest occupancy ÷ capacity) × 100`; top-right chip: `peak: <percent>` from midnight→now. Capacity map: `client1 → 10`, `client2 → 100`, no fallback. Delta chip hidden. |
 
 ## VRM KPI band semantics
 - All tiles: 24h/15m series; headlines always use the final bucket (last 15 minutes).
-- Delta chips remain only for Occupancy; Entrances, Exits, Dwell, Footfall, Traffic Distribution, and Capacity Usage suppress the top-right delta.
-- Secondary/tertiary text: Footfall surfaces “Today’s footfall” plus a tertiary 24h total; Capacity Usage shows “Peak today” from midnight→now; Traffic Distribution carries legend metadata.
-- Traffic Distribution uses per-camera event counts to compute slice shares for the latest bucket and renders a pie + legend.
-- Capacity Usage uses the UI client/org identifier for capacity lookup (`client1 → 10`, `client2 → 100`), applying the same capacity for headline and peak-today calculations.
+- Delta chips remain only for Occupancy; Entrances, Exits, Dwell, Traffic by Camera, and Capacity Usage suppress the top-right delta. Footfall shows a summary chip (`today: <total>`) and Capacity Usage shows (`peak: <percent>`), but neither is a delta.
+- Secondary/tertiary text: Footfall no longer surfaces a 24h total; Capacity Usage moves peak into the chip; Traffic by Camera uses slice annotations only.
+- Traffic by Camera uses per-camera event counts to compute slice shares for the latest bucket and renders a pie with per-slice labels (no bottom legend).
+- Capacity Usage uses the UI client/org identifier for capacity lookup (`client1 → 10`, `client2 → 100`), applying the same capacity for headline and peak-today calculations with no fallback.
 
 ## VRM debugging helpers
 - Passing `?vrmDebug=1` in non-production renders a debug panel beneath the KPI band. The panel lists each VRM widget with its series values, last bucket, calculated headline override, and any summary totals so you can verify the runtime headline is derived from the final bucket.

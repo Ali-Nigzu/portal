@@ -15,13 +15,13 @@
 | `kpi-vrm-entrances` | `count` (`eventTypes: [1]`) | Entrances in last 15 minutes. | None. |
 | `kpi-vrm-occupancy` | `occupancy_recursion` | Latest occupancy bucket; delta chip shows Δ vs previous 15-minute bucket. | None. |
 | `kpi-vrm-exits` | `count` (`eventTypes: [0]`) | Exits in last 15 minutes. | None. |
-| `kpi-vrm-footfall` | `count` (`eventTypes: [0, 1]`) | Entrances + exits in last 15 minutes. | Secondary: “Today’s footfall: <midnight→now total>”; tertiary: `24h total: …`. |
+| `kpi-vrm-footfall` | `count` (`eventTypes: [0, 1]`) | Entrances + exits in last 15 minutes. | Chip (top-right): `today: <midnight→now total>`. No tertiary/24h total. |
 | `kpi-vrm-dwell` | `dwell_mean` | Latest dwell bucket, whole minutes. | None. |
-| `kpi-vrm-traffic` | `count` grouped by camera | Top camera share (last bucket). | Per-camera pie + legend; no 100% placeholder/progress bar. |
-| `kpi-vrm-capacity` | `occupancy_recursion` | `(latest occupancy ÷ capacity) × 100`. | Secondary: “Peak today: X%” from midnight→now; capacity map uses UI client (`client1 → 10`, `client2 → 100`, fallback 10). |
+| `kpi-vrm-traffic` | `count` grouped by camera | Top camera share (last bucket). | Per-camera pie with slice annotations (no bottom legend). |
+| `kpi-vrm-capacity` | `occupancy_recursion` | `(latest occupancy ÷ capacity) × 100`. | Chip (top-right): `peak: X%` from midnight→now; capacity map uses UI client (`client1 → 10`, `client2 → 100`), no fallback. |
 
 ## Capacity usage rules
-- Capacity lookup uses the UI org/client identifier, not the BigQuery table name. Mapping: `client1 → 10`, `client2 → 100` (fallback 10 with a console warning).
+- Capacity lookup uses the UI org/client identifier, not the BigQuery table name. Mapping: `client1 → 10`, `client2 → 100` (no fallback; unknown clients error).
 - Both the headline and “Peak today” calculation apply the same capacity. The occupancy series is normalized to a percentage series for the full 24h/15m window so the sparkline and peak reuse the same capacity-aware values.
 
 ## Traffic distribution rules
