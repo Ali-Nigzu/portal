@@ -217,6 +217,16 @@ const getLatestTimestamp = (seriesList: ChartSeries[]): string | null => {
   return latest;
 };
 
+const deriveCameraLabel = (series: ChartSeries, index: number): string => {
+  const labelCandidate = series.label && series.label.toLowerCase() !== "events" ? series.label : null;
+  const source = labelCandidate ?? series.id ?? `Camera ${index + 1}`;
+  const normalized = String(source).trim();
+  const tokens = normalized.split(/\||:|=/);
+  const lastToken = tokens[tokens.length - 1]?.trim();
+  const cleaned = lastToken?.replace(/camera[_\s-]?id[:\s-]*/i, "").replace(/^cam\s*/i, "").trim();
+  return (cleaned && cleaned.length > 0 ? cleaned : lastToken) || `Camera ${index + 1}`;
+};
+
 export const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
   const trafficDistributionResult = cloneResult(result);
   markCompact(trafficDistributionResult);
@@ -244,11 +254,12 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
   }
 
   const cameraShares = hasTimestampBuckets
-    ? seriesList.map((series) => {
+    ? seriesList.map((series, index) => {
         const latestPoint =
           series.data.find((point) => point.x === latestTimestamp) ?? series.data[series.data.length - 1];
         const raw = latestPoint?.value ?? latestPoint?.y ?? 0;
-        return { camera: series.label ?? series.id, value: Number(raw) };
+        const camera = deriveCameraLabel(series, index);
+        return { camera, value: Number(raw) };
       })
     : seriesList[0].data.map((point, index) => ({
         camera: String(point.x ?? seriesList[0].label ?? `Camera ${index + 1}`),
@@ -285,6 +296,15 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
   addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
   addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
   addSummaryText(trafficDistributionResult, "title", "Traffic by Camera");
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("VRM traffic distribution context", {
+      latestTimestamp,
+      cameras: shareData.map((point) => point.x),
+      shares: shareData.map((point) => point.value ?? point.y ?? 0),
+    });
+  }
   return trafficDistributionResult;
 };
 
@@ -303,6 +323,11 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   const summary = next.meta!.summary as Record<string, unknown>;
   summary.vrmResolvedClient = uiClient ?? null;
   summary.vrmCapacity = capacity;
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("VRM capacity usage context", { orgId, resolvedUiClient: uiClient, capacity });
+  }
 
   const occupancyPoints = [...series.data];
   const normalizedSeries: DataPoint[] = occupancyPoints.map((point) => {
