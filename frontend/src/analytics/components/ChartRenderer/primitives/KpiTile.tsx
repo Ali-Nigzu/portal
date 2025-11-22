@@ -94,24 +94,17 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   };
 
   const formatLabel = (label?: string | number, payload?: unknown) => {
-    const parsedDate = parseLabelDate(label);
+    const tooltipEntries = Array.isArray(payload)
+      ? (payload as Array<{ payload?: { x?: string | number } }>)
+      : [];
+    const payloadLabel = tooltipEntries[0]?.payload?.x ?? label;
+    const parsedDate = parseLabelDate(payloadLabel);
+
     if (isVrm) {
       if (parsedDate) {
         return formatTimeOfDay(parsedDate, timezone);
       }
-
-      const tooltipEntries = Array.isArray(payload) ? (payload as Array<{ payload?: { index?: number } }>) : [];
-      const indexCandidate = tooltipEntries[0]?.payload?.index;
-      const index = typeof indexCandidate === "number" ? indexCandidate : null;
-      const totalPoints = sparklineData.length;
-      if (index === null || totalPoints === 0) {
-        return "";
-      }
-      const bucketMs = 15 * 60 * 1000;
-      const end = Date.now();
-      const start = end - Math.max(totalPoints - 1, 0) * bucketMs;
-      const reconstructed = new Date(start + index * bucketMs);
-      return formatTimeOfDay(reconstructed, timezone);
+      return "";
     }
 
     if (!parsedDate) {

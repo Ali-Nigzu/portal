@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/await-async-query */
 import React from "react";
 import { jest } from "@jest/globals";
 import renderer from "react-test-renderer";

@@ -23,6 +23,7 @@ import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
 import {
   decorateResult,
   lastBucketValue,
+  resolveUiClient,
 } from "../utils/vrmDecorators";
 
 export { lookupCapacity } from "../utils/vrmDecorators";
@@ -214,10 +215,30 @@ const DashboardV2Page = ({
     return params.has("vrmDebug");
   }, []);
 
-  const clientContextId = useMemo(
-    () => credentials.orgId ?? credentials.username ?? manifest?.orgId ?? orgId,
-    [manifest?.orgId, credentials.orgId, credentials.username, orgId],
-  );
+  const resolvedUiClient = useMemo(() => {
+    const candidates = [credentials.orgId, credentials.username, manifest?.orgId, orgId];
+    for (const candidate of candidates) {
+      const resolved = resolveUiClient(candidate);
+      if (resolved) {
+        return resolved;
+      }
+    }
+    return undefined;
+  }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
+
+  const clientContextId = resolvedUiClient;
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") {
+      return;
+    }
+    logInfo("dashboard.vrm", "vrm_context_resolved", {
+      orgId,
+      viewToken: Boolean(viewToken),
+      manifestOrgId: manifest?.orgId,
+      resolvedUiClient,
+    });
+  }, [manifest?.orgId, orgId, resolvedUiClient, viewToken]);
 
   useEffect(() => {
     const interval = setInterval(() => setLocalTime(new Date()), 60_000);
@@ -509,8 +530,9 @@ const DashboardV2Page = ({
     [localTime],
   );
   const siteOrgId = orgId ?? manifest?.orgId;
-  const siteLabel = siteOrgId ?? "Site";
-  const siteId = siteOrgId ?? "—";
+  const siteUiOrgId = resolveUiClient(siteOrgId) ?? siteOrgId;
+  const siteLabel = siteUiOrgId ?? "Site";
+  const siteId = siteUiOrgId ?? "—";
   const isVrmDashboard = useMemo(() => {
     const ids = manifest?.layout?.kpiBand ?? [];
     if (!ids.length) {
@@ -591,6 +613,17 @@ const DashboardV2Page = ({
       {vrmDebugEnabled && kpiWidgets.length > 0 ? (
         <section className="dashboard-v2__debug" aria-label="VRM debug panel">
           <h2>VRM KPI debug (last bucket vs summary)</h2>
+          <pre>
+            {JSON.stringify(
+              {
+                orgId,
+                manifestOrgId: manifest?.orgId,
+                resolvedUiClient,
+              },
+              null,
+              2,
+            )}
+          </pre>
           <ul>
             {kpiWidgets.map((state) => {
               const series = state.result?.series?.[0];
