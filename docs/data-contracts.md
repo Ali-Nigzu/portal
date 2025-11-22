@@ -4,12 +4,9 @@ Canonical rules for how analytics data is sourced, compiled, validated, and deli
 
 ## Canonical data model
 
-One BigQuery events table per client:
+One BigQuery events table per client (physically `nigzsu.demodata0.client0` / `client1` with integer-coded demographics and an unused `Race` column). Org routing resolves to `nigzsu.${BQ_DATASET}.client*` using environment variables — no compat views.
 
-- `client0` → `nigzsu.demodata.client0`
-- `client1` → `nigzsu.demodata.client1`
-
-Columns (no others are referenced):
+The compiler adapts those source tables into the canonical shape consumed by every metric:
 
 ```
 site_id     INTEGER
@@ -22,7 +19,13 @@ sex         STRING
 age_bucket  STRING
 ```
 
-All analytics computations must originate from these columns. Null demographics are normalised to `'Unknown'` during query time.
+All analytics computations must originate from these columns. The scoped events CTE in the compiler:
+
+- Reads directly from the resolved org table (e.g. `nigzsu.demodata0.client0`), never from compat views.
+- Maps integer-coded demographics to canonical strings (`sex`: `0 → 'Male'`, `1 → 'Female'`; `age_bucket`: `0 → '0-4'`, `1 → '5-13'`, `2 → '14-25'`, `3 → '26-45'`, `4 → '46-65'`, `5 → '66+'`).
+- Reconstructs `index` via `ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id)`.
+- Enforces `timestamp < @now` (where `@now` is bound per query as `min(requested_end_ts, current_time_in_timezone)`) so future events are never counted.
+- Ignores the source `Race` column entirely; it is not part of the canonical schema or ChartSpec/ChartResult.
 
 ## Analytics contract
 

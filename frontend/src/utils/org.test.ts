@@ -15,7 +15,7 @@ describe('org utils', () => {
   });
 
   it('derives orgId from a fully qualified table name', () => {
-    expect(deriveOrgIdFromTableName('nigzsu.demodata.client0')).toBe('client0');
+    expect(deriveOrgIdFromTableName('nigzsu.demodata0.client0')).toBe('client0');
     expect(deriveOrgIdFromTableName('client1')).toBe('client1');
     expect(deriveOrgIdFromTableName('')).toBeUndefined();
   });

@@ -14,6 +14,10 @@ folder are intended to be loaded into temporary BigQuery tables
   - Repeated visitor (`track_id = T1`) returning later the same day.
   - Weekly repeat visitor (`track_id = T4`) to support retention curves.
   - Demographic variety across `sex` and `age_bucket` values.
+- **`events_demodata0_client0.csv`** – integer-coded demographics mirroring the
+  `demodata0` source with no physical `index` column. Includes simultaneous
+  entrance/exit timestamps per track, a future-dated row for no-future
+  filtering, and coverage across demographic buckets.
 
 ## Loading into BigQuery
 

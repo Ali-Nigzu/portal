@@ -4,12 +4,12 @@ A manifest-driven analytics portal that turns CCTV event streams into charts and
 
 ## Data source
 
-All analytics come from canonical BigQuery event tables — no frontend math or synthetic rows. Each client maps to a single table:
+All analytics come from canonical BigQuery event tables — no frontend math or synthetic rows. Each client maps to a single table backed by `nigzsu.demodata0` (integer-coded demographics, unused `Race` column):
 
-- `client0` → `nigzsu.demodata.client0`
-- `client1` → `nigzsu.demodata.client1`
+- `client0` → `nigzsu.${BQ_DATASET}.client0`
+- `client1` → `nigzsu.${BQ_DATASET}.client1`
 
-Canonical schema (all columns are referenced by the compiler and nothing else):
+Canonical schema (all columns are referenced by the compiler and nothing else — the scoped CTE handles index synthesis, demographic mapping, and `timestamp < @now` filtering):
 
 ```
 site_id     INTEGER
@@ -44,7 +44,7 @@ age_bucket  STRING
 - **Peak Occupancy**: Cumulative entrances minus exits ordered by `timestamp, index`; maximum per bucket.
 - **Average Dwell Time**: Pair entrance/exit per `track_id`, clamp to sessions ≤ 6 hours, average dwell minutes per bucket.
 - **Retention Heatmap**: Cohort by first entrance week; lag weeks measure return fraction for the same `track_id` cohort.
-- **Demographic cuts**: Filters/splits on `sex` and `age_bucket`, with nulls normalised to `'Unknown'` during query time.
+- **Demographic cuts**: Filters/splits on `sex` and `age_bucket`, mapped directly from integer-coded source columns.
 
 All values originate from BigQuery rows; coverage/freshness is derived server-side from the same events.
 
@@ -60,7 +60,7 @@ All values originate from BigQuery rows; coverage/freshness is derived server-si
    ```bash
    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
    export BQ_PROJECT=nigzsu
-   export BQ_DATASET=demodata
+   export BQ_DATASET=demodata0
    export BQ_LOCATION=EU
    ```
 
