@@ -69,6 +69,9 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       ? (result.meta?.summary?.tertiaryText as string)
       : undefined;
   const hideDelta = Boolean(result.meta?.summary?.hideDelta);
+  const headerLabel = isVrm
+    ? (typeof summary.title === "string" ? (summary.title as string) : null)
+    : primarySeries?.label ?? primarySeries?.id;
 
   const formatLabel = (label?: string | number) => {
     if (!label) {
@@ -99,6 +102,30 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     delta !== null ? (
       <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
     ) : null;
+  const showHeaderDelta = isVrm && !isTraffic && !hideDelta && delta !== null;
+
+  const trafficRows =
+    isTraffic && primarySeries?.data?.length
+      ? primarySeries.data.map((point, index) => {
+          const label = String(point.x ?? `Cam ${index + 1}`);
+          const share =
+            typeof point.value === "number"
+              ? point.value
+              : typeof point.y === "number"
+              ? point.y
+              : 0;
+          const width = Math.max(0, Math.min(100, Number(share)));
+          return (
+            <div className="kpi-traffic-row" key={`${label}-${index}`}>
+              <div className="kpi-traffic-label">{label}</div>
+              <div className="kpi-traffic-bar">
+                <span style={{ width: `${width}%` }} />
+              </div>
+              <div className="kpi-traffic-value">{`${Math.round(Number(share))}%`}</div>
+            </div>
+          );
+        })
+      : [];
 
   return (
     <div
@@ -106,9 +133,9 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       style={{ minHeight: height }}
     >
       <div className="kpi-header">
-        <div className="kpi-label">{primarySeries?.label ?? primarySeries?.id}</div>
+        {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
         <div className="kpi-header-right">
-          {isVrm ? deltaChip : null}
+          {showHeaderDelta ? deltaChip : null}
           {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
         </div>
       </div>
@@ -121,10 +148,15 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           coverage: {coverageInfo.label}
         </div>
       ) : null}
-      {!hideDelta && delta !== null ? (
+      {!isVrm && !hideDelta && delta !== null ? (
         <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
       ) : null}
-      {sparklineData.length > 1 ? (
+      {trafficRows.length > 0 ? (
+        <div className="kpi-traffic" aria-label="Traffic distribution rows">
+          {trafficRows}
+        </div>
+      ) : null}
+      {!isTraffic && sparklineData.length > 1 ? (
         <div className="kpi-sparkline">
           <ResponsiveContainer width="100%" height={48}>
             <AreaChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>

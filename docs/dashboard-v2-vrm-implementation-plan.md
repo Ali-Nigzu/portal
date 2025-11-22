@@ -3,7 +3,7 @@
 ## Live dashboard identification
 - **Route and surface:** `/dashboard` renders inside `VRMLayout`; the default experience gate points to `DashboardV2Page`, falling back to the legacy page only if the gate flips.
 - **Manifest-driven layout:** `DashboardV2Page` loads `dashboard-default` from `/api/dashboards/{id}` and renders KPI tiles from `manifest.layout.kpiBand` using `KpiTile` + `ChartRenderer`. `applyVRMOverrides` injects the seven VRM tiles and removes legacy KPI entries.
-- **Header controls:** The header shows `Site – Site ID`, `Last updated: Realtime`, `Status: OK`, local time, an optional time-range dropdown, and Refresh/Reload buttons. VRM KPIs keep a fixed 24h/15m window regardless of the dropdown; other widgets may still honor manifest time ranges.
+- **Header controls:** The header shows `Site – Site ID`, `Last updated: Realtime`, `Status: OK`, and local time. Time-range, refresh, reload, and Site ID controls are hidden when the manifest renders the VRM KPI set; non-VRM dashboards still surface them.
 
 ## VRM KPI set and semantics
 - All VRM tiles use a fixed 24h window with 15-minute buckets (96 points). The headline for every tile is the final bucket (last 15 minutes). Sparklines use the full series.
@@ -22,7 +22,7 @@
 
 ## Capacity usage rules
 - Capacity lookup uses the UI org/client identifier, not the BigQuery table name. Mapping: `client1 → 10`, `client2 → 100` (fallback 10 with a console warning).
-- Both the headline and “Peak today” calculation apply the same capacity. The series is converted to a single last-bucket usage point for the headline while keeping the 24h sparkline shape.
+- Both the headline and “Peak today” calculation apply the same capacity. The occupancy series is normalized to a percentage series for the full 24h/15m window so the sparkline and peak reuse the same capacity-aware values.
 
 ## Traffic distribution rules
 - Traffic Distribution uses per-camera event counts in the last bucket to compute shares: `share(cam) = events(cam) / total(last bucket) * 100`.

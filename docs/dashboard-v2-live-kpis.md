@@ -6,7 +6,7 @@
 
 ## Layout and header
 - The VRM KPI band renders a single layer of dark gradient tiles (no outer white card wrappers). Titles appear once per tile inside the gradient card.
-- The header shows `Site – Site ID`, `Last updated: Realtime`, `Status: OK`, and the local time label. A time-range dropdown, “Refresh data”, and “Reload manifest” buttons remain in the header for non-KPI widgets; the VRM tiles themselves use fixed windows.
+- The header shows `Site – Site ID`, `Last updated: Realtime`, `Status: OK`, and the local time label. Time-range, refresh, reload, and Site ID controls are hidden when the manifest renders the VRM KPI set; non-VRM dashboards still show them.
 
 ## Data flow
 - Manifests are fetched from `/api/dashboards/{dashboardId}` with `orgId` or `viewToken` query params. If loading fails, the page shows an error banner and stops rendering.
@@ -20,7 +20,7 @@
 - Traffic Distribution uses the last bucket per-camera counts to compute shares; Capacity Usage derives `(latest occupancy ÷ capacity) × 100`.
 
 ## KPI tile rendering behavior
-- `KpiTile` displays the primary series label as the card title, main value from `meta.summary.headlineValue` when provided (VRM sets this from the last bucket), optional unit, and a sparkline built from series data values. VRM compact mode hides raw/coverage/delta rows; delta chips are shown only when explicitly enabled.
+- `KpiTile` displays the primary series label as the card title for legacy dashboards. In VRM compact mode the label and unit chip are suppressed, the main value uses `meta.summary.headlineValue` (last bucket), deltas are hidden except Occupancy, and dwell KPIs render as whole minutes (e.g., `24 min`). Sparklines use the series values unless a traffic pie is rendered.
 - Colors default to the series color or `#2d6cdf`; sparklines are `AreaChart` (Recharts) without animation.
 
 ## Live KPI widgets (VRM override)
