@@ -216,7 +216,7 @@ const deriveCameraLabel = (series: ChartSeries, index: number): string => {
   return (cleaned && cleaned.length > 0 ? cleaned : lastToken) || `Camera ${index + 1}`;
 };
 
-export const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
+export const applyTrafficDistributionShare = (result: ChartResult, orgId?: string): ChartResult => {
   const trafficDistributionResult = cloneResult(result);
   markCompact(trafficDistributionResult);
   suppressDelta(trafficDistributionResult);
@@ -225,9 +225,11 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: entry", {
+    console.log("[VRM] applyTrafficDistributionShare: entry", {
       widgetId: VRM_KPI_IDS.traffic,
       seriesCount: seriesList.length,
+      orgId,
+      sample: seriesList[0]?.data?.slice(0, 3),
     });
   }
 
@@ -268,10 +270,11 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: bucket discovery", {
+    console.log("[VRM] applyTrafficDistributionShare: bucket discovery", {
       seriesCount: seriesList.length,
       hasTimestampBuckets,
       latestTimestamp: latestTimestampMs,
+      samplePoints: seriesList[0]?.data?.slice(0, 3),
     });
   }
 
@@ -294,6 +297,15 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
         value: Number(point.value ?? point.y ?? 0),
       }));
 
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("[VRM] applyTrafficDistributionShare: last bucket values", {
+      cameras: cameraShares.map((share) => share.camera),
+      counts: cameraShares.map((share) => share.value),
+      totalLastBucketCount: cameraShares.reduce((sum, { value }) => sum + value, 0),
+    });
+  }
+
   const total = cameraShares.reduce((sum, { value }) => sum + value, 0);
   let topCamera = cameraShares[0]?.camera ?? "Camera";
   let topShare = 0;
@@ -311,7 +323,7 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
     const sharesPreview = shareData.map((point) => point.value ?? point.y ?? 0);
     const camerasPreview = shareData.map((point) => point.x);
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: share summary", {
+    console.log("[VRM] applyTrafficDistributionShare: share summary", {
       total,
       cameras: camerasPreview,
       shares: sharesPreview,
@@ -340,7 +352,7 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: decorated result", {
+    console.log("[VRM] applyTrafficDistributionShare: decorated result", {
       chartType: trafficDistributionResult.chartType,
       chartStyle: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.chartStyle,
       chartSubType: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.chartSubType,
@@ -468,13 +480,24 @@ export const decorateResult = (
   result: ChartResult,
   orgId: string | undefined,
 ): ChartResult => {
+  if (process.env.NODE_ENV !== "production") {
+    const summary = result.meta?.summary as Record<string, unknown> | undefined;
+    // eslint-disable-next-line no-console
+    console.log("[VRM] decorateResult", {
+      widgetId,
+      clientContextId: orgId,
+      chartType: result.chartType,
+      chartStyle: summary?.chartStyle,
+      chartSubType: summary?.chartSubType,
+    });
+  }
   const fixedIds = new Set<string>(Object.values(VRM_KPI_IDS));
   if (!fixedIds.has(widgetId)) {
     return result;
   }
   markCompact(result);
   if (widgetId === VRM_KPI_IDS.traffic) {
-    return applyTrafficDistributionShare(result);
+    return applyTrafficDistributionShare(result, orgId);
   }
   if (widgetId === VRM_KPI_IDS.capacity) {
     return applyCapacityUsage(result, orgId);
