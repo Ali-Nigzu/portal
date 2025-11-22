@@ -23,6 +23,7 @@ import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
 import {
   buildTrafficPlaceholderResult,
   decorateResult,
+  lastBucketValue,
 } from "../utils/vrmDecorators";
 
 export { lookupCapacity } from "../utils/vrmDecorators";
@@ -201,6 +202,16 @@ const DashboardV2Page = ({
   const [runNonce, setRunNonce] = useState(0);
   const [localTime, setLocalTime] = useState<Date>(() => new Date());
   const abortControllerRef = useRef<AbortController | null>(null);
+  const vrmDebugEnabled = useMemo(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    if (process.env.NODE_ENV === "production") {
+      return false;
+    }
+    const params = new URLSearchParams(window.location.search);
+    return params.has("vrmDebug");
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => setLocalTime(new Date()), 60_000);
@@ -563,6 +574,53 @@ const DashboardV2Page = ({
           ))
         )}
       </section>
+
+      {vrmDebugEnabled && kpiWidgets.length > 0 ? (
+        <section className="dashboard-v2__debug" aria-label="VRM debug panel">
+          <h2>VRM KPI debug (last bucket vs summary)</h2>
+          <ul>
+            {kpiWidgets.map((state) => {
+              const series = state.result?.series?.[0];
+              const lastBucket = lastBucketValue(series);
+              const sum =
+                series?.data.reduce((total, point) => {
+                  const value = point.value ?? point.y ?? 0;
+                  return total + (typeof value === "number" ? value : 0);
+                }, 0) ?? 0;
+              const headlineOverride = state.result?.meta?.summary
+                ? (state.result.meta.summary as Record<string, unknown>).headlineValue
+                : undefined;
+              const usedHeadline =
+                typeof headlineOverride === "number"
+                  ? headlineOverride
+                  : series?.data?.[series.data.length - 1]?.value ??
+                    series?.data?.[series.data.length - 1]?.y ??
+                    null;
+              const summaryTotals = (state.result as { summary?: unknown } | undefined)?.summary;
+              return (
+                <li key={state.widget.id}>
+                  <strong>{state.widget.title}</strong>
+                  <pre>{
+                    JSON.stringify(
+                      {
+                        widgetId: state.widget.id,
+                        seriesY: series?.data?.map((point) => point.value ?? point.y) ?? [],
+                        lastBucket,
+                        sum24h: sum,
+                        headlineOverride,
+                        usedHeadline,
+                        summaryTotals,
+                      },
+                      null,
+                      2,
+                    )
+                  }</pre>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <section
         className="dashboard-v2__grid"
