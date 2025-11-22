@@ -1,5 +1,4 @@
 import { API_BASE_URL, ANALYTICS_V2_TRANSPORT, type AnalyticsTransportMode } from "../../../config";
-import { createAbortSignal } from "../../../common/utils/abort";
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 import { validateChartResult } from "../../../analytics/components/ChartRenderer/validation";
@@ -17,6 +16,7 @@ export interface LoadWidgetOptions {
 }
 
 const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
+const DASHBOARD_ANALYTICS_TIMEOUT_MS = 60_000;
 
 export const isAbortError = (error: unknown): boolean => {
   if (error instanceof DOMException) {
@@ -25,8 +25,41 @@ export const isAbortError = (error: unknown): boolean => {
   return typeof error === "object" && error !== null && (error as { name?: string }).name === "AbortError";
 };
 
-async function runLiveQuery(body: unknown, signal?: AbortSignal): Promise<ChartResult> {
-  const { signal: requestSignal, cleanup } = createAbortSignal({ parent: signal, timeoutMs: 45000 });
+async function runLiveQuery(
+  body: unknown,
+  options: { signal?: AbortSignal; widgetId?: string; orgId?: string; timeoutMs?: number } = {},
+): Promise<ChartResult> {
+  const { signal, widgetId, orgId, timeoutMs = DASHBOARD_ANALYTICS_TIMEOUT_MS } = options;
+  const start = Date.now();
+  let abortedByTimeout = false;
+  const parentSignal = signal;
+
+  const controller = new AbortController();
+  const handleParentAbort = () => {
+    controller.abort(parentSignal?.reason ?? new DOMException("Aborted", "AbortError"));
+  };
+  if (parentSignal) {
+    if (parentSignal.aborted) {
+      handleParentAbort();
+    } else {
+      parentSignal.addEventListener("abort", handleParentAbort);
+    }
+  }
+
+  const timeoutId = setTimeout(() => {
+    abortedByTimeout = true;
+    controller.abort(new DOMException("Timeout", "AbortError"));
+  }, timeoutMs);
+
+  const cleanup = () => {
+    clearTimeout(timeoutId);
+    if (parentSignal) {
+      parentSignal.removeEventListener("abort", handleParentAbort);
+    }
+  };
+
+  const requestSignal = controller.signal;
+
   try {
     const response = await fetch(`${API_BASE_URL}${DASHBOARD_RUN_ENDPOINT}`, {
       method: "POST",
@@ -40,11 +73,41 @@ async function runLiveQuery(body: unknown, signal?: AbortSignal): Promise<ChartR
       throw new Error(`Analytics run failed: ${response.status} ${text}`);
     }
 
+    logInfo("dashboard.widgets", "live_query_success", {
+      widgetId,
+      orgId,
+      durationMs: Date.now() - start,
+      timeoutMs,
+    });
+
     return (await response.json()) as ChartResult;
   } catch (error) {
+    const durationMs = Date.now() - start;
     if (isAbortError(error)) {
-      throw new Error("Analytics request timed out or was cancelled");
+      const code = abortedByTimeout ? "TIMEOUT" : "ABORTED";
+      const reason = requestSignal.reason;
+      logWarn("dashboard.widgets", "live_query_aborted", {
+        widgetId,
+        orgId,
+        durationMs,
+        timeoutMs,
+        code,
+        reason: reason instanceof Error ? reason.message : String(reason ?? ""),
+      });
+      const abortError = new Error(
+        abortedByTimeout ? "Analytics request timed out" : "Analytics request was cancelled",
+      );
+      abortError.name = "AbortError";
+      (abortError as { code?: string }).code = code;
+      throw abortError;
     }
+    logError("dashboard.widgets", "live_query_error", {
+      widgetId,
+      orgId,
+      durationMs,
+      timeoutMs,
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw error instanceof Error ? error : new Error(String(error));
   } finally {
     cleanup();
@@ -82,11 +145,17 @@ export async function loadWidgetResult(
       result = await loadChartFixture(widget.fixtureId as ChartFixtureName);
     } else {
       const payload = viewToken ? { spec, viewToken } : { spec, orgId };
-      result = await runLiveQuery(payload, signal);
+      result = await runLiveQuery(payload, {
+        signal,
+        widgetId: widget.id,
+        orgId,
+        timeoutMs: DASHBOARD_ANALYTICS_TIMEOUT_MS,
+      });
     }
   } catch (error) {
     if (isAbortError(error)) {
-      logWarn("dashboard.widgets", "load_aborted", { widgetId: widget.id });
+      const code = (error as { code?: string }).code;
+      logWarn("dashboard.widgets", "load_aborted", { widgetId: widget.id, code });
     } else {
       logError("dashboard.widgets", "load_error", {
         widgetId: widget.id,

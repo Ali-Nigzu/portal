@@ -16,7 +16,7 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("TrafficDistribution: entry", {
+    console.log("[VRM] TrafficDistribution: entry", {
       isVrmTraffic,
       seriesLength: series.length,
       dataLength: data.length,
@@ -55,10 +55,18 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
+    console.log("[VRM] TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
   }
 
   if (!legend.length || totalValue <= 0) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM] TrafficDistribution: empty view", {
+        totalValue,
+        dataLength: data.length,
+        isVrmTraffic,
+      });
+    }
     return (
       <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
         <div className="traffic-distribution__title">{title}</div>

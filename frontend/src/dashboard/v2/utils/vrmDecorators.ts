@@ -216,17 +216,7 @@ const deriveCameraLabel = (series: ChartSeries, index: number): string => {
   return (cleaned && cleaned.length > 0 ? cleaned : lastToken) || `Camera ${index + 1}`;
 };
 
-const deriveCameraLabel = (series: ChartSeries, index: number): string => {
-  const labelCandidate = series.label && series.label.toLowerCase() !== "events" ? series.label : null;
-  const source = labelCandidate ?? series.id ?? `Camera ${index + 1}`;
-  const normalized = String(source).trim();
-  const tokens = normalized.split(/\||:|=/);
-  const lastToken = tokens[tokens.length - 1]?.trim();
-  const cleaned = lastToken?.replace(/camera[_\s-]?id[:\s-]*/i, "").replace(/^cam\s*/i, "").trim();
-  return (cleaned && cleaned.length > 0 ? cleaned : lastToken) || `Camera ${index + 1}`;
-};
-
-export const applyTrafficDistributionShare = (result: ChartResult): ChartResult => {
+export const applyTrafficDistributionShare = (result: ChartResult, orgId?: string): ChartResult => {
   const trafficDistributionResult = cloneResult(result);
   markCompact(trafficDistributionResult);
   suppressDelta(trafficDistributionResult);
@@ -235,9 +225,11 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: entry", {
+    console.log("[VRM] applyTrafficDistributionShare: entry", {
       widgetId: VRM_KPI_IDS.traffic,
       seriesCount: seriesList.length,
+      orgId,
+      sample: seriesList[0]?.data?.slice(0, 3),
     });
   }
 
@@ -245,43 +237,55 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
     return buildTrafficPlaceholderResult();
   }
 
+  const parseTimestamp = (value: unknown): Date | null => {
+    if (value instanceof Date) {
+      return value;
+    }
+    if (typeof value === "number") {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.valueOf()) ? null : parsed;
+    }
+    if (typeof value === "string") {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.valueOf()) ? null : parsed;
+    }
+    return null;
+  };
+
   const hasTimestampBuckets = seriesList.some((series) =>
-    series.data.some((point) => {
-      if (!point?.x) {
-        return false;
-      }
-      const parsed = new Date(point.x as string | number);
-      return !Number.isNaN(parsed.valueOf());
-    }),
+    series.data.some((point) => parseTimestamp(point?.x ?? null) !== null),
   );
 
-  let latestTimestamp: string | null = null;
+  let latestTimestampMs: number | null = null;
   if (hasTimestampBuckets) {
     const allTimestamps = seriesList
-      .flatMap((series) => series.data.map((point) => point.x))
-      .filter((value): value is string => typeof value === "string")
-      .filter((value) => !Number.isNaN(new Date(value).valueOf()));
+      .flatMap((series) => series.data.map((point) => parseTimestamp(point.x)))
+      .filter((value): value is Date => value !== null)
+      .map((value) => value.valueOf())
+      .filter((value) => !Number.isNaN(value));
     if (allTimestamps.length > 0) {
-      allTimestamps.sort((a, b) => new Date(a).valueOf() - new Date(b).valueOf());
-      const lastTimestamp = allTimestamps[allTimestamps.length - 1];
-      latestTimestamp = typeof lastTimestamp === "string" ? lastTimestamp : new Date(lastTimestamp).toISOString();
+      latestTimestampMs = Math.max(...allTimestamps);
     }
   }
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: bucket discovery", {
+    console.log("[VRM] applyTrafficDistributionShare: bucket discovery", {
       seriesCount: seriesList.length,
       hasTimestampBuckets,
-      latestTimestamp,
+      latestTimestamp: latestTimestampMs,
+      samplePoints: seriesList[0]?.data?.slice(0, 3),
     });
   }
 
   const cameraShares = hasTimestampBuckets
     ? seriesList.map((series, index) => {
         let latestPoint: DataPoint | undefined;
-        if (latestTimestamp) {
-          latestPoint = series.data.find((point) => point.x === latestTimestamp);
+        if (latestTimestampMs !== null) {
+          latestPoint = series.data.find((point) => {
+            const parsed = parseTimestamp(point.x);
+            return parsed?.valueOf() === latestTimestampMs;
+          });
         }
         const resolvedPoint = latestPoint ?? series.data[series.data.length - 1];
         const raw = latestPoint?.value ?? latestPoint?.y ?? 0;
@@ -292,6 +296,15 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
         camera: String(point.x ?? seriesList[0].label ?? `Camera ${index + 1}`),
         value: Number(point.value ?? point.y ?? 0),
       }));
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("[VRM] applyTrafficDistributionShare: last bucket values", {
+      cameras: cameraShares.map((share) => share.camera),
+      counts: cameraShares.map((share) => share.value),
+      totalLastBucketCount: cameraShares.reduce((sum, { value }) => sum + value, 0),
+    });
+  }
 
   const total = cameraShares.reduce((sum, { value }) => sum + value, 0);
   let topCamera = cameraShares[0]?.camera ?? "Camera";
@@ -310,7 +323,7 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
     const sharesPreview = shareData.map((point) => point.value ?? point.y ?? 0);
     const camerasPreview = shareData.map((point) => point.x);
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: share summary", {
+    console.log("[VRM] applyTrafficDistributionShare: share summary", {
       total,
       cameras: camerasPreview,
       shares: sharesPreview,
@@ -339,7 +352,7 @@ export const applyTrafficDistributionShare = (result: ChartResult): ChartResult 
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("VRM traffic distribution: decorated result", {
+    console.log("[VRM] applyTrafficDistributionShare: decorated result", {
       chartType: trafficDistributionResult.chartType,
       chartStyle: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.chartStyle,
       chartSubType: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.chartSubType,
@@ -467,13 +480,24 @@ export const decorateResult = (
   result: ChartResult,
   orgId: string | undefined,
 ): ChartResult => {
+  if (process.env.NODE_ENV !== "production") {
+    const summary = result.meta?.summary as Record<string, unknown> | undefined;
+    // eslint-disable-next-line no-console
+    console.log("[VRM] decorateResult", {
+      widgetId,
+      clientContextId: orgId,
+      chartType: result.chartType,
+      chartStyle: summary?.chartStyle,
+      chartSubType: summary?.chartSubType,
+    });
+  }
   const fixedIds = new Set<string>(Object.values(VRM_KPI_IDS));
   if (!fixedIds.has(widgetId)) {
     return result;
   }
   markCompact(result);
   if (widgetId === VRM_KPI_IDS.traffic) {
-    return applyTrafficDistributionShare(result);
+    return applyTrafficDistributionShare(result, orgId);
   }
   if (widgetId === VRM_KPI_IDS.capacity) {
     return applyCapacityUsage(result, orgId);

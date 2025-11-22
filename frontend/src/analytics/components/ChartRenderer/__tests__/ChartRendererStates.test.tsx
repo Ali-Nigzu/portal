@@ -114,6 +114,53 @@ describe('ChartRenderer high-level states', () => {
     expect(kpiValue?.children?.join('')).toContain('2');
   });
 
+  it('renders VRM traffic distribution data via TrafficDistribution', () => {
+    const trafficResult: ChartResult = {
+      chartType: 'categorical',
+      xDimension: { id: 'camera', type: 'category' },
+      series: [
+        {
+          id: 'traffic_share',
+          label: 'Traffic by Camera',
+          geometry: 'bar',
+          unit: 'percentage',
+          data: [
+            { x: '1', value: 60 },
+            { x: '2', value: 40 },
+          ],
+        },
+      ],
+      meta: { timezone: 'UTC', summary: { presentation: 'vrm', chartSubType: 'traffic_distribution' } as any },
+    };
+
+    const tree = renderer.create(<ChartRenderer result={trafficResult} height={200} />);
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('traffic-distribution kpi-tile');
+    expect(json).toContain('Traffic by Camera');
+    expect(json).not.toContain('Nothing to display yet');
+  });
+
+  it('shows traffic distribution empty view when no data is available', () => {
+    const trafficResult: ChartResult = {
+      chartType: 'categorical',
+      xDimension: { id: 'camera', type: 'category' },
+      series: [
+        {
+          id: 'traffic_share',
+          label: 'Traffic by Camera',
+          geometry: 'bar',
+          unit: 'percentage',
+          data: [],
+        },
+      ],
+      meta: { timezone: 'UTC', summary: { presentation: 'vrm', chartSubType: 'traffic_distribution' } as any },
+    };
+
+    const tree = renderer.create(<ChartRenderer result={trafficResult} height={200} />);
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('No traffic data available');
+  });
+
   it('renders the retention heatmap fixture without error', () => {
     let tree: ReturnType<typeof renderer.create> | undefined;
     expect(() => {
