@@ -24,7 +24,7 @@ export const CapacityDonut = ({
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
-  const title = typeof summary.title === "string" ? (summary.title as string) : "Capacity Usage";
+  const title = typeof summary.title === "string" ? (summary.title as string) : "Capacity";
   const headline = summary.headlineValue as number | null | undefined;
   const centerValue = typeof headline === "number" && Number.isFinite(headline) ? headline : 0;
 
@@ -80,7 +80,7 @@ export const CapacityDonut = ({
               outerRadius={68}
               paddingAngle={0}
               startAngle={90}
-              endAngle={-270}
+              endAngle={450}
               stroke="none"
             >
               {normalizedData.map((entry) => (

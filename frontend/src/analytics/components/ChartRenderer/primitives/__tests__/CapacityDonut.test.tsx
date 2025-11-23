@@ -55,7 +55,7 @@ describe("CapacityDonut", () => {
 
     const pie = tree.root.findByType(Pie);
     expect(pie.props.startAngle).toBe(90);
-    expect(pie.props.endAngle).toBe(-270);
+    expect(pie.props.endAngle).toBe(450);
     expect(pie.props.paddingAngle).toBe(0);
     expect(pie.props.stroke).toBe("none");
 

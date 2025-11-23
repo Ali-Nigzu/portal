@@ -14,7 +14,7 @@ export const TrafficDistribution = ({
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
-  const title = typeof summary.title === "string" ? (summary.title as string) : "Traffic by Camera";
+  const title = typeof summary.title === "string" ? (summary.title as string) : "Traffic Split";
   const topLevelChartStyle = (result as unknown as { chartStyle?: string }).chartStyle;
   const topLevelChartSubType = (result as unknown as { chartSubType?: string }).chartSubType;
   const summaryChartStyle = summary.chartStyle as string | undefined;
@@ -170,7 +170,7 @@ export const TrafficDistribution = ({
               outerRadius={68}
               paddingAngle={0}
               startAngle={90}
-              endAngle={-270}
+              endAngle={450}
               label={undefined}
               labelLine={false}
               stroke="none"
