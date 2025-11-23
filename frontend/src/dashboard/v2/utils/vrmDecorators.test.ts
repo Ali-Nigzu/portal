@@ -59,4 +59,39 @@ describe("traffic distribution decorator", () => {
     expect(primarySeries.data.map((point) => point.value ?? point.y)).toEqual([75, 25]);
     expect(decorated.meta?.summary?.headlineValue).toBe(75);
   });
+
+  it("drops cameras without finite last-bucket data and uses remaining shares", () => {
+    const result: ChartResult = {
+      chartType: "composed_time",
+      xDimension: { id: "timestamp", type: "time" },
+      series: [
+        {
+          id: "cam-1",
+          label: "Events | camera_id=1",
+          geometry: "column",
+          unit: "events",
+          data: [],
+        },
+        {
+          id: "cam-2",
+          label: "Events | camera_id=2",
+          geometry: "column",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: null },
+            { x: "2024-01-01T00:15:00Z", value: 40 },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC" },
+    };
+
+    const decorated = applyTrafficDistributionShare(result);
+    const primarySeries = decorated.series[0];
+
+    expect(primarySeries.data.map((point) => point.x)).toEqual(["2"]);
+    expect(primarySeries.data.map((point) => point.value ?? point.y)).toEqual([100]);
+    expect(decorated.meta?.summary?.headlineValue).toBe(100);
+    expect(decorated.meta?.summary?.chartSubType).toBe("traffic_distribution");
+  });
 });

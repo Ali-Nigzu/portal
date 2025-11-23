@@ -39,10 +39,18 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
     const rawCamera = point.x ?? `Cam ${index + 1}`;
     const normalizedCameraId = String(rawCamera).replace(/^Cam\s*/i, "").trim();
     const cameraId = normalizedCameraId !== "" ? normalizedCameraId : String(index + 1);
+    const rawValue =
+      typeof point.value === "number"
+        ? point.value
+        : typeof point.y === "number"
+        ? point.y
+        : 0;
+    const numericValue = Number(rawValue);
+    const value = Number.isFinite(numericValue) ? numericValue : 0;
     return {
       label: `Cam ${cameraId}`,
       camId: cameraId,
-      value: typeof point.value === "number" ? point.value : typeof point.y === "number" ? point.y : 0,
+      value,
       color: sliceColors[index % sliceColors.length],
     };
   });
