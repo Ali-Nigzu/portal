@@ -89,6 +89,15 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
+    console.log("[VRM traffic] TrafficDistribution totals", {
+      totalValue,
+      legendCount: legend.length,
+      dataCount: data.length,
+    });
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
     console.log("[VRM] TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
   }
 
