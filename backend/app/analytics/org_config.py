@@ -20,6 +20,10 @@ class BigQueryConfigurationError(RuntimeError):
 DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
     "client0": "client0_compat",
     "client1": "client1_compat",
+    # Fully-qualified VRM demo tables
+    "demodata0.client0": "nigzsu.demodata0.client0",
+    "demodata0.client1": "nigzsu.demodata0.client1",
+    "client2": "nigzsu.demodata0.client1",
 }
 
 
