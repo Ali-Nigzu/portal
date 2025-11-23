@@ -152,7 +152,13 @@ export const TrafficDistribution = ({
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
             <Tooltip
-              formatter={(value) => `${formatNumeric(value as number)}%`}
+              formatter={(value, _name, props) => {
+                const payload = (props?.payload ?? {}) as { displayValue?: number };
+                const displayValue =
+                  typeof payload.displayValue === "number" ? payload.displayValue : (value as number);
+                const safeValue = Number.isFinite(displayValue) ? displayValue : 0;
+                return `${formatNumeric(Math.max(0, safeValue))}%`;
+              }}
               labelFormatter={() => ""}
             />
             <Pie

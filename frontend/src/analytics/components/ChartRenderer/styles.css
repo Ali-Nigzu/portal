@@ -465,6 +465,12 @@
   font-weight: 700;
 }
 
+.capacity-usage__arc-label {
+  fill: var(--vrm-color-text-primary, #ffffff);
+  font-size: var(--vrm-typography-font-size-caption, 12px);
+  font-weight: 600;
+}
+
 .capacity-usage__subtitle {
   fill: var(--vrm-color-text-muted, #8290a6);
   font-size: var(--vrm-typography-font-size-caption, 12px);

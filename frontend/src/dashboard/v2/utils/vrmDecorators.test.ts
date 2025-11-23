@@ -23,6 +23,11 @@ describe("vrm capacity mapping", () => {
     expect(lookupCapacity("client1_compat")).toBe(5);
   });
 
+  it("maps demodata client to ui client2", () => {
+    expect(resolveUiClient("demodata0.client1")).toBe("client2");
+    expect(lookupCapacity("demodata0.client1")).toBe(750);
+  });
+
   it("throws for unknown clients", () => {
     expect(() => lookupCapacity("unknown-client")).toThrow("Unknown client for capacity usage");
   });
@@ -93,6 +98,42 @@ describe("vrm capacity donut", () => {
     const total = data.reduce((sum, point) => sum + Number(point.value ?? point.y ?? 0), 0);
     expect(Math.round(total)).toBe(100);
     expect(Math.round((capacityResult.meta?.summary?.headlineValue as number) ?? 0)).toBe(160);
+  });
+
+  it("resolves capacity per client without leaking between decorations", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+    const raw: ChartResult = {
+      chartType: "single_value",
+      xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      series: [
+        {
+          id: "occupancy",
+          label: "Occupancy",
+          geometry: "line",
+          unit: "people",
+          data: [
+            { x: prev.toISOString(), y: 4 },
+            { x: now.toISOString(), y: 4 },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC", summary: {} },
+    };
+
+    const client1 = decorateResult(VRM_KPI_IDS.capacity, raw, "client1");
+    const client2 = decorateResult(VRM_KPI_IDS.capacity, raw, "client2");
+
+    expect(client1.meta?.summary?.vrmCapacity).toBe(5);
+    expect(Math.round((client1.meta?.summary?.headlineValue as number) ?? 0)).toBe(80);
+
+    expect(client2.meta?.summary?.vrmCapacity).toBe(750);
+    expect(Math.round((client2.meta?.summary?.headlineValue as number) ?? 0)).toBe(1);
+
+    const client1Slices = client1.series[0].data.map((point) => Number(point.value ?? point.y ?? 0));
+    const client2Slices = client2.series[0].data.map((point) => Number(point.value ?? point.y ?? 0));
+
+    expect(client1Slices).not.toEqual(client2Slices);
   });
 });
 

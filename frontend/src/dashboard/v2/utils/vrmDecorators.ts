@@ -13,6 +13,8 @@ const CAMERAS_BY_CLIENT: Record<string, string[]> = {
 
 const TABLE_TO_UI_CLIENT: Record<string, string> = {
   client0: "client1",
+  "demodata0.client1": "client2",
+  "demodata0.client1_compat": "client2",
 };
 
 const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "").toLowerCase();
