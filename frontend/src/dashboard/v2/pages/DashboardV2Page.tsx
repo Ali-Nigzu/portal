@@ -13,6 +13,7 @@ import { fetchDashboardManifest, type FetchDashboardManifestOptions } from "../t
 import {
   loadWidgetResult,
   type LoadWidgetOptions,
+  isAbortError,
 } from "../transport/loadWidgetResult";
 import { unpinDashboardWidget } from "../transport/mutateDashboardManifest";
 import { determineOrgId } from "../../../utils/org";
@@ -381,6 +382,21 @@ const DashboardV2Page = ({
             if (controller.signal.aborted) {
               return;
             }
+            if (process.env.NODE_ENV !== "production" && widget.id === VRM_KPI_IDS.traffic) {
+              const summary = result.meta?.summary as Record<string, unknown> | undefined;
+              // eslint-disable-next-line no-console
+              console.log("[VRM] raw widget result", {
+                widgetId: widget.id,
+                chartType: result.chartType,
+                chartStyle: summary?.chartStyle,
+                chartSubType: summary?.chartSubType,
+                seriesLength: result.series.length,
+                firstPoints: result.series[0]?.data?.slice(0, 5)?.map((point) => ({
+                  x: point.x,
+                  value: point.value ?? point.y,
+                })),
+              });
+            }
             const decorated = decorateResult(widget.id, result, clientContextId);
             setWidgetState((previous) => ({
               ...previous,
@@ -393,6 +409,13 @@ const DashboardV2Page = ({
           } catch (err) {
             if (controller.signal.aborted) {
               return;
+            }
+            if (isAbortError(err)) {
+              const code = (err as { code?: string }).code;
+              if (code === "ABORTED") {
+                logInfo("dashboard.widgets", "ui_widget_cancelled", { widgetId: widget.id });
+                return;
+              }
             }
             encounteredError = true;
             const message = err instanceof Error ? err.message : "Unknown widget error";
