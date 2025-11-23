@@ -2,8 +2,13 @@ import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/sch
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
 
 const CAPACITY_BY_CLIENT: Record<string, number> = {
-  client1: 10,
-  client2: 100,
+  client1: 5,
+  client2: 750,
+};
+
+const CAMERAS_BY_CLIENT: Record<string, string[]> = {
+  client1: ["Cam 0"],
+  client2: ["Cam 1", "Cam 2"],
 };
 
 const TABLE_TO_UI_CLIENT: Record<string, string> = {
@@ -93,6 +98,20 @@ const applyLastBucketHeadline = (widgetId: string, result: ChartResult) => {
   const lastValue = lastBucketValue(series);
   setHeadlineValue(result, lastValue);
   logVrmDebug(widgetId, series, lastValue);
+};
+
+const lastNonNullValue = (series?: ChartSeries): number | null => {
+  if (!series) {
+    return null;
+  }
+  for (let index = series.data.length - 1; index >= 0; index -= 1) {
+    const point = series.data[index];
+    const value = point?.value ?? point?.y;
+    if (typeof value === "number") {
+      return value;
+    }
+  }
+  return null;
 };
 
 const addSummaryText = (result: ChartResult, key: string, value?: string) => {
@@ -342,6 +361,19 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
       });
     }
 
+    const resolvedUiClient = resolveUiClient(orgId);
+    const configuredNames = resolvedUiClient ? CAMERAS_BY_CLIENT[resolvedUiClient] : undefined;
+    const discoveredNames = cameraShares.length
+      ? cameraShares.map((share) => share.camera)
+      : seriesList.map((series, index) => deriveCameraLabel(series, index)).filter(Boolean);
+    const fallbackNames = configuredNames?.length
+      ? configuredNames
+      : discoveredNames.length > 0
+        ? discoveredNames
+        : ["Camera 0"];
+
+    const shareData: DataPoint[] = fallbackNames.map((camera) => ({ x: camera, value: 0, y: 0 }));
+
     trafficDistributionResult.chartType = "categorical";
     trafficDistributionResult.xDimension = { id: "camera", type: "category" } as ChartResult["xDimension"];
     trafficDistributionResult.series = [
@@ -350,11 +382,11 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
         label: "Traffic by Camera",
         geometry: "bar",
         unit: "percentage",
-        data: [],
+        data: shareData,
       },
     ];
-    setHeadlineValue(trafficDistributionResult, null);
-    addSummaryText(trafficDistributionResult, "headline", undefined);
+    setHeadlineValue(trafficDistributionResult, 0);
+    addSummaryText(trafficDistributionResult, "headline", `${fallbackNames[0] ?? "Camera"} – 0%`);
     addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
     addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
     addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
@@ -368,7 +400,7 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
         chartSubType: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.chartSubType,
         presentation: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.presentation,
         headlineValue: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.headlineValue,
-        dataLength: 0,
+        dataLength: shareData.length,
       });
     }
     return trafficDistributionResult;
@@ -540,6 +572,21 @@ const applyBasicVrmHeadline = (widgetId: string, result: ChartResult) => {
   return next;
 };
 
+const applyDwellHeadline = (result: ChartResult) => {
+  const next = applyBasicVrmHeadline(VRM_KPI_IDS.dwell, result);
+  const summary = next.meta?.summary;
+  const headline = summary?.headlineValue;
+  if (headline === null || typeof headline !== "number") {
+    const series = next.series?.[0];
+    const carried = lastNonNullValue(series);
+    if (typeof carried === "number") {
+      setHeadlineValue(next, carried);
+      logVrmDebug(VRM_KPI_IDS.dwell, series, carried);
+    }
+  }
+  return next;
+};
+
 export const decorateResult = (
   widgetId: string,
   result: ChartResult,
@@ -588,7 +635,10 @@ export const decorateResult = (
   if (widgetId === VRM_KPI_IDS.occupancy) {
     return applyOccupancyDelta(result);
   }
-  if (widgetId === VRM_KPI_IDS.entrances || widgetId === VRM_KPI_IDS.exits || widgetId === VRM_KPI_IDS.dwell) {
+  if (widgetId === VRM_KPI_IDS.dwell) {
+    return applyDwellHeadline(result);
+  }
+  if (widgetId === VRM_KPI_IDS.entrances || widgetId === VRM_KPI_IDS.exits) {
     return applyBasicVrmHeadline(widgetId, result);
   }
   return result;
