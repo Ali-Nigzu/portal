@@ -1,7 +1,7 @@
 /* eslint-disable testing-library/await-async-query */
 import React from "react";
 import renderer from "react-test-renderer";
-import { Tooltip } from "recharts";
+import { Pie, Tooltip } from "recharts";
 
 import type { ChartResult } from "../../../../schemas/charting";
 import { TrafficDistribution } from "../TrafficDistribution";
@@ -44,5 +44,10 @@ describe("TrafficDistribution", () => {
     const tooltip = tree.root.findByType(Tooltip);
     const formatted = tooltip.props.formatter(1, "traffic_share", { payload: { displayValue: 0 } });
     expect(formatted).toBe("0%");
+
+    const pie = tree.root.findByType(Pie);
+    expect(pie.props.startAngle).toBe(90);
+    expect(pie.props.endAngle).toBe(-270);
+    expect(pie.props.paddingAngle).toBe(0);
   });
 });

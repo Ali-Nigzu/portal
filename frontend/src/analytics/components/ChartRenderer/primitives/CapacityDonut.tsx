@@ -1,9 +1,8 @@
-import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
 import type { ChartPrimitiveProps } from "./types";
-import { formatNumeric } from "../utils/format";
 
-const capacityColors = ["#2d6cdf", "#f4b63d", "#2f3b52"];
+const capacityColors = ["#2d6cdf", "#f97066", "#2f3b52"];
 
 const extractNumeric = (value: unknown): number => {
   if (typeof value === "number") {
@@ -16,12 +15,6 @@ const extractNumeric = (value: unknown): number => {
   return 0;
 };
 
-const LABEL_COPY: Record<string, string> = {
-  Usage: "Current",
-  "Peak extra": "Peak +",
-  Remaining: "Remaining",
-};
-
 export const CapacityDonut = ({
   result,
   series,
@@ -32,7 +25,6 @@ export const CapacityDonut = ({
   const data = primary?.data ?? [];
   const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
   const title = typeof summary.title === "string" ? (summary.title as string) : "Capacity Usage";
-  const chip = typeof summary.vrmChipText === "string" ? (summary.vrmChipText as string) : undefined;
   const headline = summary.headlineValue as number | null | undefined;
   const centerValue = typeof headline === "number" && Number.isFinite(headline) ? headline : 0;
 
@@ -44,13 +36,14 @@ export const CapacityDonut = ({
   });
 
   const total = mappedData.reduce((sum, entry) => sum + entry.value, 0);
-  const renderData = total > 0
-    ? mappedData
-    : [
-        { label: "Usage", value: 0, color: capacityColors[0] },
-        { label: "Peak extra", value: 0, color: capacityColors[1] },
-        { label: "Remaining", value: 100, color: capacityColors[2] },
-      ];
+  const renderData =
+    total > 0
+      ? mappedData
+      : [
+          { label: "Usage", value: 0, color: capacityColors[0] },
+          { label: "Peak extra", value: 0, color: capacityColors[1] },
+          { label: "Remaining", value: 100, color: capacityColors[2] },
+        ];
 
   const renderTotal = renderData.reduce((sum, entry) => sum + entry.value, 0) || 1;
   const normalizedData = renderData.map((entry) => ({
@@ -60,29 +53,15 @@ export const CapacityDonut = ({
 
   const centerDisplay = `${Math.round(centerValue)}%`;
 
-  const RADIAN = Math.PI / 180;
-  const renderArcLabel = (props: any) => {
-    const { cx = 0, cy = 0, midAngle = 0, outerRadius = 0, payload } = props ?? {};
-    const radius = outerRadius + 18;
-    const angle = -midAngle * RADIAN;
-    const x = cx + radius * Math.cos(angle);
-    const y = cy + radius * Math.sin(angle);
-    const label = payload?.label ?? "";
-    const labelPrefix = LABEL_COPY[label] ?? label;
-    const value = Math.max(0, Math.round(extractNumeric(payload?.value)));
-    const textAnchor = x >= cx ? "start" : "end";
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="var(--vrm-color-text-primary, #ffffff)"
-        textAnchor={textAnchor}
-        dominantBaseline="central"
-        className="capacity-usage__arc-label"
-      >
-        {`${labelPrefix} ${value}%`}
-      </text>
-    );
+  const tooltipFormatter = (value: number, _name: string, props: any) => {
+    const label = (props?.payload as { label?: string })?.label ?? "";
+    const baseLabel = label === "Peak extra" ? "Peak add-on" : label === "Usage" ? "Current" : "Remaining";
+    const numericValue = Math.max(0, Math.round(extractNumeric(value)));
+    const valueLabel =
+      label === "Remaining"
+        ? `${numericValue}% (capacity not reached)`
+        : `${numericValue}%`;
+    return [valueLabel, baseLabel];
   };
 
   return (
@@ -91,6 +70,7 @@ export const CapacityDonut = ({
       <div className="capacity-usage__content">
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
+            <Tooltip formatter={tooltipFormatter} labelFormatter={() => ""} />
             <Pie
               dataKey="value"
               data={normalizedData}
@@ -102,8 +82,6 @@ export const CapacityDonut = ({
               startAngle={90}
               endAngle={-270}
               stroke="none"
-              label={renderArcLabel}
-              labelLine={{ stroke: "var(--vrm-color-text-muted, #8290a6)", strokeWidth: 1 }}
             >
               {normalizedData.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} stroke="none" />
@@ -118,12 +96,8 @@ export const CapacityDonut = ({
             >
               {centerDisplay}
             </text>
-            <text x="50%" y="95%" textAnchor="middle" dominantBaseline="middle" className="capacity-usage__subtitle">
-              Peak {formatNumeric(Math.round((summary.peak_capacity_usage_today as number) ?? 0))}%
-            </text>
           </PieChart>
         </ResponsiveContainer>
-        {chip ? <div className="capacity-usage__chip">{chip}</div> : null}
       </div>
     </div>
   );
