@@ -292,6 +292,9 @@
 .kpi-sparkline {
   height: 48px;
   position: relative;
+  display: flex;
+  align-items: flex-end;
+  overflow: visible;
 }
 
 .kpi-sparkline--vrm {
@@ -302,7 +305,7 @@
   position: absolute;
   left: 50%;
   bottom: 0;
-  transform: translate(-50%, 4px);
+  transform: translate(-50%, -6px);
   background: rgba(15, 19, 26, 0.9);
   color: #ffffff;
   padding: 8px 12px;

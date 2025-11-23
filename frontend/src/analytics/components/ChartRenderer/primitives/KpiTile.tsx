@@ -73,6 +73,8 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const deltaCandidate = primarySeries.summary?.delta;
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
 
+  const sparklineHeight = isVrm ? 56 : 48;
+
   const formattedDelta = formatDelta(delta);
   const coverageInfo = formatCoverage(coverage);
   const showRaw = !compact && shouldShowRawCount(rawCount);
@@ -245,7 +247,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       ) : null}
       {!isTraffic && sparklineData.length > 1 ? (
         <div className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}>
-          <ResponsiveContainer width="100%" height={48}>
+          <ResponsiveContainer width="100%" height={sparklineHeight}>
             <AreaChart
               data={sparklineData}
               margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
@@ -261,7 +263,14 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                   ]}
                   labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
                 />
-              ) : null}
+              ) : (
+                <Tooltip
+                  cursor={false}
+                  isAnimationActive={false}
+                  wrapperStyle={{ display: "none" }}
+                  content={() => null}
+                />
+              )}
               <Area
                 type="monotone"
                 dataKey="value"

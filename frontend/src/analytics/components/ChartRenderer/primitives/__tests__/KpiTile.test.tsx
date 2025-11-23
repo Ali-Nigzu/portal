@@ -6,7 +6,9 @@ import type { ChartResult } from "../../../../schemas/charting";
 
 jest.mock("recharts", () => {
   const MockAreaChart = ({ children, ...props }: any) => <area-chart-mock {...props}>{children}</area-chart-mock>;
-  const MockResponsive = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+  const MockResponsive = ({ children, ...props }: { children: React.ReactNode }) => (
+    <responsive-container-mock {...props}>{children}</responsive-container-mock>
+  );
   const MockArea = (props: any) => <area-mock {...props} />;
   const MockTooltip = (props: any) => <tooltip-mock {...props} />;
   const MockYAxis = (props: any) => <y-axis-mock {...props} />;
@@ -56,6 +58,9 @@ describe("KpiTile VRM sparkline", () => {
       <KpiTile result={built.result} series={built.series} height={200} className="" />,
     );
 
+    const responsive = tree.root.findByType("responsive-container-mock");
+    expect(responsive.props.height).toBe(56);
+
     const areaChart = tree.root.findByType("area-chart-mock");
     expect(typeof areaChart.props.onMouseMove).toBe("function");
 
@@ -63,7 +68,8 @@ describe("KpiTile VRM sparkline", () => {
     expect(yAxis.props.domain).toEqual([0, "auto"]);
 
     const tooltips = tree.root.findAllByType("tooltip-mock");
-    expect(tooltips).toHaveLength(0);
+    expect(tooltips).toHaveLength(1);
+    expect(tooltips[0].props.wrapperStyle).toEqual({ display: "none" });
 
     act(() => {
       areaChart.props.onMouseMove({
