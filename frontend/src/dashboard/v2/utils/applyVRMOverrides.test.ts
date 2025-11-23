@@ -160,6 +160,7 @@ describe("applyVRMOverrides", () => {
             label: "Footfall",
             geometry: "line",
             unit: "events",
+            summary: { delta: 0.1 },
             data: [
               { x: prev.toISOString(), y: 6 },
               { x: now.toISOString(), y: 9 },
@@ -195,7 +196,8 @@ describe("applyVRMOverrides", () => {
     expect(footfallHeadline.lastBucket).toBe(9);
     expect(footfallHeadline.total24h).toBe(15);
     expect(footfallResult.meta?.summary?.headlineValue).toBe(9);
-    expect(footfallResult.meta?.summary?.vrmChipText).toBe("today: 15");
+    expect(footfallResult.meta?.summary?.vrmChipText).toBeUndefined();
+    expect(footfallResult.meta?.summary?.hideDelta).toBeUndefined();
 
     const capacityHeadline = getCapacityUsageHeadline(rawCapacityResult as any, "client1");
     expect(capacityHeadline.currentUsage).toBe(80);
