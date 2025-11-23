@@ -107,4 +107,70 @@ describe("validateChartResult", () => {
     const issues = validateChartResult(heatmap);
     expect(issues.some((issue) => issue.code === "heatmap_grid_gap")).toBe(true);
   });
+
+  it("flags bucket mismatches for non-split time series", () => {
+    const result: ChartResult = {
+      chartType: "composed_time",
+      xDimension: { id: "timestamp", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      series: [
+        {
+          id: "entrances",
+          label: "Entrances",
+          geometry: "line",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:00:00Z", y: 5 },
+            { x: "2024-01-01T00:15:00Z", y: 10 },
+          ],
+        },
+        {
+          id: "exits",
+          label: "Exits",
+          geometry: "line",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:15:00Z", y: 3 },
+            { x: "2024-01-01T00:30:00Z", y: 2 },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC" },
+    };
+
+    const issues = validateChartResult(result);
+    expect(issues.some((issue) => issue.code === "bucket_mismatch")).toBe(true);
+  });
+
+  it("allows misaligned buckets for split time-series traffic charts", () => {
+    const result: ChartResult = {
+      chartType: "composed_time",
+      xDimension: { id: "timestamp", type: "time", bucket: "15_MIN", timezone: "UTC" },
+      series: [
+        {
+          id: "cam-1",
+          label: "Events | camera_id=1",
+          geometry: "column",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:00:00Z", y: 10 },
+            { x: "2024-01-01T00:30:00Z", y: 15 },
+          ],
+        },
+        {
+          id: "cam-2",
+          label: "Events | camera_id=2",
+          geometry: "column",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:15:00Z", y: 20 },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC" },
+    };
+
+    const issues = validateChartResult(result);
+    expect(issues.some((issue) => issue.code === "bucket_mismatch")).toBe(false);
+    expect(issues.some((issue) => issue.code === "duplicate_bucket")).toBe(false);
+  });
 });
