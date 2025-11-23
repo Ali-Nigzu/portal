@@ -185,6 +185,58 @@ describe('ChartRenderer high-level states', () => {
     expect(json).toContain('No traffic data available');
   });
 
+  it('routes VRM traffic when only top-level style hints are present', () => {
+    const trafficResult = {
+      chartType: 'categorical',
+      chartStyle: 'traffic_distribution',
+      chartSubType: 'traffic_distribution',
+      xDimension: { id: 'camera', type: 'category' },
+      series: [
+        {
+          id: 'traffic_share',
+          label: 'Traffic by Camera',
+          geometry: 'bar',
+          unit: 'percentage',
+          data: [
+            { x: '1', value: 70 },
+            { x: '2', value: 30 },
+          ],
+        },
+      ],
+      meta: { timezone: 'UTC', summary: { presentation: 'vrm' } as any },
+    } as ChartResult & { chartStyle: string; chartSubType: string };
+
+    const tree = renderer.create(<ChartRenderer result={trafficResult} height={200} />);
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('traffic-distribution kpi-tile');
+    expect(json).not.toContain('Nothing to display yet');
+  });
+
+  it('routes VRM traffic when summary title indicates Traffic by Camera without style hints', () => {
+    const trafficResult: ChartResult = {
+      chartType: 'categorical',
+      xDimension: { id: 'camera', type: 'category' },
+      series: [
+        {
+          id: 'traffic_share',
+          label: 'Traffic by Camera',
+          geometry: 'bar',
+          unit: 'percentage',
+          data: [
+            { x: '1', value: 55 },
+            { x: '2', value: 45 },
+          ],
+        },
+      ],
+      meta: { timezone: 'UTC', summary: { presentation: 'vrm', title: 'Traffic by Camera' } as any },
+    };
+
+    const tree = renderer.create(<ChartRenderer result={trafficResult} height={200} />);
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('traffic-distribution kpi-tile');
+    expect(json).toContain('Traffic by Camera');
+  });
+
   it('renders the retention heatmap fixture without error', () => {
     let tree: ReturnType<typeof renderer.create> | undefined;
     expect(() => {

@@ -29,6 +29,14 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
   }
 
   if (!primary || data.length === 0) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM traffic] TrafficDistribution early-exit", {
+        reason: !primary ? "no-primary" : "no-data",
+        seriesLength: series.length,
+        dataLength: data.length,
+      });
+    }
     return (
       <div
         className={`traffic-distribution kpi-tile ${className ?? ""}`}
@@ -64,6 +72,20 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
   legend[0]);
 
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
+  const nonFiniteValues = legend
+    .map((entry) => entry.value)
+    .filter((value) => !Number.isFinite(value))
+    .slice(0, 5);
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("[VRM traffic] TrafficDistribution totals", {
+      totalValue,
+      legendCount: legend.length,
+      dataCount: data.length,
+      nonFiniteValues,
+    });
+  }
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
@@ -77,6 +99,7 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
         totalValue,
         dataLength: data.length,
         isVrmTraffic,
+        reason: !legend.length ? "no-legend" : "non-positive-total",
       });
     }
     return (
