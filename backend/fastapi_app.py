@@ -353,11 +353,22 @@ def _resolve_table_for_org(org_id: str) -> str:
 def _derive_org_id_from_table_name(table_name: Optional[str]) -> Optional[str]:
     if not table_name:
         return None
-    slug = table_name.split(".")[-1].strip()
-    if slug.endswith("_compat"):
-        slug = slug[: -len("_compat")]
-    if not slug:
+
+    segments = [segment.strip() for segment in table_name.split(".") if segment and segment.strip()]
+    if not segments:
         return None
+
+    # Preserve dataset + table when available so multi-tenant slugs remain distinct
+    table_segment = segments[-1]
+    if table_segment.endswith("_compat"):
+        table_segment = table_segment[: -len("_compat")]
+
+    if len(segments) >= 2:
+        dataset_segment = segments[-2]
+        slug = f"{dataset_segment}.{table_segment}"
+    else:
+        slug = table_segment
+
     return slug or None
 
 
