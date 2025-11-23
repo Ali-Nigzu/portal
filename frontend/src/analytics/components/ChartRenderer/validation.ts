@@ -16,7 +16,42 @@ const SUPPORTED_UNITS = new Set<ChartSeries["unit"] | undefined | null>([
   null,
 ]);
 
-function validateSeriesData(series: ChartSeries[], chartType: ChartType): ValidationIssue[] {
+interface ValidationOptions {
+  allowMisalignedBuckets?: boolean;
+}
+
+const getSeriesBaseLabel = (series: ChartSeries): string => {
+  const labelSource = series.label ?? series.id ?? "";
+  const [base] = labelSource.split("|");
+  return base.trim().toLowerCase();
+};
+
+// Split time-series (e.g., per-camera traffic) render one series per category and buckets may be sparse
+// or misaligned across series. We only consider a result to be a split time-series when:
+// - The x-dimension is time-based.
+// - There are multiple series.
+// - All series share the same base label/id prefix (before any "|" split annotation).
+// - All series share the same unit.
+// This is intentionally conservative to avoid relaxing validation for unrelated multi-measure charts.
+const isSplitTimeSeries = (result: ChartResult): boolean => {
+  if (!result?.series || result.series.length <= 1) {
+    return false;
+  }
+  if (result.xDimension?.type !== "time") {
+    return false;
+  }
+
+  const baseLabels = new Set(result.series.map((entry) => getSeriesBaseLabel(entry)));
+  const units = new Set(result.series.map((entry) => entry.unit ?? null));
+
+  return baseLabels.size === 1 && units.size === 1;
+};
+
+function validateSeriesData(
+  series: ChartSeries[],
+  chartType: ChartType,
+  options: ValidationOptions = {},
+): ValidationIssue[] {
   if (series.length === 0) {
     return [
       {
@@ -30,6 +65,7 @@ function validateSeriesData(series: ChartSeries[], chartType: ChartType): Valida
 
   const referenceOrder = series[0]?.data.map((point) => point.x) ?? [];
   const seenBuckets = new Set(referenceOrder);
+  const allowMisalignedBuckets = options.allowMisalignedBuckets ?? false;
 
   series.forEach((seriesItem) => {
     if (!SUPPORTED_UNITS.has(seriesItem.unit)) {
@@ -81,7 +117,7 @@ function validateSeriesData(series: ChartSeries[], chartType: ChartType): Valida
       }
     });
 
-    if (chartType !== "heatmap" && chartType !== "retention") {
+    if (chartType !== "heatmap" && chartType !== "retention" && !allowMisalignedBuckets) {
       if (referenceOrder.length !== seriesItem.data.length) {
         issues.push({
           code: "bucket_mismatch",
@@ -104,7 +140,7 @@ function validateSeriesData(series: ChartSeries[], chartType: ChartType): Valida
     });
   });
 
-  if (chartType !== "heatmap" && chartType !== "retention") {
+  if (chartType !== "heatmap" && chartType !== "retention" && !allowMisalignedBuckets) {
     if (referenceOrder.length !== seenBuckets.size) {
       issues.push({
         code: "duplicate_bucket",
@@ -179,7 +215,9 @@ export function validateChartResult(result: ChartResult): ValidationIssue[] {
     ];
   }
 
-  const issues = validateSeriesData(result.series, result.chartType);
+  const issues = validateSeriesData(result.series, result.chartType, {
+    allowMisalignedBuckets: isSplitTimeSeries(result),
+  });
 
   if (result.chartType === "heatmap" || result.chartType === "retention") {
     issues.push(...validateHeatmap(result.series));
