@@ -96,6 +96,11 @@ def test_vrm_dwell_fifo_compiles_without_track_matching():
     compiled_vrm = compiler.compile(vrm_spec, context)
 
     sql = compiled_vrm.sql
+    assert "dwell_dwell_events" in sql
+    assert "LEAST(exit_count, entrance_count)" in sql
+    assert "WHERE event = 0 AND LEAST(exit_count, entrance_count) > 0" in sql
+    assert "WHERE exit_seq <= matched_idx" in sql
+    assert "entrance.entrance_seq = e.exit_seq" in sql
     assert "PARTITION BY site_id, cam_id" in sql
     assert (
         "PARTITION BY site_id, cam_id, track_id\n                        ORDER BY timestamp, index\n                    ) AS rn\n                FROM scoped\n                WHERE event = 1"

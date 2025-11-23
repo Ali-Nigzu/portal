@@ -1104,66 +1104,159 @@ class SpecCompiler:
         prefix = f"{measure_id}_dwell"
         options = measure.get("options", {}) if isinstance(measure.get("options"), dict) else {}
 
-        partition_fields = "site_id, cam_id" if options.get("vrmDwellFifo") else "site_id, cam_id, track_id"
-        join_track_id = "" if options.get("vrmDwellFifo") else "AND e.track_id = x.track_id"
+        if options.get("vrmDwellFifo"):
+            events = dedent(
+                f"""
+                {prefix}_events AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        track_id,
+                        timestamp,
+                        event,
+                        index,
+                        SUM(IF(event = 1, 1, 0)) OVER (
+                            PARTITION BY site_id, cam_id
+                            ORDER BY timestamp, index
+                        ) AS entrance_count,
+                        SUM(IF(event = 0, 1, 0)) OVER (
+                            PARTITION BY site_id, cam_id
+                            ORDER BY timestamp, index
+                        ) AS exit_count
+                    FROM scoped
+                )
+                """
+            ).strip()
 
-        entrances = dedent(
-            f"""
-            {prefix}_entrances AS (
-                SELECT
-                    site_id,
-                    cam_id,
-                    track_id,
-                    timestamp AS entrance_ts,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY {partition_fields}
-                        ORDER BY timestamp, index
-                    ) AS rn
-                FROM scoped
-                WHERE event = 1
-            )
-            """
-        ).strip()
+            entrances = dedent(
+                f"""
+                {prefix}_entrances AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        timestamp AS entrance_ts,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY site_id, cam_id
+                            ORDER BY timestamp, index
+                        ) AS entrance_seq
+                    FROM scoped
+                    WHERE event = 1
+                )
+                """
+            ).strip()
 
-        exits = dedent(
-            f"""
-            {prefix}_exits AS (
-                SELECT
-                    site_id,
-                    cam_id,
-                    track_id,
-                    timestamp AS exit_ts,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY {partition_fields}
-                        ORDER BY timestamp, index
-                    ) AS rn
-                FROM scoped
-                WHERE event = 0
-            )
-            """
-        ).strip()
+            exits = dedent(
+                f"""
+                {prefix}_exits AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        timestamp AS exit_ts,
+                        LEAST(exit_count, entrance_count) AS matched_idx,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY site_id, cam_id
+                            ORDER BY timestamp, index
+                        ) AS exit_seq
+                    FROM {prefix}_events
+                    WHERE event = 0 AND LEAST(exit_count, entrance_count) > 0
+                )
+                """
+            ).strip()
 
-        sessions = dedent(
-            f"""
-            {prefix}_sessions AS (
-                SELECT
-                    e.site_id,
-                    e.cam_id,
-                    e.track_id,
-                    e.entrance_ts,
-                    x.exit_ts,
-                    TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, SECOND) / 60.0 AS dwell_minutes
-                FROM {prefix}_entrances AS e
-                LEFT JOIN {prefix}_exits AS x
-                    ON e.site_id = x.site_id
-                    AND e.cam_id = x.cam_id
-                    AND e.rn = x.rn
-                    {join_track_id}
-                WHERE x.exit_ts IS NOT NULL
-                    AND TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, MINUTE) BETWEEN 0 AND 360
-            )
-            """
-        ).strip()
+            filtered_exits = dedent(
+                f"""
+                {prefix}_filtered_exits AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        exit_ts,
+                        exit_seq,
+                        matched_idx
+                    FROM {prefix}_exits
+                    WHERE exit_seq <= matched_idx
+                )
+                """
+            ).strip()
+
+            sessions = dedent(
+                f"""
+                {prefix}_sessions AS (
+                    SELECT
+                        e.site_id,
+                        e.cam_id,
+                        entrance.entrance_ts,
+                        e.exit_ts,
+                        TIMESTAMP_DIFF(e.exit_ts, entrance.entrance_ts, SECOND) / 60.0 AS dwell_minutes
+                    FROM {prefix}_filtered_exits AS e
+                    JOIN {prefix}_entrances AS entrance
+                        ON entrance.site_id = e.site_id
+                        AND entrance.cam_id = e.cam_id
+                        AND entrance.entrance_seq = e.exit_seq
+                    WHERE TIMESTAMP_DIFF(e.exit_ts, entrance.entrance_ts, MINUTE) BETWEEN 0 AND 360
+                )
+                """
+            ).strip()
+        else:
+            partition_fields = "site_id, cam_id, track_id"
+            join_track_id = "AND e.track_id = x.track_id"
+
+            entrances = dedent(
+                f"""
+                {prefix}_entrances AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        track_id,
+                        timestamp AS entrance_ts,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY {partition_fields}
+                            ORDER BY timestamp, index
+                        ) AS rn
+                    FROM scoped
+                    WHERE event = 1
+                )
+                """
+            ).strip()
+
+            exits = dedent(
+                f"""
+                {prefix}_exits AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        track_id,
+                        timestamp AS exit_ts,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY {partition_fields}
+                            ORDER BY timestamp, index
+                        ) AS rn
+                    FROM scoped
+                    WHERE event = 0
+                )
+                """
+            ).strip()
+
+            sessions = dedent(
+                f"""
+                {prefix}_sessions AS (
+                    SELECT
+                        e.site_id,
+                        e.cam_id,
+                        e.track_id,
+                        e.entrance_ts,
+                        x.exit_ts,
+                        TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, SECOND) / 60.0 AS dwell_minutes
+                    FROM {prefix}_entrances AS e
+                    LEFT JOIN {prefix}_exits AS x
+                        ON e.site_id = x.site_id
+                        AND e.cam_id = x.cam_id
+                        AND e.rn = x.rn
+                        {join_track_id}
+                    WHERE x.exit_ts IS NOT NULL
+                        AND TIMESTAMP_DIFF(x.exit_ts, e.entrance_ts, MINUTE) BETWEEN 0 AND 360
+                )
+                """
+            ).strip()
 
         if use_calendar:
             bucketed = dedent(
@@ -1247,8 +1340,12 @@ class SpecCompiler:
         select_sql = (
             f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_series"
         )
+        ctes = [entrances, exits, sessions, bucketed, series]
+        if options.get("vrmDwellFifo"):
+            ctes = [events, entrances, exits, filtered_exits, sessions, bucketed, series]
+
         return MeasureCompilation(
-            ctes=[entrances, exits, sessions, bucketed, series],
+            ctes=ctes,
             select_sql=select_sql,
         )
 
