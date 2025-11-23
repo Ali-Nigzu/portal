@@ -21,6 +21,10 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
       seriesLength: series.length,
       dataLength: data.length,
       summary,
+      firstPoints: data.slice(0, 5).map((point) => ({
+        x: point.x,
+        value: point.value ?? point.y,
+      })),
     });
   }
 

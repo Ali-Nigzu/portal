@@ -86,6 +86,7 @@ from backend.app.analytics.data_contract import (
     TimeRangeKey,
     compile_contract_query,
 )
+from backend.app.analytics.fixtures import build_offline_chart_result
 from backend.app.analytics.org_config import (
     BigQueryConfigurationError,
     OrganisationNotConfiguredError,
@@ -112,14 +113,21 @@ analytics_spec_cache = SpecCache(LocalCacheBackend(), default_ttl=ANALYTICS_RUN_
 
 ALLOWED_ORIGINS = get_allowed_origins()
 
+ANALYTICS_OFFLINE_MODE = os.getenv("ANALYTICS_OFFLINE_MODE", "").lower() == "true"
+
+
 @app.on_event("startup")
 async def startup_health_check():
     """Run a lightweight BigQuery connectivity check on startup."""
+    if ANALYTICS_OFFLINE_MODE:
+        logger.info("Analytics offline mode enabled; skipping BigQuery startup health check")
+        return
     try:
         bigquery_client.run_health_check()
     except Exception as exc:
         logger.error("BigQuery startup health check failed: %s", exc)
-        raise
+        # Do not crash the server in environments without BigQuery access
+        return
 
 app.add_middleware(
     CORSMiddleware,
@@ -689,48 +697,94 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
         "analytics.run.resolved_table",
         extra={"org": org_id, "table": table_name},
     )
-    engine = AnalyticsEngine(
-        table_router=TableRouter({org_id: table_name}),
-        bigquery_client=bigquery_client,
-        cache=analytics_spec_cache,
-    )
+    if ANALYTICS_OFFLINE_MODE:
+        try:
+            result = build_offline_chart_result(payload.spec)
+            logger.info(
+                "analytics.run.offline_result",
+                extra={"spec_id": payload.spec.get("id"), "org": org_id},
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.exception("Analytics offline fixture failed for %s", org_id)
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "offline_fixture_failed", "message": str(exc)},
+            ) from exc
+    else:
+        engine = AnalyticsEngine(
+            table_router=TableRouter({org_id: table_name}),
+            bigquery_client=bigquery_client,
+            cache=analytics_spec_cache,
+        )
 
-    try:
-        result = engine.execute(
-            payload.spec,
-            organisation=org_id,
-            bypass_cache=payload.bypass_cache,
-            cache_ttl=payload.cache_ttl_seconds,
-        )
-    except ContractValidationError as exc:
-        logger.warning("Analytics execution rejected spec for %s: %s", org_id, exc)
-        raise HTTPException(
-            status_code=422,
-            detail={"error": "invalid_spec", "message": str(exc)},
-        ) from exc
-    except BigQueryDataFrameError as exc:
-        logger.error(
-            "Analytics run failed for %s (job_id=%s): %s", org_id, exc.job_id, exc
-        )
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "error": "bigquery_error",
-                "message": str(exc),
-                "jobId": exc.job_id,
-            },
-        ) from exc
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Analytics run execution error for %s", org_id)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "analytics_execution_failed",
-                "message": str(exc),
-            },
-        ) from exc
+        try:
+            result = engine.execute(
+                payload.spec,
+                organisation=org_id,
+                bypass_cache=payload.bypass_cache,
+                cache_ttl=payload.cache_ttl_seconds,
+            )
+        except ContractValidationError as exc:
+            logger.warning("Analytics execution rejected spec for %s: %s", org_id, exc)
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "invalid_spec", "message": str(exc)},
+            ) from exc
+        except BigQueryDataFrameError as exc:
+            logger.error(
+                "Analytics run failed for %s (job_id=%s): %s", org_id, exc.job_id, exc
+            )
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "bigquery_error",
+                    "message": str(exc),
+                    "jobId": exc.job_id,
+                },
+            ) from exc
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("Analytics run execution error for %s", org_id)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "analytics_execution_failed",
+                    "message": str(exc),
+                },
+            ) from exc
+
+    spec_id = payload.spec.get("id") if isinstance(payload.spec, dict) else None
+    if spec_id == "kpi-vrm-traffic":
+        try:
+            sample_series = []
+            for series in result.get("series", [])[:5]:
+                sample_series.append(
+                    {
+                        "id": series.get("id"),
+                        "geometry": series.get("geometry"),
+                        "unit": series.get("unit"),
+                        "data": series.get("data", [])[:10],
+                    }
+                )
+            logger.info(
+                "analytics.run.debug_traffic",
+                extra={
+                    "org": org_id,
+                    "spec_id": spec_id,
+                    "chart_type": result.get("chartType"),
+                    "chart_style": (result.get("meta", {}) or {})
+                    .get("summary", {})
+                    .get("chartStyle"),
+                    "chart_sub_type": (result.get("meta", {}) or {})
+                    .get("summary", {})
+                    .get("chartSubType"),
+                    "x_dimension": result.get("xDimension"),
+                    "series_preview": sample_series,
+                },
+            )
+        except Exception:  # pragma: no cover - debug logging only
+            logger.exception("analytics.run.debug_traffic_logging_failed")
 
     return result
 

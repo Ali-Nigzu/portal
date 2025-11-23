@@ -323,15 +323,6 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
     });
   }
 
-  if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
-    console.log("[VRM] applyTrafficDistributionShare: last bucket values", {
-      cameras: cameraShares.map((share) => share.camera),
-      counts: cameraShares.map((share) => share.value),
-      totalLastBucketCount: cameraShares.reduce((sum, { value }) => sum + value, 0),
-    });
-  }
-
   const total = cameraShares.reduce((sum, { value }) => sum + value, 0);
   let topCamera = cameraShares[0]?.camera ?? "Camera";
   let topShare: number | null = null;

@@ -382,6 +382,21 @@ const DashboardV2Page = ({
             if (controller.signal.aborted) {
               return;
             }
+            if (process.env.NODE_ENV !== "production" && widget.id === VRM_KPI_IDS.traffic) {
+              const summary = result.meta?.summary as Record<string, unknown> | undefined;
+              // eslint-disable-next-line no-console
+              console.log("[VRM] raw widget result", {
+                widgetId: widget.id,
+                chartType: result.chartType,
+                chartStyle: summary?.chartStyle,
+                chartSubType: summary?.chartSubType,
+                seriesLength: result.series.length,
+                firstPoints: result.series[0]?.data?.slice(0, 5)?.map((point) => ({
+                  x: point.x,
+                  value: point.value ?? point.y,
+                })),
+              });
+            }
             const decorated = decorateResult(widget.id, result, clientContextId);
             setWidgetState((previous) => ({
               ...previous,
