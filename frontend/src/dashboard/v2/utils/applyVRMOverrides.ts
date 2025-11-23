@@ -89,7 +89,14 @@ const vrmWidgets: DashboardWidget[] = [
     fixtureId: "golden_dashboard_kpi_live_occupancy",
     inlineSpec: singleValueSpec({
       id: "dashboard.kpi.vrm.occupancy",
-      measures: [{ aggregation: "occupancy_recursion", id: "occupancy", label: "Occupancy" }],
+      measures: [
+        {
+          aggregation: "occupancy_recursion",
+          id: "occupancy",
+          label: "Occupancy",
+          options: { vrmOccupancy: true },
+        },
+      ],
       notes: ["Occupancy per 15 minutes"],
     }),
     fixedTimeWindow: fixedWindow,
@@ -133,7 +140,14 @@ const vrmWidgets: DashboardWidget[] = [
     fixtureId: "golden_dashboard_kpi_average_dwell_time",
     inlineSpec: singleValueSpec({
       id: "dashboard.kpi.vrm.dwell",
-      measures: [{ aggregation: "dwell_mean", id: "dwell", label: "Avg dwell" }],
+      measures: [
+        {
+          aggregation: "dwell_mean",
+          id: "dwell",
+          label: "Avg dwell",
+          options: { vrmDwellFifo: true },
+        },
+      ],
       notes: ["Average dwell by 15-minute bucket"],
     }),
     fixedTimeWindow: fixedWindow,
