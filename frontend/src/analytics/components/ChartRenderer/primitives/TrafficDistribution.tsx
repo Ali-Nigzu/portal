@@ -85,10 +85,6 @@ export const TrafficDistribution = ({
     };
   });
 
-  const topSlice = legend.reduce((winner, candidate) =>
-    candidate.value >= winner.value ? candidate : winner,
-  legend[0]);
-
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
   const nonFiniteValues = legend
     .map((entry) => entry.value)
@@ -110,7 +106,7 @@ export const TrafficDistribution = ({
     console.log("[VRM] TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
   }
 
-  if (!legend.length || totalValue <= 0) {
+  if (!legend.length || (totalValue <= 0 && !isVrmTraffic)) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log("[VRM] TrafficDistribution: empty view", {
@@ -130,6 +126,25 @@ export const TrafficDistribution = ({
     );
   }
 
+  const zeroTotalFallback = isVrmTraffic && totalValue <= 0;
+  const renderLegend = zeroTotalFallback
+    ? legend.map((entry) => ({
+        ...entry,
+        renderValue: 1,
+        displayValue: 0,
+      }))
+    : legend.map((entry) => ({
+        ...entry,
+        renderValue: entry.value,
+        displayValue: entry.value,
+      }));
+  const renderTopSlice = renderLegend.reduce((winner, candidate) =>
+    candidate.renderValue >= winner.renderValue ? candidate : winner,
+  renderLegend[0]);
+
+  const pieLegend = renderLegend.map((entry) => ({ ...entry, value: entry.renderValue }));
+  const centerValue = renderTopSlice.displayValue ?? renderTopSlice.value ?? 0;
+
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
       <div className="traffic-distribution__title">{title}</div>
@@ -137,12 +152,18 @@ export const TrafficDistribution = ({
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
             <Tooltip
-              formatter={(value) => `${formatNumeric(value as number)}%`}
+              formatter={(value, _name, props) => {
+                const payload = (props?.payload ?? {}) as { displayValue?: number };
+                const displayValue =
+                  typeof payload.displayValue === "number" ? payload.displayValue : (value as number);
+                const safeValue = Number.isFinite(displayValue) ? displayValue : 0;
+                return `${formatNumeric(Math.max(0, safeValue))}%`;
+              }}
               labelFormatter={() => ""}
             />
             <Pie
               dataKey="value"
-              data={legend}
+              data={pieLegend}
               cx="50%"
               cy="50%"
               innerRadius={40}
@@ -152,7 +173,8 @@ export const TrafficDistribution = ({
                 isVrmTraffic
                   ? ({ payload, value }) => {
                       const camId = (payload as { camId?: string })?.camId ?? (payload as { label?: string })?.label;
-                      const share = typeof value === "number" ? Math.round(value) : 0;
+                      const shareCandidate = (payload as { displayValue?: number })?.displayValue ?? value;
+                      const share = typeof shareCandidate === "number" ? Math.round(shareCandidate) : 0;
                       const cameraLabel = camId ? `Cam ${camId.replace(/^Cam\s*/i, "").trim()}` : "Cam";
                       return `${cameraLabel} ${share}%`;
                     }
@@ -160,18 +182,18 @@ export const TrafficDistribution = ({
               }
               labelLine={isVrmTraffic ? false : undefined}
             >
-              {legend.map((entry) => (
+              {pieLegend.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} />
               ))}
               <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="traffic-distribution__center">
-                {`${Math.round(topSlice.value)}%`}
+                {`${Math.round(centerValue)}%`}
               </text>
             </Pie>
           </PieChart>
         </ResponsiveContainer>
         {!isVrmTraffic ? (
           <div className="traffic-distribution__annotations" aria-label="Traffic by camera annotations">
-            {legend.map((entry) => (
+            {renderLegend.map((entry) => (
               <div className="traffic-distribution__annotation" key={entry.label}>
                 <span
                   className="traffic-distribution__annotation-swatch"
@@ -179,7 +201,7 @@ export const TrafficDistribution = ({
                   aria-hidden
                 />
                 <span className="traffic-distribution__annotation-label">{entry.label}</span>
-                <span className="traffic-distribution__annotation-value">{`${Math.round(entry.value)}%`}</span>
+                <span className="traffic-distribution__annotation-value">{`${Math.round(entry.displayValue ?? entry.value)}%`}</span>
               </div>
             ))}
           </div>
