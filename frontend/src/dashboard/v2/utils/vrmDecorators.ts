@@ -567,8 +567,10 @@ export const decorateResult = (
       // eslint-disable-next-line no-console
       console.log("[VRM traffic] decorated result", {
         chartType: decorated.chartType,
-        chartStyle: decorated.meta?.summary?.chartStyle,
-        chartSubType: decorated.meta?.summary?.chartSubType,
+        chartStyle: (decorated as unknown as Record<string, unknown>)?.chartStyle,
+        chartSubType: (decorated as unknown as Record<string, unknown>)?.chartSubType,
+        summaryChartStyle: decorated.meta?.summary?.chartStyle,
+        summaryChartSubType: decorated.meta?.summary?.chartSubType,
         presentation: decorated.meta?.summary?.presentation,
         headline: decorated.meta?.summary?.headlineValue,
         seriesCount: decorated.series?.length,

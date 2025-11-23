@@ -186,9 +186,12 @@ export async function loadWidgetResult(
     console.log("[VRM traffic] raw result post-validation", {
       widgetId: widget.id,
       chartType: result.chartType,
-      chartStyle: (result.meta?.summary as Record<string, unknown> | undefined)?.chartStyle,
-      chartSubType: (result.meta?.summary as Record<string, unknown> | undefined)?.chartSubType,
+      chartStyle: (result as unknown as Record<string, unknown> | undefined)?.chartStyle,
+      chartSubType: (result as unknown as Record<string, unknown> | undefined)?.chartSubType,
+      summaryChartStyle: (result.meta?.summary as Record<string, unknown> | undefined)?.chartStyle,
+      summaryChartSubType: (result.meta?.summary as Record<string, unknown> | undefined)?.chartSubType,
       seriesCount: result.series?.length,
+      xDimension: result.xDimension,
       firstSeriesSample: result.series?.[0]?.data?.slice(0, 5),
       metaSummary: result.meta?.summary,
     });
