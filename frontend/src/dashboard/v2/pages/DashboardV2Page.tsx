@@ -13,6 +13,7 @@ import { fetchDashboardManifest, type FetchDashboardManifestOptions } from "../t
 import {
   loadWidgetResult,
   type LoadWidgetOptions,
+  isAbortError,
 } from "../transport/loadWidgetResult";
 import { unpinDashboardWidget } from "../transport/mutateDashboardManifest";
 import { determineOrgId } from "../../../utils/org";
@@ -393,6 +394,13 @@ const DashboardV2Page = ({
           } catch (err) {
             if (controller.signal.aborted) {
               return;
+            }
+            if (isAbortError(err)) {
+              const code = (err as { code?: string }).code;
+              if (code === "ABORTED") {
+                logInfo("dashboard.widgets", "ui_widget_cancelled", { widgetId: widget.id });
+                return;
+              }
             }
             encounteredError = true;
             const message = err instanceof Error ? err.message : "Unknown widget error";

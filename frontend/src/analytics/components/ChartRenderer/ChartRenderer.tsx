@@ -56,15 +56,23 @@ export const ChartRenderer = ({
     if (!result.series.length) {
       return true;
     }
-    return result.series.every((seriesItem) => {
+    const empties = result.series.map((seriesItem) => {
       if (!seriesItem.data || seriesItem.data.length === 0) {
-        return true;
+        return { id: seriesItem.id, empty: true, reason: "no-data" } as const;
       }
-      return seriesItem.data.every((point) => {
+      const allNull = seriesItem.data.every((point) => {
         const value = point.y ?? point.value ?? null;
         return value === null || value === undefined;
       });
+      return { id: seriesItem.id, empty: allNull, reason: allNull ? "all-null" : "has-value" } as const;
     });
+
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM] ChartRenderer isEmpty check", { empties });
+    }
+
+    return empties.every((entry) => entry.empty);
   }, [result]);
 
   useEffect(() => {
@@ -139,7 +147,7 @@ export const ChartRenderer = ({
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("ChartRenderer: traffic distribution check", {
+    console.log("[VRM] ChartRenderer pre-check", {
       chartType: result.chartType,
       chartStyle: summary?.chartStyle,
       chartSubType: result.meta?.summary?.chartSubType,
@@ -159,19 +167,10 @@ export const ChartRenderer = ({
     );
   }
 
-  if (isEmpty) {
-    return (
-      <ChartEmptyState
-        height={height}
-        className={resolvedClassName}
-      />
-    );
-  }
-
   if (isTrafficDistribution) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
-      console.log("ChartRenderer: rendering TrafficDistribution", {
+      console.log("[VRM] ChartRenderer: rendering TrafficDistribution", {
         chartType: result.chartType,
         chartStyle: summary?.chartStyle,
         chartSubType: result.meta?.summary?.chartSubType,
@@ -179,6 +178,19 @@ export const ChartRenderer = ({
       });
     }
     return <TrafficDistribution {...chartProps} height={height} />;
+  }
+
+  if (isEmpty) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM] ChartRenderer: empty state", { reason: "series empty or all null" });
+    }
+    return (
+      <ChartEmptyState
+        height={height}
+        className={resolvedClassName}
+      />
+    );
   }
 
   if (result.chartType === "single_value") {

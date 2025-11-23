@@ -16,7 +16,7 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("TrafficDistribution: entry", {
+    console.log("[VRM] TrafficDistribution: entry", {
       isVrmTraffic,
       seriesLength: series.length,
       dataLength: data.length,
@@ -39,10 +39,18 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
     const rawCamera = point.x ?? `Cam ${index + 1}`;
     const normalizedCameraId = String(rawCamera).replace(/^Cam\s*/i, "").trim();
     const cameraId = normalizedCameraId !== "" ? normalizedCameraId : String(index + 1);
+    const rawValue =
+      typeof point.value === "number"
+        ? point.value
+        : typeof point.y === "number"
+        ? point.y
+        : 0;
+    const numericValue = Number(rawValue);
+    const value = Number.isFinite(numericValue) ? numericValue : 0;
     return {
       label: `Cam ${cameraId}`,
       camId: cameraId,
-      value: typeof point.value === "number" ? point.value : typeof point.y === "number" ? point.y : 0,
+      value,
       color: sliceColors[index % sliceColors.length],
     };
   });
@@ -55,10 +63,18 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
+    console.log("[VRM] TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
   }
 
   if (!legend.length || totalValue <= 0) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM] TrafficDistribution: empty view", {
+        totalValue,
+        dataLength: data.length,
+        isVrmTraffic,
+      });
+    }
     return (
       <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
         <div className="traffic-distribution__title">{title}</div>
