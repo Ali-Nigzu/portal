@@ -9,4 +9,5 @@ export interface ChartPrimitiveProps {
   onToggleSeries?: (seriesId: string) => void;
   height: number;
   className?: string;
+  widgetId?: string;
 }

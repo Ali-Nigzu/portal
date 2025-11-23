@@ -20,6 +20,7 @@ export interface ChartRendererProps {
   height?: number;
   className?: string;
   onVisibilityChange?: (visibility: SeriesVisibilityMap) => void;
+  widgetId?: string;
 }
 
 function buildInitialVisibility(series: ChartSeries[]): SeriesVisibilityMap {
@@ -34,6 +35,7 @@ export const ChartRenderer = ({
   height = 320,
   className,
   onVisibilityChange,
+  widgetId,
 }: ChartRendererProps) => {
   const [visibility, setVisibility] = useState<SeriesVisibilityMap>(() =>
     buildInitialVisibility(result.series)
@@ -139,11 +141,42 @@ export const ChartRenderer = ({
     onToggleSeries: handleToggleSeries,
     height,
     className: resolvedClassName,
+    widgetId,
   };
 
-  const summary = result.meta?.summary as { presentation?: string; chartStyle?: string } | undefined;
-  const isTrafficDistribution =
-    summary?.chartStyle === "traffic_distribution" || result.meta?.summary?.chartSubType === "traffic_distribution";
+  const summary = result.meta?.summary as
+    | { presentation?: string; chartStyle?: string; chartSubType?: string }
+    | undefined;
+  const summaryRecord = summary as Record<string, unknown> | undefined;
+  const summaryTitle = typeof summaryRecord?.title === "string" ? (summaryRecord.title as string) : undefined;
+  const chartStyle =
+    summary?.chartStyle || (result as unknown as { chartStyle?: string }).chartStyle;
+  const chartSubType =
+    summary?.chartSubType || (result as unknown as { chartSubType?: string }).chartSubType;
+  const summaryTitleNormalized = summaryTitle?.toLowerCase().trim();
+  const isVrmTrafficByTitle =
+    summary?.presentation === "vrm" && summaryTitleNormalized === "traffic by camera";
+  const isVrmPresentation = summary?.presentation === "vrm";
+  const isTrafficWidgetId = isVrmPresentation && widgetId === "kpi-vrm-traffic";
+  const hasTrafficStyle =
+    chartStyle === "traffic_distribution" || chartSubType === "traffic_distribution";
+  const isTrafficDistribution = hasTrafficStyle || isVrmTrafficByTitle || isTrafficWidgetId;
+  const isTrafficDebugCandidate =
+    isTrafficDistribution || summaryTitle === "Traffic by Camera" || result.chartType === "categorical";
+
+  if (process.env.NODE_ENV !== "production" && isTrafficDebugCandidate) {
+    // eslint-disable-next-line no-console
+    console.log("[VRM traffic] ChartRenderer input", {
+      chartType: result.chartType,
+      chartStyle: summary?.chartStyle,
+      chartSubType: result.meta?.summary?.chartSubType,
+      topLevelChartStyle: (result as unknown as { chartStyle?: string }).chartStyle,
+      topLevelChartSubType: (result as unknown as { chartSubType?: string }).chartSubType,
+      seriesCount: result.series?.length,
+      seriesLengths: result.series?.map((entry) => entry.data?.length ?? 0),
+      summary,
+    });
+  }
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
@@ -175,6 +208,9 @@ export const ChartRenderer = ({
         chartStyle: summary?.chartStyle,
         chartSubType: result.meta?.summary?.chartSubType,
         seriesLength: result.series.length,
+        isEmpty,
+        seriesLengths: result.series.map((seriesItem) => seriesItem.data?.length ?? 0),
+        renderedPrimitive: "TrafficDistribution",
       });
     }
     return <TrafficDistribution {...chartProps} height={height} />;
@@ -183,7 +219,10 @@ export const ChartRenderer = ({
   if (isEmpty) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
-      console.log("[VRM] ChartRenderer: empty state", { reason: "series empty or all null" });
+      console.log("[VRM] ChartRenderer: empty state", {
+        reason: "series empty or all null",
+        renderedPrimitive: "ChartEmptyState",
+      });
     }
     return (
       <ChartEmptyState
@@ -194,6 +233,10 @@ export const ChartRenderer = ({
   }
 
   if (result.chartType === "single_value") {
+    if (process.env.NODE_ENV !== "production" && isTrafficDebugCandidate) {
+      // eslint-disable-next-line no-console
+      console.log("[VRM traffic] ChartRenderer decision", { renderedPrimitive: "KpiTile" });
+    }
     return <KpiTile {...chartProps} />;
   }
 
@@ -202,6 +245,10 @@ export const ChartRenderer = ({
   }
 
   if (result.chartType === "categorical") {
+    if (process.env.NODE_ENV !== "production" && isTrafficDebugCandidate) {
+      // eslint-disable-next-line no-console
+      console.log("[VRM traffic] ChartRenderer decision", { renderedPrimitive: "BarChart" });
+    }
     return <BarChart {...chartProps} />;
   }
 
@@ -210,11 +257,22 @@ export const ChartRenderer = ({
     const hasBar = geometries.has("bar") || geometries.has("column");
     const hasArea = geometries.has("area");
     const hasLine = geometries.has("line");
+    if (process.env.NODE_ENV !== "production" && isTrafficDebugCandidate) {
+      // eslint-disable-next-line no-console
+      console.log("[VRM traffic] ChartRenderer decision", {
+        renderedPrimitive: (hasArea && hasBar) || (hasBar && hasLine) ? "FlowChart" : "TimeSeriesChart",
+        geometries: Array.from(geometries),
+      });
+    }
     if ((hasArea && hasBar) || (hasBar && hasLine)) {
       return <FlowChart {...chartProps} />;
     }
     return <TimeSeriesChart {...chartProps} />;
   }
 
+  if (process.env.NODE_ENV !== "production" && isTrafficDebugCandidate) {
+    // eslint-disable-next-line no-console
+    console.log("[VRM traffic] ChartRenderer decision", { renderedPrimitive: "TimeSeriesChart (fallback)" });
+  }
   return <TimeSeriesChart {...chartProps} />;
 };

@@ -72,12 +72,14 @@ const KpiTile = ({
   state,
   locked,
   onRemove,
+  widgetId,
 }: {
   title: string;
   result?: Parameters<typeof ChartRenderer>[0]["result"];
   state: DashboardWidgetState;
   locked?: boolean;
   onRemove?: () => void;
+  widgetId: string;
 }) => {
   const summary = result?.meta?.summary ?? {};
   const headline = typeof summary.headline === "string" ? summary.headline : null;
@@ -104,6 +106,7 @@ const KpiTile = ({
         result={renderedResult!}
         height={168}
         className="dashboard-v2__kpi-renderer"
+        widgetId={widgetId}
       />
     );
   }
@@ -133,6 +136,7 @@ const ChartCard = ({
   result,
   locked,
   onRemove,
+  widgetId,
 }: {
   title: string;
   subtitle?: string;
@@ -140,6 +144,7 @@ const ChartCard = ({
   result?: Parameters<typeof ChartRenderer>[0]["result"];
   locked?: boolean;
   onRemove?: () => void;
+  widgetId: string;
 }) => {
   let body: JSX.Element;
   if (state.status === "loading") {
@@ -149,7 +154,7 @@ const ChartCard = ({
   } else if (!result) {
     body = renderError("No data available");
   } else {
-    body = <ChartRenderer result={result} height={360} />;
+    body = <ChartRenderer result={result} height={360} widgetId={widgetId} />;
   }
 
   const footer = !locked && onRemove ? (
@@ -619,17 +624,18 @@ const DashboardV2Page = ({
           </div>
         ) : (
           kpiWidgets.map((state) => (
-            <KpiTile
-              key={state.widget.id}
-              title={state.widget.title}
-              result={state.result}
-              state={state}
-              locked={state.widget.locked}
-              onRemove={
-                state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
-              }
-            />
-          ))
+          <KpiTile
+            key={state.widget.id}
+            title={state.widget.title}
+            result={state.result}
+            state={state}
+            locked={state.widget.locked}
+            widgetId={state.widget.id}
+            onRemove={
+              state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
+            }
+          />
+        ))
         )}
       </section>
 
@@ -715,6 +721,7 @@ const DashboardV2Page = ({
                 state={state}
                 result={state.result}
                 locked={state.widget.locked}
+                widgetId={state.widget.id}
                 onRemove={
                   state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
                 }

@@ -50,6 +50,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   }, [primarySeries]);
 
   if (!primarySeries) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM traffic] KpiTile early return: no primary series");
+    }
     return null;
   }
   const latestPoint = primarySeries.data[primarySeries.data.length - 1];
@@ -161,6 +165,17 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           );
         })
       : [];
+
+  if (process.env.NODE_ENV !== "production" && isTraffic) {
+    // eslint-disable-next-line no-console
+    console.log("[VRM traffic] KpiTile input", {
+      chartStyle,
+      presentation,
+      primarySeriesLength: primarySeries?.data?.length,
+      headlineValue: summary?.headlineValue,
+      hasTrafficRows: trafficRows.length > 0,
+    });
+  }
 
   return (
     <div

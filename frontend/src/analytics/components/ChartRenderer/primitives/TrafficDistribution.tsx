@@ -4,15 +4,33 @@ import { formatNumeric } from "../utils/format";
 
 const sliceColors = ["#2d6cdf", "#4bcf9f", "#f4b63d", "#f97066", "#7c3aed", "#0ea5e9"];
 
-export const TrafficDistribution = ({ result, series, height, className }: ChartPrimitiveProps) => {
+export const TrafficDistribution = ({
+  result,
+  series,
+  height,
+  className,
+  widgetId,
+}: ChartPrimitiveProps) => {
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
   const title = typeof summary.title === "string" ? (summary.title as string) : "Traffic by Camera";
+  const topLevelChartStyle = (result as unknown as { chartStyle?: string }).chartStyle;
+  const topLevelChartSubType = (result as unknown as { chartSubType?: string }).chartSubType;
+  const summaryChartStyle = summary.chartStyle as string | undefined;
+  const summaryChartSubType = summary.chartSubType as string | undefined;
+  const hasTrafficStyle =
+    summaryChartStyle === "traffic_distribution" ||
+    summaryChartSubType === "traffic_distribution" ||
+    topLevelChartStyle === "traffic_distribution" ||
+    topLevelChartSubType === "traffic_distribution";
   const isVrmTraffic =
     typeof summary.presentation === "string" &&
     summary.presentation === "vrm" &&
-    summary.chartSubType === "traffic_distribution";
+    (hasTrafficStyle || widgetId === "kpi-vrm-traffic");
+  const contentClassName = `traffic-distribution__content${
+    isVrmTraffic ? " traffic-distribution__content--vrm" : ""
+  }`;
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
@@ -29,6 +47,14 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
   }
 
   if (!primary || data.length === 0) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM traffic] TrafficDistribution early-exit", {
+        reason: !primary ? "no-primary" : "no-data",
+        seriesLength: series.length,
+        dataLength: data.length,
+      });
+    }
     return (
       <div
         className={`traffic-distribution kpi-tile ${className ?? ""}`}
@@ -64,6 +90,20 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
   legend[0]);
 
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
+  const nonFiniteValues = legend
+    .map((entry) => entry.value)
+    .filter((value) => !Number.isFinite(value))
+    .slice(0, 5);
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("[VRM traffic] TrafficDistribution totals", {
+      totalValue,
+      legendCount: legend.length,
+      dataCount: data.length,
+      nonFiniteValues,
+    });
+  }
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
@@ -77,6 +117,7 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
         totalValue,
         dataLength: data.length,
         isVrmTraffic,
+        reason: !legend.length ? "no-legend" : "non-positive-total",
       });
     }
     return (
@@ -92,7 +133,7 @@ export const TrafficDistribution = ({ result, series, height, className }: Chart
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
       <div className="traffic-distribution__title">{title}</div>
-      <div className="traffic-distribution__content">
+      <div className={contentClassName}>
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
             <Tooltip
