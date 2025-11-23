@@ -222,7 +222,7 @@ const DashboardV2Page = ({
   }, []);
 
   const resolvedUiClient = useMemo(() => {
-    const candidates = [credentials.orgId, credentials.username, manifest?.orgId, orgId];
+    const candidates = [manifest?.orgId, orgId, credentials.orgId, credentials.username];
     for (const candidate of candidates) {
       const resolved = resolveUiClient(candidate);
       if (resolved) {
@@ -557,8 +557,8 @@ const DashboardV2Page = ({
     () => localTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     [localTime],
   );
-  const siteOrgId = orgId ?? manifest?.orgId;
-  const siteUiOrgId = resolveUiClient(siteOrgId) ?? siteOrgId;
+  const siteOrgId = manifest?.orgId ?? orgId;
+  const siteUiOrgId = resolvedUiClient ?? resolveUiClient(siteOrgId) ?? siteOrgId;
   const siteLabel = siteUiOrgId ?? "Site";
   const siteId = siteUiOrgId ?? "—";
   const isVrmDashboard = useMemo(() => {
