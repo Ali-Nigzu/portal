@@ -13,7 +13,6 @@ const CAMERAS_BY_CLIENT: Record<string, string[]> = {
 
 const TABLE_TO_UI_CLIENT: Record<string, string> = {
   client0: "client1",
-  client1: "client2",
 };
 
 const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "").toLowerCase();
@@ -23,8 +22,11 @@ export const resolveUiClient = (orgId: string | undefined): string | undefined =
   if (!normalized) {
     return undefined;
   }
-  const mapped = TABLE_TO_UI_CLIENT[normalized] ?? normalized;
-  if (CAPACITY_BY_CLIENT[mapped] !== undefined) {
+  if (CAPACITY_BY_CLIENT[normalized] !== undefined) {
+    return normalized;
+  }
+  const mapped = TABLE_TO_UI_CLIENT[normalized];
+  if (mapped && CAPACITY_BY_CLIENT[mapped] !== undefined) {
     return mapped;
   }
   return undefined;
@@ -173,6 +175,12 @@ export const getCapacityUsageHeadline = (
   result: ChartResult,
   orgId: string | undefined,
 ): { currentUsage: number | null; peakToday: number } => {
+  const summary = result.meta?.summary as Record<string, unknown> | undefined;
+  const summaryNow = summary?.capacity_usage_now;
+  const summaryPeak = summary?.peak_capacity_usage_today;
+  if (typeof summaryNow === "number" && typeof summaryPeak === "number") {
+    return { currentUsage: summaryNow, peakToday: summaryPeak };
+  }
   const series = result.series?.[0];
   const capacity = lookupCapacity(orgId);
   if (!series || !capacity) {
@@ -489,10 +497,6 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
     return { ...point, value: usage, y: usage } as DataPoint;
   });
 
-  series.unit = "percentage";
-  series.label = "Capacity usage";
-  series.data = normalizedSeries;
-
   const { last, previous } = getLastTwoValues({ ...series, data: normalizedSeries });
   const deltaUsage = typeof last === "number" && typeof previous === "number" ? last - previous : null;
   const usageNow = typeof last === "number" ? last : null;
@@ -524,8 +528,30 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   summary.peak_occupancy_today = peakOccupancy;
 
   addSummaryText(next, "vrmChipText", `peak: ${Math.round(peakUsage)}%`);
-  setHeadlineValue(next, usageNow);
-  logVrmDebug(VRM_KPI_IDS.capacity, series, usageNow);
+  addSummaryText(next, "chartStyle", "capacity_usage");
+  addSummaryText(next, "chartSubType", "capacity_usage");
+  addSummaryText(next, "title", "Capacity Usage");
+
+  const usageValue = typeof usageNow === "number" && Number.isFinite(usageNow) ? usageNow : 0;
+  const peakValue = Number.isFinite(peakUsage) ? peakUsage : 0;
+  const donutUsage = Math.min(Math.max(usageValue, 0), 100);
+  const donutPeak = Math.min(Math.max(peakValue, donutUsage), 100);
+  const peakExtra = Math.max(0, donutPeak - donutUsage);
+  const remainder = Math.max(0, 100 - donutPeak);
+
+  next.chartType = "categorical";
+  next.xDimension = { id: "capacity_segment", type: "category" } as ChartResult["xDimension"];
+  series.unit = "percentage";
+  series.label = "Capacity usage";
+  series.geometry = "bar";
+  series.data = [
+    { x: "Usage", value: donutUsage, y: donutUsage },
+    { x: "Peak extra", value: peakExtra, y: peakExtra },
+    { x: "Remaining", value: remainder, y: remainder },
+  ];
+
+  setHeadlineValue(next, usageValue);
+  logVrmDebug(VRM_KPI_IDS.capacity, series, usageValue);
   return next;
 };
 

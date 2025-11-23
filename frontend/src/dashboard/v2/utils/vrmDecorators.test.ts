@@ -13,13 +13,86 @@ describe("vrm capacity mapping", () => {
     expect(lookupCapacity("client0")).toBe(5);
   });
 
-  it("maps table client1 to ui client2 with capacity 750", () => {
-    expect(resolveUiClient("client1")).toBe("client2");
-    expect(lookupCapacity("client1")).toBe(750);
+  it("uses the UI client identifier when provided", () => {
+    expect(resolveUiClient("client1")).toBe("client1");
+    expect(lookupCapacity("client1")).toBe(5);
+  });
+
+  it("maps table client1_compat to ui client1", () => {
+    expect(resolveUiClient("client1_compat")).toBe("client1");
+    expect(lookupCapacity("client1_compat")).toBe(5);
   });
 
   it("throws for unknown clients", () => {
     expect(() => lookupCapacity("unknown-client")).toThrow("Unknown client for capacity usage");
+  });
+});
+
+describe("vrm capacity donut", () => {
+  it("builds usage/peak/rem slices with capacity mapping", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+
+    const capacityResult = decorateResult(
+      VRM_KPI_IDS.capacity,
+      {
+        chartType: "single_value",
+        xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "occupancy",
+            label: "Occupancy",
+            geometry: "line",
+            unit: "people",
+            data: [
+              { x: prev.toISOString(), y: 300 },
+              { x: now.toISOString(), y: 450 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: {} },
+      },
+      "client2",
+    );
+
+    expect(capacityResult.chartType).toBe("categorical");
+    expect(capacityResult.meta?.summary?.chartStyle).toBe("capacity_usage");
+    const data = capacityResult.series[0].data;
+    const values = data.map((point) => Math.round((point.value ?? point.y ?? 0) as number));
+    expect(values).toEqual([60, 0, 40]);
+    expect(Math.round((capacityResult.meta?.summary?.headlineValue as number) ?? 0)).toBe(60);
+  });
+
+  it("caps donut slices at 100 while keeping headline", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+
+    const capacityResult = decorateResult(
+      VRM_KPI_IDS.capacity,
+      {
+        chartType: "single_value",
+        xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "occupancy",
+            label: "Occupancy",
+            geometry: "line",
+            unit: "people",
+            data: [
+              { x: prev.toISOString(), y: 800 },
+              { x: now.toISOString(), y: 1200 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: {} },
+      },
+      "client2",
+    );
+
+    const data = capacityResult.series[0].data;
+    const total = data.reduce((sum, point) => sum + Number(point.value ?? point.y ?? 0), 0);
+    expect(Math.round(total)).toBe(100);
+    expect(Math.round((capacityResult.meta?.summary?.headlineValue as number) ?? 0)).toBe(160);
   });
 });
 

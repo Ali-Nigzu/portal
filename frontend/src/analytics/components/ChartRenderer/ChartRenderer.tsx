@@ -9,6 +9,7 @@ import {
   HeatmapChart,
   KpiTile,
   TrafficDistribution,
+  CapacityDonut,
 } from "./primitives";
 import { ChartErrorState } from "./ui/ChartErrorState";
 import { ChartEmptyState } from "./ui/ChartEmptyState";
@@ -161,6 +162,8 @@ export const ChartRenderer = ({
   const hasTrafficStyle =
     chartStyle === "traffic_distribution" || chartSubType === "traffic_distribution";
   const isTrafficDistribution = hasTrafficStyle || isVrmTrafficByTitle || isTrafficWidgetId;
+  const isCapacityUsage =
+    chartStyle === "capacity_usage" || chartSubType === "capacity_usage";
   const isTrafficDebugCandidate =
     isTrafficDistribution || summaryTitle === "Traffic by Camera" || result.chartType === "categorical";
 
@@ -214,6 +217,22 @@ export const ChartRenderer = ({
       });
     }
     return <TrafficDistribution {...chartProps} height={height} />;
+  }
+
+  if (isCapacityUsage && isVrmPresentation) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM] ChartRenderer: rendering CapacityDonut", {
+        chartType: result.chartType,
+        chartStyle: summary?.chartStyle,
+        chartSubType: result.meta?.summary?.chartSubType,
+        seriesLength: result.series.length,
+        isEmpty,
+        seriesLengths: result.series.map((seriesItem) => seriesItem.data?.length ?? 0),
+        renderedPrimitive: "CapacityDonut",
+      });
+    }
+    return <CapacityDonut {...chartProps} height={height} />;
   }
 
   if (isEmpty) {
