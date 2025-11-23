@@ -221,6 +221,12 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
   markCompact(trafficDistributionResult);
   suppressDelta(trafficDistributionResult);
   ensureSummary(trafficDistributionResult);
+  // ChartRenderer traffic routing relies on both top-level and summary style hints.
+  // Ensure they are always present for decorated VRM traffic results.
+  (trafficDistributionResult as unknown as { chartStyle?: string }).chartStyle = "traffic_distribution";
+  (trafficDistributionResult as unknown as { chartSubType?: string }).chartSubType = "traffic_distribution";
+  trafficDistributionResult.meta.summary!.chartStyle = "traffic_distribution";
+  trafficDistributionResult.meta.summary!.chartSubType = "traffic_distribution";
   const seriesList = trafficDistributionResult.series ?? [];
 
   if (process.env.NODE_ENV !== "production") {
@@ -556,7 +562,20 @@ export const decorateResult = (
   }
   markCompact(result);
   if (widgetId === VRM_KPI_IDS.traffic) {
-    return applyTrafficDistributionShare(result, orgId);
+    const decorated = applyTrafficDistributionShare(result, orgId);
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log("[VRM traffic] decorated result", {
+        chartType: decorated.chartType,
+        chartStyle: decorated.meta?.summary?.chartStyle,
+        chartSubType: decorated.meta?.summary?.chartSubType,
+        presentation: decorated.meta?.summary?.presentation,
+        headline: decorated.meta?.summary?.headlineValue,
+        seriesCount: decorated.series?.length,
+        firstSeriesSample: decorated.series?.[0]?.data?.slice(0, 5),
+      });
+    }
+    return decorated;
   }
   if (widgetId === VRM_KPI_IDS.capacity) {
     return applyCapacityUsage(result, orgId);

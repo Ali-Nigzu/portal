@@ -51,6 +51,8 @@ describe("traffic distribution decorator", () => {
     const primarySeries = decorated.series[0];
 
     expect(decorated.chartType).toBe("categorical");
+    expect((decorated as unknown as { chartStyle?: string }).chartStyle).toBe("traffic_distribution");
+    expect((decorated as unknown as { chartSubType?: string }).chartSubType).toBe("traffic_distribution");
     expect(decorated.meta?.summary?.chartSubType).toBe("traffic_distribution");
     expect(decorated.meta?.summary?.chartStyle).toBe("traffic_distribution");
     expect(decorated.meta?.summary?.presentation).toBe("vrm");
