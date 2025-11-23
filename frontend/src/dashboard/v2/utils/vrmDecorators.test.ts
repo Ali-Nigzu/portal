@@ -1,19 +1,98 @@
 import type { ChartResult } from "../../../analytics/schemas/charting";
-import { applyTrafficDistributionShare, lookupCapacity, resolveUiClient } from "./vrmDecorators";
+import { VRM_KPI_IDS } from "./applyVRMOverrides";
+import {
+  applyTrafficDistributionShare,
+  decorateResult,
+  lookupCapacity,
+  resolveUiClient,
+} from "./vrmDecorators";
 
 describe("vrm capacity mapping", () => {
-  it("maps table client0 to ui client1 with capacity 10", () => {
+  it("maps table client0 to ui client1 with capacity 5", () => {
     expect(resolveUiClient("client0")).toBe("client1");
-    expect(lookupCapacity("client0")).toBe(10);
+    expect(lookupCapacity("client0")).toBe(5);
   });
 
-  it("maps table client1 to ui client2 with capacity 100", () => {
-    expect(resolveUiClient("client1")).toBe("client2");
-    expect(lookupCapacity("client1")).toBe(100);
+  it("uses the UI client identifier when provided", () => {
+    expect(resolveUiClient("client1")).toBe("client1");
+    expect(lookupCapacity("client1")).toBe(5);
+  });
+
+  it("maps table client1_compat to ui client1", () => {
+    expect(resolveUiClient("client1_compat")).toBe("client1");
+    expect(lookupCapacity("client1_compat")).toBe(5);
   });
 
   it("throws for unknown clients", () => {
     expect(() => lookupCapacity("unknown-client")).toThrow("Unknown client for capacity usage");
+  });
+});
+
+describe("vrm capacity donut", () => {
+  it("builds usage/peak/rem slices with capacity mapping", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+
+    const capacityResult = decorateResult(
+      VRM_KPI_IDS.capacity,
+      {
+        chartType: "single_value",
+        xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "occupancy",
+            label: "Occupancy",
+            geometry: "line",
+            unit: "people",
+            data: [
+              { x: prev.toISOString(), y: 300 },
+              { x: now.toISOString(), y: 450 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: {} },
+      },
+      "client2",
+    );
+
+    expect(capacityResult.chartType).toBe("categorical");
+    expect(capacityResult.meta?.summary?.chartStyle).toBe("capacity_usage");
+    const data = capacityResult.series[0].data;
+    const values = data.map((point) => Math.round((point.value ?? point.y ?? 0) as number));
+    expect(values).toEqual([60, 0, 40]);
+    expect(Math.round((capacityResult.meta?.summary?.headlineValue as number) ?? 0)).toBe(60);
+  });
+
+  it("caps donut slices at 100 while keeping headline", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+
+    const capacityResult = decorateResult(
+      VRM_KPI_IDS.capacity,
+      {
+        chartType: "single_value",
+        xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+        series: [
+          {
+            id: "occupancy",
+            label: "Occupancy",
+            geometry: "line",
+            unit: "people",
+            data: [
+              { x: prev.toISOString(), y: 800 },
+              { x: now.toISOString(), y: 1200 },
+            ],
+          },
+        ],
+        meta: { timezone: "UTC", summary: {} },
+      },
+      "client2",
+    );
+
+    const data = capacityResult.series[0].data;
+    const total = data.reduce((sum, point) => sum + Number(point.value ?? point.y ?? 0), 0);
+    expect(Math.round(total)).toBe(100);
+    expect(Math.round((capacityResult.meta?.summary?.headlineValue as number) ?? 0)).toBe(160);
   });
 });
 
@@ -95,5 +174,81 @@ describe("traffic distribution decorator", () => {
     expect(primarySeries.data.map((point) => point.value ?? point.y)).toEqual([100]);
     expect(decorated.meta?.summary?.headlineValue).toBe(100);
     expect(decorated.meta?.summary?.chartSubType).toBe("traffic_distribution");
+  });
+
+  it("renders zero-value slices instead of empty state when totals are zero", () => {
+    const result: ChartResult = {
+      chartType: "composed_time",
+      xDimension: { id: "timestamp", type: "time" },
+      series: [
+        {
+          id: "cam-1",
+          label: "Events | camera_id=1",
+          geometry: "column",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: 0 },
+            { x: "2024-01-01T00:15:00Z", value: 0 },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC" },
+    };
+
+    const decorated = applyTrafficDistributionShare(result, "client0");
+    const primarySeries = decorated.series[0];
+
+    expect(decorated.meta?.summary?.headlineValue).toBe(0);
+    expect(primarySeries.data).toHaveLength(1);
+    expect(primarySeries.data[0]).toEqual({ x: "Cam 0", value: 0, y: 0 });
+    expect(decorated.meta?.summary?.chartSubType).toBe("traffic_distribution");
+  });
+});
+
+describe("vrm dwell headline carry-forward", () => {
+  it("uses the latest non-null dwell value when the last bucket is null", () => {
+    const dwellResult: ChartResult = {
+      chartType: "single_value",
+      xDimension: { id: "timestamp", type: "time" },
+      series: [
+        {
+          id: "dwell",
+          label: "dwell",
+          geometry: "line",
+          unit: "minutes",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: 4 },
+            { x: "2024-01-01T00:15:00Z", value: null },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC", summary: {} },
+    };
+
+    const decorated = decorateResult(VRM_KPI_IDS.dwell, dwellResult, "client1");
+    expect(decorated.meta?.summary?.headlineValue).toBe(4);
+  });
+
+  it("leaves the headline null when all buckets are null", () => {
+    const dwellResult: ChartResult = {
+      chartType: "single_value",
+      xDimension: { id: "timestamp", type: "time" },
+      series: [
+        {
+          id: "dwell",
+          label: "dwell",
+          geometry: "line",
+          unit: "minutes",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: null },
+            { x: "2024-01-01T00:15:00Z", value: null },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC", summary: {} },
+    };
+
+    const decorated = decorateResult(VRM_KPI_IDS.dwell, dwellResult, "client1");
+    expect(decorated.meta?.summary?.headlineValue).toBeNull();
   });
 });

@@ -181,8 +181,8 @@ describe("applyVRMOverrides", () => {
           geometry: "line",
           unit: "people",
           data: [
-            { x: prev.toISOString(), y: 100 },
-            { x: now.toISOString(), y: 90 },
+            { x: prev.toISOString(), y: 3 },
+            { x: now.toISOString(), y: 4 },
           ],
         },
       ],
@@ -198,11 +198,11 @@ describe("applyVRMOverrides", () => {
     expect(footfallResult.meta?.summary?.vrmChipText).toBe("today: 15");
 
     const capacityHeadline = getCapacityUsageHeadline(rawCapacityResult as any, "client1");
-    expect(capacityHeadline.currentUsage).toBe(90);
-    expect(capacityHeadline.peakToday).toBe(100);
-    expect(capacityResult.meta?.summary?.headlineValue).toBe(90);
+    expect(capacityHeadline.currentUsage).toBe(80);
+    expect(capacityHeadline.peakToday).toBe(80);
+    expect(capacityResult.meta?.summary?.headlineValue).toBe(80);
     expect(capacityResult.meta?.summary?.hideDelta).toBeTruthy();
-    expect(capacityResult.meta?.summary?.vrmChipText).toBe("peak: 100%");
+    expect(capacityResult.meta?.summary?.vrmChipText).toBe("peak: 80%");
   });
 
   it("uses UI client identifiers for capacity mapping", () => {
@@ -231,7 +231,7 @@ describe("applyVRMOverrides", () => {
     );
 
     const headline = getCapacityUsageHeadline(capacityResult as any, "client2");
-    expect(Math.round(headline.currentUsage ?? 0)).toBe(327);
+    expect(Math.round(headline.currentUsage ?? 0)).toBe(44);
     expect(capacityResult.meta?.summary?.peak_capacity_usage_today).toBeGreaterThan(0);
   });
 

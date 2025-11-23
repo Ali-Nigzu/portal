@@ -2,13 +2,17 @@ import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/sch
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
 
 const CAPACITY_BY_CLIENT: Record<string, number> = {
-  client1: 10,
-  client2: 100,
+  client1: 5,
+  client2: 750,
+};
+
+const CAMERAS_BY_CLIENT: Record<string, string[]> = {
+  client1: ["Cam 0"],
+  client2: ["Cam 1", "Cam 2"],
 };
 
 const TABLE_TO_UI_CLIENT: Record<string, string> = {
   client0: "client1",
-  client1: "client2",
 };
 
 const normalizeOrgId = (orgId: string | undefined) => orgId?.replace(/_compat$/, "").toLowerCase();
@@ -18,8 +22,11 @@ export const resolveUiClient = (orgId: string | undefined): string | undefined =
   if (!normalized) {
     return undefined;
   }
-  const mapped = TABLE_TO_UI_CLIENT[normalized] ?? normalized;
-  if (CAPACITY_BY_CLIENT[mapped] !== undefined) {
+  if (CAPACITY_BY_CLIENT[normalized] !== undefined) {
+    return normalized;
+  }
+  const mapped = TABLE_TO_UI_CLIENT[normalized];
+  if (mapped && CAPACITY_BY_CLIENT[mapped] !== undefined) {
     return mapped;
   }
   return undefined;
@@ -95,6 +102,20 @@ const applyLastBucketHeadline = (widgetId: string, result: ChartResult) => {
   logVrmDebug(widgetId, series, lastValue);
 };
 
+const lastNonNullValue = (series?: ChartSeries): number | null => {
+  if (!series) {
+    return null;
+  }
+  for (let index = series.data.length - 1; index >= 0; index -= 1) {
+    const point = series.data[index];
+    const value = point?.value ?? point?.y;
+    if (typeof value === "number") {
+      return value;
+    }
+  }
+  return null;
+};
+
 const addSummaryText = (result: ChartResult, key: string, value?: string) => {
   if (!value) {
     return;
@@ -154,6 +175,12 @@ export const getCapacityUsageHeadline = (
   result: ChartResult,
   orgId: string | undefined,
 ): { currentUsage: number | null; peakToday: number } => {
+  const summary = result.meta?.summary as Record<string, unknown> | undefined;
+  const summaryNow = summary?.capacity_usage_now;
+  const summaryPeak = summary?.peak_capacity_usage_today;
+  if (typeof summaryNow === "number" && typeof summaryPeak === "number") {
+    return { currentUsage: summaryNow, peakToday: summaryPeak };
+  }
   const series = result.series?.[0];
   const capacity = lookupCapacity(orgId);
   if (!series || !capacity) {
@@ -342,6 +369,19 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
       });
     }
 
+    const resolvedUiClient = resolveUiClient(orgId);
+    const configuredNames = resolvedUiClient ? CAMERAS_BY_CLIENT[resolvedUiClient] : undefined;
+    const discoveredNames = cameraShares.length
+      ? cameraShares.map((share) => share.camera)
+      : seriesList.map((series, index) => deriveCameraLabel(series, index)).filter(Boolean);
+    const fallbackNames = configuredNames?.length
+      ? configuredNames
+      : discoveredNames.length > 0
+        ? discoveredNames
+        : ["Camera 0"];
+
+    const shareData: DataPoint[] = fallbackNames.map((camera) => ({ x: camera, value: 0, y: 0 }));
+
     trafficDistributionResult.chartType = "categorical";
     trafficDistributionResult.xDimension = { id: "camera", type: "category" } as ChartResult["xDimension"];
     trafficDistributionResult.series = [
@@ -350,11 +390,11 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
         label: "Traffic by Camera",
         geometry: "bar",
         unit: "percentage",
-        data: [],
+        data: shareData,
       },
     ];
-    setHeadlineValue(trafficDistributionResult, null);
-    addSummaryText(trafficDistributionResult, "headline", undefined);
+    setHeadlineValue(trafficDistributionResult, 0);
+    addSummaryText(trafficDistributionResult, "headline", `${fallbackNames[0] ?? "Camera"} – 0%`);
     addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
     addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
     addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
@@ -368,7 +408,7 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
         chartSubType: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.chartSubType,
         presentation: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.presentation,
         headlineValue: (trafficDistributionResult.meta?.summary as Record<string, unknown> | undefined)?.headlineValue,
-        dataLength: 0,
+        dataLength: shareData.length,
       });
     }
     return trafficDistributionResult;
@@ -457,10 +497,6 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
     return { ...point, value: usage, y: usage } as DataPoint;
   });
 
-  series.unit = "percentage";
-  series.label = "Capacity usage";
-  series.data = normalizedSeries;
-
   const { last, previous } = getLastTwoValues({ ...series, data: normalizedSeries });
   const deltaUsage = typeof last === "number" && typeof previous === "number" ? last - previous : null;
   const usageNow = typeof last === "number" ? last : null;
@@ -492,8 +528,30 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   summary.peak_occupancy_today = peakOccupancy;
 
   addSummaryText(next, "vrmChipText", `peak: ${Math.round(peakUsage)}%`);
-  setHeadlineValue(next, usageNow);
-  logVrmDebug(VRM_KPI_IDS.capacity, series, usageNow);
+  addSummaryText(next, "chartStyle", "capacity_usage");
+  addSummaryText(next, "chartSubType", "capacity_usage");
+  addSummaryText(next, "title", "Capacity Usage");
+
+  const usageValue = typeof usageNow === "number" && Number.isFinite(usageNow) ? usageNow : 0;
+  const peakValue = Number.isFinite(peakUsage) ? peakUsage : 0;
+  const donutUsage = Math.min(Math.max(usageValue, 0), 100);
+  const donutPeak = Math.min(Math.max(peakValue, donutUsage), 100);
+  const peakExtra = Math.max(0, donutPeak - donutUsage);
+  const remainder = Math.max(0, 100 - donutPeak);
+
+  next.chartType = "categorical";
+  next.xDimension = { id: "capacity_segment", type: "category" } as ChartResult["xDimension"];
+  series.unit = "percentage";
+  series.label = "Capacity usage";
+  series.geometry = "bar";
+  series.data = [
+    { x: "Usage", value: donutUsage, y: donutUsage },
+    { x: "Peak extra", value: peakExtra, y: peakExtra },
+    { x: "Remaining", value: remainder, y: remainder },
+  ];
+
+  setHeadlineValue(next, usageValue);
+  logVrmDebug(VRM_KPI_IDS.capacity, series, usageValue);
   return next;
 };
 
@@ -537,6 +595,21 @@ const applyBasicVrmHeadline = (widgetId: string, result: ChartResult) => {
   markCompact(next);
   suppressDelta(next);
   applyLastBucketHeadline(widgetId, next);
+  return next;
+};
+
+const applyDwellHeadline = (result: ChartResult) => {
+  const next = applyBasicVrmHeadline(VRM_KPI_IDS.dwell, result);
+  const summary = next.meta?.summary;
+  const headline = summary?.headlineValue;
+  if (headline === null || typeof headline !== "number") {
+    const series = next.series?.[0];
+    const carried = lastNonNullValue(series);
+    if (typeof carried === "number") {
+      setHeadlineValue(next, carried);
+      logVrmDebug(VRM_KPI_IDS.dwell, series, carried);
+    }
+  }
   return next;
 };
 
@@ -588,7 +661,10 @@ export const decorateResult = (
   if (widgetId === VRM_KPI_IDS.occupancy) {
     return applyOccupancyDelta(result);
   }
-  if (widgetId === VRM_KPI_IDS.entrances || widgetId === VRM_KPI_IDS.exits || widgetId === VRM_KPI_IDS.dwell) {
+  if (widgetId === VRM_KPI_IDS.dwell) {
+    return applyDwellHeadline(result);
+  }
+  if (widgetId === VRM_KPI_IDS.entrances || widgetId === VRM_KPI_IDS.exits) {
     return applyBasicVrmHeadline(widgetId, result);
   }
   return result;
