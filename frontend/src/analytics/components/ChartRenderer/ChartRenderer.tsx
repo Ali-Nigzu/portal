@@ -141,9 +141,26 @@ export const ChartRenderer = ({
     className: resolvedClassName,
   };
 
-  const summary = result.meta?.summary as { presentation?: string; chartStyle?: string } | undefined;
+  const summary = result.meta?.summary as
+    | { presentation?: string; chartStyle?: string; chartSubType?: string }
+    | undefined;
+  const chartStyle =
+    summary?.chartStyle || (result as unknown as { chartStyle?: string }).chartStyle;
+  const chartSubType =
+    summary?.chartSubType || (result as unknown as { chartSubType?: string }).chartSubType;
   const isTrafficDistribution =
-    summary?.chartStyle === "traffic_distribution" || result.meta?.summary?.chartSubType === "traffic_distribution";
+    chartStyle === "traffic_distribution" || chartSubType === "traffic_distribution";
+
+  if (process.env.NODE_ENV !== "production" && result.meta?.summary?.chartSubType === "traffic_distribution") {
+    // eslint-disable-next-line no-console
+    console.log("[VRM traffic] ChartRenderer input", {
+      chartType: result.chartType,
+      chartStyle: summary?.chartStyle,
+      chartSubType: result.meta?.summary?.chartSubType,
+      seriesCount: result.series?.length,
+      seriesLengths: result.series?.map((entry) => entry.data?.length ?? 0),
+    });
+  }
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
@@ -175,6 +192,8 @@ export const ChartRenderer = ({
         chartStyle: summary?.chartStyle,
         chartSubType: result.meta?.summary?.chartSubType,
         seriesLength: result.series.length,
+        isEmpty,
+        seriesLengths: result.series.map((seriesItem) => seriesItem.data?.length ?? 0),
       });
     }
     return <TrafficDistribution {...chartProps} height={height} />;
