@@ -392,6 +392,13 @@
   gap: var(--vrm-spacing-4, 16px);
 }
 
+.traffic-distribution__content--vrm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .traffic-distribution__annotations {
   display: grid;
   gap: var(--vrm-spacing-2, 8px);

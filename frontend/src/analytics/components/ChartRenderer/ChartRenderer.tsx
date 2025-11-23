@@ -20,6 +20,7 @@ export interface ChartRendererProps {
   height?: number;
   className?: string;
   onVisibilityChange?: (visibility: SeriesVisibilityMap) => void;
+  widgetId?: string;
 }
 
 function buildInitialVisibility(series: ChartSeries[]): SeriesVisibilityMap {
@@ -34,6 +35,7 @@ export const ChartRenderer = ({
   height = 320,
   className,
   onVisibilityChange,
+  widgetId,
 }: ChartRendererProps) => {
   const [visibility, setVisibility] = useState<SeriesVisibilityMap>(() =>
     buildInitialVisibility(result.series)
@@ -139,6 +141,7 @@ export const ChartRenderer = ({
     onToggleSeries: handleToggleSeries,
     height,
     className: resolvedClassName,
+    widgetId,
   };
 
   const summary = result.meta?.summary as
@@ -153,10 +156,11 @@ export const ChartRenderer = ({
   const summaryTitleNormalized = summaryTitle?.toLowerCase().trim();
   const isVrmTrafficByTitle =
     summary?.presentation === "vrm" && summaryTitleNormalized === "traffic by camera";
-  const isTrafficDistribution =
-    chartStyle === "traffic_distribution" ||
-    chartSubType === "traffic_distribution" ||
-    isVrmTrafficByTitle;
+  const isVrmPresentation = summary?.presentation === "vrm";
+  const isTrafficWidgetId = isVrmPresentation && widgetId === "kpi-vrm-traffic";
+  const hasTrafficStyle =
+    chartStyle === "traffic_distribution" || chartSubType === "traffic_distribution";
+  const isTrafficDistribution = hasTrafficStyle || isVrmTrafficByTitle || isTrafficWidgetId;
   const isTrafficDebugCandidate =
     isTrafficDistribution || summaryTitle === "Traffic by Camera" || result.chartType === "categorical";
 

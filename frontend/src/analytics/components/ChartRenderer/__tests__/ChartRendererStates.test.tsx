@@ -212,6 +212,41 @@ describe('ChartRenderer high-level states', () => {
     expect(json).not.toContain('Nothing to display yet');
   });
 
+  it('applies VRM traffic layout styling even without annotations', () => {
+    const trafficResult = {
+      chartType: 'categorical',
+      chartStyle: 'traffic_distribution',
+      chartSubType: 'traffic_distribution',
+      xDimension: { id: 'camera', type: 'category' },
+      series: [
+        {
+          id: 'traffic_share',
+          label: 'Traffic by Camera',
+          geometry: 'bar',
+          unit: 'percentage',
+          data: [
+            { x: '1', value: 80 },
+            { x: '2', value: 20 },
+          ],
+        },
+      ],
+      meta: {
+        timezone: 'UTC',
+        summary: {
+          presentation: 'vrm',
+          chartStyle: 'traffic_distribution',
+          chartSubType: 'traffic_distribution',
+          title: 'Traffic by Camera',
+        },
+      },
+    } as ChartResult & { chartStyle: string; chartSubType: string };
+
+    const tree = renderer.create(<ChartRenderer result={trafficResult} height={200} />);
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('traffic-distribution__content--vrm');
+    expect(json).toContain('traffic-distribution kpi-tile');
+  });
+
   it('routes VRM traffic when summary title indicates Traffic by Camera without style hints', () => {
     const trafficResult: ChartResult = {
       chartType: 'categorical',
@@ -231,10 +266,39 @@ describe('ChartRenderer high-level states', () => {
       meta: { timezone: 'UTC', summary: { presentation: 'vrm', title: 'Traffic by Camera' } as any },
     };
 
-    const tree = renderer.create(<ChartRenderer result={trafficResult} height={200} />);
+    const tree = renderer.create(
+      <ChartRenderer result={trafficResult} height={200} widgetId="kpi-vrm-traffic" />,
+    );
     const json = JSON.stringify(tree.toJSON());
     expect(json).toContain('traffic-distribution kpi-tile');
     expect(json).toContain('Traffic by Camera');
+  });
+
+  it('routes VRM traffic by widget id when style hints are missing', () => {
+    const trafficResult: ChartResult = {
+      chartType: 'categorical',
+      xDimension: { id: 'camera', type: 'category' },
+      series: [
+        {
+          id: 'traffic_share',
+          label: 'Traffic by Camera',
+          geometry: 'bar',
+          unit: 'percentage',
+          data: [
+            { x: '1', value: 50 },
+            { x: '2', value: 50 },
+          ],
+        },
+      ],
+      meta: { timezone: 'UTC', summary: { presentation: 'vrm' } as any },
+    };
+
+    const tree = renderer.create(
+      <ChartRenderer result={trafficResult} height={200} widgetId="kpi-vrm-traffic" />,
+    );
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('traffic-distribution kpi-tile');
+    expect(json).toContain('traffic-distribution__content--vrm');
   });
 
   it('renders the retention heatmap fixture without error', () => {
