@@ -182,7 +182,14 @@ const vrmWidgets: DashboardWidget[] = [
     fixtureId: "golden_dashboard_kpi_live_occupancy",
     inlineSpec: singleValueSpec({
       id: "dashboard.kpi.vrm.capacity_usage",
-      measures: [{ aggregation: "occupancy_recursion", id: "occupancy", label: "Occupancy" }],
+      measures: [
+        {
+          aggregation: "occupancy_recursion",
+          id: "occupancy",
+          label: "Occupancy",
+          options: { vrmOccupancy: true },
+        },
+      ],
       notes: ["Capacity usage derived from occupancy"],
     }),
     fixedTimeWindow: fixedWindow,

@@ -1152,13 +1152,28 @@ class SpecCompiler:
                         site_id,
                         cam_id,
                         timestamp AS exit_ts,
-                        LEAST(exit_count, entrance_count) AS matched_idx,
+                        index,
+                        entrance_count,
+                        exit_count,
+                        MIN(entrance_count - exit_count) OVER (
+                            PARTITION BY site_id, cam_id
+                            ORDER BY timestamp, index
+                            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                        ) AS min_balance,
                         ROW_NUMBER() OVER (
                             PARTITION BY site_id, cam_id
                             ORDER BY timestamp, index
-                        ) AS exit_seq
+                        ) AS exit_seq,
+                        exit_count + LEAST(
+                            MIN(entrance_count - exit_count) OVER (
+                                PARTITION BY site_id, cam_id
+                                ORDER BY timestamp, index
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS matched_seq
                     FROM {prefix}_events
-                    WHERE event = 0 AND LEAST(exit_count, entrance_count) > 0
+                    WHERE event = 0
                 )
                 """
             ).strip()
@@ -1170,10 +1185,17 @@ class SpecCompiler:
                         site_id,
                         cam_id,
                         exit_ts,
-                        exit_seq,
-                        matched_idx
-                    FROM {prefix}_exits
-                    WHERE exit_seq <= matched_idx
+                        matched_seq
+                    FROM (
+                        SELECT
+                            *,
+                            LAG(matched_seq, 1, 0) OVER (
+                                PARTITION BY site_id, cam_id
+                                ORDER BY exit_ts, index
+                            ) AS prev_matched_seq
+                        FROM {prefix}_exits
+                    )
+                    WHERE matched_seq > prev_matched_seq
                 )
                 """
             ).strip()
@@ -1191,7 +1213,7 @@ class SpecCompiler:
                     JOIN {prefix}_entrances AS entrance
                         ON entrance.site_id = e.site_id
                         AND entrance.cam_id = e.cam_id
-                        AND entrance.entrance_seq = e.exit_seq
+                        AND entrance.entrance_seq = e.matched_seq
                     WHERE TIMESTAMP_DIFF(e.exit_ts, entrance.entrance_ts, MINUTE) BETWEEN 0 AND 360
                 )
                 """
