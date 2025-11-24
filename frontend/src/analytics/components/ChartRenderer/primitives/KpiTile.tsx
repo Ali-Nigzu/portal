@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
   Area,
   Tooltip,
+  YAxis,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import {
@@ -49,6 +50,8 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     );
   }, [primarySeries]);
 
+  const [vrmHover, setVrmHover] = useState<{ value: number | null; label: string } | null>(null);
+
   if (!primarySeries) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
@@ -69,6 +72,8 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const rawCount = compact ? null : (latestPoint as unknown as { rawCount?: number | null })?.rawCount ?? null;
   const deltaCandidate = primarySeries.summary?.delta;
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
+
+  const sparklineHeight = isVrm ? 56 : 48;
 
   const formattedDelta = formatDelta(delta);
   const coverageInfo = formatCoverage(coverage);
@@ -119,6 +124,41 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     const includeDate = parsedDate.toDateString() !== now.toDateString();
     const datePart = includeDate ? `${parsedDate.toLocaleDateString()} ` : "";
     return `${datePart}${timePart}`;
+  };
+
+  const formatPopoverLabel = (raw?: string | number) => {
+    const parsed = parseLabelDate(raw);
+    if (!parsed) {
+      return "";
+    }
+    const datePart = parsed.toLocaleDateString([], {
+      timeZone: timezone,
+      month: "short",
+      day: "numeric",
+    });
+    const timePart = formatTimeOfDay(parsed, timezone);
+    return `${datePart} · ${timePart}`;
+  };
+
+  const handleSparklineHover = (state: any) => {
+    if (!isVrm) {
+      return;
+    }
+    const payload =
+      (state?.activePayload?.[0]?.payload as { value?: number | null; x?: string | number } | undefined) ??
+      (typeof state?.activeTooltipIndex === "number" ? sparklineData[state.activeTooltipIndex] : undefined);
+    if (!payload) {
+      setVrmHover(null);
+      return;
+    }
+    const numeric = typeof payload.value === "number" ? payload.value : null;
+    setVrmHover({ value: numeric, label: formatPopoverLabel(payload.x) });
+  };
+
+  const handleSparklineLeave = () => {
+    if (isVrm) {
+      setVrmHover(null);
+    }
   };
 
   const formatHeadline = () => {
@@ -208,25 +248,31 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         </div>
       ) : null}
       {!isTraffic && sparklineData.length > 1 ? (
-        <div className="kpi-sparkline">
-          <ResponsiveContainer width="100%" height={48}>
-            <AreaChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <Tooltip
-                formatter={(tooltipValue) => {
-                  if (isVrm) {
-                    const numeric = formatNumeric(tooltipValue as number);
-                    const formattedValue =
-                      primarySeries.unit === "percentage" ? `${numeric}%` : numeric;
-                    const label = headerLabel ?? "";
-                    return [formattedValue, label];
-                  }
-                  return [
+        <div className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}>
+          <ResponsiveContainer width="100%" height={sparklineHeight}>
+            <AreaChart
+              data={sparklineData}
+              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+              onMouseMove={isVrm ? handleSparklineHover : undefined}
+              onMouseLeave={isVrm ? handleSparklineLeave : undefined}
+            >
+              <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
+              {!isVrm ? (
+                <Tooltip
+                  formatter={(tooltipValue) => [
                     formatValue(tooltipValue as number, primarySeries.unit),
                     primarySeries.label ?? primarySeries.id ?? "",
-                  ];
-                }}
-                labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
-              />
+                  ]}
+                  labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
+                />
+              ) : (
+                <Tooltip
+                  cursor={false}
+                  isAnimationActive={false}
+                  wrapperStyle={{ display: "none" }}
+                  content={() => null}
+                />
+              )}
               <Area
                 type="monotone"
                 dataKey="value"
@@ -237,6 +283,14 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
               />
             </AreaChart>
           </ResponsiveContainer>
+          {isVrm && vrmHover ? (
+            <div className="kpi-sparkline__popover" aria-label="VRM sparkline popover">
+              <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>
+              <div className="kpi-sparkline__popover-value">
+                {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
