@@ -216,7 +216,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
 
   const handleOverlayHover = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!isVrm) return;
-    // Explicit overlay hover keeps VRM popovers responsive even when tooltip metadata is absent.
     const rect =
       sparklineRef.current?.getBoundingClientRect() ??
       event.currentTarget?.getBoundingClientRect?.();
