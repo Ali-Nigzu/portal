@@ -52,6 +52,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
 
   const [vrmHover, setVrmHover] = useState<{ value: number | null; label: string } | null>(null);
   const lastTooltipIndex = useRef<number | null>(null);
+  const sparklineRef = useRef<HTMLDivElement | null>(null);
 
   if (!primarySeries) {
     if (process.env.NODE_ENV !== "production") {
@@ -153,6 +154,27 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       return parsed ? parsed.valueOf() : String(label);
     };
 
+    const deriveIndexFromPosition = () => {
+      const width =
+        typeof state?.chartWidth === "number"
+          ? state.chartWidth
+          : sparklineRef.current?.getBoundingClientRect().width ?? 0;
+
+      const xCoord =
+        typeof state?.chartX === "number"
+          ? state.chartX
+          : typeof state?.activeCoordinate?.x === "number"
+          ? state.activeCoordinate.x
+          : null;
+
+      if (!width || width <= 0 || xCoord === null || typeof xCoord !== "number") {
+        return -1;
+      }
+
+      const clampedRatio = Math.max(0, Math.min(1, xCoord / width));
+      return Math.round(clampedRatio * Math.max(0, sparklineData.length - 1));
+    };
+
     const tooltipIndex = (() => {
       if (typeof state?.activeTooltipIndex === "number") {
         return state.activeTooltipIndex;
@@ -165,7 +187,8 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           return pointLabel === target;
         });
       }
-      return -1;
+
+      return deriveIndexFromPosition();
     })();
 
     if (tooltipIndex >= 0) {
@@ -283,6 +306,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       {!isTraffic && sparklineData.length > 1 ? (
         <div
           className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
+          ref={sparklineRef}
         >
           <ResponsiveContainer width="100%" height={sparklineHeight}>
             <AreaChart

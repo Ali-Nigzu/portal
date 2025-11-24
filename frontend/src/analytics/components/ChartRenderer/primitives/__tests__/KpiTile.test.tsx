@@ -134,6 +134,40 @@ describe("KpiTile VRM sparkline", () => {
     expect(JSON.stringify(json)).toContain("3");
   });
 
+  it("derives index from chartX when no payload or label is provided", () => {
+    const built = buildResult("vrm");
+    if (!built) throw new Error("missing data");
+    const tree = renderer.create(
+      <KpiTile result={built.result} series={built.series} height={200} className="" />,
+    );
+
+    const areaChart = tree.root.findByType("area-chart-mock");
+
+    act(() => {
+      areaChart.props.onMouseMove({
+        activePayload: [],
+        chartWidth: 300,
+        chartX: 150,
+      });
+    });
+
+    const jsonMid = tree.toJSON();
+    expect(JSON.stringify(jsonMid)).toContain("VRM sparkline popover");
+    expect(JSON.stringify(jsonMid)).toContain("3");
+
+    act(() => {
+      areaChart.props.onMouseMove({
+        activePayload: [],
+        chartWidth: 300,
+        chartX: 295,
+      });
+    });
+
+    const jsonEnd = tree.toJSON();
+    expect(JSON.stringify(jsonEnd)).toContain("VRM sparkline popover");
+    expect(JSON.stringify(jsonEnd)).toContain("2");
+  });
+
   it("matches numeric activeLabel timestamps to sparkline points", () => {
     const built = buildResult("vrm");
     if (!built) throw new Error("missing data");
