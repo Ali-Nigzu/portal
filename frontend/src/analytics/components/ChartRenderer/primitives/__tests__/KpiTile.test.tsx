@@ -65,7 +65,9 @@ describe("KpiTile VRM sparkline", () => {
     expect(typeof areaChart.props.onMouseMove).toBe("function");
 
     const yAxis = tree.root.findByType("y-axis-mock");
-    expect(yAxis.props.domain).toEqual([0, "auto"]);
+    expect(Array.isArray(yAxis.props.domain)).toBe(true);
+    expect(yAxis.props.domain[0]).toBe(0);
+    expect(typeof yAxis.props.domain[1]).toBe("function");
 
     const tooltips = tree.root.findAllByType("tooltip-mock");
     expect(tooltips).toHaveLength(1);

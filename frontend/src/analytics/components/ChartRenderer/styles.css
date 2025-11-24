@@ -220,6 +220,10 @@
   color: var(--vrm-color-text-primary, #ffffff);
 }
 
+.kpi-tile--vrm {
+  overflow: visible;
+}
+
 .kpi-header {
   display: flex;
   justify-content: space-between;
@@ -299,6 +303,7 @@
 
 .kpi-sparkline--vrm {
   height: 56px;
+  align-items: stretch;
 }
 
 .kpi-sparkline__popover {

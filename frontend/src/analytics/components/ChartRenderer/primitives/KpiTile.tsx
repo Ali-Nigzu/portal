@@ -144,7 +144,9 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     if (!isVrm) {
       return;
     }
-    const payload = state?.activePayload?.[0]?.payload as { value?: number | null; x?: string | number } | undefined;
+    const payload =
+      (state?.activePayload?.[0]?.payload as { value?: number | null; x?: string | number } | undefined) ??
+      (typeof state?.activeTooltipIndex === "number" ? sparklineData[state.activeTooltipIndex] : undefined);
     if (!payload) {
       setVrmHover(null);
       return;
@@ -254,7 +256,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
               onMouseMove={isVrm ? handleSparklineHover : undefined}
               onMouseLeave={isVrm ? handleSparklineLeave : undefined}
             >
-              <YAxis type="number" domain={[0, "auto"]} hide />
+              <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
               {!isVrm ? (
                 <Tooltip
                   formatter={(tooltipValue) => [
