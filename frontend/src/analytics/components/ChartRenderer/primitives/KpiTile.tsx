@@ -1,4 +1,3 @@
-import type React from "react";
 import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
@@ -143,18 +142,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     return `${datePart} · ${timePart}`;
   };
 
-  const applyHoverIndex = (index: number) => {
-    if (!isVrm || !sparklineData.length) return;
-
-    const clampedIndex = Math.max(0, Math.min(sparklineData.length - 1, index));
-    lastTooltipIndex.current = clampedIndex;
-    const chosen = sparklineData[clampedIndex];
-    if (!chosen) return;
-
-    const numeric = typeof chosen.value === "number" ? chosen.value : null;
-    setVrmHover({ value: numeric, label: formatPopoverLabel(chosen.x) });
-  };
-
   const handleSparklineHover = (state: any) => {
     if (!isVrm) {
       return;
@@ -172,7 +159,13 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         typeof state?.chartWidth === "number"
           ? state.chartWidth
           : sparklineRef.current?.getBoundingClientRect().width ?? 0;
-      const xCoord = typeof state?.chartX === "number" ? state.chartX : null;
+
+      const xCoord =
+        typeof state?.chartX === "number"
+          ? state.chartX
+          : typeof state?.activeCoordinate?.x === "number"
+          ? state.activeCoordinate.x
+          : null;
 
       if (!width || width <= 0 || xCoord === null || typeof xCoord !== "number") {
         return -1;
@@ -199,31 +192,23 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     })();
 
     if (tooltipIndex >= 0) {
-      applyHoverIndex(tooltipIndex);
+      lastTooltipIndex.current = tooltipIndex;
+    }
+
+    const fallbackPayload =
+      tooltipIndex >= 0
+        ? sparklineData[tooltipIndex]
+        : lastTooltipIndex.current !== null
+        ? sparklineData[lastTooltipIndex.current] ?? undefined
+        : undefined;
+    const chosen = payload ?? fallbackPayload;
+
+    if (!chosen) {
       return;
     }
 
-    if (lastTooltipIndex.current !== null) {
-      applyHoverIndex(lastTooltipIndex.current);
-      return;
-    }
-
-    if (payload) {
-      const numeric = typeof payload.value === "number" ? payload.value : null;
-      setVrmHover({ value: numeric, label: formatPopoverLabel(payload.x) });
-    }
-  };
-
-  const handleOverlayHover = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!isVrm) return;
-    const rect =
-      sparklineRef.current?.getBoundingClientRect() ??
-      event.currentTarget?.getBoundingClientRect?.();
-    if (!rect || rect.width <= 0) return;
-
-    const ratio = (event.clientX - rect.left) / rect.width;
-    const index = Math.round(Math.max(0, Math.min(1, ratio)) * Math.max(0, sparklineData.length - 1));
-    applyHoverIndex(index);
+    const numeric = typeof chosen.value === "number" ? chosen.value : null;
+    setVrmHover({ value: numeric, label: formatPopoverLabel(chosen.x) });
   };
 
   const handleSparklineLeave = () => {
@@ -357,15 +342,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
               />
             </AreaChart>
           </ResponsiveContainer>
-          {isVrm ? (
-            <div
-              className="kpi-sparkline__overlay"
-              data-testid="vrm-sparkline-overlay"
-              onMouseMove={handleOverlayHover}
-              onMouseEnter={handleOverlayHover}
-              onMouseLeave={handleSparklineLeave}
-            />
-          ) : null}
           {isVrm && vrmHover ? (
             <div className="kpi-sparkline__popover" aria-label="VRM sparkline popover">
               <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>

@@ -168,29 +168,6 @@ describe("KpiTile VRM sparkline", () => {
     expect(JSON.stringify(jsonEnd)).toContain("2");
   });
 
-  it("uses overlay hover when tooltip metadata is absent", () => {
-    const built = buildResult("vrm");
-    if (!built) throw new Error("missing data");
-    const tree = renderer.create(
-      <KpiTile result={built.result} series={built.series} height={200} className="" />,
-    );
-
-    const overlay = tree.root.find((node) => node.props["data-testid"] === "vrm-sparkline-overlay");
-
-    act(() => {
-      overlay.props.onMouseMove({
-        clientX: 150,
-        currentTarget: {
-          getBoundingClientRect: () => ({ width: 300, left: 0, right: 300, top: 0, bottom: 64, height: 64 }),
-        },
-      });
-    });
-
-    const json = tree.toJSON();
-    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
-    expect(JSON.stringify(json)).toContain("3");
-  });
-
   it("matches numeric activeLabel timestamps to sparkline points", () => {
     const built = buildResult("vrm");
     if (!built) throw new Error("missing data");
