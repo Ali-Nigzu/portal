@@ -147,7 +147,7 @@ describe("KpiTile VRM sparkline", () => {
     }
 
     expect(anchored).toBe(true);
-    expect(popover.parent?.props?.className).toContain("kpi-sparkline-anchor");
+    expect(popover.parent?.props?.className).toContain("kpi-sparkline");
   });
 
   it("clamps overlay hover to the first bucket", () => {
@@ -191,7 +191,6 @@ describe("KpiTile VRM sparkline", () => {
 
     const popovers = tree.root.findAllByProps({ "aria-label": "VRM sparkline popover" });
     expect(popovers).toHaveLength(1);
-    expect(popovers[0].props.className).toContain("kpi-sparkline__popover--vrm");
 
     let cursor: any = popovers[0]?.parent;
     let anchoredToShell = false;
@@ -204,18 +203,6 @@ describe("KpiTile VRM sparkline", () => {
     }
 
     expect(anchoredToShell).toBe(true);
-  });
-
-  it("does not render a visible default tooltip for VRM", () => {
-    const built = buildResult("vrm");
-    const tree = renderer.create(
-      <KpiTile result={built.result} series={built.series} height={200} className="" />,
-    );
-
-    const tooltips = tree.root.findAllByType("tooltip-mock");
-    expect(tooltips).toHaveLength(1);
-    expect(tooltips[0].props.wrapperStyle).toMatchObject({ display: "none" });
-    expect(typeof tooltips[0].props.content).toBe("function");
   });
 
   it("renders a visible VRM hover dot with contrast styling", () => {

@@ -348,31 +348,6 @@
   z-index: 3;
 }
 
-.kpi-sparkline__popover--vrm {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%) translateY(8px);
-  min-width: 150px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(20, 22, 26, 0.95);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-  z-index: 4;
-}
-
-.kpi-sparkline__popover--vrm .kpi-sparkline__popover-time {
-  font-size: 12px;
-  opacity: 0.85;
-}
-
-.kpi-sparkline__popover--vrm .kpi-sparkline__popover-value {
-  font-size: 18px;
-  font-weight: 700;
-  margin-top: 2px;
-}
-
 .kpi-sparkline__overlay {
   position: absolute;
   inset: 0;
