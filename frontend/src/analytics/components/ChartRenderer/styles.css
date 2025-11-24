@@ -302,17 +302,13 @@
   overflow: visible;
 }
 
-.kpi-sparkline-anchor {
-  position: relative;
-  overflow: visible;
-}
-
-.kpi-sparkline-anchor--vrm {
-  padding-bottom: var(--vrm-spacing-4, 16px);
-}
-
 .kpi-sparkline-shell {
-  position: static;
+  position: relative;
+}
+
+.kpi-sparkline-shell--vrm {
+  overflow: visible;
+  padding-bottom: var(--vrm-spacing-4, 16px);
 }
 
 .kpi-sparkline--vrm {
@@ -323,7 +319,7 @@
 .kpi-sparkline__popover {
   position: absolute;
   left: 50%;
-  bottom: -2px;
+  bottom: -6px;
   transform: translate(-50%, 100%);
   background: rgba(15, 19, 26, 0.9);
   color: #ffffff;
@@ -334,13 +330,7 @@
   min-width: 160px;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  z-index: 5;
-}
-
-.kpi-sparkline__popover--vrm {
-  bottom: 0;
-  transform: translateX(-50%) translateY(6px);
-  z-index: 6;
+  z-index: 3;
 }
 
 .kpi-sparkline__overlay {
