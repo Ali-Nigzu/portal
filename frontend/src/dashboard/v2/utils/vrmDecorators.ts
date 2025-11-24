@@ -229,7 +229,7 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
       hideDelta: 1 as unknown as number,
       chartStyle: "traffic_distribution",
       chartSubType: "traffic_distribution",
-      title: "Traffic by Camera",
+      title: "Traffic Split",
     },
     timezone: "UTC",
   },
@@ -400,7 +400,7 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
     addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
     addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
     addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
-    addSummaryText(trafficDistributionResult, "title", "Traffic by Camera");
+    addSummaryText(trafficDistributionResult, "title", "Traffic Split");
 
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
@@ -455,7 +455,7 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
   addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
   addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
   addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
-  addSummaryText(trafficDistributionResult, "title", "Traffic by Camera");
+  addSummaryText(trafficDistributionResult, "title", "Traffic Split");
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
@@ -532,7 +532,7 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   addSummaryText(next, "vrmChipText", `peak: ${Math.round(peakUsage)}%`);
   addSummaryText(next, "chartStyle", "capacity_usage");
   addSummaryText(next, "chartSubType", "capacity_usage");
-  addSummaryText(next, "title", "Capacity Usage");
+  addSummaryText(next, "title", "Capacity");
 
   const usageValue = typeof usageNow === "number" && Number.isFinite(usageNow) ? usageNow : 0;
   const peakValue = Number.isFinite(peakUsage) ? peakUsage : 0;
@@ -557,30 +557,7 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   return next;
 };
 
-export const applyFootfallTotal = (result: ChartResult): ChartResult => {
-  const next = cloneResult(result);
-  markCompact(next);
-  ensureSummary(next);
-  const primary = next.series[0];
-  const lastValue = lastBucketValue(primary);
-  const startOfDay = getStartOfToday();
-  const totalToday = primary
-    ? primary.data.reduce((sum, point) => {
-        const timestamp = point.x ? new Date(point.x) : null;
-        const withinDay = timestamp ? timestamp >= startOfDay : true;
-        const value = point.value ?? point.y ?? 0;
-        if (!withinDay) {
-          return sum;
-        }
-        return sum + (typeof value === "number" ? Number(value) : 0);
-      }, 0)
-    : 0;
-  setHeadlineValue(next, lastValue);
-  logVrmDebug(VRM_KPI_IDS.footfall, primary, lastValue);
-  addSummaryText(next, "vrmChipText", `today: ${Math.round(totalToday)}`);
-  suppressDelta(next);
-  return next;
-};
+export const applyFootfallTotal = (result: ChartResult): ChartResult => applyFootfallDelta(result);
 
 export const applyOccupancyDelta = (result: ChartResult): ChartResult => {
   const next = cloneResult(result);
@@ -597,6 +574,35 @@ const applyBasicVrmHeadline = (widgetId: string, result: ChartResult) => {
   markCompact(next);
   suppressDelta(next);
   applyLastBucketHeadline(widgetId, next);
+  return next;
+};
+
+const applyVrmTotalChip = (widgetId: string, result: ChartResult): ChartResult => {
+  const next = cloneResult(result);
+  markCompact(next);
+  ensureSummary(next);
+  applyLastBucketHeadline(widgetId, next);
+  const total = sumSeries(next.series?.[0]);
+  addSummaryText(next, "vrmChipText", `${Math.round(total)}`);
+  suppressDelta(next);
+  return next;
+};
+
+const applyFootfallDelta = (result: ChartResult): ChartResult => {
+  const next = cloneResult(result);
+  markCompact(next);
+  ensureSummary(next);
+  const primary = next.series[0];
+  const lastValue = lastBucketValue(primary);
+  setHeadlineValue(next, lastValue);
+  logVrmDebug(VRM_KPI_IDS.footfall, primary, lastValue);
+  const summary = next.meta?.summary as Record<string, unknown> | undefined;
+  if (summary?.vrmChipText) {
+    delete summary.vrmChipText;
+  }
+  if (summary?.hideDelta) {
+    delete summary.hideDelta;
+  }
   return next;
 };
 
@@ -667,7 +673,7 @@ export const decorateResult = (
     return applyDwellHeadline(result);
   }
   if (widgetId === VRM_KPI_IDS.entrances || widgetId === VRM_KPI_IDS.exits) {
-    return applyBasicVrmHeadline(widgetId, result);
+    return applyVrmTotalChip(widgetId, result);
   }
   return result;
 };
