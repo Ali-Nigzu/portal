@@ -103,6 +103,31 @@ const buildSeriesPoints = (values: number[]) => {
   }));
 };
 
+const buildVrmManifest = (orgId: string): DashboardManifest => ({
+  id: "dashboard-default",
+  orgId,
+  widgets: [
+    {
+      id: VRM_KPI_IDS.capacity,
+      title: "Capacity Usage",
+      kind: "kpi",
+      chartSpecId: "vrm.capacity_usage",
+      fixtureId: "vrm.capacity_usage",
+      locked: true,
+    },
+    {
+      id: VRM_KPI_IDS.traffic,
+      title: "Traffic by Camera",
+      kind: "kpi",
+      chartSpecId: "vrm.traffic_distribution",
+      fixtureId: "vrm.traffic_distribution",
+      locked: true,
+    },
+  ],
+  layout: { kpiBand: [VRM_KPI_IDS.capacity, VRM_KPI_IDS.traffic], grid: { columns: 12, placements: {} } },
+  timeControls: cloneManifest().timeControls,
+});
+
 const buildChartResult = (
   values: number[],
   options?: {
@@ -155,6 +180,19 @@ afterEach(() => {
   renderedResults.length = 0;
 });
 
+const renderText = (node: any): string => {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(renderText).join(" ");
+  }
+  if (node?.props?.children) {
+    return renderText(node.props.children);
+  }
+  return "";
+};
+
 async function flushEffects(times = 3) {
   for (let i = 0; i < times; i += 1) {
     // eslint-disable-next-line no-await-in-loop
@@ -166,9 +204,9 @@ async function flushEffects(times = 3) {
 
 describe("lookupCapacity", () => {
   it("returns configured capacity for known clients", () => {
-    expect(lookupCapacity("client0")).toBe(10);
-    expect(lookupCapacity("client1")).toBe(100);
-    expect(lookupCapacity("client2")).toBe(100);
+    expect(lookupCapacity("client0")).toBe(5);
+    expect(lookupCapacity("client1")).toBe(5);
+    expect(lookupCapacity("client2")).toBe(750);
   });
 
   it("throws for unknown clients", () => {
@@ -510,6 +548,65 @@ describe("DashboardV2Page", () => {
     expect(headlines.length).toBeGreaterThan(0);
   });
 
+  it("uses manifest org to resolve VRM capacity per client without leakage", async () => {
+    const loadOrgView = async (orgId: string, occupancy: number) => {
+      const manifestLoader = jest.fn(async () => buildVrmManifest(orgId));
+      const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
+        if (widget.id === VRM_KPI_IDS.capacity) {
+          return buildChartResult([occupancy], {
+            meta: { timezone: "UTC", summary: { widgetId: widget.id } },
+          });
+        }
+        if (widget.id === VRM_KPI_IDS.traffic) {
+          return trafficDistributionResult;
+        }
+        return buildChartResult([1], { meta: { timezone: "UTC", summary: { widgetId: widget.id } } });
+      });
+
+      let tree: TestRenderer;
+      await act(async () => {
+        tree = renderer.create(
+          <DashboardV2Page
+            credentials={{ username: "client1", password: "secret" }}
+            manifestLoader={manifestLoader}
+            widgetResultLoader={widgetLoader}
+          />,
+        );
+      });
+      await flushEffects();
+
+      const capacityResult = renderedResults.find(
+        (result) =>
+          (result.meta?.summary as Record<string, unknown> | undefined)?.chartSubType === "capacity_usage",
+      );
+      const headerText = renderText(
+        tree!.root.findByProps({ className: "dashboard-v2__header" }).props.children,
+      ).toLowerCase();
+
+      return { capacityResult, headerText };
+    };
+
+    const client2View = await loadOrgView("demodata0.client1", 375);
+    expect(
+      (client2View.capacityResult?.meta?.summary as Record<string, unknown> | undefined)?.vrmCapacity,
+    ).toBe(750);
+    expect(
+      (client2View.capacityResult?.meta?.summary as Record<string, unknown> | undefined)?.vrmResolvedClient,
+    ).toBe("client2");
+    expect(client2View.headerText).toContain("client2");
+
+    renderedResults.length = 0;
+
+    const client1View = await loadOrgView("client1", 4);
+    expect(
+      (client1View.capacityResult?.meta?.summary as Record<string, unknown> | undefined)?.vrmCapacity,
+    ).toBe(5);
+    expect(
+      (client1View.capacityResult?.meta?.summary as Record<string, unknown> | undefined)?.vrmResolvedClient,
+    ).toBe("client1");
+    expect(client1View.headerText).toContain("client1");
+  });
+
   it("renders empty states when manifest has no widgets", async () => {
     const manifestLoader = jest.fn(async () =>
       cloneManifest({
@@ -566,10 +663,13 @@ describe("DashboardV2Page", () => {
     const capacityResult = renderedResults.find(
       (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
     );
-    expect(lastBucketValue(capacityResult?.series?.[0])).toBeCloseTo(60);
+    expect((capacityResult?.meta?.summary as Record<string, unknown> | undefined)?.vrmCapacity).toBe(750);
+    expect((capacityResult?.meta?.summary as Record<string, number> | undefined)?.headlineValue).toBeCloseTo(
+      (60 / 750) * 100,
+    );
   });
 
-  it("prefers credential org over manifest org when decorating VRM results", async () => {
+  it("prefers manifest org over credential org when decorating VRM results", async () => {
     renderedResults.length = 0;
     const manifestLoader = jest.fn(async () => cloneManifest({ orgId: "client1" }));
     const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
@@ -596,12 +696,13 @@ describe("DashboardV2Page", () => {
     await flushEffects();
 
     const title = tree!.root.findByProps({ className: "dashboard-v2__title" });
-    expect(title.children.join(" ")).toContain("client2 – client2");
+    expect(title.children.join(" ")).toContain("client1 – client1");
 
     const capacityResult = renderedResults.find(
       (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
     );
-    expect(capacityResult?.meta?.summary?.headlineValue).toBe(100);
+    expect((capacityResult?.meta?.summary as Record<string, number> | undefined)?.vrmCapacity).toBe(5);
+    expect((capacityResult?.meta?.summary as Record<string, number> | undefined)?.headlineValue).toBeCloseTo(2000);
   });
 
   it("derives VRM KPI headlines from the latest bucket values instead of 24h totals", () => {
@@ -636,8 +737,9 @@ describe("DashboardV2Page", () => {
     expect(lastBucketValue(occupancy.series[0])).toBe(60);
     expect(lastBucketValue(occupancy.series[0])).not.toBe(105);
 
-    expect(lastBucketValue(capacity.series[0])).toBe(90);
-    expect(lastBucketValue(capacity.series[0])).not.toBe(160);
+    expect((capacity.meta?.summary as Record<string, number> | undefined)?.headlineValue).toBeCloseTo(
+      (90 / 5) * 100,
+    );
   });
 
   it("uses the latest 15-minute bucket for VRM KPI headlines", async () => {
@@ -697,7 +799,9 @@ describe("DashboardV2Page", () => {
     expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.footfall])).toBe(9);
     expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.dwell])).toBeCloseTo(3.5);
     expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.occupancy])).toBe(60);
-    expect(getLastValue(resultsByWidgetId[VRM_KPI_IDS.capacity])).toBe(90);
+    expect(
+      (resultsByWidgetId[VRM_KPI_IDS.capacity]?.meta?.summary as Record<string, number> | undefined)?.headlineValue,
+    ).toBeCloseTo((90 / 5) * 100);
   });
 });
 

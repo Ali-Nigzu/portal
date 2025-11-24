@@ -1,4 +1,4 @@
-import type { ChartResult } from "../../../analytics/schemas/charting";
+import type { ChartResult, ChartSeries } from "../../../analytics/schemas/charting";
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
 import {
   applyTrafficDistributionShare,
@@ -30,6 +30,40 @@ describe("vrm capacity mapping", () => {
 
   it("throws for unknown clients", () => {
     expect(() => lookupCapacity("unknown-client")).toThrow("Unknown client for capacity usage");
+  });
+});
+
+describe("vrm entrances/exits chips", () => {
+  const baseSeries: ChartSeries = {
+    id: "entrances",
+    label: "Entrances",
+    geometry: "line",
+    unit: "events",
+    data: [
+      { x: "2024-01-01T00:00:00Z", value: 2 },
+      { x: "2024-01-01T00:15:00Z", value: 3 },
+    ],
+  };
+
+  const baseResult: ChartResult = {
+    chartType: "single_value",
+    xDimension: { id: "time", type: "time", bucket: "15_MIN", timezone: "UTC" },
+    series: [baseSeries],
+    meta: { timezone: "UTC", summary: {} },
+  };
+
+  it("adds a 24h total chip for entrances", () => {
+    const decorated = decorateResult(VRM_KPI_IDS.entrances, baseResult as any, "client1");
+    expect(decorated.meta?.summary?.vrmChipText).toBe("5");
+    expect(decorated.meta?.summary?.hideDelta).toBeTruthy();
+    expect(decorated.meta?.summary?.headlineValue).toBe(3);
+  });
+
+  it("adds a 24h total chip for exits", () => {
+    const decorated = decorateResult(VRM_KPI_IDS.exits, baseResult as any, "client1");
+    expect(decorated.meta?.summary?.vrmChipText).toBe("5");
+    expect(decorated.meta?.summary?.hideDelta).toBeTruthy();
+    expect(decorated.meta?.summary?.headlineValue).toBe(3);
   });
 });
 
@@ -291,5 +325,35 @@ describe("vrm dwell headline carry-forward", () => {
 
     const decorated = decorateResult(VRM_KPI_IDS.dwell, dwellResult, "client1");
     expect(decorated.meta?.summary?.headlineValue).toBeNull();
+  });
+});
+
+describe("vrm footfall delta", () => {
+  it("exposes percent delta without vrm chip text", () => {
+    const now = new Date();
+    const prev = new Date(now.getTime() - 15 * 60 * 1000);
+    const footfallResult: ChartResult = {
+      chartType: "single_value",
+      xDimension: { id: "timestamp", type: "time" },
+      series: [
+        {
+          id: "footfall",
+          label: "Footfall",
+          geometry: "line",
+          unit: "events",
+          summary: { delta: 0.25 },
+          data: [
+            { x: prev.toISOString(), value: 200 },
+            { x: now.toISOString(), value: 250 },
+          ],
+        },
+      ],
+      meta: { timezone: "UTC", summary: {} },
+    };
+
+    const decorated = decorateResult(VRM_KPI_IDS.footfall, footfallResult, "client1");
+    expect(decorated.meta?.summary?.headlineValue).toBe(250);
+    expect(decorated.meta?.summary?.vrmChipText).toBeUndefined();
+    expect(decorated.meta?.summary?.hideDelta).toBeUndefined();
   });
 });
