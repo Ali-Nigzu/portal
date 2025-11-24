@@ -74,7 +74,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
 
   const sparklineHeight = isVrm ? 56 : 48;
-  const sparklineOffset = isVrm ? 12 : 0;
+  const sparklineOffset = isVrm ? 16 : 0;
 
   const formattedDelta = formatDelta(delta);
   const coverageInfo = formatCoverage(coverage);
@@ -147,12 +147,26 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     }
 
     const payload = state?.activePayload?.[0]?.payload as { value?: number | null; x?: string | number } | undefined;
-    const tooltipIndex =
-      typeof state?.activeTooltipIndex === "number"
-        ? state.activeTooltipIndex
-        : state?.activeLabel
-        ? sparklineData.findIndex((point) => point.x === state.activeLabel)
-        : -1;
+    const normalizeLabel = (label: unknown) => {
+      if (label === null || label === undefined) return null;
+      const parsed = parseLabelDate(label as string | number);
+      return parsed ? parsed.valueOf() : String(label);
+    };
+
+    const tooltipIndex = (() => {
+      if (typeof state?.activeTooltipIndex === "number") {
+        return state.activeTooltipIndex;
+      }
+      if (state?.activeLabel !== undefined) {
+        const target = normalizeLabel(state.activeLabel);
+        if (target === null) return -1;
+        return sparklineData.findIndex((point) => {
+          const pointLabel = normalizeLabel(point.x);
+          return pointLabel === target;
+        });
+      }
+      return -1;
+    })();
 
     const fallbackPayload = tooltipIndex >= 0 ? sparklineData[tooltipIndex] : undefined;
     const chosen = payload ?? fallbackPayload;
@@ -261,7 +275,11 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       {!isTraffic && sparklineData.length > 1 ? (
         <div
           className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
-          style={isVrm ? { marginBottom: -sparklineOffset } : undefined}
+          style={
+            isVrm
+              ? { marginBottom: `calc(-1 * var(--vrm-spacing-4, ${sparklineOffset}px))` }
+              : undefined
+          }
         >
           <ResponsiveContainer width="100%" height={sparklineHeight}>
             <AreaChart
