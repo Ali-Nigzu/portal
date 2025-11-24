@@ -11,7 +11,9 @@ jest.mock("recharts", () => ({
   AreaChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Area: () => <div>area</div>,
   YAxis: () => <div>y-axis</div>,
+  XAxis: () => <div>x-axis</div>,
   Tooltip: () => null,
+  ReferenceDot: (props: any) => <div {...props}>reference-dot</div>,
 }));
 
 const buildProps = (overrides?: Partial<ChartPrimitiveProps>): ChartPrimitiveProps => {
@@ -228,7 +230,9 @@ describe("KpiTile", () => {
       });
     });
 
-    const popover = tree.root.findByProps({ className: "kpi-sparkline__popover" });
+    const popover = tree.root.find(
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline__popover"),
+    );
     const valueNode = popover.findByProps({ className: "kpi-sparkline__popover-value" });
     const timeNode = popover.findByProps({ className: "kpi-sparkline__popover-time" });
 
@@ -265,7 +269,9 @@ describe("KpiTile", () => {
       });
     });
 
-    const popover = tree.root.findByProps({ className: "kpi-sparkline__popover" });
+    const popover = tree.root.find(
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline__popover"),
+    );
     const valueNode = popover.findByProps({ className: "kpi-sparkline__popover-value" });
 
     expect(valueNode.children.join(" ")).toBe("20");
