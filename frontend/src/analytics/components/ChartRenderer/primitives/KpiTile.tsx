@@ -367,7 +367,15 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                 {formatKpiValue(vrmHover.value, primarySeries?.unit)}
               </div>
             </div>
-          ) : null}
+          </div>
+        </div>
+      ) : null}
+      {isVrm && vrmHover ? (
+        <div className="kpi-sparkline__popover kpi-sparkline__popover--vrm" aria-label="VRM sparkline popover">
+          <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>
+          <div className="kpi-sparkline__popover-value">
+            {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+          </div>
         </div>
       ) : null}
     </div>
