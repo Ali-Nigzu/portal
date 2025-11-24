@@ -311,8 +311,8 @@
 .kpi-sparkline__popover {
   position: absolute;
   left: 50%;
-  bottom: 0;
-  transform: translate(-50%, -6px);
+  bottom: -6px;
+  transform: translate(-50%, 100%);
   background: rgba(15, 19, 26, 0.9);
   color: #ffffff;
   padding: 8px 12px;
@@ -329,6 +329,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
+  pointer-events: auto;
 }
 
 .kpi-sparkline__popover-time {
