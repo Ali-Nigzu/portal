@@ -164,5 +164,5 @@ def test_manifest_endpoint_accepts_view_token(api_client: TestClient):
     )
     assert response.status_code == 200
     payload = response.json()
-    # client2 maps to the client1 org slug via table name derivation
-    assert payload["orgId"] == "client1"
+    # client2 resolves to the demodata slug (dataset + table) so downstream capacity uses K=750
+    assert payload["orgId"] == "demodata0.client1"

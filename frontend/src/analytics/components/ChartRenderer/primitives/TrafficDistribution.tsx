@@ -14,7 +14,7 @@ export const TrafficDistribution = ({
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
-  const title = typeof summary.title === "string" ? (summary.title as string) : "Traffic by Camera";
+  const title = typeof summary.title === "string" ? (summary.title as string) : "Traffic Split";
   const topLevelChartStyle = (result as unknown as { chartStyle?: string }).chartStyle;
   const topLevelChartSubType = (result as unknown as { chartSubType?: string }).chartSubType;
   const summaryChartStyle = summary.chartStyle as string | undefined;
@@ -166,24 +166,17 @@ export const TrafficDistribution = ({
               data={pieLegend}
               cx="50%"
               cy="50%"
-              innerRadius={40}
-              outerRadius={60}
-              paddingAngle={2}
-              label={
-                isVrmTraffic
-                  ? ({ payload, value }) => {
-                      const camId = (payload as { camId?: string })?.camId ?? (payload as { label?: string })?.label;
-                      const shareCandidate = (payload as { displayValue?: number })?.displayValue ?? value;
-                      const share = typeof shareCandidate === "number" ? Math.round(shareCandidate) : 0;
-                      const cameraLabel = camId ? `Cam ${camId.replace(/^Cam\s*/i, "").trim()}` : "Cam";
-                      return `${cameraLabel} ${share}%`;
-                    }
-                  : undefined
-              }
-              labelLine={isVrmTraffic ? false : undefined}
+              innerRadius={48}
+              outerRadius={68}
+              paddingAngle={0}
+              startAngle={90}
+              endAngle={450}
+              label={undefined}
+              labelLine={false}
+              stroke="none"
             >
               {pieLegend.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} />
+                <Cell key={entry.label} fill={entry.color} stroke="none" />
               ))}
               <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="traffic-distribution__center">
                 {`${Math.round(centerValue)}%`}
