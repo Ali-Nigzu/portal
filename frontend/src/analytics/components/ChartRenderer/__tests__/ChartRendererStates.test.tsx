@@ -136,7 +136,7 @@ describe('ChartRenderer high-level states', () => {
     const tree = renderer.create(<ChartRenderer result={trafficResult} height={200} />);
     const json = JSON.stringify(tree.toJSON());
     expect(json).toContain('traffic-distribution kpi-tile');
-    expect(json).toContain('Traffic by Camera');
+    expect(json).toContain('Traffic Split');
     expect(json).not.toContain('Nothing to display yet');
   });
 
