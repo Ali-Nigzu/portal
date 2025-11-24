@@ -268,15 +268,11 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         </div>
       ) : null}
       {!isTraffic && sparklineData.length > 1 ? (
-        <div
-          className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
-          ref={sparklineRef}
-        >
-          <ResponsiveContainer width="100%" height={sparklineHeight}>
-            <AreaChart
-              data={sparklineData}
-              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-              onMouseLeave={isVrm ? undefined : handleSparklineLeave}
+        <div className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}>
+          <div className="kpi-sparkline-anchor">
+            <div
+              className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
+              ref={sparklineRef}
             >
               <ResponsiveContainer width="100%" height={sparklineHeight}>
                 <AreaChart
@@ -298,7 +294,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     <Tooltip
                       cursor={false}
                       isAnimationActive={false}
-                      wrapperStyle={{ visibility: "hidden", pointerEvents: "none" }}
+                      wrapperStyle={{ visibility: "hidden", pointerEvents: "none", display: "none" }}
                       content={() => null}
                     />
                   )}
@@ -312,12 +308,13 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                   />
                   {isVrm && vrmHover && hoveredNumericValue !== null ? (
                     <ReferenceDot
-                      x={vrmHover.index}
+                      x={sparklineData[vrmHover.index]?.index ?? vrmHover.index}
                       y={hoveredNumericValue}
                       r={5}
                       fill="#ffffff"
                       stroke={primarySeries?.color ?? "#2d6cdf"}
                       strokeWidth={2}
+                      strokeOpacity={0.9}
                     />
                   ) : null}
                 </AreaChart>
@@ -330,51 +327,19 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                   onMouseEnter={handleOverlayHover}
                   onMouseLeave={handleSparklineLeave}
                 />
-              ) : (
-                <Tooltip
-                  cursor={false}
-                  isAnimationActive={false}
-                />
-                {isVrm && vrmHover && hoveredNumericValue !== null ? (
-                  <ReferenceDot
-                    x={vrmHover.index}
-                    y={hoveredNumericValue}
-                    r={4}
-                    fill={primarySeries?.color ?? "#2d6cdf"}
-                    stroke="#0f131a"
-                    strokeWidth={1.5}
-                  />
-                ) : null}
-              </AreaChart>
-            </ResponsiveContainer>
-            {isVrm ? (
-              <div
-                className="kpi-sparkline__overlay"
-                data-testid="vrm-sparkline-overlay"
-                onMouseMove={handleOverlayHover}
-                onMouseEnter={handleOverlayHover}
-                onMouseLeave={handleSparklineLeave}
-              />
-            ) : null}
-          </div>
-          {isVrm && vrmHover ? (
-            <div
-              className="kpi-sparkline__popover kpi-sparkline__popover--vrm"
-              aria-label="VRM sparkline popover"
-            >
-              <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>
-              <div className="kpi-sparkline__popover-value">
-                {formatKpiValue(vrmHover.value, primarySeries?.unit)}
-              </div>
+              ) : null}
             </div>
-          </div>
-        </div>
-      ) : null}
-      {isVrm && vrmHover ? (
-        <div className="kpi-sparkline__popover kpi-sparkline__popover--vrm" aria-label="VRM sparkline popover">
-          <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>
-          <div className="kpi-sparkline__popover-value">
-            {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+            {isVrm && vrmHover ? (
+              <div
+                className="kpi-sparkline__popover kpi-sparkline__popover--vrm"
+                aria-label="VRM sparkline popover"
+              >
+                <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>
+                <div className="kpi-sparkline__popover-value">
+                  {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

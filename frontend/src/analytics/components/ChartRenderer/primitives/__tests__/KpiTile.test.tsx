@@ -55,7 +55,7 @@ const buildResult = (presentation: "vrm" | "default" = "vrm"): {
 };
 
 describe("KpiTile VRM sparkline", () => {
-  it("renders baseline anchored to 0 and drop-up popover", () => {
+  it("renders baseline anchored to 0 and VRM drawer popover", () => {
     const built = buildResult("vrm");
     if (!built) throw new Error("missing data");
     const tree = renderer.create(
@@ -78,7 +78,11 @@ describe("KpiTile VRM sparkline", () => {
 
     const tooltips = tree.root.findAllByType("tooltip-mock");
     expect(tooltips).toHaveLength(1);
-    expect(tooltips[0].props.wrapperStyle).toEqual({ visibility: "hidden", pointerEvents: "none" });
+    expect(tooltips[0].props.wrapperStyle).toEqual({
+      visibility: "hidden",
+      pointerEvents: "none",
+      display: "none",
+    });
     const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
 
     act(() => {
@@ -130,10 +134,12 @@ describe("KpiTile VRM sparkline", () => {
     });
 
     const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
+    expect(popover.props.className).toContain("kpi-sparkline__popover--vrm");
+
     let cursor: any = popover.parent;
     let anchored = false;
     while (cursor) {
-      if (cursor.props?.className?.includes("kpi-tile--vrm")) {
+      if (cursor.props?.className?.includes("kpi-sparkline-shell--vrm")) {
         anchored = true;
         break;
       }
@@ -141,7 +147,7 @@ describe("KpiTile VRM sparkline", () => {
     }
 
     expect(anchored).toBe(true);
-    expect(popover.parent?.props?.className).toContain("kpi-sparkline-shell");
+    expect(popover.parent?.props?.className).toContain("kpi-sparkline-anchor");
   });
 
   it("clamps overlay hover to the first bucket", () => {
@@ -162,6 +168,76 @@ describe("KpiTile VRM sparkline", () => {
     const json = tree.toJSON();
     expect(JSON.stringify(json)).toContain("VRM sparkline popover");
     expect(JSON.stringify(json)).toContain("1");
+  });
+
+  it("renders a single VRM overlay and popover within the sparkline shell", () => {
+    const built = buildResult("vrm");
+    if (!built) throw new Error("missing data");
+    const tree = renderer.create(
+      <KpiTile result={built.result} series={built.series} height={200} className="" />,
+    );
+
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
+
+    act(() => {
+      overlay.props.onMouseMove({
+        clientX: 150,
+        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
+      });
+    });
+
+    const overlays = tree.root.findAll((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
+    expect(overlays).toHaveLength(1);
+
+    const popovers = tree.root.findAllByProps({ "aria-label": "VRM sparkline popover" });
+    expect(popovers).toHaveLength(1);
+    expect(popovers[0].props.className).toContain("kpi-sparkline__popover--vrm");
+
+    let cursor: any = popovers[0]?.parent;
+    let anchoredToShell = false;
+    while (cursor) {
+      if (typeof cursor.props?.className === "string" && cursor.props.className.includes("kpi-sparkline-shell--vrm")) {
+        anchoredToShell = true;
+        break;
+      }
+      cursor = cursor.parent;
+    }
+
+    expect(anchoredToShell).toBe(true);
+  });
+
+  it("does not render a visible default tooltip for VRM", () => {
+    const built = buildResult("vrm");
+    const tree = renderer.create(
+      <KpiTile result={built.result} series={built.series} height={200} className="" />,
+    );
+
+    const tooltips = tree.root.findAllByType("tooltip-mock");
+    expect(tooltips).toHaveLength(1);
+    expect(tooltips[0].props.wrapperStyle).toMatchObject({ display: "none" });
+    expect(typeof tooltips[0].props.content).toBe("function");
+  });
+
+  it("renders a visible VRM hover dot with contrast styling", () => {
+    const built = buildResult("vrm");
+    if (!built) throw new Error("missing data");
+    const tree = renderer.create(
+      <KpiTile result={built.result} series={built.series} height={200} className="" />,
+    );
+
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
+    act(() => {
+      overlay.props.onMouseMove({
+        clientX: 225,
+        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
+      });
+    });
+
+    const dots = tree.root.findAllByType("reference-dot-mock");
+    expect(dots).toHaveLength(1);
+    expect(dots[0].props.r).toBeGreaterThanOrEqual(5);
+    expect(dots[0].props.fill).toBe("#ffffff");
+    expect(dots[0].props.strokeWidth).toBeGreaterThanOrEqual(2);
   });
 
   it("keeps default tooltip for non-VRM charts", () => {
