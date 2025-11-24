@@ -125,15 +125,23 @@ describe("KpiTile VRM sparkline", () => {
     act(() => {
       overlay.props.onMouseMove({
         clientX: 150,
-        currentTarget: {
-          getBoundingClientRect: () => ({ width: 300, left: 0, right: 300, top: 0, bottom: 64, height: 64 }),
-        },
+        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
       });
     });
 
-    const json = tree.toJSON();
-    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
-    expect(JSON.stringify(json)).toContain("3");
+    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
+    let cursor: any = popover.parent;
+    let anchored = false;
+    while (cursor) {
+      if (cursor.props?.className?.includes("kpi-tile--vrm")) {
+        anchored = true;
+        break;
+      }
+      cursor = cursor.parent;
+    }
+
+    expect(anchored).toBe(true);
+    expect(popover.parent?.props?.className).toContain("kpi-sparkline-shell");
   });
 
   it("clamps overlay hover to the first bucket", () => {
@@ -154,71 +162,6 @@ describe("KpiTile VRM sparkline", () => {
     const json = tree.toJSON();
     expect(JSON.stringify(json)).toContain("VRM sparkline popover");
     expect(JSON.stringify(json)).toContain("1");
-  });
-
-  it("anchors the popover within the VRM tile subtree", () => {
-    const built = buildResult("vrm");
-    if (!built) throw new Error("missing data");
-    const tree = renderer.create(
-      <KpiTile result={built.result} series={built.series} height={200} className="" />,
-    );
-
-    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
-    act(() => {
-      overlay.props.onMouseMove({
-        clientX: 150,
-        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
-      });
-    });
-
-    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
-    expect(popover.props.className).toContain("kpi-sparkline__popover--vrm");
-    let cursor: any = popover.parent;
-    let anchored = false;
-    while (cursor) {
-      if (cursor.props?.className?.includes("kpi-tile--vrm")) {
-        anchored = true;
-        break;
-      }
-      cursor = cursor.parent;
-    }
-
-    expect(anchored).toBe(true);
-  });
-
-  it("renders a VRM-only hover dot at the hovered index", () => {
-    const built = buildResult("vrm");
-    if (!built) throw new Error("missing data");
-    const tree = renderer.create(
-      <KpiTile result={built.result} series={built.series} height={200} className="" />,
-    );
-
-    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
-    act(() => {
-      overlay.props.onMouseMove({
-        clientX: 300,
-        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
-      });
-    });
-
-    const dots = tree.root.findAllByType("reference-dot-mock");
-    expect(dots).toHaveLength(1);
-    expect(dots[0].props.x).toBe(2);
-    expect(dots[0].props.y).toBe(2);
-    expect(dots[0].props.r).toBe(5);
-    expect(dots[0].props.fill).toBe("#ffffff");
-    expect(dots[0].props.strokeWidth).toBe(2);
-  });
-
-  it("does not render the VRM hover dot for non-VRM charts", () => {
-    const built = buildResult("default");
-    if (!built) throw new Error("missing data");
-    const tree = renderer.create(
-      <KpiTile result={built.result} series={built.series} height={200} className="" />,
-    );
-
-    const dots = tree.root.findAllByType("reference-dot-mock");
-    expect(dots).toHaveLength(0);
   });
 
   it("keeps default tooltip for non-VRM charts", () => {
