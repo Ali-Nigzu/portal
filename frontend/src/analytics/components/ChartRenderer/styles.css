@@ -221,6 +221,7 @@
 }
 
 .kpi-tile--vrm {
+  position: relative;
   overflow: visible;
 }
 
@@ -301,34 +302,52 @@
   overflow: visible;
 }
 
+.kpi-sparkline-anchor {
+  position: relative;
+  overflow: visible;
+}
+
+.kpi-sparkline-anchor--vrm {
+  padding-bottom: var(--vrm-spacing-4, 16px);
+}
+
+.kpi-sparkline-shell {
+  position: static;
+}
+
 .kpi-sparkline--vrm {
   height: calc(64px + var(--vrm-spacing-4, 16px));
   align-items: flex-end;
-  margin-bottom: calc(-1 * var(--vrm-spacing-4, 16px));
-  padding-bottom: 0;
 }
 
 .kpi-sparkline__popover {
   position: absolute;
   left: 50%;
-  bottom: 0;
-  transform: translate(-50%, -6px);
+  bottom: -2px;
+  transform: translate(-50%, 100%);
   background: rgba(15, 19, 26, 0.9);
   color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 10px;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
   pointer-events: none;
   min-width: 160px;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  z-index: 2;
+  z-index: 5;
+}
+
+.kpi-sparkline__popover--vrm {
+  bottom: 0;
+  transform: translateX(-50%) translateY(6px);
+  z-index: 6;
 }
 
 .kpi-sparkline__overlay {
   position: absolute;
   inset: 0;
   z-index: 1;
+  pointer-events: auto;
 }
 
 .kpi-sparkline__popover-time {

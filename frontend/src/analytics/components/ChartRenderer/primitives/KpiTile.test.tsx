@@ -1,7 +1,7 @@
 /* eslint-disable testing-library/await-async-query */
 import React from "react";
 import { jest } from "@jest/globals";
-import renderer from "react-test-renderer";
+import renderer, { act } from "react-test-renderer";
 import { KpiTile } from "./KpiTile";
 import type { ChartPrimitiveProps } from "./types";
 import type { ChartResult, ChartSeries } from "../../../schemas/charting";
@@ -10,6 +10,9 @@ jest.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AreaChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Area: () => <div>area</div>,
+  XAxis: () => <div>x-axis</div>,
+  YAxis: () => <div>y-axis</div>,
+  ReferenceDot: () => <div>reference-dot</div>,
   Tooltip: () => null,
 }));
 
@@ -211,5 +214,109 @@ describe("KpiTile", () => {
       .replace(/\s+/g, "");
     expect(labelText).toBe("Cam 0");
     expect(valueText).toBe("67%");
+  });
+
+  it("shows VRM popover from overlay hover without Recharts tooltip metadata", () => {
+    const props = buildProps();
+    props.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
+
+    const tree = renderer.create(<KpiTile {...props} />);
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
+
+    act(() => {
+      overlay.props.onMouseMove({
+        clientX: 0,
+        currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 200 }) },
+      });
+    });
+
+    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
+    const valueNode = popover.findByProps({ className: "kpi-sparkline__popover-value" });
+    const timeNode = popover.findByProps({ className: "kpi-sparkline__popover-time" });
+
+    expect(valueNode.children.join(" ")).toBe("10");
+    expect(timeNode.children.join(" ")).not.toBe("");
+  });
+
+  it("derives VRM hover index from overlay position", () => {
+    const props = buildProps({
+      series: [
+        {
+          id: "primary",
+          label: "Primary",
+          geometry: "metric",
+          unit: "events",
+          data: [
+            { x: "2024-01-01T00:00:00Z", value: 1 },
+            { x: "2024-01-01T00:15:00Z", value: 5 },
+            { x: "2024-01-01T00:30:00Z", value: 10 },
+            { x: "2024-01-01T00:45:00Z", value: 20 },
+          ],
+        },
+      ],
+    });
+    props.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
+
+    const tree = renderer.create(<KpiTile {...props} />);
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
+
+    act(() => {
+      overlay.props.onMouseMove({
+        clientX: 200,
+        currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 200 }) },
+      });
+    });
+
+    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
+    const valueNode = popover.findByProps({ className: "kpi-sparkline__popover-value" });
+
+    expect(valueNode.children.join(" ")).toBe("20");
+  });
+
+  it("anchors VRM popover within the VRM tile", () => {
+    const props = buildProps();
+    props.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
+
+    const tree = renderer.create(<KpiTile {...props} />);
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
+
+    act(() => {
+      overlay.props.onMouseMove({
+        clientX: 10,
+        currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 100 }) },
+      });
+    });
+
+    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
+    let cursor: any = popover.parent;
+    let anchoredToTile = false;
+    while (cursor) {
+      if (cursor.props?.className?.includes?.("kpi-tile--vrm")) {
+        anchoredToTile = true;
+        break;
+      }
+      cursor = cursor.parent;
+    }
+
+    expect(anchoredToTile).toBe(true);
+  });
+
+  it("renders a VRM-only hover dot when hovering the sparkline overlay", () => {
+    const props = buildProps();
+    props.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
+
+    const tree = renderer.create(<KpiTile {...props} />);
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
+
+    expect(tree.root.findAll((node: any) => node.children?.includes?.("reference-dot"))).toHaveLength(0);
+
+    act(() => {
+      overlay.props.onMouseMove({
+        clientX: 50,
+        currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 100 }) },
+      });
+    });
+
+    expect(tree.root.findAll((node: any) => node.children?.includes?.("reference-dot"))).toHaveLength(1);
   });
 });
