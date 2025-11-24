@@ -302,8 +302,10 @@
 }
 
 .kpi-sparkline--vrm {
-  height: 56px;
-  align-items: stretch;
+  height: calc(64px + var(--vrm-spacing-4, 16px));
+  align-items: flex-end;
+  margin-bottom: calc(-1 * var(--vrm-spacing-4, 16px));
+  padding-bottom: 0;
 }
 
 .kpi-sparkline__popover {

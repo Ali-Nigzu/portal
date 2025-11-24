@@ -59,7 +59,7 @@ describe("KpiTile VRM sparkline", () => {
     );
 
     const responsive = tree.root.findByType("responsive-container-mock");
-    expect(responsive.props.height).toBe(56);
+    expect(responsive.props.height).toBe(64);
 
     const areaChart = tree.root.findByType("area-chart-mock");
     expect(typeof areaChart.props.onMouseMove).toBe("function");
@@ -70,11 +70,11 @@ describe("KpiTile VRM sparkline", () => {
     expect(typeof yAxis.props.domain[1]).toBe("function");
 
     const sparkline = tree.root.find((node) => node.props.className?.includes("kpi-sparkline--vrm"));
-    expect(sparkline.props.style).toMatchObject({ marginBottom: "calc(-1 * var(--vrm-spacing-4, 16px))" });
+    expect(sparkline.props.style).toBeUndefined();
 
     const tooltips = tree.root.findAllByType("tooltip-mock");
     expect(tooltips).toHaveLength(1);
-    expect(tooltips[0].props.wrapperStyle).toEqual({ display: "none" });
+    expect(tooltips[0].props.wrapperStyle).toEqual({ visibility: "hidden", pointerEvents: "none" });
 
     act(() => {
       areaChart.props.onMouseMove({
@@ -98,6 +98,33 @@ describe("KpiTile VRM sparkline", () => {
     act(() => {
       areaChart.props.onMouseMove({
         activeLabel: "2024-01-01T00:15:00Z",
+        activePayload: [],
+      });
+    });
+
+    const json = tree.toJSON();
+    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
+    expect(JSON.stringify(json)).toContain("3");
+  });
+
+  it("keeps hover when payload is missing but last index exists", () => {
+    const built = buildResult("vrm");
+    if (!built) throw new Error("missing data");
+    const tree = renderer.create(
+      <KpiTile result={built.result} series={built.series} height={200} className="" />,
+    );
+
+    const areaChart = tree.root.findByType("area-chart-mock");
+    act(() => {
+      areaChart.props.onMouseMove({
+        activeLabel: "2024-01-01T00:15:00Z",
+        activePayload: [],
+        activeTooltipIndex: 1,
+      });
+    });
+
+    act(() => {
+      areaChart.props.onMouseMove({
         activePayload: [],
       });
     });

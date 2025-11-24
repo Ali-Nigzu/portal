@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -51,6 +51,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   }, [primarySeries]);
 
   const [vrmHover, setVrmHover] = useState<{ value: number | null; label: string } | null>(null);
+  const lastTooltipIndex = useRef<number | null>(null);
 
   if (!primarySeries) {
     if (process.env.NODE_ENV !== "production") {
@@ -73,8 +74,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const deltaCandidate = primarySeries.summary?.delta;
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
 
-  const sparklineHeight = isVrm ? 56 : 48;
-  const sparklineOffset = isVrm ? 16 : 0;
+  const sparklineHeight = isVrm ? 64 : 48;
 
   const formattedDelta = formatDelta(delta);
   const coverageInfo = formatCoverage(coverage);
@@ -168,11 +168,19 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       return -1;
     })();
 
-    const fallbackPayload = tooltipIndex >= 0 ? sparklineData[tooltipIndex] : undefined;
+    if (tooltipIndex >= 0) {
+      lastTooltipIndex.current = tooltipIndex;
+    }
+
+    const fallbackPayload =
+      tooltipIndex >= 0
+        ? sparklineData[tooltipIndex]
+        : lastTooltipIndex.current !== null
+        ? sparklineData[lastTooltipIndex.current] ?? undefined
+        : undefined;
     const chosen = payload ?? fallbackPayload;
 
     if (!chosen) {
-      setVrmHover(null);
       return;
     }
 
@@ -275,11 +283,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       {!isTraffic && sparklineData.length > 1 ? (
         <div
           className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
-          style={
-            isVrm
-              ? { marginBottom: `calc(-1 * var(--vrm-spacing-4, ${sparklineOffset}px))` }
-              : undefined
-          }
         >
           <ResponsiveContainer width="100%" height={sparklineHeight}>
             <AreaChart
@@ -301,7 +304,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                 <Tooltip
                   cursor={false}
                   isAnimationActive={false}
-                  wrapperStyle={{ display: "none" }}
+                  wrapperStyle={{ visibility: "hidden", pointerEvents: "none" }}
                   content={() => null}
                 />
               )}
