@@ -55,7 +55,7 @@ const buildResult = (presentation: "vrm" | "default" = "vrm"): {
 };
 
 describe("KpiTile VRM sparkline", () => {
-  it("renders baseline anchored to 0 and drop-up popover", () => {
+  it("renders baseline anchored to 0 and VRM drawer popover", () => {
     const built = buildResult("vrm");
     if (!built) throw new Error("missing data");
     const tree = renderer.create(
@@ -78,7 +78,11 @@ describe("KpiTile VRM sparkline", () => {
 
     const tooltips = tree.root.findAllByType("tooltip-mock");
     expect(tooltips).toHaveLength(1);
-    expect(tooltips[0].props.wrapperStyle).toEqual({ visibility: "hidden", pointerEvents: "none" });
+    expect(tooltips[0].props.wrapperStyle).toEqual({
+      visibility: "hidden",
+      pointerEvents: "none",
+      display: "none",
+    });
     const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
 
     act(() => {
@@ -130,6 +134,8 @@ describe("KpiTile VRM sparkline", () => {
     });
 
     const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
+    expect(popover.props.className).toContain("kpi-sparkline__popover--vrm");
+
     let cursor: any = popover.parent;
     let anchored = false;
     while (cursor) {
