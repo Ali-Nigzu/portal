@@ -307,12 +307,21 @@
 }
 
 .kpi-sparkline-shell--vrm {
+  position: relative;
   overflow: visible;
-  padding-bottom: var(--vrm-spacing-4, 16px);
+  padding-bottom: var(--vrm-spacing-5, 20px);
+}
+
+.kpi-sparkline-anchor {
+  position: relative;
+}
+
+.kpi-sparkline-shell--vrm .kpi-sparkline-anchor {
+  padding-bottom: var(--vrm-spacing-3, 12px);
 }
 
 .kpi-sparkline--vrm {
-  height: calc(64px + var(--vrm-spacing-4, 16px));
+  height: 64px;
   align-items: flex-end;
 }
 
@@ -331,6 +340,34 @@
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 3;
+}
+
+
+.kpi-sparkline__popover--vrm {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%) translateY(10px);
+  min-width: 150px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(20, 22, 26, 0.95);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 4;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kpi-sparkline__popover--vrm .kpi-sparkline__popover-time {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.kpi-sparkline__popover--vrm .kpi-sparkline__popover-value {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
 }
 
 .kpi-sparkline__overlay {
