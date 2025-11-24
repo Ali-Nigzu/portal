@@ -10,9 +10,7 @@ jest.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AreaChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Area: () => <div>area</div>,
-  XAxis: () => <div>x-axis</div>,
   YAxis: () => <div>y-axis</div>,
-  ReferenceDot: () => <div>reference-dot</div>,
   Tooltip: () => null,
 }));
 

@@ -319,8 +319,8 @@
 .kpi-sparkline__popover {
   position: absolute;
   left: 50%;
-  bottom: 0;
-  transform: translate(-50%, calc(100% + 4px));
+  bottom: -6px;
+  transform: translate(-50%, 100%);
   background: rgba(15, 19, 26, 0.9);
   color: #ffffff;
   padding: 8px 12px;
