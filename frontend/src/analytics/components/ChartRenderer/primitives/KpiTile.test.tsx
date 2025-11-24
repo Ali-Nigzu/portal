@@ -230,9 +230,9 @@ describe("KpiTile", () => {
       });
     });
 
-      const popover = tree.root.find(
-        (node: any) => node.props?.["aria-label"] === "VRM sparkline popover",
-      );
+    const popover = tree.root.find(
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline__popover"),
+    );
     const valueNode = popover.findByProps({ className: "kpi-sparkline__popover-value" });
     const timeNode = popover.findByProps({ className: "kpi-sparkline__popover-time" });
 
@@ -269,9 +269,9 @@ describe("KpiTile", () => {
       });
     });
 
-      const popover = tree.root.find(
-        (node: any) => node.props?.["aria-label"] === "VRM sparkline popover",
-      );
+    const popover = tree.root.find(
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline__popover"),
+    );
     const valueNode = popover.findByProps({ className: "kpi-sparkline__popover-value" });
 
     expect(valueNode.children.join(" ")).toBe("20");
