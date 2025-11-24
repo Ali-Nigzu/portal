@@ -74,6 +74,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
 
   const sparklineHeight = isVrm ? 56 : 48;
+  const sparklineOffset = isVrm ? 12 : 0;
 
   const formattedDelta = formatDelta(delta);
   const coverageInfo = formatCoverage(coverage);
@@ -144,15 +145,25 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     if (!isVrm) {
       return;
     }
-    const payload =
-      (state?.activePayload?.[0]?.payload as { value?: number | null; x?: string | number } | undefined) ??
-      (typeof state?.activeTooltipIndex === "number" ? sparklineData[state.activeTooltipIndex] : undefined);
-    if (!payload) {
+
+    const payload = state?.activePayload?.[0]?.payload as { value?: number | null; x?: string | number } | undefined;
+    const tooltipIndex =
+      typeof state?.activeTooltipIndex === "number"
+        ? state.activeTooltipIndex
+        : state?.activeLabel
+        ? sparklineData.findIndex((point) => point.x === state.activeLabel)
+        : -1;
+
+    const fallbackPayload = tooltipIndex >= 0 ? sparklineData[tooltipIndex] : undefined;
+    const chosen = payload ?? fallbackPayload;
+
+    if (!chosen) {
       setVrmHover(null);
       return;
     }
-    const numeric = typeof payload.value === "number" ? payload.value : null;
-    setVrmHover({ value: numeric, label: formatPopoverLabel(payload.x) });
+
+    const numeric = typeof chosen.value === "number" ? chosen.value : null;
+    setVrmHover({ value: numeric, label: formatPopoverLabel(chosen.x) });
   };
 
   const handleSparklineLeave = () => {
@@ -248,7 +259,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         </div>
       ) : null}
       {!isTraffic && sparklineData.length > 1 ? (
-        <div className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}>
+        <div
+          className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
+          style={isVrm ? { marginBottom: -sparklineOffset } : undefined}
+        >
           <ResponsiveContainer width="100%" height={sparklineHeight}>
             <AreaChart
               data={sparklineData}

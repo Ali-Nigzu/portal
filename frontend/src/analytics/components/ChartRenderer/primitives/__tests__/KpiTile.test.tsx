@@ -69,6 +69,9 @@ describe("KpiTile VRM sparkline", () => {
     expect(yAxis.props.domain[0]).toBe(0);
     expect(typeof yAxis.props.domain[1]).toBe("function");
 
+    const sparkline = tree.root.find((node) => node.props.className?.includes("kpi-sparkline--vrm"));
+    expect(sparkline.props.style).toMatchObject({ marginBottom: -12 });
+
     const tooltips = tree.root.findAllByType("tooltip-mock");
     expect(tooltips).toHaveLength(1);
     expect(tooltips[0].props.wrapperStyle).toEqual({ display: "none" });
@@ -82,6 +85,26 @@ describe("KpiTile VRM sparkline", () => {
     const json = tree.toJSON();
     expect(JSON.stringify(json)).toContain("VRM sparkline popover");
     expect(JSON.stringify(json)).toContain("2");
+  });
+
+  it("falls back to activeLabel when payload is missing", () => {
+    const built = buildResult("vrm");
+    if (!built) throw new Error("missing data");
+    const tree = renderer.create(
+      <KpiTile result={built.result} series={built.series} height={200} className="" />,
+    );
+
+    const areaChart = tree.root.findByType("area-chart-mock");
+    act(() => {
+      areaChart.props.onMouseMove({
+        activeLabel: "2024-01-01T00:15:00Z",
+        activePayload: [],
+      });
+    });
+
+    const json = tree.toJSON();
+    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
+    expect(JSON.stringify(json)).toContain("3");
   });
 
   it("keeps default tooltip for non-VRM charts", () => {
