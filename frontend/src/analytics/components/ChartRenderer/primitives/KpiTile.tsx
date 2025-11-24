@@ -6,6 +6,8 @@ import {
   Area,
   Tooltip,
   YAxis,
+  ReferenceDot,
+  XAxis,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import {
@@ -175,6 +177,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     }
   };
 
+  const hoveredPoint = vrmHover ? sparklineData[vrmHover.index] : null;
+  const hoveredNumericValue =
+    hoveredPoint && typeof hoveredPoint.value === "number" ? hoveredPoint.value : null;
+
   const formatHeadline = () => {
     if (value === null || value === undefined) {
       return formatKpiValue(value, primarySeries?.unit);
@@ -285,29 +291,29 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                 <Tooltip
                   cursor={false}
                   isAnimationActive={false}
-                  wrapperStyle={{ visibility: "hidden", pointerEvents: "none" }}
-                  content={() => null}
                 />
-              )}
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={primarySeries?.color ?? "#2d6cdf"}
-                fill={primarySeries?.color ?? "#2d6cdf"}
-                fillOpacity={0.2}
-                isAnimationActive={false}
+                {isVrm && vrmHover && hoveredNumericValue !== null ? (
+                  <ReferenceDot
+                    x={vrmHover.index}
+                    y={hoveredNumericValue}
+                    r={4}
+                    fill={primarySeries?.color ?? "#2d6cdf"}
+                    stroke="#0f131a"
+                    strokeWidth={1.5}
+                  />
+                ) : null}
+              </AreaChart>
+            </ResponsiveContainer>
+            {isVrm ? (
+              <div
+                className="kpi-sparkline__overlay"
+                data-testid="vrm-sparkline-overlay"
+                onMouseMove={handleOverlayHover}
+                onMouseEnter={handleOverlayHover}
+                onMouseLeave={handleSparklineLeave}
               />
-            </AreaChart>
-          </ResponsiveContainer>
-          {isVrm ? (
-            <div
-              className="kpi-sparkline__overlay"
-              data-testid="vrm-sparkline-overlay"
-              onMouseMove={handleOverlayHover}
-              onMouseEnter={handleOverlayHover}
-              onMouseLeave={handleSparklineLeave}
-            />
-          ) : null}
+            ) : null}
+          </div>
           {isVrm && vrmHover ? (
             <div className="kpi-sparkline__popover" aria-label="VRM sparkline popover">
               <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>

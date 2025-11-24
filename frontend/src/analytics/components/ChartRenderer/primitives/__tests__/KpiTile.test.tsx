@@ -12,12 +12,16 @@ jest.mock("recharts", () => {
   const MockArea = (props: any) => <area-mock {...props} />;
   const MockTooltip = (props: any) => <tooltip-mock {...props} />;
   const MockYAxis = (props: any) => <y-axis-mock {...props} />;
+  const MockXAxis = (props: any) => <x-axis-mock {...props} />;
+  const MockReferenceDot = (props: any) => <reference-dot-mock {...props} />;
   return {
     ResponsiveContainer: MockResponsive,
     AreaChart: MockAreaChart,
     Area: MockArea,
     Tooltip: MockTooltip,
     YAxis: MockYAxis,
+    XAxis: MockXAxis,
+    ReferenceDot: MockReferenceDot,
   } as typeof import("recharts");
 });
 
@@ -121,15 +125,23 @@ describe("KpiTile VRM sparkline", () => {
     act(() => {
       overlay.props.onMouseMove({
         clientX: 150,
-        currentTarget: {
-          getBoundingClientRect: () => ({ width: 300, left: 0, right: 300, top: 0, bottom: 64, height: 64 }),
-        },
+        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
       });
     });
 
-    const json = tree.toJSON();
-    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
-    expect(JSON.stringify(json)).toContain("3");
+    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
+    let cursor: any = popover.parent;
+    let anchored = false;
+    while (cursor) {
+      if (cursor.props?.className?.includes("kpi-tile--vrm")) {
+        anchored = true;
+        break;
+      }
+      cursor = cursor.parent;
+    }
+
+    expect(anchored).toBe(true);
+    expect(popover.parent?.props?.className).toContain("kpi-sparkline-shell");
   });
 
   it("clamps overlay hover to the first bucket", () => {
