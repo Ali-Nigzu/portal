@@ -268,66 +268,51 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         </div>
       ) : null}
       {!isTraffic && sparklineData.length > 1 ? (
-        <div className={`kpi-sparkline-anchor${isVrm ? " kpi-sparkline-anchor--vrm" : ""}`}>
-          <div className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}>
-            <div
-              className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
-              ref={sparklineRef}
+        <div
+          className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
+          ref={sparklineRef}
+        >
+          <ResponsiveContainer width="100%" height={sparklineHeight}>
+            <AreaChart
+              data={sparklineData}
+              margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+              onMouseLeave={isVrm ? undefined : handleSparklineLeave}
             >
-              <ResponsiveContainer width="100%" height={sparklineHeight}>
-                <AreaChart
-                  data={sparklineData}
-                  margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-                  onMouseLeave={isVrm ? undefined : handleSparklineLeave}
-                >
-                  <XAxis dataKey="index" type="number" hide domain={["dataMin", "dataMax"]} />
-                  <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
-                  {!isVrm ? (
-                    <Tooltip
-                      formatter={(tooltipValue) => [
-                        formatValue(tooltipValue as number, primarySeries.unit),
-                        primarySeries.label ?? primarySeries.id ?? "",
-                      ]}
-                      labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
-                    />
-                  ) : (
-                    <Tooltip
-                      cursor={false}
-                      isAnimationActive={false}
-                      wrapperStyle={{ visibility: "hidden", pointerEvents: "none" }}
-                      content={() => null}
-                    />
-                  )}
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke={primarySeries?.color ?? "#2d6cdf"}
-                    fill={primarySeries?.color ?? "#2d6cdf"}
-                    fillOpacity={0.2}
-                    isAnimationActive={false}
-                  />
-                  {isVrm && vrmHover && hoveredNumericValue !== null ? (
-                    <ReferenceDot
-                      x={vrmHover.index}
-                      y={hoveredNumericValue}
-                      r={5}
-                      fill="#ffffff"
-                      stroke={primarySeries?.color ?? "#2d6cdf"}
-                      strokeWidth={2}
-                    />
-                  ) : null}
-                </AreaChart>
-              </ResponsiveContainer>
-              {isVrm ? (
-                <div
-                  className="kpi-sparkline__overlay"
-                  data-testid="vrm-sparkline-overlay"
-                  onMouseMove={handleOverlayHover}
-                  onMouseEnter={handleOverlayHover}
-                  onMouseLeave={handleSparklineLeave}
+              <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
+              {!isVrm ? (
+                <Tooltip
+                  formatter={(tooltipValue) => [
+                    formatValue(tooltipValue as number, primarySeries.unit),
+                    primarySeries.label ?? primarySeries.id ?? "",
+                  ]}
+                  labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
                 />
-              ) : null}
-            </div>
+              ) : (
+                <Tooltip
+                  cursor={false}
+                  isAnimationActive={false}
+                />
+                {isVrm && vrmHover && hoveredNumericValue !== null ? (
+                  <ReferenceDot
+                    x={vrmHover.index}
+                    y={hoveredNumericValue}
+                    r={4}
+                    fill={primarySeries?.color ?? "#2d6cdf"}
+                    stroke="#0f131a"
+                    strokeWidth={1.5}
+                  />
+                ) : null}
+              </AreaChart>
+            </ResponsiveContainer>
+            {isVrm ? (
+              <div
+                className="kpi-sparkline__overlay"
+                data-testid="vrm-sparkline-overlay"
+                onMouseMove={handleOverlayHover}
+                onMouseEnter={handleOverlayHover}
+                onMouseLeave={handleSparklineLeave}
+              />
+            ) : null}
           </div>
           {isVrm && vrmHover ? (
             <div className="kpi-sparkline__popover" aria-label="VRM sparkline popover">
