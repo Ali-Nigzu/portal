@@ -51,8 +51,11 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     );
   }, [primarySeries]);
 
-  const [vrmHover, setVrmHover] = useState<{ value: number | null; label: string } | null>(null);
-  const lastTooltipIndex = useRef<number | null>(null);
+  const [vrmHover, setVrmHover] = useState<{
+    value: number | null;
+    label: string;
+    index: number;
+  } | null>(null);
   const sparklineRef = useRef<HTMLDivElement | null>(null);
 
   if (!primarySeries) {
@@ -147,71 +150,11 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     if (!isVrm || !sparklineData.length) return;
 
     const clampedIndex = Math.max(0, Math.min(sparklineData.length - 1, index));
-    lastTooltipIndex.current = clampedIndex;
     const chosen = sparklineData[clampedIndex];
     if (!chosen) return;
 
     const numeric = typeof chosen.value === "number" ? chosen.value : null;
-    setVrmHover({ value: numeric, label: formatPopoverLabel(chosen.x) });
-  };
-
-  const handleSparklineHover = (state: any) => {
-    if (!isVrm) {
-      return;
-    }
-
-    const payload = state?.activePayload?.[0]?.payload as { value?: number | null; x?: string | number } | undefined;
-    const normalizeLabel = (label: unknown) => {
-      if (label === null || label === undefined) return null;
-      const parsed = parseLabelDate(label as string | number);
-      return parsed ? parsed.valueOf() : String(label);
-    };
-
-    const deriveIndexFromPosition = () => {
-      const width =
-        typeof state?.chartWidth === "number"
-          ? state.chartWidth
-          : sparklineRef.current?.getBoundingClientRect().width ?? 0;
-      const xCoord = typeof state?.chartX === "number" ? state.chartX : null;
-
-      if (!width || width <= 0 || xCoord === null || typeof xCoord !== "number") {
-        return -1;
-      }
-
-      const clampedRatio = Math.max(0, Math.min(1, xCoord / width));
-      return Math.round(clampedRatio * Math.max(0, sparklineData.length - 1));
-    };
-
-    const tooltipIndex = (() => {
-      if (typeof state?.activeTooltipIndex === "number") {
-        return state.activeTooltipIndex;
-      }
-      if (state?.activeLabel !== undefined) {
-        const target = normalizeLabel(state.activeLabel);
-        if (target === null) return -1;
-        return sparklineData.findIndex((point) => {
-          const pointLabel = normalizeLabel(point.x);
-          return pointLabel === target;
-        });
-      }
-
-      return deriveIndexFromPosition();
-    })();
-
-    if (tooltipIndex >= 0) {
-      applyHoverIndex(tooltipIndex);
-      return;
-    }
-
-    if (lastTooltipIndex.current !== null) {
-      applyHoverIndex(lastTooltipIndex.current);
-      return;
-    }
-
-    if (payload) {
-      const numeric = typeof payload.value === "number" ? payload.value : null;
-      setVrmHover({ value: numeric, label: formatPopoverLabel(payload.x) });
-    }
+    setVrmHover({ value: numeric, label: formatPopoverLabel(chosen.x), index: clampedIndex });
   };
 
   const handleOverlayHover = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -221,8 +164,8 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
       event.currentTarget?.getBoundingClientRect?.();
     if (!rect || rect.width <= 0) return;
 
-    const ratio = (event.clientX - rect.left) / rect.width;
-    const index = Math.round(Math.max(0, Math.min(1, ratio)) * Math.max(0, sparklineData.length - 1));
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const index = Math.round(ratio * Math.max(0, sparklineData.length - 1));
     applyHoverIndex(index);
   };
 
@@ -327,8 +270,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
             <AreaChart
               data={sparklineData}
               margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-              onMouseMove={isVrm ? handleSparklineHover : undefined}
-              onMouseLeave={isVrm ? handleSparklineLeave : undefined}
+              onMouseLeave={isVrm ? undefined : handleSparklineLeave}
             >
               <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
               {!isVrm ? (

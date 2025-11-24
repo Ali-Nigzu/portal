@@ -62,7 +62,7 @@ describe("KpiTile VRM sparkline", () => {
     expect(responsive.props.height).toBe(64);
 
     const areaChart = tree.root.findByType("area-chart-mock");
-    expect(typeof areaChart.props.onMouseMove).toBe("function");
+    expect(areaChart.props.onMouseMove).toBeUndefined();
 
     const yAxis = tree.root.findByType("y-axis-mock");
     expect(Array.isArray(yAxis.props.domain)).toBe(true);
@@ -75,10 +75,12 @@ describe("KpiTile VRM sparkline", () => {
     const tooltips = tree.root.findAllByType("tooltip-mock");
     expect(tooltips).toHaveLength(1);
     expect(tooltips[0].props.wrapperStyle).toEqual({ visibility: "hidden", pointerEvents: "none" });
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
 
     act(() => {
-      areaChart.props.onMouseMove({
-        activePayload: [{ payload: { x: "2024-01-01T00:30:00Z", value: 2 } }],
+      overlay.props.onMouseMove({
+        clientX: 300,
+        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
       });
     });
 
@@ -87,85 +89,24 @@ describe("KpiTile VRM sparkline", () => {
     expect(JSON.stringify(json)).toContain("2");
   });
 
-  it("falls back to activeLabel when payload is missing", () => {
+  it("computes hover from overlay midpoint", () => {
     const built = buildResult("vrm");
     if (!built) throw new Error("missing data");
     const tree = renderer.create(
       <KpiTile result={built.result} series={built.series} height={200} className="" />,
     );
 
-    const areaChart = tree.root.findByType("area-chart-mock");
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
     act(() => {
-      areaChart.props.onMouseMove({
-        activeLabel: "2024-01-01T00:15:00Z",
-        activePayload: [],
+      overlay.props.onMouseMove({
+        clientX: 150,
+        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
       });
     });
 
     const json = tree.toJSON();
     expect(JSON.stringify(json)).toContain("VRM sparkline popover");
     expect(JSON.stringify(json)).toContain("3");
-  });
-
-  it("keeps hover when payload is missing but last index exists", () => {
-    const built = buildResult("vrm");
-    if (!built) throw new Error("missing data");
-    const tree = renderer.create(
-      <KpiTile result={built.result} series={built.series} height={200} className="" />,
-    );
-
-    const areaChart = tree.root.findByType("area-chart-mock");
-    act(() => {
-      areaChart.props.onMouseMove({
-        activeLabel: "2024-01-01T00:15:00Z",
-        activePayload: [],
-        activeTooltipIndex: 1,
-      });
-    });
-
-    act(() => {
-      areaChart.props.onMouseMove({
-        activePayload: [],
-      });
-    });
-
-    const json = tree.toJSON();
-    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
-    expect(JSON.stringify(json)).toContain("3");
-  });
-
-  it("derives index from chartX when no payload or label is provided", () => {
-    const built = buildResult("vrm");
-    if (!built) throw new Error("missing data");
-    const tree = renderer.create(
-      <KpiTile result={built.result} series={built.series} height={200} className="" />,
-    );
-
-    const areaChart = tree.root.findByType("area-chart-mock");
-
-    act(() => {
-      areaChart.props.onMouseMove({
-        activePayload: [],
-        chartWidth: 300,
-        chartX: 150,
-      });
-    });
-
-    const jsonMid = tree.toJSON();
-    expect(JSON.stringify(jsonMid)).toContain("VRM sparkline popover");
-    expect(JSON.stringify(jsonMid)).toContain("3");
-
-    act(() => {
-      areaChart.props.onMouseMove({
-        activePayload: [],
-        chartWidth: 300,
-        chartX: 295,
-      });
-    });
-
-    const jsonEnd = tree.toJSON();
-    expect(JSON.stringify(jsonEnd)).toContain("VRM sparkline popover");
-    expect(JSON.stringify(jsonEnd)).toContain("2");
   });
 
   it("uses overlay hover when tooltip metadata is absent", () => {
@@ -175,7 +116,7 @@ describe("KpiTile VRM sparkline", () => {
       <KpiTile result={built.result} series={built.series} height={200} className="" />,
     );
 
-    const overlay = tree.root.find((node) => node.props["data-testid"] === "vrm-sparkline-overlay");
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
 
     act(() => {
       overlay.props.onMouseMove({
@@ -191,24 +132,24 @@ describe("KpiTile VRM sparkline", () => {
     expect(JSON.stringify(json)).toContain("3");
   });
 
-  it("matches numeric activeLabel timestamps to sparkline points", () => {
+  it("clamps overlay hover to the first bucket", () => {
     const built = buildResult("vrm");
     if (!built) throw new Error("missing data");
     const tree = renderer.create(
       <KpiTile result={built.result} series={built.series} height={200} className="" />,
     );
 
-    const areaChart = tree.root.findByType("area-chart-mock");
+    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
     act(() => {
-      areaChart.props.onMouseMove({
-        activeLabel: new Date("2024-01-01T00:15:00Z").valueOf(),
-        activePayload: [],
+      overlay.props.onMouseMove({
+        clientX: -50,
+        currentTarget: { getBoundingClientRect: () => ({ width: 300, left: 0 }) },
       });
     });
 
     const json = tree.toJSON();
     expect(JSON.stringify(json)).toContain("VRM sparkline popover");
-    expect(JSON.stringify(json)).toContain("3");
+    expect(JSON.stringify(json)).toContain("1");
   });
 
   it("keeps default tooltip for non-VRM charts", () => {
