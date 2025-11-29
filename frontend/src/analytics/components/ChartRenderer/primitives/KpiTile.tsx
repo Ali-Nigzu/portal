@@ -268,37 +268,47 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         </div>
       ) : null}
       {!isTraffic && sparklineData.length > 1 ? (
-        <div className={isVrm ? "kpi-sparkline-stack kpi-sparkline-stack--vrm" : undefined}>
+        <div
+          className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}
+          onMouseLeave={isVrm ? handleSparklineLeave : undefined}
+        >
           <div
             className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}
             onMouseLeave={isVrm ? handleSparklineLeave : undefined}
             data-testid={isVrm ? "vrm-sparkline-shell" : undefined}
             style={isVrm ? { paddingBottom: 0 } : undefined}
           >
-            <div
-              className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
-              ref={sparklineRef}
-            >
-              <ResponsiveContainer width="100%" height={sparklineHeight}>
-                <AreaChart
-                  data={sparklineData}
-                  margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-                  onMouseLeave={isVrm ? undefined : handleSparklineLeave}
-                >
-                  <XAxis dataKey="index" type="number" hide domain={["dataMin", "dataMax"]} />
-                  <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
-                  {!isVrm ? (
-                    <Tooltip
-                      formatter={(tooltipValue) => [
-                        formatValue(tooltipValue as number, primarySeries.unit),
-                        primarySeries.label ?? primarySeries.id ?? "",
-                      ]}
-                      labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
-                    />
-                  ) : null}
-                  <Area
-                    type="monotone"
-                    dataKey="value"
+            <ResponsiveContainer width="100%" height={sparklineHeight}>
+              <AreaChart
+                data={sparklineData}
+                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                onMouseLeave={isVrm ? undefined : handleSparklineLeave}
+              >
+                <XAxis dataKey="index" type="number" hide domain={["dataMin", "dataMax"]} />
+                <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
+                {!isVrm ? (
+                  <Tooltip
+                    formatter={(tooltipValue) => [
+                      formatValue(tooltipValue as number, primarySeries.unit),
+                      primarySeries.label ?? primarySeries.id ?? "",
+                    ]}
+                    labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
+                  />
+                ) : null}
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke={primarySeries?.color ?? "#2d6cdf"}
+                  fill={primarySeries?.color ?? "#2d6cdf"}
+                  fillOpacity={0.2}
+                  isAnimationActive={false}
+                />
+                {isVrm && vrmHover && hoveredNumericValue !== null ? (
+                  <ReferenceDot
+                    x={sparklineData[vrmHover.index]?.index ?? vrmHover.index}
+                    y={hoveredNumericValue}
+                    r={5}
+                    fill="#ffffff"
                     stroke={primarySeries?.color ?? "#2d6cdf"}
                     fill={primarySeries?.color ?? "#2d6cdf"}
                     fillOpacity={0.2}
@@ -325,8 +335,8 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                   onMouseEnter={handleOverlayHover}
                   onMouseLeave={handleSparklineLeave}
                 />
-              ) : null}
-            </div>
+              </>
+            ) : null}
           </div>
           {isVrm ? (
             <div className="kpi-sparkline-strip-slot" aria-hidden={!vrmHover}>
@@ -340,6 +350,14 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
               ) : null}
             </div>
           ) : null}
+        </div>
+      ) : null}
+      {isVrm && vrmHover ? (
+        <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
+          <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
+          <div className="kpi-sparkline-strip__value">
+            {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+          </div>
         </div>
       ) : null}
     </div>
