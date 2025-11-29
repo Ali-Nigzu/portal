@@ -223,6 +223,7 @@
 .kpi-tile--vrm {
   position: relative;
   overflow: visible;
+  padding-bottom: 0;
 }
 
 .kpi-header {

@@ -240,7 +240,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   return (
     <div
       className={["kpi-tile", className ?? "", isVrm ? "kpi-tile--vrm" : ""].filter(Boolean).join(" ")}
-      style={{ minHeight: height }}
+      style={isVrm ? { minHeight: height, paddingBottom: 0 } : { minHeight: height }}
     >
       <div className="kpi-header">
         {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
