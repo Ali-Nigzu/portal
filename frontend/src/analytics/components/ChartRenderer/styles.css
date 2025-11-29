@@ -317,6 +317,10 @@
   position: relative;
 }
 
+.kpi-sparkline-shell--vrm .kpi-sparkline-anchor {
+  padding-bottom: 0;
+}
+
 .kpi-sparkline--vrm {
   height: 64px;
   align-items: flex-end;

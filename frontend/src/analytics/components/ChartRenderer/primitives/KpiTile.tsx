@@ -271,8 +271,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         <div
           className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}
           onMouseLeave={isVrm ? handleSparklineLeave : undefined}
-          data-testid={isVrm ? "vrm-sparkline-shell" : undefined}
-          style={isVrm ? { paddingBottom: 0 } : undefined}
         >
           <div
             className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
