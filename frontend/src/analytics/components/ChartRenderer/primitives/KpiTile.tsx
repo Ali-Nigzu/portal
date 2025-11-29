@@ -273,8 +273,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           onMouseLeave={isVrm ? handleSparklineLeave : undefined}
         >
           <div
-            className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
-            ref={sparklineRef}
+            className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}
+            onMouseLeave={isVrm ? handleSparklineLeave : undefined}
+            data-testid={isVrm ? "vrm-sparkline-shell" : undefined}
+            style={isVrm ? { paddingBottom: 0 } : undefined}
           >
             <ResponsiveContainer width="100%" height={sparklineHeight}>
               <AreaChart
@@ -308,14 +310,24 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     r={5}
                     fill="#ffffff"
                     stroke={primarySeries?.color ?? "#2d6cdf"}
-                    strokeWidth={2}
-                    strokeOpacity={0.9}
+                    fill={primarySeries?.color ?? "#2d6cdf"}
+                    fillOpacity={0.2}
+                    isAnimationActive={false}
                   />
-                ) : null}
-              </AreaChart>
-            </ResponsiveContainer>
-            {isVrm ? (
-              <>
+                  {isVrm && vrmHover && hoveredNumericValue !== null ? (
+                    <ReferenceDot
+                      x={sparklineData[vrmHover.index]?.index ?? vrmHover.index}
+                      y={hoveredNumericValue}
+                      r={5}
+                      fill="#ffffff"
+                      stroke={primarySeries?.color ?? "#2d6cdf"}
+                      strokeWidth={2}
+                      strokeOpacity={0.9}
+                    />
+                  ) : null}
+                </AreaChart>
+              </ResponsiveContainer>
+              {isVrm ? (
                 <div
                   className="kpi-sparkline__overlay"
                   data-testid="vrm-sparkline-overlay"
@@ -326,6 +338,18 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
               </>
             ) : null}
           </div>
+          {isVrm ? (
+            <div className="kpi-sparkline-strip-slot" aria-hidden={!vrmHover}>
+              {vrmHover ? (
+                <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
+                  <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
+                  <div className="kpi-sparkline-strip__value">
+                    {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {isVrm && vrmHover ? (
