@@ -180,6 +180,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const hoveredPoint = vrmHover ? sparklineData[vrmHover.index] : null;
   const hoveredNumericValue =
     hoveredPoint && typeof hoveredPoint.value === "number" ? hoveredPoint.value : null;
+  const showVrmReferenceDot = isVrm && vrmHover && hoveredNumericValue !== null;
 
   const formatHeadline = () => {
     if (value === null || value === undefined) {
@@ -240,7 +241,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   return (
     <div
       className={["kpi-tile", className ?? "", isVrm ? "kpi-tile--vrm" : ""].filter(Boolean).join(" ")}
-      style={{ minHeight: height }}
+      style={isVrm ? { minHeight: height, paddingBottom: 0 } : { minHeight: height }}
     >
       <div className="kpi-header">
         {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
@@ -268,58 +269,56 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         </div>
       ) : null}
       {!isTraffic && sparklineData.length > 1 ? (
-        <div className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}>
+        <div className={isVrm ? "kpi-sparkline-stack kpi-sparkline-stack--vrm" : undefined}>
           <div
-            className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
-            ref={sparklineRef}
+            className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}
+            onMouseLeave={isVrm ? handleSparklineLeave : undefined}
+            data-testid={isVrm ? "vrm-sparkline-shell" : undefined}
+            style={isVrm ? { paddingBottom: 0 } : undefined}
           >
-            <ResponsiveContainer width="100%" height={sparklineHeight}>
-              <AreaChart
-                data={sparklineData}
-                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-                onMouseLeave={isVrm ? undefined : handleSparklineLeave}
-              >
-                <XAxis dataKey="index" type="number" hide domain={["dataMin", "dataMax"]} />
-                <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
-                {!isVrm ? (
-                  <Tooltip
-                    formatter={(tooltipValue) => [
-                      formatValue(tooltipValue as number, primarySeries.unit),
-                      primarySeries.label ?? primarySeries.id ?? "",
-                    ]}
-                    labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
-                  />
-                ) : (
-                  <Tooltip
-                    cursor={false}
-                    isAnimationActive={false}
-                    wrapperStyle={{ visibility: "hidden", pointerEvents: "none" }}
-                    content={() => null}
-                  />
-                )}
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke={primarySeries?.color ?? "#2d6cdf"}
-                  fill={primarySeries?.color ?? "#2d6cdf"}
-                  fillOpacity={0.2}
-                  isAnimationActive={false}
-                />
-                {isVrm && vrmHover && hoveredNumericValue !== null ? (
-                  <ReferenceDot
-                    x={sparklineData[vrmHover.index]?.index ?? vrmHover.index}
-                    y={hoveredNumericValue}
-                    r={5}
-                    fill="#ffffff"
+            <div
+              className={`kpi-sparkline${isVrm ? " kpi-sparkline--vrm" : ""}`}
+              ref={sparklineRef}
+            >
+              <ResponsiveContainer width="100%" height={sparklineHeight}>
+                <AreaChart
+                  data={sparklineData}
+                  margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                  onMouseLeave={isVrm ? undefined : handleSparklineLeave}
+                >
+                  <XAxis dataKey="index" type="number" hide domain={["dataMin", "dataMax"]} />
+                  <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
+                  {!isVrm ? (
+                    <Tooltip
+                      formatter={(tooltipValue) => [
+                        formatValue(tooltipValue as number, primarySeries.unit),
+                        primarySeries.label ?? primarySeries.id ?? "",
+                      ]}
+                      labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
+                    />
+                  ) : null}
+                  <Area
+                    type="monotone"
+                    dataKey="value"
                     stroke={primarySeries?.color ?? "#2d6cdf"}
-                    strokeWidth={2}
-                    strokeOpacity={0.9}
+                    fill={primarySeries?.color ?? "#2d6cdf"}
+                    fillOpacity={0.2}
+                    isAnimationActive={false}
                   />
-                ) : null}
-              </AreaChart>
-            </ResponsiveContainer>
-            {isVrm ? (
-              <>
+                  {showVrmReferenceDot ? (
+                    <ReferenceDot
+                      x={sparklineData[vrmHover.index]?.index ?? vrmHover.index}
+                      y={hoveredNumericValue}
+                      r={5}
+                      fill="#ffffff"
+                      stroke={primarySeries?.color ?? "#2d6cdf"}
+                      strokeWidth={2}
+                      strokeOpacity={0.9}
+                    />
+                  ) : null}
+                </AreaChart>
+              </ResponsiveContainer>
+              {isVrm ? (
                 <div
                   className="kpi-sparkline__overlay"
                   data-testid="vrm-sparkline-overlay"
@@ -327,20 +326,21 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                   onMouseEnter={handleOverlayHover}
                   onMouseLeave={handleSparklineLeave}
                 />
-                {vrmHover ? (
-                  <div
-                    className="kpi-sparkline__popover kpi-sparkline__popover--vrm"
-                    aria-label="VRM sparkline popover"
-                  >
-                    <div className="kpi-sparkline__popover-time">{vrmHover.label}</div>
-                    <div className="kpi-sparkline__popover-value">
-                      {formatKpiValue(vrmHover.value, primarySeries?.unit)}
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
+              ) : null}
+            </div>
           </div>
+          {isVrm ? (
+            <div className="kpi-sparkline-strip-slot" aria-hidden={!vrmHover}>
+              {vrmHover ? (
+                <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
+                  <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
+                  <div className="kpi-sparkline-strip__value">
+                    {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
