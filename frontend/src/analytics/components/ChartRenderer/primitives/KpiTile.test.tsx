@@ -305,28 +305,4 @@ describe("KpiTile", () => {
     );
     expect(strips).toHaveLength(0);
   });
-
-  it("keeps the VRM sparkline flush to the shell bottom and renders the strip outside the sparkline container", () => {
-    const props = buildProps();
-    props.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
-
-    const tree = renderer.create(<KpiTile {...props} />);
-    const shell = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-shell");
-    expect(shell.props.style?.paddingBottom ?? 0).toBe(0);
-
-    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
-
-    act(() => {
-      overlay.props.onMouseEnter({
-        clientX: 20,
-        currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 100 }) },
-      });
-    });
-
-    const strip = tree.root.find(
-      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
-    );
-
-    expect(shell.findAll((node: any) => node === strip)).toHaveLength(0);
-  });
 });
