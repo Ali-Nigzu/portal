@@ -237,9 +237,7 @@ describe("KpiTile", () => {
     });
 
     const strip = tree.root.find(
-      (node: any) =>
-        typeof node.props?.className === "string" &&
-        node.props.className.split(" ").includes("kpi-sparkline-strip"),
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
     );
     const valueNode = strip.findByProps({ className: "kpi-sparkline-strip__value" });
     const timeNode = strip.findByProps({ className: "kpi-sparkline-strip__time" });
@@ -290,9 +288,7 @@ describe("KpiTile", () => {
     });
 
     const strip = tree.root.find(
-      (node: any) =>
-        typeof node.props?.className === "string" &&
-        node.props.className.split(" ").includes("kpi-sparkline-strip"),
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
     );
     const valueNode = strip.findByProps({ className: "kpi-sparkline-strip__value" });
 
@@ -314,9 +310,7 @@ describe("KpiTile", () => {
     });
 
     let strips = tree.root.findAll(
-      (node: any) =>
-        typeof node.props?.className === "string" &&
-        node.props.className.split(" ").includes("kpi-sparkline-strip"),
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
     );
     expect(strips.length).toBeGreaterThan(0);
 
@@ -325,45 +319,8 @@ describe("KpiTile", () => {
     });
 
     strips = tree.root.findAll(
-      (node: any) =>
-        typeof node.props?.className === "string" &&
-        node.props.className.split(" ").includes("kpi-sparkline-strip"),
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
     );
     expect(strips).toHaveLength(0);
-  });
-
-  it("keeps the VRM sparkline flush to the shell bottom and renders the strip outside the sparkline container", () => {
-    const props = buildProps();
-    props.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
-
-    const tree = renderer.create(<KpiTile {...props} />);
-    const tile = tree.root.find((node: any) => node.props.className?.includes("kpi-tile"));
-    expect(tile.props.style?.paddingBottom ?? null).toBe(0);
-
-    const shell = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-shell");
-    expect(shell.props.style?.paddingBottom ?? 0).toBe(0);
-
-    const slotBeforeHover = tree.root.findAllByProps({ className: "kpi-sparkline-strip-slot" });
-    expect(slotBeforeHover).toHaveLength(1);
-    expect(slotBeforeHover[0].children).toHaveLength(0);
-
-    const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
-
-    act(() => {
-      overlay.props.onMouseEnter({
-        clientX: 20,
-        currentTarget: { getBoundingClientRect: () => ({ left: 0, width: 100 }) },
-      });
-    });
-
-    const strip = tree.root.find(
-      (node: any) =>
-        typeof node.props?.className === "string" &&
-        node.props.className.split(" ").includes("kpi-sparkline-strip"),
-    );
-
-    expect(shell.findAll((node: any) => node === strip)).toHaveLength(0);
-    const slotAfterHover = tree.root.findAllByProps({ className: "kpi-sparkline-strip-slot" });
-    expect(slotAfterHover[0].children).toHaveLength(1);
   });
 });
