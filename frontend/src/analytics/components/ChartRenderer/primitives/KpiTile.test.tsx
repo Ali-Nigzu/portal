@@ -6,13 +6,15 @@ import { KpiTile } from "./KpiTile";
 import type { ChartPrimitiveProps } from "./types";
 import type { ChartResult, ChartSeries } from "../../../schemas/charting";
 
+const mockTooltip = jest.fn((props: any) => <div className="recharts-tooltip-mock" {...props} />);
+
 jest.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AreaChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Area: () => <div>area</div>,
   YAxis: () => <div>y-axis</div>,
   XAxis: () => <div>x-axis</div>,
-  Tooltip: () => null,
+  Tooltip: (props: any) => mockTooltip(props),
   ReferenceDot: (props: any) => <div {...props}>reference-dot</div>,
 }));
 
@@ -46,6 +48,10 @@ const buildProps = (overrides?: Partial<ChartPrimitiveProps>): ChartPrimitivePro
 };
 
 describe("KpiTile", () => {
+  beforeEach(() => {
+    mockTooltip.mockClear();
+  });
+
   it("hides raw and coverage metadata when compact", () => {
     const props = buildProps();
     props.result.meta = {
@@ -238,6 +244,18 @@ describe("KpiTile", () => {
 
     expect(valueNode.children.join(" ")).toBe("10");
     expect(timeNode.children.join(" ")).not.toBe("");
+    expect(tree.root.findAllByProps({ className: "recharts-tooltip-mock" })).toHaveLength(0);
+  });
+
+  it("renders Recharts tooltip for non-VRM tiles and omits it for VRM tiles", () => {
+    renderer.create(<KpiTile {...buildProps()} />);
+    expect(mockTooltip).toHaveBeenCalledTimes(1);
+
+    mockTooltip.mockClear();
+    const vrmProps = buildProps();
+    vrmProps.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
+    renderer.create(<KpiTile {...vrmProps} />);
+    expect(mockTooltip).not.toHaveBeenCalled();
   });
 
   it("derives VRM hover index from overlay position", () => {

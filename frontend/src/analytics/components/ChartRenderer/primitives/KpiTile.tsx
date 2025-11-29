@@ -292,14 +292,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     ]}
                     labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
                   />
-                ) : (
-                  <Tooltip
-                    cursor={false}
-                    isAnimationActive={false}
-                    wrapperStyle={{ visibility: "hidden", pointerEvents: "none" }}
-                    content={() => null}
-                  />
-                )}
+                ) : null}
                 <Area
                   type="monotone"
                   dataKey="value"
