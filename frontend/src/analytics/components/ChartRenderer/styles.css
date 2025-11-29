@@ -309,7 +309,7 @@
 .kpi-sparkline-shell--vrm {
   position: relative;
   overflow: visible;
-  padding-bottom: var(--vrm-spacing-5, 20px);
+  padding-bottom: 0;
 }
 
 .kpi-sparkline-anchor {
@@ -317,15 +317,7 @@
 }
 
 .kpi-sparkline-shell--vrm .kpi-sparkline-anchor {
-  padding-bottom: var(--vrm-spacing-3, 12px);
-}
-
-.kpi-sparkline-anchor {
-  position: relative;
-}
-
-.kpi-sparkline-shell--vrm .kpi-sparkline-anchor {
-  padding-bottom: var(--vrm-spacing-4, 16px);
+  padding-bottom: 0;
 }
 
 .kpi-sparkline--vrm {
