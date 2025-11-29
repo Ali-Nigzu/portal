@@ -180,6 +180,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const hoveredPoint = vrmHover ? sparklineData[vrmHover.index] : null;
   const hoveredNumericValue =
     hoveredPoint && typeof hoveredPoint.value === "number" ? hoveredPoint.value : null;
+  const showVrmReferenceDot = isVrm && vrmHover && hoveredNumericValue !== null;
 
   const formatHeadline = () => {
     if (value === null || value === undefined) {
