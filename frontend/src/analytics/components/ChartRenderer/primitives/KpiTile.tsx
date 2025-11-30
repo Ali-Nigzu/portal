@@ -181,6 +181,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const hoveredNumericValue =
     hoveredPoint && typeof hoveredPoint.value === "number" ? hoveredPoint.value : null;
   const vrmHoverPoint = isVrm && vrmHover && hoveredNumericValue !== null ? vrmHover : null;
+  const showVrmHover = Boolean(vrmHoverPoint);
   const vrmReferenceDot = vrmHoverPoint ? (
     <ReferenceDot
       x={sparklineData[vrmHoverPoint.index]?.index ?? vrmHoverPoint.index}
@@ -331,7 +332,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
             </div>
           </div>
           {isVrm ? (
-            <div className="kpi-sparkline-strip-slot" aria-hidden={!vrmHover}>
+            <div className="kpi-sparkline-strip-slot" aria-hidden={!showVrmHover}>
               {vrmHoverPoint ? (
                 <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
                   <div className="kpi-sparkline-strip__time">{vrmHoverPoint.label}</div>
