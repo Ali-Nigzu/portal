@@ -237,6 +237,7 @@
 .kpi-content--vrm {
   flex: 1;
   align-items: stretch;
+  gap: var(--vrm-spacing-3, 12px);
 }
 
 .kpi-main-block {
@@ -335,6 +336,7 @@
   gap: 0;
   flex: 1;
   justify-content: flex-end;
+  align-items: stretch;
 }
 
 .kpi-sparkline-anchor {
@@ -355,6 +357,8 @@
   justify-content: flex-end;
   align-items: stretch;
   margin-top: auto;
+  padding: 0;
+  min-height: 64px;
 }
 
 .kpi-sparkline--vrm {

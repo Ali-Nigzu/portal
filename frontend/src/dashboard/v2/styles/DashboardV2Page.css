@@ -157,6 +157,13 @@
   border-radius: 0 !important;
 }
 
+.dashboard-v2__kpi-renderer .kpi-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
 .dashboard-v2__kpi-renderer .kpi-sparkline-strip,
 .dashboard-v2__kpi-renderer .traffic-distribution,
 .dashboard-v2__kpi-renderer .capacity-usage,

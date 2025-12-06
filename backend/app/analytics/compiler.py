@@ -881,7 +881,7 @@ class SpecCompiler:
                     {prefix}_series AS (
                         SELECT
                             enriched.bucket_start,
-                            enriched.value,
+                            COALESCE(band.occupancy_avg, enriched.value) AS value,
                             band.occupancy_min,
                             band.occupancy_max,
                             band.occupancy_avg,
