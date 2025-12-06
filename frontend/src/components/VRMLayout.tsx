@@ -206,8 +206,20 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
         <div className="vrm-header-stack">
           <header className="vrm-header">
             <div className="vrm-header-left">
+              <div className="vrm-site-identity">
+                <div className="vrm-site-identity-label">Active site</div>
+                <div className="vrm-site-context" role="tablist" aria-label="Sites">
+                  <button type="button" className="vrm-site-chip active" role="tab" aria-selected="true">
+                    Site 0
+                  </button>
+                  <button type="button" className="vrm-site-chip disabled" aria-disabled role="tab">
+                    Add site
+                  </button>
+                </div>
+              </div>
+
               {/* Search Bar */}
-              <div className="vrm-search">
+              <div className="vrm-search vrm-search-compact">
                 <div className="vrm-search-icon" aria-hidden="true"></div>
                 <input
                   type="text"
@@ -215,17 +227,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
                   aria-label="Search"
                 />
               </div>
-              <div className="vrm-site-context" role="tablist" aria-label="Sites">
-                <button type="button" className="vrm-site-chip active" role="tab" aria-selected="true">
-                  Site 0
-                </button>
-                <button type="button" className="vrm-site-chip disabled" aria-disabled role="tab">
-                  Add site
-                </button>
-              </div>
             </div>
 
             <div className="vrm-header-right">
+              <HeaderStatusStrip />
+
               {/* User Info */}
               <div className="vrm-user-meta">
                 <span className="vrm-status vrm-status-online">
@@ -244,8 +250,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
               </div>
             </div>
           </header>
-
-          <HeaderStatusStrip />
         </div>
 
         {/* Page Content */}

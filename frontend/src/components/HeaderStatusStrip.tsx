@@ -13,30 +13,38 @@ const HeaderStatusStrip: React.FC = () => {
   const toggleRealtime = () => setRealtime(!realtime);
 
   return (
-    <div className="vrm-status-strip" role="status" aria-live="polite">
-      <div className="vrm-status-strip-section">
+    <div className="vrm-header-meta" role="status" aria-live="polite">
+      <div className="vrm-header-meta-group">
+        <span className="vrm-header-chip" title="Last updated timestamp">
+          Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—'}
+        </span>
         <button
           type="button"
-          className={`vrm-status-chip vrm-status-chip-action ${realtime ? 'active' : ''}`}
+          className={`vrm-header-chip vrm-header-chip-action ${realtime ? 'active' : ''}`}
           onClick={toggleRealtime}
           aria-pressed={realtime}
         >
           <span className={`vrm-status-indicator ${realtime ? 'ok' : 'warning'}`} />
           {realtime ? 'Realtime on' : 'Realtime off'}
         </button>
-        <span className="vrm-status-chip" title="Last updated timestamp">
-          Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—'}
-        </span>
-        <span className="vrm-status-chip" title="Local site time">
-          Local time: {localTime}
-        </span>
       </div>
-      <div className="vrm-status-strip-section">
-        <span className="vrm-status-chip" title={statusCopy[systemStatus]}>
+
+      <span className="vrm-header-meta-divider" aria-hidden="true" />
+
+      <div className="vrm-header-meta-group">
+        <span className="vrm-header-chip" title={statusCopy[systemStatus]}>
           <span className={`vrm-status-indicator ${systemStatus}`} aria-hidden />
           {statusCopy[systemStatus]}
         </span>
-        <span className="vrm-status-chip" title="Viewer access">
+      </div>
+
+      <span className="vrm-header-meta-divider" aria-hidden="true" />
+
+      <div className="vrm-header-meta-group">
+        <span className="vrm-header-chip" title="Local site time">
+          Local time: {localTime}
+        </span>
+        <span className="vrm-header-chip" title="Viewer access">
           Viewer rights: Full
         </span>
       </div>
