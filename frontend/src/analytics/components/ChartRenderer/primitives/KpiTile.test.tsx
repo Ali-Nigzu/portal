@@ -236,15 +236,30 @@ describe("KpiTile", () => {
       });
     });
 
-    const strip = tree.root.find(
+    const strips = tree.root.findAll(
       (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
     );
+    expect(strips).toHaveLength(1);
+    const strip = strips[0];
     const valueNode = strip.findByProps({ className: "kpi-sparkline-strip__value" });
     const timeNode = strip.findByProps({ className: "kpi-sparkline-strip__time" });
 
     expect(valueNode.children.join(" ")).toBe("10");
     expect(timeNode.children.join(" ")).not.toBe("");
     expect(tree.root.findAllByProps({ className: "recharts-tooltip-mock" })).toHaveLength(0);
+  });
+
+  it("does not render the VRM hover strip when not hovering", () => {
+    const props = buildProps();
+    props.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
+
+    const tree = renderer.create(<KpiTile {...props} />);
+
+    const strips = tree.root.findAll(
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
+    );
+
+    expect(strips).toHaveLength(0);
   });
 
   it("renders Recharts tooltip for non-VRM tiles and omits it for VRM tiles", () => {
@@ -256,6 +271,16 @@ describe("KpiTile", () => {
     vrmProps.result.meta = { timezone: "UTC", summary: { presentation: "vrm" } as any } as ChartResult["meta"];
     renderer.create(<KpiTile {...vrmProps} />);
     expect(mockTooltip).not.toHaveBeenCalled();
+  });
+
+  it("keeps the VRM hover strip hidden for non-VRM tiles", () => {
+    const tree = renderer.create(<KpiTile {...buildProps()} />).root;
+
+    const strips = tree.findAll(
+      (node: any) => typeof node.props?.className === "string" && node.props.className.includes("kpi-sparkline-strip"),
+    );
+
+    expect(strips).toHaveLength(0);
   });
 
   it("derives VRM hover index from overlay position", () => {

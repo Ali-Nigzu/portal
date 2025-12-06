@@ -274,7 +274,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           onMouseLeave={isVrm ? handleSparklineLeave : undefined}
         >
           <div
-            className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}
+            className={`kpi-sparkline-anchor${isVrm ? " kpi-sparkline-anchor--vrm" : ""}`}
             onMouseLeave={isVrm ? handleSparklineLeave : undefined}
             data-testid={isVrm ? "vrm-sparkline-shell" : undefined}
             style={isVrm ? { paddingBottom: 0 } : undefined}
@@ -312,10 +312,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                   <ReferenceDot
                     x={sparklineData[vrmHover.index]?.index ?? vrmHover.index}
                     y={hoveredNumericValue}
-                    r={5}
-                    fill="#ffffff"
+                    r={3.5}
+                    fill="rgba(255,255,255,0.1)"
                     stroke={primarySeries?.color ?? "#2d6cdf"}
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                     strokeOpacity={0.9}
                   />
                 ) : null}
@@ -331,26 +331,14 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
               />
             ) : null}
           </div>
-          {isVrm ? (
-            <div className="kpi-sparkline-strip-slot" aria-hidden={!vrmHover}>
-              {vrmHover ? (
-                <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
-                  <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
-                  <div className="kpi-sparkline-strip__value">
-                    {formatKpiValue(vrmHover.value, primarySeries?.unit)}
-                  </div>
-                </div>
-              ) : null}
+          {isVrm && vrmHover ? (
+            <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
+              <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
+              <div className="kpi-sparkline-strip__value">
+                {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+              </div>
             </div>
           ) : null}
-        </div>
-      ) : null}
-      {isVrm && vrmHover ? (
-        <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
-          <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
-          <div className="kpi-sparkline-strip__value">
-            {formatKpiValue(vrmHover.value, primarySeries?.unit)}
-          </div>
         </div>
       ) : null}
     </div>
