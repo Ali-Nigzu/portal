@@ -18,6 +18,7 @@ import { filterDataByControls, getDateRangeFromPreset, deriveComparisonRange } f
 import { CardControlState } from '../hooks/useCardControls';
 import { InteractionProvider } from '../context/InteractionContext';
 import { Credentials } from '../types/credentials';
+import HeaderStatusStrip from '../components/HeaderStatusStrip';
 
 interface ApiResponse {
   data: ChartData[];
@@ -78,6 +79,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const [flowControlsState, setFlowControlsState] = useState<CardControlState | null>(null);
   const globalControls = useGlobalControls();
   const navigate = useNavigate();
+  const siteLabel = useMemo(() => credentials.username ?? 'Site', [credentials.username]);
+  const siteId = useMemo(() => credentials.username ?? '—', [credentials.username]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -461,6 +464,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
             </div>
           </div>
         </div>
+
+        <section className="vrm-section">
+          <div className="vrm-dashboard-header">
+            <div className="vrm-dashboard-header-left">
+              <div className="vrm-dashboard-avatar" aria-hidden="true" />
+              <div className="vrm-dashboard-identity">
+                <div className="vrm-dashboard-identity-label">Active site</div>
+                <div className="vrm-dashboard-title">{`${siteLabel} – ${siteId}`}</div>
+              </div>
+            </div>
+            <div className="vrm-dashboard-header-right">
+              <HeaderStatusStrip className="vrm-dashboard-header-meta" />
+            </div>
+          </div>
+        </section>
 
         <section className="vrm-section">
           <div className="vrm-kpi-grid">

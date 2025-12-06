@@ -7,13 +7,17 @@ const statusCopy: Record<SystemStatus, string> = {
   critical: 'System status: Attention required',
 };
 
-const HeaderStatusStrip: React.FC = () => {
+interface HeaderStatusStripProps {
+  className?: string;
+}
+
+const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
   const { lastUpdated, systemStatus, localTime, realtime, setRealtime } = useGlobalControls();
 
   const toggleRealtime = () => setRealtime(!realtime);
 
   return (
-    <div className="vrm-header-meta" role="status" aria-live="polite">
+    <div className={`vrm-header-meta ${className ?? ''}`.trim()} role="status" aria-live="polite">
       <div className="vrm-header-meta-group">
         <span className="vrm-header-chip" title="Last updated timestamp">
           Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—'}

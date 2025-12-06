@@ -3,6 +3,7 @@ import { Card } from "../../../analytics/components/Card";
 import { ChartRenderer } from "../../../analytics/components/ChartRenderer";
 import ErrorBoundary from "../../../common/components/ErrorBoundary";
 import { logError, logInfo } from "../../../common/utils/logger";
+import HeaderStatusStrip from "../../../components/HeaderStatusStrip";
 import type {
   DashboardGridPlacement,
   DashboardManifest,
@@ -553,10 +554,6 @@ const DashboardV2Page = ({
   );
 
   const gridColumns = manifest?.layout.grid.columns ?? 12;
-  const localTimeLabel = useMemo(
-    () => localTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    [localTime],
-  );
   const siteOrgId = manifest?.orgId ?? orgId;
   const siteUiOrgId = resolvedUiClient ?? resolveUiClient(siteOrgId) ?? siteOrgId;
   const siteLabel = siteUiOrgId ?? "Site";
@@ -573,12 +570,16 @@ const DashboardV2Page = ({
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
       <header className="dashboard-v2__header">
-        <div className="dashboard-v2__title-block">
-          <h1 className="dashboard-v2__title">{`${siteLabel} – ${siteId}`}</h1>
-          <div className="dashboard-v2__meta-row">
-            <span>Last updated: Realtime</span>
-            <span>• Status: OK</span>
-            <span>• Local time: {localTimeLabel}</span>
+        <div className="vrm-dashboard-header">
+          <div className="vrm-dashboard-header-left">
+            <div className="vrm-dashboard-avatar" aria-hidden="true" />
+            <div className="vrm-dashboard-identity">
+              <div className="vrm-dashboard-identity-label">Active site</div>
+              <div className="vrm-dashboard-title">{`${siteLabel} – ${siteId}`}</div>
+            </div>
+          </div>
+          <div className="vrm-dashboard-header-right">
+            <HeaderStatusStrip className="vrm-dashboard-header-meta" />
           </div>
         </div>
         {!isVrmDashboard ? (

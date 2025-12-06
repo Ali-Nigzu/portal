@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import HeaderStatusStrip from './HeaderStatusStrip';
 import '../styles/VRMTheme.css';
 
 interface VRMLayoutProps {
@@ -204,34 +203,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
       {/* Main Content Area */}
       <main className="vrm-main">
         <div className="vrm-header-stack">
-          <header className="vrm-header">
-            <div className="vrm-header-left">
-              <div className="vrm-site-identity">
-                <div className="vrm-site-identity-label">Active site</div>
-                <div className="vrm-site-context" role="tablist" aria-label="Sites">
-                  <button type="button" className="vrm-site-chip active" role="tab" aria-selected="true">
-                    Site 0
-                  </button>
-                  <button type="button" className="vrm-site-chip disabled" aria-disabled role="tab">
-                    Add site
-                  </button>
-                </div>
-              </div>
-
-              {/* Search Bar */}
-              <div className="vrm-search vrm-search-compact">
-                <div className="vrm-search-icon" aria-hidden="true"></div>
-                <input
-                  type="text"
-                  placeholder="Search or type /"
-                  aria-label="Search"
-                />
-              </div>
-            </div>
-
+          <header className="vrm-header vrm-header--userbar">
             <div className="vrm-header-right">
-              <HeaderStatusStrip />
-
               {/* User Info */}
               <div className="vrm-user-meta">
                 <span className="vrm-status vrm-status-online">
