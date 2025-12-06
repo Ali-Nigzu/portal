@@ -224,6 +224,7 @@
   position: relative;
   overflow: visible;
   padding-bottom: 0;
+  align-items: stretch;
 }
 
 .kpi-header {
@@ -322,6 +323,12 @@
 
 .kpi-sparkline-anchor--vrm {
   padding-bottom: 0;
+}
+
+.kpi-sparkline-region--vrm {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .kpi-sparkline--vrm {

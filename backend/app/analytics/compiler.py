@@ -811,6 +811,35 @@ class SpecCompiler:
                     )
                     """
                 ).strip()
+                samples_with_next = dedent(
+                    f"""
+                    {prefix}_samples_with_next AS (
+                        SELECT
+                            bucket_start,
+                            bucket_end,
+                            bucket_seconds,
+                            window_seconds,
+                            occupancy,
+                            ts,
+                            ordering,
+                            GREATEST(
+                                0,
+                                LEAST(
+                                    window_seconds,
+                                    TIMESTAMP_DIFF(
+                                        COALESCE(
+                                            LEAD(ts) OVER (PARTITION BY bucket_start ORDER BY ts, ordering),
+                                            bucket_end
+                                        ),
+                                        ts,
+                                        SECOND
+                                    )
+                                )
+                            ) AS duration_seconds
+                        FROM {prefix}_samples
+                    )
+                    """
+                ).strip()
                 band = dedent(
                     f"""
                     {prefix}_band AS (
@@ -820,23 +849,8 @@ class SpecCompiler:
                             window_seconds,
                             MIN(occupancy) AS occupancy_min,
                             MAX(occupancy) AS occupancy_max,
-                            SUM(
-                                occupancy * GREATEST(
-                                    0,
-                                    LEAST(
-                                        window_seconds,
-                                        TIMESTAMP_DIFF(
-                                            COALESCE(
-                                                LEAD(ts) OVER (PARTITION BY bucket_start ORDER BY ts, ordering),
-                                                bucket_end
-                                            ),
-                                            ts,
-                                            SECOND
-                                        )
-                                    )
-                                )
-                            ) / NULLIF(window_seconds, 0) AS occupancy_avg
-                        FROM {prefix}_samples
+                            SUM(occupancy * duration_seconds) / NULLIF(window_seconds, 0) AS occupancy_avg
+                        FROM {prefix}_samples_with_next
                         GROUP BY bucket_start, bucket_seconds, window_seconds
                     )
                     """
@@ -877,6 +891,7 @@ class SpecCompiler:
                         enriched,
                         events_with_bucket,
                         samples,
+                        samples_with_next,
                         band,
                         series,
                     ],
