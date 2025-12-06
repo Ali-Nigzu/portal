@@ -466,7 +466,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   }, [controls.rangePreset, controls.customRange, mergedSeries]);
 
   return (
-    <div className="vrm-card vrm-card--chart">
+    <div className="vrm-card vrm-card--chart vrm-card--chart-panel">
       <CardControlHeader
         cardId={cardId}
         title={title}

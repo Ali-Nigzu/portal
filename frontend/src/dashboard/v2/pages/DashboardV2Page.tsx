@@ -134,7 +134,7 @@ const KpiTile = ({
   const showRemove = Boolean(onRemove) && !locked;
 
   return (
-    <div className="dashboard-v2__kpi-tile" data-state={state.status}>
+    <div className="dashboard-v2__kpi-tile vrm-kpi-tile vrm-kpi-tile--panel" data-state={state.status}>
       {showRemove ? (
         <div className="dashboard-v2__kpi-controls">
           <button type="button" className="dashboard-v2__remove-button" onClick={onRemove}>
@@ -189,7 +189,7 @@ const ChartCard = ({
     <Card
       title={title}
       subtitle={subtitle}
-      className="dashboard-v2__chart-card"
+      className="dashboard-v2__chart-card vrm-card vrm-card--chart-panel"
       footer={footer}
     >
       {body}

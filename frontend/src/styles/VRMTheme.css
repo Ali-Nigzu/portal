@@ -783,7 +783,7 @@ body {
 }
 
 .vrm-section {
-  margin-bottom: var(--vrm-spacing-5);
+  margin-bottom: var(--vrm-spacing-6);
 }
 
 .vrm-section:last-child {
@@ -1293,6 +1293,22 @@ body {
   box-shadow: var(--vrm-elevation-card);
 }
 
+.vrm-card--chart-panel {
+  background-color: var(--vrm-bg-tertiary);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.38);
+  border-radius: calc(var(--vrm-radii-card) + 2px);
+}
+
+.vrm-card--chart-panel.analytics-card {
+  padding: 0;
+  gap: 0;
+  background: var(--vrm-bg-tertiary);
+  color: var(--vrm-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.38);
+}
+
 .vrm-card:hover {
   border-color: var(--vrm-accent-blue);
   box-shadow: var(--vrm-elevation-card);
@@ -1312,6 +1328,21 @@ body {
   padding: var(--vrm-spacing-4) var(--vrm-spacing-6);
 }
 
+.vrm-card--chart-panel .vrm-card-header {
+  background-color: transparent;
+  padding: var(--vrm-spacing-5) var(--vrm-spacing-6);
+  gap: var(--vrm-spacing-4);
+}
+
+.vrm-card--chart-panel .analytics-card__header {
+  padding: var(--vrm-spacing-5) var(--vrm-spacing-6);
+  border-bottom: 1px solid var(--vrm-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vrm-spacing-4);
+}
+
 .vrm-card-header--controls {
   flex-direction: column;
   align-items: stretch;
@@ -1327,6 +1358,11 @@ body {
 
 .vrm-card--chart .vrm-card-heading {
   align-items: center;
+}
+
+.vrm-card--chart-panel .vrm-card-heading {
+  align-items: center;
+  gap: var(--vrm-spacing-5);
 }
 
 .vrm-card-heading-text {
@@ -1582,8 +1618,8 @@ body {
 
 .vrm-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--vrm-spacing-5);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--vrm-spacing-6);
   align-items: stretch;
 }
 
@@ -1599,8 +1635,16 @@ body {
   box-shadow: var(--vrm-elevation-card);
 }
 
+.vrm-kpi-tile--panel {
+  background: var(--vrm-bg-tertiary);
+  border-color: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
+  padding: var(--vrm-spacing-5) var(--vrm-spacing-6);
+  gap: var(--vrm-spacing-4);
+}
+
 .vrm-kpi-tile--uniform {
-  min-height: 168px;
+  min-height: 176px;
 }
 
 .vrm-kpi-tile--clickable {
@@ -1614,8 +1658,8 @@ body {
 }
 
 .vrm-kpi-badge {
-  font-size: var(--vrm-typography-font-size-caption);
-  padding: var(--vrm-spacing-1) var(--vrm-spacing-2);
+  font-size: 11px;
+  padding: calc(var(--vrm-spacing-1) - 1px) var(--vrm-spacing-2);
   border-radius: var(--vrm-radii-badge);
   font-weight: 600;
   margin-left: var(--vrm-spacing-2);
@@ -1642,7 +1686,7 @@ body {
 .vrm-kpi-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--vrm-spacing-2);
 }
 
@@ -1655,10 +1699,10 @@ body {
 }
 
 .vrm-kpi-delta {
-  font-size: var(--vrm-typography-font-size-caption);
+  font-size: 11px;
   font-weight: 600;
   border-radius: var(--vrm-radii-chip);
-  padding: var(--vrm-spacing-1) var(--vrm-spacing-2);
+  padding: calc(var(--vrm-spacing-1) - 1px) var(--vrm-spacing-2);
   border: 1px solid var(--vrm-border);
   background-color: var(--vrm-bg-tertiary);
 }
@@ -1688,7 +1732,7 @@ body {
 }
 
 .vrm-kpi-value {
-  font-size: calc(var(--vrm-typography-font-size-kpi) + 2px);
+  font-size: calc(var(--vrm-typography-font-size-kpi) + 6px);
   font-weight: 700;
   color: var(--vrm-text-primary);
   line-height: var(--vrm-typography-line-height-tight);
@@ -1708,6 +1752,7 @@ body {
 .vrm-kpi-caption {
   font-size: var(--vrm-typography-font-size-caption);
   color: var(--vrm-text-muted);
+  margin-top: var(--vrm-spacing-1);
 }
 
 .vrm-card-title {
@@ -1733,8 +1778,16 @@ body {
 }
 
 .vrm-card-body--chart {
-  padding: var(--vrm-spacing-5) var(--vrm-spacing-6);
-  gap: var(--vrm-spacing-4);
+  padding: var(--vrm-spacing-5) var(--vrm-spacing-6) var(--vrm-spacing-6);
+  gap: var(--vrm-spacing-5);
+}
+
+.vrm-card--chart-panel .analytics-card__body {
+  padding: var(--vrm-spacing-5) var(--vrm-spacing-6) var(--vrm-spacing-6);
+}
+
+.vrm-card--chart-panel .analytics-card__footer {
+  padding: 0 var(--vrm-spacing-6) var(--vrm-spacing-5);
 }
 
 .vrm-chart-wrapper--padded {
