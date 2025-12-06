@@ -1678,7 +1678,7 @@ body {
 
 .vrm-kpi-tile {
   background: var(--vrm-bg-panel-strong);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: none;
   border-radius: var(--vrm-radii-card);
   padding: var(--vrm-spacing-5) var(--vrm-spacing-6);
   display: flex;
@@ -1690,8 +1690,8 @@ body {
 
 .vrm-kpi-tile--panel {
   background: var(--vrm-bg-panel);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
   padding: var(--vrm-spacing-6) var(--vrm-spacing-6);
   gap: var(--vrm-spacing-4);
   border-radius: var(--vrm-radii-card);

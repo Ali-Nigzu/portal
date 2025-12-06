@@ -151,6 +151,9 @@
 .dashboard-v2__kpi-renderer .kpi-tile {
   box-shadow: none;
   padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .dashboard-v2__kpi-content {
