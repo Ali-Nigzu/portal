@@ -317,7 +317,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     stroke={primarySeries?.color ?? "#2d6cdf"}
                     strokeWidth={2}
                     strokeOpacity={0.9}
-                    isAnimationActive={false}
                   />
                 ) : null}
               </AreaChart>
