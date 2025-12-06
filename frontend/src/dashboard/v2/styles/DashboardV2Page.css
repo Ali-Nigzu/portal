@@ -30,6 +30,13 @@
   padding: var(--vrm-spacing-6) var(--vrm-spacing-7);
 }
 
+.dashboard-v2__header .vrm-dashboard-header {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
 .dashboard-v2__title-block {
   display: flex;
   flex-direction: column;

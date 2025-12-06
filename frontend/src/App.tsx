@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import VRMLayout from './components/VRMLayout';
-import DashboardPage from './pages/DashboardPage';
 import EventLogsPage from './pages/EventLogsPage';
 import AlarmLogsPage from './pages/AlarmLogsPage';
 import DeviceListPage from './pages/DeviceListPage';
@@ -192,7 +191,6 @@ const App: React.FC = () => {
 
   const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
   const analyticsExperience = EXPERIENCE_GATES.analytics;
-  const dashboardExperience = EXPERIENCE_GATES.dashboard;
 
   return (
     <Router>
@@ -209,44 +207,14 @@ const App: React.FC = () => {
               <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
                 {userRole === 'admin' && !hasViewToken ? (
                   <Navigate to="/admin" replace />
-                ) : dashboardExperience.default === 'v2' ? (
-                  <DashboardV2Page credentials={credentials} />
                 ) : (
-                  <DashboardPage credentials={credentials} />
+                  <DashboardV2Page credentials={credentials} />
                 )}
               </VRMLayout>
             } />
-            {dashboardExperience.default === 'legacy' && dashboardExperience.routes.v2 ? (
-              <Route
-                path="/dashboard/v2"
-                element={
-                  <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-                    {userRole === 'admin' && !hasViewToken ? (
-                      <Navigate to="/admin" replace />
-                    ) : (
-                      <DashboardV2Page credentials={credentials} />
-                    )}
-                  </VRMLayout>
-                }
-              />
-            ) : null}
-            {dashboardExperience.default === 'v2' && dashboardExperience.routes.legacy ? (
-              <Route
-                path="/dashboard/legacy"
-                element={
-                  <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-                    {userRole === 'admin' && !hasViewToken ? (
-                      <Navigate to="/admin" replace />
-                    ) : (
-                      <DashboardPage credentials={credentials} />
-                    )}
-                  </VRMLayout>
-                }
-              />
-            ) : null}
             <Route path="/event-logs" element={
               <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-                {userRole === 'admin' && !hasViewToken ? 
+                {userRole === 'admin' && !hasViewToken ?
                   <Navigate to="/admin" replace /> : 
                   <EventLogsPage credentials={credentials} />
                 }

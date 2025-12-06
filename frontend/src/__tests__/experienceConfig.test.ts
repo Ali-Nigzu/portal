@@ -56,20 +56,20 @@ describe('EXPERIENCE_GATES', () => {
     expect(EXPERIENCE_GATES.analytics.routes.legacy).toBe(true);
     expect(EXPERIENCE_GATES.analytics.routes.v2).toBe(true);
     expect(EXPERIENCE_GATES.dashboard.default).toBe('v2');
-    expect(EXPERIENCE_GATES.dashboard.routes.legacy).toBe(true);
+    expect(EXPERIENCE_GATES.dashboard.routes.legacy).toBe(false);
     expect(EXPERIENCE_GATES.dashboard.routes.v2).toBe(true);
   });
 
-  test('allows forcing legacy dashboard while keeping v2 route exposed for comparisons', async () => {
+  test('ignores legacy dashboard overrides and keeps v2-only routing', async () => {
     process.env.REACT_APP_ENVIRONMENT = 'development';
     process.env.REACT_APP_DASHBOARD_EXPERIENCE = 'legacy';
     process.env.REACT_APP_EXPOSE_DASHBOARD_V2 = 'true';
 
     const { EXPERIENCE_GATES } = await importConfig();
 
-    expect(EXPERIENCE_GATES.dashboard.default).toBe('legacy');
+    expect(EXPERIENCE_GATES.dashboard.default).toBe('v2');
     expect(EXPERIENCE_GATES.dashboard.routes.v2).toBe(true);
-    expect(EXPERIENCE_GATES.dashboard.routes.legacy).toBe(true);
+    expect(EXPERIENCE_GATES.dashboard.routes.legacy).toBe(false);
   });
 });
 

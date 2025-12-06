@@ -79,38 +79,28 @@ const resolveAnalyticsV2Transport = (): AnalyticsTransportMode => {
 };
 
 const analyticsExperienceFromEnv = parseExperienceVersion(process.env.REACT_APP_ANALYTICS_EXPERIENCE);
-const dashboardExperienceFromEnv = parseExperienceVersion(process.env.REACT_APP_DASHBOARD_EXPERIENCE);
 
 const analyticsFeatureFlag = parseBooleanFlag(process.env.REACT_APP_FEATURE_ANALYTICS_V2) ?? false;
-const dashboardFeatureFlag = parseBooleanFlag(process.env.REACT_APP_FEATURE_DASHBOARD_V2) ?? false;
 
 const analyticsDefault: ExperienceVersion = IS_PRODUCTION
   ? 'v2'
   : analyticsExperienceFromEnv ?? 'v2';
 
-const dashboardDefault: ExperienceVersion = IS_PRODUCTION
-  ? 'v2'
-  : dashboardExperienceFromEnv ?? 'v2';
+const dashboardDefault: ExperienceVersion = 'v2';
 
 const analyticsLegacyRouteEnabled =
   analyticsDefault === 'legacy'
     ? true
     : (!IS_PRODUCTION && (parseBooleanFlag(process.env.REACT_APP_EXPOSE_ANALYTICS_LEGACY) ?? false));
 
-const dashboardLegacyRouteEnabled =
-  dashboardDefault === 'legacy'
-    ? true
-    : (!IS_PRODUCTION && (parseBooleanFlag(process.env.REACT_APP_EXPOSE_DASHBOARD_LEGACY) ?? false));
+const dashboardLegacyRouteEnabled = false;
 
 const analyticsV2RouteEnabled =
   analyticsDefault === 'v2'
     ? true
     : (parseBooleanFlag(process.env.REACT_APP_EXPOSE_ANALYTICS_V2) ?? analyticsFeatureFlag);
 
-const dashboardV2RouteEnabled =
-  dashboardDefault === 'v2'
-    ? true
-    : (parseBooleanFlag(process.env.REACT_APP_EXPOSE_DASHBOARD_V2) ?? dashboardFeatureFlag);
+const dashboardV2RouteEnabled = true;
 
 export const EXPERIENCE_GATES = {
   analytics: {
