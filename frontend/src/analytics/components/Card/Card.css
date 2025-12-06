@@ -2,19 +2,19 @@
   display: flex;
   flex-direction: column;
   gap: var(--vrm-spacing-3, 12px);
-  background: linear-gradient(180deg, rgba(21, 26, 34, 0.9), rgba(12, 17, 24, 0.82));
-  color: var(--vrm-color-text-primary, #ffffff);
+  background: var(--vrm-bg-panel-strong, #141a20);
+  color: var(--vrm-text-primary, #ffffff);
   border-radius: var(--vrm-radii-card, 12px);
   padding: var(--vrm-spacing-5, 20px);
-  box-shadow: var(--vrm-elevation-card, 0 12px 24px rgba(0, 0, 0, 0.25));
-  backdrop-filter: blur(16px);
+  box-shadow: 0 26px 56px rgba(0, 0, 0, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   font-family: var(--vrm-typography-font-family-base, 'Inter', sans-serif);
 }
 
 @media (prefers-color-scheme: light) {
   .analytics-card {
-    background: rgba(255, 255, 255, 0.92);
-    color: var(--vrm-color-text-secondary, #1f2933);
+    background: var(--vrm-bg-panel-strong, #141a20);
+    color: var(--vrm-text-primary, #ffffff);
   }
 }
 
@@ -35,12 +35,15 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--vrm-spacing-4, 16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: var(--vrm-spacing-3, 12px);
 }
 
 .analytics-card__title-group h3 {
   font-size: var(--vrm-typography-font-size-title, 18px);
   margin: 0;
   font-weight: 600;
+  color: var(--vrm-text-primary, #ffffff);
 }
 
 .analytics-card__title-group p {
@@ -60,7 +63,7 @@
   height: 40px;
   padding: 0 var(--vrm-spacing-3, 12px);
   border-radius: var(--vrm-radii-chip, 16px);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -83,8 +86,8 @@
   width: 40px;
   height: 40px;
   border-radius: var(--vrm-radii-button, 8px);
-  border: 1px solid rgba(130, 144, 166, 0.35);
-  background: rgba(12, 17, 24, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(15, 19, 26, 0.4);
   color: inherit;
   cursor: pointer;
   display: inline-flex;
@@ -119,6 +122,7 @@
 
 .analytics-card__body {
   min-height: 240px;
+  padding-top: var(--vrm-spacing-2, 8px);
 }
 
 .analytics-card__footer {
