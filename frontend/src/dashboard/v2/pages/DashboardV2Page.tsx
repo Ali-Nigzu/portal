@@ -3,6 +3,7 @@ import { Card } from "../../../analytics/components/Card";
 import { ChartRenderer } from "../../../analytics/components/ChartRenderer";
 import ErrorBoundary from "../../../common/components/ErrorBoundary";
 import { logError, logInfo } from "../../../common/utils/logger";
+import HeaderStatusStrip from "../../../components/HeaderStatusStrip";
 import type {
   DashboardGridPlacement,
   DashboardManifest,
@@ -30,6 +31,25 @@ import {
 export { lookupCapacity } from "../utils/vrmDecorators";
 
 const GRID_ROW_HEIGHT = 96;
+
+const formatTitleCase = (value?: string | null) => {
+  if (!value) return "Site";
+  return value
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
+const deriveSiteDisplayId = (raw?: string | null) => {
+  if (!raw) return "—";
+  const cleaned = raw.split(".")[0];
+  const numericMatch = cleaned.match(/(\d+)/);
+  if (numericMatch) {
+    return numericMatch[1];
+  }
+  return cleaned;
+};
 
 type ManifestLoader = (
   orgId: string | undefined,
@@ -553,14 +573,18 @@ const DashboardV2Page = ({
   );
 
   const gridColumns = manifest?.layout.grid.columns ?? 12;
-  const localTimeLabel = useMemo(
-    () => localTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    [localTime],
-  );
   const siteOrgId = manifest?.orgId ?? orgId;
+  const siteIdFromQuery = useMemo(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const params = new URLSearchParams(window.location.search);
+    return params.get("client_id") ?? params.get("site_id") ?? undefined;
+  }, []);
   const siteUiOrgId = resolvedUiClient ?? resolveUiClient(siteOrgId) ?? siteOrgId;
-  const siteLabel = siteUiOrgId ?? "Site";
-  const siteId = siteUiOrgId ?? "—";
+  const clientDisplayName = useMemo(() => formatTitleCase(siteUiOrgId), [siteUiOrgId]);
+  const siteId = siteIdFromQuery ?? siteOrgId ?? "—";
+  const siteDisplayId = useMemo(() => deriveSiteDisplayId(siteId), [siteId]);
   const isVrmDashboard = useMemo(() => {
     const ids = manifest?.layout?.kpiBand ?? [];
     if (!ids.length) {
@@ -573,17 +597,21 @@ const DashboardV2Page = ({
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
       <header className="dashboard-v2__header">
-        <div className="dashboard-v2__title-block">
-          <h1 className="dashboard-v2__title">{`${siteLabel} – ${siteId}`}</h1>
-          <div className="dashboard-v2__meta-row">
-            <span>Last updated: Realtime</span>
-            <span>• Status: OK</span>
-            <span>• Local time: {localTimeLabel}</span>
+        <div className="vrm-dashboard-header">
+          <div className="vrm-dashboard-header-left">
+            <div className="vrm-dashboard-avatar" aria-hidden="true" />
+              <div className="vrm-dashboard-identity">
+                <div className="vrm-dashboard-identity-label">Active site</div>
+              <div className="vrm-dashboard-title">{`${clientDisplayName} – Site ${siteDisplayId}`}</div>
+              </div>
+            </div>
+            <div className="vrm-dashboard-header-right">
+            <HeaderStatusStrip className="vrm-dashboard-header-meta" />
           </div>
         </div>
         {!isVrmDashboard ? (
           <div className="dashboard-v2__controls">
-            <div className="dashboard-v2__org">Site ID: {siteId}</div>
+            <div className="dashboard-v2__org">Site ID: {siteDisplayId}</div>
             <div className="dashboard-v2__control-group">
               {manifest?.timeControls?.options?.length ? (
                 <label className="dashboard-v2__control">

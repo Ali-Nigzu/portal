@@ -208,7 +208,38 @@ exports[`Storybook design baselines DefaultShell matches snapshot 1`] = `
           className="vrm-header-left"
         >
           <div
-            className="vrm-search"
+            className="vrm-site-identity"
+          >
+            <div
+              className="vrm-site-identity-label"
+            >
+              Active site
+            </div>
+            <div
+              aria-label="Sites"
+              className="vrm-site-context"
+              role="tablist"
+            >
+              <button
+                aria-selected="true"
+                className="vrm-site-chip active"
+                role="tab"
+                type="button"
+              >
+                Site 0
+              </button>
+              <button
+                aria-disabled={true}
+                className="vrm-site-chip disabled"
+                role="tab"
+                type="button"
+              >
+                Add site
+              </button>
+            </div>
+          </div>
+          <div
+            className="vrm-search vrm-search-compact"
           >
             <div
               aria-hidden="true"
@@ -220,32 +251,77 @@ exports[`Storybook design baselines DefaultShell matches snapshot 1`] = `
               type="text"
             />
           </div>
-          <div
-            aria-label="Sites"
-            className="vrm-site-context"
-            role="tablist"
-          >
-            <button
-              aria-selected="true"
-              className="vrm-site-chip active"
-              role="tab"
-              type="button"
-            >
-              Site 0
-            </button>
-            <button
-              aria-disabled={true}
-              className="vrm-site-chip disabled"
-              role="tab"
-              type="button"
-            >
-              Add site
-            </button>
-          </div>
         </div>
         <div
           className="vrm-header-right"
         >
+          <div
+            aria-live="polite"
+            className="vrm-header-meta"
+            role="status"
+          >
+            <div
+              className="vrm-header-meta-group"
+            >
+              <span
+                className="vrm-header-chip"
+                title="Last updated timestamp"
+              >
+                Last updated:
+                12:00:00 PM
+              </span>
+              <button
+                aria-pressed={false}
+                className="vrm-header-chip vrm-header-chip-action "
+                onClick={[Function]}
+                type="button"
+              >
+                <span
+                  className="vrm-status-indicator warning"
+                />
+                Realtime off
+              </button>
+            </div>
+            <span
+              aria-hidden="true"
+              className="vrm-header-meta-divider"
+            />
+            <div
+              className="vrm-header-meta-group"
+            >
+              <span
+                className="vrm-header-chip"
+                title="System status: OK"
+              >
+                <span
+                  aria-hidden={true}
+                  className="vrm-status-indicator ok"
+                />
+                System status: OK
+              </span>
+            </div>
+            <span
+              aria-hidden="true"
+              className="vrm-header-meta-divider"
+            />
+            <div
+              className="vrm-header-meta-group"
+            >
+              <span
+                className="vrm-header-chip"
+                title="Local site time"
+              >
+                Local time:
+                1/1/2024, 12:00:00 PM
+              </span>
+              <span
+                className="vrm-header-chip"
+                title="Viewer access"
+              >
+                Viewer rights: Full
+              </span>
+            </div>
+          </div>
           <div
             className="vrm-user-meta"
           >
@@ -260,61 +336,6 @@ exports[`Storybook design baselines DefaultShell matches snapshot 1`] = `
           </div>
         </div>
       </header>
-      <div
-        aria-live="polite"
-        className="vrm-status-strip"
-        role="status"
-      >
-        <div
-          className="vrm-status-strip-section"
-        >
-          <button
-            aria-pressed={false}
-            className="vrm-status-chip vrm-status-chip-action "
-            onClick={[Function]}
-            type="button"
-          >
-            <span
-              className="vrm-status-indicator warning"
-            />
-            Realtime off
-          </button>
-          <span
-            className="vrm-status-chip"
-            title="Last updated timestamp"
-          >
-            Last updated: 
-            12:00:00 PM
-          </span>
-          <span
-            className="vrm-status-chip"
-            title="Local site time"
-          >
-            Local time: 
-            1/1/2024, 12:00:00 PM
-          </span>
-        </div>
-        <div
-          className="vrm-status-strip-section"
-        >
-          <span
-            className="vrm-status-chip"
-            title="System status: OK"
-          >
-            <span
-              aria-hidden={true}
-              className="vrm-status-indicator ok"
-            />
-            System status: OK
-          </span>
-          <span
-            className="vrm-status-chip"
-            title="Viewer access"
-          >
-            Viewer rights: Full
-          </span>
-        </div>
-      </div>
     </div>
     <div
       className="vrm-content"
@@ -345,15 +366,22 @@ exports[`Storybook design baselines DefaultShell matches snapshot 1`] = `
 exports[`Storybook design baselines DefaultStatus matches snapshot 1`] = `
 <div
   aria-live="polite"
-  className="vrm-status-strip"
+  className="vrm-header-meta"
   role="status"
 >
   <div
-    className="vrm-status-strip-section"
+    className="vrm-header-meta-group"
   >
+    <span
+      className="vrm-header-chip"
+      title="Last updated timestamp"
+    >
+      Last updated:
+      12:00:00 PM
+    </span>
     <button
       aria-pressed={false}
-      className="vrm-status-chip vrm-status-chip-action "
+      className="vrm-header-chip vrm-header-chip-action "
       onClick={[Function]}
       type="button"
     >
@@ -362,26 +390,16 @@ exports[`Storybook design baselines DefaultStatus matches snapshot 1`] = `
       />
       Realtime off
     </button>
-    <span
-      className="vrm-status-chip"
-      title="Last updated timestamp"
-    >
-      Last updated: 
-      12:00:00 PM
-    </span>
-    <span
-      className="vrm-status-chip"
-      title="Local site time"
-    >
-      Local time: 
-      1/1/2024, 12:00:00 PM
-    </span>
   </div>
+  <span
+    aria-hidden="true"
+    className="vrm-header-meta-divider"
+  />
   <div
-    className="vrm-status-strip-section"
+    className="vrm-header-meta-group"
   >
     <span
-      className="vrm-status-chip"
+      className="vrm-header-chip"
       title="System status: OK"
     >
       <span
@@ -390,8 +408,23 @@ exports[`Storybook design baselines DefaultStatus matches snapshot 1`] = `
       />
       System status: OK
     </span>
+  </div>
+  <span
+    aria-hidden="true"
+    className="vrm-header-meta-divider"
+  />
+  <div
+    className="vrm-header-meta-group"
+  >
     <span
-      className="vrm-status-chip"
+      className="vrm-header-chip"
+      title="Local site time"
+    >
+      Local time:
+      1/1/2024, 12:00:00 PM
+    </span>
+    <span
+      className="vrm-header-chip"
       title="Viewer access"
     >
       Viewer rights: Full
