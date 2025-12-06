@@ -346,13 +346,13 @@
 }
 
 .kpi-sparkline-strip--vrm {
-  background: linear-gradient(165deg, rgba(21, 26, 34, 0.78), rgba(15, 19, 26, 0.48));
+  background: inherit;
   color: inherit;
-  border-top: none;
+  border: none;
   box-shadow: none;
-  border-radius: 0 0 var(--vrm-radii-card, 12px) var(--vrm-radii-card, 12px);
-  padding: var(--vrm-spacing-2, 8px) var(--vrm-spacing-4, 16px);
-  gap: var(--vrm-spacing-4, 16px);
+  border-radius: 0;
+  padding: var(--vrm-spacing-2, 8px) var(--vrm-spacing-3, 12px);
+  gap: var(--vrm-spacing-3, 12px);
 }
 
 .kpi-sparkline-strip--vrm .kpi-sparkline-strip__time {
