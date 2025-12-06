@@ -156,6 +156,16 @@
   border-radius: 0;
 }
 
+.dashboard-v2__kpi-renderer .kpi-sparkline-strip,
+.dashboard-v2__kpi-renderer .traffic-distribution,
+.dashboard-v2__kpi-renderer .capacity-usage,
+.dashboard-v2__kpi-renderer .kpi-tile--vrm {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
 .dashboard-v2__kpi-content {
   min-height: 180px;
   display: flex;
