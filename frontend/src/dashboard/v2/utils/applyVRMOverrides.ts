@@ -208,14 +208,16 @@ const maybeApplySiteFlow = (widget: DashboardWidget): DashboardWidget => {
   const measures = nextInlineSpec?.measures ?? [];
   const updatedMeasures = measures
     .filter((measure) => measure.id !== "throughput")
-    .map((measure) =>
-      measure.id === "occupancy"
-        ? {
-            ...measure,
-            options: { ...(measure.options ?? {}), vrmOccupancy: true, vrmOccupancyStats: true },
-          }
-        : measure,
-    );
+    .map((measure) => {
+      if (measure.id === "occupancy") {
+        return {
+          ...measure,
+          id: "occupancy",
+          options: { ...(measure.options ?? {}), vrmOccupancy: true, vrmOccupancyStats: true },
+        };
+      }
+      return measure;
+    });
 
   return {
     ...widget,

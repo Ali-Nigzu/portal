@@ -101,6 +101,7 @@ export const FlowChart = ({
                   hide={hidden}
                   isAnimationActive={false}
                   barSize={20}
+                  stackId={seriesItem.stack}
                 />
               );
             }
@@ -117,6 +118,7 @@ export const FlowChart = ({
                   yAxisId={yAxisId}
                   hide={hidden}
                   strokeDasharray={hasLowCoverage ? "6 4" : undefined}
+                  stackId={seriesItem.stack}
                   isAnimationActive={false}
                 />
               );

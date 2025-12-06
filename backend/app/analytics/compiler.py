@@ -416,7 +416,28 @@ class SpecCompiler:
     ) -> str:
         cte_entries = list(base_ctes)
         cte_entries.extend(measure_ctes)
-        union_selects = "\nUNION ALL\n".join(select_statements)
+
+        select_list = list(select_statements)
+        needs_occupancy = any("occupancy_min" in stmt.lower() for stmt in select_list)
+        normalized_selects = []
+
+        for stmt in select_list:
+            if needs_occupancy and "occupancy_min" not in stmt.lower():
+                normalized_selects.append(
+                    " ".join(
+                        [
+                            "SELECT measure_id, bucket_start, value, coverage, raw_count,",
+                            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max,",
+                            "CAST(NULL AS FLOAT64) AS occupancy_avg FROM (",
+                            stmt,
+                            ")",
+                        ]
+                    )
+                )
+            else:
+                normalized_selects.append(stmt)
+
+        union_selects = "\nUNION ALL\n".join(normalized_selects)
         final_cte = dedent(
             f"""
             final AS (
@@ -811,6 +832,35 @@ class SpecCompiler:
                     )
                     """
                 ).strip()
+                samples_with_next = dedent(
+                    f"""
+                    {prefix}_samples_with_next AS (
+                        SELECT
+                            bucket_start,
+                            bucket_end,
+                            bucket_seconds,
+                            window_seconds,
+                            occupancy,
+                            ts,
+                            ordering,
+                            GREATEST(
+                                0,
+                                LEAST(
+                                    window_seconds,
+                                    TIMESTAMP_DIFF(
+                                        COALESCE(
+                                            LEAD(ts) OVER (PARTITION BY bucket_start ORDER BY ts, ordering),
+                                            bucket_end
+                                        ),
+                                        ts,
+                                        SECOND
+                                    )
+                                )
+                            ) AS duration_seconds
+                        FROM {prefix}_samples
+                    )
+                    """
+                ).strip()
                 band = dedent(
                     f"""
                     {prefix}_band AS (
@@ -820,23 +870,8 @@ class SpecCompiler:
                             window_seconds,
                             MIN(occupancy) AS occupancy_min,
                             MAX(occupancy) AS occupancy_max,
-                            SUM(
-                                occupancy * GREATEST(
-                                    0,
-                                    LEAST(
-                                        window_seconds,
-                                        TIMESTAMP_DIFF(
-                                            COALESCE(
-                                                LEAD(ts) OVER (PARTITION BY bucket_start ORDER BY ts, ordering),
-                                                bucket_end
-                                            ),
-                                            ts,
-                                            SECOND
-                                        )
-                                    )
-                                )
-                            ) / NULLIF(window_seconds, 0) AS occupancy_avg
-                        FROM {prefix}_samples
+                            SUM(occupancy * duration_seconds) / NULLIF(window_seconds, 0) AS occupancy_avg
+                        FROM {prefix}_samples_with_next
                         GROUP BY bucket_start, bucket_seconds, window_seconds
                     )
                     """
@@ -846,7 +881,7 @@ class SpecCompiler:
                     {prefix}_series AS (
                         SELECT
                             enriched.bucket_start,
-                            enriched.value,
+                            COALESCE(band.occupancy_avg, enriched.value) AS value,
                             band.occupancy_min,
                             band.occupancy_max,
                             band.occupancy_avg,
@@ -877,6 +912,7 @@ class SpecCompiler:
                         enriched,
                         events_with_bucket,
                         samples,
+                        samples_with_next,
                         band,
                         series,
                     ],
@@ -1009,7 +1045,9 @@ class SpecCompiler:
             ).strip()
 
             select_sql = (
-                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_series"
+                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+                "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+                f"FROM {prefix}_series"
             )
             return MeasureCompilation(
                 ctes=[anchor, deltas, bucketed, cumulative, reflected, series],
@@ -1142,7 +1180,9 @@ class SpecCompiler:
         ).strip()
 
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {prefix}_series"
         )
         return MeasureCompilation(
             ctes=[ordered, clamped, bucket_bounds, occupancy_buckets, occupancy_filled, series],
@@ -1180,7 +1220,9 @@ class SpecCompiler:
             """
         ).strip()
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {measure_id}_activity_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {measure_id}_activity_series"
         )
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
 
@@ -1218,7 +1260,9 @@ class SpecCompiler:
             """
         ).strip()
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {measure_id}_activity_rate_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {measure_id}_activity_rate_series"
         )
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
 
@@ -1255,7 +1299,9 @@ class SpecCompiler:
                     """
                 ).strip()
                 select_sql = (
-                    f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}"
+                    f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+                    "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+                    f"FROM {prefix}"
                 )
                 return MeasureCompilation(ctes=[cte], select_sql=select_sql)
 
@@ -1613,7 +1659,9 @@ class SpecCompiler:
         ).strip()
 
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {prefix}_series"
         )
         ctes = [entrances, exits, sessions, bucketed, series]
         if options.get("vrmDwellFifo"):

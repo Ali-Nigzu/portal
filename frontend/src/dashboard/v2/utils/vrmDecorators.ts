@@ -68,15 +68,31 @@ export const markCompact = (result: ChartResult) => {
 
 const numberOrNull = (value: unknown) => (typeof value === "number" ? value : null);
 
+type OccupancyPoint = {
+  occupancy_min?: number | null;
+  occupancy_max?: number | null;
+  occupancy_avg?: number | null;
+  min?: number | null;
+  max?: number | null;
+  avg?: number | null;
+};
+
 const applySiteFlow = (result: ChartResult): ChartResult => {
-  const occupancySeries = result.series.find((series) => series.id === "occupancy");
+  const occupancySeries =
+    result.series.find((series) => series.id === "occupancy") ??
+    result.series.find((series) =>
+      (series.data ?? []).some(
+        (point) => "occupancy_min" in (point ?? {}) || "occupancy_max" in (point ?? {}) || "occupancy_avg" in (point ?? {})
+      ),
+    );
   const occupancyColor = occupancySeries?.color ?? "var(--vrm-color-accent-occupancy, #2d6cdf)";
   const occupancyAxis = occupancySeries?.axis;
 
   const occupancyBand = (occupancySeries?.data ?? []).map((point) => {
-    const min = numberOrNull((point as Record<string, unknown>).occupancy_min ?? (point as Record<string, unknown>).min);
-    const max = numberOrNull((point as Record<string, unknown>).occupancy_max ?? (point as Record<string, unknown>).max);
-    const avg = numberOrNull((point as Record<string, unknown>).occupancy_avg ?? (point as Record<string, unknown>).avg);
+    const occupancyPoint = point as unknown as OccupancyPoint;
+    const min = numberOrNull(occupancyPoint.occupancy_min ?? occupancyPoint.min);
+    const max = numberOrNull(occupancyPoint.occupancy_max ?? occupancyPoint.max);
+    const avg = numberOrNull(occupancyPoint.occupancy_avg ?? occupancyPoint.avg ?? occupancyPoint.value);
     const span = min !== null && max !== null ? max - min : null;
     return {
       x: point.x,
@@ -93,7 +109,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
       occupancy_avg: number | null;
       occupancy_span: number | null;
     };
-  });
+  }).filter((point) => point.occupancy_min !== null || point.occupancy_max !== null || point.occupancy_avg !== null);
 
   const occupancyMinLine: ChartSeries = {
     id: "occupancy_min",

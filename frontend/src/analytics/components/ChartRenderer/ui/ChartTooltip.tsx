@@ -38,41 +38,42 @@ export const ChartTooltip = ({
             const rawCount = datumMeta?.rawCount ?? null;
             const coverageInfo = formatCoverage(coverage);
             const showRaw = shouldShowRawCount(rawCount);
-          const coverageClass =
-            coverageInfo.tone === "critical"
-              ? "coverage-critical"
-              : coverageInfo.tone === "low"
-              ? "coverage-low"
-              : undefined;
+            const coverageClass =
+              coverageInfo.tone === "critical"
+                ? "coverage-critical"
+                : coverageInfo.tone === "low"
+                ? "coverage-low"
+                : undefined;
 
-          const highlight = coverageInfo.tone !== "normal";
+            const highlight = coverageInfo.tone !== "normal";
 
-          return (
-            <li key={seriesId} className={highlight ? "low" : undefined}>
-              <span className="series-label">
-                <span
-                  className="swatch"
-                  style={{ backgroundColor: entry.color ?? series?.color ?? "#2d6cdf" }}
-                />
-                {series?.label ?? seriesId}
-              </span>
-              <span className="series-value">
-                {formatValue(
-                  (series?.tooltipValueKey
-                    ? ((entry.payload as Record<string, unknown> | undefined) ?? {})[
-                        series.tooltipValueKey
-                      ]
-                    : entry.value) as number | null | undefined,
-                  series?.unit,
-                )}
-              </span>
-              {showRaw ? (
-                <span className="series-meta">raw: {rawCount}</span>
-              ) : null}
-              <span className={`series-coverage ${coverageClass ?? ""}`}>
-                coverage: {coverageInfo.label}
-              </span>
-            </li>
+            return (
+              <li key={seriesId} className={highlight ? "low" : undefined}>
+                <span className="series-label">
+                  <span
+                    className="swatch"
+                    style={{ backgroundColor: entry.color ?? series?.color ?? "#2d6cdf" }}
+                  />
+                  {series?.label ?? seriesId}
+                </span>
+                <span className="series-value">
+                  {formatValue(
+                    (series?.tooltipValueKey
+                      ? ((entry.payload as Record<string, unknown> | undefined) ?? {})[
+                          series.tooltipValueKey
+                        ]
+                      : entry.value) as number | null | undefined,
+                    series?.unit,
+                  )}
+                </span>
+                {showRaw ? (
+                  <span className="series-meta">raw: {rawCount}</span>
+                ) : null}
+                <span className={`series-coverage ${coverageClass ?? ""}`}>
+                  coverage: {coverageInfo.label}
+                </span>
+              </li>
+            );
           })
           .filter(Boolean)}
       </ul>

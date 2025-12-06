@@ -157,6 +157,13 @@
   border-radius: 0 !important;
 }
 
+.dashboard-v2__kpi-renderer .kpi-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
 .dashboard-v2__kpi-renderer .kpi-sparkline-strip,
 .dashboard-v2__kpi-renderer .traffic-distribution,
 .dashboard-v2__kpi-renderer .capacity-usage,
@@ -175,13 +182,24 @@
   padding: 0 !important;
   margin: 0 !important;
   gap: 0 !important;
+  align-items: stretch;
 }
 
 .dashboard-v2__kpi-content {
   min-height: 180px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+.dashboard-v2__kpi-content .kpi-sparkline-region--vrm {
+  margin-top: auto;
+  padding-bottom: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .dashboard-v2__kpi-controls {
