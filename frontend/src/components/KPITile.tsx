@@ -10,6 +10,7 @@ interface KPITileProps {
   badgeLabel?: string;
   badgeTone?: 'info' | 'warning' | 'critical';
   onClick?: () => void;
+  className?: string;
 }
 
 const KPITile: React.FC<KPITileProps> = ({
@@ -23,6 +24,7 @@ const KPITile: React.FC<KPITileProps> = ({
   badgeLabel,
   badgeTone = 'info',
   onClick,
+  className,
 }) => {
   const trendClass = trend === 'up' ? 'vrm-kpi-delta--up' : trend === 'down' ? 'vrm-kpi-delta--down' : 'vrm-kpi-delta--neutral';
   const badgeClass = `vrm-kpi-badge vrm-kpi-badge--${badgeTone}`;
@@ -30,7 +32,9 @@ const KPITile: React.FC<KPITileProps> = ({
 
   return (
     <Wrapper
-      className={`vrm-kpi-tile vrm-kpi-tile--uniform vrm-kpi-tile--panel${onClick ? ' vrm-kpi-tile--clickable' : ''}`}
+      className={`vrm-kpi-tile vrm-kpi-tile--uniform vrm-kpi-tile--panel${
+        onClick ? ' vrm-kpi-tile--clickable' : ''
+      }${className ? ` ${className}` : ''}`}
       type={onClick ? 'button' : undefined}
       onClick={onClick}
     >

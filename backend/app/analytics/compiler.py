@@ -630,6 +630,259 @@ class SpecCompiler:
         options = measure.get("options", {}) if isinstance(measure.get("options"), dict) else {}
 
         if options.get("vrmOccupancy"):
+            if options.get("vrmOccupancyStats"):
+                ordered = dedent(
+                    f"""
+                    {prefix}_ordered AS (
+                        SELECT
+                            timestamp,
+                            index,
+                            site_id,
+                            cam_id,
+                            event,
+                            IF(event = 1, 1, -1) AS delta,
+                            SUM(IF(event = 1, 1, -1)) OVER (
+                                PARTITION BY site_id, cam_id
+                                ORDER BY timestamp, index
+                            ) AS running_total
+                        FROM scoped
+                    )
+                    """
+                ).strip()
+                clamped = dedent(
+                    f"""
+                    {prefix}_clamped AS (
+                        SELECT
+                            *,
+                            GREATEST(running_total, 0) AS occupancy,
+                            running_total < 0 AS seeded_by_exit
+                        FROM {prefix}_ordered
+                    )
+                    """
+                ).strip()
+                if use_calendar:
+                    bucket_bounds = dedent(
+                        f"""
+                        {prefix}_bucket_bounds AS (
+                            SELECT
+                                bucket_start,
+                                bucket_end,
+                                bucket_seconds,
+                                window_seconds
+                            FROM calendar
+                        )
+                        """
+                    ).strip()
+                else:
+                    interval_expr = _bucket_interval_expression(bucket)
+                    bucket_bounds = dedent(
+                        f"""
+                        {prefix}_bucket_bounds AS (
+                            SELECT
+                                bucket_start,
+                                TIMESTAMP_ADD(bucket_start, {interval_expr}) AS bucket_end,
+                                TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
+                                GREATEST(
+                                    TIMESTAMP_DIFF(
+                                        LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                        GREATEST(bucket_start, TIMESTAMP(@start_ts)),
+                                        SECOND
+                                    ),
+                                    0
+                                ) AS window_seconds
+                            FROM (
+                                SELECT DISTINCT {_bucket_expression(bucket)} AS bucket_start
+                                FROM scoped
+                            )
+                        )
+                        """
+                    ).strip()
+                occupancy_buckets = dedent(
+                    f"""
+                    {prefix}_buckets AS (
+                        SELECT
+                            bounds.bucket_start,
+                            bounds.bucket_end,
+                            bounds.bucket_seconds,
+                            bounds.window_seconds,
+                            COUNT(clamped.timestamp) AS event_count,
+                            LOGICAL_OR(clamped.seeded_by_exit) AS seeded_by_exit,
+                            ARRAY_AGG(clamped.occupancy ORDER BY clamped.timestamp DESC, clamped.index DESC)[SAFE_OFFSET(0)] AS occupancy_end
+                        FROM {prefix}_bucket_bounds AS bounds
+                        LEFT JOIN {prefix}_clamped AS clamped
+                            ON clamped.timestamp >= bounds.bucket_start
+                            AND clamped.timestamp < bounds.bucket_end
+                        GROUP BY bounds.bucket_start, bounds.bucket_end, bounds.bucket_seconds, bounds.window_seconds
+                        ORDER BY bounds.bucket_start
+                    )
+                    """
+                ).strip()
+                occupancy_filled = dedent(
+                    f"""
+                    {prefix}_filled AS (
+                        SELECT
+                            bucket_start,
+                            bucket_end,
+                            bucket_seconds,
+                            window_seconds,
+                            event_count,
+                            seeded_by_exit,
+                            COALESCE(
+                                occupancy_end,
+                                LAST_VALUE(occupancy_end IGNORE NULLS) OVER (
+                                    ORDER BY bucket_start
+                                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                                ),
+                                0
+                            ) AS value,
+                            occupancy_end IS NOT NULL AS has_events
+                        FROM {prefix}_buckets
+                    )
+                    """
+                ).strip()
+                enriched = dedent(
+                    f"""
+                    {prefix}_enriched AS (
+                        SELECT
+                            bucket_start,
+                            bucket_end,
+                            bucket_seconds,
+                            window_seconds,
+                            event_count,
+                            seeded_by_exit,
+                            has_events,
+                            value,
+                            COALESCE(LAG(value) OVER (ORDER BY bucket_start), 0) AS occupancy_start
+                        FROM {prefix}_filled
+                    )
+                    """
+                ).strip()
+                events_with_bucket = dedent(
+                    f"""
+                    {prefix}_events_with_bucket AS (
+                        SELECT
+                            bounds.bucket_start,
+                            bounds.bucket_end,
+                            bounds.bucket_seconds,
+                            bounds.window_seconds,
+                            clamped.timestamp,
+                            clamped.index,
+                            clamped.occupancy
+                        FROM {prefix}_bucket_bounds AS bounds
+                        LEFT JOIN {prefix}_clamped AS clamped
+                            ON clamped.timestamp >= bounds.bucket_start
+                            AND clamped.timestamp < bounds.bucket_end
+                    )
+                    """
+                ).strip()
+                samples = dedent(
+                    f"""
+                    {prefix}_samples AS (
+                        SELECT
+                            bucket_start,
+                            bucket_end,
+                            bucket_seconds,
+                            window_seconds,
+                            occupancy_start AS occupancy,
+                            bucket_start AS ts,
+                            -1 AS ordering
+                        FROM {prefix}_enriched
+                        UNION ALL
+                        SELECT
+                            bucket_start,
+                            bucket_end,
+                            bucket_seconds,
+                            window_seconds,
+                            occupancy,
+                            timestamp AS ts,
+                            index AS ordering
+                        FROM {prefix}_events_with_bucket
+                        WHERE timestamp IS NOT NULL
+                        UNION ALL
+                        SELECT
+                            bucket_start,
+                            bucket_end,
+                            bucket_seconds,
+                            window_seconds,
+                            value AS occupancy,
+                            bucket_end AS ts,
+                            999999999 AS ordering
+                        FROM {prefix}_enriched
+                    )
+                    """
+                ).strip()
+                band = dedent(
+                    f"""
+                    {prefix}_band AS (
+                        SELECT
+                            bucket_start,
+                            bucket_seconds,
+                            window_seconds,
+                            MIN(occupancy) AS occupancy_min,
+                            MAX(occupancy) AS occupancy_max,
+                            SUM(
+                                occupancy * GREATEST(
+                                    0,
+                                    LEAST(
+                                        window_seconds,
+                                        TIMESTAMP_DIFF(
+                                            COALESCE(
+                                                LEAD(ts) OVER (PARTITION BY bucket_start ORDER BY ts, ordering),
+                                                bucket_end
+                                            ),
+                                            ts,
+                                            SECOND
+                                        )
+                                    )
+                                )
+                            ) / NULLIF(window_seconds, 0) AS occupancy_avg
+                        FROM {prefix}_samples
+                        GROUP BY bucket_start, bucket_seconds, window_seconds
+                    )
+                    """
+                ).strip()
+                series = dedent(
+                    f"""
+                    {prefix}_series AS (
+                        SELECT
+                            enriched.bucket_start,
+                            enriched.value,
+                            band.occupancy_min,
+                            band.occupancy_max,
+                            band.occupancy_avg,
+                            CASE
+                                WHEN enriched.bucket_seconds = 0 THEN 0.0
+                                WHEN NOT enriched.has_events THEN 0.0
+                                WHEN enriched.seeded_by_exit THEN LEAST(0.5, SAFE_DIVIDE(enriched.window_seconds, enriched.bucket_seconds))
+                                ELSE SAFE_DIVIDE(enriched.window_seconds, enriched.bucket_seconds)
+                            END AS coverage,
+                            enriched.event_count AS raw_count
+                        FROM {prefix}_enriched AS enriched
+                        LEFT JOIN {prefix}_band AS band
+                            ON band.bucket_start = enriched.bucket_start
+                    )
+                    """
+                ).strip()
+
+                select_sql = (
+                    f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, occupancy_min, occupancy_max, occupancy_avg FROM {prefix}_series"
+                )
+                return MeasureCompilation(
+                    ctes=[
+                        ordered,
+                        clamped,
+                        bucket_bounds,
+                        occupancy_buckets,
+                        occupancy_filled,
+                        enriched,
+                        events_with_bucket,
+                        samples,
+                        band,
+                        series,
+                    ],
+                    select_sql=select_sql,
+                )
+
             bucket_expr = _bucket_expression(bucket)
             interval_expr = _bucket_interval_expression(bucket)
             anchor = dedent(

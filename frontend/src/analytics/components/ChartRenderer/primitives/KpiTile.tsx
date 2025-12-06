@@ -287,7 +287,13 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                 onMouseLeave={isVrm ? undefined : handleSparklineLeave}
               >
                 <XAxis dataKey="index" hide />
-                <YAxis type="number" domain={[0, (dataMax: number) => dataMax ?? 0]} hide />
+                <YAxis
+                  type="number"
+                  domain={[0, "dataMax"]}
+                  padding={{ bottom: 0, top: 0 }}
+                  allowDataOverflow={false}
+                  hide
+                />
                 {!isVrm ? (
                   <Tooltip
                     formatter={(tooltipValue: number) => [

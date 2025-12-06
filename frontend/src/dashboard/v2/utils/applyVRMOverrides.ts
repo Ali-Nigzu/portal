@@ -198,6 +198,35 @@ const vrmWidgets: DashboardWidget[] = [
 
 const KPI_ORDER = vrmWidgets.map((widget) => widget.id);
 
+const maybeApplySiteFlow = (widget: DashboardWidget): DashboardWidget => {
+  const isSiteFlow = widget.chartSpecId === "dashboard.live_flow" || widget.id === "live-flow";
+  if (!isSiteFlow) {
+    return widget;
+  }
+
+  const nextInlineSpec = widget.inlineSpec ?? null;
+  const measures = nextInlineSpec?.measures ?? [];
+  const updatedMeasures = measures
+    .filter((measure) => measure.id !== "throughput")
+    .map((measure) =>
+      measure.id === "occupancy"
+        ? {
+            ...measure,
+            options: { ...(measure.options ?? {}), vrmOccupancy: true, vrmOccupancyStats: true },
+          }
+        : measure,
+    );
+
+  return {
+    ...widget,
+    title: "Site Flow",
+    chartSpecId: widget.chartSpecId === "dashboard.live_flow" ? widget.chartSpecId : widget.chartSpecId,
+    inlineSpec: nextInlineSpec
+      ? { ...nextInlineSpec, measures: updatedMeasures, displayHints: { ...nextInlineSpec.displayHints } }
+      : widget.inlineSpec,
+  };
+};
+
 const filterOutOldKpis = (manifest: DashboardManifest) => {
   const priorKpiIds = new Set(manifest.layout?.kpiBand ?? []);
   return manifest.widgets.filter((widget) => !priorKpiIds.has(widget.id));
@@ -206,7 +235,7 @@ const filterOutOldKpis = (manifest: DashboardManifest) => {
 export function applyVRMOverrides(
   manifest: DashboardManifest,
 ): DashboardManifest {
-  const filteredWidgets = filterOutOldKpis(manifest);
+  const filteredWidgets = filterOutOldKpis(manifest).map(maybeApplySiteFlow);
   const nextWidgets = [...filteredWidgets, ...vrmWidgets];
 
   return {

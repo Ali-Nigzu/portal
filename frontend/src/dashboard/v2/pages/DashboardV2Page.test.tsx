@@ -58,7 +58,7 @@ const baseWidgets: DashboardWidget[] = [
   },
   {
     id: "live-flow",
-    title: "Live Flow",
+    title: "Site Flow",
     kind: "chart",
     chartSpecId: "dashboard.live_flow",
     fixtureId: "golden_dashboard_live_flow",
