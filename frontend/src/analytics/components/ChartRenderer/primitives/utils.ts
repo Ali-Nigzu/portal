@@ -36,6 +36,26 @@ export function buildCartesianDataset(series: ChartSeries[]): CartesianDataset {
         datum[seriesItem.id] = point.y ?? point.value ?? null;
       }
 
+      Object.entries(point).forEach(([field, fieldValue]) => {
+        if (
+          [
+            "x",
+            "y",
+            "value",
+            "coverage",
+            "rawCount",
+            "group",
+            "comparison",
+            "target",
+          ].includes(field)
+        ) {
+          return;
+        }
+        if (datum[field] === undefined) {
+          datum[field] = fieldValue;
+        }
+      });
+
       if (!metaMap[key]) {
         metaMap[key] = {};
       }

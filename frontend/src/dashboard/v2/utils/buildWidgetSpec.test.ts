@@ -4,7 +4,7 @@ import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 
 const baseWidget: DashboardWidget = {
   id: "live-flow",
-  title: "Live Flow",
+  title: "Site Flow",
   kind: "chart",
   inlineSpec: {
     id: "dashboard.live_flow",

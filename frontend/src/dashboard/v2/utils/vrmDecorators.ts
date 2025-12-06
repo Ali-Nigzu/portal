@@ -66,6 +66,113 @@ export const markCompact = (result: ChartResult) => {
   result.meta.summary!.compact = 1 as unknown as string | number | null;
 };
 
+const numberOrNull = (value: unknown) => (typeof value === "number" ? value : null);
+
+const applySiteFlow = (result: ChartResult): ChartResult => {
+  const occupancySeries = result.series.find((series) => series.id === "occupancy");
+  const occupancyColor = occupancySeries?.color ?? "var(--vrm-color-accent-occupancy, #2d6cdf)";
+  const occupancyAxis = occupancySeries?.axis;
+
+  const occupancyBand = (occupancySeries?.data ?? []).map((point) => {
+    const min = numberOrNull((point as Record<string, unknown>).occupancy_min ?? (point as Record<string, unknown>).min);
+    const max = numberOrNull((point as Record<string, unknown>).occupancy_max ?? (point as Record<string, unknown>).max);
+    const avg = numberOrNull((point as Record<string, unknown>).occupancy_avg ?? (point as Record<string, unknown>).avg);
+    const span = min !== null && max !== null ? max - min : null;
+    return {
+      x: point.x,
+      y: min,
+      coverage: point.coverage ?? null,
+      rawCount: (point as unknown as { rawCount?: number | null }).rawCount ?? null,
+      occupancy_min: min,
+      occupancy_max: max,
+      occupancy_avg: avg,
+      occupancy_span: span,
+    } satisfies DataPoint & {
+      occupancy_min: number | null;
+      occupancy_max: number | null;
+      occupancy_avg: number | null;
+      occupancy_span: number | null;
+    };
+  });
+
+  const occupancyMinLine: ChartSeries = {
+    id: "occupancy_min",
+    label: "Occupancy (min)",
+    geometry: "line",
+    axis: occupancyAxis,
+    hideInLegend: true,
+    color: occupancyColor,
+    strokeOpacity: 0.45,
+    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_min })),
+  };
+
+  const occupancyMaxLine: ChartSeries = {
+    id: "occupancy_max",
+    label: "Occupancy (max)",
+    geometry: "line",
+    axis: occupancyAxis,
+    hideInLegend: true,
+    color: occupancyColor,
+    strokeOpacity: 0.6,
+    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_max })),
+  };
+
+  const occupancyAvgLine: ChartSeries = {
+    id: "occupancy_avg",
+    label: "Occupancy (avg)",
+    geometry: "line",
+    axis: occupancyAxis,
+    color: occupancyColor,
+    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_avg })),
+  };
+
+  const occupancyBandBase: ChartSeries = {
+    id: "occupancy_band_base",
+    label: "Occupancy band base",
+    geometry: "area",
+    stack: "occupancy-band",
+    color: occupancyColor,
+    fillOpacity: 0,
+    strokeOpacity: 0,
+    hideInLegend: true,
+    hideInTooltip: true,
+    axis: occupancyAxis,
+    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_min })),
+  };
+
+  const occupancyBandSpan: ChartSeries = {
+    id: "occupancy_band_span",
+    label: "Occupancy (min–max)",
+    geometry: "area",
+    stack: "occupancy-band",
+    color: occupancyColor,
+    fillOpacity: 0.22,
+    strokeOpacity: 0.9,
+    hideInLegend: true,
+    hideInTooltip: true,
+    axis: occupancyAxis,
+    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_span })),
+  };
+
+  const bars = result.series
+    .filter((series) => series.id !== "occupancy" && series.id !== "throughput")
+    .map((series) => {
+      if (series.id === "entrances" || series.id === "exits") {
+        return { ...series, geometry: "bar" as const };
+      }
+      return series;
+    });
+
+  return {
+    ...result,
+    meta: {
+      ...(result.meta ?? { timezone: "UTC" }),
+      summary: { ...(result.meta?.summary ?? {}), title: "Site Flow" },
+    },
+    series: [occupancyBandBase, occupancyBandSpan, occupancyMinLine, occupancyMaxLine, occupancyAvgLine, ...bars],
+  };
+};
+
 // VRM KPI band semantics:
 // - All headline KPI values are taken from the latest 15-minute bucket within a 24h/15m
 //   series (or the derived "now" occupancy point for capacity usage).
@@ -636,6 +743,9 @@ export const decorateResult = (
       chartStyle: summary?.chartStyle,
       chartSubType: summary?.chartSubType,
     });
+  }
+  if (widgetId === "live-flow" || widgetId === "site-flow") {
+    return applySiteFlow(result);
   }
   const fixedIds = new Set<string>(Object.values(VRM_KPI_IDS));
   if (!fixedIds.has(widgetId)) {

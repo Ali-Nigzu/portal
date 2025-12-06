@@ -16,9 +16,11 @@ export const SeriesLegend = ({
     return null;
   }
 
+  const visibleSeries = series.filter((item) => !item.hideInLegend);
+
   return (
     <div className="analytics-series-legend">
-      {series.map((item) => {
+      {visibleSeries.map((item) => {
         const active = visibility[item.id] ?? true;
         return (
           <button

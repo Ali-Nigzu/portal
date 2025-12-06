@@ -170,6 +170,13 @@
   border-radius: 0 !important;
 }
 
+.dashboard-v2__kpi-renderer .kpi-sparkline-shell,
+.dashboard-v2__kpi-renderer .kpi-sparkline-anchor {
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+}
+
 .dashboard-v2__kpi-content {
   min-height: 180px;
   display: flex;

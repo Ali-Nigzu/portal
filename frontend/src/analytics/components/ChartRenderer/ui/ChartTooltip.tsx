@@ -26,14 +26,18 @@ export const ChartTooltip = ({
     <div className="analytics-chart-tooltip">
       <div className="tooltip-header">{label}</div>
       <ul>
-        {payload.map((entry) => {
-          const seriesId = String(entry.dataKey);
-          const series = seriesMap.get(seriesId);
-          const datumMeta = xMeta[seriesId];
-          const coverage = datumMeta?.coverage ?? null;
-          const rawCount = datumMeta?.rawCount ?? null;
-          const coverageInfo = formatCoverage(coverage);
-          const showRaw = shouldShowRawCount(rawCount);
+        {payload
+          .map((entry) => {
+            const seriesId = String(entry.dataKey);
+            const series = seriesMap.get(seriesId);
+            if (series?.hideInTooltip) {
+              return null;
+            }
+            const datumMeta = xMeta[seriesId];
+            const coverage = datumMeta?.coverage ?? null;
+            const rawCount = datumMeta?.rawCount ?? null;
+            const coverageInfo = formatCoverage(coverage);
+            const showRaw = shouldShowRawCount(rawCount);
           const coverageClass =
             coverageInfo.tone === "critical"
               ? "coverage-critical"
@@ -53,7 +57,14 @@ export const ChartTooltip = ({
                 {series?.label ?? seriesId}
               </span>
               <span className="series-value">
-                {formatValue(entry.value as number | null | undefined, series?.unit)}
+                {formatValue(
+                  (series?.tooltipValueKey
+                    ? ((entry.payload as Record<string, unknown> | undefined) ?? {})[
+                        series.tooltipValueKey
+                      ]
+                    : entry.value) as number | null | undefined,
+                  series?.unit,
+                )}
               </span>
               {showRaw ? (
                 <span className="series-meta">raw: {rawCount}</span>
@@ -62,8 +73,8 @@ export const ChartTooltip = ({
                 coverage: {coverageInfo.label}
               </span>
             </li>
-          );
-        })}
+          })
+          .filter(Boolean)}
       </ul>
     </div>
   );

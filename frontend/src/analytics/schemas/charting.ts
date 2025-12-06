@@ -175,6 +175,11 @@ export interface ChartSeries {
   geometry: Geometry;
   stack?: string;
   color?: string;
+  fillOpacity?: number;
+  strokeOpacity?: number;
+  hideInLegend?: boolean;
+  hideInTooltip?: boolean;
+  tooltipValueKey?: string;
   data: DataPoint[];
   summary?: SeriesSummary;
   annotations?: Annotation[];

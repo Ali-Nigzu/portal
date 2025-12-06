@@ -450,7 +450,11 @@
         "measures": [
           {
             "aggregation": "occupancy_recursion",
-            "id": "occupancy"
+            "id": "occupancy",
+            "options": {
+              "vrmOccupancy": true,
+              "vrmOccupancyStats": true
+            }
           },
           {
             "aggregation": "count",
@@ -465,14 +469,10 @@
               0
             ],
             "id": "exits"
-          },
-          {
-            "aggregation": "activity_rate",
-            "id": "throughput"
           }
         ],
         "notes": [
-          "Live Flow chart used by dashboard + analytics presets"
+          "Site Flow chart used by dashboard + analytics presets"
         ],
         "timeWindow": {
           "bucket": "5_MIN",
@@ -482,7 +482,7 @@
         }
       },
       "kind": "chart",
-      "title": "Live Flow",
+      "title": "Site Flow",
       "locked": true
     }
   ]
