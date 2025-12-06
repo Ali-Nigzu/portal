@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: var(--vrm-spacing-3, 12px);
   font-family: var(--vrm-typography-font-family-base, 'Inter', sans-serif);
-  color: var(--vrm-color-text-secondary, #1f2933);
+  color: var(--vrm-text-secondary, #c9d2e1);
 }
 
 .analytics-chart-surface .recharts-cartesian-grid line {

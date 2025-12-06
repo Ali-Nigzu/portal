@@ -134,7 +134,7 @@ const KpiTile = ({
   const showRemove = Boolean(onRemove) && !locked;
 
   return (
-    <div className="dashboard-v2__kpi-tile" data-state={state.status}>
+    <div className="dashboard-v2__kpi-tile vrm-kpi-tile vrm-kpi-tile--panel" data-state={state.status}>
       {showRemove ? (
         <div className="dashboard-v2__kpi-controls">
           <button type="button" className="dashboard-v2__remove-button" onClick={onRemove}>
@@ -189,7 +189,7 @@ const ChartCard = ({
     <Card
       title={title}
       subtitle={subtitle}
-      className="dashboard-v2__chart-card"
+      className="dashboard-v2__chart-card vrm-card vrm-card--chart-panel"
       footer={footer}
     >
       {body}
@@ -596,7 +596,7 @@ const DashboardV2Page = ({
 
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
-      <header className="dashboard-v2__header">
+      <header className="dashboard-v2__header vrm-section vrm-section--header">
         <div className="vrm-dashboard-header">
           <div className="vrm-dashboard-header-left">
             <div className="vrm-dashboard-avatar" aria-hidden="true" />
@@ -645,7 +645,7 @@ const DashboardV2Page = ({
         </div>
       ) : null}
 
-      <section className="dashboard-v2__kpi-band">
+      <section className="dashboard-v2__kpi-band vrm-section vrm-section--kpis">
         {kpiWidgets.length === 0 ? (
           <div className="dashboard-v2__empty" role="status">
             No KPI widgets yet. Pin single-value charts from the analytics workspace to populate this row.
@@ -726,7 +726,7 @@ const DashboardV2Page = ({
       ) : null}
 
       <section
-        className="dashboard-v2__grid"
+        className="dashboard-v2__grid vrm-section vrm-section--chart"
         style={{
           gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
           gridAutoRows: `${GRID_ROW_HEIGHT}px`,

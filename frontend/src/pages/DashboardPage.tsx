@@ -486,7 +486,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   return (
     <InteractionProvider pageKey="dashboard">
       <div>
-        <div className="vrm-section">
+        <div className="vrm-section vrm-section--page-intro">
           <div>
             <h1 className="vrm-page-title">System Overview</h1>
             <div className="vrm-breadcrumb">
@@ -497,7 +497,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
         </div>
 
-        <section className="vrm-section">
+        <section className="vrm-section vrm-section--header">
           <div className="vrm-dashboard-header">
             <div className="vrm-dashboard-header-left">
               <div className="vrm-dashboard-avatar" aria-hidden="true" />
@@ -512,7 +512,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
         </section>
 
-        <section className="vrm-section">
+        <section className="vrm-section vrm-section--kpis">
           <div className="vrm-kpi-grid">
             {kpiTiles.map(tile => (
               <KPITile
@@ -532,7 +532,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
           </div>
         </section>
 
-        <section className="vrm-section">
+        <section className="vrm-section vrm-section--chart">
           <ConfigurableChart
             cardId="dashboard-flow"
             routeKey="dashboard"
