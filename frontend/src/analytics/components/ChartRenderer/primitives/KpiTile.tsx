@@ -278,6 +278,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
             onMouseLeave={isVrm ? handleSparklineLeave : undefined}
             data-testid={isVrm ? "vrm-sparkline-shell" : undefined}
             style={isVrm ? { paddingBottom: 0 } : undefined}
+            ref={sparklineRef}
           >
             <ResponsiveContainer width="100%" height={sparklineHeight}>
               <AreaChart
@@ -285,20 +286,23 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                 margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                 onMouseLeave={isVrm ? undefined : handleSparklineLeave}
               >
-                <XAxis dataKey="index" type="number" hide domain={["dataMin", "dataMax"]} />
-                <YAxis type="number" domain={[0, (dataMax: number | undefined) => dataMax ?? 0]} hide />
+                <XAxis dataKey="index" hide />
+                <YAxis type="number" domain={[0, (dataMax: number) => dataMax ?? 0]} hide />
                 {!isVrm ? (
                   <Tooltip
-                    formatter={(tooltipValue) => [
-                      formatValue(tooltipValue as number, primarySeries.unit),
+                    formatter={(tooltipValue: number) => [
+                      formatValue(tooltipValue, primarySeries.unit),
                       primarySeries.label ?? primarySeries.id ?? "",
                     ]}
-                    labelFormatter={(label, payload) => formatLabel(label as string | number, payload)}
+                    labelFormatter={(label, payload) =>
+                      formatLabel(label as string | number, payload)
+                    }
                   />
                 ) : null}
                 <Area
                   type="monotone"
                   dataKey="value"
+                  name={primarySeries.label ?? primarySeries.id ?? ""}
                   stroke={primarySeries?.color ?? "#2d6cdf"}
                   fill={primarySeries?.color ?? "#2d6cdf"}
                   fillOpacity={0.2}
@@ -311,32 +315,21 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     r={5}
                     fill="#ffffff"
                     stroke={primarySeries?.color ?? "#2d6cdf"}
-                    fill={primarySeries?.color ?? "#2d6cdf"}
-                    fillOpacity={0.2}
+                    strokeWidth={2}
+                    strokeOpacity={0.9}
                     isAnimationActive={false}
                   />
-                  {isVrm && vrmHover && hoveredNumericValue !== null ? (
-                    <ReferenceDot
-                      x={sparklineData[vrmHover.index]?.index ?? vrmHover.index}
-                      y={hoveredNumericValue}
-                      r={5}
-                      fill="#ffffff"
-                      stroke={primarySeries?.color ?? "#2d6cdf"}
-                      strokeWidth={2}
-                      strokeOpacity={0.9}
-                    />
-                  ) : null}
-                </AreaChart>
-              </ResponsiveContainer>
-              {isVrm ? (
-                <div
-                  className="kpi-sparkline__overlay"
-                  data-testid="vrm-sparkline-overlay"
-                  onMouseMove={handleOverlayHover}
-                  onMouseEnter={handleOverlayHover}
-                  onMouseLeave={handleSparklineLeave}
-                />
-              </>
+                ) : null}
+              </AreaChart>
+            </ResponsiveContainer>
+            {isVrm ? (
+              <div
+                className="kpi-sparkline__overlay"
+                data-testid="vrm-sparkline-overlay"
+                onMouseMove={handleOverlayHover}
+                onMouseEnter={handleOverlayHover}
+                onMouseLeave={handleSparklineLeave}
+              />
             ) : null}
           </div>
           {isVrm ? (
