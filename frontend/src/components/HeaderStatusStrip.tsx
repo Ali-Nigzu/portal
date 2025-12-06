@@ -12,25 +12,41 @@ interface HeaderStatusStripProps {
 }
 
 const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
-  const { lastUpdated, systemStatus, localTime, realtime, setRealtime } = useGlobalControls();
+  const { lastUpdated, systemStatus, localTime, realtime } = useGlobalControls();
 
-  const toggleRealtime = () => setRealtime(!realtime);
+  const RealtimeWaveIcon = () => (
+    <svg
+      className="vrm-realtime-wave"
+      viewBox="0 0 24 24"
+      role="presentation"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M4 12c1.5-2 3.5-2 5 0s3.5 2 5 0 3.5-2 5 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 
   return (
     <div className={`vrm-header-meta ${className ?? ''}`.trim()} role="status" aria-live="polite">
       <div className="vrm-header-meta-group">
         <span className="vrm-header-chip" title="Last updated timestamp">
-          Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—'}
+          Last updated:{' '}
+          {realtime ? (
+            <span className="vrm-header-chip-highlight">
+              <RealtimeWaveIcon />
+              Realtime
+            </span>
+          ) : (
+            lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—'
+          )}
         </span>
-        <button
-          type="button"
-          className={`vrm-header-chip vrm-header-chip-action ${realtime ? 'active' : ''}`}
-          onClick={toggleRealtime}
-          aria-pressed={realtime}
-        >
-          <span className={`vrm-status-indicator ${realtime ? 'ok' : 'warning'}`} />
-          {realtime ? 'Realtime on' : 'Realtime off'}
-        </button>
       </div>
 
       <span className="vrm-header-meta-divider" aria-hidden="true" />
@@ -47,9 +63,6 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
       <div className="vrm-header-meta-group">
         <span className="vrm-header-chip" title="Local site time">
           Local time: {localTime}
-        </span>
-        <span className="vrm-header-chip" title="Viewer access">
-          Viewer rights: Full
         </span>
       </div>
     </div>

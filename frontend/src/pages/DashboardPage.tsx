@@ -79,8 +79,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const [flowControlsState, setFlowControlsState] = useState<CardControlState | null>(null);
   const globalControls = useGlobalControls();
   const navigate = useNavigate();
-  const siteLabel = useMemo(() => credentials.username ?? 'Site', [credentials.username]);
-  const siteId = useMemo(() => credentials.username ?? '—', [credentials.username]);
+  const clientName = useMemo(() => credentials.username ?? 'Site', [credentials.username]);
+  const siteId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const clientId = params.get('client_id');
+    if (clientId) {
+      return clientId;
+    }
+    if (credentials.orgId) {
+      return credentials.orgId;
+    }
+    return clientName;
+  }, [clientName, credentials.orgId]);
+  const siteLabel = clientName;
 
   const fetchData = useCallback(async () => {
     try {

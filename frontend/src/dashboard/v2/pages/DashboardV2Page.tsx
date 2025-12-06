@@ -555,9 +555,16 @@ const DashboardV2Page = ({
 
   const gridColumns = manifest?.layout.grid.columns ?? 12;
   const siteOrgId = manifest?.orgId ?? orgId;
+  const siteIdFromQuery = useMemo(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const params = new URLSearchParams(window.location.search);
+    return params.get("client_id") ?? params.get("site_id") ?? undefined;
+  }, []);
   const siteUiOrgId = resolvedUiClient ?? resolveUiClient(siteOrgId) ?? siteOrgId;
   const siteLabel = siteUiOrgId ?? "Site";
-  const siteId = siteUiOrgId ?? "—";
+  const siteId = siteIdFromQuery ?? siteOrgId ?? "—";
   const isVrmDashboard = useMemo(() => {
     const ids = manifest?.layout?.kpiBand ?? [];
     if (!ids.length) {

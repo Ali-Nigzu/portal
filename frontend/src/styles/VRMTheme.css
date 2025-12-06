@@ -397,6 +397,21 @@ body {
   color: var(--vrm-text-secondary);
 }
 
+.vrm-header-chip-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vrm-spacing-1);
+  color: var(--vrm-accent-blue);
+  font-weight: 600;
+}
+
+.vrm-realtime-wave {
+  width: 18px;
+  height: 12px;
+  display: inline-block;
+  color: var(--vrm-accent-blue);
+}
+
 .vrm-header-meta-group {
   display: inline-flex;
   align-items: center;
