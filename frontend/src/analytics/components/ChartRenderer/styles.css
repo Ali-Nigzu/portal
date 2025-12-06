@@ -227,6 +227,24 @@
   align-items: stretch;
 }
 
+.kpi-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vrm-spacing-2, 8px);
+  height: 100%;
+}
+
+.kpi-content--vrm {
+  flex: 1;
+  align-items: stretch;
+}
+
+.kpi-main-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vrm-spacing-2, 8px);
+}
+
 .kpi-header {
   display: flex;
   justify-content: space-between;
@@ -336,6 +354,7 @@
   flex-direction: column;
   justify-content: flex-end;
   align-items: stretch;
+  margin-top: auto;
 }
 
 .kpi-sparkline--vrm {

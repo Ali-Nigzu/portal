@@ -416,7 +416,28 @@ class SpecCompiler:
     ) -> str:
         cte_entries = list(base_ctes)
         cte_entries.extend(measure_ctes)
-        union_selects = "\nUNION ALL\n".join(select_statements)
+
+        select_list = list(select_statements)
+        needs_occupancy = any("occupancy_min" in stmt.lower() for stmt in select_list)
+        normalized_selects = []
+
+        for stmt in select_list:
+            if needs_occupancy and "occupancy_min" not in stmt.lower():
+                normalized_selects.append(
+                    " ".join(
+                        [
+                            "SELECT measure_id, bucket_start, value, coverage, raw_count,",
+                            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max,",
+                            "CAST(NULL AS FLOAT64) AS occupancy_avg FROM (",
+                            stmt,
+                            ")",
+                        ]
+                    )
+                )
+            else:
+                normalized_selects.append(stmt)
+
+        union_selects = "\nUNION ALL\n".join(normalized_selects)
         final_cte = dedent(
             f"""
             final AS (
