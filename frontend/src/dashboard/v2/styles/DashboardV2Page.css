@@ -189,6 +189,10 @@
 .dashboard-v2__kpi-content .kpi-sparkline-region--vrm {
   margin-top: auto;
   padding-bottom: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .dashboard-v2__kpi-controls {

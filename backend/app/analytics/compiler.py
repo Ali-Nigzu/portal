@@ -1024,7 +1024,9 @@ class SpecCompiler:
             ).strip()
 
             select_sql = (
-                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_series"
+                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+                "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+                f"FROM {prefix}_series"
             )
             return MeasureCompilation(
                 ctes=[anchor, deltas, bucketed, cumulative, reflected, series],
@@ -1157,7 +1159,9 @@ class SpecCompiler:
         ).strip()
 
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {prefix}_series"
         )
         return MeasureCompilation(
             ctes=[ordered, clamped, bucket_bounds, occupancy_buckets, occupancy_filled, series],
@@ -1195,7 +1199,9 @@ class SpecCompiler:
             """
         ).strip()
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {measure_id}_activity_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {measure_id}_activity_series"
         )
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
 
@@ -1233,7 +1239,9 @@ class SpecCompiler:
             """
         ).strip()
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {measure_id}_activity_rate_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {measure_id}_activity_rate_series"
         )
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
 
@@ -1270,7 +1278,9 @@ class SpecCompiler:
                     """
                 ).strip()
                 select_sql = (
-                    f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}"
+                    f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+                    "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+                    f"FROM {prefix}"
                 )
                 return MeasureCompilation(ctes=[cte], select_sql=select_sql)
 
@@ -1628,7 +1638,9 @@ class SpecCompiler:
         ).strip()
 
         select_sql = (
-            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count FROM {prefix}_series"
+            f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
+            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            f"FROM {prefix}_series"
         )
         ctes = [entrances, exits, sessions, bucketed, series]
         if options.get("vrmDwellFifo"):

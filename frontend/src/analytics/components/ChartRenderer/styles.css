@@ -315,6 +315,8 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .kpi-sparkline-anchor {
@@ -323,11 +325,16 @@
 
 .kpi-sparkline-anchor--vrm {
   padding-bottom: 0;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
 }
 
 .kpi-sparkline-region--vrm {
+  position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   align-items: stretch;
 }
 
@@ -360,6 +367,9 @@
   border-radius: 0;
   padding: var(--vrm-spacing-2, 8px) var(--vrm-spacing-3, 12px);
   gap: var(--vrm-spacing-3, 12px);
+  position: absolute;
+  inset: auto 0 0 0;
+  pointer-events: none;
 }
 
 .kpi-sparkline-strip--vrm .kpi-sparkline-strip__time {
