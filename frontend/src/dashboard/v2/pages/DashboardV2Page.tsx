@@ -596,168 +596,170 @@ const DashboardV2Page = ({
 
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
-      <header className="dashboard-v2__header vrm-section vrm-section--header">
-        <div className="vrm-dashboard-header">
-          <div className="vrm-dashboard-header-left">
-            <div className="vrm-dashboard-avatar" aria-hidden="true" />
+      <div className="dashboard-v2__content vrm-dashboard-shell">
+        <header className="dashboard-v2__header vrm-section vrm-section--header">
+          <div className="vrm-dashboard-header">
+            <div className="vrm-dashboard-header-left">
+              <div className="vrm-dashboard-avatar" aria-hidden="true" />
               <div className="vrm-dashboard-identity">
                 <div className="vrm-dashboard-identity-label">Active site</div>
-              <div className="vrm-dashboard-title">{`${clientDisplayName} – Site ${siteDisplayId}`}</div>
+                <div className="vrm-dashboard-title">{`${clientDisplayName} – Site ${siteDisplayId}`}</div>
               </div>
             </div>
             <div className="vrm-dashboard-header-right">
-            <HeaderStatusStrip className="vrm-dashboard-header-meta" />
-          </div>
-        </div>
-        {!isVrmDashboard ? (
-          <div className="dashboard-v2__controls">
-            <div className="dashboard-v2__org">Site ID: {siteDisplayId}</div>
-            <div className="dashboard-v2__control-group">
-              {manifest?.timeControls?.options?.length ? (
-                <label className="dashboard-v2__control">
-                  <span>Time range</span>
-                  <select
-                    value={selectedTimeRangeId ?? manifest.timeControls?.options?.[0]?.id ?? ""}
-                    onChange={handleTimeRangeChange}
-                  >
-                    {(manifest.timeControls.options ?? []).map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              <button type="button" className="dashboard-v2__button" onClick={handleRefresh}>
-                Refresh data
-              </button>
-              <button type="button" className="dashboard-v2__button" onClick={handleReloadManifest}>
-                Reload manifest
-              </button>
+              <HeaderStatusStrip className="vrm-dashboard-header-meta" />
             </div>
           </div>
+          {!isVrmDashboard ? (
+            <div className="dashboard-v2__controls">
+              <div className="dashboard-v2__org">Site ID: {siteDisplayId}</div>
+              <div className="dashboard-v2__control-group">
+                {manifest?.timeControls?.options?.length ? (
+                  <label className="dashboard-v2__control">
+                    <span>Time range</span>
+                    <select
+                      value={selectedTimeRangeId ?? manifest.timeControls?.options?.[0]?.id ?? ""}
+                      onChange={handleTimeRangeChange}
+                    >
+                      {(manifest.timeControls.options ?? []).map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <button type="button" className="dashboard-v2__button" onClick={handleRefresh}>
+                  Refresh data
+                </button>
+                <button type="button" className="dashboard-v2__button" onClick={handleReloadManifest}>
+                  Reload manifest
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </header>
+
+        {status === "error" && error ? (
+          <div className="dashboard-v2__error-banner" role="alert">
+            {error}
+          </div>
         ) : null}
-      </header>
 
-      {status === "error" && error ? (
-        <div className="dashboard-v2__error-banner" role="alert">
-          {error}
-        </div>
-      ) : null}
-
-      <section className="dashboard-v2__kpi-band vrm-section vrm-section--kpis">
-        {kpiWidgets.length === 0 ? (
-          <div className="dashboard-v2__empty" role="status">
-            No KPI widgets yet. Pin single-value charts from the analytics workspace to populate this row.
-          </div>
-        ) : (
-          kpiWidgets.map((state) => (
-          <KpiTile
-            key={state.widget.id}
-            title={state.widget.title}
-            result={state.result}
-            state={state}
-            locked={state.widget.locked}
-            widgetId={state.widget.id}
-            onRemove={
-              state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
-            }
-          />
-        ))
-        )}
-      </section>
-
-      {vrmDebugEnabled && kpiWidgets.length > 0 ? (
-        <section className="dashboard-v2__debug" aria-label="VRM debug panel">
-          <h2>VRM KPI debug (last bucket vs summary)</h2>
-          <pre>
-            {JSON.stringify(
-              {
-                orgId,
-                manifestOrgId: manifest?.orgId,
-                resolvedUiClient,
-              },
-              null,
-              2,
-            )}
-          </pre>
-          <ul>
-            {kpiWidgets.map((state) => {
-              const series = state.result?.series?.[0];
-              const lastBucket = lastBucketValue(series);
-              const sum =
-                series?.data.reduce((total, point) => {
-                  const value = point.value ?? point.y ?? 0;
-                  return total + (typeof value === "number" ? value : 0);
-                }, 0) ?? 0;
-              const headlineOverride = state.result?.meta?.summary
-                ? (state.result.meta.summary as Record<string, unknown>).headlineValue
-                : undefined;
-              const usedHeadline =
-                typeof headlineOverride === "number"
-                  ? headlineOverride
-                  : series?.data?.[series.data.length - 1]?.value ??
-                    series?.data?.[series.data.length - 1]?.y ??
-                    null;
-              const summaryTotals = (state.result as { summary?: unknown } | undefined)?.summary;
-              return (
-                <li key={state.widget.id}>
-                  <strong>{state.widget.title}</strong>
-                  <pre>{
-                    JSON.stringify(
-                      {
-                        widgetId: state.widget.id,
-                        seriesY: series?.data?.map((point) => point.value ?? point.y) ?? [],
-                        lastBucket,
-                        sum24h: sum,
-                        headlineOverride,
-                        usedHeadline,
-                        summaryTotals,
-                      },
-                      null,
-                      2,
-                    )
-                  }</pre>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      <section
-        className="dashboard-v2__grid vrm-section vrm-section--chart"
-        style={{
-          gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
-          gridAutoRows: `${GRID_ROW_HEIGHT}px`,
-        }}
-      >
-        {chartWidgets.length === 0 ? (
-          <div className="dashboard-v2__empty" role="status">
-            No charts pinned yet. Use “Pin to dashboard” from the analytics workspace to build your layout.
-          </div>
-        ) : (
-          chartWidgets.map(({ state, placement }) => (
-            <div
-              key={state.widget.id}
-              className="dashboard-v2__grid-item"
-              style={buildGridStyle(placement)}
-            >
-              <ChartCard
+        <section className="dashboard-v2__kpi-band vrm-section vrm-section--kpis">
+          {kpiWidgets.length === 0 ? (
+            <div className="dashboard-v2__empty" role="status">
+              No KPI widgets yet. Pin single-value charts from the analytics workspace to populate this row.
+            </div>
+          ) : (
+            kpiWidgets.map((state) => (
+              <KpiTile
+                key={state.widget.id}
                 title={state.widget.title}
-                subtitle={state.widget.subtitle}
-                state={state}
                 result={state.result}
+                state={state}
                 locked={state.widget.locked}
                 widgetId={state.widget.id}
                 onRemove={
                   state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
                 }
               />
+            ))
+          )}
+        </section>
+
+        {vrmDebugEnabled && kpiWidgets.length > 0 ? (
+          <section className="dashboard-v2__debug" aria-label="VRM debug panel">
+            <h2>VRM KPI debug (last bucket vs summary)</h2>
+            <pre>
+              {JSON.stringify(
+                {
+                  orgId,
+                  manifestOrgId: manifest?.orgId,
+                  resolvedUiClient,
+                },
+                null,
+                2,
+              )}
+            </pre>
+            <ul>
+              {kpiWidgets.map((state) => {
+                const series = state.result?.series?.[0];
+                const lastBucket = lastBucketValue(series);
+                const sum =
+                  series?.data.reduce((total, point) => {
+                    const value = point.value ?? point.y ?? 0;
+                    return total + (typeof value === "number" ? value : 0);
+                  }, 0) ?? 0;
+                const headlineOverride = state.result?.meta?.summary
+                  ? (state.result.meta.summary as Record<string, unknown>).headlineValue
+                  : undefined;
+                const usedHeadline =
+                  typeof headlineOverride === "number"
+                    ? headlineOverride
+                    : series?.data?.[series.data.length - 1]?.value ??
+                      series?.data?.[series.data.length - 1]?.y ??
+                      null;
+                const summaryTotals = (state.result as { summary?: unknown } | undefined)?.summary;
+                return (
+                  <li key={state.widget.id}>
+                    <strong>{state.widget.title}</strong>
+                    <pre>
+                      {JSON.stringify(
+                        {
+                          widgetId: state.widget.id,
+                          seriesY: series?.data?.map((point) => point.value ?? point.y) ?? [],
+                          lastBucket,
+                          sum24h: sum,
+                          headlineOverride,
+                          usedHeadline,
+                          summaryTotals,
+                        },
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
+
+        <section
+          className="dashboard-v2__grid vrm-section vrm-section--chart"
+          style={{
+            gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+            gridAutoRows: `${GRID_ROW_HEIGHT}px`,
+          }}
+        >
+          {chartWidgets.length === 0 ? (
+            <div className="dashboard-v2__empty" role="status">
+              No charts pinned yet. Use “Pin to dashboard” from the analytics workspace to build your layout.
             </div>
-          ))
-        )}
-      </section>
+          ) : (
+            chartWidgets.map(({ state, placement }) => (
+              <div
+                key={state.widget.id}
+                className="dashboard-v2__grid-item"
+                style={buildGridStyle(placement)}
+              >
+                <ChartCard
+                  title={state.widget.title}
+                  subtitle={state.widget.subtitle}
+                  state={state}
+                  result={state.result}
+                  locked={state.widget.locked}
+                  widgetId={state.widget.id}
+                  onRemove={
+                    state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
+                  }
+                />
+              </div>
+            ))
+          )}
+        </section>
+      </div>
     </div>
   );
 };

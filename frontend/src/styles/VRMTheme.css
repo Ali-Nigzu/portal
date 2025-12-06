@@ -129,6 +129,12 @@ body {
   background-color: var(--vrm-bg-primary);
 }
 
+.vrm-dashboard-shell {
+  width: 100%;
+  max-width: var(--vrm-layout-content-max);
+  margin: 0 auto;
+}
+
 /* Sidebar Navigation */
 .vrm-sidebar {
   width: var(--vrm-layout-sidebar-width);

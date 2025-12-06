@@ -52,6 +52,7 @@ interface ConfigurableChartProps {
   intelligence?: IntelligencePayload | null;
   onControlsChange?: (state: CardControlState) => void;
   isLoading?: boolean;
+  className?: string;
 }
 
 const SERIES_DEFINITIONS: SeriesDefinition[] = [
@@ -243,6 +244,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   intelligence,
   onControlsChange,
   isLoading = false,
+  className,
 }) => {
   const chartDomId = useMemo(() => generateChartId(`${cardId}-chart`), [cardId]);
   const { syncId } = useInteractionContext();
@@ -466,7 +468,11 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   }, [controls.rangePreset, controls.customRange, mergedSeries]);
 
   return (
-    <div className="vrm-card vrm-card--chart vrm-card--chart-panel">
+    <div
+      className={`vrm-card vrm-card--chart vrm-card--chart-panel configurable-chart${
+        className ? ` ${className}` : ""
+      }`}
+    >
       <div className="vrm-card-header vrm-card-header--chart">
         <CardControlHeader
           cardId={cardId}
