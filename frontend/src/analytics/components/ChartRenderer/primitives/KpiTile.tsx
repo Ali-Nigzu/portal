@@ -332,7 +332,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
             ) : null}
           </div>
           {isVrm && vrmHover ? (
-            <div className="kpi-sparkline-strip" aria-label="VRM sparkline hover strip">
+            <div
+              className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
+              aria-label="VRM sparkline hover strip"
+            >
               <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
               <div className="kpi-sparkline-strip__value">
                 {formatKpiValue(vrmHover.value, primarySeries?.unit)}

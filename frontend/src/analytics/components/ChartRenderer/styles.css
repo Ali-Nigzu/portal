@@ -313,7 +313,7 @@
   padding-bottom: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--vrm-spacing-2, 8px);
+  gap: var(--vrm-spacing-1, 4px);
 }
 
 .kpi-sparkline-anchor {
@@ -343,6 +343,25 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   pointer-events: none;
+}
+
+.kpi-sparkline-strip--vrm {
+  background: linear-gradient(165deg, rgba(21, 26, 34, 0.78), rgba(15, 19, 26, 0.48));
+  color: inherit;
+  border-top: none;
+  box-shadow: none;
+  border-radius: 0 0 var(--vrm-radii-card, 12px) var(--vrm-radii-card, 12px);
+  padding: var(--vrm-spacing-2, 8px) var(--vrm-spacing-4, 16px);
+  gap: var(--vrm-spacing-4, 16px);
+}
+
+.kpi-sparkline-strip--vrm .kpi-sparkline-strip__time {
+  color: var(--vrm-color-text-muted, #8290a6);
+}
+
+.kpi-sparkline-strip--vrm .kpi-sparkline-strip__value {
+  color: var(--vrm-color-text-primary, #ffffff);
+  font-weight: 600;
 }
 
 .kpi-sparkline-strip__time {
