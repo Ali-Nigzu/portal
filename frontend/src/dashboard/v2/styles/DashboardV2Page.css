@@ -148,22 +148,26 @@
   height: 100%;
 }
 
+.dashboard-v2__kpi-renderer.kpi-tile,
 .dashboard-v2__kpi-renderer .kpi-tile {
-  box-shadow: none;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
 }
 
 .dashboard-v2__kpi-renderer .kpi-sparkline-strip,
 .dashboard-v2__kpi-renderer .traffic-distribution,
 .dashboard-v2__kpi-renderer .capacity-usage,
-.dashboard-v2__kpi-renderer .kpi-tile--vrm {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  border-radius: 0;
+.dashboard-v2__kpi-renderer .kpi-tile--vrm,
+.dashboard-v2__kpi-renderer .kpi-sparkline-shell,
+.dashboard-v2__kpi-renderer .kpi-sparkline-anchor,
+.dashboard-v2__kpi-renderer .kpi-sparkline-strip--vrm {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .dashboard-v2__kpi-content {
