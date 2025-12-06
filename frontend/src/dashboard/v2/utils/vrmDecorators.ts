@@ -75,6 +75,7 @@ type OccupancyPoint = {
   min?: number | null;
   max?: number | null;
   avg?: number | null;
+  value?: number | null;
 };
 
 const applySiteFlow = (result: ChartResult): ChartResult => {

@@ -197,7 +197,7 @@
   margin-top: auto;
   padding-bottom: 0;
   display: flex;
-  flex: 1;
+  flex: 0 0 auto;
   flex-direction: column;
   justify-content: flex-end;
 }
