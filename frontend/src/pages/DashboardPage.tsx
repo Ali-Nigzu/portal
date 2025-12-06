@@ -79,8 +79,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
   const [flowControlsState, setFlowControlsState] = useState<CardControlState | null>(null);
   const globalControls = useGlobalControls();
   const navigate = useNavigate();
+  const formatTitleCase = useCallback((value: string | undefined | null) => {
+    if (!value) return 'Site';
+    return value
+      .split(/[\s._-]+/)
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  }, []);
+
+  const deriveSiteDisplayId = useCallback((raw: string | undefined | null) => {
+    if (!raw) return '—';
+    const cleaned = raw.split('.')[0];
+    const numericMatch = cleaned.match(/(\d+)/);
+    if (numericMatch) {
+      return numericMatch[1];
+    }
+    return cleaned;
+  }, []);
+
   const clientName = useMemo(() => credentials.username ?? 'Site', [credentials.username]);
-  const siteId = useMemo(() => {
+  const siteIdRaw = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const clientId = params.get('client_id');
     if (clientId) {
@@ -91,7 +110,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
     }
     return clientName;
   }, [clientName, credentials.orgId]);
-  const siteLabel = clientName;
+
+  const clientDisplayName = useMemo(() => formatTitleCase(clientName), [clientName, formatTitleCase]);
+  const siteDisplayId = useMemo(() => deriveSiteDisplayId(siteIdRaw), [deriveSiteDisplayId, siteIdRaw]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -482,7 +503,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ credentials }) => {
               <div className="vrm-dashboard-avatar" aria-hidden="true" />
               <div className="vrm-dashboard-identity">
                 <div className="vrm-dashboard-identity-label">Active site</div>
-                <div className="vrm-dashboard-title">{`${siteLabel} – ${siteId}`}</div>
+                <div className="vrm-dashboard-title">{`${clientDisplayName} – Site ${siteDisplayId}`}</div>
               </div>
             </div>
             <div className="vrm-dashboard-header-right">

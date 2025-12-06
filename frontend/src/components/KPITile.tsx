@@ -30,7 +30,7 @@ const KPITile: React.FC<KPITileProps> = ({
 
   return (
     <Wrapper
-      className={`vrm-kpi-tile${onClick ? ' vrm-kpi-tile--clickable' : ''}`}
+      className={`vrm-kpi-tile vrm-kpi-tile--uniform${onClick ? ' vrm-kpi-tile--clickable' : ''}`}
       type={onClick ? 'button' : undefined}
       onClick={onClick}
     >

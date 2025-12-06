@@ -466,7 +466,7 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
   }, [controls.rangePreset, controls.customRange, mergedSeries]);
 
   return (
-    <div className="vrm-card">
+    <div className="vrm-card vrm-card--chart">
       <CardControlHeader
         cardId={cardId}
         title={title}
@@ -496,8 +496,8 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
         availableSegments={availableSegments}
         isLoading={isLoading}
       />
-      <div className="vrm-card-body vrm-card-body--stacked">
-        <div className="vrm-chart-wrapper">
+      <div className="vrm-card-body vrm-card-body--stacked vrm-card-body--chart">
+        <div className="vrm-chart-wrapper vrm-chart-wrapper--padded">
           <ResponsiveContainer width="100%" height={420}>
             <ComposedChart data={mergedSeries} syncId={syncId} margin={{ top: 16, right: 24, bottom: 0, left: 0 }}>
               <defs>

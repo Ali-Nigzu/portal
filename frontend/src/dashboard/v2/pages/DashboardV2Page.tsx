@@ -32,6 +32,25 @@ export { lookupCapacity } from "../utils/vrmDecorators";
 
 const GRID_ROW_HEIGHT = 96;
 
+const formatTitleCase = (value?: string | null) => {
+  if (!value) return "Site";
+  return value
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
+const deriveSiteDisplayId = (raw?: string | null) => {
+  if (!raw) return "—";
+  const cleaned = raw.split(".")[0];
+  const numericMatch = cleaned.match(/(\d+)/);
+  if (numericMatch) {
+    return numericMatch[1];
+  }
+  return cleaned;
+};
+
 type ManifestLoader = (
   orgId: string | undefined,
   dashboardId?: string,
@@ -563,8 +582,9 @@ const DashboardV2Page = ({
     return params.get("client_id") ?? params.get("site_id") ?? undefined;
   }, []);
   const siteUiOrgId = resolvedUiClient ?? resolveUiClient(siteOrgId) ?? siteOrgId;
-  const siteLabel = siteUiOrgId ?? "Site";
+  const clientDisplayName = useMemo(() => formatTitleCase(siteUiOrgId), [siteUiOrgId]);
   const siteId = siteIdFromQuery ?? siteOrgId ?? "—";
+  const siteDisplayId = useMemo(() => deriveSiteDisplayId(siteId), [siteId]);
   const isVrmDashboard = useMemo(() => {
     const ids = manifest?.layout?.kpiBand ?? [];
     if (!ids.length) {
@@ -580,18 +600,18 @@ const DashboardV2Page = ({
         <div className="vrm-dashboard-header">
           <div className="vrm-dashboard-header-left">
             <div className="vrm-dashboard-avatar" aria-hidden="true" />
-            <div className="vrm-dashboard-identity">
-              <div className="vrm-dashboard-identity-label">Active site</div>
-              <div className="vrm-dashboard-title">{`${siteLabel} – ${siteId}`}</div>
+              <div className="vrm-dashboard-identity">
+                <div className="vrm-dashboard-identity-label">Active site</div>
+              <div className="vrm-dashboard-title">{`${clientDisplayName} – Site ${siteDisplayId}`}</div>
+              </div>
             </div>
-          </div>
-          <div className="vrm-dashboard-header-right">
+            <div className="vrm-dashboard-header-right">
             <HeaderStatusStrip className="vrm-dashboard-header-meta" />
           </div>
         </div>
         {!isVrmDashboard ? (
           <div className="dashboard-v2__controls">
-            <div className="dashboard-v2__org">Site ID: {siteId}</div>
+            <div className="dashboard-v2__org">Site ID: {siteDisplayId}</div>
             <div className="dashboard-v2__control-group">
               {manifest?.timeControls?.options?.length ? (
                 <label className="dashboard-v2__control">
