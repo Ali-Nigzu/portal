@@ -101,6 +101,8 @@
   --vrm-border: var(--vrm-color-border);
   --vrm-hover: var(--vrm-color-hover);
   --vrm-active: var(--vrm-color-active);
+  --vrm-bg-panel: #1b2331;
+  --vrm-bg-panel-strong: #141a20;
 }
 
 /* Global Reset and Base */
@@ -790,6 +792,20 @@ body {
   margin-bottom: 0;
 }
 
+.vrm-section--header {
+  margin-bottom: calc(var(--vrm-spacing-8) + var(--vrm-spacing-2));
+}
+
+.vrm-section--kpis {
+  margin-top: calc(var(--vrm-spacing-2) * -1);
+  margin-bottom: calc(var(--vrm-spacing-8) - var(--vrm-spacing-2));
+}
+
+.vrm-section--chart {
+  margin-top: calc(var(--vrm-spacing-6) * -0.25);
+  margin-bottom: var(--vrm-spacing-7);
+}
+
 .vrm-analytics-layout {
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -1294,22 +1310,20 @@ body {
 }
 
 .vrm-card--chart-panel {
-  background-color: var(--vrm-bg-tertiary);
-  border-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 26px 52px rgba(0, 0, 0, 0.46);
-  border-radius: calc(var(--vrm-radii-card) + 4px);
-  background-image: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.05), transparent 36%),
-    radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.05), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+  background-color: var(--vrm-bg-panel-strong);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 64px rgba(0, 0, 0, 0.55);
+  border-radius: var(--vrm-radii-card);
+  background-image: none;
 }
 
 .vrm-card--chart-panel.analytics-card {
   padding: 0;
   gap: 0;
-  background: var(--vrm-bg-tertiary);
+  background: var(--vrm-bg-panel-strong);
   color: var(--vrm-text-primary);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.38);
+  box-shadow: 0 28px 52px rgba(0, 0, 0, 0.48);
 }
 
 .vrm-card:hover {
@@ -1333,9 +1347,17 @@ body {
 
 .vrm-card--chart-panel .vrm-card-header {
   background-color: transparent;
-  padding: var(--vrm-spacing-6);
+  padding: var(--vrm-spacing-6) var(--vrm-spacing-6) var(--vrm-spacing-4);
   gap: var(--vrm-spacing-5);
   align-items: center;
+}
+
+.vrm-card-header--chart {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--vrm-spacing-4);
 }
 
 .vrm-card--chart-panel .analytics-card__header {
@@ -1368,6 +1390,20 @@ body {
 .vrm-card--chart-panel .vrm-card-heading {
   align-items: center;
   gap: var(--vrm-spacing-6);
+}
+
+.vrm-card-header--chart .vrm-card-heading {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.vrm-card-header--chart .vrm-card-heading-text {
+  flex: 1 1 320px;
+}
+
+.vrm-card-header--chart .vrm-card-controls {
+  flex: 1 1 320px;
+  justify-content: flex-end;
 }
 
 .vrm-card-heading-text {
@@ -1624,16 +1660,16 @@ body {
 
 .vrm-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--vrm-spacing-7);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--vrm-spacing-6);
   align-items: stretch;
   width: 100%;
 }
 
 .vrm-kpi-tile {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0) 32%), var(--vrm-bg-secondary);
+  background: var(--vrm-bg-secondary);
   border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: calc(var(--vrm-radii-card) + 2px);
+  border-radius: var(--vrm-radii-card);
   padding: var(--vrm-spacing-5) var(--vrm-spacing-6);
   display: flex;
   flex-direction: column;
@@ -1643,17 +1679,16 @@ body {
 }
 
 .vrm-kpi-tile--panel {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0))
-      padding-box,
-    var(--vrm-bg-tertiary);
+  background: var(--vrm-bg-panel);
   border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.44);
-  padding: var(--vrm-spacing-6);
-  gap: var(--vrm-spacing-5);
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.5);
+  padding: var(--vrm-spacing-6) var(--vrm-spacing-6);
+  gap: var(--vrm-spacing-4);
+  border-radius: var(--vrm-radii-card);
 }
 
 .vrm-kpi-tile--uniform {
-  min-height: 188px;
+  min-height: 192px;
 }
 
 .vrm-kpi-tile--clickable {
@@ -1668,12 +1703,12 @@ body {
 
 .vrm-kpi-badge {
   font-size: 10px;
-  padding: calc(var(--vrm-spacing-1) - 2px) var(--vrm-spacing-2);
+  padding: 3px 8px;
   border-radius: var(--vrm-radii-badge);
   font-weight: 600;
   margin-left: var(--vrm-spacing-2);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--vrm-text-secondary);
 }
 
@@ -1700,21 +1735,31 @@ body {
   flex-wrap: wrap;
 }
 
+.vrm-kpi-tile__header {
+  margin-bottom: var(--vrm-spacing-2);
+}
+
+.vrm-kpi-tile__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vrm-spacing-2);
+}
+
 .vrm-kpi-title {
   color: var(--vrm-text-muted);
-  font-size: var(--vrm-typography-font-size-body);
-  letter-spacing: 0.04em;
+  font-size: var(--vrm-typography-font-size-caption);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
 }
 
 .vrm-kpi-delta {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   border-radius: var(--vrm-radii-chip);
-  padding: calc(var(--vrm-spacing-1) - 2px) var(--vrm-spacing-2);
+  padding: 4px 9px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 .vrm-kpi-delta--up {
@@ -1742,7 +1787,7 @@ body {
 }
 
 .vrm-kpi-value {
-  font-size: calc(var(--vrm-typography-font-size-kpi) + 10px);
+  font-size: calc(var(--vrm-typography-font-size-kpi) + 4px);
   font-weight: 800;
   color: var(--vrm-text-primary);
   line-height: var(--vrm-typography-line-height-tight);
@@ -1763,7 +1808,7 @@ body {
 .vrm-kpi-caption {
   font-size: var(--vrm-typography-font-size-caption);
   color: var(--vrm-text-muted);
-  margin-top: var(--vrm-spacing-2);
+  margin-top: var(--vrm-spacing-1);
 }
 
 .vrm-card-title {
@@ -1793,6 +1838,12 @@ body {
   gap: var(--vrm-spacing-6);
   background: radial-gradient(circle at 30% 0%, rgba(255, 255, 255, 0.04), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+
+.vrm-card-body--chart-panel {
+  padding: var(--vrm-spacing-6) var(--vrm-spacing-6) var(--vrm-spacing-7);
+  gap: var(--vrm-spacing-6);
+  background: none;
 }
 
 .vrm-card--chart-panel .analytics-card__body {

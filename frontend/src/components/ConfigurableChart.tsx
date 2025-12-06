@@ -467,36 +467,38 @@ const ConfigurableChart: React.FC<ConfigurableChartProps> = ({
 
   return (
     <div className="vrm-card vrm-card--chart vrm-card--chart-panel">
-      <CardControlHeader
-        cardId={cardId}
-        title={title}
-        subtitle={subtitle}
-        controls={controls}
-        isSynced={isSynced}
-        setRangePreset={setRangePreset}
-        setCustomRange={setCustomRange}
-        setGranularity={setGranularity}
-        setScope={setScope}
-        toggleSegment={toggleSegment}
-        setCompare={setCompare}
-        resync={resync}
-        onExportPNG={exportPng}
-        onExportCSV={exportCsv}
-        exportDisabled={!mergedSeries.length}
-        seriesConfig={SERIES_DEFINITIONS.map(series => ({
-          key: series.key,
-          label: series.label,
-          color: series.color,
-        }))}
-        visibleSeries={visibility}
-        onToggleSeries={toggleSeries}
-        disablePerCamera={!hasCameraData}
-        showScope={hasCameraData}
-        showSegments={availableSegments.length > 0}
-        availableSegments={availableSegments}
-        isLoading={isLoading}
-      />
-      <div className="vrm-card-body vrm-card-body--stacked vrm-card-body--chart">
+      <div className="vrm-card-header vrm-card-header--chart">
+        <CardControlHeader
+          cardId={cardId}
+          title={title}
+          subtitle={subtitle}
+          controls={controls}
+          isSynced={isSynced}
+          setRangePreset={setRangePreset}
+          setCustomRange={setCustomRange}
+          setGranularity={setGranularity}
+          setScope={setScope}
+          toggleSegment={toggleSegment}
+          setCompare={setCompare}
+          resync={resync}
+          onExportPNG={exportPng}
+          onExportCSV={exportCsv}
+          exportDisabled={!mergedSeries.length}
+          seriesConfig={SERIES_DEFINITIONS.map(series => ({
+            key: series.key,
+            label: series.label,
+            color: series.color,
+          }))}
+          visibleSeries={visibility}
+          onToggleSeries={toggleSeries}
+          disablePerCamera={!hasCameraData}
+          showScope={hasCameraData}
+          showSegments={availableSegments.length > 0}
+          availableSegments={availableSegments}
+          isLoading={isLoading}
+        />
+      </div>
+      <div className="vrm-card-body vrm-card-body--stacked vrm-card-body--chart vrm-card-body--chart-panel">
         <div className="vrm-chart-wrapper vrm-chart-wrapper--padded">
           <ResponsiveContainer width="100%" height={420}>
             <ComposedChart data={mergedSeries} syncId={syncId} margin={{ top: 16, right: 24, bottom: 0, left: 0 }}>

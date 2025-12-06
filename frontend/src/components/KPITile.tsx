@@ -34,13 +34,15 @@ const KPITile: React.FC<KPITileProps> = ({
       type={onClick ? 'button' : undefined}
       onClick={onClick}
     >
-      <div className="vrm-kpi-header">
-        <span className="vrm-kpi-title">{title}</span>
-        {deltaLabel && <span className={`vrm-kpi-delta ${trendClass}`}>{deltaLabel}</span>}
-        {badgeLabel && <span className={badgeClass}>{badgeLabel}</span>}
+      <div className="vrm-kpi-header vrm-kpi-tile__header">
+        <span className="vrm-kpi-title vrm-kpi-tile__label">{title}</span>
+        <div className="vrm-kpi-tile__meta">
+          {deltaLabel && <span className={`vrm-kpi-delta ${trendClass}`}>{deltaLabel}</span>}
+          {badgeLabel && <span className={badgeClass}>{badgeLabel}</span>}
+        </div>
       </div>
       <div className="vrm-kpi-main">
-        <span className="vrm-kpi-value" style={{ color }}>
+        <span className="vrm-kpi-value vrm-kpi-tile__value" style={{ color }}>
           {value}
           {unit && <span className="vrm-kpi-unit">{unit}</span>}
         </span>
