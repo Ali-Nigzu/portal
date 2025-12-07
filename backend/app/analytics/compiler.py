@@ -482,46 +482,36 @@ class SpecCompiler:
     def _render_scoped(self, table_name: str, filters_sql: str) -> str:
         """Canonical events CTE over the resolved org table.
 
-        This preserves the legacy analytics contract while reading directly from
-        demodata0 tables:
         - Base table is resolved via org routing (e.g. `nigzsu.demodata0.client0`).
         - Synthetic index reconstructs ordering with
           ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id).
-        - Demographics map integer codes to canonical strings (sex: Male/Female; age buckets: 0-4 … 66+; race).
+        - Demographic columns are selected raw and aliased (Race → race) for consistent downstream usage.
         - "No future" rule enforced with `timestamp < @now` alongside the requested window.
         """
         scoped = dedent(
             f"""
             scoped AS (
-                SELECT
-                    site_id,
-                    cam_id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY site_id, cam_id, track_id
-                        ORDER BY timestamp, event DESC, track_id
-                    ) AS index,
-                    track_id,
-                    event,
-                    timestamp,
-                    CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' END AS sex,
-                    CASE
-                        age_bucket
-                        WHEN 0 THEN '0-4'
-                        WHEN 1 THEN '5-13'
-                        WHEN 2 THEN '14-25'
-                        WHEN 3 THEN '26-45'
-                        WHEN 4 THEN '46-65'
-                        WHEN 5 THEN '66+'
-                    END AS age_bucket,
-                    CASE
-                        Race
-                        WHEN 0 THEN 'Light'
-                        WHEN 1 THEN 'Mix'
-                        WHEN 2 THEN 'Dark'
-                    END AS race
-                FROM `{table_name}`
-                WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
-                    AND timestamp < TIMESTAMP(@now){filters_sql}
+                WITH scoped_base AS (
+                    SELECT
+                        site_id,
+                        cam_id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY site_id, cam_id, track_id
+                            ORDER BY timestamp, event DESC, track_id
+                        ) AS index,
+                        track_id,
+                        event,
+                        timestamp,
+                        age_bucket AS age_bucket,
+                        sex AS sex,
+                        Race AS race
+                    FROM `{table_name}`
+                    WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
+                        AND timestamp < TIMESTAMP(@now)
+                )
+                SELECT *
+                FROM scoped_base
+                WHERE 1=1{filters_sql}
             )
             """
         ).strip()
