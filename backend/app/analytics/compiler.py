@@ -216,6 +216,10 @@ class SpecCompiler:
             chart_type=chart_type,
         )
 
+        measures = spec["measures"]
+        if any((measure.get("options") or {}).get("vrmOccupancyStats") for measure in measures):
+            use_calendar = True
+
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
@@ -223,7 +227,6 @@ class SpecCompiler:
         }
 
         filters_sql = self._build_filters(spec.get("filters", []), params)
-        measures = spec["measures"]
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
 
@@ -699,22 +702,36 @@ class SpecCompiler:
                     bucket_bounds = dedent(
                         f"""
                         {prefix}_bucket_bounds AS (
+                            WITH {WINDOW_BOUNDS_CTE} AS (
+                                SELECT
+                                    TIMESTAMP(@start_ts) AS window_start,
+                                    TIMESTAMP(@end_ts) AS window_end,
+                                    {_bucket_trunc_expression(bucket)} AS aligned_start
+                            )
                             SELECT
                                 bucket_start,
-                                TIMESTAMP_ADD(bucket_start, {interval_expr}) AS bucket_end,
-                                TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
+                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end) AS bucket_end,
+                                GREATEST(
+                                    TIMESTAMP_DIFF(LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end), bucket_start, SECOND),
+                                    0
+                                ) AS bucket_seconds,
                                 GREATEST(
                                     TIMESTAMP_DIFF(
-                                        LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
-                                        GREATEST(bucket_start, TIMESTAMP(@start_ts)),
+                                        LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end),
+                                        GREATEST(bucket_start, window_start),
                                         SECOND
                                     ),
                                     0
                                 ) AS window_seconds
-                            FROM (
-                                SELECT DISTINCT {_bucket_expression(bucket)} AS bucket_start
-                                FROM scoped
-                            )
+                            FROM {WINDOW_BOUNDS_CTE},
+                            UNNEST(
+                                GENERATE_TIMESTAMP_ARRAY(
+                                    aligned_start,
+                                    window_end,
+                                    {interval_expr}
+                                )
+                            ) AS bucket_start
+                            WHERE bucket_start < window_end
                         )
                         """
                     ).strip()
@@ -1360,29 +1377,52 @@ class SpecCompiler:
             ).strip()
         else:
             interval_expr = _bucket_interval_expression(bucket)
-            bucket_expr = _bucket_expression(bucket)
-            where_clause = f" WHERE {filter_condition}" if filter_condition else ""
             counts_cte = dedent(
                 f"""
                 {prefix} AS (
-                    SELECT
-                        bucket_start,
-                        TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
-                        GREATEST(
-                            TIMESTAMP_DIFF(
-                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
-                                GREATEST(bucket_start, TIMESTAMP(@start_ts)),
-                                SECOND
-                            ),
-                            0
-                        ) AS window_seconds,
-                        COUNT(timestamp) AS event_count
-                    FROM (
-                        SELECT {bucket_expr} AS bucket_start, timestamp
-                        FROM scoped{where_clause}
+                    WITH {WINDOW_BOUNDS_CTE} AS (
+                        SELECT
+                            TIMESTAMP(@start_ts) AS window_start,
+                            TIMESTAMP(@end_ts) AS window_end,
+                            {_bucket_trunc_expression(bucket)} AS aligned_start
+                    ),
+                    {prefix}_calendar AS (
+                        SELECT
+                            bucket_start,
+                            LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end) AS bucket_end,
+                            GREATEST(
+                                TIMESTAMP_DIFF(LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end), bucket_start, SECOND),
+                                0
+                            ) AS bucket_seconds,
+                            GREATEST(
+                                TIMESTAMP_DIFF(
+                                    LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end),
+                                    GREATEST(bucket_start, window_start),
+                                    SECOND
+                                ),
+                                0
+                            ) AS window_seconds
+                        FROM {WINDOW_BOUNDS_CTE},
+                        UNNEST(
+                            GENERATE_TIMESTAMP_ARRAY(
+                                aligned_start,
+                                window_end,
+                                {interval_expr}
+                            )
+                        ) AS bucket_start
+                        WHERE bucket_start < window_end
                     )
-                    GROUP BY bucket_start
-                    ORDER BY bucket_start
+                    SELECT
+                        calendar.bucket_start,
+                        calendar.bucket_seconds,
+                        calendar.window_seconds,
+                        COUNT(scoped.timestamp) AS event_count
+                    FROM {prefix}_calendar AS calendar
+                    LEFT JOIN scoped
+                        ON scoped.timestamp >= calendar.bucket_start
+                        AND scoped.timestamp < calendar.bucket_end{filter_sql}
+                    GROUP BY calendar.bucket_start, calendar.bucket_seconds, calendar.window_seconds
+                    ORDER BY calendar.bucket_start
                 )
                 """
             ).strip()
