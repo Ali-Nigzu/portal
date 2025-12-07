@@ -241,14 +241,23 @@ class SpecCompiler:
 
         for measure in measures:
             aggregation = measure["aggregation"]
-            enriched_measure = (
-                {**measure, "dimension": spec["dimensions"][0]}
-                if aggregation == "demographic_count" and "dimension" not in measure
-                else measure
-            )
-            renderer = self._time_series_measures.get(aggregation)
+            enriched_measure = measure
+
+            if chart_type == "categorical" and aggregation != "demographic_count":
+                renderer = self._render_categorical_measure
+                dimension = (spec.get("dimensions") or [{}])[0]
+                enriched_measure = {**measure, "dimension": dimension}
+            else:
+                enriched_measure = (
+                    {**measure, "dimension": spec["dimensions"][0]}
+                    if aggregation == "demographic_count" and "dimension" not in measure
+                    else measure
+                )
+                renderer = self._time_series_measures.get(aggregation)
+
             if renderer is None:
                 raise UnsupportedMeasureError(aggregation)
+
             compilation = renderer(
                 measure=enriched_measure,
                 bucket=bucket,
@@ -495,6 +504,7 @@ class SpecCompiler:
                     SELECT
                         site_id,
                         cam_id,
+                        cam_id AS camera_id,
                         ROW_NUMBER() OVER (
                             PARTITION BY site_id, cam_id, track_id
                             ORDER BY timestamp, event DESC, track_id
@@ -1362,6 +1372,62 @@ class SpecCompiler:
 
         measure_id = measure["id"]
         prefix = f"{measure_id}_demographics"
+        aggregation_cte = dedent(
+            f"""
+            {prefix} AS (
+                SELECT
+                    {category_expr} AS category_value,
+                    COUNT(*) AS value
+                FROM scoped
+                GROUP BY category_value
+            )
+            """
+        ).strip()
+
+        select_sql = dedent(
+            f"""
+            SELECT '{measure_id}' AS measure_id, category_value, value,
+                CAST(NULL AS FLOAT64) AS coverage,
+                CAST(NULL AS FLOAT64) AS raw_count,
+                CAST(NULL AS FLOAT64) AS occupancy_min,
+                CAST(NULL AS FLOAT64) AS occupancy_max,
+                CAST(NULL AS FLOAT64) AS occupancy_avg
+            FROM {prefix}
+            """
+        ).strip()
+
+        return MeasureCompilation(ctes=[aggregation_cte], select_sql=select_sql)
+
+    def _render_categorical_measure(
+        self,
+        *,
+        measure: Dict[str, object],
+        bucket: str,
+        params: Dict[str, object],
+        use_calendar: bool = True,
+    ) -> MeasureCompilation:
+        dimension = measure.get("dimension") or {}
+        if not isinstance(dimension, dict):
+            raise ValidationError("categorical charts require a dimension descriptor")
+        column = dimension.get("column")
+        if column == "Race":
+            column = "race"
+        if not column:
+            raise ValidationError("categorical charts require a dimension column")
+        bucket_label = dimension.get("bucket")
+        if column == "timestamp":
+            category_bucket = bucket_label or bucket
+            if category_bucket == "HOUR":
+                category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+            elif category_bucket and category_bucket != "RAW":
+                category_expr = _bucket_expression(category_bucket, field="scoped.timestamp")
+            else:
+                category_expr = "scoped.timestamp"
+        else:
+            category_expr = f"CAST(scoped.{column} AS STRING)"
+
+        measure_id = measure["id"]
+        prefix = f"{measure_id}_categorical"
         aggregation_cte = dedent(
             f"""
             {prefix} AS (
