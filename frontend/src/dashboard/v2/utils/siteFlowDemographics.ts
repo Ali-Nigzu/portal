@@ -114,7 +114,12 @@ const toNumeric = (point: { value?: number | null; y?: number | null }): number 
 
 const normalizeCode = (code: string | number): number | null => {
   if (typeof code === "number" && Number.isFinite(code)) return code;
-  const parsed = Number(String(code).trim());
+  const trimmed = String(code).trim();
+  const match = trimmed.match(/(-?\d+)\s*$/);
+  if (!match) {
+    return null;
+  }
+  const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
@@ -134,7 +139,7 @@ export const mapAgeLabel = (code: string | number): string => {
     case 5:
       return "66+";
     default:
-      return String(code).trim() || "Unknown";
+      return "Unknown";
   }
 };
 
@@ -146,7 +151,7 @@ export const mapGenderLabel = (code: string | number): string => {
     case 1:
       return "Female";
     default:
-      return String(code).trim() || "Unknown";
+      return "Unknown";
   }
 };
 
@@ -160,7 +165,7 @@ export const mapRaceLabel = (code: string | number): string => {
     case 2:
       return "Dark";
     default:
-      return String(code).trim() || "Unknown";
+      return "Unknown";
   }
 };
 
@@ -194,6 +199,30 @@ const mapSeries = (
     .filter((entry) => entry.label !== "");
 };
 
+const normalizeHour = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.min(23, Math.trunc(value)));
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const match = trimmed.match(/(-?\d+)\s*$/);
+    if (match) {
+      const parsed = Number(match[1]);
+      if (Number.isFinite(parsed)) {
+        return Math.max(0, Math.min(23, Math.trunc(parsed)));
+      }
+    }
+
+    const maybeDate = new Date(trimmed);
+    if (!Number.isNaN(maybeDate.getTime())) {
+      return maybeDate.getHours();
+    }
+  }
+
+  return null;
+};
+
 const mapHours = (result: ChartResult | undefined): HourSlice[] => {
   const series: ChartSeries | undefined = result?.series?.[0];
   if (!series) return [];
@@ -201,20 +230,10 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
 
   (series.data ?? []).forEach((point) => {
     const count = toNumeric(point);
-    const rawHour =
-      typeof point.x === "number"
-        ? point.x
-        : Number(point.x ?? Number.NaN);
-    const hourFromNumber = Number.isFinite(rawHour) ? Number(rawHour) : Number.NaN;
-    const parsedFromDate =
-      !Number.isFinite(hourFromNumber) && point.x != null
-        ? new Date(String(point.x)).getHours()
-        : Number.NaN;
-    const hour = Number.isFinite(hourFromNumber) ? hourFromNumber : parsedFromDate;
-    if (!Number.isFinite(hour) || count <= 0) {
+    const normalizedHour = normalizeHour(point.x);
+    if (normalizedHour == null || count <= 0) {
       return;
     }
-    const normalizedHour = Math.max(0, Math.min(23, Math.trunc(hour)));
     const existing = aggregated.get(normalizedHour);
     if (existing) {
       aggregated.set(normalizedHour, { ...existing, count: existing.count + count });
