@@ -337,6 +337,7 @@
   flex: 1;
   justify-content: flex-end;
   align-items: stretch;
+  min-height: 64px;
 }
 
 .kpi-sparkline-anchor {
@@ -348,6 +349,7 @@
   flex: 1;
   display: flex;
   align-items: stretch;
+  min-height: 64px;
 }
 
 .kpi-sparkline-region--vrm {
@@ -358,7 +360,8 @@
   align-items: stretch;
   margin-top: auto;
   padding: 0;
-  min-height: 64px;
+  min-height: 0;
+  flex-shrink: 0;
 }
 
 .kpi-sparkline--vrm {

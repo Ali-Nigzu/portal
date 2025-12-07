@@ -75,6 +75,7 @@ type OccupancyPoint = {
   min?: number | null;
   max?: number | null;
   avg?: number | null;
+  value?: number | null;
 };
 
 const applySiteFlow = (result: ChartResult): ChartResult => {
@@ -109,7 +110,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
       occupancy_avg: number | null;
       occupancy_span: number | null;
     };
-  }).filter((point) => point.occupancy_min !== null || point.occupancy_max !== null || point.occupancy_avg !== null);
+  });
 
   const occupancyMinLine: ChartSeries = {
     id: "occupancy_min",

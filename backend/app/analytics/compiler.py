@@ -216,6 +216,13 @@ class SpecCompiler:
             chart_type=chart_type,
         )
 
+        measures = spec["measures"]
+        vrm_occupancy_enabled = any(
+            (measure.get("options") or {}).get("vrmOccupancyStats") for measure in measures
+        )
+        if vrm_occupancy_enabled:
+            use_calendar = True
+
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
@@ -223,13 +230,14 @@ class SpecCompiler:
         }
 
         filters_sql = self._build_filters(spec.get("filters", []), params)
-        measures = spec["measures"]
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
 
         base_ctes = [self._render_scoped(context.table_name, filters_sql)]
         if bucket != "RAW" and use_calendar:
-            base_ctes.append(self._render_calendar(bucket))
+            base_ctes.append(
+                self._render_calendar(bucket, clamp_to_data=vrm_occupancy_enabled)
+            )
 
         for measure in measures:
             aggregation = measure["aggregation"]
@@ -502,21 +510,55 @@ class SpecCompiler:
         ).strip()
         return scoped
 
-    def _render_calendar(self, bucket: str) -> str:
+    def _render_calendar(self, bucket: str, *, clamp_to_data: bool = False) -> str:
         if bucket == "RAW":
             raise ValidationError("Calendar requires bucketed time series")
-        trunc_expr = _bucket_trunc_expression(bucket)
+        window_start_expr = (
+            "GREATEST(TIMESTAMP(@start_ts), COALESCE(min_ts, TIMESTAMP(@start_ts)))"
+            if clamp_to_data
+            else "TIMESTAMP(@start_ts)"
+        )
+        trunc_expr = (
+            _bucket_expression(bucket, field=window_start_expr)
+            if clamp_to_data
+            else _bucket_trunc_expression(bucket)
+        )
         interval_expr = _bucket_interval_expression(bucket)
         add_expr = f"TIMESTAMP_ADD(bucket_start, {interval_expr})"
-        calendar = dedent(
-            f"""
-            calendar AS (
-                WITH {WINDOW_BOUNDS_CTE} AS (
+        bounds_cte = (
+            dedent(
+                f"""
+                calendar_data_bounds AS (
+                    SELECT
+                        MIN(timestamp) AS min_ts,
+                        MAX(timestamp) AS max_ts
+                    FROM scoped
+                ),
+                {WINDOW_BOUNDS_CTE} AS (
+                    SELECT
+                        {window_start_expr} AS window_start,
+                        LEAST(TIMESTAMP(@end_ts), COALESCE(max_ts, TIMESTAMP(@end_ts))) AS window_end,
+                        {trunc_expr} AS aligned_start
+                    FROM calendar_data_bounds
+                )
+                """
+            ).strip()
+            if clamp_to_data
+            else dedent(
+                f"""
+                {WINDOW_BOUNDS_CTE} AS (
                     SELECT
                         TIMESTAMP(@start_ts) AS window_start,
                         TIMESTAMP(@end_ts) AS window_end,
                         {trunc_expr} AS aligned_start
                 )
+                """
+            ).strip()
+        )
+        calendar = dedent(
+            f"""
+            calendar AS (
+                WITH {bounds_cte}
                 SELECT
                     bucket_start,
                     LEAST({add_expr}, window_end) AS bucket_end,
@@ -541,6 +583,7 @@ class SpecCompiler:
                     )
                 ) AS bucket_start
                 WHERE bucket_start < window_end
+                    AND window_start < window_end
             )
             """
         ).strip()
@@ -699,22 +742,36 @@ class SpecCompiler:
                     bucket_bounds = dedent(
                         f"""
                         {prefix}_bucket_bounds AS (
+                            WITH {WINDOW_BOUNDS_CTE} AS (
+                                SELECT
+                                    TIMESTAMP(@start_ts) AS window_start,
+                                    TIMESTAMP(@end_ts) AS window_end,
+                                    {_bucket_trunc_expression(bucket)} AS aligned_start
+                            )
                             SELECT
                                 bucket_start,
-                                TIMESTAMP_ADD(bucket_start, {interval_expr}) AS bucket_end,
-                                TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
+                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end) AS bucket_end,
+                                GREATEST(
+                                    TIMESTAMP_DIFF(LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end), bucket_start, SECOND),
+                                    0
+                                ) AS bucket_seconds,
                                 GREATEST(
                                     TIMESTAMP_DIFF(
-                                        LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
-                                        GREATEST(bucket_start, TIMESTAMP(@start_ts)),
+                                        LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end),
+                                        GREATEST(bucket_start, window_start),
                                         SECOND
                                     ),
                                     0
                                 ) AS window_seconds
-                            FROM (
-                                SELECT DISTINCT {_bucket_expression(bucket)} AS bucket_start
-                                FROM scoped
-                            )
+                            FROM {WINDOW_BOUNDS_CTE},
+                            UNNEST(
+                                GENERATE_TIMESTAMP_ARRAY(
+                                    aligned_start,
+                                    window_end,
+                                    {interval_expr}
+                                )
+                            ) AS bucket_start
+                            WHERE bucket_start < window_end
                         )
                         """
                     ).strip()
@@ -882,9 +939,9 @@ class SpecCompiler:
                         SELECT
                             enriched.bucket_start,
                             COALESCE(band.occupancy_avg, enriched.value) AS value,
-                            band.occupancy_min,
-                            band.occupancy_max,
-                            band.occupancy_avg,
+                            COALESCE(band.occupancy_min, enriched.value) AS occupancy_min,
+                            COALESCE(band.occupancy_max, enriched.value) AS occupancy_max,
+                            COALESCE(band.occupancy_avg, enriched.value) AS occupancy_avg,
                             CASE
                                 WHEN enriched.bucket_seconds = 0 THEN 0.0
                                 WHEN NOT enriched.has_events THEN 0.0
@@ -1173,7 +1230,10 @@ class SpecCompiler:
                         WHEN seeded_by_exit THEN LEAST(0.5, SAFE_DIVIDE(window_seconds, bucket_seconds))
                         ELSE SAFE_DIVIDE(window_seconds, bucket_seconds)
                     END AS coverage,
-                    event_count AS raw_count
+                    event_count AS raw_count,
+                    value AS occupancy_min,
+                    value AS occupancy_max,
+                    value AS occupancy_avg
                 FROM {prefix}_filled
             )
             """
@@ -1181,7 +1241,7 @@ class SpecCompiler:
 
         select_sql = (
             f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
-            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            "occupancy_min, occupancy_max, occupancy_avg "
             f"FROM {prefix}_series"
         )
         return MeasureCompilation(
@@ -1360,29 +1420,52 @@ class SpecCompiler:
             ).strip()
         else:
             interval_expr = _bucket_interval_expression(bucket)
-            bucket_expr = _bucket_expression(bucket)
-            where_clause = f" WHERE {filter_condition}" if filter_condition else ""
             counts_cte = dedent(
                 f"""
                 {prefix} AS (
-                    SELECT
-                        bucket_start,
-                        TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
-                        GREATEST(
-                            TIMESTAMP_DIFF(
-                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
-                                GREATEST(bucket_start, TIMESTAMP(@start_ts)),
-                                SECOND
-                            ),
-                            0
-                        ) AS window_seconds,
-                        COUNT(timestamp) AS event_count
-                    FROM (
-                        SELECT {bucket_expr} AS bucket_start, timestamp
-                        FROM scoped{where_clause}
+                    WITH {WINDOW_BOUNDS_CTE} AS (
+                        SELECT
+                            TIMESTAMP(@start_ts) AS window_start,
+                            TIMESTAMP(@end_ts) AS window_end,
+                            {_bucket_trunc_expression(bucket)} AS aligned_start
+                    ),
+                    {prefix}_calendar AS (
+                        SELECT
+                            bucket_start,
+                            LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end) AS bucket_end,
+                            GREATEST(
+                                TIMESTAMP_DIFF(LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end), bucket_start, SECOND),
+                                0
+                            ) AS bucket_seconds,
+                            GREATEST(
+                                TIMESTAMP_DIFF(
+                                    LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end),
+                                    GREATEST(bucket_start, window_start),
+                                    SECOND
+                                ),
+                                0
+                            ) AS window_seconds
+                        FROM {WINDOW_BOUNDS_CTE},
+                        UNNEST(
+                            GENERATE_TIMESTAMP_ARRAY(
+                                aligned_start,
+                                window_end,
+                                {interval_expr}
+                            )
+                        ) AS bucket_start
+                        WHERE bucket_start < window_end
                     )
-                    GROUP BY bucket_start
-                    ORDER BY bucket_start
+                    SELECT
+                        calendar.bucket_start,
+                        calendar.bucket_seconds,
+                        calendar.window_seconds,
+                        COUNT(scoped.timestamp) AS event_count
+                    FROM {prefix}_calendar AS calendar
+                    LEFT JOIN scoped
+                        ON scoped.timestamp >= calendar.bucket_start
+                        AND scoped.timestamp < calendar.bucket_end{filter_sql}
+                    GROUP BY calendar.bucket_start, calendar.bucket_seconds, calendar.window_seconds
+                    ORDER BY calendar.bucket_start
                 )
                 """
             ).strip()
