@@ -939,9 +939,9 @@ class SpecCompiler:
                         SELECT
                             enriched.bucket_start,
                             COALESCE(band.occupancy_avg, enriched.value) AS value,
-                            band.occupancy_min,
-                            band.occupancy_max,
-                            band.occupancy_avg,
+                            COALESCE(band.occupancy_min, enriched.value) AS occupancy_min,
+                            COALESCE(band.occupancy_max, enriched.value) AS occupancy_max,
+                            COALESCE(band.occupancy_avg, enriched.value) AS occupancy_avg,
                             CASE
                                 WHEN enriched.bucket_seconds = 0 THEN 0.0
                                 WHEN NOT enriched.has_events THEN 0.0
