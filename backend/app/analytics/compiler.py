@@ -261,10 +261,17 @@ class SpecCompiler:
                 cte_registry[name] = fragment
             select_statements.append(compilation.select_sql)
 
+        order_by = "bucket_start, measure_id"
+        if chart_type == "categorical" or any(
+            measure.get("aggregation") == "demographic_count" for measure in measures
+        ):
+            order_by = "category_value, measure_id"
+
         sql = self._assemble_sql(
             base_ctes=base_ctes,
             measure_ctes=cte_registry.values(),
             select_statements=select_statements,
+            order_by=order_by,
         )
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
