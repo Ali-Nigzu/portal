@@ -138,7 +138,10 @@ const toNumeric = (point: { value?: number | null; y?: number | null }): number 
 
 const normalizeCode = (code: string | number): number | null => {
   if (typeof code === "number" && Number.isFinite(code)) return code;
-  const trimmed = String(code).trim();
+  const trimmed = String(code ?? "").trim();
+  if (trimmed === "") {
+    return null;
+  }
   const match = trimmed.match(/(-?\d+)\s*$/);
   if (!match) {
     return null;
@@ -147,7 +150,34 @@ const normalizeCode = (code: string | number): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const normalizeAgeLabel = (raw: string): string | null => {
+  const compact = raw.replace(/\s+/g, "");
+  const canonical = compact.replace("--", "–").replace("-", "–");
+  switch (canonical) {
+    case "0–4":
+      return "0–4";
+    case "5–13":
+      return "5–13";
+    case "14–25":
+      return "14–25";
+    case "26–45":
+      return "26–45";
+    case "46–65":
+      return "46–65";
+    case "66+":
+      return "66+";
+    default:
+      return null;
+  }
+};
+
 export const mapAgeLabel = (code: string | number): string => {
+  const raw = String(code ?? "").trim();
+  const direct = normalizeAgeLabel(raw);
+  if (direct) {
+    return direct;
+  }
+
   const normalized = normalizeCode(code);
   switch (normalized) {
     case 0:
@@ -163,11 +193,16 @@ export const mapAgeLabel = (code: string | number): string => {
     case 5:
       return "66+";
     default:
-      return "Unknown";
+      return raw === "" ? "Unknown" : raw;
   }
 };
 
 export const mapGenderLabel = (code: string | number): string => {
+  const raw = String(code ?? "").trim();
+  const lowered = raw.toLowerCase();
+  if (lowered === "male") return "Male";
+  if (lowered === "female") return "Female";
+
   const normalized = normalizeCode(code);
   switch (normalized) {
     case 0:
@@ -175,11 +210,17 @@ export const mapGenderLabel = (code: string | number): string => {
     case 1:
       return "Female";
     default:
-      return "Unknown";
+      return raw === "" ? "Unknown" : raw;
   }
 };
 
 export const mapRaceLabel = (code: string | number): string => {
+  const raw = String(code ?? "").trim();
+  const lowered = raw.toLowerCase();
+  if (lowered === "light") return "Light";
+  if (lowered === "mix") return "Mix";
+  if (lowered === "dark") return "Dark";
+
   const normalized = normalizeCode(code);
   switch (normalized) {
     case 0:
@@ -189,7 +230,7 @@ export const mapRaceLabel = (code: string | number): string => {
     case 2:
       return "Dark";
     default:
-      return "Unknown";
+      return raw === "" ? "Unknown" : raw;
   }
 };
 
@@ -230,6 +271,14 @@ const normalizeHour = (value: unknown): number | null => {
 
   if (typeof value === "string") {
     const trimmed = value.trim();
+    const hourMinuteMatch = trimmed.match(/^(\d{1,2})(?::\d{2})?$/);
+    if (hourMinuteMatch) {
+      const parsed = Number(hourMinuteMatch[1]);
+      if (Number.isFinite(parsed)) {
+        return Math.max(0, Math.min(23, Math.trunc(parsed)));
+      }
+    }
+
     const match = trimmed.match(/(-?\d+)\s*$/);
     if (match) {
       const parsed = Number(match[1]);
