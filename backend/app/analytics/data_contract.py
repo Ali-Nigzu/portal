@@ -43,6 +43,7 @@ class Dimension(str, Enum):
     CAMERA = "camera"
     SEX = "sex"
     AGE_BUCKET = "age_bucket"
+    RACE = "race"
     RETENTION_LAG = "retention_lag"
 
 
@@ -75,6 +76,7 @@ EVENT_TABLE_COLUMNS: Sequence[str] = (
     "timestamp",
     "sex",
     "age_bucket",
+    "Race",
 )
 
 UNKNOWN_DIMENSION_VALUE = "Unknown"
@@ -95,6 +97,7 @@ class QueryContext(BaseModel):
     camera_ids: Optional[List[str]] = None
     sexes: Optional[List[str]] = None
     age_buckets: Optional[List[str]] = None
+    races: Optional[List[str]] = None
     events: Optional[List[int]] = None
     track_id_like: Optional[str] = None
     time_range: TimeRangeKey = TimeRangeKey.CUSTOM
@@ -107,7 +110,7 @@ class QueryContext(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    @field_validator("site_ids", "camera_ids", "sexes", "age_buckets", mode="before")
+    @field_validator("site_ids", "camera_ids", "sexes", "age_buckets", "races", mode="before")
     @classmethod
     def _normalise_sequence(cls, value: Optional[Iterable[str]]) -> Optional[List[str]]:
         if value is None:
@@ -380,6 +383,11 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
         params["age_filters"] = ctx.age_buckets
         clauses.append(
             f"COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@age_filters)"
+        )
+    if ctx.races:
+        params["race_filters"] = ctx.races
+        clauses.append(
+            f"COALESCE(race, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@race_filters)"
         )
     if ctx.events:
         params["event_filters"] = ctx.events

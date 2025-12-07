@@ -18,6 +18,7 @@ EVENT_COLUMNS: Sequence[str] = (
     "timestamp",
     "sex",
     "age_bucket",
+    "Race",
 )
 
 

@@ -183,6 +183,7 @@ class SpecCompiler:
             "dwell_mean": self._render_dwell,
             "dwell_p90": self._render_dwell,
             "sessions": self._render_dwell,
+            "demographic_count": self._render_demographic_count,
         }
         self._retention_measures = {
             "retention_rate": self._render_retention,
@@ -241,11 +242,16 @@ class SpecCompiler:
 
         for measure in measures:
             aggregation = measure["aggregation"]
+            enriched_measure = (
+                {**measure, "dimension": spec["dimensions"][0]}
+                if aggregation == "demographic_count" and "dimension" not in measure
+                else measure
+            )
             renderer = self._time_series_measures.get(aggregation)
             if renderer is None:
                 raise UnsupportedMeasureError(aggregation)
             compilation = renderer(
-                measure=measure,
+                measure=enriched_measure,
                 bucket=bucket,
                 params=params,
                 use_calendar=use_calendar,
@@ -475,8 +481,7 @@ class SpecCompiler:
         - Base table is resolved via org routing (e.g. `nigzsu.demodata0.client0`).
         - Synthetic index reconstructs ordering with
           ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id).
-        - Demographics map integer codes to canonical strings (sex: Male/Female; age buckets: 0-4 … 66+).
-        - Race exists in the source but is intentionally not projected.
+        - Demographics map integer codes to canonical strings (sex: Male/Female; age buckets: 0-4 … 66+; race).
         - "No future" rule enforced with `timestamp < @now` alongside the requested window.
         """
         scoped = dedent(
@@ -501,7 +506,13 @@ class SpecCompiler:
                         WHEN 3 THEN '26-45'
                         WHEN 4 THEN '46-65'
                         WHEN 5 THEN '66+'
-                    END AS age_bucket
+                    END AS age_bucket,
+                    CASE
+                        Race
+                        WHEN 0 THEN 'Light'
+                        WHEN 1 THEN 'Mix'
+                        WHEN 2 THEN 'Dark'
+                    END AS race
                 FROM `{table_name}`
                 WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
                     AND timestamp < TIMESTAMP(@now){filters_sql}
@@ -619,7 +630,7 @@ class SpecCompiler:
 
     def _compile_condition(self, condition: Dict[str, object], params: Dict[str, object]) -> str:
         field = condition["field"]
-        if field in {"sex", "age_bucket"}:
+        if field in {"sex", "age_bucket", "race"}:
             field_expr = f"COALESCE({field}, '{_UNKNOWN_DIMENSION_VALUE}')"
         else:
             field_expr = field
@@ -1325,6 +1336,54 @@ class SpecCompiler:
             f"FROM {measure_id}_activity_rate_series"
         )
         return MeasureCompilation(ctes=[counts_cte_sql, series], select_sql=select_sql)
+
+    def _render_demographic_count(
+        self,
+        *,
+        measure: Dict[str, object],
+        bucket: str,
+        params: Dict[str, object],
+        use_calendar: bool = True,
+    ) -> MeasureCompilation:
+        dimension = measure.get("dimension") or {}
+        if not isinstance(dimension, dict):
+            raise ValidationError("demographic_count requires a dimension descriptor")
+        column = dimension.get("column")
+        if not column:
+            raise ValidationError("demographic_count requires a dimension column")
+        bucket_label = dimension.get("bucket")
+        if column == "timestamp" and bucket_label == "HOUR":
+            category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+        else:
+            category_expr = f"COALESCE({column}, '{_UNKNOWN_DIMENSION_VALUE}')"
+
+        measure_id = measure["id"]
+        prefix = f"{measure_id}_demographics"
+        aggregation_cte = dedent(
+            f"""
+            {prefix} AS (
+                SELECT
+                    {category_expr} AS category_value,
+                    COUNT(*) AS value
+                FROM scoped
+                GROUP BY category_value
+            )
+            """
+        ).strip()
+
+        select_sql = dedent(
+            f"""
+            SELECT '{measure_id}' AS measure_id, category_value, value,
+                CAST(NULL AS FLOAT64) AS coverage,
+                CAST(NULL AS FLOAT64) AS raw_count,
+                CAST(NULL AS FLOAT64) AS occupancy_min,
+                CAST(NULL AS FLOAT64) AS occupancy_max,
+                CAST(NULL AS FLOAT64) AS occupancy_avg
+            FROM {prefix}
+            """
+        ).strip()
+
+        return MeasureCompilation(ctes=[aggregation_cte], select_sql=select_sql)
 
     def _render_single_value_measure(
         self,

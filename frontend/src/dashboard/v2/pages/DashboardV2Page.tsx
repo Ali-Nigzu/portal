@@ -614,7 +614,7 @@ const DashboardV2Page = ({
 
     const controller = new AbortController();
     const timezone = manifest.timeControls?.timezone;
-    const kinds: DemographicWidgetKind[] = ["age", "gender", "hour"];
+    const kinds: DemographicWidgetKind[] = ["age", "gender", "hour", "race"];
 
     setSiteFlowDemographics({ status: "loading" });
 
@@ -628,7 +628,7 @@ const DashboardV2Page = ({
       });
 
     Promise.all(kinds.map((kind) => loadDemographic(kind)))
-      .then(([ageResult, genderResult, hourResult]) => {
+      .then(([ageResult, genderResult, hourResult, raceResult]) => {
         if (controller.signal.aborted) {
           return;
         }
@@ -652,19 +652,29 @@ const DashboardV2Page = ({
           return (series.data ?? [])
             .map((point) => {
               const value = toNumeric(point);
-              const hourCandidate = typeof point.x === "string" ? new Date(point.x) : null;
-              const hour = hourCandidate?.getUTCHours();
-              const label = Number.isFinite(hour) ? `${String(hour).padStart(2, "0")}:00` : String(point.x ?? "");
+              const rawHour = typeof point.x === "number" ? point.x : Number(point.x ?? null);
+              const label = Number.isFinite(rawHour)
+                ? `${String(rawHour).padStart(2, "0")}:00`
+                : String(point.x ?? "");
               return { label, value };
             })
             .filter((entry) => entry.value > 0 && entry.label !== "");
         };
 
+        const resolvedTimezone =
+          ageResult?.meta?.timezone ??
+          genderResult?.meta?.timezone ??
+          hourResult?.meta?.timezone ??
+          raceResult?.meta?.timezone ??
+          timezone ??
+          "UTC";
+
         const data: SiteFlowDemographicsData = {
           age: mapSeries(ageResult),
           gender: mapSeries(genderResult),
-          race: [],
+          race: mapSeries(raceResult),
           hour: mapHours(hourResult),
+          timezone: resolvedTimezone,
         };
 
         setSiteFlowDemographics({ status: "ready", data });

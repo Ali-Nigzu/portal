@@ -17,12 +17,20 @@ const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSer
   };
 };
 
-const toTrafficDistributionProps = (title: string, slices: DemographicSlice[]) => {
+const toTrafficDistributionProps = (
+  title: string,
+  slices: DemographicSlice[],
+  timezone: string,
+) => {
   const series = [toPercentageSeries(title, slices)];
   const result: ChartResult = {
     chartType: "categorical",
+    xDimension: { id: "category", type: "category", timezone },
     series,
-    meta: { summary: { title, presentation: "vrm", chartStyle: "traffic_distribution" } },
+    meta: {
+      timezone,
+      summary: { title, presentation: "vrm", chartStyle: "traffic_distribution" },
+    },
   };
   return { series, result };
 };
@@ -43,7 +51,7 @@ export const SiteFlowDemographicsView = ({ data }: { data: SiteFlowDemographicsD
     <div className="site-flow-demographics">
       {charts.map(({ title, slices }) => {
         const hasData = slices.length > 0;
-        const { series, result } = toTrafficDistributionProps(title, slices);
+        const { series, result } = toTrafficDistributionProps(title, slices, data.timezone);
         return (
           <div className="site-flow-demographics__chart" key={title}>
             <div className="site-flow-demographics__heading">{title}</div>
