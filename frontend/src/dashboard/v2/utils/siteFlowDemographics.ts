@@ -198,25 +198,28 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
   const series: ChartSeries | undefined = result?.series?.[0];
   if (!series) return [];
   return (series.data ?? [])
-    .map((point) => {
+    .map((point): HourSlice | null => {
       const count = toNumeric(point);
       const rawHour =
         typeof point.x === "number"
           ? point.x
-          : Number(point.x ?? null);
-      const hourFromNumber = Number.isFinite(rawHour) ? Number(rawHour) : null;
+          : Number(point.x ?? Number.NaN);
+      const hourFromNumber = Number.isFinite(rawHour) ? Number(rawHour) : Number.NaN;
       const parsedFromDate =
-        hourFromNumber === null && point.x != null
+        !Number.isFinite(hourFromNumber) && point.x != null
           ? new Date(String(point.x)).getHours()
-          : null;
-      const hour = hourFromNumber ?? (Number.isFinite(parsedFromDate) ? parsedFromDate : NaN);
+          : Number.NaN;
+      const hour = Number.isFinite(hourFromNumber) ? hourFromNumber : parsedFromDate;
+      if (!Number.isFinite(hour)) return null;
       return {
         hour,
         count,
-        label: Number.isFinite(hour) ? formatHourLabel(hour) : String(point.x ?? ""),
+        label: formatHourLabel(hour),
       };
     })
-    .filter((entry) => entry.count > 0 && entry.label !== "" && Number.isFinite(entry.hour));
+    .filter((entry): entry is HourSlice =>
+      Boolean(entry) && entry.count > 0 && entry.label !== "",
+    );
 };
 
 export const mapChartResultsToDemographics = (
