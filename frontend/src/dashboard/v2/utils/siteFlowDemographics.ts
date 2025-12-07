@@ -13,7 +13,8 @@ const demographicDimension: Record<DemographicWidgetKind, ChartSpec["dimensions"
   age: [{ id: "age_bucket", column: "age_bucket", sort: "desc" }],
   gender: [{ id: "sex", column: "sex", sort: "desc" }],
   hour: [{ id: "timestamp", column: "timestamp", bucket: "HOUR", sort: "asc" }],
-  race: [{ id: "race", column: "Race", sort: "desc" }],
+  // Use the scoped, mapped race label column (lowercase) to align with backend CTE output.
+  race: [{ id: "race", column: "race", sort: "desc" }],
 };
 
 const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = {
