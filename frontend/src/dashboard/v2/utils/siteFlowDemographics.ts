@@ -217,8 +217,9 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
         label: formatHourLabel(hour),
       };
     })
-    .filter((entry): entry is HourSlice =>
-      Boolean(entry) && entry.count > 0 && entry.label !== "",
+    .filter(
+      (entry): entry is HourSlice =>
+        entry != null && entry.count > 0 && entry.label !== "",
     );
 };
 
