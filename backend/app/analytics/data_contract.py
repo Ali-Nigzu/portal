@@ -229,6 +229,8 @@ def _dimension_entry(dimension: Dimension, *, limit: int = 10) -> Dict[str, obje
         return {"id": "sex", "column": "sex", "sort": "asc"}
     if dimension == Dimension.AGE_BUCKET:
         return {"id": "age_bucket", "column": "age_bucket", "sort": "asc"}
+    if dimension == Dimension.RACE:
+        return {"id": "race", "column": "Race", "sort": "asc"}
     if dimension == Dimension.RETENTION_LAG:
         return {"id": "retention_lag", "column": "lag_weeks", "sort": "asc"}
     raise UnsupportedMetricDimensionCombination(f"Unknown dimension: {dimension}")
@@ -318,7 +320,7 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
         "SELECT"
         f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
         f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
-        f" COALESCE(race, '{UNKNOWN_DIMENSION_VALUE}') AS race,"
+        f" COALESCE(Race, '{UNKNOWN_DIMENSION_VALUE}') AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"

@@ -203,14 +203,14 @@ class SpecCompiler:
 
         time_window = spec["timeWindow"]
         timezone = time_window.get("timezone", context.timezone)
-        bucket = self._auto_bucket(
+        bucket = time_window.get("bucket", "RAW") if chart_type == "categorical" else self._auto_bucket(
             preferred=time_window.get("bucket", "RAW"),
             start=time_window.get("from"),
             end=time_window.get("to"),
             chart_type=chart_type,
         )
 
-        use_calendar = self._should_render_calendar(
+        use_calendar = False if chart_type == "categorical" else self._should_render_calendar(
             bucket=bucket,
             start=time_window.get("from"),
             end=time_window.get("to"),
