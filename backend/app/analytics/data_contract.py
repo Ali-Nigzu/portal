@@ -79,7 +79,6 @@ EVENT_TABLE_COLUMNS: Sequence[str] = (
     "Race",
 )
 
-UNKNOWN_DIMENSION_VALUE = "Unknown"
 
 
 def _ensure_timezone(value: datetime) -> datetime:
@@ -320,9 +319,9 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
     filters, params = _render_filters(ctx)
     sql = (
         "SELECT"
-        f" COALESCE(CAST(sex AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
-        f" COALESCE(CAST(age_bucket AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
-        f" COALESCE(CAST(Race AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS race,"
+        " CAST(sex AS STRING) AS sex,"
+        " CAST(age_bucket AS STRING) AS age_bucket,"
+        " CAST(Race AS STRING) AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
@@ -348,8 +347,8 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
     params["offset"] = resolved_offset
     sql = (
         "SELECT track_id, event, timestamp,"
-        f" COALESCE(CAST(sex AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
-        f" COALESCE(CAST(age_bucket AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket"
+        " CAST(sex AS STRING) AS sex,"
+        " CAST(age_bucket AS STRING) AS age_bucket"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
@@ -381,19 +380,13 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
         clauses.append("cam_id IN UNNEST(@camera_ids)")
     if ctx.sexes:
         params["sex_filters"] = ctx.sexes
-        clauses.append(
-            f"COALESCE(CAST(sex AS STRING), '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@sex_filters)"
-        )
+        clauses.append("CAST(sex AS STRING) IN UNNEST(@sex_filters)")
     if ctx.age_buckets:
         params["age_filters"] = ctx.age_buckets
-        clauses.append(
-            f"COALESCE(CAST(age_bucket AS STRING), '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@age_filters)"
-        )
+        clauses.append("CAST(age_bucket AS STRING) IN UNNEST(@age_filters)")
     if ctx.races:
         params["race_filters"] = ctx.races
-        clauses.append(
-            f"COALESCE(CAST(Race AS STRING), '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@race_filters)"
-        )
+        clauses.append("CAST(Race AS STRING) IN UNNEST(@race_filters)")
     if ctx.events:
         params["event_filters"] = ctx.events
         clauses.append("event IN UNNEST(@event_filters)")

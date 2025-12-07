@@ -25,7 +25,6 @@ _BUCKET_SECONDS = {
 
 _RETENTION_MIN_COHORT = 100
 _RETENTION_MAX_COHORTS = {"WEEK": 52, "MONTH": 24}
-_UNKNOWN_DIMENSION_VALUE = "Unknown"
 
 _BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
 
@@ -637,10 +636,7 @@ class SpecCompiler:
 
     def _compile_condition(self, condition: Dict[str, object], params: Dict[str, object]) -> str:
         field = condition["field"]
-        if field in {"sex", "age_bucket", "race"}:
-            field_expr = f"COALESCE(CAST({field} AS STRING), '{_UNKNOWN_DIMENSION_VALUE}')"
-        else:
-            field_expr = field
+        field_expr = f"CAST({field} AS STRING)" if field in {"sex", "age_bucket", "race"} else field
         operator = condition["op"]
         value = condition.get("value")
         param_base = re.sub(r"[^0-9A-Za-z_]", "_", field)
@@ -1368,7 +1364,7 @@ class SpecCompiler:
             else:
                 category_expr = "scoped.timestamp"
         else:
-            category_expr = f"COALESCE(CAST(scoped.{column} AS STRING), '{_UNKNOWN_DIMENSION_VALUE}')"
+            category_expr = f"CAST(scoped.{column} AS STRING)"
 
         measure_id = measure["id"]
         prefix = f"{measure_id}_demographics"
