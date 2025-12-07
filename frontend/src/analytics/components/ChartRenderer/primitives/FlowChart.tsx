@@ -27,10 +27,30 @@ export const FlowChart = ({
   height,
   className,
 }: ChartPrimitiveProps) => {
-  const dataset = useMemo(() => buildCartesianDataset(series), [series]);
-  const seriesMap = useMemo(() => {
-    return new Map<string, ChartSeries>(series.map((item) => [item.id, item]));
+  const sortedSeries = useMemo(() => {
+    const prioritizedGroup = "occupancy";
+    return series
+      .map((item, index) => ({ item, index }))
+      .sort((a, b) => {
+        const aGroup = a.item.seriesGroup;
+        const bGroup = b.item.seriesGroup;
+        if (aGroup !== bGroup) {
+          if (aGroup === prioritizedGroup) {
+            return 1;
+          }
+          if (bGroup === prioritizedGroup) {
+            return -1;
+          }
+        }
+        return a.index - b.index;
+      })
+      .map((entry) => entry.item);
   }, [series]);
+
+  const dataset = useMemo(() => buildCartesianDataset(sortedSeries), [sortedSeries]);
+  const seriesMap = useMemo(() => {
+    return new Map<string, ChartSeries>(sortedSeries.map((item) => [item.id, item]));
+  }, [sortedSeries]);
 
   return (
     <div className={className} style={{ height }}>
@@ -56,7 +76,7 @@ export const FlowChart = ({
             content={<ChartTooltip meta={dataset.meta} seriesMap={seriesMap} />}
             cursor={{ stroke: "var(--border-strong, #d0d5dd)" }}
           />
-          {series.map((seriesItem) => {
+          {sortedSeries.map((seriesItem) => {
             const yAxisId = axisConfig.bindings[seriesItem.id] ?? "Y1";
             const hidden = visibility[seriesItem.id] === false;
             const hasLowCoverage = seriesItem.data.some(

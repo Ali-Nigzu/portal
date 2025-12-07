@@ -117,6 +117,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     label: "Occupancy (min)",
     geometry: "line",
     axis: occupancyAxis,
+    seriesGroup: "occupancy",
     hideInLegend: true,
     color: occupancyColor,
     strokeOpacity: 0.45,
@@ -128,6 +129,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     label: "Occupancy (max)",
     geometry: "line",
     axis: occupancyAxis,
+    seriesGroup: "occupancy",
     hideInLegend: true,
     color: occupancyColor,
     strokeOpacity: 0.6,
@@ -139,6 +141,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     label: "Occupancy (avg)",
     geometry: "line",
     axis: occupancyAxis,
+    seriesGroup: "occupancy",
     color: occupancyColor,
     data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_avg })),
   };
@@ -154,6 +157,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     hideInLegend: true,
     hideInTooltip: true,
     axis: occupancyAxis,
+    seriesGroup: "occupancy",
     data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_min })),
   };
 
@@ -168,6 +172,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     hideInLegend: true,
     hideInTooltip: true,
     axis: occupancyAxis,
+    seriesGroup: "occupancy",
     data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_span })),
   };
 
@@ -186,7 +191,14 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
       ...(result.meta ?? { timezone: "UTC" }),
       summary: { ...(result.meta?.summary ?? {}), title: "Site Flow" },
     },
-    series: [occupancyBandBase, occupancyBandSpan, occupancyMinLine, occupancyMaxLine, occupancyAvgLine, ...bars],
+    series: [
+      ...bars,
+      occupancyBandBase,
+      occupancyBandSpan,
+      occupancyMinLine,
+      occupancyMaxLine,
+      occupancyAvgLine,
+    ],
   };
 };
 
