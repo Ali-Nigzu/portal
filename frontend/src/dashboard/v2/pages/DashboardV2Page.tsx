@@ -27,14 +27,13 @@ import {
   lastBucketValue,
   resolveUiClient,
 } from "../utils/vrmDecorators";
-import {
-  SiteFlowDemographicsView,
-  type SiteFlowDemographicsData,
-} from "../components/SiteFlowDemographicsView";
+import { SiteFlowDemographicsView } from "../components/SiteFlowDemographicsView";
 import {
   buildDemographicsWidget,
   isSiteFlowWidget,
   type DemographicWidgetKind,
+  mapChartResultsToDemographics,
+  type SiteFlowDemographicsData,
 } from "../utils/siteFlowDemographics";
 
 export { lookupCapacity } from "../utils/vrmDecorators";
@@ -633,86 +632,13 @@ const DashboardV2Page = ({
           return;
         }
 
-        const toNumeric = (point: { value?: number | null; y?: number | null }) => {
-          const raw = point.value ?? point.y ?? null;
-          return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
-        };
-
-        const mapLabel = (label: string, kind: DemographicWidgetKind) => {
-          const normalized = label.trim();
-          if (kind === "age") {
-            const ageMap: Record<string, string> = {
-              "0": "0–4",
-              "1": "5–13",
-              "2": "14–25",
-              "3": "26–45",
-              "4": "46–65",
-              "5": "66+",
-            };
-            return ageMap[normalized] ?? normalized;
-          }
-          if (kind === "gender") {
-            const genderMap: Record<string, string> = {
-              "0": "Male",
-              "1": "Female",
-            };
-            return genderMap[normalized] ?? normalized;
-          }
-          if (kind === "race") {
-            const raceMap: Record<string, string> = {
-              "0": "Light",
-              "1": "Mix",
-              "2": "Dark",
-            };
-            return raceMap[normalized] ?? normalized;
-          }
-          return normalized;
-        };
-
-        const mapSeries = (
-          result?: Parameters<typeof ChartRenderer>[0]["result"],
-          kind?: DemographicWidgetKind,
-        ) => {
-          const series = result?.series?.[0];
-          if (!series) return [] as Array<{ label: string; value: number }>;
-          return (series.data ?? [])
-            .map((point) => ({
-              label: mapLabel(String(point.x ?? ""), kind ?? "age"),
-              value: toNumeric(point),
-            }))
-            .filter((entry) => entry.label !== "");
-        };
-
-        const mapHours = (result?: Parameters<typeof ChartRenderer>[0]["result"]) => {
-          const series = result?.series?.[0];
-          if (!series) return [] as Array<{ label: string; value: number }>;
-          return (series.data ?? [])
-            .map((point) => {
-              const value = toNumeric(point);
-              const rawHour = typeof point.x === "number" ? point.x : Number(point.x ?? null);
-              const label = Number.isFinite(rawHour)
-                ? `${String(rawHour).padStart(2, "0")}:00`
-                : String(point.x ?? "");
-              return { label, value };
-            })
-            .filter((entry) => entry.value > 0 && entry.label !== "");
-        };
-
-        const resolvedTimezone =
-          ageResult?.meta?.timezone ??
-          genderResult?.meta?.timezone ??
-          hourResult?.meta?.timezone ??
-          raceResult?.meta?.timezone ??
-          timezone ??
-          "UTC";
-
-        const data: SiteFlowDemographicsData = {
-          age: mapSeries(ageResult, "age"),
-          gender: mapSeries(genderResult, "gender"),
-          race: mapSeries(raceResult, "race"),
-          hour: mapHours(hourResult),
-          timezone: resolvedTimezone,
-        };
+        const data: SiteFlowDemographicsData = mapChartResultsToDemographics({
+          age: ageResult,
+          gender: genderResult,
+          race: raceResult,
+          hour: hourResult,
+          timezone,
+        });
 
         setSiteFlowDemographics({ status: "ready", data });
       })

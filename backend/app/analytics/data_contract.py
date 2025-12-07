@@ -318,15 +318,16 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
         "SELECT"
         f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
         f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
+        f" COALESCE(race, '{UNKNOWN_DIMENSION_VALUE}') AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
-        " GROUP BY sex, age_bucket"
+        " GROUP BY sex, age_bucket, race"
     )
     return ContractQuery(
         metric=Metric.DEMOGRAPHICS,
-        dimensions=(Dimension.SEX, Dimension.AGE_BUCKET),
+        dimensions=(Dimension.SEX, Dimension.AGE_BUCKET, Dimension.RACE),
         sql=sql,
         params=params,
         measure_id="demographics",
