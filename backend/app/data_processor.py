@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
+from textwrap import dedent
 from typing import Dict, Optional
 
 import pandas as pd
@@ -17,6 +18,7 @@ from .analytics.data_contract import (
     Metric,
     QueryContext,
     TimeRangeKey,
+    _render_filters,
     compile_contract_query,
 )
 from .bigquery_client import BigQueryDataFrameError, bigquery_client
@@ -118,13 +120,29 @@ class DataProcessor:
             demographics_plan = compile_contract_query(Metric.DEMOGRAPHICS, [], context)
             demo_df = cls._execute(demographics_plan, table_name=table_name, job="demographics")
 
-            hourly_ctx = context.model_copy(update={"bucket": "HOUR"})
-            hourly_plan = compile_contract_query(Metric.ACTIVITY, [Dimension.TIME], hourly_ctx)
-            hourly_df = cls._execute(hourly_plan, table_name=table_name, job="hourly")
+            filters_sql, hour_params = _render_filters(context)
+            hour_params = {**hour_params}
+            hour_sql = dedent(
+                f"""
+                SELECT
+                    EXTRACT(HOUR FROM timestamp) AS hour,
+                    COUNT(*) AS count
+                FROM `{context.table_name}`
+                WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts){filters_sql}
+                GROUP BY hour
+                ORDER BY hour
+                """
+            )
+
+            hourly_df = bigquery_client.query_dataframe(
+                hour_sql, hour_params, job_context=f"{table_name}::hourly_demographics"
+            )
             if not hourly_df.empty:
-                hourly_df = hourly_df[hourly_df["measure_id"] == hourly_plan.measure_id].copy()
-                hourly_df["hour"] = hourly_df["bucket_start"].dt.tz_convert("UTC").dt.hour
-                hourly_df.rename(columns={"value": "count"}, inplace=True)
+                hourly_df["hour"] = pd.to_numeric(hourly_df["hour"], errors="coerce").astype("Int64")
+                hourly_df.dropna(subset=["hour"], inplace=True)
+                hourly_df["hour"] = hourly_df["hour"].astype(int)
+                hourly_df["count"] = pd.to_numeric(hourly_df["count"], errors="coerce").fillna(0)
+                hourly_df = hourly_df.sort_values("hour")
 
             records_plan = compile_contract_query(Metric.RAW_EVENTS, [], context)
             records_df = cls._execute(records_plan, table_name=table_name, job="records")
