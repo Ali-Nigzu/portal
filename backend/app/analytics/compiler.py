@@ -217,7 +217,10 @@ class SpecCompiler:
         )
 
         measures = spec["measures"]
-        if any((measure.get("options") or {}).get("vrmOccupancyStats") for measure in measures):
+        vrm_occupancy_enabled = any(
+            (measure.get("options") or {}).get("vrmOccupancyStats") for measure in measures
+        )
+        if vrm_occupancy_enabled:
             use_calendar = True
 
         params: Dict[str, object] = {
@@ -232,7 +235,9 @@ class SpecCompiler:
 
         base_ctes = [self._render_scoped(context.table_name, filters_sql)]
         if bucket != "RAW" and use_calendar:
-            base_ctes.append(self._render_calendar(bucket))
+            base_ctes.append(
+                self._render_calendar(bucket, clamp_to_data=vrm_occupancy_enabled)
+            )
 
         for measure in measures:
             aggregation = measure["aggregation"]
@@ -505,21 +510,50 @@ class SpecCompiler:
         ).strip()
         return scoped
 
-    def _render_calendar(self, bucket: str) -> str:
+    def _render_calendar(self, bucket: str, *, clamp_to_data: bool = False) -> str:
         if bucket == "RAW":
             raise ValidationError("Calendar requires bucketed time series")
-        trunc_expr = _bucket_trunc_expression(bucket)
+        trunc_expr = (
+            _bucket_expression(bucket, field="window_start")
+            if clamp_to_data
+            else _bucket_trunc_expression(bucket)
+        )
         interval_expr = _bucket_interval_expression(bucket)
         add_expr = f"TIMESTAMP_ADD(bucket_start, {interval_expr})"
-        calendar = dedent(
-            f"""
-            calendar AS (
-                WITH {WINDOW_BOUNDS_CTE} AS (
+        bounds_cte = (
+            dedent(
+                f"""
+                calendar_data_bounds AS (
+                    SELECT
+                        MIN(timestamp) AS min_ts,
+                        MAX(timestamp) AS max_ts
+                    FROM scoped
+                ),
+                {WINDOW_BOUNDS_CTE} AS (
+                    SELECT
+                        GREATEST(TIMESTAMP(@start_ts), COALESCE(min_ts, TIMESTAMP(@start_ts))) AS window_start,
+                        LEAST(TIMESTAMP(@end_ts), COALESCE(max_ts, TIMESTAMP(@end_ts))) AS window_end,
+                        {trunc_expr} AS aligned_start
+                    FROM calendar_data_bounds
+                )
+                """
+            ).strip()
+            if clamp_to_data
+            else dedent(
+                f"""
+                {WINDOW_BOUNDS_CTE} AS (
                     SELECT
                         TIMESTAMP(@start_ts) AS window_start,
                         TIMESTAMP(@end_ts) AS window_end,
                         {trunc_expr} AS aligned_start
                 )
+                """
+            ).strip()
+        )
+        calendar = dedent(
+            f"""
+            calendar AS (
+                WITH {bounds_cte}
                 SELECT
                     bucket_start,
                     LEAST({add_expr}, window_end) AS bucket_end,
@@ -544,6 +578,7 @@ class SpecCompiler:
                     )
                 ) AS bucket_start
                 WHERE bucket_start < window_end
+                    AND window_start < window_end
             )
             """
         ).strip()
