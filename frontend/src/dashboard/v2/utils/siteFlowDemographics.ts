@@ -193,7 +193,7 @@ export const mapAgeLabel = (code: string | number): string => {
     case 5:
       return "66+";
     default:
-      return raw === "" ? "Unknown" : raw;
+      return "Unknown";
   }
 };
 
@@ -210,7 +210,7 @@ export const mapGenderLabel = (code: string | number): string => {
     case 1:
       return "Female";
     default:
-      return raw === "" ? "Unknown" : raw;
+      return "Unknown";
   }
 };
 
@@ -230,7 +230,7 @@ export const mapRaceLabel = (code: string | number): string => {
     case 2:
       return "Dark";
     default:
-      return raw === "" ? "Unknown" : raw;
+      return "Unknown";
   }
 };
 
