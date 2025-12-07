@@ -64,10 +64,11 @@ export const FlowChart = ({
               yAxisId={axis.id}
               hide={!axis.visible}
               tick={{ fill: "var(--text-muted, #475467)" }}
+              orientation={axis.id === "Y1" ? "left" : "right"}
               label={{
                 value: axis.label ?? axis.unit,
                 angle: -90,
-                position: "insideLeft",
+                position: axis.id === "Y1" ? "insideLeft" : "insideRight",
                 style: { fill: "var(--text-muted, #475467)" },
               }}
             />
@@ -111,6 +112,7 @@ export const FlowChart = ({
                 />
               );
             };
+            const dotProp = seriesItem.noDots ? false : dotRenderer;
             if (seriesItem.geometry === "bar" || seriesItem.geometry === "column") {
               return (
                 <Bar
@@ -152,7 +154,8 @@ export const FlowChart = ({
                   stroke={seriesItem.color}
                   strokeOpacity={seriesItem.strokeOpacity}
                   strokeWidth={2}
-                  dot={dotRenderer}
+                  dot={dotProp}
+                  activeDot={seriesItem.noDots ? false : dotRenderer}
                   yAxisId={yAxisId}
                   hide={hidden}
                   isAnimationActive={false}
