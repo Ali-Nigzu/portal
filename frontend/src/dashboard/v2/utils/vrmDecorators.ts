@@ -117,6 +117,9 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     label: "Occupancy (min)",
     geometry: "line",
     axis: occupancyAxis,
+    unit: "people",
+    seriesGroup: "occupancy",
+    noDots: true,
     hideInLegend: true,
     color: occupancyColor,
     strokeOpacity: 0.45,
@@ -128,6 +131,9 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     label: "Occupancy (max)",
     geometry: "line",
     axis: occupancyAxis,
+    unit: "people",
+    seriesGroup: "occupancy",
+    noDots: true,
     hideInLegend: true,
     color: occupancyColor,
     strokeOpacity: 0.6,
@@ -139,6 +145,9 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     label: "Occupancy (avg)",
     geometry: "line",
     axis: occupancyAxis,
+    unit: "people",
+    seriesGroup: "occupancy",
+    noDots: true,
     color: occupancyColor,
     data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_avg })),
   };
@@ -154,6 +163,8 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     hideInLegend: true,
     hideInTooltip: true,
     axis: occupancyAxis,
+    unit: "people",
+    seriesGroup: "occupancy",
     data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_min })),
   };
 
@@ -168,6 +179,8 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     hideInLegend: true,
     hideInTooltip: true,
     axis: occupancyAxis,
+    unit: "people",
+    seriesGroup: "occupancy",
     data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_span })),
   };
 
@@ -175,7 +188,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     .filter((series) => series.id !== "occupancy" && series.id !== "throughput")
     .map((series) => {
       if (series.id === "entrances" || series.id === "exits") {
-        return { ...series, geometry: "bar" as const };
+        return { ...series, geometry: "bar" as const, unit: "events" };
       }
       return series;
     });
@@ -186,7 +199,14 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
       ...(result.meta ?? { timezone: "UTC" }),
       summary: { ...(result.meta?.summary ?? {}), title: "Site Flow" },
     },
-    series: [occupancyBandBase, occupancyBandSpan, occupancyMinLine, occupancyMaxLine, occupancyAvgLine, ...bars],
+    series: [
+      ...bars,
+      occupancyBandBase,
+      occupancyBandSpan,
+      occupancyMinLine,
+      occupancyMaxLine,
+      occupancyAvgLine,
+    ],
   };
 };
 
