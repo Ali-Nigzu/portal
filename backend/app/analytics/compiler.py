@@ -638,7 +638,7 @@ class SpecCompiler:
     def _compile_condition(self, condition: Dict[str, object], params: Dict[str, object]) -> str:
         field = condition["field"]
         if field in {"sex", "age_bucket", "race"}:
-            field_expr = f"COALESCE({field}, '{_UNKNOWN_DIMENSION_VALUE}')"
+            field_expr = f"COALESCE(CAST({field} AS STRING), '{_UNKNOWN_DIMENSION_VALUE}')"
         else:
             field_expr = field
         operator = condition["op"]
@@ -1359,10 +1359,16 @@ class SpecCompiler:
         if not column:
             raise ValidationError("demographic_count requires a dimension column")
         bucket_label = dimension.get("bucket")
-        if column == "timestamp" and bucket_label == "HOUR":
-            category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+        if column == "timestamp":
+            category_bucket = bucket_label or bucket
+            if category_bucket == "HOUR":
+                category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+            elif category_bucket and category_bucket != "RAW":
+                category_expr = _bucket_expression(category_bucket, field="scoped.timestamp")
+            else:
+                category_expr = "scoped.timestamp"
         else:
-            category_expr = f"COALESCE({column}, '{_UNKNOWN_DIMENSION_VALUE}')"
+            category_expr = f"COALESCE(CAST(scoped.{column} AS STRING), '{_UNKNOWN_DIMENSION_VALUE}')"
 
         measure_id = measure["id"]
         prefix = f"{measure_id}_demographics"

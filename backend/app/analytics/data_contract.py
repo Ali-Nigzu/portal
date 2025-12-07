@@ -180,6 +180,8 @@ class QueryContext(BaseModel):
             conditions.append({"field": "sex", "op": "in", "value": list(self.sexes)})
         if self.age_buckets:
             conditions.append({"field": "age_bucket", "op": "in", "value": list(self.age_buckets)})
+        if self.races:
+            conditions.append({"field": "Race", "op": "in", "value": list(self.races)})
         if self.events:
             conditions.append({"field": "event", "op": "in", "value": list(self.events)})
         if conditions:
@@ -318,9 +320,9 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
     filters, params = _render_filters(ctx)
     sql = (
         "SELECT"
-        f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
-        f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
-        f" COALESCE(Race, '{UNKNOWN_DIMENSION_VALUE}') AS race,"
+        f" COALESCE(CAST(sex AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
+        f" COALESCE(CAST(age_bucket AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
+        f" COALESCE(CAST(Race AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
@@ -346,8 +348,8 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
     params["offset"] = resolved_offset
     sql = (
         "SELECT track_id, event, timestamp,"
-        f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
-        f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket"
+        f" COALESCE(CAST(sex AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
+        f" COALESCE(CAST(age_bucket AS STRING), '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
@@ -380,17 +382,17 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
     if ctx.sexes:
         params["sex_filters"] = ctx.sexes
         clauses.append(
-            f"COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@sex_filters)"
+            f"COALESCE(CAST(sex AS STRING), '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@sex_filters)"
         )
     if ctx.age_buckets:
         params["age_filters"] = ctx.age_buckets
         clauses.append(
-            f"COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@age_filters)"
+            f"COALESCE(CAST(age_bucket AS STRING), '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@age_filters)"
         )
     if ctx.races:
         params["race_filters"] = ctx.races
         clauses.append(
-            f"COALESCE(race, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@race_filters)"
+            f"COALESCE(CAST(Race AS STRING), '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@race_filters)"
         )
     if ctx.events:
         params["event_filters"] = ctx.events
