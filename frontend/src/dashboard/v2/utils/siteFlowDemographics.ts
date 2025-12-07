@@ -30,7 +30,7 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
       measures: [
         {
           id: "events",
-          aggregation: "demographic_count",
+          aggregation: "count",
           label: "Events",
         },
       ],
@@ -50,7 +50,7 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
       measures: [
         {
           id: "events",
-          aggregation: "demographic_count",
+          aggregation: "count",
           label: "Events",
         },
       ],
@@ -70,7 +70,7 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
       measures: [
         {
           id: "events",
-          aggregation: "demographic_count",
+          aggregation: "count",
           label: "Events",
         },
       ],
@@ -90,7 +90,7 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
       measures: [
         {
           id: "events",
-          aggregation: "demographic_count",
+          aggregation: "count",
           label: "Events",
         },
       ],
