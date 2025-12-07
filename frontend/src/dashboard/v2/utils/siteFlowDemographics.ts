@@ -206,23 +206,26 @@ const mapSeries = (
 ): DemographicSlice[] => {
   const series: ChartSeries | undefined = result?.series?.[0];
   if (!series) return [];
-  return (series.data ?? [])
-    .map((point) => {
-      const raw = point.x ?? "";
-      const baseLabel =
-        kind === "age"
-          ? mapAgeLabel(raw as string | number)
-          : kind === "gender"
-            ? mapGenderLabel(raw as string | number)
-            : kind === "race"
-              ? mapRaceLabel(raw as string | number)
-              : "Unknown";
-      return {
-        label: baseLabel,
-        count: toNumeric(point),
-      };
-    })
-    .filter((entry) => entry.count > 0 && entry.label !== "");
+  const aggregated = new Map<string, number>();
+
+  (series.data ?? []).forEach((point) => {
+    const raw = point.x ?? "";
+    const baseLabel =
+      kind === "age"
+        ? mapAgeLabel(raw as string | number)
+        : kind === "gender"
+          ? mapGenderLabel(raw as string | number)
+          : kind === "race"
+            ? mapRaceLabel(raw as string | number)
+            : "Unknown";
+    const nextCount = toNumeric(point);
+    if (baseLabel === "" || nextCount <= 0) {
+      return;
+    }
+    aggregated.set(baseLabel, (aggregated.get(baseLabel) ?? 0) + nextCount);
+  });
+
+  return Array.from(aggregated.entries()).map(([label, count]) => ({ label, count }));
 };
 
 const mapHours = (result: ChartResult | undefined): HourSlice[] => {

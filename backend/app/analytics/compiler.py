@@ -1358,6 +1358,9 @@ class SpecCompiler:
             column = "race"
         if not column:
             raise ValidationError("demographic_count requires a dimension column")
+        column = str(column)
+        if column not in {"timestamp", "age_bucket", "sex", "race"}:
+            raise ValidationError(f"Unsupported demographic dimension: {column}")
         bucket_label = dimension.get("bucket")
         if column == "timestamp":
             category_bucket = bucket_label or bucket
