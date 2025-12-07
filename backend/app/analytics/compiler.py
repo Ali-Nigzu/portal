@@ -626,6 +626,8 @@ class SpecCompiler:
 
     def _compile_condition(self, condition: Dict[str, object], params: Dict[str, object]) -> str:
         field = condition["field"]
+        if field == "Race":
+            field = "race"
         field_expr = f"CAST({field} AS STRING)" if field in {"sex", "age_bucket", "race"} else field
         operator = condition["op"]
         value = condition.get("value")
@@ -1342,6 +1344,8 @@ class SpecCompiler:
         if not isinstance(dimension, dict):
             raise ValidationError("demographic_count requires a dimension descriptor")
         column = dimension.get("column")
+        if column == "Race":
+            column = "race"
         if not column:
             raise ValidationError("demographic_count requires a dimension column")
         bucket_label = dimension.get("bucket")

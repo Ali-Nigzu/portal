@@ -164,13 +164,8 @@ export const mapAgeLabel = (code: string | number): string => {
       return "46–65";
     case 5:
       return "66+";
-    default: {
-      const raw = String(code ?? "").trim();
-      if (["0–4", "5–13", "14–25", "26–45", "46–65", "66+"].includes(raw)) {
-        return raw;
-      }
+    default:
       return "Unknown";
-    }
   }
 };
 
@@ -181,12 +176,8 @@ export const mapGenderLabel = (code: string | number): string => {
       return "Male";
     case 1:
       return "Female";
-    default: {
-      const raw = String(code ?? "").trim().toLowerCase();
-      if (raw === "male") return "Male";
-      if (raw === "female") return "Female";
+    default:
       return "Unknown";
-    }
   }
 };
 
@@ -199,13 +190,8 @@ export const mapRaceLabel = (code: string | number): string => {
       return "Mix";
     case 2:
       return "Dark";
-    default: {
-      const raw = String(code ?? "").trim().toLowerCase();
-      if (raw === "light") return "Light";
-      if (raw === "mix") return "Mix";
-      if (raw === "dark") return "Dark";
+    default:
       return "Unknown";
-    }
   }
 };
 
