@@ -638,11 +638,48 @@ const DashboardV2Page = ({
           return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
         };
 
-        const mapSeries = (result?: Parameters<typeof ChartRenderer>[0]["result"]) => {
+        const mapLabel = (label: string, kind: DemographicWidgetKind) => {
+          const normalized = label.trim();
+          if (kind === "age") {
+            const ageMap: Record<string, string> = {
+              "0": "0–4",
+              "1": "5–13",
+              "2": "14–25",
+              "3": "26–45",
+              "4": "46–65",
+              "5": "66+",
+            };
+            return ageMap[normalized] ?? normalized;
+          }
+          if (kind === "gender") {
+            const genderMap: Record<string, string> = {
+              "0": "Male",
+              "1": "Female",
+            };
+            return genderMap[normalized] ?? normalized;
+          }
+          if (kind === "race") {
+            const raceMap: Record<string, string> = {
+              "0": "Light",
+              "1": "Mix",
+              "2": "Dark",
+            };
+            return raceMap[normalized] ?? normalized;
+          }
+          return normalized;
+        };
+
+        const mapSeries = (
+          result?: Parameters<typeof ChartRenderer>[0]["result"],
+          kind?: DemographicWidgetKind,
+        ) => {
           const series = result?.series?.[0];
           if (!series) return [] as Array<{ label: string; value: number }>;
           return (series.data ?? [])
-            .map((point) => ({ label: String(point.x ?? ""), value: toNumeric(point) }))
+            .map((point) => ({
+              label: mapLabel(String(point.x ?? ""), kind ?? "age"),
+              value: toNumeric(point),
+            }))
             .filter((entry) => entry.label !== "");
         };
 
@@ -670,9 +707,9 @@ const DashboardV2Page = ({
           "UTC";
 
         const data: SiteFlowDemographicsData = {
-          age: mapSeries(ageResult),
-          gender: mapSeries(genderResult),
-          race: mapSeries(raceResult),
+          age: mapSeries(ageResult, "age"),
+          gender: mapSeries(genderResult, "gender"),
+          race: mapSeries(raceResult, "race"),
           hour: mapHours(hourResult),
           timezone: resolvedTimezone,
         };
