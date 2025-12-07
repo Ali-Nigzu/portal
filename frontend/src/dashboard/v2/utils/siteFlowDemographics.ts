@@ -13,7 +13,7 @@ const demographicDimension: Record<DemographicWidgetKind, ChartSpec["dimensions"
   age: [{ id: "age_bucket", column: "age_bucket", sort: "desc" }],
   gender: [{ id: "sex", column: "sex", sort: "desc" }],
   hour: [{ id: "timestamp", column: "timestamp", bucket: "HOUR", sort: "asc" }],
-  race: [{ id: "race", column: "race", sort: "desc" }],
+  race: [{ id: "race", column: "Race", sort: "desc" }],
 };
 
 const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = {
@@ -26,7 +26,14 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
     inlineSpec: {
       ...BASE_DEMOGRAPHIC_SPEC,
       id: "dashboard.site_flow.demographics.age",
-      measures: [{ id: "events", aggregation: "demographic_count", label: "Events" }],
+      measures: [
+        {
+          id: "events",
+          aggregation: "demographic_count",
+          label: "Events",
+          dimension: demographicDimension.age[0],
+        },
+      ],
       dimensions: demographicDimension.age,
       interactions: { export: ["png", "csv"] },
     },
@@ -40,7 +47,14 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
     inlineSpec: {
       ...BASE_DEMOGRAPHIC_SPEC,
       id: "dashboard.site_flow.demographics.gender",
-      measures: [{ id: "events", aggregation: "demographic_count", label: "Events" }],
+      measures: [
+        {
+          id: "events",
+          aggregation: "demographic_count",
+          label: "Events",
+          dimension: demographicDimension.gender[0],
+        },
+      ],
       dimensions: demographicDimension.gender,
       interactions: { export: ["png", "csv"] },
     },
@@ -54,7 +68,14 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
     inlineSpec: {
       ...BASE_DEMOGRAPHIC_SPEC,
       id: "dashboard.site_flow.demographics.hour",
-      measures: [{ id: "events", aggregation: "demographic_count", label: "Events" }],
+      measures: [
+        {
+          id: "events",
+          aggregation: "demographic_count",
+          label: "Events",
+          dimension: demographicDimension.hour[0],
+        },
+      ],
       dimensions: demographicDimension.hour,
       interactions: { export: ["png", "csv"] },
     },
@@ -68,7 +89,14 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
     inlineSpec: {
       ...BASE_DEMOGRAPHIC_SPEC,
       id: "dashboard.site_flow.demographics.race",
-      measures: [{ id: "events", aggregation: "demographic_count", label: "Events" }],
+      measures: [
+        {
+          id: "events",
+          aggregation: "demographic_count",
+          label: "Events",
+          dimension: demographicDimension.race[0],
+        },
+      ],
       dimensions: demographicDimension.race,
       interactions: { export: ["png", "csv"] },
     },
