@@ -10,6 +10,7 @@ export const TrafficDistribution = ({
   height,
   className,
   widgetId,
+  useRawLabels = false,
 }: ChartPrimitiveProps) => {
   const primary = series[0];
   const data = primary?.data ?? [];
@@ -69,6 +70,7 @@ export const TrafficDistribution = ({
     const rawCamera = point.x ?? `Cam ${index + 1}`;
     const normalizedCameraId = String(rawCamera).replace(/^Cam\s*/i, "").trim();
     const cameraId = normalizedCameraId !== "" ? normalizedCameraId : String(index + 1);
+    const rawLabel = String(rawCamera).trim() || `Slice ${index + 1}`;
     const rawValue =
       typeof point.value === "number"
         ? point.value
@@ -78,7 +80,7 @@ export const TrafficDistribution = ({
     const numericValue = Number(rawValue);
     const value = Number.isFinite(numericValue) ? numericValue : 0;
     return {
-      label: `Cam ${cameraId}`,
+      label: useRawLabels ? rawLabel : `Cam ${cameraId}`,
       camId: cameraId,
       value,
       color: sliceColors[index % sliceColors.length],

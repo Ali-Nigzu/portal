@@ -71,6 +71,7 @@ export const SiteFlowDemographicsView = ({ data }: { data: SiteFlowDemographicsD
                 height={220}
                 className="site-flow-demographics__pie"
                 widgetId={`site-flow-${title.toLowerCase()}`}
+                useRawLabels
               />
             ) : (
               <EmptyPie title={title} />

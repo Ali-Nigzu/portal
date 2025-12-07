@@ -125,6 +125,11 @@ class DataProcessor:
                 hourly_df = hourly_df[hourly_df["measure_id"] == hourly_plan.measure_id].copy()
                 hourly_df["hour"] = hourly_df["bucket_start"].dt.tz_convert("UTC").dt.hour
                 hourly_df.rename(columns={"value": "count"}, inplace=True)
+                hourly_df = (
+                    hourly_df.groupby("hour", as_index=False)["count"]
+                    .sum()
+                    .sort_values("hour")
+                )
 
             records_plan = compile_contract_query(Metric.RAW_EVENTS, [], context)
             records_df = cls._execute(records_plan, table_name=table_name, job="records")

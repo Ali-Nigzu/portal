@@ -197,30 +197,37 @@ const mapSeries = (
 const mapHours = (result: ChartResult | undefined): HourSlice[] => {
   const series: ChartSeries | undefined = result?.series?.[0];
   if (!series) return [];
-  return (series.data ?? [])
-    .map((point): HourSlice | null => {
-      const count = toNumeric(point);
-      const rawHour =
-        typeof point.x === "number"
-          ? point.x
-          : Number(point.x ?? Number.NaN);
-      const hourFromNumber = Number.isFinite(rawHour) ? Number(rawHour) : Number.NaN;
-      const parsedFromDate =
-        !Number.isFinite(hourFromNumber) && point.x != null
-          ? new Date(String(point.x)).getHours()
-          : Number.NaN;
-      const hour = Number.isFinite(hourFromNumber) ? hourFromNumber : parsedFromDate;
-      if (!Number.isFinite(hour)) return null;
-      return {
-        hour,
+  const aggregated = new Map<number, HourSlice>();
+
+  (series.data ?? []).forEach((point) => {
+    const count = toNumeric(point);
+    const rawHour =
+      typeof point.x === "number"
+        ? point.x
+        : Number(point.x ?? Number.NaN);
+    const hourFromNumber = Number.isFinite(rawHour) ? Number(rawHour) : Number.NaN;
+    const parsedFromDate =
+      !Number.isFinite(hourFromNumber) && point.x != null
+        ? new Date(String(point.x)).getHours()
+        : Number.NaN;
+    const hour = Number.isFinite(hourFromNumber) ? hourFromNumber : parsedFromDate;
+    if (!Number.isFinite(hour) || count <= 0) {
+      return;
+    }
+    const normalizedHour = Math.max(0, Math.min(23, Math.trunc(hour)));
+    const existing = aggregated.get(normalizedHour);
+    if (existing) {
+      aggregated.set(normalizedHour, { ...existing, count: existing.count + count });
+    } else {
+      aggregated.set(normalizedHour, {
+        hour: normalizedHour,
         count,
-        label: formatHourLabel(hour),
-      };
-    })
-    .filter(
-      (entry): entry is HourSlice =>
-        entry != null && entry.count > 0 && entry.label !== "",
-    );
+        label: formatHourLabel(normalizedHour),
+      });
+    }
+  });
+
+  return Array.from(aggregated.values()).sort((a, b) => a.hour - b.hour);
 };
 
 export const mapChartResultsToDemographics = (

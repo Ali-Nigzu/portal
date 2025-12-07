@@ -10,4 +10,5 @@ export interface ChartPrimitiveProps {
   height: number;
   className?: string;
   widgetId?: string;
+  useRawLabels?: boolean;
 }
