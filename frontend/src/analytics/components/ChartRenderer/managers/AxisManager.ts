@@ -32,7 +32,8 @@ export class AxisManager {
     const axes: AxisDescriptor[] = [];
     const bindings: AxisBindingConfig = {};
 
-    const unitEntries = Array.from(units.entries()).slice(0, this.maxAxes);
+    const prioritizedUnits = this.prioritizeUnits(units);
+    const unitEntries = prioritizedUnits.slice(0, this.maxAxes);
     unitEntries.forEach(([unit, seriesIds], index) => {
       const axisId = AXIS_ORDER[index];
       const filteredSeries = seriesIds.filter((id) => effectiveVisible.has(id));
@@ -67,6 +68,20 @@ export class AxisManager {
       }
     });
     return map;
+  }
+
+  private prioritizeUnits(units: Map<string, string[]>): Array<[string, string[]]> {
+    if (units.has("events") && units.has("people")) {
+      const preferredOrder = ["events", "people"];
+      const remaining = Array.from(units.entries()).filter(
+        ([unit]) => !preferredOrder.includes(unit)
+      );
+      const prioritized: Array<[string, string[]]> = preferredOrder
+        .filter((unit) => units.has(unit))
+        .map((unit) => [unit, units.get(unit)!]);
+      return [...prioritized, ...remaining];
+    }
+    return Array.from(units.entries());
   }
 
   private buildAxisLabel(unit: string): string {

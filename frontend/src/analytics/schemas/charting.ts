@@ -172,6 +172,8 @@ export interface ChartSeries {
   label?: string;
   axis?: AxisBinding;
   unit?: string;
+  seriesGroup?: string;
+  noDots?: boolean;
   geometry: Geometry;
   stack?: string;
   color?: string;
