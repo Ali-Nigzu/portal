@@ -234,12 +234,26 @@ class AnalyticsEngine:
                 coverage_value = _coerce_number(record.get("coverage"))
                 raw_count_value = _coerce_number(record.get("raw_count"), cast=int)
 
+                occupancy_min_value = _coerce_number(record.get("occupancy_min"))
+                occupancy_max_value = _coerce_number(record.get("occupancy_max"))
+                occupancy_avg_value = _coerce_number(record.get("occupancy_avg"))
+
                 data_points.append(
                     {
                         "x": _to_iso(bucket),
                         "y": float(value) if value is not None else None,
+                        "value": float(value) if value is not None else None,
                         "coverage": float(coverage_value) if coverage_value is not None else None,
                         "rawCount": int(raw_count_value) if raw_count_value is not None else None,
+                        "occupancy_min": float(occupancy_min_value)
+                        if occupancy_min_value is not None
+                        else None,
+                        "occupancy_max": float(occupancy_max_value)
+                        if occupancy_max_value is not None
+                        else None,
+                        "occupancy_avg": float(occupancy_avg_value)
+                        if occupancy_avg_value is not None
+                        else None,
                     }
                 )
             series.append(
