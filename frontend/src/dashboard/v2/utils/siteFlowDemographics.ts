@@ -1,12 +1,43 @@
-import type { ChartResult, ChartSeries, ChartSpec } from "../../../analytics/schemas/charting";
-import type { DashboardWidget } from "../types";
+import type {
+  ChartResult,
+  ChartSeries,
+  ChartSpec,
+  TimeBucket,
+} from "../../../analytics/schemas/charting";
+import type { DashboardTimeRangeOption, DashboardWidget } from "../types";
 
 export type DemographicWidgetKind = "age" | "gender" | "hour" | "race";
+
+const resolveTimeWindow = (
+  timeRange: DashboardTimeRangeOption | null | undefined,
+  timezone: string | undefined,
+  anchor: Date,
+  bucketOverride?: TimeBucket,
+): ChartSpec["timeWindow"] => {
+  const to = anchor.toISOString();
+  const isAllTime = timeRange?.allTime ?? timeRange?.durationMinutes == null;
+  const durationMinutes = timeRange?.durationMinutes ?? 0;
+  const from = isAllTime
+    ? new Date(0).toISOString()
+    : new Date(anchor.getTime() - durationMinutes * 60_000).toISOString();
+
+  const timeWindow: ChartSpec["timeWindow"] = { from, to };
+  const bucket = bucketOverride ?? timeRange?.bucket;
+  if (bucket) {
+    timeWindow.bucket = bucket;
+  }
+  if (timezone) {
+    timeWindow.timezone = timezone;
+  }
+  return timeWindow;
+};
+
+const DEFAULT_DEMOGRAPHIC_TIME_WINDOW = resolveTimeWindow(null, undefined, new Date());
 
 const BASE_DEMOGRAPHIC_SPEC: Pick<ChartSpec, "dataset" | "chartType" | "timeWindow"> = {
   dataset: "events",
   chartType: "categorical",
-  timeWindow: { from: "", to: "" },
+  timeWindow: DEFAULT_DEMOGRAPHIC_TIME_WINDOW,
 };
 
 const demographicDimension: Record<DemographicWidgetKind, ChartSpec["dimensions"]> = {
@@ -100,9 +131,26 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
   },
 };
 
-export const buildDemographicsWidget = (kind: DemographicWidgetKind): DashboardWidget => ({
-  ...DEMOGRAPHIC_WIDGET_BASE[kind],
-});
+export const buildDemographicsWidget = (
+  kind: DemographicWidgetKind,
+  timeWindow: ChartSpec["timeWindow"],
+): DashboardWidget => {
+  const base = DEMOGRAPHIC_WIDGET_BASE[kind];
+  return {
+    ...base,
+    inlineSpec: {
+      ...(base.inlineSpec as ChartSpec),
+      timeWindow: { ...timeWindow },
+    },
+  };
+};
+
+export const resolveDemographicsTimeWindow = (
+  timeRange: DashboardTimeRangeOption | null | undefined,
+  timezone: string | undefined,
+  anchor: Date = new Date(),
+  bucketOverride?: TimeBucket,
+): ChartSpec["timeWindow"] => resolveTimeWindow(timeRange, timezone, anchor, bucketOverride);
 
 export const isSiteFlowWidget = (widget: DashboardWidget): boolean =>
   widget.id === "live-flow" || widget.chartSpecId === "dashboard.live_flow";

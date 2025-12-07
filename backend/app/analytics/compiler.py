@@ -89,6 +89,37 @@ def _parse_iso8601(value: object) -> datetime | None:
         return None
 
 
+def _normalize_timestamp_param(value: object, *, fallback: str, timezone: str | None = None) -> str:
+    """Return a safe ISO8601 timestamp for query parameters.
+
+    - Valid ISO8601 strings are normalized to include timezone info.
+    - Empty/invalid inputs fall back to the provided default to avoid TIMESTAMP("") errors.
+    """
+
+    parsed = _parse_iso8601(value)
+    if parsed is None:
+        return fallback
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=ZoneInfo(timezone or "UTC"))
+    else:
+        parsed = parsed.astimezone(ZoneInfo(timezone or "UTC"))
+    return parsed.isoformat()
+
+
+def _resolve_time_params(time_window: Dict[str, object], timezone: str) -> Tuple[str, str, str]:
+    """Ensure @start_ts/@end_ts/@now are always valid ISO strings."""
+
+    start_fallback = datetime.fromtimestamp(0, tz=ZoneInfo("UTC")).isoformat()
+    start_ts = _normalize_timestamp_param(time_window.get("from"), fallback=start_fallback, timezone=timezone)
+
+    end_fallback = _current_time(timezone, time_window.get("to"))
+    end_ts = _normalize_timestamp_param(time_window.get("to"), fallback=end_fallback, timezone=timezone)
+
+    now = _current_time(timezone, end_ts)
+    return start_ts, end_ts, now
+
+
 def _current_time(timezone: str, end_ts: object) -> str:
     tzinfo = ZoneInfo(timezone)
     now_in_tz = datetime.now(tzinfo)
@@ -223,10 +254,12 @@ class SpecCompiler:
         if vrm_occupancy_enabled:
             use_calendar = True
 
+        start_ts, end_ts, now = _resolve_time_params(time_window, timezone)
+
         params: Dict[str, object] = {
-            "start_ts": time_window["from"],
-            "end_ts": time_window["to"],
-            "now": _current_time(timezone, time_window.get("to")),
+            "start_ts": start_ts,
+            "end_ts": end_ts,
+            "now": now,
         }
 
         filters_sql = self._build_filters(spec.get("filters", []), params)

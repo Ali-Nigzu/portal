@@ -9,6 +9,7 @@ import type {
   DashboardManifest,
   DashboardWidget,
   DashboardWidgetState,
+  DashboardTimeRangeOption,
 } from "../types";
 import { fetchDashboardManifest, type FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import {
@@ -33,6 +34,7 @@ import {
   isSiteFlowWidget,
   type DemographicWidgetKind,
   mapChartResultsToDemographics,
+  resolveDemographicsTimeWindow,
   type SiteFlowDemographicsData,
 } from "../utils/siteFlowDemographics";
 
@@ -604,7 +606,7 @@ const DashboardV2Page = ({
   ]);
 
   useEffect(() => {
-    if (!siteFlowWidget || !manifest || !selectedTimeRange) {
+    if (!siteFlowWidget || !manifest) {
       setSiteFlowDemographics((previous) =>
         previous.status === "idle" ? previous : { status: "idle" },
       );
@@ -614,13 +616,22 @@ const DashboardV2Page = ({
     const controller = new AbortController();
     const timezone = manifest.timeControls?.timezone;
     const kinds: DemographicWidgetKind[] = ["age", "gender", "hour", "race"];
+    const resolvedTimeRange =
+      selectedTimeRange ?? ({
+        id: "all_time_default",
+        label: "All time",
+        durationMinutes: null,
+        allTime: true,
+      } satisfies DashboardTimeRangeOption);
+    const anchor = new Date();
+    const timeWindow = resolveDemographicsTimeWindow(resolvedTimeRange, timezone, anchor);
 
     setSiteFlowDemographics({ status: "loading" });
 
     const loadDemographic = async (kind: DemographicWidgetKind) =>
-      widgetResultLoaderImpl(buildDemographicsWidget(kind), {
+      widgetResultLoaderImpl(buildDemographicsWidget(kind, timeWindow), {
         signal: controller.signal,
-        timeRange: selectedTimeRange ?? undefined,
+        timeRange: resolvedTimeRange ?? undefined,
         timezone,
         orgId,
         viewToken,
