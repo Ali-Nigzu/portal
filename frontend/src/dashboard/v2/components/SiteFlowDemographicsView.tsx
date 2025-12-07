@@ -8,13 +8,13 @@ import type { SiteFlowDemographicsData, DemographicSlice } from "../utils/siteFl
 import "../styles/DashboardV2Page.css";
 
 const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSeries => {
-  const total = slices.reduce((sum, slice) => sum + (Number.isFinite(slice.value) ? slice.value : 0), 0);
+  const total = slices.reduce((sum, slice) => sum + (Number.isFinite(slice.count) ? slice.count : 0), 0);
   const safeTotal = total > 0 ? total : 1;
   return {
     id: `${title.toLowerCase().replace(/\s+/g, "-")}-demographics`,
     label: title,
     geometry: "bar",
-    data: slices.map((slice) => ({ x: slice.label, value: (slice.value / safeTotal) * 100 })),
+    data: slices.map((slice) => ({ x: slice.label, value: (slice.count / safeTotal) * 100 })),
   };
 };
 

@@ -25,7 +25,6 @@ _BUCKET_SECONDS = {
 
 _RETENTION_MIN_COHORT = 100
 _RETENTION_MAX_COHORTS = {"WEEK": 52, "MONTH": 24}
-_UNKNOWN_DIMENSION_VALUE = "Unknown"
 
 _BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
 
@@ -203,14 +202,14 @@ class SpecCompiler:
 
         time_window = spec["timeWindow"]
         timezone = time_window.get("timezone", context.timezone)
-        bucket = self._auto_bucket(
+        bucket = time_window.get("bucket", "RAW") if chart_type == "categorical" else self._auto_bucket(
             preferred=time_window.get("bucket", "RAW"),
             start=time_window.get("from"),
             end=time_window.get("to"),
             chart_type=chart_type,
         )
 
-        use_calendar = self._should_render_calendar(
+        use_calendar = False if chart_type == "categorical" else self._should_render_calendar(
             bucket=bucket,
             start=time_window.get("from"),
             end=time_window.get("to"),
@@ -261,10 +260,17 @@ class SpecCompiler:
                 cte_registry[name] = fragment
             select_statements.append(compilation.select_sql)
 
+        order_by = "bucket_start, measure_id"
+        if chart_type == "categorical" or any(
+            measure.get("aggregation") == "demographic_count" for measure in measures
+        ):
+            order_by = "category_value, measure_id"
+
         sql = self._assemble_sql(
             base_ctes=base_ctes,
             measure_ctes=cte_registry.values(),
             select_statements=select_statements,
+            order_by=order_by,
         )
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
@@ -630,10 +636,7 @@ class SpecCompiler:
 
     def _compile_condition(self, condition: Dict[str, object], params: Dict[str, object]) -> str:
         field = condition["field"]
-        if field in {"sex", "age_bucket", "race"}:
-            field_expr = f"COALESCE({field}, '{_UNKNOWN_DIMENSION_VALUE}')"
-        else:
-            field_expr = field
+        field_expr = f"CAST({field} AS STRING)" if field in {"sex", "age_bucket", "race"} else field
         operator = condition["op"]
         value = condition.get("value")
         param_base = re.sub(r"[^0-9A-Za-z_]", "_", field)
@@ -1352,10 +1355,16 @@ class SpecCompiler:
         if not column:
             raise ValidationError("demographic_count requires a dimension column")
         bucket_label = dimension.get("bucket")
-        if column == "timestamp" and bucket_label == "HOUR":
-            category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+        if column == "timestamp":
+            category_bucket = bucket_label or bucket
+            if category_bucket == "HOUR":
+                category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+            elif category_bucket and category_bucket != "RAW":
+                category_expr = _bucket_expression(category_bucket, field="scoped.timestamp")
+            else:
+                category_expr = "scoped.timestamp"
         else:
-            category_expr = f"COALESCE({column}, '{_UNKNOWN_DIMENSION_VALUE}')"
+            category_expr = f"CAST(scoped.{column} AS STRING)"
 
         measure_id = measure["id"]
         prefix = f"{measure_id}_demographics"

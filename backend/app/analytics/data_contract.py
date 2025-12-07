@@ -79,7 +79,6 @@ EVENT_TABLE_COLUMNS: Sequence[str] = (
     "Race",
 )
 
-UNKNOWN_DIMENSION_VALUE = "Unknown"
 
 
 def _ensure_timezone(value: datetime) -> datetime:
@@ -180,6 +179,8 @@ class QueryContext(BaseModel):
             conditions.append({"field": "sex", "op": "in", "value": list(self.sexes)})
         if self.age_buckets:
             conditions.append({"field": "age_bucket", "op": "in", "value": list(self.age_buckets)})
+        if self.races:
+            conditions.append({"field": "Race", "op": "in", "value": list(self.races)})
         if self.events:
             conditions.append({"field": "event", "op": "in", "value": list(self.events)})
         if conditions:
@@ -229,6 +230,8 @@ def _dimension_entry(dimension: Dimension, *, limit: int = 10) -> Dict[str, obje
         return {"id": "sex", "column": "sex", "sort": "asc"}
     if dimension == Dimension.AGE_BUCKET:
         return {"id": "age_bucket", "column": "age_bucket", "sort": "asc"}
+    if dimension == Dimension.RACE:
+        return {"id": "race", "column": "Race", "sort": "asc"}
     if dimension == Dimension.RETENTION_LAG:
         return {"id": "retention_lag", "column": "lag_weeks", "sort": "asc"}
     raise UnsupportedMetricDimensionCombination(f"Unknown dimension: {dimension}")
@@ -316,17 +319,18 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
     filters, params = _render_filters(ctx)
     sql = (
         "SELECT"
-        f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
-        f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket,"
+        " CAST(sex AS STRING) AS sex,"
+        " CAST(age_bucket AS STRING) AS age_bucket,"
+        " CAST(Race AS STRING) AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
-        " GROUP BY sex, age_bucket"
+        " GROUP BY sex, age_bucket, race"
     )
     return ContractQuery(
         metric=Metric.DEMOGRAPHICS,
-        dimensions=(Dimension.SEX, Dimension.AGE_BUCKET),
+        dimensions=(Dimension.SEX, Dimension.AGE_BUCKET, Dimension.RACE),
         sql=sql,
         params=params,
         measure_id="demographics",
@@ -343,8 +347,8 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
     params["offset"] = resolved_offset
     sql = (
         "SELECT track_id, event, timestamp,"
-        f" COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') AS sex,"
-        f" COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') AS age_bucket"
+        " CAST(sex AS STRING) AS sex,"
+        " CAST(age_bucket AS STRING) AS age_bucket"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
@@ -376,19 +380,13 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
         clauses.append("cam_id IN UNNEST(@camera_ids)")
     if ctx.sexes:
         params["sex_filters"] = ctx.sexes
-        clauses.append(
-            f"COALESCE(sex, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@sex_filters)"
-        )
+        clauses.append("CAST(sex AS STRING) IN UNNEST(@sex_filters)")
     if ctx.age_buckets:
         params["age_filters"] = ctx.age_buckets
-        clauses.append(
-            f"COALESCE(age_bucket, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@age_filters)"
-        )
+        clauses.append("CAST(age_bucket AS STRING) IN UNNEST(@age_filters)")
     if ctx.races:
         params["race_filters"] = ctx.races
-        clauses.append(
-            f"COALESCE(race, '{UNKNOWN_DIMENSION_VALUE}') IN UNNEST(@race_filters)"
-        )
+        clauses.append("CAST(Race AS STRING) IN UNNEST(@race_filters)")
     if ctx.events:
         params["event_filters"] = ctx.events
         clauses.append("event IN UNNEST(@event_filters)")
