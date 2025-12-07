@@ -123,7 +123,13 @@ class DataProcessor:
             hourly_df = cls._execute(hourly_plan, table_name=table_name, job="hourly")
             if not hourly_df.empty:
                 hourly_df = hourly_df[hourly_df["measure_id"] == hourly_plan.measure_id].copy()
-                hourly_df["hour"] = hourly_df["bucket_start"].dt.tz_convert("UTC").dt.hour
+                hourly_df["bucket_start"] = pd.to_datetime(hourly_df["bucket_start"], errors="coerce")
+                if hourly_df["bucket_start"].dt.tz is None:
+                    hourly_df["bucket_start"] = hourly_df["bucket_start"].dt.tz_localize("UTC")
+                else:
+                    hourly_df["bucket_start"] = hourly_df["bucket_start"].dt.tz_convert("UTC")
+                hourly_df.dropna(subset=["bucket_start"], inplace=True)
+                hourly_df["hour"] = hourly_df["bucket_start"].dt.hour
                 hourly_df.rename(columns={"value": "count"}, inplace=True)
                 hourly_df = (
                     hourly_df.groupby("hour", as_index=False)["count"]
