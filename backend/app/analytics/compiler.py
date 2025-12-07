@@ -513,8 +513,13 @@ class SpecCompiler:
     def _render_calendar(self, bucket: str, *, clamp_to_data: bool = False) -> str:
         if bucket == "RAW":
             raise ValidationError("Calendar requires bucketed time series")
+        window_start_expr = (
+            "GREATEST(TIMESTAMP(@start_ts), COALESCE(min_ts, TIMESTAMP(@start_ts)))"
+            if clamp_to_data
+            else "TIMESTAMP(@start_ts)"
+        )
         trunc_expr = (
-            _bucket_expression(bucket, field="window_start")
+            _bucket_expression(bucket, field=window_start_expr)
             if clamp_to_data
             else _bucket_trunc_expression(bucket)
         )
@@ -531,7 +536,7 @@ class SpecCompiler:
                 ),
                 {WINDOW_BOUNDS_CTE} AS (
                     SELECT
-                        GREATEST(TIMESTAMP(@start_ts), COALESCE(min_ts, TIMESTAMP(@start_ts))) AS window_start,
+                        {window_start_expr} AS window_start,
                         LEAST(TIMESTAMP(@end_ts), COALESCE(max_ts, TIMESTAMP(@end_ts))) AS window_end,
                         {trunc_expr} AS aligned_start
                     FROM calendar_data_bounds
