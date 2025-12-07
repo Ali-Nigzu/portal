@@ -1230,7 +1230,10 @@ class SpecCompiler:
                         WHEN seeded_by_exit THEN LEAST(0.5, SAFE_DIVIDE(window_seconds, bucket_seconds))
                         ELSE SAFE_DIVIDE(window_seconds, bucket_seconds)
                     END AS coverage,
-                    event_count AS raw_count
+                    event_count AS raw_count,
+                    value AS occupancy_min,
+                    value AS occupancy_max,
+                    value AS occupancy_avg
                 FROM {prefix}_filled
             )
             """
@@ -1238,7 +1241,7 @@ class SpecCompiler:
 
         select_sql = (
             f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, "
-            "CAST(NULL AS FLOAT64) AS occupancy_min, CAST(NULL AS FLOAT64) AS occupancy_max, CAST(NULL AS FLOAT64) AS occupancy_avg "
+            "occupancy_min, occupancy_max, occupancy_avg "
             f"FROM {prefix}_series"
         )
         return MeasureCompilation(
