@@ -27,6 +27,15 @@ import {
   lastBucketValue,
   resolveUiClient,
 } from "../utils/vrmDecorators";
+import {
+  SiteFlowDemographicsView,
+  type SiteFlowDemographicsData,
+} from "../components/SiteFlowDemographicsView";
+import {
+  buildDemographicsWidget,
+  isSiteFlowWidget,
+  type DemographicWidgetKind,
+} from "../utils/siteFlowDemographics";
 
 export { lookupCapacity } from "../utils/vrmDecorators";
 
@@ -197,6 +206,84 @@ const ChartCard = ({
   );
 };
 
+const SiteFlowCard = ({
+  state,
+  result,
+  subtitle,
+  locked,
+  onRemove,
+  widgetId,
+  mode,
+  onModeChange,
+  demographics,
+}: {
+  state: DashboardWidgetState;
+  result?: Parameters<typeof ChartRenderer>[0]["result"];
+  subtitle?: string;
+  locked?: boolean;
+  onRemove?: () => void;
+  widgetId: string;
+  mode: "activity" | "demographics";
+  onModeChange: (mode: "activity" | "demographics") => void;
+  demographics: { status: "idle" | "loading" | "ready" | "error"; data?: SiteFlowDemographicsData; error?: string };
+}) => {
+  const renderSiteFlowBody = () => {
+    if (mode === "demographics") {
+      if (demographics.status === "loading") {
+        return renderLoading("Demographics");
+      }
+      if (demographics.status === "error") {
+        return renderError(demographics.error ?? "Failed to load demographics");
+      }
+      if (demographics.status !== "ready" || !demographics.data) {
+        return renderError("No demographics available");
+      }
+      return <SiteFlowDemographicsView data={demographics.data} />;
+    }
+
+    if (state.status === "loading") {
+      return renderLoading("Site Flow");
+    }
+    if (state.status === "error") {
+      return renderError(state.error ?? "Failed to load Site Flow");
+    }
+    if (!result) {
+      return renderError("No data available");
+    }
+    return <ChartRenderer result={result} height={360} widgetId={widgetId} />;
+  };
+
+  const footer = !locked && onRemove ? (
+    <div className="dashboard-v2__widget-footer">
+      <button type="button" className="dashboard-v2__remove-button" onClick={onRemove}>
+        Unpin
+      </button>
+    </div>
+  ) : undefined;
+
+  return (
+    <Card
+      title="Site Flow"
+      subtitle={subtitle}
+      className="dashboard-v2__chart-card vrm-card vrm-card--chart-panel"
+      footer={footer}
+      dateSelector={
+        <select
+          className="vrm-select"
+          aria-label="Select Site Flow view"
+          value={mode}
+          onChange={(event) => onModeChange(event.target.value as "activity" | "demographics")}
+        >
+          <option value="activity">Activity</option>
+          <option value="demographics">Demographics</option>
+        </select>
+      }
+    >
+      {renderSiteFlowBody()}
+    </Card>
+  );
+};
+
 const buildGridStyle = (placement?: DashboardGridPlacement) => {
   if (!placement) {
     return undefined;
@@ -229,6 +316,14 @@ const DashboardV2Page = ({
   const [selectedTimeRangeId, setSelectedTimeRangeId] = useState<string | null>(null);
   const [runNonce, setRunNonce] = useState(0);
   const [localTime, setLocalTime] = useState<Date>(() => new Date());
+  const [siteFlowMode, setSiteFlowMode] = useState<"activity" | "demographics">(
+    "activity",
+  );
+  const [siteFlowDemographics, setSiteFlowDemographics] = useState<{
+    status: "idle" | "loading" | "ready" | "error";
+    data?: SiteFlowDemographicsData;
+    error?: string;
+  }>({ status: "idle" });
   const abortControllerRef = useRef<AbortController | null>(null);
   const vrmDebugEnabled = useMemo(() => {
     if (typeof window === "undefined") {
@@ -366,6 +461,11 @@ const DashboardV2Page = ({
     );
   }, [manifest, selectedTimeRangeId]);
 
+  const siteFlowWidget = useMemo(
+    () => manifest?.widgets.find((widget) => isSiteFlowWidget(widget)) ?? null,
+    [manifest],
+  );
+
   useEffect(() => {
     if (!manifest) {
       return;
@@ -502,6 +602,137 @@ const DashboardV2Page = ({
     orgId,
     viewToken,
     clientContextId,
+  ]);
+
+  useEffect(() => {
+    if (!siteFlowWidget || !manifest || !selectedTimeRange) {
+      setSiteFlowDemographics((previous) =>
+        previous.status === "idle" ? previous : { status: "idle" },
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    const timezone = manifest.timeControls?.timezone;
+    const kinds: DemographicWidgetKind[] = ["age", "gender", "hour", "race"];
+
+    setSiteFlowDemographics({ status: "loading" });
+
+    const loadDemographic = async (kind: DemographicWidgetKind) =>
+      widgetResultLoaderImpl(buildDemographicsWidget(kind), {
+        signal: controller.signal,
+        timeRange: selectedTimeRange ?? undefined,
+        timezone,
+        orgId,
+        viewToken,
+      });
+
+    Promise.all(kinds.map((kind) => loadDemographic(kind)))
+      .then(([ageResult, genderResult, hourResult, raceResult]) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const toNumeric = (point: { value?: number | null; y?: number | null }) => {
+          const raw = point.value ?? point.y ?? null;
+          return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+        };
+
+        const mapLabel = (label: string, kind: DemographicWidgetKind) => {
+          const normalized = label.trim();
+          if (kind === "age") {
+            const ageMap: Record<string, string> = {
+              "0": "0–4",
+              "1": "5–13",
+              "2": "14–25",
+              "3": "26–45",
+              "4": "46–65",
+              "5": "66+",
+            };
+            return ageMap[normalized] ?? normalized;
+          }
+          if (kind === "gender") {
+            const genderMap: Record<string, string> = {
+              "0": "Male",
+              "1": "Female",
+            };
+            return genderMap[normalized] ?? normalized;
+          }
+          if (kind === "race") {
+            const raceMap: Record<string, string> = {
+              "0": "Light",
+              "1": "Mix",
+              "2": "Dark",
+            };
+            return raceMap[normalized] ?? normalized;
+          }
+          return normalized;
+        };
+
+        const mapSeries = (
+          result?: Parameters<typeof ChartRenderer>[0]["result"],
+          kind?: DemographicWidgetKind,
+        ) => {
+          const series = result?.series?.[0];
+          if (!series) return [] as Array<{ label: string; value: number }>;
+          return (series.data ?? [])
+            .map((point) => ({
+              label: mapLabel(String(point.x ?? ""), kind ?? "age"),
+              value: toNumeric(point),
+            }))
+            .filter((entry) => entry.label !== "");
+        };
+
+        const mapHours = (result?: Parameters<typeof ChartRenderer>[0]["result"]) => {
+          const series = result?.series?.[0];
+          if (!series) return [] as Array<{ label: string; value: number }>;
+          return (series.data ?? [])
+            .map((point) => {
+              const value = toNumeric(point);
+              const rawHour = typeof point.x === "number" ? point.x : Number(point.x ?? null);
+              const label = Number.isFinite(rawHour)
+                ? `${String(rawHour).padStart(2, "0")}:00`
+                : String(point.x ?? "");
+              return { label, value };
+            })
+            .filter((entry) => entry.value > 0 && entry.label !== "");
+        };
+
+        const resolvedTimezone =
+          ageResult?.meta?.timezone ??
+          genderResult?.meta?.timezone ??
+          hourResult?.meta?.timezone ??
+          raceResult?.meta?.timezone ??
+          timezone ??
+          "UTC";
+
+        const data: SiteFlowDemographicsData = {
+          age: mapSeries(ageResult, "age"),
+          gender: mapSeries(genderResult, "gender"),
+          race: mapSeries(raceResult, "race"),
+          hour: mapHours(hourResult),
+          timezone: resolvedTimezone,
+        };
+
+        setSiteFlowDemographics({ status: "ready", data });
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : "Failed to load demographics";
+        setSiteFlowDemographics({ status: "error", error: message });
+      });
+
+    return () => controller.abort();
+  }, [
+    manifest,
+    widgetResultLoaderImpl,
+    orgId,
+    viewToken,
+    selectedTimeRange,
+    siteFlowWidget,
+    runNonce,
   ]);
 
   const kpiWidgets = useMemo(() => {
@@ -744,17 +975,33 @@ const DashboardV2Page = ({
                 className="dashboard-v2__grid-item"
                 style={buildGridStyle(placement)}
               >
-                <ChartCard
-                  title={state.widget.title}
-                  subtitle={state.widget.subtitle}
-                  state={state}
-                  result={state.result}
-                  locked={state.widget.locked}
-                  widgetId={state.widget.id}
-                  onRemove={
-                    state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
-                  }
-                />
+                {isSiteFlowWidget(state.widget) ? (
+                  <SiteFlowCard
+                    subtitle={state.widget.subtitle}
+                    state={state}
+                    result={state.result}
+                    locked={state.widget.locked}
+                    widgetId={state.widget.id}
+                    onRemove={
+                      state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
+                    }
+                    mode={siteFlowMode}
+                    onModeChange={setSiteFlowMode}
+                    demographics={siteFlowDemographics}
+                  />
+                ) : (
+                  <ChartCard
+                    title={state.widget.title}
+                    subtitle={state.widget.subtitle}
+                    state={state}
+                    result={state.result}
+                    locked={state.widget.locked}
+                    widgetId={state.widget.id}
+                    onRemove={
+                      state.widget.locked ? undefined : () => handleUnpinWidget(state.widget.id)
+                    }
+                  />
+                )}
               </div>
             ))
           )}

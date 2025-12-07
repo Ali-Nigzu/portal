@@ -22,6 +22,7 @@ _GEOMETRY_MAP = {
     "dwell_mean": "line",
     "dwell_p90": "line",
     "sessions": "column",
+    "demographic_count": "bar",
     "retention_rate": "heatmap",
 }
 
@@ -41,6 +42,7 @@ _UNIT_MAP = {
     "dwell_mean": "minutes",
     "dwell_p90": "minutes",
     "sessions": "count",
+    "demographic_count": "events",
     "retention_rate": "percentage",
 }
 
@@ -166,7 +168,64 @@ class AnalyticsEngine:
             return self._normalise_time_series(spec, compiled, frame)
         if chart_type in {"heatmap", "retention"}:
             return self._normalise_heatmap(spec, compiled, frame)
+        if chart_type == "categorical":
+            return self._normalise_categorical(spec, compiled, frame)
         raise UnsupportedChartExecution(chart_type)
+
+    def _normalise_categorical(
+        self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame
+    ) -> Dict[str, Any]:
+        measures = compiled.measures
+        timezone = spec["timeWindow"].get("timezone", "UTC")
+        series: List[Dict[str, Any]] = []
+
+        for measure_id, aggregation in measures.items():
+            subset = frame[frame["measure_id"] == measure_id]
+            data_points: List[Dict[str, Any]] = []
+            for record in subset.to_dict("records"):
+                label = record.get("category_value")
+                if label is None or (hasattr(pd, "isna") and pd.isna(label)):
+                    continue
+                value = _coerce_number(record.get("value"))
+                data_points.append(
+                    {
+                        "x": str(label),
+                        "value": float(value) if value is not None else None,
+                        "y": float(value) if value is not None else None,
+                    }
+                )
+            series.append(
+                {
+                    "id": measure_id,
+                    "label": _label_for_series(measure_id, aggregation),
+                    "geometry": _GEOMETRY_MAP.get(aggregation, "bar"),
+                    "axis": _AXIS_MAP.get(aggregation),
+                    "unit": _UNIT_MAP.get(aggregation),
+                    "data": data_points,
+                }
+            )
+
+        dimension = spec["dimensions"][0]
+        x_dimension = {
+            "id": dimension["id"],
+            "type": "category",
+            "bucket": None,
+            "timezone": timezone,
+        }
+
+        meta: Dict[str, Any] = {
+            "timezone": timezone,
+            "coverage": [],
+            "surges": [],
+            "summary": {"points": len(frame), "measures": list(measures.keys())},
+        }
+
+        return {
+            "chartType": "categorical",
+            "xDimension": x_dimension,
+            "series": series,
+            "meta": meta,
+        }
 
     def _normalise_single_value(
         self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame
