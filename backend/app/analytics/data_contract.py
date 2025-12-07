@@ -180,7 +180,7 @@ class QueryContext(BaseModel):
         if self.age_buckets:
             conditions.append({"field": "age_bucket", "op": "in", "value": list(self.age_buckets)})
         if self.races:
-            conditions.append({"field": "Race", "op": "in", "value": list(self.races)})
+            conditions.append({"field": "race", "op": "in", "value": list(self.races)})
         if self.events:
             conditions.append({"field": "event", "op": "in", "value": list(self.events)})
         if conditions:
@@ -231,7 +231,7 @@ def _dimension_entry(dimension: Dimension, *, limit: int = 10) -> Dict[str, obje
     if dimension == Dimension.AGE_BUCKET:
         return {"id": "age_bucket", "column": "age_bucket", "sort": "asc"}
     if dimension == Dimension.RACE:
-        return {"id": "race", "column": "Race", "sort": "asc"}
+        return {"id": "race", "column": "race", "sort": "asc"}
     if dimension == Dimension.RETENTION_LAG:
         return {"id": "retention_lag", "column": "lag_weeks", "sort": "asc"}
     raise UnsupportedMetricDimensionCombination(f"Unknown dimension: {dimension}")
