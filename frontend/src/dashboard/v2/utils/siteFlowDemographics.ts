@@ -112,46 +112,61 @@ const toNumeric = (point: { value?: number | null; y?: number | null }): number 
   return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
 };
 
-const toLabel = (raw: string, kind: DemographicWidgetKind): string => {
-  const normalized = raw.trim();
-  if (kind === "age") {
-    const ageMap: Record<string, string> = {
-      "0": "0–4",
-      "0-4": "0–4",
-      "1": "5–13",
-      "5-13": "5–13",
-      "2": "14–25",
-      "14-25": "14–25",
-      "3": "26–45",
-      "26-45": "26–45",
-      "4": "46–65",
-      "46-65": "46–65",
-      "5": "66+",
-      "66+": "66+",
-    };
-    return ageMap[normalized] ?? normalized;
+const normalizeCode = (code: string | number): number | null => {
+  if (typeof code === "number" && Number.isFinite(code)) return code;
+  const parsed = Number(String(code).trim());
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+export const mapAgeLabel = (code: string | number): string => {
+  const normalized = normalizeCode(code);
+  switch (normalized) {
+    case 0:
+      return "0–4";
+    case 1:
+      return "5–13";
+    case 2:
+      return "14–25";
+    case 3:
+      return "26–45";
+    case 4:
+      return "46–65";
+    case 5:
+      return "66+";
+    default:
+      return String(code).trim() || "Unknown";
   }
-  if (kind === "gender") {
-    const genderMap: Record<string, string> = {
-      "0": "Male",
-      "Male": "Male",
-      "1": "Female",
-      "Female": "Female",
-    };
-    return genderMap[normalized] ?? normalized;
+};
+
+export const mapGenderLabel = (code: string | number): string => {
+  const normalized = normalizeCode(code);
+  switch (normalized) {
+    case 0:
+      return "Male";
+    case 1:
+      return "Female";
+    default:
+      return String(code).trim() || "Unknown";
   }
-  if (kind === "race") {
-    const raceMap: Record<string, string> = {
-      "0": "Light",
-      "Light": "Light",
-      "1": "Mix",
-      "Mix": "Mix",
-      "2": "Dark",
-      "Dark": "Dark",
-    };
-    return raceMap[normalized] ?? normalized;
+};
+
+export const mapRaceLabel = (code: string | number): string => {
+  const normalized = normalizeCode(code);
+  switch (normalized) {
+    case 0:
+      return "Light";
+    case 1:
+      return "Mix";
+    case 2:
+      return "Dark";
+    default:
+      return String(code).trim() || "Unknown";
   }
-  return normalized;
+};
+
+export const formatHourLabel = (hour: number): string => {
+  const safeHour = Math.max(0, Math.min(23, Math.trunc(hour)));
+  return `${String(safeHour).padStart(2, "0")}:00`;
 };
 
 const mapSeries = (
@@ -161,10 +176,21 @@ const mapSeries = (
   const series: ChartSeries | undefined = result?.series?.[0];
   if (!series) return [];
   return (series.data ?? [])
-    .map((point) => ({
-      label: toLabel(String(point.x ?? ""), kind),
-      count: toNumeric(point),
-    }))
+    .map((point) => {
+      const raw = point.x ?? "";
+      const baseLabel =
+        kind === "age"
+          ? mapAgeLabel(raw as string | number)
+          : kind === "gender"
+            ? mapGenderLabel(raw as string | number)
+            : kind === "race"
+              ? mapRaceLabel(raw as string | number)
+              : String(raw);
+      return {
+        label: baseLabel,
+        count: toNumeric(point),
+      };
+    })
     .filter((entry) => entry.label !== "");
 };
 
@@ -174,12 +200,20 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
   return (series.data ?? [])
     .map((point) => {
       const count = toNumeric(point);
-      const rawHour = typeof point.x === "number" ? point.x : Number(point.x ?? null);
-      const hour = Number.isFinite(rawHour) ? Number(rawHour) : NaN;
+      const rawHour =
+        typeof point.x === "number"
+          ? point.x
+          : Number(point.x ?? null);
+      const hourFromNumber = Number.isFinite(rawHour) ? Number(rawHour) : null;
+      const parsedFromDate =
+        hourFromNumber === null && point.x != null
+          ? new Date(String(point.x)).getHours()
+          : null;
+      const hour = hourFromNumber ?? (Number.isFinite(parsedFromDate) ? parsedFromDate : NaN);
       return {
         hour,
         count,
-        label: Number.isFinite(hour) ? `${String(hour).padStart(2, "0")}:00` : String(point.x ?? ""),
+        label: Number.isFinite(hour) ? formatHourLabel(hour) : String(point.x ?? ""),
       };
     })
     .filter((entry) => entry.count > 0 && entry.label !== "" && Number.isFinite(entry.hour));
