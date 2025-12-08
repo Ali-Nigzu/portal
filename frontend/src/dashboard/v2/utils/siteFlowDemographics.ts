@@ -156,6 +156,7 @@ export const isSiteFlowWidget = (widget: DashboardWidget): boolean =>
   widget.id === "live-flow" || widget.chartSpecId === "dashboard.live_flow";
 
 export interface DemographicSlice {
+  code: string | number | null;
   label: string;
   count: number;
 }
@@ -185,16 +186,37 @@ const toNumeric = (point: { value?: number | null; y?: number | null }): number 
   return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
 };
 
+const AGE_LABELS = new Set(["0–4", "5–13", "14–25", "26–45", "46–65", "66+", "Unknown"]);
+const GENDER_LABELS = new Set(["Male", "Female", "Unknown"]);
+const RACE_LABELS = new Set(["Light", "Mix", "Dark", "Unknown"]);
+
 const normalizeCode = (code: string | number): number | null => {
-  if (typeof code === "number" && Number.isFinite(code)) return code;
+  if (typeof code === "number" && Number.isFinite(code)) {
+    return Math.trunc(code);
+  }
+
   if (typeof code === "string") {
-    const match = code.trim().match(/(-?\d+)\s*$/);
-    if (match) {
-      const parsed = Number(match[1]);
-      return Number.isFinite(parsed) ? parsed : null;
+    const trimmed = code.trim();
+    if (/^-?\d+$/.test(trimmed)) {
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
     }
   }
+
   return null;
+};
+
+const ensureAllowedLabel = (kind: DemographicWidgetKind, label: string): string => {
+  if (kind === "age") {
+    return AGE_LABELS.has(label) ? label : "Unknown";
+  }
+  if (kind === "gender") {
+    return GENDER_LABELS.has(label) ? label : "Unknown";
+  }
+  if (kind === "race") {
+    return RACE_LABELS.has(label) ? label : "Unknown";
+  }
+  return label;
 };
 
 export const mapAgeLabel = (code: string | number): string => {
@@ -254,11 +276,11 @@ const mapSeries = (
 ): DemographicSlice[] => {
   const series: ChartSeries | undefined = result?.series?.[0];
   if (!series) return [];
-  const aggregated = new Map<string, number>();
+  const aggregated = new Map<string, { count: number; code: string | number | null }>();
 
   (series.data ?? []).forEach((point) => {
     const raw = point.x ?? "";
-    const baseLabel =
+    const mappedLabel =
       kind === "age"
         ? mapAgeLabel(raw as string | number)
         : kind === "gender"
@@ -266,14 +288,41 @@ const mapSeries = (
           : kind === "race"
             ? mapRaceLabel(raw as string | number)
             : "Unknown";
+    const baseLabel = ensureAllowedLabel(kind, mappedLabel);
     const nextCount = toNumeric(point);
     if (baseLabel === "" || nextCount <= 0) {
       return;
     }
-    aggregated.set(baseLabel, (aggregated.get(baseLabel) ?? 0) + nextCount);
+    const existing = aggregated.get(baseLabel);
+    const currentCount = existing?.count ?? 0;
+    const currentCode = existing?.code ?? null;
+    const nextCode = currentCode ?? (raw as string | number | null);
+    aggregated.set(baseLabel, { count: currentCount + nextCount, code: nextCode });
   });
 
-  return Array.from(aggregated.entries()).map(([label, count]) => ({ label, count }));
+  return Array.from(aggregated.entries()).map(([label, { count, code }]) => ({
+    label,
+    count,
+    code,
+  }));
+};
+
+const parseHour = (raw: unknown): number | null => {
+  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 0 && raw <= 23) {
+    return raw;
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (/^\d{1,2}$/.test(trimmed)) {
+      const parsed = Number.parseInt(trimmed, 10);
+      if (parsed >= 0 && parsed <= 23) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
 };
 
 const mapHours = (result: ChartResult | undefined): HourSlice[] => {
@@ -282,7 +331,7 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
   const aggregated = new Map<number, number>();
 
   (series.data ?? []).forEach((point) => {
-    const hour = normalizeCode(point.x as string | number);
+    const hour = parseHour(point.x as string | number);
     if (hour == null || hour < 0 || hour > 23) {
       return;
     }
@@ -293,6 +342,7 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
 
   return Array.from(aggregated.entries())
     .map(([hour, count]) => ({
+      code: hour,
       hour,
       label: formatHourLabel(hour),
       count,

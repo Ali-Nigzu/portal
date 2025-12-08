@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
+from numbers import Number
 from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
@@ -187,9 +189,19 @@ class AnalyticsEngine:
                 if label is None or (hasattr(pd, "isna") and pd.isna(label)):
                     continue
                 value = _coerce_number(record.get("value"))
+
+                if isinstance(label, pd.Timestamp):
+                    x_value: object = int(label.hour)
+                elif isinstance(label, datetime):
+                    x_value = label.hour
+                elif isinstance(label, Number):
+                    x_value = int(label)
+                else:
+                    x_value = str(label)
+
                 data_points.append(
                     {
-                        "x": str(label),
+                        "x": x_value,
                         "value": float(value) if value is not None else None,
                         "y": float(value) if value is not None else None,
                     }
