@@ -1,7 +1,8 @@
 """Table routing helpers for ChartSpec execution."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 from typing import Dict
 
 
@@ -14,6 +15,8 @@ class TableRouter:
     """Resolve organisation identifiers to fully-qualified BigQuery table names."""
 
     mapping: Dict[str, str]
+    timestamp_columns: Dict[str, str] = field(default_factory=dict)
+    default_event_timestamp_column: str = "timestamp"
 
     def resolve(self, organisation: str) -> str:
         try:
@@ -25,3 +28,20 @@ class TableRouter:
                 "Table names must be fully-qualified in the form project.dataset.table"
             )
         return table_name
+
+    def resolve_event_timestamp_column(self, organisation: str) -> str:
+        """Return the raw event timestamp column for an organisation.
+
+        Preference order:
+        1. Per-organisation override provided to the router.
+        2. ``EVENT_TIMESTAMP_COLUMN`` environment variable (global default).
+        3. Hardcoded fallback to ``timestamp``.
+        """
+
+        override = self.timestamp_columns.get(organisation)
+        if override:
+            return override
+        env_default = os.getenv("EVENT_TIMESTAMP_COLUMN")
+        if env_default:
+            return env_default
+        return self.default_event_timestamp_column

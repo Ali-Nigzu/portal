@@ -91,8 +91,10 @@ def test_demographics_hour_pipeline_prefers_event_timestamp_column(monkeypatch):
         return multi_hour if "event_ts" in sql else single_hour
 
     stub = StubBigQueryClient(single_hour, sql_resolver=resolver)
+
+    default_router = TableRouter({"org": "project.dataset.table"})
     engine = AnalyticsEngine(
-        table_router=TableRouter({"org": "project.dataset.table"}),
+        table_router=default_router,
         bigquery_client=stub,
         cache=SpecCache(LocalCacheBackend(), default_ttl=60),
     )
@@ -104,9 +106,18 @@ def test_demographics_hour_pipeline_prefers_event_timestamp_column(monkeypatch):
     assert baseline_keys == {"0"}
     assert "event_ts" not in first_sql
 
-    monkeypatch.setenv("EVENT_TIMESTAMP_COLUMN", "event_ts")
+    override_router = TableRouter(
+        {"org": "project.dataset.table"}, timestamp_columns={"org": "event_ts"}
+    )
+    adjusted_engine = AnalyticsEngine(
+        table_router=override_router,
+        bigquery_client=stub,
+        cache=SpecCache(LocalCacheBackend(), default_ttl=60),
+    )
 
-    adjusted = engine.execute(_demographics_hour_spec(), organisation="org", bypass_cache=True)
+    adjusted = adjusted_engine.execute(
+        _demographics_hour_spec(), organisation="org", bypass_cache=True
+    )
     adjusted_keys = {point.get("x") for point in adjusted["series"][0].get("data", [])}
     second_sql = stub.last_sql or ""
 

@@ -160,6 +160,7 @@ class AnalyticsEngine:
         cache_ttl: Optional[int] = None,
     ) -> Dict[str, Any]:
         table_name = self.table_router.resolve(organisation)
+        event_timestamp_column = self.table_router.resolve_event_timestamp_column(organisation)
         logger.info(
             "analytics.run.resolved_table org=%s table=%s",
             organisation,
@@ -172,7 +173,12 @@ class AnalyticsEngine:
             if cached is not None:
                 return cached
 
-        compiled = self.compiler.compile(spec, CompilerContext(table_name=table_name))
+        compiled = self.compiler.compile(
+            spec,
+            CompilerContext(
+                table_name=table_name, event_timestamp_column=event_timestamp_column
+            ),
+        )
         if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
             logger.info(
                 "analytics.debug.hour.compiled_sql",
