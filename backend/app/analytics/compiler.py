@@ -544,6 +544,7 @@ class SpecCompiler:
                         ) AS index,
                         track_id,
                         event,
+                        -- Keep event timestamp raw for downstream hour extraction (no truncation).
                         timestamp,
                         age_bucket AS age_bucket,
                         sex AS sex,
