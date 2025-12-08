@@ -1,4 +1,7 @@
-import { mapChartResultsToDemographics } from "./siteFlowDemographics";
+import {
+  mapChartResultsToDemographics,
+  resolveDemographicsTimeWindow,
+} from "./siteFlowDemographics";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 
 describe("mapHours", () => {
@@ -53,5 +56,18 @@ describe("mapHours", () => {
 
     expect(result.hour).toHaveLength(2);
     expect(result.hour.map((slice) => slice.hour)).toEqual([3, 4]);
+  });
+});
+
+describe("resolveDemographicsTimeWindow", () => {
+  it("uses a bounded default instead of epoch when no range is provided", () => {
+    const anchor = new Date("2024-02-01T12:00:00Z");
+
+    const window = resolveDemographicsTimeWindow(null, undefined, anchor);
+
+    expect(window.to).toBe(anchor.toISOString());
+    expect(new Date(window.from).getTime()).toBe(
+      anchor.getTime() - 30 * 24 * 60 * 60 * 1000,
+    );
   });
 });

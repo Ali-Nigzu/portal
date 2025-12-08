@@ -106,6 +106,18 @@ def test_analytics_run_endpoint_returns_unknown_org_for_missing_mapping(client, 
     assert payload["detail"]["error"] == "unknown_org"
 
 
+@pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
+def test_analytics_run_endpoint_applies_default_time_window(client, endpoint):
+    http_client, calls = client
+    spec = _build_spec()
+    spec.pop("timeWindow", None)
+
+    response = http_client.post(endpoint, json={"spec": spec, "orgId": "client0"})
+
+    assert response.status_code == 200
+    assert calls["count"] == 1
+
+
 def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
     http_client, calls = client
 
@@ -138,5 +150,5 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert captured.get("org_id") == "client0"
+    assert captured.get("org_id") == "demodata0.client0"
     assert calls["count"] == 1

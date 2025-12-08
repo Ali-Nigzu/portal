@@ -1,3 +1,5 @@
+import pytest
+
 from backend.app.analytics.router import TableRouter
 
 
@@ -54,3 +56,33 @@ def test_table_router_ignores_missing_override(monkeypatch):
         )
         == "timestamp"
     )
+
+
+def test_table_router_rejects_disallowed_override(monkeypatch):
+    monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
+    router = TableRouter(
+        {"org": "project.dataset.table"}, timestamp_columns={"org": "bucket_start"}
+    )
+
+    def _schema(table_name: str):
+        assert table_name == "project.dataset.table"
+        return ["bucket_start", "timestamp"]
+
+    with pytest.raises(ValueError):
+        router.resolve_event_timestamp_column(
+            "org", table_name="project.dataset.table", schema_loader=_schema
+        )
+
+
+def test_table_router_errors_when_only_disallowed_columns(monkeypatch):
+    monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
+    router = TableRouter({"org": "project.dataset.table"})
+
+    def _schema(table_name: str):
+        assert table_name == "project.dataset.table"
+        return ["bucket_start", "site_id"]
+
+    with pytest.raises(ValueError):
+        router.resolve_event_timestamp_column(
+            "org", table_name="project.dataset.table", schema_loader=_schema
+        )

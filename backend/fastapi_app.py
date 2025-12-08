@@ -47,6 +47,7 @@ from backend.app.analytics.contracts import (
     validate_chart_spec,
     ValidationError as ContractValidationError,
 )
+from backend.app.analytics.time_windows import ensure_time_window
 from backend.app.analytics.dashboard_catalogue import (
     ManifestValidationError,
     get_dashboard_manifest,
@@ -694,8 +695,9 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
         "analytics.run.start",
         extra={"spec_id": payload.spec.get("id"), "org": payload.org_id},
     )
+    spec = ensure_time_window(dict(payload.spec))
     try:
-        validate_chart_spec(payload.spec)
+        validate_chart_spec(spec)
     except ContractValidationError as exc:
         logger.warning("Analytics spec validation failed: %s", exc)
         raise HTTPException(
@@ -710,7 +712,7 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
     )
     if ANALYTICS_OFFLINE_MODE:
         try:
-            result = build_offline_chart_result(payload.spec)
+            result = build_offline_chart_result(spec)
             logger.info(
                 "analytics.run.offline_result",
                 extra={"spec_id": payload.spec.get("id"), "org": org_id},
@@ -735,7 +737,7 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
 
         try:
             result = engine.execute(
-                payload.spec,
+                spec,
                 organisation=org_id,
                 bypass_cache=payload.bypass_cache,
                 cache_ttl=payload.cache_ttl_seconds,
