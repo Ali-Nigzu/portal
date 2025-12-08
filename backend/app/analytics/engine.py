@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from numbers import Number
@@ -50,6 +51,23 @@ _UNIT_MAP = {
 
 
 logger = logging.getLogger(__name__)
+
+
+_DEMOGRAPHICS_HOUR_DEBUG = os.getenv("DEMOGRAPHICS_HOUR_DEBUG", "").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+
+
+def _is_demographics_hour_spec(spec: Dict[str, Any]) -> bool:
+    """Return True when the spec represents the demographics hour chart."""
+
+    dimension = (spec.get("dimensions") or [{}])[0]
+    return (
+        spec.get("id") == "dashboard.site_flow.demographics.hour"
+        or (dimension.get("column") == "timestamp" and dimension.get("bucket") == "HOUR")
+    )
 
 
 def _label_for_series(measure_id: str, aggregation: str) -> str:
@@ -155,6 +173,15 @@ class AnalyticsEngine:
                 return cached
 
         compiled = self.compiler.compile(spec, CompilerContext(table_name=table_name))
+        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
+            logger.info(
+                "analytics.debug.hour.compiled_sql",
+                extra={
+                    "spec_id": spec.get("id"),
+                    "sql": compiled.sql,
+                    "params": compiled.params,
+                },
+            )
         try:
             frame = self.bigquery_client.query_dataframe(
                 compiled.sql,
@@ -196,6 +223,16 @@ class AnalyticsEngine:
         timezone = spec["timeWindow"].get("timezone", "UTC")
         series: List[Dict[str, Any]] = []
 
+        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
+            logger.info(
+                "analytics.debug.hour.raw_frame",
+                extra={
+                    "spec_id": spec.get("id"),
+                    "columns": list(frame.columns),
+                    "rows": frame.head(50).to_dict("records"),
+                },
+            )
+
         for measure_id, aggregation in measures.items():
             subset = frame[frame["measure_id"] == measure_id]
             buckets: Dict[str, Dict[str, Any]] = {}
@@ -235,6 +272,16 @@ class AnalyticsEngine:
             data_points = [
                 buckets[key] for key in sorted(buckets.keys(), key=_categorical_bucket_sort_key)
             ]
+            if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
+                logger.info(
+                    "analytics.debug.hour.normalised_series",
+                    extra={
+                        "spec_id": spec.get("id"),
+                        "measure_id": measure_id,
+                        "bucket_keys": [point.get("x") for point in data_points],
+                        "row_count": len(data_points),
+                    },
+                )
             series.append(
                 {
                     "id": measure_id,
