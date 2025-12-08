@@ -37,6 +37,8 @@ def test_default_mapping_includes_demodata(monkeypatch):
 
     assert mapping["demodata0.client0"] == "timestamp"
     assert mapping["demodata0.client1"] == "timestamp"
+    assert mapping["client0"] == "timestamp"
+    assert mapping["client1"] == "timestamp"
 
 
 def test_env_override_ignored_for_locked_orgs(monkeypatch, caplog):

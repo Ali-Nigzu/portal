@@ -103,3 +103,20 @@ def test_table_router_respects_demodata_timestamp_override(monkeypatch):
         )
         == "timestamp"
     )
+
+
+def test_table_router_uses_b1_timestamp_for_default_client(monkeypatch):
+    monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
+    org_id = "client0"
+    router = TableRouter({org_id: "project.dataset.table"}, timestamp_columns={org_id: "timestamp"})
+
+    def _schema(table_name: str):
+        assert table_name == "project.dataset.table"
+        return ["site_id", "timestamp", "event", "Race"]
+
+    assert (
+        router.resolve_event_timestamp_column(
+            org_id, table_name="project.dataset.table", schema_loader=_schema
+        )
+        == "timestamp"
+    )
