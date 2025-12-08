@@ -4,7 +4,11 @@ import type {
   ChartResult,
   ChartSeries,
 } from "../../../analytics/schemas/charting";
-import type { SiteFlowDemographicsData, DemographicSlice } from "../utils/siteFlowDemographics";
+import type {
+  SiteFlowDemographicsData,
+  DemographicSlice,
+  HourSlice,
+} from "../utils/siteFlowDemographics";
 import "../styles/DashboardV2Page.css";
 
 const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSeries => {
@@ -14,7 +18,13 @@ const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSer
     id: `${title.toLowerCase().replace(/\s+/g, "-")}-demographics`,
     label: title,
     geometry: "bar",
-    data: slices.map((slice) => ({ x: slice.label, value: (slice.count / safeTotal) * 100 })),
+    data: slices.map((slice) => ({
+      x: slice.label,
+      label: slice.label,
+      code: slice.code,
+      ...("hour" in slice ? { hour: (slice as HourSlice).hour } : {}),
+      value: (slice.count / safeTotal) * 100,
+    })),
   };
 };
 
@@ -72,6 +82,7 @@ export const SiteFlowDemographicsView = ({ data }: { data: SiteFlowDemographicsD
                 className="site-flow-demographics__pie"
                 widgetId={`site-flow-${title.toLowerCase()}`}
                 useRawLabels
+                labelKey="label"
               />
             ) : (
               <EmptyPie title={title} />
