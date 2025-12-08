@@ -191,17 +191,19 @@ class AnalyticsEngine:
                 value = _coerce_number(record.get("value"))
 
                 if isinstance(label, pd.Timestamp):
-                    x_value: object = int(label.hour)
+                    raw_x: object = int(label.hour)
                 elif isinstance(label, datetime):
-                    x_value = label.hour
+                    raw_x = label.hour
                 elif isinstance(label, Number):
-                    x_value = int(label)
+                    raw_x = int(label)
                 else:
-                    x_value = str(label)
+                    raw_x = label
 
                 data_points.append(
                     {
-                        "x": x_value,
+                        # Contract expects categorical x values to be strings, even when
+                        # the underlying label is numeric (e.g. hour buckets).
+                        "x": str(raw_x),
                         "value": float(value) if value is not None else None,
                         "y": float(value) if value is not None else None,
                     }
