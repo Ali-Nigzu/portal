@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from backend.fastapi_app import app, analytics_spec_cache
 from backend.app.bigquery_client import bigquery_client
-from backend.app.analytics import org_config
+from backend.app.analytics import TableRouter, org_config
 
 
 @pytest.fixture(autouse=True)
@@ -104,6 +104,25 @@ def test_analytics_run_endpoint_returns_unknown_org_for_missing_mapping(client, 
     assert response.status_code == 404
     payload = response.json()
     assert payload["detail"]["error"] == "unknown_org"
+
+
+@pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
+def test_analytics_run_endpoint_handles_timestamp_resolution_error(monkeypatch, client, endpoint):
+    http_client, calls = client
+    spec = _build_spec()
+
+    def raise_timestamp_error(self, organisation: str, **_: object) -> str:
+        raise ValueError("missing timestamp column")
+
+    monkeypatch.setattr(TableRouter, "resolve_event_timestamp_column", raise_timestamp_error)
+
+    response = http_client.post(endpoint, json={"spec": spec, "orgId": "client0"})
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["detail"]["error"] == "invalid_spec"
+    assert "timestamp" in payload["detail"].get("message", "")
+    assert calls["count"] == 0
 
 
 @pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
