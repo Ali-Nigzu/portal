@@ -1398,7 +1398,8 @@ class SpecCompiler:
         if column == "timestamp":
             category_bucket = bucket_label or bucket
             if category_bucket == "HOUR":
-                category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+                # Demographics hour buckets must surface as integer hours (0-23) for frontend mapping.
+                category_expr = "CAST(EXTRACT(HOUR FROM scoped.timestamp) AS INT64)"
             elif category_bucket and category_bucket != "RAW":
                 category_expr = _bucket_expression(category_bucket, field="scoped.timestamp")
             else:
@@ -1454,7 +1455,8 @@ class SpecCompiler:
         if column == "timestamp":
             category_bucket = bucket_label or bucket
             if category_bucket == "HOUR":
-                category_expr = "EXTRACT(HOUR FROM scoped.timestamp)"
+                # Demographics hour buckets must surface as integer hours (0-23) for frontend mapping.
+                category_expr = "CAST(EXTRACT(HOUR FROM scoped.timestamp) AS INT64)"
             elif category_bucket and category_bucket != "RAW":
                 category_expr = _bucket_expression(category_bucket, field="scoped.timestamp")
             else:

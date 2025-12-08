@@ -172,6 +172,7 @@ export const TrafficDistribution = ({
             <Pie
               dataKey="value"
               data={pieLegend}
+              nameKey={labelKey ?? undefined}
               cx="50%"
               cy="50%"
               innerRadius={48}

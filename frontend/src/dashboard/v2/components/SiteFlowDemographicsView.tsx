@@ -4,7 +4,11 @@ import type {
   ChartResult,
   ChartSeries,
 } from "../../../analytics/schemas/charting";
-import type { SiteFlowDemographicsData, DemographicSlice } from "../utils/siteFlowDemographics";
+import type {
+  SiteFlowDemographicsData,
+  DemographicSlice,
+  HourSlice,
+} from "../utils/siteFlowDemographics";
 import "../styles/DashboardV2Page.css";
 
 const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSeries => {
@@ -17,6 +21,8 @@ const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSer
     data: slices.map((slice) => ({
       x: slice.label,
       label: slice.label,
+      code: slice.code,
+      ...("hour" in slice ? { hour: (slice as HourSlice).hour } : {}),
       value: (slice.count / safeTotal) * 100,
     })),
   };
