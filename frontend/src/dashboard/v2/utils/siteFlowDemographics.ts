@@ -311,16 +311,27 @@ const parseHour = (raw: unknown): number | null => {
   if (typeof raw === "number" && Number.isInteger(raw)) {
     return raw;
   }
+
   if (typeof raw === "string") {
     const trimmed = raw.trim();
     if (trimmed === "") {
       return null;
     }
+
     const numeric = Number(trimmed);
     if (Number.isFinite(numeric) && Number.isInteger(numeric)) {
       return numeric;
     }
+
+    const hourMatch = trimmed.match(/(?:T|\s)(\d{2}):\d{2}/);
+    if (hourMatch) {
+      const parsedHour = Number(hourMatch[1]);
+      if (parsedHour >= 0 && parsedHour <= 23) {
+        return parsedHour;
+      }
+    }
   }
+
   return null;
 };
 
