@@ -57,12 +57,20 @@ def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
     return mapping
 
 
+# Default mappings for known organisations. Some entries are "locked" to avoid
+# accidental overrides by misconfigured environment variables.
 DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {
     # VRM demo datasets use the raw event timestamp column named "timestamp"
     "demodata0.client0": "timestamp",
     "demodata0.client1": "timestamp",
-    # Environment overrides layered on top
-    **_parse_event_timestamp_columns(os.getenv("EVENT_TIMESTAMP_COLUMNS")),
+}
+
+# Organisations whose default timestamp columns should not be overridden by
+# environment variables (to avoid emitting invalid SQL when schemas differ from
+# deployment settings).
+LOCKED_ORG_EVENT_TIMESTAMP_COLUMNS = {
+    "demodata0.client0",
+    "demodata0.client1",
 }
 
 
@@ -109,8 +117,18 @@ def build_org_event_timestamp_columns(
     env_mapping = _parse_event_timestamp_columns(os.getenv("EVENT_TIMESTAMP_COLUMNS"))
 
     mapping = dict(DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS)
-    if env_mapping:
-        mapping.update(env_mapping)
+
+    # Apply environment overrides except for locked organisations where we want
+    # to guarantee the real, schema-backed column name.
+    for org, column in env_mapping.items():
+        if org in LOCKED_ORG_EVENT_TIMESTAMP_COLUMNS:
+            logger.warning(
+                "analytics.org_config.timestamp_column.env_ignored",
+                extra={"organisation": org, "column": column},
+            )
+            continue
+        mapping[org] = column
+
     if overrides:
         mapping.update(overrides)
     return mapping
