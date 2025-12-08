@@ -74,7 +74,20 @@ class TableRouter:
                 schema_columns = None
 
         override = self.timestamp_columns.get(organisation)
-        if override and _has_column(override):
+        if override:
+            if not _has_column(override):
+                self._logger.warning(
+                    "analytics.router.timestamp_column.override_missing",
+                    extra={
+                        "organisation": organisation,
+                        "column": override,
+                        "table": table_name,
+                        "schema_columns": sorted(schema_columns) if schema_columns else None,
+                    },
+                )
+                raise ValueError(
+                    f"Event timestamp override '{override}' for organisation '{organisation}' not found in schema"
+                )
             if override in self.disallowed_fallbacks:
                 self._logger.warning(
                     "analytics.router.timestamp_column.disallowed_override",
@@ -90,11 +103,6 @@ class TableRouter:
             if schema_columns is not None:
                 self._resolved_cache[table_name] = override
             return override
-        if override and schema_columns is not None and override not in schema_columns:
-            self._logger.warning(
-                "analytics.router.timestamp_column.override_missing",
-                extra={"organisation": organisation, "column": override, "table": table_name},
-            )
 
         env_default = os.getenv("EVENT_TIMESTAMP_COLUMN")
         if env_default and _has_column(env_default):

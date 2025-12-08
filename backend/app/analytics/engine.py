@@ -165,6 +165,25 @@ class AnalyticsEngine:
             table_name=table_name,
             schema_loader=getattr(self.bigquery_client, "get_table_schema", None),
         )
+        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
+            schema_loader = getattr(self.bigquery_client, "get_table_schema", None)
+            if schema_loader:
+                try:  # pragma: no cover - diagnostic only
+                    columns = schema_loader(table_name)
+                    logger.info(
+                        "analytics.debug.hour.table_schema",
+                        extra={
+                            "spec_id": spec.get("id"),
+                            "table": table_name,
+                            "schema_columns": columns,
+                        },
+                    )
+                except Exception:
+                    logger.warning(
+                        "analytics.debug.hour.table_schema_failed",
+                        extra={"spec_id": spec.get("id"), "table": table_name},
+                        exc_info=True,
+                    )
         logger.info(
             "analytics.run.resolved_table org=%s table=%s",
             organisation,
