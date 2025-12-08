@@ -309,7 +309,7 @@ const mapSeries = (
 
 const parseHour = (raw: unknown): number | null => {
   if (typeof raw === "number" && Number.isInteger(raw)) {
-    return raw;
+    return raw >= 0 && raw <= 23 ? raw : null;
   }
 
   if (typeof raw === "string") {
@@ -319,14 +319,24 @@ const parseHour = (raw: unknown): number | null => {
     }
 
     const numeric = Number(trimmed);
-    if (Number.isFinite(numeric) && Number.isInteger(numeric)) {
+    if (Number.isFinite(numeric) && Number.isInteger(numeric) && numeric >= 0 && numeric <= 23) {
       return numeric;
     }
 
-    const hourMatch = trimmed.match(/(?:T|\s)(\d{2}):\d{2}/);
-    if (hourMatch) {
-      const parsedHour = Number(hourMatch[1]);
+    // ISO-like timestamps or "YYYY-MM-DD HH:MM:SS"
+    const timestampHourMatch = trimmed.match(/(?:T|\s)(\d{2}):\d{2}/);
+    if (timestampHourMatch) {
+      const parsedHour = Number(timestampHourMatch[1]);
       if (parsedHour >= 0 && parsedHour <= 23) {
+        return parsedHour;
+      }
+    }
+
+    // Plain time strings such as "05:00" or "05:00:00"
+    const timeHourMatch = trimmed.match(/^(\d{1,2})(?::\d{2})/);
+    if (timeHourMatch) {
+      const parsedHour = Number(timeHourMatch[1]);
+      if (Number.isInteger(parsedHour) && parsedHour >= 0 && parsedHour <= 23) {
         return parsedHour;
       }
     }
