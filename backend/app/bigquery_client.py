@@ -193,6 +193,13 @@ class BigQueryClient:
             )
             raise BigQueryDataFrameError(str(exc), getattr(job, "job_id", None)) from exc
 
+    def get_table_schema(self, table_name: str) -> List[str]:
+        """Return the column names for the given fully-qualified table."""
+
+        client = self._ensure_client()
+        table = client.get_table(table_name)
+        return [schema_field.name for schema_field in table.schema]
+
     def run_health_check(self) -> None:
         try:
             client = self._ensure_client()

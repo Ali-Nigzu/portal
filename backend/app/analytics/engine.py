@@ -160,7 +160,11 @@ class AnalyticsEngine:
         cache_ttl: Optional[int] = None,
     ) -> Dict[str, Any]:
         table_name = self.table_router.resolve(organisation)
-        event_timestamp_column = self.table_router.resolve_event_timestamp_column(organisation)
+        event_timestamp_column = self.table_router.resolve_event_timestamp_column(
+            organisation,
+            table_name=table_name,
+            schema_loader=getattr(self.bigquery_client, "get_table_schema", None),
+        )
         logger.info(
             "analytics.run.resolved_table org=%s table=%s",
             organisation,

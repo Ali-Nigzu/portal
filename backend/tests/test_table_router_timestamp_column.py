@@ -22,3 +22,19 @@ def test_table_router_falls_back_to_default(monkeypatch):
     router = TableRouter({"org": "project.dataset.table"})
 
     assert router.resolve_event_timestamp_column("org") == "timestamp"
+
+
+def test_table_router_auto_detects_from_schema(monkeypatch):
+    monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
+    router = TableRouter({"org": "project.dataset.table"})
+
+    def _schema(table_name: str):
+        assert table_name == "project.dataset.table"
+        return ["site_id", "event_ts", "bucket_start"]
+
+    assert (
+        router.resolve_event_timestamp_column(
+            "org", table_name="project.dataset.table", schema_loader=_schema
+        )
+        == "event_ts"
+    )

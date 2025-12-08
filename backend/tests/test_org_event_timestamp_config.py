@@ -16,7 +16,8 @@ def test_parse_event_timestamp_columns_csv(monkeypatch):
 
     mapping = org_config.build_org_event_timestamp_columns()
 
-    assert mapping == {"org1": "event_ts", "org2": "event_timestamp"}
+    assert mapping["org1"] == "event_ts"
+    assert mapping["org2"] == "event_timestamp"
 
 
 def test_override_org_event_timestamp_columns(monkeypatch):
@@ -26,3 +27,13 @@ def test_override_org_event_timestamp_columns(monkeypatch):
     org_config.override_org_event_timestamp_columns({"org": "ts_override"})
 
     assert org_config.ORG_EVENT_TIMESTAMP_COLUMNS == {"org": "ts_override"}
+
+
+def test_default_mapping_includes_demodata(monkeypatch):
+    monkeypatch.delenv("EVENT_TIMESTAMP_COLUMNS", raising=False)
+    monkeypatch.setattr(org_config, "ORG_EVENT_TIMESTAMP_COLUMNS", {})
+
+    mapping = org_config.build_org_event_timestamp_columns()
+
+    assert mapping["demodata0.client0"] == "event_ts"
+    assert mapping["demodata0.client1"] == "event_ts"

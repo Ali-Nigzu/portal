@@ -57,9 +57,13 @@ def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
     return mapping
 
 
-DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = _parse_event_timestamp_columns(
-    os.getenv("EVENT_TIMESTAMP_COLUMNS")
-)
+DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {
+    # VRM demo datasets
+    "demodata0.client0": "event_ts",
+    "demodata0.client1": "event_ts",
+    # Environment overrides layered on top
+    **_parse_event_timestamp_columns(os.getenv("EVENT_TIMESTAMP_COLUMNS")),
+}
 
 
 def _strip_compat_suffix(table_id: str) -> str:
