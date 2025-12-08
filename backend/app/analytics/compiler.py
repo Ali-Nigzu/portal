@@ -1,13 +1,14 @@
 """Spec → SQL compiler for analytics ChartSpecs."""
 from __future__ import annotations
 
-from collections import OrderedDict
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from dataclasses import dataclass
+import os
 import re
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from datetime import datetime
 from textwrap import dedent
 from typing import Dict, Iterable, List, Tuple
+from zoneinfo import ZoneInfo
 
 from .contracts import ValidationError, validate_chart_spec
 
@@ -167,12 +168,19 @@ def _retention_lag_expression(bucket: str) -> str:
     raise ValidationError(f"Unsupported retention bucket: {bucket}")
 
 
+def _event_timestamp_column() -> str:
+    """Return the raw event timestamp column name (defaults to ``timestamp``)."""
+
+    return os.getenv("EVENT_TIMESTAMP_COLUMN", "timestamp")
+
+
 @dataclass
 class CompilerContext:
     """Resolved execution context for a ChartSpec."""
 
     table_name: str
     timezone: str = "UTC"
+    event_timestamp_column: str = field(default_factory=_event_timestamp_column)
 
 
 @dataclass
@@ -266,7 +274,13 @@ class SpecCompiler:
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
 
-        base_ctes = [self._render_scoped(context.table_name, filters_sql)]
+        base_ctes = [
+            self._render_scoped(
+                context.table_name,
+                filters_sql,
+                event_timestamp_column=context.event_timestamp_column,
+            )
+        ]
         if bucket != "RAW" and use_calendar:
             base_ctes.append(
                 self._render_calendar(bucket, clamp_to_data=vrm_occupancy_enabled)
@@ -350,7 +364,13 @@ class SpecCompiler:
 
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
-        base_ctes = [self._render_scoped(context.table_name, filters_sql)]
+        base_ctes = [
+            self._render_scoped(
+                context.table_name,
+                filters_sql,
+                event_timestamp_column=context.event_timestamp_column,
+            )
+        ]
         if bucket != "RAW" and use_calendar:
             base_ctes.append(self._render_calendar(bucket))
 
@@ -445,7 +465,13 @@ class SpecCompiler:
 
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
-        base_ctes = [self._render_scoped(context.table_name, filters_sql)]
+        base_ctes = [
+            self._render_scoped(
+                context.table_name,
+                filters_sql,
+                event_timestamp_column=context.event_timestamp_column,
+            )
+        ]
         base_ctes.extend(self._render_retention_calendar(bucket))
 
         for measure in measures:
@@ -521,7 +547,9 @@ class SpecCompiler:
         )
         return "\n".join(line.rstrip() for line in final_sql.splitlines() if line.strip())
 
-    def _render_scoped(self, table_name: str, filters_sql: str) -> str:
+    def _render_scoped(
+        self, table_name: str, filters_sql: str, *, event_timestamp_column: str
+    ) -> str:
         """Canonical events CTE over the resolved org table.
 
         - Base table is resolved via org routing (e.g. `nigzsu.demodata0.client0`).
@@ -540,18 +568,18 @@ class SpecCompiler:
                         cam_id AS camera_id,
                         ROW_NUMBER() OVER (
                             PARTITION BY site_id, cam_id, track_id
-                            ORDER BY timestamp, event DESC, track_id
+                            ORDER BY {event_timestamp_column}, event DESC, track_id
                         ) AS index,
                         track_id,
                         event,
                         -- Keep event timestamp raw for downstream hour extraction (no truncation).
-                        timestamp,
+                        {event_timestamp_column} AS timestamp,
                         age_bucket AS age_bucket,
                         sex AS sex,
                         Race AS race
                     FROM `{table_name}`
-                    WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
-                        AND timestamp < TIMESTAMP(@now)
+                    WHERE {event_timestamp_column} BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
+                        AND {event_timestamp_column} < TIMESTAMP(@now)
                 )
                 SELECT *
                 FROM scoped_base
