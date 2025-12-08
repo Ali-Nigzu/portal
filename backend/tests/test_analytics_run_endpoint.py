@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from backend.fastapi_app import app, analytics_spec_cache
 from backend.app.bigquery_client import bigquery_client
-from backend.app.analytics import org_config
+from backend.app.analytics import TableRouter, org_config
 
 
 @pytest.fixture(autouse=True)
@@ -106,6 +106,37 @@ def test_analytics_run_endpoint_returns_unknown_org_for_missing_mapping(client, 
     assert payload["detail"]["error"] == "unknown_org"
 
 
+@pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
+def test_analytics_run_endpoint_handles_timestamp_resolution_error(monkeypatch, client, endpoint):
+    http_client, calls = client
+    spec = _build_spec()
+
+    def raise_timestamp_error(self, organisation: str, **_: object) -> str:
+        raise ValueError("missing timestamp column")
+
+    monkeypatch.setattr(TableRouter, "resolve_event_timestamp_column", raise_timestamp_error)
+
+    response = http_client.post(endpoint, json={"spec": spec, "orgId": "client0"})
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["detail"]["error"] == "invalid_spec"
+    assert "timestamp" in payload["detail"].get("message", "")
+    assert calls["count"] == 0
+
+
+@pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
+def test_analytics_run_endpoint_applies_default_time_window(client, endpoint):
+    http_client, calls = client
+    spec = _build_spec()
+    spec.pop("timeWindow", None)
+
+    response = http_client.post(endpoint, json={"spec": spec, "orgId": "client0"})
+
+    assert response.status_code == 200
+    assert calls["count"] == 1
+
+
 def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
     http_client, calls = client
 
@@ -138,5 +169,5 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert captured.get("org_id") == "client0"
+    assert captured.get("org_id") == "demodata0.client0"
     assert calls["count"] == 1

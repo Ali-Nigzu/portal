@@ -19,8 +19,10 @@ class BigQueryConfigurationError(RuntimeError):
 
 
 DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
-    "client0": "client0_compat",
-    "client1": "client1_compat",
+    # Route the default demo orgs directly to the raw B1 tables to preserve event-level
+    # timestamps (e.g., for hour-of-day demographics) instead of the legacy compat views.
+    "client0": "nigzsu.demodata0.client0",
+    "client1": "nigzsu.demodata0.client1",
     # Fully-qualified VRM demo tables
     "demodata0.client0": "nigzsu.demodata0.client0",
     "demodata0.client1": "nigzsu.demodata0.client1",
@@ -63,6 +65,8 @@ DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {
     # VRM demo datasets use the raw event timestamp column named "timestamp"
     "demodata0.client0": "timestamp",
     "demodata0.client1": "timestamp",
+    "client0": "timestamp",
+    "client1": "timestamp",
 }
 
 # Organisations whose default timestamp columns should not be overridden by
@@ -71,6 +75,8 @@ DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {
 LOCKED_ORG_EVENT_TIMESTAMP_COLUMNS = {
     "demodata0.client0",
     "demodata0.client1",
+    "client0",
+    "client1",
 }
 
 

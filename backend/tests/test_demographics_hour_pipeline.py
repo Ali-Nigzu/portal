@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from backend.app.analytics import AnalyticsEngine, LocalCacheBackend, SpecCache, TableRouter
 from backend.app.analytics.compiler import CompilerContext, SpecCompiler
@@ -58,7 +59,7 @@ def test_demographics_hour_pipeline_surfaces_multiple_buckets():
         ]
     )
 
-    stub = StubBigQueryClient(frame)
+    stub = StubBigQueryClient(frame, schema=["timestamp", "bucket_start"])
     engine = AnalyticsEngine(
         table_router=TableRouter({"org": "project.dataset.table"}),
         bigquery_client=stub,
@@ -119,12 +120,22 @@ def test_demographics_hour_pipeline_prefers_event_timestamp_column(monkeypatch):
         cache=SpecCache(LocalCacheBackend(), default_ttl=60),
     )
 
-    adjusted = adjusted_engine.execute(
-        _demographics_hour_spec(), organisation="org", bypass_cache=True
-    )
-    adjusted_keys = {point.get("x") for point in adjusted["series"][0].get("data", [])}
-    second_sql = stub.last_sql or ""
+    with pytest.raises(ValueError):
+        adjusted_engine.execute(
+            _demographics_hour_spec(), organisation="org", bypass_cache=True
+        )
+    assert stub.calls == 1
 
-    assert adjusted_keys == {"0"}
-    assert "bucket_start AS timestamp" in second_sql
-    assert stub.calls == 2
+
+def test_demographics_hour_pipeline_errors_when_no_event_timestamp():
+    stub = StubBigQueryClient(pd.DataFrame(), schema=["bucket_start", "site_id"])
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"org": "project.dataset.table"}),
+        bigquery_client=stub,
+        cache=SpecCache(LocalCacheBackend(), default_ttl=60),
+    )
+
+    with pytest.raises(ValueError):
+        engine.execute(_demographics_hour_spec(), organisation="org", bypass_cache=True)
+
+    assert stub.calls == 0

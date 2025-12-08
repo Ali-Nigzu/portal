@@ -18,10 +18,10 @@ const resolveTimeWindow = (
 ): ChartSpec["timeWindow"] => {
   const to = anchor.toISOString();
   const isAllTime = timeRange?.allTime ?? timeRange?.durationMinutes == null;
-  const durationMinutes = timeRange?.durationMinutes ?? 0;
-  const from = isAllTime
-    ? new Date(0).toISOString()
-    : new Date(anchor.getTime() - durationMinutes * 60_000).toISOString();
+  const durationMinutes = isAllTime
+    ? 60 * 24 * 30
+    : Math.max(timeRange?.durationMinutes ?? 0, 0);
+  const from = new Date(anchor.getTime() - durationMinutes * 60_000).toISOString();
 
   const timeWindow: ChartSpec["timeWindow"] = { from, to };
   const bucket = bucketOverride ?? timeRange?.bucket;
