@@ -14,7 +14,11 @@ const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSer
     id: `${title.toLowerCase().replace(/\s+/g, "-")}-demographics`,
     label: title,
     geometry: "bar",
-    data: slices.map((slice) => ({ x: slice.label, value: (slice.count / safeTotal) * 100 })),
+    data: slices.map((slice) => ({
+      x: slice.label,
+      label: slice.label,
+      value: (slice.count / safeTotal) * 100,
+    })),
   };
 };
 
@@ -72,6 +76,7 @@ export const SiteFlowDemographicsView = ({ data }: { data: SiteFlowDemographicsD
                 className="site-flow-demographics__pie"
                 widgetId={`site-flow-${title.toLowerCase()}`}
                 useRawLabels
+                labelKey="label"
               />
             ) : (
               <EmptyPie title={title} />

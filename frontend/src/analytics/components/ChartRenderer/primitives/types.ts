@@ -11,4 +11,5 @@ export interface ChartPrimitiveProps {
   className?: string;
   widgetId?: string;
   useRawLabels?: boolean;
+  labelKey?: string;
 }

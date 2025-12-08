@@ -186,14 +186,18 @@ const toNumeric = (point: { value?: number | null; y?: number | null }): number 
 };
 
 const normalizeCode = (code: string | number): number | null => {
-  if (typeof code === "number" && Number.isFinite(code)) return code;
+  if (typeof code === "number" && Number.isFinite(code)) {
+    return Math.trunc(code);
+  }
+
   if (typeof code === "string") {
-    const match = code.trim().match(/(-?\d+)\s*$/);
-    if (match) {
-      const parsed = Number(match[1]);
-      return Number.isFinite(parsed) ? parsed : null;
+    const trimmed = code.trim();
+    if (/^-?\d+$/.test(trimmed)) {
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
     }
   }
+
   return null;
 };
 
