@@ -7,14 +7,19 @@ from backend.app.analytics.compiler import CompilerContext, SpecCompiler
 
 
 class StubBigQueryClient:
-    def __init__(self, frame: pd.DataFrame) -> None:
+    def __init__(self, frame: pd.DataFrame, sql_resolver=None) -> None:
         self.frame = frame
         self.calls = 0
         self.last_sql: str | None = None
+        self._sql_resolver = sql_resolver
 
-    def query_dataframe(self, sql: str, params: dict, job_context: str | None = None) -> pd.DataFrame:  # pragma: no cover - passthrough
+    def query_dataframe(
+        self, sql: str, params: dict, job_context: str | None = None
+    ) -> pd.DataFrame:  # pragma: no cover - passthrough
         self.calls += 1
         self.last_sql = sql
+        if self._sql_resolver:
+            return self._sql_resolver(sql).copy()
         return self.frame.copy()
 
 
@@ -64,3 +69,47 @@ def test_demographics_hour_pipeline_surfaces_multiple_buckets():
     assert bucket_keys == {"9", "10", "11"}
     assert all(point.get("value") is not None for point in series.get("data", []))
     assert stub.calls == 1
+
+
+def test_demographics_hour_pipeline_prefers_event_timestamp_column(monkeypatch):
+    monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
+
+    single_hour = pd.DataFrame(
+        [
+            {"measure_id": "events", "category_value": pd.Timestamp("2024-01-01T00:00:00Z"), "value": 15},
+        ]
+    )
+    multi_hour = pd.DataFrame(
+        [
+            {"measure_id": "events", "category_value": pd.Timestamp("2024-01-01T09:00:00Z"), "value": 5},
+            {"measure_id": "events", "category_value": pd.Timestamp("2024-01-01T10:00:00Z"), "value": 3},
+            {"measure_id": "events", "category_value": pd.Timestamp("2024-01-01T11:00:00Z"), "value": 7},
+        ]
+    )
+
+    def resolver(sql: str) -> pd.DataFrame:
+        return multi_hour if "event_ts" in sql else single_hour
+
+    stub = StubBigQueryClient(single_hour, sql_resolver=resolver)
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"org": "project.dataset.table"}),
+        bigquery_client=stub,
+        cache=SpecCache(LocalCacheBackend(), default_ttl=60),
+    )
+
+    baseline = engine.execute(_demographics_hour_spec(), organisation="org", bypass_cache=True)
+    baseline_keys = {point.get("x") for point in baseline["series"][0].get("data", [])}
+    first_sql = stub.last_sql or ""
+
+    assert baseline_keys == {"0"}
+    assert "event_ts" not in first_sql
+
+    monkeypatch.setenv("EVENT_TIMESTAMP_COLUMN", "event_ts")
+
+    adjusted = engine.execute(_demographics_hour_spec(), organisation="org", bypass_cache=True)
+    adjusted_keys = {point.get("x") for point in adjusted["series"][0].get("data", [])}
+    second_sql = stub.last_sql or ""
+
+    assert adjusted_keys == {"9", "10", "11"}
+    assert "event_ts AS timestamp" in second_sql
+    assert stub.calls == 2
