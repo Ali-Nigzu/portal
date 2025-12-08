@@ -1,6 +1,7 @@
 """Organisation-to-table configuration helpers for analytics queries."""
 from __future__ import annotations
 
+import json
 import os
 import logging
 from typing import Dict
@@ -25,6 +26,40 @@ DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
     "demodata0.client1": "nigzsu.demodata0.client1",
     "client2": "nigzsu.demodata0.client1",
 }
+
+
+def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
+    """Parse per-organisation event timestamp column overrides.
+
+    Accepts either JSON (``{"org": "event_ts"}``) or a comma-delimited list of
+    ``org=column`` pairs (``org1=event_ts,org2=event_timestamp``).
+    """
+
+    if not value:
+        return {}
+
+    try:
+        parsed = json.loads(value)
+        if isinstance(parsed, dict):
+            return {str(k): str(v) for k, v in parsed.items()}
+    except Exception:
+        logger.warning("analytics.org_config.event_timestamp.json_parse_failed", exc_info=True)
+
+    mapping: Dict[str, str] = {}
+    for part in value.split(","):
+        if not part or "=" not in part:
+            continue
+        org, column = part.split("=", 1)
+        org = org.strip()
+        column = column.strip()
+        if org and column:
+            mapping[org] = column
+    return mapping
+
+
+DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = _parse_event_timestamp_columns(
+    os.getenv("EVENT_TIMESTAMP_COLUMNS")
+)
 
 
 def _strip_compat_suffix(table_id: str) -> str:
@@ -62,8 +97,24 @@ def build_org_table_map(overrides: Dict[str, str] | None = None) -> Dict[str, st
     return mapping
 
 
+def build_org_event_timestamp_columns(
+    overrides: Dict[str, str] | None = None,
+) -> Dict[str, str]:
+    """Construct the organisation → event timestamp column mapping."""
+
+    env_mapping = _parse_event_timestamp_columns(os.getenv("EVENT_TIMESTAMP_COLUMNS"))
+
+    mapping = dict(DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS)
+    if env_mapping:
+        mapping.update(env_mapping)
+    if overrides:
+        mapping.update(overrides)
+    return mapping
+
+
 # The resolved table mapping used by production code. Tests may monkeypatch this.
 ORG_TABLE_MAP: Dict[str, str] = build_org_table_map()
+ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = build_org_event_timestamp_columns()
 
 
 def resolve_table_for_org(organisation: str) -> str:
@@ -87,3 +138,10 @@ def override_org_table_map(mapping: Dict[str, str]) -> None:
 
     global ORG_TABLE_MAP
     ORG_TABLE_MAP = dict(mapping)
+
+
+def override_org_event_timestamp_columns(mapping: Dict[str, str]) -> None:
+    """Override the organisation → event timestamp column mapping for tests."""
+
+    global ORG_EVENT_TIMESTAMP_COLUMNS
+    ORG_EVENT_TIMESTAMP_COLUMNS = dict(mapping)

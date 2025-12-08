@@ -167,6 +167,16 @@ class AnalyticsEngine:
             table_name,
             extra={"spec_id": spec.get("id"), "org": organisation, "table": table_name},
         )
+        logger.info(
+            "analytics.run.resolved_timestamp_column org=%s column=%s",
+            organisation,
+            event_timestamp_column,
+            extra={
+                "spec_id": spec.get("id"),
+                "org": organisation,
+                "timestamp_column": event_timestamp_column,
+            },
+        )
         cache_key = build_cache_key(spec, table_name=table_name)
         if not bypass_cache:
             cached = self.cache.get(cache_key)
@@ -236,6 +246,29 @@ class AnalyticsEngine:
                     "spec_id": spec.get("id"),
                     "columns": list(frame.columns),
                     "rows": frame.head(50).to_dict("records"),
+                },
+            )
+
+            distinct_hours: set[str] = set()
+            for value in frame.get("category_value", []):
+                if isinstance(value, pd.Timestamp):
+                    distinct_hours.add(str(int(value.hour)))
+                elif isinstance(value, datetime):
+                    distinct_hours.add(str(int(value.hour)))
+                elif isinstance(value, Number):
+                    distinct_hours.add(str(int(value)))
+                else:
+                    try:
+                        numeric_value = int(str(value))
+                        distinct_hours.add(str(numeric_value))
+                    except Exception:
+                        continue
+
+            logger.info(
+                "analytics.debug.hour.distinct_hours",
+                extra={
+                    "spec_id": spec.get("id"),
+                    "hours": sorted(distinct_hours),
                 },
             )
 
@@ -313,6 +346,23 @@ class AnalyticsEngine:
             "surges": [],
             "summary": {"points": len(frame), "measures": list(measures.keys())},
         }
+
+        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
+            bucket_keys = sorted(
+                {
+                    point.get("x")
+                    for series_entry in series
+                    for point in series_entry.get("data", [])
+                    if point.get("x") is not None
+                }
+            )
+            logger.info(
+                "analytics.debug.hour.chartresult_buckets",
+                extra={
+                    "spec_id": spec.get("id"),
+                    "bucket_keys": bucket_keys,
+                },
+            )
 
         return {
             "chartType": "categorical",

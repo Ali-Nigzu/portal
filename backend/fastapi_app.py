@@ -722,8 +722,13 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
                 detail={"error": "offline_fixture_failed", "message": str(exc)},
             ) from exc
     else:
+        timestamp_columns = org_config.build_org_event_timestamp_columns()
+        resolved_timestamp = timestamp_columns.get(org_id)
+
         engine = AnalyticsEngine(
-            table_router=TableRouter({org_id: table_name}),
+            table_router=TableRouter(
+                {org_id: table_name}, timestamp_columns=timestamp_columns
+            ),
             bigquery_client=bigquery_client,
             cache=analytics_spec_cache,
         )
