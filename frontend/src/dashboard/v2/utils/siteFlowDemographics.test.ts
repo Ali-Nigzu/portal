@@ -4,16 +4,16 @@ import type { ChartResult } from "../../../analytics/schemas/charting";
 describe("mapHours", () => {
   const baseResult = (data: { x: string | number; value?: number; y?: number }[]): ChartResult => ({
     chartType: "categorical",
-    xDimension: { id: "timestamp", type: "category", bucket: null, timezone: "UTC" },
+    xDimension: { id: "timestamp", type: "category", bucket: undefined, timezone: "UTC" },
     series: [
       {
         id: "events",
         label: "Events",
         geometry: "bar",
-        data,
+        data: data.map((point) => ({ ...point, x: String(point.x) })),
       },
     ],
-    meta: { timezone: "UTC", coverage: [], surges: [], summary: { points: data.length, measures: ["events"] } },
+    meta: { timezone: "UTC", coverage: [], surges: [], summary: { points: data.length, measure: "events" } },
   });
 
   it("returns multiple slices when multiple hour buckets are present", () => {
