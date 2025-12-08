@@ -51,6 +51,48 @@ def test_categorical_normaliser_stringifies_numeric_labels():
     assert [point["value"] for point in points] == [10.0, 2.0, 3.0]
 
 
+def test_categorical_normaliser_aggregates_duplicate_numeric_labels():
+    frame = pd.DataFrame(
+        [
+            {"measure_id": "demographics", "category_value": 9, "value": 10},
+            {"measure_id": "demographics", "category_value": 9, "value": 5},
+            {"measure_id": "demographics", "category_value": 10, "value": 3},
+        ]
+    )
+    stub = StubBigQueryClient(frame)
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"org": "project.dataset.table"}),
+        bigquery_client=stub,
+        cache=SpecCache(LocalCacheBackend(), default_ttl=60),
+    )
+
+    result = engine.execute(_categorical_spec(), organisation="org", bypass_cache=True)
+
+    points = result["series"][0]["data"]
+    assert [(point["x"], point["value"]) for point in points] == [("9", 15.0), ("10", 3.0)]
+
+
+def test_categorical_normaliser_aggregates_duplicate_string_labels():
+    frame = pd.DataFrame(
+        [
+            {"measure_id": "demographics", "category_value": "18-24", "value": 4},
+            {"measure_id": "demographics", "category_value": "18-24", "value": 6},
+            {"measure_id": "demographics", "category_value": "25-34", "value": 2},
+        ]
+    )
+    stub = StubBigQueryClient(frame)
+    engine = AnalyticsEngine(
+        table_router=TableRouter({"org": "project.dataset.table"}),
+        bigquery_client=stub,
+        cache=SpecCache(LocalCacheBackend(), default_ttl=60),
+    )
+
+    result = engine.execute(_categorical_spec(), organisation="org", bypass_cache=True)
+
+    points = result["series"][0]["data"]
+    assert [(point["x"], point["value"]) for point in points] == [("18-24", 10.0), ("25-34", 2.0)]
+
+
 def test_categorical_normaliser_keeps_cache_hits_valid():
     frame = pd.DataFrame([
         {"measure_id": "demographics", "category_value": 23, "value": 1},

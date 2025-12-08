@@ -88,6 +88,21 @@ def _coerce_number(value: Any, cast=float) -> Optional[float]:
     return coerced
 
 
+def _categorical_bucket_sort_key(bucket_key: str) -> tuple[int, Any]:
+    """Return a deterministic sort key for categorical buckets.
+
+    Numeric buckets (including numeric strings) are ordered before non-numeric
+    buckets and sorted by numeric value. Non-numeric buckets fall back to a
+    lexical order.
+    """
+
+    try:
+        numeric_value = float(bucket_key)
+    except (TypeError, ValueError):
+        return (1, str(bucket_key))
+    return (0, numeric_value)
+
+
 def _detect_surges(measure_id: str, points: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     values = [float(point["y"]) for point in points if point.get("y") is not None]
     if len(values) < 2:
@@ -183,7 +198,7 @@ class AnalyticsEngine:
 
         for measure_id, aggregation in measures.items():
             subset = frame[frame["measure_id"] == measure_id]
-            data_points: List[Dict[str, Any]] = []
+            buckets: Dict[str, Dict[str, Any]] = {}
             for record in subset.to_dict("records"):
                 label = record.get("category_value")
                 if label is None or (hasattr(pd, "isna") and pd.isna(label)):
@@ -199,15 +214,27 @@ class AnalyticsEngine:
                 else:
                     raw_x = label
 
-                data_points.append(
+                bucket_key = str(raw_x)
+                bucket = buckets.setdefault(
+                    bucket_key,
                     {
                         # Contract expects categorical x values to be strings, even when
                         # the underlying label is numeric (e.g. hour buckets).
-                        "x": str(raw_x),
-                        "value": float(value) if value is not None else None,
-                        "y": float(value) if value is not None else None,
-                    }
+                        "x": bucket_key,
+                        "value": None,
+                        "y": None,
+                    },
                 )
+
+                if value is not None:
+                    current = bucket["value"]
+                    aggregated = float(value) if current is None else float(current) + float(value)
+                    bucket["value"] = aggregated
+                    bucket["y"] = aggregated
+
+            data_points = [
+                buckets[key] for key in sorted(buckets.keys(), key=_categorical_bucket_sort_key)
+            ]
             series.append(
                 {
                     "id": measure_id,
