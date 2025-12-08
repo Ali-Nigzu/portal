@@ -110,6 +110,11 @@ def validate_chart_spec(payload: Dict[str, Any]) -> None:
 
 
 def _validate_series_data(data: Iterable[Any]) -> None:
+    """Validate series points.
+
+    For categorical charts, x values are always serialised as strings even when the
+    underlying bucket is numeric (for example hour-of-day).
+    """
     _ensure(isinstance(data, list), "Series data must be list")
     for point in data:
         _ensure(isinstance(point, dict), "Series point must be object")

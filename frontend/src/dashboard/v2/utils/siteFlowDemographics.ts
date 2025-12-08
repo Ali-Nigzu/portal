@@ -6,6 +6,8 @@ import type {
 } from "../../../analytics/schemas/charting";
 import type { DashboardTimeRangeOption, DashboardWidget } from "../types";
 
+const DEBUG_DEMOGRAPHICS_HOUR = process.env.REACT_APP_DEBUG_DEMOGRAPHICS_HOUR === "true";
+
 export type DemographicWidgetKind = "age" | "gender" | "hour" | "race";
 
 const resolveTimeWindow = (
@@ -219,6 +221,35 @@ const ensureAllowedLabel = (kind: DemographicWidgetKind, label: string): string 
   return label;
 };
 
+const parseHourString = (raw: string): number | null => {
+  const trimmed = raw.trim();
+
+  if (/^\d{1,2}$/.test(trimmed)) {
+    const parsed = Number.parseInt(trimmed, 10);
+    if (parsed >= 0 && parsed <= 23) {
+      return parsed;
+    }
+  }
+
+  const hhmmMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (hhmmMatch) {
+    const parsed = Number.parseInt(hhmmMatch[1] ?? "", 10);
+    if (parsed >= 0 && parsed <= 23) {
+      return parsed;
+    }
+  }
+
+  const parsedDate = Number.isNaN(Date.parse(trimmed)) ? null : new Date(trimmed);
+  if (parsedDate) {
+    const hour = parsedDate.getUTCHours();
+    if (Number.isInteger(hour) && hour >= 0 && hour <= 23) {
+      return hour;
+    }
+  }
+
+  return null;
+};
+
 export const mapAgeLabel = (code: string | number): string => {
   const normalized = normalizeCode(code);
   switch (normalized) {
@@ -313,13 +344,7 @@ const parseHour = (raw: unknown): number | null => {
   }
 
   if (typeof raw === "string") {
-    const trimmed = raw.trim();
-    if (/^\d{1,2}$/.test(trimmed)) {
-      const parsed = Number.parseInt(trimmed, 10);
-      if (parsed >= 0 && parsed <= 23) {
-        return parsed;
-      }
-    }
+    return parseHourString(raw);
   }
 
   return null;
@@ -330,9 +355,23 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
   if (!series) return [];
   const aggregated = new Map<number, number>();
 
+  if (DEBUG_DEMOGRAPHICS_HOUR) {
+    const sample = (series.data ?? []).slice(0, 50);
+    const distinct = Array.from(new Set(sample.map((point) => point.x)));
+    // eslint-disable-next-line no-console
+    console.debug("demographics.hour.debug.pre_map", {
+      points: sample,
+      distinct,
+    });
+  }
+
   (series.data ?? []).forEach((point) => {
     const hour = parseHour(point.x as string | number);
     if (hour == null || hour < 0 || hour > 23) {
+      if (DEBUG_DEMOGRAPHICS_HOUR) {
+        // eslint-disable-next-line no-console
+        console.debug("demographics.hour.debug.dropped_point", { rawX: point.x, value: point.value ?? point.y });
+      }
       return;
     }
     const count = toNumeric(point);
@@ -348,7 +387,14 @@ const mapHours = (result: ChartResult | undefined): HourSlice[] => {
       count,
     }))
     .filter((slice) => slice.count > 0)
-    .sort((a, b) => a.hour - b.hour);
+    .sort((a, b) => a.hour - b.hour)
+    .map((slice) => {
+      if (DEBUG_DEMOGRAPHICS_HOUR) {
+        // eslint-disable-next-line no-console
+        console.debug("demographics.hour.debug.slice", slice);
+      }
+      return slice;
+    });
 };
 
 export const mapChartResultsToDemographics = (
@@ -361,6 +407,17 @@ export const mapChartResultsToDemographics = (
     results.race?.meta?.timezone ??
     results.timezone ??
     "UTC";
+
+  if (DEBUG_DEMOGRAPHICS_HOUR) {
+    // eslint-disable-next-line no-console
+    console.debug("demographics.hour.debug.meta", {
+      ageBuckets: results.age?.series?.[0]?.data?.length ?? 0,
+      genderBuckets: results.gender?.series?.[0]?.data?.length ?? 0,
+      raceBuckets: results.race?.series?.[0]?.data?.length ?? 0,
+      hourBuckets: results.hour?.series?.[0]?.data?.length ?? 0,
+      timezone: resolvedTimezone,
+    });
+  }
 
   return {
     age: mapSeries(results.age, "age"),
