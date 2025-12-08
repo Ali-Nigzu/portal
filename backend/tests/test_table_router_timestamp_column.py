@@ -30,11 +30,27 @@ def test_table_router_auto_detects_from_schema(monkeypatch):
 
     def _schema(table_name: str):
         assert table_name == "project.dataset.table"
-        return ["site_id", "event_ts", "bucket_start"]
+        return ["site_id", "timestamp", "bucket_start"]
 
     assert (
         router.resolve_event_timestamp_column(
             "org", table_name="project.dataset.table", schema_loader=_schema
         )
-        == "event_ts"
+        == "timestamp"
+    )
+
+
+def test_table_router_ignores_missing_override(monkeypatch):
+    monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
+    router = TableRouter({"org": "project.dataset.table"}, timestamp_columns={"org": "event_ts"})
+
+    def _schema(table_name: str):
+        assert table_name == "project.dataset.table"
+        return ["timestamp", "bucket_start"]
+
+    assert (
+        router.resolve_event_timestamp_column(
+            "org", table_name="project.dataset.table", schema_loader=_schema
+        )
+        == "timestamp"
     )

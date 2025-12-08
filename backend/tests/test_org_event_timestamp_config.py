@@ -35,5 +35,5 @@ def test_default_mapping_includes_demodata(monkeypatch):
 
     mapping = org_config.build_org_event_timestamp_columns()
 
-    assert mapping["demodata0.client0"] == "event_ts"
-    assert mapping["demodata0.client1"] == "event_ts"
+    assert mapping["demodata0.client0"] == "timestamp"
+    assert mapping["demodata0.client1"] == "timestamp"

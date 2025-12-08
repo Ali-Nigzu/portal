@@ -7,11 +7,12 @@ from backend.app.analytics.compiler import CompilerContext, SpecCompiler
 
 
 class StubBigQueryClient:
-    def __init__(self, frame: pd.DataFrame, sql_resolver=None) -> None:
+    def __init__(self, frame: pd.DataFrame, sql_resolver=None, schema=None) -> None:
         self.frame = frame
         self.calls = 0
         self.last_sql: str | None = None
         self._sql_resolver = sql_resolver
+        self._schema = schema or []
 
     def query_dataframe(
         self, sql: str, params: dict, job_context: str | None = None
@@ -21,6 +22,9 @@ class StubBigQueryClient:
         if self._sql_resolver:
             return self._sql_resolver(sql).copy()
         return self.frame.copy()
+
+    def get_table_schema(self, table_name: str):  # pragma: no cover - simple passthrough
+        return list(self._schema)
 
 
 def _demographics_hour_spec() -> dict:
@@ -88,9 +92,9 @@ def test_demographics_hour_pipeline_prefers_event_timestamp_column(monkeypatch):
     )
 
     def resolver(sql: str) -> pd.DataFrame:
-        return multi_hour if "event_ts" in sql else single_hour
+        return single_hour if "bucket_start" in sql else multi_hour
 
-    stub = StubBigQueryClient(single_hour, sql_resolver=resolver)
+    stub = StubBigQueryClient(single_hour, sql_resolver=resolver, schema=["timestamp", "bucket_start"])
 
     default_router = TableRouter({"org": "project.dataset.table"})
     engine = AnalyticsEngine(
@@ -103,11 +107,11 @@ def test_demographics_hour_pipeline_prefers_event_timestamp_column(monkeypatch):
     baseline_keys = {point.get("x") for point in baseline["series"][0].get("data", [])}
     first_sql = stub.last_sql or ""
 
-    assert baseline_keys == {"0"}
-    assert "event_ts" not in first_sql
+    assert baseline_keys == {"9", "10", "11"}
+    assert "timestamp AS timestamp" in first_sql
 
     override_router = TableRouter(
-        {"org": "project.dataset.table"}, timestamp_columns={"org": "event_ts"}
+        {"org": "project.dataset.table"}, timestamp_columns={"org": "bucket_start"}
     )
     adjusted_engine = AnalyticsEngine(
         table_router=override_router,
@@ -121,6 +125,6 @@ def test_demographics_hour_pipeline_prefers_event_timestamp_column(monkeypatch):
     adjusted_keys = {point.get("x") for point in adjusted["series"][0].get("data", [])}
     second_sql = stub.last_sql or ""
 
-    assert adjusted_keys == {"9", "10", "11"}
-    assert "event_ts AS timestamp" in second_sql
+    assert adjusted_keys == {"0"}
+    assert "bucket_start AS timestamp" in second_sql
     assert stub.calls == 2

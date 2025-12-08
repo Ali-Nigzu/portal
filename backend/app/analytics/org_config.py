@@ -58,9 +58,9 @@ def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
 
 
 DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {
-    # VRM demo datasets
-    "demodata0.client0": "event_ts",
-    "demodata0.client1": "event_ts",
+    # VRM demo datasets use the raw event timestamp column named "timestamp"
+    "demodata0.client0": "timestamp",
+    "demodata0.client1": "timestamp",
     # Environment overrides layered on top
     **_parse_event_timestamp_columns(os.getenv("EVENT_TIMESTAMP_COLUMNS")),
 }
