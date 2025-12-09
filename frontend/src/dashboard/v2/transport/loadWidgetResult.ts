@@ -22,7 +22,14 @@ export interface LoadWidgetOptions {
 }
 
 const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
-const DASHBOARD_ANALYTICS_TIMEOUT_MS = 60_000;
+const MIN_ANALYTICS_TIMEOUT_MS = 3_600_000; // 1 hour safeguard to align with backend allowance
+
+const envAnalyticsTimeoutMs = Number(process.env.REACT_APP_DASHBOARD_ANALYTICS_TIMEOUT_MS);
+
+const DASHBOARD_ANALYTICS_TIMEOUT_MS =
+  Number.isFinite(envAnalyticsTimeoutMs) && envAnalyticsTimeoutMs >= MIN_ANALYTICS_TIMEOUT_MS
+    ? envAnalyticsTimeoutMs
+    : MIN_ANALYTICS_TIMEOUT_MS;
 
 export const isAbortError = (error: unknown): boolean => {
   if (error instanceof DOMException) {
