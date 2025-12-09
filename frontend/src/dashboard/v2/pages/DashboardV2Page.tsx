@@ -615,7 +615,7 @@ const DashboardV2Page = ({
 
     const controller = new AbortController();
     const timezone = manifest.timeControls?.timezone;
-    const kinds: DemographicWidgetKind[] = ["age", "gender", "hour", "race"];
+    const kinds: DemographicWidgetKind[] = ["age", "gender", "race"];
     const resolvedTimeRange =
       selectedTimeRange ?? ({
         id: "all_time_default",
@@ -638,7 +638,7 @@ const DashboardV2Page = ({
       });
 
     Promise.all(kinds.map((kind) => loadDemographic(kind)))
-      .then(([ageResult, genderResult, hourResult, raceResult]) => {
+      .then(([ageResult, genderResult, raceResult]) => {
         if (controller.signal.aborted) {
           return;
         }
@@ -647,7 +647,6 @@ const DashboardV2Page = ({
           age: ageResult,
           gender: genderResult,
           race: raceResult,
-          hour: hourResult,
           timezone,
         });
 

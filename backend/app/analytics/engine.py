@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from numbers import Number
@@ -54,25 +53,6 @@ _UNIT_MAP = {
 
 
 logger = logging.getLogger(__name__)
-
-
-_DEMOGRAPHICS_HOUR_DEBUG = os.getenv("DEMOGRAPHICS_HOUR_DEBUG", "").lower() in {
-    "1",
-    "true",
-    "yes",
-}
-
-
-def _is_demographics_hour_spec(spec: Dict[str, Any]) -> bool:
-    """Return True when the spec represents the demographics hour chart."""
-
-    dimension = (spec.get("dimensions") or [{}])[0]
-    return (
-        spec.get("id") == "dashboard.site_flow.demographics.hour"
-        or (dimension.get("column") == "timestamp" and dimension.get("bucket") == "HOUR")
-    )
-
-
 def _label_for_series(measure_id: str, aggregation: str) -> str:
     if measure_id:
         return measure_id.replace("_", " ").title()
@@ -179,25 +159,6 @@ class AnalyticsEngine:
                 },
             )
             raise ContractValidationError(str(exc)) from exc
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-            schema_loader = getattr(self.bigquery_client, "get_table_schema", None)
-            if schema_loader:
-                try:  # pragma: no cover - diagnostic only
-                    columns = schema_loader(table_name)
-                    logger.info(
-                        "analytics.debug.hour.table_schema",
-                        extra={
-                            "spec_id": spec.get("id"),
-                            "table": table_name,
-                            "schema_columns": columns,
-                        },
-                    )
-                except Exception:
-                    logger.warning(
-                        "analytics.debug.hour.table_schema_failed",
-                        extra={"spec_id": spec.get("id"), "table": table_name},
-                        exc_info=True,
-                    )
         logger.info(
             "analytics.run.resolved_table org=%s table=%s",
             organisation,
@@ -226,15 +187,6 @@ class AnalyticsEngine:
                 table_name=table_name, event_timestamp_column=event_timestamp_column
             ),
         )
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-            logger.info(
-                "analytics.debug.hour.compiled_sql",
-                extra={
-                    "spec_id": spec.get("id"),
-                    "sql": compiled.sql,
-                    "params": compiled.params,
-                },
-            )
         try:
             frame = self.bigquery_client.query_dataframe(
                 compiled.sql,
@@ -276,39 +228,6 @@ class AnalyticsEngine:
         timezone = spec["timeWindow"].get("timezone", "UTC")
         series: List[Dict[str, Any]] = []
 
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-            logger.info(
-                "analytics.debug.hour.raw_frame",
-                extra={
-                    "spec_id": spec.get("id"),
-                    "columns": list(frame.columns),
-                    "rows": frame.head(50).to_dict("records"),
-                },
-            )
-
-            distinct_hours: set[str] = set()
-            for value in frame.get("category_value", []):
-                if isinstance(value, pd.Timestamp):
-                    distinct_hours.add(str(int(value.hour)))
-                elif isinstance(value, datetime):
-                    distinct_hours.add(str(int(value.hour)))
-                elif isinstance(value, Number):
-                    distinct_hours.add(str(int(value)))
-                else:
-                    try:
-                        numeric_value = int(str(value))
-                        distinct_hours.add(str(numeric_value))
-                    except Exception:
-                        continue
-
-            logger.info(
-                "analytics.debug.hour.distinct_hours",
-                extra={
-                    "spec_id": spec.get("id"),
-                    "hours": sorted(distinct_hours),
-                },
-            )
-
         for measure_id, aggregation in measures.items():
             subset = frame[frame["measure_id"] == measure_id]
             buckets: Dict[str, Dict[str, Any]] = {}
@@ -348,16 +267,6 @@ class AnalyticsEngine:
             data_points = [
                 buckets[key] for key in sorted(buckets.keys(), key=_categorical_bucket_sort_key)
             ]
-            if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-                logger.info(
-                    "analytics.debug.hour.normalised_series",
-                    extra={
-                        "spec_id": spec.get("id"),
-                        "measure_id": measure_id,
-                        "bucket_keys": [point.get("x") for point in data_points],
-                        "row_count": len(data_points),
-                    },
-                )
             series.append(
                 {
                     "id": measure_id,
@@ -383,23 +292,6 @@ class AnalyticsEngine:
             "surges": [],
             "summary": {"points": len(frame), "measures": list(measures.keys())},
         }
-
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-            bucket_keys = sorted(
-                {
-                    point.get("x")
-                    for series_entry in series
-                    for point in series_entry.get("data", [])
-                    if point.get("x") is not None
-                }
-            )
-            logger.info(
-                "analytics.debug.hour.chartresult_buckets",
-                extra={
-                    "spec_id": spec.get("id"),
-                    "bucket_keys": bucket_keys,
-                },
-            )
 
         return {
             "chartType": "categorical",

@@ -1,13 +1,10 @@
-import {
-  mapChartResultsToDemographics,
-  resolveDemographicsTimeWindow,
-} from "./siteFlowDemographics";
+import { mapChartResultsToDemographics, resolveDemographicsTimeWindow } from "./siteFlowDemographics";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 
-describe("mapHours", () => {
+describe("mapChartResultsToDemographics", () => {
   const baseResult = (data: { x: string | number; value?: number; y?: number }[]): ChartResult => ({
     chartType: "categorical",
-    xDimension: { id: "timestamp", type: "category", bucket: undefined, timezone: "UTC" },
+    xDimension: { id: "category", type: "category", bucket: undefined, timezone: "UTC" },
     series: [
       {
         id: "events",
@@ -16,58 +13,45 @@ describe("mapHours", () => {
         data: data.map((point) => ({ ...point, x: String(point.x) })),
       },
     ],
-    meta: { timezone: "UTC", coverage: [], surges: [], summary: { points: data.length, measure: "events" } },
+    meta: {
+      timezone: "UTC",
+      coverage: [],
+      surges: [],
+      summary: { points: data.length, measure: "events" },
+    },
   });
 
-  it("returns multiple slices when multiple hour buckets are present", () => {
+  it("maps age, gender, and race buckets while preserving timezone", () => {
     const result = mapChartResultsToDemographics({
-      hour: baseResult([
-        { x: "0", value: 5 },
-        { x: "1", value: 3 },
-        { x: "2", value: 7 },
+      age: baseResult([
+        { x: 0, value: 2 },
+        { x: 1, value: 1 },
       ]),
+      gender: baseResult([
+        { x: 0, value: 3 },
+        { x: 1, value: 1 },
+      ]),
+      race: baseResult([
+        { x: 2, value: 4 },
+        { x: 5, value: 1 },
+      ]),
+      timezone: "America/New_York",
     });
 
-    expect(result.hour).toHaveLength(3);
-    expect(result.hour.map((slice) => slice.hour)).toEqual([0, 1, 2]);
-    expect(result.hour.map((slice) => slice.label)).toEqual(["00:00", "01:00", "02:00"]);
-  });
-
-  it("parses iso and hh:mm hour strings", () => {
-    const result = mapChartResultsToDemographics({
-      hour: baseResult([
-        { x: "2024-01-01T15:10:00Z", y: 4 },
-        { x: "08:30", y: 2 },
-      ]),
-    });
-
-    expect(result.hour).toHaveLength(2);
-    expect(result.hour.map((slice) => slice.hour)).toEqual([8, 15]);
-  });
-
-  it("drops invalid hour buckets without collapsing valid ones", () => {
-    const result = mapChartResultsToDemographics({
-      hour: baseResult([
-        { x: "bad", value: 10 },
-        { x: "3", value: 5 },
-        { x: 4, value: 1 },
-      ]),
-    });
-
-    expect(result.hour).toHaveLength(2);
-    expect(result.hour.map((slice) => slice.hour)).toEqual([3, 4]);
+    expect(result.timezone).toBe("America/New_York");
+    expect(result.age.map((slice) => slice.label)).toEqual(["0–4", "5–13"]);
+    expect(result.gender.map((slice) => slice.label)).toEqual(["Male", "Female"]);
+    expect(result.race.map((slice) => slice.label)).toEqual(["Dark", "Unknown"]);
   });
 });
 
 describe("resolveDemographicsTimeWindow", () => {
-  it("uses a bounded default instead of epoch when no range is provided", () => {
+  it("uses an all-time window by default when no range is provided", () => {
     const anchor = new Date("2024-02-01T12:00:00Z");
 
     const window = resolveDemographicsTimeWindow(null, undefined, anchor);
 
     expect(window.to).toBe(anchor.toISOString());
-    expect(new Date(window.from).getTime()).toBe(
-      anchor.getTime() - 30 * 24 * 60 * 60 * 1000,
-    );
+    expect(window.from).toBe(new Date(0).toISOString());
   });
 });
