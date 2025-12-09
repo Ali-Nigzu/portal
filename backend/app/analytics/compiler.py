@@ -705,12 +705,12 @@ class SpecCompiler:
         """
         scoped = dedent(
             f"""
-            scoped AS (
-                WITH scoped_base AS (
-                    SELECT
-                        site_id,
-                        cam_id,
-                        cam_id AS camera_id,
+                scoped AS (
+                    WITH scoped_base AS (
+                        SELECT
+                            site_id,
+                            cam_id,
+                            cam_id AS camera_id,
                         ROW_NUMBER() OVER (
                             PARTITION BY site_id, cam_id, track_id
                             ORDER BY {event_timestamp_column}, event DESC, track_id
@@ -723,7 +723,13 @@ class SpecCompiler:
                             WHEN age_bucket IS NULL THEN 'Unknown'
                             ELSE CAST(age_bucket AS STRING)
                         END AS age_bucket,
-                        CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Unknown' END AS sex,
+                        CASE
+                            WHEN sex = 0 THEN 'Male'
+                            WHEN sex = 1 THEN 'Female'
+                            WHEN LOWER(CAST(sex AS STRING)) IN ('m', 'male') THEN 'Male'
+                            WHEN LOWER(CAST(sex AS STRING)) IN ('f', 'female') THEN 'Female'
+                            ELSE 'Unknown'
+                        END AS sex,
                         COALESCE(CAST(Race AS STRING), 'Unknown') AS race
                     FROM `{table_name}`
                     WHERE {event_timestamp_column} BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)

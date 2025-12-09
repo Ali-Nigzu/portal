@@ -218,14 +218,16 @@ export const mapAgeLabel = (code: string | number): string => {
 
 export const mapGenderLabel = (code: string | number): string => {
   const normalized = normalizeCode(code);
-  switch (normalized) {
-    case 0:
-      return "Male";
-    case 1:
-      return "Female";
-    default:
-      return "Unknown";
+  if (normalized === 0) return "Male";
+  if (normalized === 1) return "Female";
+
+  if (typeof code === "string") {
+    const lowered = code.trim().toLowerCase();
+    if (lowered === "male" || lowered === "m") return "Male";
+    if (lowered === "female" || lowered === "f") return "Female";
   }
+
+  return "Unknown";
 };
 
 export const mapRaceLabel = (code: string | number): string => {
