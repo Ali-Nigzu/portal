@@ -13,6 +13,13 @@ from zoneinfo import ZoneInfo
 
 from .contracts import ValidationError, validate_chart_spec
 
+# DEBUG MAP (temporary)
+# - Live Flow spec: backend/app/analytics/dashboard_catalogue.py:~190
+# - Live Flow compile path: compile()/ _render_calendar()/ _activity_counts_cte()
+# - KPI band spec(s): frontend/src/dashboard/v2/utils/applyVRMOverrides.ts
+# - Demographics spec(s)/compiler: _render_demographic_count()/ _render_categorical_measure()
+# - Time window handling: _resolve_time_params()/ _coarsen_bucket_if_needed()
+
 
 _BUCKET_SECONDS = {
     "RAW": None,
@@ -147,6 +154,58 @@ def _current_time(timezone: str, end_ts: object) -> str:
             parsed_end = parsed_end.astimezone(tzinfo)
         now_in_tz = min(now_in_tz, parsed_end)
     return now_in_tz.isoformat()
+
+
+def _clamp_time_window(
+    time_window: Dict[str, object], *, timezone: str, lookback_days: int = _SAFE_DEFAULT_LOOKBACK_DAYS
+) -> Dict[str, object]:
+    """Bound open-ended/all-time windows to a sane lookback.
+
+    If ``from`` is missing or earlier than ``lookback_days`` before the resolved end
+    timestamp, clamp it to the lookback boundary. The returned dict is a shallow copy
+    to avoid mutating the caller's spec.
+    """
+
+    bounded = dict(time_window)
+    resolved_end = _current_time(timezone, time_window.get("to"))
+    end_dt = _parse_iso8601(resolved_end) or datetime.now(tz=ZoneInfo(timezone))
+    min_start = end_dt - timedelta(days=lookback_days)
+    raw_start = time_window.get("from")
+    start_dt = _parse_iso8601(raw_start) if raw_start else None
+    if start_dt is None or start_dt < min_start:
+        bounded["from"] = min_start.isoformat()
+    return bounded
+
+
+def _bounded_bucket(
+    *,
+    bucket: str,
+    start: str,
+    end: str,
+    max_buckets: int = _MAX_CALENDAR_BUCKETS,
+) -> str:
+    """Return a bucket coarsened until it stays within ``max_buckets``."""
+
+    start_dt = _parse_iso8601(start)
+    end_dt = _parse_iso8601(end)
+    if not start_dt or not end_dt or start_dt >= end_dt:
+        return bucket
+
+    effective = bucket
+    span_seconds = (end_dt - start_dt).total_seconds()
+    while True:
+        interval_seconds = _BUCKET_SECONDS.get(effective)
+        if interval_seconds is None:
+            return effective
+        if span_seconds / interval_seconds <= max_buckets:
+            return effective
+        next_index = _bucket_rank(effective) + 1
+        if next_index >= len(_BUCKET_ORDER):
+            return effective
+        next_bucket = _BUCKET_ORDER[next_index]
+        if _BUCKET_SECONDS.get(next_bucket) is None:
+            return effective
+        effective = next_bucket
 
 
 def _bucket_rank(bucket: str) -> int:
@@ -291,6 +350,19 @@ class SpecCompiler:
         if chart_type not in self._supported_charts:
             raise UnsupportedChartError(f"Unsupported chart type: {chart_type}")
 
+        spec_id = str(spec.get("id", ""))
+        time_window = dict(spec["timeWindow"])
+        timezone = time_window.get("timezone", context.timezone)
+
+        if spec_id == "dashboard.live_flow":
+            time_window = _clamp_time_window(time_window, timezone=timezone)
+            spec = {**spec, "timeWindow": time_window}
+        if chart_type == "categorical" and any(
+            measure.get("aggregation") == "demographic_count" for measure in spec.get("measures", [])
+        ):
+            time_window = _clamp_time_window(time_window, timezone=timezone)
+            spec = {**spec, "timeWindow": time_window}
+
         if chart_type == "single_value":
             return self._compile_single_value(spec, context)
 
@@ -305,6 +377,22 @@ class SpecCompiler:
             end=time_window.get("to"),
             chart_type=chart_type,
         )
+
+        if spec_id == "dashboard.live_flow":
+            # Keep Live Flow within a bounded span/bucket before calendar construction.
+            bucket = _bounded_bucket(
+                bucket=bucket,
+                start=time_window.get("from"),
+                end=time_window.get("to"),
+            )
+            # Align dimension bucket with the chosen grain to keep ordering consistent.
+            if spec.get("dimensions"):
+                dimensions = list(spec.get("dimensions", []))
+                first = dict(dimensions[0])
+                first["bucket"] = bucket
+                dimensions[0] = first
+                spec = {**spec, "dimensions": dimensions}
+                time_window = {**time_window, "bucket": bucket}
 
         use_calendar = False if chart_type == "categorical" else self._should_render_calendar(
             bucket=bucket,
@@ -341,6 +429,42 @@ class SpecCompiler:
         if vrm_occupancy_enabled:
             use_calendar = True
         if occupancy_present:
+            use_calendar = True
+        if spec_id == "dashboard.live_flow":
+            estimated_buckets = None
+            if start_dt and end_dt and interval_seconds:
+                estimated_buckets = (end_dt - start_dt).total_seconds() / interval_seconds
+            logger.debug(
+                "analytics.live_flow.bucket_debug",
+                extra={
+                    "spec_id": spec_id,
+                    "start_ts": start_ts,
+                    "end_ts": end_ts,
+                    "bucket": bucket,
+                    "estimated_buckets": estimated_buckets,
+                },
+            )
+        if spec_id == "dashboard.live_flow":
+            # Coarsen further if needed so the shared calendar remains safe and present.
+            while (
+                interval_seconds
+                and start_dt
+                and end_dt
+                and (end_dt - start_dt).total_seconds() / interval_seconds > _MAX_CALENDAR_BUCKETS
+            ):
+                previous_bucket = bucket
+                bucket = _bounded_bucket(bucket=bucket, start=start_ts, end=end_ts)
+                if bucket == previous_bucket:
+                    break
+                interval_seconds = _BUCKET_SECONDS.get(bucket)
+                time_window = {**time_window, "bucket": bucket}
+                if spec.get("dimensions"):
+                    dimensions = list(spec.get("dimensions", []))
+                    first = dict(dimensions[0])
+                    first["bucket"] = bucket
+                    dimensions[0] = first
+                    spec = {**spec, "dimensions": dimensions}
+                excessive_calendar = False
             use_calendar = True
         if use_calendar and excessive_calendar:
             use_calendar = False

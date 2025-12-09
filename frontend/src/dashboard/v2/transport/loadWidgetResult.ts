@@ -6,6 +6,12 @@ import { loadChartFixture, type ChartFixtureName } from "../../../analytics/util
 import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildWidgetSpec } from "../utils/buildWidgetSpec";
 
+// DEBUG MAP (temporary)
+// - Site Flow widget transport: frontend/src/dashboard/v2/transport/loadWidgetResult.ts
+// - Live Flow spec source: backend/app/analytics/dashboard_catalogue.py:~190
+// - Demographics donuts components: frontend/src/dashboard/v2/widgets/DemographicsWidget.tsx
+// - Chart validation: frontend/src/analytics/components/ChartRenderer/validation.ts
+
 export interface LoadWidgetOptions {
   signal?: AbortSignal;
   mode?: AnalyticsTransportMode;

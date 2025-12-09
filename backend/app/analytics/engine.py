@@ -22,6 +22,13 @@ from .contracts import (
 from .hashing import build_cache_key
 from .router import TableRouter
 
+# DEBUG MAP (temporary)
+# - Live Flow spec: backend/app/analytics/dashboard_catalogue.py:~190
+# - Live Flow compile path: backend/app/analytics/compiler.py:compile/_render_calendar
+# - KPI band spec(s): frontend/src/dashboard/v2/utils/applyVRMOverrides.ts
+# - Demographics spec(s): backend/app/analytics/compiler.py:_render_demographic_count
+# - Time window handling: backend/app/analytics/compiler.py:_resolve_time_params
+
 
 _GEOMETRY_MAP = {
     "occupancy_recursion": "area",
@@ -210,6 +217,53 @@ def _densify_vrm_series(
                 }
             )
 
+    return filled
+
+
+def _expected_buckets(
+    *, start_ts: str, end_ts: str, bucket_seconds: Optional[int]
+) -> List[str]:
+    if bucket_seconds is None or bucket_seconds <= 0:
+        return []
+    start_dt = pd.to_datetime(start_ts, utc=True, errors="coerce")
+    end_dt = pd.to_datetime(end_ts, utc=True, errors="coerce")
+    if start_dt is pd.NaT or end_dt is pd.NaT or start_dt >= end_dt:
+        return []
+    cursor = _aligned_bucket_start(start_dt, bucket_seconds)
+    expected: List[str] = []
+    step = pd.Timedelta(seconds=bucket_seconds)
+    while cursor < end_dt:
+        expected.append(_to_iso(cursor))
+        cursor += step
+    return expected
+
+
+def _densify_live_flow_series(
+    *,
+    data_points: List[Dict[str, Any]],
+    start_ts: str,
+    end_ts: str,
+    bucket_seconds: Optional[int],
+) -> List[Dict[str, Any]]:
+    buckets = _expected_buckets(start_ts=start_ts, end_ts=end_ts, bucket_seconds=bucket_seconds)
+    if not buckets:
+        return data_points
+    by_bucket = {point.get("x"): point for point in data_points}
+    filled: List[Dict[str, Any]] = []
+    for bucket in buckets:
+        existing = by_bucket.get(bucket)
+        if existing is not None:
+            filled.append(existing)
+        else:
+            filled.append(
+                {
+                    "x": bucket,
+                    "y": 0.0,
+                    "value": 0.0,
+                    "coverage": 0.0,
+                    "rawCount": 0,
+                }
+            )
     return filled
 
 
@@ -483,6 +537,7 @@ class AnalyticsEngine:
     ) -> Dict[str, Any]:
         measures = compiled.measures
         timezone = spec["timeWindow"].get("timezone", "UTC")
+        spec_id = str(spec.get("id", ""))
 
         if frame.empty:
             coverage_meta: List[Dict[str, Any]] = []
@@ -539,6 +594,13 @@ class AnalyticsEngine:
                 )
             if is_vrm_kpi:
                 data_points = _densify_vrm_series(
+                    data_points=data_points,
+                    start_ts=str(compiled.params.get("start_ts")),
+                    end_ts=str(compiled.params.get("end_ts")),
+                    bucket_seconds=_BUCKET_SECONDS.get(compiled.bucket),
+                )
+            if spec_id == "dashboard.live_flow":
+                data_points = _densify_live_flow_series(
                     data_points=data_points,
                     start_ts=str(compiled.params.get("start_ts")),
                     end_ts=str(compiled.params.get("end_ts")),

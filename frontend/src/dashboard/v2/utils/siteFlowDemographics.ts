@@ -1,6 +1,12 @@
 import type { ChartResult, ChartSeries, ChartSpec, TimeBucket } from "../../../analytics/schemas/charting";
 import type { DashboardTimeRangeOption, DashboardWidget } from "../types";
 
+// DEBUG MAP (temporary)
+// - Demographics widgets/specs: frontend/src/dashboard/v2/utils/siteFlowDemographics.ts
+// - Demographics compiler path: backend/app/analytics/compiler.py:_render_demographic_count
+// - Time window handling: backend/app/analytics/compiler.py:_resolve_time_params
+// - Live Flow spec for comparison: backend/app/analytics/dashboard_catalogue.py:~190
+
 export type DemographicWidgetKind = "age" | "gender" | "race";
 
 const resolveTimeWindow = (
