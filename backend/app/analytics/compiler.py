@@ -156,13 +156,8 @@ def _coarsen_bucket_if_needed(
     (``RAW``/``MONTH``) are left unchanged.
     """
 
-    if (raw_start is not None and _parse_iso8601(raw_start) is None) or (
-        raw_end is not None and _parse_iso8601(raw_end) is None
-    ):
-        return bucket
-
-    start_dt = _parse_iso8601(start)
-    end_dt = _parse_iso8601(end)
+    start_dt = _parse_iso8601(start) or _parse_iso8601(raw_start)
+    end_dt = _parse_iso8601(end) or _parse_iso8601(raw_end)
     if not start_dt or not end_dt:
         return bucket
 
