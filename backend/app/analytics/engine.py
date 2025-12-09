@@ -14,7 +14,7 @@ import pandas as pd
 
 from ..bigquery_client import BigQueryDataFrameError
 from .cache import SpecCache
-from .compiler import CompiledQuery, CompilerContext, SpecCompiler
+from .compiler import _BUCKET_SECONDS, CompiledQuery, CompilerContext, SpecCompiler
 from .contracts import (
     ValidationError as ContractValidationError,
     validate_chart_result,
@@ -58,6 +58,7 @@ _UNIT_MAP = {
 logger = logging.getLogger(__name__)
 DEBUG_SQL_ENABLED = os.getenv("ANALYTICS_DEBUG_SQL", "").lower() in {"1", "true", "yes"}
 _DEBUG_SQL_PREFIXES = ("dashboard.live_flow", "dashboard.kpi.vrm.")
+_VRM_KPI_PREFIX = "dashboard.kpi.vrm."
 
 _KPI_BUNDLE_MAP: Dict[str, tuple[str, str]] = {
     "dashboard.kpi.activity_today": ("dashboard.kpi.site_flow_bundle", "activity_total"),
@@ -160,6 +161,56 @@ def _filter_single_value_measure(result: Dict[str, Any], measure_id: str) -> Dic
     filtered_meta["summary"] = summary
 
     return {**result, "chartType": "single_value", "series": filtered_series, "meta": filtered_meta}
+
+
+def _aligned_bucket_start(timestamp: pd.Timestamp, bucket_seconds: Optional[int]) -> pd.Timestamp:
+    if bucket_seconds is None or bucket_seconds <= 0:
+        return timestamp
+    nanos = bucket_seconds * 1_000_000_000
+    return pd.to_datetime((timestamp.value // nanos) * nanos, utc=True)
+
+
+def _densify_vrm_series(
+    *,
+    data_points: List[Dict[str, Any]],
+    start_ts: str,
+    end_ts: str,
+    bucket_seconds: Optional[int],
+) -> List[Dict[str, Any]]:
+    if bucket_seconds is None or bucket_seconds <= 0:
+        return data_points
+    start_dt = pd.to_datetime(start_ts, utc=True, errors="coerce")
+    end_dt = pd.to_datetime(end_ts, utc=True, errors="coerce")
+    if start_dt is pd.NaT or end_dt is pd.NaT or start_dt >= end_dt:
+        return data_points
+
+    aligned_start = _aligned_bucket_start(start_dt, bucket_seconds)
+    expected = []
+    cursor = aligned_start
+    step = pd.Timedelta(seconds=bucket_seconds)
+    while cursor < end_dt:
+        expected.append(cursor)
+        cursor += step
+
+    by_bucket = {point.get("x"): point for point in data_points}
+    filled: List[Dict[str, Any]] = []
+    for ts in expected:
+        key = _to_iso(ts)
+        existing = by_bucket.get(key)
+        if existing:
+            filled.append(existing)
+        else:
+            filled.append(
+                {
+                    "x": key,
+                    "y": 0.0,
+                    "value": 0.0,
+                    "coverage": 0.0,
+                    "rawCount": 0,
+                }
+            )
+
+    return filled
 
 
 @dataclass
@@ -452,6 +503,7 @@ class AnalyticsEngine:
 
         series: List[Dict[str, Any]] = []
         surges: List[Dict[str, Any]] = []
+        is_vrm_kpi = str(spec.get("id", "")).startswith(_VRM_KPI_PREFIX)
         for measure_id, aggregation in measures.items():
             subset = frame[frame["measure_id"] == measure_id]
             data_points: List[Dict[str, Any]] = []
@@ -484,6 +536,13 @@ class AnalyticsEngine:
                         if occupancy_avg_value is not None
                         else None,
                     }
+                )
+            if is_vrm_kpi:
+                data_points = _densify_vrm_series(
+                    data_points=data_points,
+                    start_ts=str(compiled.params.get("start_ts")),
+                    end_ts=str(compiled.params.get("end_ts")),
+                    bucket_seconds=_BUCKET_SECONDS.get(compiled.bucket),
                 )
             series.append(
                 {

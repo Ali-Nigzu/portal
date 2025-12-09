@@ -6,7 +6,7 @@ import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from textwrap import dedent
 from typing import Dict, Iterable, List, Tuple
 from zoneinfo import ZoneInfo
@@ -29,7 +29,8 @@ _RETENTION_MIN_COHORT = 100
 _RETENTION_MAX_COHORTS = {"WEEK": 52, "MONTH": 24}
 
 _BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
-_MAX_CALENDAR_BUCKETS = 4000
+_MAX_CALENDAR_BUCKETS = 2000
+_SAFE_DEFAULT_LOOKBACK_DAYS = 365
 
 logger = logging.getLogger(__name__)
 
@@ -115,10 +116,20 @@ def _normalize_timestamp_param(value: object, *, fallback: str, timezone: str | 
 def _resolve_time_params(time_window: Dict[str, object], timezone: str) -> Tuple[str, str, str]:
     """Ensure @start_ts/@end_ts/@now are always valid ISO strings."""
 
-    start_fallback = datetime.fromtimestamp(0, tz=ZoneInfo("UTC")).isoformat()
+    end_fallback = _current_time(timezone, time_window.get("to"))
+    duration_minutes = time_window.get("durationMinutes")
+    if isinstance(duration_minutes, (int, float)) and duration_minutes > 0:
+        start_default_dt = _parse_iso8601(end_fallback) or datetime.now(tz=ZoneInfo(timezone))
+        start_default_dt -= timedelta(minutes=float(duration_minutes))
+    else:
+        # Avoid unbounded epoch fallbacks for "all-time" requests by clamping to a
+        # sane lookback window (1 year) when no explicit start is provided.
+        start_default_dt = _parse_iso8601(end_fallback) or datetime.now(tz=ZoneInfo(timezone))
+        start_default_dt -= timedelta(days=_SAFE_DEFAULT_LOOKBACK_DAYS)
+
+    start_fallback = start_default_dt.astimezone(ZoneInfo("UTC")).isoformat()
     start_ts = _normalize_timestamp_param(time_window.get("from"), fallback=start_fallback, timezone=timezone)
 
-    end_fallback = _current_time(timezone, time_window.get("to"))
     end_ts = _normalize_timestamp_param(time_window.get("to"), fallback=end_fallback, timezone=timezone)
 
     now = _current_time(timezone, end_ts)

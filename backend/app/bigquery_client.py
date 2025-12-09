@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -168,8 +169,9 @@ class BigQueryClient:
         self, sql: str, params: Dict[str, Any], *, job_context: Optional[str] = None
     ) -> pd.DataFrame:
         job = self.query(sql, params)
+        timeout_seconds = int(os.getenv("ANALYTICS_BQ_TIMEOUT_SECONDS", "300"))
         try:
-            result = job.result()
+            result = job.result(timeout=timeout_seconds)
             storage_client = self._get_bqstorage_client()
             dataframe_kwargs: Dict[str, Any] = {}
             if storage_client is not None:
