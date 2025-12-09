@@ -1,6 +1,12 @@
 import type { ChartResult, ChartSeries, ChartSpec, TimeBucket } from "../../../analytics/schemas/charting";
 import type { DashboardTimeRangeOption, DashboardWidget } from "../types";
 
+// DEBUG MAP (temporary)
+// - Demographics widgets/specs: frontend/src/dashboard/v2/utils/siteFlowDemographics.ts
+// - Demographics compiler path: backend/app/analytics/compiler.py:_render_demographic_count
+// - Time window handling: backend/app/analytics/compiler.py:_resolve_time_params
+// - Live Flow spec for comparison: backend/app/analytics/dashboard_catalogue.py:~190
+
 export type DemographicWidgetKind = "age" | "gender" | "race";
 
 const resolveTimeWindow = (
@@ -212,14 +218,16 @@ export const mapAgeLabel = (code: string | number): string => {
 
 export const mapGenderLabel = (code: string | number): string => {
   const normalized = normalizeCode(code);
-  switch (normalized) {
-    case 0:
-      return "Male";
-    case 1:
-      return "Female";
-    default:
-      return "Unknown";
+  if (normalized === 0) return "Male";
+  if (normalized === 1) return "Female";
+
+  if (typeof code === "string") {
+    const lowered = code.trim().toLowerCase();
+    if (lowered === "male" || lowered === "m") return "Male";
+    if (lowered === "female" || lowered === "f") return "Female";
   }
+
+  return "Unknown";
 };
 
 export const mapRaceLabel = (code: string | number): string => {

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -168,8 +169,9 @@ class BigQueryClient:
         self, sql: str, params: Dict[str, Any], *, job_context: Optional[str] = None
     ) -> pd.DataFrame:
         job = self.query(sql, params)
+        timeout_seconds = int(os.getenv("ANALYTICS_BQ_TIMEOUT_SECONDS", "300"))
         try:
-            result = job.result()
+            result = job.result(timeout=timeout_seconds)
             storage_client = self._get_bqstorage_client()
             dataframe_kwargs: Dict[str, Any] = {}
             if storage_client is not None:
@@ -177,6 +179,18 @@ class BigQueryClient:
             else:
                 dataframe_kwargs["create_bqstorage_client"] = False
             df = result.to_dataframe(**dataframe_kwargs)
+            stats = getattr(job, "_properties", {}).get("statistics", {}) if job else {}
+            query_stats = stats.get("query", {}) if isinstance(stats, dict) else {}
+            logger.info(
+                "analytics.bigquery.job_stats",
+                extra={
+                    "job_id": getattr(job, "job_id", None),
+                    "job_context": job_context or "unlabeled",
+                    "location": getattr(job, "location", None),
+                    "total_bytes_processed": query_stats.get("totalBytesProcessed"),
+                    "total_slot_ms": query_stats.get("totalSlotMs"),
+                },
+            )
             logger.debug(
                 "BigQuery job %s materialised dataframe (%s rows) [%s]",
                 job.job_id,

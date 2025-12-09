@@ -67,9 +67,9 @@ def test_vrm_kpis_use_bucket_start_instead_of_raw_timestamp():
 
     sql = compiled.sql
     assert "TIMESTAMP_ADD(bucket_start" in sql
-    assert "COUNT(*) AS event_count" in sql
-    assert "GROUP BY bucket_start" in sql
-    assert "DIV(UNIX_SECONDS(timestamp)" in sql
+    assert "COUNT(scoped.timestamp) AS event_count" in sql
+    assert "GROUP BY calendar.bucket_start" in sql
+    assert "DIV(UNIX_SECONDS(TIMESTAMP(@start_ts))" in sql
     assert "TIMESTAMP_ADD(timestamp" not in sql
 
 

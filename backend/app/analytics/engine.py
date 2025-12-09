@@ -14,7 +14,7 @@ import pandas as pd
 
 from ..bigquery_client import BigQueryDataFrameError
 from .cache import SpecCache
-from .compiler import CompiledQuery, CompilerContext, SpecCompiler
+from .compiler import CompiledQuery, CompilerContext, SpecCompiler, _safe_bucket_count
 from .contracts import (
     ValidationError as ContractValidationError,
     validate_chart_result,
@@ -235,6 +235,19 @@ class AnalyticsEngine:
             ),
         )
         spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+        if spec_id == "dashboard.live_flow":
+            bucket_count = _safe_bucket_count(
+                compiled.bucket, spec.get("timeWindow", {}).get("from"), spec.get("timeWindow", {}).get("to")
+            )
+            logger.info(
+                "analytics.run.debug_live_flow",
+                extra={
+                    "spec_id": spec_id,
+                    "bucket": compiled.bucket,
+                    "time_window": spec.get("timeWindow"),
+                    "bucket_count": bucket_count,
+                },
+            )
         if DEBUG_SQL_ENABLED and any(spec_id.startswith(prefix) for prefix in _DEBUG_SQL_PREFIXES):
             logger.info(
                 "analytics.run.debug_sql",
@@ -450,6 +463,10 @@ class AnalyticsEngine:
             else:
                 coverage_meta = []
 
+        expected_buckets: List[str] = []
+        if coverage_meta:
+            expected_buckets = [entry["x"] for entry in coverage_meta]
+
         series: List[Dict[str, Any]] = []
         surges: List[Dict[str, Any]] = []
         for measure_id, aggregation in measures.items():
@@ -496,6 +513,31 @@ class AnalyticsEngine:
                 }
             )
             surges.extend(_detect_surges(measure_id, data_points))
+
+        spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+        needs_alignment = expected_buckets and (
+            spec_id.startswith("dashboard.live_flow") or spec_id.startswith("dashboard.kpi.vrm.")
+        )
+        if needs_alignment:
+            bucket_lookup = list(dict.fromkeys(expected_buckets))
+            for series_entry in series:
+                existing = {point["x"]: point for point in series_entry.get("data", [])}
+                aligned: List[Dict[str, Any]] = []
+                for bucket_x in bucket_lookup:
+                    point = existing.get(bucket_x)
+                    if point is None:
+                        point = {
+                            "x": bucket_x,
+                            "y": 0.0,
+                            "value": 0.0,
+                            "coverage": 0.0,
+                            "rawCount": 0,
+                            "occupancy_min": 0.0,
+                            "occupancy_max": 0.0,
+                            "occupancy_avg": 0.0,
+                        }
+                    aligned.append(point)
+                series_entry["data"] = aligned
 
         dimension = spec["dimensions"][0]
         x_dimension = {

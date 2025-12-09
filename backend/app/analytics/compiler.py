@@ -156,13 +156,8 @@ def _coarsen_bucket_if_needed(
     (``RAW``/``MONTH``) are left unchanged.
     """
 
-    if (raw_start is not None and _parse_iso8601(raw_start) is None) or (
-        raw_end is not None and _parse_iso8601(raw_end) is None
-    ):
-        return bucket
-
-    start_dt = _parse_iso8601(start)
-    end_dt = _parse_iso8601(end)
+    start_dt = _parse_iso8601(start) or _parse_iso8601(raw_start)
+    end_dt = _parse_iso8601(end) or _parse_iso8601(raw_end)
     if not start_dt or not end_dt:
         return bucket
 
@@ -186,6 +181,22 @@ def _coarsen_bucket_if_needed(
         if _BUCKET_SECONDS.get(next_bucket) is None:
             return effective
         effective = next_bucket
+
+
+def _safe_bucket_count(bucket: str, start: object, end: object) -> int | None:
+    """Return the estimated number of calendar buckets for the span if computable."""
+
+    interval_seconds = _BUCKET_SECONDS.get(bucket)
+    if interval_seconds is None:
+        return None
+    start_dt = _parse_iso8601(start)
+    end_dt = _parse_iso8601(end)
+    if not start_dt or not end_dt:
+        return None
+    span_seconds = (end_dt - start_dt).total_seconds()
+    if span_seconds <= 0:
+        return None
+    return int(span_seconds // interval_seconds) + 1
 
 
 def _retention_cohort_trunc(bucket: str) -> str:
@@ -317,6 +328,19 @@ class SpecCompiler:
             raw_start=time_window.get("from"),
             raw_end=time_window.get("to"),
         )
+        if spec.get("id", "") == "dashboard.live_flow":
+            # Preserve all-time coverage by automatically coarsening the bucket when the
+            # requested span would exceed the calendar limit at the current grain.
+            bucket_count = _safe_bucket_count(bucket, start_ts, end_ts)
+            while bucket_count is not None and bucket_count > _MAX_CALENDAR_BUCKETS:
+                next_index = _bucket_rank(bucket) + 1
+                if next_index >= len(_BUCKET_ORDER):
+                    break
+                next_bucket = _BUCKET_ORDER[next_index]
+                if _BUCKET_SECONDS.get(next_bucket) is None:
+                    break
+                bucket = next_bucket
+                bucket_count = _safe_bucket_count(bucket, start_ts, end_ts)
         start_dt = _parse_iso8601(start_ts)
         end_dt = _parse_iso8601(end_ts)
         interval_seconds = _BUCKET_SECONDS.get(bucket)
@@ -429,6 +453,8 @@ class SpecCompiler:
             measure.get("aggregation") == "occupancy_recursion" for measure in measures
         ):
             use_calendar = False
+        if spec.get("id", "").startswith("dashboard.kpi.vrm."):
+            use_calendar = True
 
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
@@ -679,12 +705,12 @@ class SpecCompiler:
         """
         scoped = dedent(
             f"""
-            scoped AS (
-                WITH scoped_base AS (
-                    SELECT
-                        site_id,
-                        cam_id,
-                        cam_id AS camera_id,
+                scoped AS (
+                    WITH scoped_base AS (
+                        SELECT
+                            site_id,
+                            cam_id,
+                            cam_id AS camera_id,
                         ROW_NUMBER() OVER (
                             PARTITION BY site_id, cam_id, track_id
                             ORDER BY {event_timestamp_column}, event DESC, track_id
@@ -697,7 +723,13 @@ class SpecCompiler:
                             WHEN age_bucket IS NULL THEN 'Unknown'
                             ELSE CAST(age_bucket AS STRING)
                         END AS age_bucket,
-                        CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Unknown' END AS sex,
+                        CASE
+                            WHEN sex = 0 THEN 'Male'
+                            WHEN sex = 1 THEN 'Female'
+                            WHEN LOWER(CAST(sex AS STRING)) IN ('m', 'male') THEN 'Male'
+                            WHEN LOWER(CAST(sex AS STRING)) IN ('f', 'female') THEN 'Female'
+                            ELSE 'Unknown'
+                        END AS sex,
                         COALESCE(CAST(Race AS STRING), 'Unknown') AS race
                     FROM `{table_name}`
                     WHERE {event_timestamp_column} BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
