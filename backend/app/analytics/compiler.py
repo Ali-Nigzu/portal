@@ -1,6 +1,7 @@
 """Spec → SQL compiler for analytics ChartSpecs."""
 from __future__ import annotations
 
+import logging
 import os
 import re
 from collections import OrderedDict
@@ -29,6 +30,8 @@ _RETENTION_MAX_COHORTS = {"WEEK": 52, "MONTH": 24}
 
 _BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
 _MAX_CALENDAR_BUCKETS = 4000
+
+logger = logging.getLogger(__name__)
 
 # BigQuery reserves WINDOW as a keyword, so we use descriptive aliases instead.
 WINDOW_BOUNDS_CTE = "window_bounds"
@@ -397,6 +400,7 @@ class SpecCompiler:
             select_statements=select_statements,
             order_by=order_by,
         )
+        self._warn_on_unbucketed_timestamp(sql, spec.get("id"))
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
 
@@ -581,6 +585,7 @@ class SpecCompiler:
             select_statements=select_statements,
             order_by="bucket_start, lag_weeks, measure_id",
         )
+        self._warn_on_unbucketed_timestamp(sql, spec.get("id"))
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
 
@@ -636,6 +641,30 @@ class SpecCompiler:
             """
         )
         return "\n".join(line.rstrip() for line in final_sql.splitlines() if line.strip())
+
+    def _warn_on_unbucketed_timestamp(self, sql: str, spec_id: str | None) -> None:
+        """Detect obvious cases where timestamp is selected without grouping.
+
+        This is a lightweight guardrail (not a SQL parser) intended for known
+        dashboard specs. It only emits a log entry; behaviour is unchanged.
+        """
+
+        lowered = sql.lower()
+        if "group by" not in lowered:
+            return
+        if "timestamp" not in lowered:
+            return
+        group_clause = lowered.split("group by", 1)[1]
+        if "timestamp" in group_clause:
+            return
+        if spec_id and (
+            spec_id.startswith("dashboard.live_flow")
+            or spec_id.startswith("dashboard.kpi.vrm.")
+        ):
+            logger.error(
+                "analytics.compile.timestamp_not_grouped",
+                extra={"spec_id": spec_id},
+            )
 
     def _render_scoped(
         self, table_name: str, filters_sql: str, *, event_timestamp_column: str
@@ -896,20 +925,23 @@ class SpecCompiler:
                     f"""
                     {prefix}_deltas AS (
                         SELECT
-                            {bucket_expr} AS bucket_start,
-                            TIMESTAMP_ADD({bucket_expr}, {interval_expr}) AS bucket_end,
-                            TIMESTAMP_DIFF(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), {bucket_expr}, SECOND) AS bucket_seconds,
+                            bucket_start,
+                            TIMESTAMP_ADD(bucket_start, {interval_expr}) AS bucket_end,
+                            TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
                             GREATEST(
                                 TIMESTAMP_DIFF(
-                                    LEAST(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), TIMESTAMP(@end_ts)),
-                                    GREATEST({bucket_expr}, TIMESTAMP(@start_ts)),
+                                    LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                    GREATEST(bucket_start, TIMESTAMP(@start_ts)),
                                     SECOND
                                 ),
                                 0
                             ) AS window_seconds,
                             COALESCE(SUM(CASE WHEN scoped.event = 1 THEN 1 WHEN scoped.event = 0 THEN -1 ELSE 0 END), 0) AS delta,
-                            COUNT(scoped.timestamp) AS raw_count
-                        FROM scoped
+                            COUNT(*) AS raw_count
+                        FROM (
+                            SELECT {_bucket_expression(bucket)} AS bucket_start, event
+                            FROM scoped
+                        ) AS scoped
                         GROUP BY bucket_start
                         ORDER BY bucket_start
                     )
@@ -1778,7 +1810,7 @@ class SpecCompiler:
         *,
         use_calendar: bool = True,
         bucket: str = "DAY",
-    ) -> Tuple[str, str]:
+        ) -> Tuple[str, str]:
         measure_id = measure["id"]
         prefix = f"{measure_id}_activity_counts"
         event_types = measure.get("eventTypes")
@@ -1815,19 +1847,22 @@ class SpecCompiler:
                 f"""
                 {prefix} AS (
                     SELECT
-                        {bucket_expr} AS bucket_start,
-                        TIMESTAMP_DIFF(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), {bucket_expr}, SECOND) AS bucket_seconds,
+                        bucket_start,
+                        TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
                         GREATEST(
                             TIMESTAMP_DIFF(
-                                LEAST(TIMESTAMP_ADD({bucket_expr}, {interval_expr}), TIMESTAMP(@end_ts)),
-                                GREATEST({bucket_expr}, TIMESTAMP(@start_ts)),
+                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                GREATEST(bucket_start, TIMESTAMP(@start_ts)),
                                 SECOND
                             ),
                             0
                         ) AS window_seconds,
-                        COUNT(scoped.timestamp) AS event_count
-                    FROM scoped
-                    WHERE scoped.timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts){filter_sql}
+                        COUNT(*) AS event_count
+                    FROM (
+                        SELECT {_bucket_expression(bucket)} AS bucket_start, event
+                        FROM scoped
+                        WHERE scoped.timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts){filter_sql}
+                    ) AS scoped
                     GROUP BY bucket_start
                     ORDER BY bucket_start
                 )

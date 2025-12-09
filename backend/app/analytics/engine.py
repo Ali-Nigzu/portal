@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from numbers import Number
@@ -55,6 +56,8 @@ _UNIT_MAP = {
 
 
 logger = logging.getLogger(__name__)
+DEBUG_SQL_ENABLED = os.getenv("ANALYTICS_DEBUG_SQL", "").lower() in {"1", "true", "yes"}
+_DEBUG_SQL_PREFIXES = ("dashboard.live_flow", "dashboard.kpi.vrm.")
 
 _KPI_BUNDLE_MAP: Dict[str, tuple[str, str]] = {
     "dashboard.kpi.activity_today": ("dashboard.kpi.site_flow_bundle", "activity_total"),
@@ -231,6 +234,17 @@ class AnalyticsEngine:
                 table_name=table_name, event_timestamp_column=event_timestamp_column
             ),
         )
+        spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+        if DEBUG_SQL_ENABLED and any(spec_id.startswith(prefix) for prefix in _DEBUG_SQL_PREFIXES):
+            logger.info(
+                "analytics.run.debug_sql",
+                extra={
+                    "spec_id": spec_id,
+                    "time_window": spec.get("timeWindow"),
+                    "bucket": getattr(compiled, "bucket", None),
+                    "sql": compiled.sql,
+                },
+            )
         try:
             frame = self.bigquery_client.query_dataframe(
                 compiled.sql,
