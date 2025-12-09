@@ -66,8 +66,8 @@ def test_standard_occupancy_remains_unchanged():
     compiled = compiler.compile(spec, context)
 
     sql = compiled.sql
-    assert "seeded_by_exit" in sql
-    assert "occupancy_occupancy_anchor" not in sql
+    assert "occupancy_deltas" in sql
+    assert "seeded_by_exit" not in sql
 
 
 def test_vrm_dwell_fifo_compiles_without_track_matching():

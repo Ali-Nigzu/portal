@@ -259,7 +259,12 @@ class SpecCompiler:
         vrm_occupancy_enabled = any(
             (measure.get("options") or {}).get("vrmOccupancyStats") for measure in measures
         )
+        occupancy_present = any(
+            measure.get("aggregation") == "occupancy_recursion" for measure in measures
+        )
         if vrm_occupancy_enabled:
+            use_calendar = True
+        if occupancy_present:
             use_calendar = True
 
         start_ts, end_ts, now = _resolve_time_params(time_window, timezone)
@@ -283,7 +288,9 @@ class SpecCompiler:
         ]
         if bucket != "RAW" and use_calendar:
             base_ctes.append(
-                self._render_calendar(bucket, clamp_to_data=vrm_occupancy_enabled)
+                self._render_calendar(
+                    bucket, clamp_to_data=vrm_occupancy_enabled or occupancy_present
+                )
             )
 
         for measure in measures:
@@ -770,6 +777,81 @@ class SpecCompiler:
         measure_id = measure["id"]
         prefix = f"{measure_id}_occupancy"
         options = measure.get("options", {}) if isinstance(measure.get("options"), dict) else {}
+
+        if not options.get("vrmOccupancy"):
+            deltas = dedent(
+                f"""
+                {prefix}_deltas AS (
+                    SELECT
+                        calendar.bucket_start,
+                        calendar.bucket_end,
+                        calendar.bucket_seconds,
+                        calendar.window_seconds,
+                        COALESCE(SUM(CASE WHEN scoped.event = 1 THEN 1 WHEN scoped.event = 0 THEN -1 ELSE 0 END), 0) AS delta,
+                        COUNT(scoped.timestamp) AS raw_count
+                    FROM calendar
+                    LEFT JOIN scoped
+                        ON scoped.timestamp >= calendar.bucket_start
+                        AND scoped.timestamp < calendar.bucket_end
+                    GROUP BY
+                        calendar.bucket_start,
+                        calendar.bucket_end,
+                        calendar.bucket_seconds,
+                        calendar.window_seconds
+                    ORDER BY calendar.bucket_start
+                )
+                """
+            ).strip()
+
+            series = dedent(
+                f"""
+                {prefix}_series AS (
+                    SELECT
+                        bucket_start,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS value,
+                        CASE
+                            WHEN bucket_seconds = 0 THEN 0.0
+                            ELSE SAFE_DIVIDE(window_seconds, bucket_seconds)
+                        END AS coverage,
+                        COALESCE(raw_count, 0) AS raw_count,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS occupancy_min,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS occupancy_max,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS occupancy_avg
+                    FROM {prefix}_deltas
+                )
+                """
+            ).strip()
+
+            select_sql = (
+                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, occupancy_min, occupancy_max, occupancy_avg "
+                f"FROM {prefix}_series"
+            )
+
+            return MeasureCompilation(ctes=[deltas, series], select_sql=select_sql)
 
         if options.get("vrmOccupancy"):
             if options.get("vrmOccupancyStats"):
