@@ -8,6 +8,8 @@ from datetime import datetime
 from numbers import Number
 from typing import Any, Dict, Iterable, List, Optional
 
+from .dashboard_catalogue import get_dashboard_spec
+
 import pandas as pd
 
 from ..bigquery_client import BigQueryDataFrameError
@@ -54,25 +56,15 @@ _UNIT_MAP = {
 
 
 logger = logging.getLogger(__name__)
+DEBUG_SQL_ENABLED = os.getenv("ANALYTICS_DEBUG_SQL", "").lower() in {"1", "true", "yes"}
+_DEBUG_SQL_PREFIXES = ("dashboard.live_flow", "dashboard.kpi.vrm.")
 
-
-_DEMOGRAPHICS_HOUR_DEBUG = os.getenv("DEMOGRAPHICS_HOUR_DEBUG", "").lower() in {
-    "1",
-    "true",
-    "yes",
+_KPI_BUNDLE_MAP: Dict[str, tuple[str, str]] = {
+    "dashboard.kpi.activity_today": ("dashboard.kpi.site_flow_bundle", "activity_total"),
+    "dashboard.kpi.entrances_today": ("dashboard.kpi.site_flow_bundle", "entrances"),
+    "dashboard.kpi.exits_today": ("dashboard.kpi.site_flow_bundle", "exits"),
+    "dashboard.kpi.avg_dwell_today": ("dashboard.kpi.site_flow_bundle", "avg_dwell"),
 }
-
-
-def _is_demographics_hour_spec(spec: Dict[str, Any]) -> bool:
-    """Return True when the spec represents the demographics hour chart."""
-
-    dimension = (spec.get("dimensions") or [{}])[0]
-    return (
-        spec.get("id") == "dashboard.site_flow.demographics.hour"
-        or (dimension.get("column") == "timestamp" and dimension.get("bucket") == "HOUR")
-    )
-
-
 def _label_for_series(measure_id: str, aggregation: str) -> str:
     if measure_id:
         return measure_id.replace("_", " ").title()
@@ -145,6 +137,31 @@ def _detect_surges(measure_id: str, points: Iterable[Dict[str, Any]]) -> List[Di
     return surges
 
 
+def _filter_single_value_measure(result: Dict[str, Any], measure_id: str) -> Dict[str, Any]:
+    """Return a ChartResult containing only the requested single-value measure."""
+
+    filtered_series = []
+    for series in result.get("series", []):
+        if series.get("id") != measure_id:
+            continue
+        normalised_series = {**series, "geometry": "metric"}
+        normalised_series.pop("axis", None)
+        if normalised_series.get("data"):
+            for point in normalised_series["data"]:
+                if "y" in point and "value" not in point:
+                    point["value"] = point["y"]
+        filtered_series.append(normalised_series)
+
+    filtered_meta = dict(result.get("meta", {}) or {})
+    summary = dict(filtered_meta.get("summary", {}) or {})
+    measures = summary.get("measures")
+    if measures is not None:
+        summary["measures"] = [m for m in measures if m == measure_id]
+    filtered_meta["summary"] = summary
+
+    return {**result, "chartType": "single_value", "series": filtered_series, "meta": filtered_meta}
+
+
 @dataclass
 class AnalyticsEngine:
     """High-level orchestration for executing ChartSpecs."""
@@ -179,25 +196,6 @@ class AnalyticsEngine:
                 },
             )
             raise ContractValidationError(str(exc)) from exc
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-            schema_loader = getattr(self.bigquery_client, "get_table_schema", None)
-            if schema_loader:
-                try:  # pragma: no cover - diagnostic only
-                    columns = schema_loader(table_name)
-                    logger.info(
-                        "analytics.debug.hour.table_schema",
-                        extra={
-                            "spec_id": spec.get("id"),
-                            "table": table_name,
-                            "schema_columns": columns,
-                        },
-                    )
-                except Exception:
-                    logger.warning(
-                        "analytics.debug.hour.table_schema_failed",
-                        extra={"spec_id": spec.get("id"), "table": table_name},
-                        exc_info=True,
-                    )
         logger.info(
             "analytics.run.resolved_table org=%s table=%s",
             organisation,
@@ -220,19 +218,31 @@ class AnalyticsEngine:
             if cached is not None:
                 return cached
 
+        delegated = self._maybe_delegate_kpi_bundle(
+            spec,
+            organisation=organisation,
+            cache_key=cache_key,
+            bypass_cache=bypass_cache,
+            cache_ttl=cache_ttl,
+        )
+        if delegated is not None:
+            return delegated
+
         compiled = self.compiler.compile(
             spec,
             CompilerContext(
                 table_name=table_name, event_timestamp_column=event_timestamp_column
             ),
         )
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
+        spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+        if DEBUG_SQL_ENABLED and any(spec_id.startswith(prefix) for prefix in _DEBUG_SQL_PREFIXES):
             logger.info(
-                "analytics.debug.hour.compiled_sql",
+                "analytics.run.debug_sql",
                 extra={
-                    "spec_id": spec.get("id"),
+                    "spec_id": spec_id,
+                    "time_window": spec.get("timeWindow"),
+                    "bucket": getattr(compiled, "bucket", None),
                     "sql": compiled.sql,
-                    "params": compiled.params,
                 },
             )
         try:
@@ -257,6 +267,45 @@ class AnalyticsEngine:
         self.cache.set(cache_key, result, ttl=cache_ttl)
         return result
 
+    def _maybe_delegate_kpi_bundle(
+        self,
+        spec: Dict[str, Any],
+        *,
+        organisation: str,
+        cache_key: str,
+        bypass_cache: bool,
+        cache_ttl: Optional[int],
+    ) -> Optional[Dict[str, Any]]:
+        mapping = _KPI_BUNDLE_MAP.get(spec.get("id"))
+        if not mapping:
+            return None
+        if len(spec.get("measures", [])) != 1:
+            return None
+
+        bundle_spec_id, measure_id = mapping
+        if spec.get("id") == bundle_spec_id:
+            return None
+
+        bundle_spec = get_dashboard_spec(bundle_spec_id)
+        if spec.get("timeWindow"):
+            bundle_spec["timeWindow"] = spec["timeWindow"]
+        if spec.get("dimensions"):
+            bundle_spec["dimensions"] = spec["dimensions"]
+        if spec.get("filters"):
+            bundle_spec["filters"] = spec["filters"]
+
+        bundle_result = self.execute(
+            bundle_spec,
+            organisation=organisation,
+            bypass_cache=bypass_cache,
+            cache_ttl=cache_ttl,
+        )
+
+        filtered = _filter_single_value_measure(bundle_result, measure_id)
+        if not bypass_cache:
+            self.cache.set(cache_key, filtered, ttl=cache_ttl)
+        return filtered
+
     def _normalise(self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame) -> Dict[str, Any]:
         chart_type = spec["chartType"]
         if chart_type == "single_value":
@@ -275,39 +324,6 @@ class AnalyticsEngine:
         measures = compiled.measures
         timezone = spec["timeWindow"].get("timezone", "UTC")
         series: List[Dict[str, Any]] = []
-
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-            logger.info(
-                "analytics.debug.hour.raw_frame",
-                extra={
-                    "spec_id": spec.get("id"),
-                    "columns": list(frame.columns),
-                    "rows": frame.head(50).to_dict("records"),
-                },
-            )
-
-            distinct_hours: set[str] = set()
-            for value in frame.get("category_value", []):
-                if isinstance(value, pd.Timestamp):
-                    distinct_hours.add(str(int(value.hour)))
-                elif isinstance(value, datetime):
-                    distinct_hours.add(str(int(value.hour)))
-                elif isinstance(value, Number):
-                    distinct_hours.add(str(int(value)))
-                else:
-                    try:
-                        numeric_value = int(str(value))
-                        distinct_hours.add(str(numeric_value))
-                    except Exception:
-                        continue
-
-            logger.info(
-                "analytics.debug.hour.distinct_hours",
-                extra={
-                    "spec_id": spec.get("id"),
-                    "hours": sorted(distinct_hours),
-                },
-            )
 
         for measure_id, aggregation in measures.items():
             subset = frame[frame["measure_id"] == measure_id]
@@ -348,16 +364,6 @@ class AnalyticsEngine:
             data_points = [
                 buckets[key] for key in sorted(buckets.keys(), key=_categorical_bucket_sort_key)
             ]
-            if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-                logger.info(
-                    "analytics.debug.hour.normalised_series",
-                    extra={
-                        "spec_id": spec.get("id"),
-                        "measure_id": measure_id,
-                        "bucket_keys": [point.get("x") for point in data_points],
-                        "row_count": len(data_points),
-                    },
-                )
             series.append(
                 {
                     "id": measure_id,
@@ -383,23 +389,6 @@ class AnalyticsEngine:
             "surges": [],
             "summary": {"points": len(frame), "measures": list(measures.keys())},
         }
-
-        if _DEMOGRAPHICS_HOUR_DEBUG and _is_demographics_hour_spec(spec):
-            bucket_keys = sorted(
-                {
-                    point.get("x")
-                    for series_entry in series
-                    for point in series_entry.get("data", [])
-                    if point.get("x") is not None
-                }
-            )
-            logger.info(
-                "analytics.debug.hour.chartresult_buckets",
-                extra={
-                    "spec_id": spec.get("id"),
-                    "bucket_keys": bucket_keys,
-                },
-            )
 
         return {
             "chartType": "categorical",

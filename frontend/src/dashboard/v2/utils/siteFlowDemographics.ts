@@ -1,14 +1,7 @@
-import type {
-  ChartResult,
-  ChartSeries,
-  ChartSpec,
-  TimeBucket,
-} from "../../../analytics/schemas/charting";
+import type { ChartResult, ChartSeries, ChartSpec, TimeBucket } from "../../../analytics/schemas/charting";
 import type { DashboardTimeRangeOption, DashboardWidget } from "../types";
 
-const DEBUG_DEMOGRAPHICS_HOUR = process.env.REACT_APP_DEBUG_DEMOGRAPHICS_HOUR === "true";
-
-export type DemographicWidgetKind = "age" | "gender" | "hour" | "race";
+export type DemographicWidgetKind = "age" | "gender" | "race";
 
 const resolveTimeWindow = (
   timeRange: DashboardTimeRangeOption | null | undefined,
@@ -19,9 +12,12 @@ const resolveTimeWindow = (
   const to = anchor.toISOString();
   const isAllTime = timeRange?.allTime ?? timeRange?.durationMinutes == null;
   const durationMinutes = isAllTime
-    ? 60 * 24 * 30
+    ? null
     : Math.max(timeRange?.durationMinutes ?? 0, 0);
-  const from = new Date(anchor.getTime() - durationMinutes * 60_000).toISOString();
+  const from =
+    durationMinutes == null
+      ? new Date(0).toISOString()
+      : new Date(anchor.getTime() - durationMinutes * 60_000).toISOString();
 
   const timeWindow: ChartSpec["timeWindow"] = { from, to };
   const bucket = bucketOverride ?? timeRange?.bucket;
@@ -45,7 +41,6 @@ const BASE_DEMOGRAPHIC_SPEC: Pick<ChartSpec, "dataset" | "chartType" | "timeWind
 const demographicDimension: Record<DemographicWidgetKind, ChartSpec["dimensions"]> = {
   age: [{ id: "age_bucket", column: "age_bucket", sort: "desc" }],
   gender: [{ id: "sex", column: "sex", sort: "desc" }],
-  hour: [{ id: "timestamp", column: "timestamp", bucket: "HOUR", sort: "asc" }],
   // Use the scoped, mapped race label column (lowercase) to align with backend CTE output.
   race: [{ id: "race", column: "race", sort: "desc" }],
 };
@@ -88,26 +83,6 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
         },
       ],
       dimensions: demographicDimension.gender,
-      interactions: { export: ["png", "csv"] },
-    },
-  },
-  hour: {
-    id: "site-flow-demographics-hour",
-    title: "Site Flow Hourly Distribution",
-    kind: "chart",
-    chartSpecId: "dashboard.site_flow.demographics.hour",
-    fixtureId: undefined,
-    inlineSpec: {
-      ...BASE_DEMOGRAPHIC_SPEC,
-      id: "dashboard.site_flow.demographics.hour",
-      measures: [
-        {
-          id: "events",
-          aggregation: "count",
-          label: "Events",
-        },
-      ],
-      dimensions: demographicDimension.hour,
       interactions: { export: ["png", "csv"] },
     },
   },
@@ -163,15 +138,10 @@ export interface DemographicSlice {
   count: number;
 }
 
-export interface HourSlice extends DemographicSlice {
-  hour: number;
-}
-
 export interface SiteFlowDemographicsData {
   age: DemographicSlice[];
   gender: DemographicSlice[];
   race: DemographicSlice[];
-  hour: HourSlice[];
   timezone: string;
 }
 
@@ -179,7 +149,6 @@ export interface DemographicChartResults {
   age?: ChartResult;
   gender?: ChartResult;
   race?: ChartResult;
-  hour?: ChartResult;
   timezone?: string | null;
 }
 
@@ -219,35 +188,6 @@ const ensureAllowedLabel = (kind: DemographicWidgetKind, label: string): string 
     return RACE_LABELS.has(label) ? label : "Unknown";
   }
   return label;
-};
-
-const parseHourString = (raw: string): number | null => {
-  const trimmed = raw.trim();
-
-  if (/^\d{1,2}$/.test(trimmed)) {
-    const parsed = Number.parseInt(trimmed, 10);
-    if (parsed >= 0 && parsed <= 23) {
-      return parsed;
-    }
-  }
-
-  const hhmmMatch = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-  if (hhmmMatch) {
-    const parsed = Number.parseInt(hhmmMatch[1] ?? "", 10);
-    if (parsed >= 0 && parsed <= 23) {
-      return parsed;
-    }
-  }
-
-  const parsedDate = Number.isNaN(Date.parse(trimmed)) ? null : new Date(trimmed);
-  if (parsedDate) {
-    const hour = parsedDate.getUTCHours();
-    if (Number.isInteger(hour) && hour >= 0 && hour <= 23) {
-      return hour;
-    }
-  }
-
-  return null;
 };
 
 export const mapAgeLabel = (code: string | number): string => {
@@ -296,11 +236,6 @@ export const mapRaceLabel = (code: string | number): string => {
   }
 };
 
-export const formatHourLabel = (hour: number): string => {
-  const safeHour = Math.max(0, Math.min(23, Math.trunc(hour)));
-  return `${String(safeHour).padStart(2, "0")}:00`;
-};
-
 const mapSeries = (
   result: ChartResult | undefined,
   kind: DemographicWidgetKind,
@@ -338,92 +273,20 @@ const mapSeries = (
   }));
 };
 
-const parseHour = (raw: unknown): number | null => {
-  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 0 && raw <= 23) {
-    return raw;
-  }
-
-  if (typeof raw === "string") {
-    return parseHourString(raw);
-  }
-
-  return null;
-};
-
-const mapHours = (result: ChartResult | undefined): HourSlice[] => {
-  const series: ChartSeries | undefined = result?.series?.[0];
-  if (!series) return [];
-  const aggregated = new Map<number, number>();
-
-  if (DEBUG_DEMOGRAPHICS_HOUR) {
-    const sample = (series.data ?? []).slice(0, 50);
-    const distinct = Array.from(new Set(sample.map((point) => point.x)));
-    // eslint-disable-next-line no-console
-    console.debug("demographics.hour.debug.pre_map", {
-      points: sample,
-      distinct,
-    });
-  }
-
-  (series.data ?? []).forEach((point) => {
-    const hour = parseHour(point.x as string | number);
-    if (hour == null || hour < 0 || hour > 23) {
-      if (DEBUG_DEMOGRAPHICS_HOUR) {
-        // eslint-disable-next-line no-console
-        console.debug("demographics.hour.debug.dropped_point", { rawX: point.x, value: point.value ?? point.y });
-      }
-      return;
-    }
-    const count = toNumeric(point);
-    const current = aggregated.get(hour) ?? 0;
-    aggregated.set(hour, current + count);
-  });
-
-  return Array.from(aggregated.entries())
-    .map(([hour, count]) => ({
-      code: hour,
-      hour,
-      label: formatHourLabel(hour),
-      count,
-    }))
-    .filter((slice) => slice.count > 0)
-    .sort((a, b) => a.hour - b.hour)
-    .map((slice) => {
-      if (DEBUG_DEMOGRAPHICS_HOUR) {
-        // eslint-disable-next-line no-console
-        console.debug("demographics.hour.debug.slice", slice);
-      }
-      return slice;
-    });
-};
-
 export const mapChartResultsToDemographics = (
   results: DemographicChartResults,
 ): SiteFlowDemographicsData => {
   const resolvedTimezone =
+    results.timezone ??
     results.age?.meta?.timezone ??
     results.gender?.meta?.timezone ??
-    results.hour?.meta?.timezone ??
     results.race?.meta?.timezone ??
-    results.timezone ??
     "UTC";
-
-  if (DEBUG_DEMOGRAPHICS_HOUR) {
-    // eslint-disable-next-line no-console
-    console.debug("demographics.hour.debug.meta", {
-      ageBuckets: results.age?.series?.[0]?.data?.length ?? 0,
-      genderBuckets: results.gender?.series?.[0]?.data?.length ?? 0,
-      raceBuckets: results.race?.series?.[0]?.data?.length ?? 0,
-      hourBuckets: results.hour?.series?.[0]?.data?.length ?? 0,
-      timezone: resolvedTimezone,
-    });
-  }
 
   return {
     age: mapSeries(results.age, "age"),
     gender: mapSeries(results.gender, "gender"),
     race: mapSeries(results.race, "race"),
-    hour: mapHours(results.hour),
     timezone: resolvedTimezone,
   };
 };

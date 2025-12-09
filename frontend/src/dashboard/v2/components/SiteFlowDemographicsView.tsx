@@ -7,7 +7,6 @@ import type {
 import type {
   SiteFlowDemographicsData,
   DemographicSlice,
-  HourSlice,
 } from "../utils/siteFlowDemographics";
 import "../styles/DashboardV2Page.css";
 
@@ -22,7 +21,6 @@ const toPercentageSeries = (title: string, slices: DemographicSlice[]): ChartSer
       x: slice.label,
       label: slice.label,
       code: slice.code,
-      ...("hour" in slice ? { hour: (slice as HourSlice).hour } : {}),
       value: (slice.count / safeTotal) * 100,
     })),
   };
@@ -57,7 +55,6 @@ export const SiteFlowDemographicsView = ({ data }: { data: SiteFlowDemographicsD
     { title: "Age", slices: data.age },
     { title: "Gender", slices: data.gender },
     { title: "Race", slices: data.race },
-    { title: "Hour", slices: data.hour },
   ];
 
   return (

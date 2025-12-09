@@ -36,6 +36,8 @@ def mock_bigquery(monkeypatch):
         {
             "measure_id": "activity_total",
             "bucket_start": pd.Timestamp("2024-01-01T09:00:00Z"),
+            "hour": 9,
+            "count": 12,
             "value": 12,
             "coverage": 1.0,
             "raw_count": 12,
@@ -43,6 +45,8 @@ def mock_bigquery(monkeypatch):
         {
             "measure_id": "activity_total",
             "bucket_start": pd.Timestamp("2024-01-01T10:00:00Z"),
+            "hour": 10,
+            "count": 24,
             "value": 24,
             "coverage": 1.0,
             "raw_count": 24,
@@ -50,6 +54,8 @@ def mock_bigquery(monkeypatch):
         {
             "measure_id": "activity_total",
             "bucket_start": pd.Timestamp("2024-01-01T11:00:00Z"),
+            "hour": 11,
+            "count": 6,
             "value": 6,
             "coverage": 1.0,
             "raw_count": 6,
@@ -103,6 +109,8 @@ def mock_bigquery(monkeypatch):
         if "GROUP BY sex, age_bucket" in sql:
             return demographics_df
         if "activity_total_activity_series" in sql:
+            return hourly_contract_df
+        if "EXTRACT(HOUR FROM timestamp) AS hour" in sql:
             return hourly_contract_df
         if "LIMIT @limit" in sql and "OFFSET @offset" in sql:
             offset = int(params.get('offset', 0) or 0)

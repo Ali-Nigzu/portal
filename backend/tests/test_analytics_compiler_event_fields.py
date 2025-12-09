@@ -56,6 +56,8 @@ def _assert_canonical_event_scope(sql: str) -> None:
     for name, body in ctes.items():
         if name == "scoped":
             continue
+        if name.endswith("_base"):
+            continue
         if "event " not in body and "event=" not in body and "event," not in body:
             continue
         assert (
@@ -168,8 +170,9 @@ def test_live_flow_all_time_avoids_dense_calendar() -> None:
     spec["timeWindow"]["to"] = "2024-01-01T00:00:00Z"
     compiler = SpecCompiler()
     compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
-    assert "GENERATE_TIMESTAMP_ARRAY" not in compiled.sql
-    assert "calendar AS" not in compiled.sql
+    assert compiled.sql.count("GENERATE_TIMESTAMP_ARRAY") == 1
+    assert "INTERVAL 5 MINUTE" not in compiled.sql
+    assert "INTERVAL 7 DAY" in compiled.sql
 
 
 def test_retention_calendar_exports_window_bounds() -> None:

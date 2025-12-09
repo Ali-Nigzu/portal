@@ -44,6 +44,35 @@ def test_vrm_occupancy_compiles_soft_anchor_pipeline():
     assert "seeded_by_exit" not in sql
 
 
+def test_vrm_kpis_use_bucket_start_instead_of_raw_timestamp():
+    spec = {
+        "id": "dashboard.kpi.vrm.footfall",
+        "dataset": "events",
+        "chartType": "single_value",
+        "measures": [
+            {"id": "footfall", "aggregation": "count", "eventTypes": [0, 1]},
+        ],
+        "dimensions": [{"id": "timestamp", "column": "timestamp", "bucket": "15_MIN"}],
+        "timeWindow": {
+            "from": "2024-01-01T00:00:00Z",
+            "to": "2024-01-02T00:00:00Z",
+            "bucket": "15_MIN",
+            "timezone": "UTC",
+        },
+    }
+
+    compiler = SpecCompiler()
+    context = CompilerContext(table_name="project.dataset.table")
+    compiled = compiler.compile(spec, context)
+
+    sql = compiled.sql
+    assert "TIMESTAMP_ADD(bucket_start" in sql
+    assert "COUNT(*) AS event_count" in sql
+    assert "GROUP BY bucket_start" in sql
+    assert "DIV(UNIX_SECONDS(timestamp)" in sql
+    assert "TIMESTAMP_ADD(timestamp" not in sql
+
+
 def test_standard_occupancy_remains_unchanged():
     spec = {
         "id": "live-flow",
@@ -66,8 +95,8 @@ def test_standard_occupancy_remains_unchanged():
     compiled = compiler.compile(spec, context)
 
     sql = compiled.sql
-    assert "seeded_by_exit" in sql
-    assert "occupancy_occupancy_anchor" not in sql
+    assert "occupancy_deltas" in sql
+    assert "seeded_by_exit" not in sql
 
 
 def test_vrm_dwell_fifo_compiles_without_track_matching():

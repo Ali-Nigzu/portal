@@ -51,9 +51,11 @@ def test_simultaneous_events_order_entrances_before_exits():
 def test_scoped_cte_projects_canonical_fields():
     from backend.app.analytics.compiler import SpecCompiler
 
-    sql = SpecCompiler()._render_scoped("project.dataset.client0", "")
+    sql = SpecCompiler()._render_scoped(
+        "project.dataset.client0", "", event_timestamp_column="timestamp"
+    )
 
     assert "ROW_NUMBER() OVER" in sql
-    assert "CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' END" in sql
+    assert "CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Unknown' END" in sql
     assert "CASE" in sql and "age_bucket" in sql
     assert "timestamp < TIMESTAMP(@now)" in sql

@@ -59,8 +59,8 @@ def test_compile_activity_query_with_filters() -> None:
     assert "COUNT(" in plan.sql
     assert "site_id IN UNNEST(@site_id_0)" in plan.sql
     assert "cam_id IN UNNEST(@cam_id_0)" in plan.sql
-    assert "COALESCE(sex, 'Unknown') IN UNNEST(@sex_0)" in plan.sql
-    assert "COALESCE(age_bucket, 'Unknown') IN UNNEST(@age_bucket_0)" in plan.sql
+    assert "CAST(sex AS STRING) IN UNNEST(@sex_0)" in plan.sql
+    assert "CAST(age_bucket AS STRING) IN UNNEST(@age_bucket_0)" in plan.sql
     assert plan.params["sex_0"] == ["Unknown"]
     assert plan.params["age_bucket_0"] == ["26-45"]
     assert plan.params["start_ts"] == ctx.start.isoformat()
@@ -98,6 +98,9 @@ def test_raw_events_offset_override() -> None:
 
 
 def _scoped_projection(sql: str) -> str:
+    match = re.search(r"scoped AS \(\s*WITH\s+scoped_base AS \(\s*SELECT\s+(.*?)\s+FROM", sql, re.S)
+    if match:
+        return " ".join(match.group(1).split())
     match = re.search(r"scoped AS \(\s*SELECT\s+(.*?)\s+FROM", sql, re.S)
     assert match is not None, "scoped CTE not found"
     return " ".join(match.group(1).split())
@@ -140,8 +143,10 @@ def test_scoped_cte_projects_canonical_columns() -> None:
     plan = compile_contract_query(Metric.OCCUPANCY, [Dimension.TIME], ctx)
     projection = _scoped_projection(plan.sql)
     expected = (
-        "site_id, cam_id, COALESCE(index, 0) AS index, track_id, event, timestamp, "
-        "COALESCE(sex, 'Unknown') AS sex, COALESCE(age_bucket, 'Unknown') AS age_bucket"
+        "site_id, cam_id, cam_id AS camera_id, ROW_NUMBER() OVER ( PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, "
+        "event DESC, track_id ) AS index, track_id, event, -- Keep event timestamp raw for downstream hour extraction (no truncation). "
+        "timestamp AS timestamp, CASE WHEN age_bucket IS NULL THEN 'Unknown' ELSE CAST(age_bucket AS STRING) END AS age_bucket, "
+        "CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Unknown' END AS sex, COALESCE(CAST(Race AS STRING), 'Unknown') AS race"
     )
     assert projection == " ".join(expected.split())
 
@@ -155,8 +160,8 @@ def test_metric_queries_use_timestamp_bounds() -> None:
 def test_event_summary_filters_apply_coalesce() -> None:
     ctx = _context(sexes=["Unknown"], age_buckets=["14-25"])
     plan = compile_contract_query(Metric.EVENT_SUMMARY, [], ctx)
-    assert "COALESCE(sex, 'Unknown') IN UNNEST(@sex_filters)" in plan.sql
-    assert "COALESCE(age_bucket, 'Unknown') IN UNNEST(@age_filters)" in plan.sql
+    assert "COALESCE(CAST(sex AS STRING), 'Unknown') IN UNNEST(@sex_filters)" in plan.sql
+    assert "COALESCE(CAST(age_bucket AS STRING), 'Unknown') IN UNNEST(@age_filters)" in plan.sql
     assert plan.params["sex_filters"] == ["Unknown"]
     assert plan.params["age_filters"] == ["14-25"]
 
@@ -164,6 +169,6 @@ def test_event_summary_filters_apply_coalesce() -> None:
 def test_raw_events_selects_coalesced_demographics() -> None:
     ctx = _context()
     plan = compile_contract_query(Metric.RAW_EVENTS, [], ctx)
-    assert "COALESCE(sex, 'Unknown') AS sex" in plan.sql
-    assert "COALESCE(age_bucket, 'Unknown') AS age_bucket" in plan.sql
+    assert "COALESCE(CAST(sex AS STRING), 'Unknown') AS sex" in plan.sql
+    assert "COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket" in plan.sql
 

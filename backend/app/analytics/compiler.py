@@ -1,6 +1,7 @@
 """Spec → SQL compiler for analytics ChartSpecs."""
 from __future__ import annotations
 
+import logging
 import os
 import re
 from collections import OrderedDict
@@ -28,6 +29,9 @@ _RETENTION_MIN_COHORT = 100
 _RETENTION_MAX_COHORTS = {"WEEK": 52, "MONTH": 24}
 
 _BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
+_MAX_CALENDAR_BUCKETS = 4000
+
+logger = logging.getLogger(__name__)
 
 # BigQuery reserves WINDOW as a keyword, so we use descriptive aliases instead.
 WINDOW_BOUNDS_CTE = "window_bounds"
@@ -139,6 +143,49 @@ def _bucket_rank(bucket: str) -> int:
         return _BUCKET_ORDER.index(bucket)
     except ValueError:
         return len(_BUCKET_ORDER)
+
+
+def _coarsen_bucket_if_needed(
+    *, bucket: str, start: object, end: object, raw_start: object | None = None, raw_end: object | None = None
+) -> str:
+    """Apply a defensive upper bound on calendar bucket counts.
+
+    If the requested time span would generate more than ``_MAX_CALENDAR_BUCKETS``
+    buckets at the given grain, coarsen to the next available bucket size (e.g.
+    ``5_MIN`` → ``HOUR`` → ``DAY`` → ``WEEK``). Buckets without a fixed interval
+    (``RAW``/``MONTH``) are left unchanged.
+    """
+
+    if (raw_start is not None and _parse_iso8601(raw_start) is None) or (
+        raw_end is not None and _parse_iso8601(raw_end) is None
+    ):
+        return bucket
+
+    start_dt = _parse_iso8601(start)
+    end_dt = _parse_iso8601(end)
+    if not start_dt or not end_dt:
+        return bucket
+
+    span_seconds = (end_dt - start_dt).total_seconds()
+    if span_seconds <= 0:
+        return bucket
+
+    effective = bucket
+    while True:
+        interval_seconds = _BUCKET_SECONDS.get(effective)
+        if interval_seconds is None:
+            return effective
+
+        if span_seconds / interval_seconds <= _MAX_CALENDAR_BUCKETS:
+            return effective
+
+        next_index = _bucket_rank(effective) + 1
+        if next_index >= len(_BUCKET_ORDER):
+            return effective
+        next_bucket = _BUCKET_ORDER[next_index]
+        if _BUCKET_SECONDS.get(next_bucket) is None:
+            return effective
+        effective = next_bucket
 
 
 def _retention_cohort_trunc(bucket: str) -> str:
@@ -259,10 +306,33 @@ class SpecCompiler:
         vrm_occupancy_enabled = any(
             (measure.get("options") or {}).get("vrmOccupancyStats") for measure in measures
         )
+        occupancy_present = any(
+            measure.get("aggregation") == "occupancy_recursion" for measure in measures
+        )
+        start_ts, end_ts, now = _resolve_time_params(time_window, timezone)
+        bucket = _coarsen_bucket_if_needed(
+            bucket=bucket,
+            start=start_ts,
+            end=end_ts,
+            raw_start=time_window.get("from"),
+            raw_end=time_window.get("to"),
+        )
+        start_dt = _parse_iso8601(start_ts)
+        end_dt = _parse_iso8601(end_ts)
+        interval_seconds = _BUCKET_SECONDS.get(bucket)
+        excessive_calendar = (
+            start_dt
+            and end_dt
+            and interval_seconds
+            and interval_seconds > 0
+            and (end_dt - start_dt).total_seconds() / interval_seconds > _MAX_CALENDAR_BUCKETS
+        )
         if vrm_occupancy_enabled:
             use_calendar = True
-
-        start_ts, end_ts, now = _resolve_time_params(time_window, timezone)
+        if occupancy_present:
+            use_calendar = True
+        if use_calendar and excessive_calendar:
+            use_calendar = False
 
         params: Dict[str, object] = {
             "start_ts": start_ts,
@@ -281,9 +351,11 @@ class SpecCompiler:
                 event_timestamp_column=context.event_timestamp_column,
             )
         ]
-        if bucket != "RAW" and use_calendar:
+        if bucket != "RAW" and use_calendar and not excessive_calendar:
             base_ctes.append(
-                self._render_calendar(bucket, clamp_to_data=vrm_occupancy_enabled)
+                self._render_calendar(
+                    bucket, clamp_to_data=vrm_occupancy_enabled or occupancy_present
+                )
             )
 
         for measure in measures:
@@ -328,6 +400,7 @@ class SpecCompiler:
             select_statements=select_statements,
             order_by=order_by,
         )
+        self._warn_on_unbucketed_timestamp(sql, spec.get("id"))
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
 
@@ -342,6 +415,9 @@ class SpecCompiler:
             end=time_window.get("to"),
             chart_type=spec["chartType"],
         )
+        measures = spec["measures"]
+        if not measures:
+            raise UnsupportedMeasureError("single_value requires at least one measure")
 
         use_calendar = self._should_render_calendar(
             bucket=bucket,
@@ -349,19 +425,37 @@ class SpecCompiler:
             end=time_window.get("to"),
             chart_type=spec["chartType"],
         )
+        if spec["chartType"] == "single_value" and not any(
+            measure.get("aggregation") == "occupancy_recursion" for measure in measures
+        ):
+            use_calendar = False
 
         params: Dict[str, object] = {
             "start_ts": time_window["from"],
             "end_ts": time_window["to"],
             "now": _current_time(timezone, time_window.get("to")),
         }
+        bucket = _coarsen_bucket_if_needed(
+            bucket=bucket,
+            start=params["start_ts"],
+            end=params["end_ts"],
+            raw_start=time_window.get("from"),
+            raw_end=time_window.get("to"),
+        )
+        start_dt = _parse_iso8601(params["start_ts"])
+        end_dt = _parse_iso8601(params["end_ts"])
+        interval_seconds = _BUCKET_SECONDS.get(bucket)
+        excessive_calendar = (
+            start_dt
+            and end_dt
+            and interval_seconds
+            and interval_seconds > 0
+            and (end_dt - start_dt).total_seconds() / interval_seconds > _MAX_CALENDAR_BUCKETS
+        )
+        if use_calendar and excessive_calendar:
+            use_calendar = False
 
         filters_sql = self._build_filters(spec.get("filters", []), params)
-        measures = spec["measures"]
-
-        if not measures:
-            raise UnsupportedMeasureError("single_value requires at least one measure")
-
         cte_registry: OrderedDict[str, str] = OrderedDict()
         select_statements: List[str] = []
         base_ctes = [
@@ -491,6 +585,7 @@ class SpecCompiler:
             select_statements=select_statements,
             order_by="bucket_start, lag_weeks, measure_id",
         )
+        self._warn_on_unbucketed_timestamp(sql, spec.get("id"))
         measure_map = {measure["id"]: measure["aggregation"] for measure in measures}
         return CompiledQuery(sql=sql, params=params, measures=measure_map, bucket=bucket)
 
@@ -547,6 +642,30 @@ class SpecCompiler:
         )
         return "\n".join(line.rstrip() for line in final_sql.splitlines() if line.strip())
 
+    def _warn_on_unbucketed_timestamp(self, sql: str, spec_id: str | None) -> None:
+        """Detect obvious cases where timestamp is selected without grouping.
+
+        This is a lightweight guardrail (not a SQL parser) intended for known
+        dashboard specs. It only emits a log entry; behaviour is unchanged.
+        """
+
+        lowered = sql.lower()
+        if "group by" not in lowered:
+            return
+        if "timestamp" not in lowered:
+            return
+        group_clause = lowered.split("group by", 1)[1]
+        if "timestamp" in group_clause:
+            return
+        if spec_id and (
+            spec_id.startswith("dashboard.live_flow")
+            or spec_id.startswith("dashboard.kpi.vrm.")
+        ):
+            logger.error(
+                "analytics.compile.timestamp_not_grouped",
+                extra={"spec_id": spec_id},
+            )
+
     def _render_scoped(
         self, table_name: str, filters_sql: str, *, event_timestamp_column: str
     ) -> str:
@@ -574,9 +693,12 @@ class SpecCompiler:
                         event,
                         -- Keep event timestamp raw for downstream hour extraction (no truncation).
                         {event_timestamp_column} AS timestamp,
-                        age_bucket AS age_bucket,
-                        sex AS sex,
-                        Race AS race
+                        CASE
+                            WHEN age_bucket IS NULL THEN 'Unknown'
+                            ELSE CAST(age_bucket AS STRING)
+                        END AS age_bucket,
+                        CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Unknown' END AS sex,
+                        COALESCE(CAST(Race AS STRING), 'Unknown') AS race
                     FROM `{table_name}`
                     WHERE {event_timestamp_column} BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
                         AND {event_timestamp_column} < TIMESTAMP(@now)
@@ -770,6 +892,111 @@ class SpecCompiler:
         measure_id = measure["id"]
         prefix = f"{measure_id}_occupancy"
         options = measure.get("options", {}) if isinstance(measure.get("options"), dict) else {}
+
+        if not options.get("vrmOccupancy"):
+            bucket_expr = _bucket_expression(bucket)
+            interval_expr = _bucket_interval_expression(bucket)
+            if use_calendar:
+                deltas = dedent(
+                    f"""
+                    {prefix}_deltas AS (
+                        SELECT
+                            calendar.bucket_start,
+                            calendar.bucket_end,
+                            calendar.bucket_seconds,
+                            calendar.window_seconds,
+                            COALESCE(SUM(CASE WHEN scoped.event = 1 THEN 1 WHEN scoped.event = 0 THEN -1 ELSE 0 END), 0) AS delta,
+                            COUNT(scoped.timestamp) AS raw_count
+                        FROM calendar
+                        LEFT JOIN scoped
+                            ON scoped.timestamp >= calendar.bucket_start
+                            AND scoped.timestamp < calendar.bucket_end
+                        GROUP BY
+                            calendar.bucket_start,
+                            calendar.bucket_end,
+                            calendar.bucket_seconds,
+                            calendar.window_seconds
+                        ORDER BY calendar.bucket_start
+                    )
+                    """
+                ).strip()
+            else:
+                deltas = dedent(
+                    f"""
+                    {prefix}_deltas AS (
+                        SELECT
+                            bucket_start,
+                            TIMESTAMP_ADD(bucket_start, {interval_expr}) AS bucket_end,
+                            TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
+                            GREATEST(
+                                TIMESTAMP_DIFF(
+                                    LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                    GREATEST(bucket_start, TIMESTAMP(@start_ts)),
+                                    SECOND
+                                ),
+                                0
+                            ) AS window_seconds,
+                            COALESCE(SUM(CASE WHEN scoped.event = 1 THEN 1 WHEN scoped.event = 0 THEN -1 ELSE 0 END), 0) AS delta,
+                            COUNT(*) AS raw_count
+                        FROM (
+                            SELECT {_bucket_expression(bucket)} AS bucket_start, event
+                            FROM scoped
+                        ) AS scoped
+                        GROUP BY bucket_start
+                        ORDER BY bucket_start
+                    )
+                    """
+                ).strip()
+
+            series = dedent(
+                f"""
+                {prefix}_series AS (
+                    SELECT
+                        bucket_start,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS value,
+                        CASE
+                            WHEN bucket_seconds = 0 THEN 0.0
+                            ELSE SAFE_DIVIDE(window_seconds, bucket_seconds)
+                        END AS coverage,
+                        COALESCE(raw_count, 0) AS raw_count,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS occupancy_min,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS occupancy_max,
+                        GREATEST(
+                            SUM(delta) OVER (
+                                ORDER BY bucket_start
+                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                            ),
+                            0
+                        ) AS occupancy_avg
+                    FROM {prefix}_deltas
+                )
+                """
+            ).strip()
+
+            select_sql = (
+                f"SELECT '{measure_id}' AS measure_id, bucket_start, value, coverage, raw_count, occupancy_min, occupancy_max, occupancy_avg "
+                f"FROM {prefix}_series"
+            )
+
+            return MeasureCompilation(ctes=[deltas, series], select_sql=select_sql)
 
         if options.get("vrmOccupancy"):
             if options.get("vrmOccupancyStats"):
@@ -1583,7 +1810,7 @@ class SpecCompiler:
         *,
         use_calendar: bool = True,
         bucket: str = "DAY",
-    ) -> Tuple[str, str]:
+        ) -> Tuple[str, str]:
         measure_id = measure["id"]
         prefix = f"{measure_id}_activity_counts"
         event_types = measure.get("eventTypes")
@@ -1614,53 +1841,30 @@ class SpecCompiler:
                 """
             ).strip()
         else:
+            bucket_expr = _bucket_expression(bucket)
             interval_expr = _bucket_interval_expression(bucket)
             counts_cte = dedent(
                 f"""
                 {prefix} AS (
-                    WITH {WINDOW_BOUNDS_CTE} AS (
-                        SELECT
-                            TIMESTAMP(@start_ts) AS window_start,
-                            TIMESTAMP(@end_ts) AS window_end,
-                            {_bucket_trunc_expression(bucket)} AS aligned_start
-                    ),
-                    {prefix}_calendar AS (
-                        SELECT
-                            bucket_start,
-                            LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end) AS bucket_end,
-                            GREATEST(
-                                TIMESTAMP_DIFF(LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end), bucket_start, SECOND),
-                                0
-                            ) AS bucket_seconds,
-                            GREATEST(
-                                TIMESTAMP_DIFF(
-                                    LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), window_end),
-                                    GREATEST(bucket_start, window_start),
-                                    SECOND
-                                ),
-                                0
-                            ) AS window_seconds
-                        FROM {WINDOW_BOUNDS_CTE},
-                        UNNEST(
-                            GENERATE_TIMESTAMP_ARRAY(
-                                aligned_start,
-                                window_end,
-                                {interval_expr}
-                            )
-                        ) AS bucket_start
-                        WHERE bucket_start < window_end
-                    )
                     SELECT
-                        calendar.bucket_start,
-                        calendar.bucket_seconds,
-                        calendar.window_seconds,
-                        COUNT(scoped.timestamp) AS event_count
-                    FROM {prefix}_calendar AS calendar
-                    LEFT JOIN scoped
-                        ON scoped.timestamp >= calendar.bucket_start
-                        AND scoped.timestamp < calendar.bucket_end{filter_sql}
-                    GROUP BY calendar.bucket_start, calendar.bucket_seconds, calendar.window_seconds
-                    ORDER BY calendar.bucket_start
+                        bucket_start,
+                        TIMESTAMP_DIFF(TIMESTAMP_ADD(bucket_start, {interval_expr}), bucket_start, SECOND) AS bucket_seconds,
+                        GREATEST(
+                            TIMESTAMP_DIFF(
+                                LEAST(TIMESTAMP_ADD(bucket_start, {interval_expr}), TIMESTAMP(@end_ts)),
+                                GREATEST(bucket_start, TIMESTAMP(@start_ts)),
+                                SECOND
+                            ),
+                            0
+                        ) AS window_seconds,
+                        COUNT(*) AS event_count
+                    FROM (
+                        SELECT {_bucket_expression(bucket)} AS bucket_start, event
+                        FROM scoped
+                        WHERE scoped.timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts){filter_sql}
+                    ) AS scoped
+                    GROUP BY bucket_start
+                    ORDER BY bucket_start
                 )
                 """
             ).strip()
