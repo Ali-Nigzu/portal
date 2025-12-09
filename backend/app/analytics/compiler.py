@@ -188,6 +188,22 @@ def _coarsen_bucket_if_needed(
         effective = next_bucket
 
 
+def _safe_bucket_count(bucket: str, start: object, end: object) -> int | None:
+    """Return the estimated number of calendar buckets for the span if computable."""
+
+    interval_seconds = _BUCKET_SECONDS.get(bucket)
+    if interval_seconds is None:
+        return None
+    start_dt = _parse_iso8601(start)
+    end_dt = _parse_iso8601(end)
+    if not start_dt or not end_dt:
+        return None
+    span_seconds = (end_dt - start_dt).total_seconds()
+    if span_seconds <= 0:
+        return None
+    return int(span_seconds // interval_seconds) + 1
+
+
 def _retention_cohort_trunc(bucket: str) -> str:
     if bucket == "WEEK":
         return "TIMESTAMP_TRUNC(timestamp, WEEK(MONDAY))"
@@ -317,6 +333,19 @@ class SpecCompiler:
             raw_start=time_window.get("from"),
             raw_end=time_window.get("to"),
         )
+        if spec.get("id", "") == "dashboard.live_flow":
+            # Preserve all-time coverage by automatically coarsening the bucket when the
+            # requested span would exceed the calendar limit at the current grain.
+            bucket_count = _safe_bucket_count(bucket, start_ts, end_ts)
+            while bucket_count is not None and bucket_count > _MAX_CALENDAR_BUCKETS:
+                next_index = _bucket_rank(bucket) + 1
+                if next_index >= len(_BUCKET_ORDER):
+                    break
+                next_bucket = _BUCKET_ORDER[next_index]
+                if _BUCKET_SECONDS.get(next_bucket) is None:
+                    break
+                bucket = next_bucket
+                bucket_count = _safe_bucket_count(bucket, start_ts, end_ts)
         start_dt = _parse_iso8601(start_ts)
         end_dt = _parse_iso8601(end_ts)
         interval_seconds = _BUCKET_SECONDS.get(bucket)
@@ -429,6 +458,8 @@ class SpecCompiler:
             measure.get("aggregation") == "occupancy_recursion" for measure in measures
         ):
             use_calendar = False
+        if spec.get("id", "").startswith("dashboard.kpi.vrm."):
+            use_calendar = True
 
         params: Dict[str, object] = {
             "start_ts": time_window["from"],

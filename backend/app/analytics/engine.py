@@ -14,7 +14,7 @@ import pandas as pd
 
 from ..bigquery_client import BigQueryDataFrameError
 from .cache import SpecCache
-from .compiler import CompiledQuery, CompilerContext, SpecCompiler
+from .compiler import CompiledQuery, CompilerContext, SpecCompiler, _safe_bucket_count
 from .contracts import (
     ValidationError as ContractValidationError,
     validate_chart_result,
@@ -235,6 +235,19 @@ class AnalyticsEngine:
             ),
         )
         spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+        if spec_id == "dashboard.live_flow":
+            bucket_count = _safe_bucket_count(
+                compiled.bucket, spec.get("timeWindow", {}).get("from"), spec.get("timeWindow", {}).get("to")
+            )
+            logger.info(
+                "analytics.run.debug_live_flow",
+                extra={
+                    "spec_id": spec_id,
+                    "bucket": compiled.bucket,
+                    "time_window": spec.get("timeWindow"),
+                    "bucket_count": bucket_count,
+                },
+            )
         if DEBUG_SQL_ENABLED and any(spec_id.startswith(prefix) for prefix in _DEBUG_SQL_PREFIXES):
             logger.info(
                 "analytics.run.debug_sql",
