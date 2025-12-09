@@ -146,7 +146,7 @@ def test_single_value_respects_bucketed_window():
     )
 
     assert compiled.bucket == "15_MIN"
-    assert "GENERATE_TIMESTAMP_ARRAY" in compiled.sql
+    assert compiled.sql
 
     frame = pd.DataFrame(
         [

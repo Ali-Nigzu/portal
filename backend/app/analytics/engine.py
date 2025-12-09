@@ -7,6 +7,8 @@ from datetime import datetime
 from numbers import Number
 from typing import Any, Dict, Iterable, List, Optional
 
+from .dashboard_catalogue import get_dashboard_spec
+
 import pandas as pd
 
 from ..bigquery_client import BigQueryDataFrameError
@@ -53,6 +55,13 @@ _UNIT_MAP = {
 
 
 logger = logging.getLogger(__name__)
+
+_KPI_BUNDLE_MAP: Dict[str, tuple[str, str]] = {
+    "dashboard.kpi.activity_today": ("dashboard.kpi.site_flow_bundle", "activity_total"),
+    "dashboard.kpi.entrances_today": ("dashboard.kpi.site_flow_bundle", "entrances"),
+    "dashboard.kpi.exits_today": ("dashboard.kpi.site_flow_bundle", "exits"),
+    "dashboard.kpi.avg_dwell_today": ("dashboard.kpi.site_flow_bundle", "avg_dwell"),
+}
 def _label_for_series(measure_id: str, aggregation: str) -> str:
     if measure_id:
         return measure_id.replace("_", " ").title()
@@ -125,6 +134,31 @@ def _detect_surges(measure_id: str, points: Iterable[Dict[str, Any]]) -> List[Di
     return surges
 
 
+def _filter_single_value_measure(result: Dict[str, Any], measure_id: str) -> Dict[str, Any]:
+    """Return a ChartResult containing only the requested single-value measure."""
+
+    filtered_series = []
+    for series in result.get("series", []):
+        if series.get("id") != measure_id:
+            continue
+        normalised_series = {**series, "geometry": "metric"}
+        normalised_series.pop("axis", None)
+        if normalised_series.get("data"):
+            for point in normalised_series["data"]:
+                if "y" in point and "value" not in point:
+                    point["value"] = point["y"]
+        filtered_series.append(normalised_series)
+
+    filtered_meta = dict(result.get("meta", {}) or {})
+    summary = dict(filtered_meta.get("summary", {}) or {})
+    measures = summary.get("measures")
+    if measures is not None:
+        summary["measures"] = [m for m in measures if m == measure_id]
+    filtered_meta["summary"] = summary
+
+    return {**result, "chartType": "single_value", "series": filtered_series, "meta": filtered_meta}
+
+
 @dataclass
 class AnalyticsEngine:
     """High-level orchestration for executing ChartSpecs."""
@@ -181,6 +215,16 @@ class AnalyticsEngine:
             if cached is not None:
                 return cached
 
+        delegated = self._maybe_delegate_kpi_bundle(
+            spec,
+            organisation=organisation,
+            cache_key=cache_key,
+            bypass_cache=bypass_cache,
+            cache_ttl=cache_ttl,
+        )
+        if delegated is not None:
+            return delegated
+
         compiled = self.compiler.compile(
             spec,
             CompilerContext(
@@ -208,6 +252,45 @@ class AnalyticsEngine:
         validate_chart_result(result)
         self.cache.set(cache_key, result, ttl=cache_ttl)
         return result
+
+    def _maybe_delegate_kpi_bundle(
+        self,
+        spec: Dict[str, Any],
+        *,
+        organisation: str,
+        cache_key: str,
+        bypass_cache: bool,
+        cache_ttl: Optional[int],
+    ) -> Optional[Dict[str, Any]]:
+        mapping = _KPI_BUNDLE_MAP.get(spec.get("id"))
+        if not mapping:
+            return None
+        if len(spec.get("measures", [])) != 1:
+            return None
+
+        bundle_spec_id, measure_id = mapping
+        if spec.get("id") == bundle_spec_id:
+            return None
+
+        bundle_spec = get_dashboard_spec(bundle_spec_id)
+        if spec.get("timeWindow"):
+            bundle_spec["timeWindow"] = spec["timeWindow"]
+        if spec.get("dimensions"):
+            bundle_spec["dimensions"] = spec["dimensions"]
+        if spec.get("filters"):
+            bundle_spec["filters"] = spec["filters"]
+
+        bundle_result = self.execute(
+            bundle_spec,
+            organisation=organisation,
+            bypass_cache=bypass_cache,
+            cache_ttl=cache_ttl,
+        )
+
+        filtered = _filter_single_value_measure(bundle_result, measure_id)
+        if not bypass_cache:
+            self.cache.set(cache_key, filtered, ttl=cache_ttl)
+        return filtered
 
     def _normalise(self, spec: Dict[str, Any], compiled: CompiledQuery, frame: pd.DataFrame) -> Dict[str, Any]:
         chart_type = spec["chartType"]

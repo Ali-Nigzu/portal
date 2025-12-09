@@ -86,6 +86,52 @@ DASHBOARD_SPEC_CATALOGUE: Mapping[str, ChartSpec] = {
         time_to="{{NOW}}",
         event_types=[0],
     ),
+    "dashboard.kpi.site_flow_bundle": {
+        "id": "dashboard.kpi.site_flow_bundle",
+        "dataset": "events",
+        "chartType": "composed_time",
+        "measures": [
+            {
+                "id": "activity_total",
+                "aggregation": "count",
+                "label": "Activity across entrances + exits",
+            },
+            {
+                "id": "entrances",
+                "aggregation": "count",
+                "label": "Entrances since local midnight",
+                "eventTypes": [1],
+            },
+            {
+                "id": "exits",
+                "aggregation": "count",
+                "label": "Exits since local midnight",
+                "eventTypes": [0],
+            },
+            {
+                "id": "avg_dwell",
+                "aggregation": "dwell_mean",
+                "label": "Average dwell duration today",
+            },
+        ],
+        "dimensions": [
+            {
+                "id": "timestamp",
+                "column": "timestamp",
+                "bucket": "HOUR",
+                "sort": "asc",
+            }
+        ],
+        "timeWindow": {
+            "from": "{{TODAY_START}}",
+            "to": "{{NOW}}",
+            "bucket": "HOUR",
+            "timezone": _DEFAULT_TIMEZONE,
+        },
+        "displayHints": {"carryForward": True},
+        "interactions": {"export": ["png", "csv"]},
+        "notes": ["Bundled Site Flow KPIs for reuse"],
+    },
     "dashboard.kpi.live_occupancy": {
         "id": "dashboard.kpi.live_occupancy",
         "dataset": "events",

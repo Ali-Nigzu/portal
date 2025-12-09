@@ -319,9 +319,9 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
     filters, params = _render_filters(ctx)
     sql = (
         "SELECT"
-        " CAST(sex AS STRING) AS sex,"
-        " CAST(age_bucket AS STRING) AS age_bucket,"
-        " CAST(Race AS STRING) AS race,"
+        " COALESCE(CAST(sex AS STRING), 'Unknown') AS sex,"
+        " COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket,"
+        " COALESCE(CAST(Race AS STRING), 'Unknown') AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
@@ -347,8 +347,8 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
     params["offset"] = resolved_offset
     sql = (
         "SELECT track_id, event, timestamp,"
-        " CAST(sex AS STRING) AS sex,"
-        " CAST(age_bucket AS STRING) AS age_bucket"
+        " COALESCE(CAST(sex AS STRING), 'Unknown') AS sex,"
+        " COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
@@ -380,13 +380,17 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
         clauses.append("cam_id IN UNNEST(@camera_ids)")
     if ctx.sexes:
         params["sex_filters"] = ctx.sexes
-        clauses.append("CAST(sex AS STRING) IN UNNEST(@sex_filters)")
+        clauses.append(
+            "COALESCE(CAST(sex AS STRING), 'Unknown') IN UNNEST(@sex_filters)"
+        )
     if ctx.age_buckets:
         params["age_filters"] = ctx.age_buckets
-        clauses.append("CAST(age_bucket AS STRING) IN UNNEST(@age_filters)")
+        clauses.append(
+            "COALESCE(CAST(age_bucket AS STRING), 'Unknown') IN UNNEST(@age_filters)"
+        )
     if ctx.races:
         params["race_filters"] = ctx.races
-        clauses.append("CAST(Race AS STRING) IN UNNEST(@race_filters)")
+        clauses.append("COALESCE(CAST(Race AS STRING), 'Unknown') IN UNNEST(@race_filters)")
     if ctx.events:
         params["event_filters"] = ctx.events
         clauses.append("event IN UNNEST(@event_filters)")

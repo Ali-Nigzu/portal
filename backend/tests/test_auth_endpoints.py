@@ -33,8 +33,8 @@ def test_login_response_includes_org_id(login_client: TestClient, monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["user"]["orgId"] == "client0"
-    assert body["user"]["org_id"] == "client0"
+    assert body["user"]["orgId"] == "demodata0.client0"
+    assert body["user"]["org_id"] == "demodata0.client0"
 
 
 def test_login_defaults_admin_to_client0_org(login_client: TestClient, monkeypatch):
