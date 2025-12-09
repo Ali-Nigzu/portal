@@ -36,6 +36,31 @@ class BigQueryDataFrameError(RuntimeError):
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS = 3600
+
+
+def _load_analytics_timeout() -> int:
+    raw_timeout = os.getenv("ANALYTICS_BQ_TIMEOUT_SECONDS")
+    if raw_timeout is None:
+        return DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS
+
+    try:
+        parsed_timeout = int(raw_timeout)
+        if parsed_timeout <= 0:
+            raise ValueError("timeout must be positive")
+        return parsed_timeout
+    except (TypeError, ValueError):
+        logger.warning(
+            "Invalid ANALYTICS_BQ_TIMEOUT_SECONDS=%r; using default %s seconds",  # pragma: no cover - logging only
+            raw_timeout,
+            DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS,
+        )
+        return DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS
+
+
+ANALYTICS_BQ_TIMEOUT_SECONDS = _load_analytics_timeout()
+
+
 def _load_credentials() -> Optional[service_account.Credentials]:
     """Load service account credentials from environment configuration."""
     credentials_json = os.getenv("BQ_SERVICE_ACCOUNT_JSON")
@@ -169,7 +194,7 @@ class BigQueryClient:
         self, sql: str, params: Dict[str, Any], *, job_context: Optional[str] = None
     ) -> pd.DataFrame:
         job = self.query(sql, params)
-        timeout_seconds = int(os.getenv("ANALYTICS_BQ_TIMEOUT_SECONDS", "300"))
+        timeout_seconds = ANALYTICS_BQ_TIMEOUT_SECONDS
         try:
             result = job.result(timeout=timeout_seconds)
             storage_client = self._get_bqstorage_client()
