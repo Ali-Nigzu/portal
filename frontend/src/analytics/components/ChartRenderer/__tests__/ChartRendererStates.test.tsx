@@ -69,6 +69,17 @@ describe('ChartRenderer high-level states', () => {
     expect(json).toContain('Unable to render chart');
   });
 
+  it('applies KPI renderer classnames to error state for dashboard overrides', () => {
+    const invalid: ChartResult = { ...baseTimeResult, series: [] };
+    const tree = renderer.create(
+      <ChartRenderer result={invalid} height={300} className="dashboard-v2__kpi-renderer" />,
+    );
+    const root = tree.root.find(
+      (node) => typeof node.props?.className === 'string' && node.props.className.includes('analytics-chart-error'),
+    );
+    expect(root.props.className).toContain('dashboard-v2__kpi-renderer');
+  });
+
   it('shows ChartEmptyState when all data points are null', () => {
     const emptyResult: ChartResult = {
       ...baseTimeResult,
