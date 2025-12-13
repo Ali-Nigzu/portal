@@ -43,21 +43,28 @@ describe("CapacityDonut", () => {
         presentation: "vrm",
         chartStyle: "capacity_usage",
         headlineValue: 40,
+        capacity_usage_now: 40,
         peak_capacity_usage_today: 50,
+        capacity_usage_overflow_now: 0,
+        peak_capacity_usage_overflow_today: 0,
       } as any,
     },
   };
 
-  it("renders an anti-clockwise seamless donut with VRM slices and tooltips", () => {
+  it("renders the base donut with three slices under capacity", () => {
     const tree = renderer.create(
       <CapacityDonut result={baseResult} series={baseResult.series} height={200} className="" />,
     );
 
-    const pie = tree.root.findByType(Pie);
+    const pies = tree.root.findAllByType(Pie);
+    expect(pies.length).toBe(1);
+    const pie = pies[0];
     expect(pie.props.startAngle).toBe(90);
     expect(pie.props.endAngle).toBe(450);
     expect(pie.props.paddingAngle).toBe(0);
     expect(pie.props.stroke).toBe("none");
+    expect(pie.props.innerRadius).toBe("30%");
+    expect(pie.props.outerRadius).toBe("42%");
 
     const pieData = pie.props.data as Array<{ label: string; value: number; color: string }>;
     expect(pieData.map((entry) => entry.label)).toEqual(["Usage", "Peak extra", "Remaining"]);
@@ -84,5 +91,109 @@ describe("CapacityDonut", () => {
     expect(json).toContain("capacity-usage__center");
     expect(json).toContain("40%");
     expect(json).not.toContain("capacity-usage__subtitle");
+  });
+
+  it("renders overflow as an outer ring when current exceeds capacity", () => {
+    const overflowResult: ChartResult = {
+      ...baseResult,
+      series: [
+        {
+          ...baseResult.series[0],
+          data: [
+            { x: "Usage", value: 100 },
+            { x: "Peak extra", value: 0 },
+            { x: "Remaining", value: 0 },
+          ],
+        },
+      ],
+      meta: {
+        ...baseResult.meta,
+        summary: {
+          ...(baseResult.meta?.summary as any),
+          headlineValue: 141,
+          capacity_usage_now: 141,
+          peak_capacity_usage_today: 141,
+          capacity_usage_overflow_now: 41,
+          peak_capacity_usage_overflow_today: 41,
+        },
+      },
+    };
+
+    const tree = renderer.create(
+      <CapacityDonut result={overflowResult} series={overflowResult.series} height={200} className="" />,
+    );
+
+    const pies = tree.root.findAllByType(Pie);
+    expect(pies.length).toBe(2);
+    const overflowPie = pies[1];
+    const overflowData = overflowPie.props.data as Array<{ label: string; value: number; color: string }>;
+    expect(overflowPie.props.innerRadius).toBe("46%");
+    expect(overflowPie.props.outerRadius).toBe("52%");
+    expect(overflowData.map((entry) => entry.label)).toEqual(["Current overflow"]);
+    expect(overflowData[0].value).toBe(41);
+
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain("141%");
+    expect(json).toContain("+41% over");
+  });
+
+  it("persists peak overflow when peak > 100 but current is below", () => {
+    const peakOverflowResult: ChartResult = {
+      ...baseResult,
+      series: [
+        {
+          ...baseResult.series[0],
+          data: [
+            { x: "Usage", value: 80 },
+            { x: "Peak extra", value: 20 },
+            { x: "Remaining", value: 0 },
+          ],
+        },
+      ],
+      meta: {
+        ...baseResult.meta,
+        summary: {
+          ...(baseResult.meta?.summary as any),
+          headlineValue: 80,
+          capacity_usage_now: 80,
+          peak_capacity_usage_today: 130,
+          capacity_usage_overflow_now: 0,
+          peak_capacity_usage_overflow_today: 30,
+        },
+      },
+    };
+
+    const tree = renderer.create(
+      <CapacityDonut result={peakOverflowResult} series={peakOverflowResult.series} height={200} className="" />,
+    );
+
+    const pies = tree.root.findAllByType(Pie);
+    expect(pies.length).toBe(2);
+    const overflowPie = pies[1];
+    const overflowData = overflowPie.props.data as Array<{ label: string; value: number; color: string }>;
+    expect(overflowData.map((entry) => entry.label)).toEqual(["Peak overflow"]);
+    expect(overflowData[0].value).toBe(30);
+
+    const tooltip = tree.root.findByType(Tooltip);
+    expect(
+      tooltip.props.formatter(30, "value", { payload: { label: "Peak overflow" } }),
+    ).toEqual(["30% peak over", "Peak overflow"]);
+  });
+
+  it("renders within a square chart wrapper to avoid clipping", () => {
+    const tree = renderer.create(
+      <CapacityDonut result={baseResult} series={baseResult.series} height={200} className="" />,
+    );
+
+    const json = tree.toJSON();
+    const serialized = JSON.stringify(json);
+    expect(serialized).toContain("capacity-usage__chart");
+    expect(serialized).toContain("capacity-donut");
+
+    const pies = tree.root.findAllByType(Pie);
+    pies.forEach((pie) => {
+      expect(typeof pie.props.outerRadius === "string" && pie.props.outerRadius.includes("%"))
+        .toBe(true);
+    });
   });
 });

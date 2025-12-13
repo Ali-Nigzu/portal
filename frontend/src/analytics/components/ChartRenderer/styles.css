@@ -622,8 +622,20 @@
 .capacity-usage__content {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: var(--vrm-spacing-3, 12px);
+  flex: 1;
+}
+
+.capacity-usage__chart {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--vrm-spacing-2, 8px);
+  box-sizing: border-box;
 }
 
 .capacity-usage__center {

@@ -680,10 +680,15 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
 
   const usageValue = typeof usageNow === "number" && Number.isFinite(usageNow) ? usageNow : 0;
   const peakValue = Number.isFinite(peakUsage) ? peakUsage : 0;
-  const donutUsage = Math.min(Math.max(usageValue, 0), 100);
-  const donutPeak = Math.min(Math.max(peakValue, donutUsage), 100);
-  const peakExtra = Math.max(0, donutPeak - donutUsage);
-  const remainder = Math.max(0, 100 - donutPeak);
+  const currentBase = Math.min(Math.max(usageValue, 0), 100);
+  const peakBase = Math.min(Math.max(peakValue, currentBase), 100);
+  const peakExtraBase = Math.max(0, peakBase - currentBase);
+  const remainingBase = peakValue > 100 ? 0 : Math.max(0, 100 - peakBase);
+  const currentOverflow = Math.max(0, usageValue - 100);
+  const peakOverflow = Math.max(0, peakValue - 100);
+
+  summary.capacity_usage_overflow_now = currentOverflow;
+  summary.peak_capacity_usage_overflow_today = peakOverflow;
 
   next.chartType = "categorical";
   next.xDimension = { id: "capacity_segment", type: "category" } as ChartResult["xDimension"];
@@ -691,9 +696,9 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   series.label = "Capacity usage";
   series.geometry = "bar";
   series.data = [
-    { x: "Usage", value: donutUsage, y: donutUsage },
-    { x: "Peak extra", value: peakExtra, y: peakExtra },
-    { x: "Remaining", value: remainder, y: remainder },
+    { x: "Usage", value: currentBase, y: currentBase },
+    { x: "Peak extra", value: peakExtraBase, y: peakExtraBase },
+    { x: "Remaining", value: remainingBase, y: remainingBase },
   ];
 
   setHeadlineValue(next, usageValue);
