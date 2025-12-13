@@ -63,6 +63,8 @@ describe("CapacityDonut", () => {
     expect(pie.props.endAngle).toBe(450);
     expect(pie.props.paddingAngle).toBe(0);
     expect(pie.props.stroke).toBe("none");
+    expect(pie.props.innerRadius).toBe("30%");
+    expect(pie.props.outerRadius).toBe("42%");
 
     const pieData = pie.props.data as Array<{ label: string; value: number; color: string }>;
     expect(pieData.map((entry) => entry.label)).toEqual(["Usage", "Peak extra", "Remaining"]);
@@ -125,6 +127,8 @@ describe("CapacityDonut", () => {
     expect(pies.length).toBe(2);
     const overflowPie = pies[1];
     const overflowData = overflowPie.props.data as Array<{ label: string; value: number; color: string }>;
+    expect(overflowPie.props.innerRadius).toBe("46%");
+    expect(overflowPie.props.outerRadius).toBe("52%");
     expect(overflowData.map((entry) => entry.label)).toEqual(["Current overflow"]);
     expect(overflowData[0].value).toBe(41);
 
@@ -174,5 +178,22 @@ describe("CapacityDonut", () => {
     expect(
       tooltip.props.formatter(30, "value", { payload: { label: "Peak overflow" } }),
     ).toEqual(["30% peak over", "Peak overflow"]);
+  });
+
+  it("renders within a square chart wrapper to avoid clipping", () => {
+    const tree = renderer.create(
+      <CapacityDonut result={baseResult} series={baseResult.series} height={200} className="" />,
+    );
+
+    const json = tree.toJSON();
+    const serialized = JSON.stringify(json);
+    expect(serialized).toContain("capacity-usage__chart");
+    expect(serialized).toContain("capacity-donut");
+
+    const pies = tree.root.findAllByType(Pie);
+    pies.forEach((pie) => {
+      expect(typeof pie.props.outerRadius === "string" && pie.props.outerRadius.includes("%"))
+        .toBe(true);
+    });
   });
 });

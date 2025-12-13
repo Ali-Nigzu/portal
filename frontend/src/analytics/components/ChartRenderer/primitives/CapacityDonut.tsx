@@ -86,65 +86,67 @@ export const CapacityDonut = ({
     <div className={`capacity-usage kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
       <div className="capacity-usage__title">{title}</div>
       <div className="capacity-usage__content">
-        <ResponsiveContainer width="100%" height={hasOverflow ? 164 : 140}>
-          <PieChart>
-            <Tooltip formatter={tooltipFormatter} labelFormatter={() => ""} />
-            <Pie
-              dataKey="value"
-              data={renderBase}
-              cx="50%"
-              cy="50%"
-              innerRadius={48}
-              outerRadius={68}
-              paddingAngle={0}
-              startAngle={90}
-              endAngle={450}
-              stroke="none"
-            >
-              {renderBase.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} stroke="none" />
-              ))}
-            </Pie>
-            {hasOverflow ? (
+        <div className="capacity-usage__chart" aria-label="capacity-donut">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Tooltip formatter={tooltipFormatter} labelFormatter={() => ""} />
               <Pie
                 dataKey="value"
-                data={overflowData}
+                data={renderBase}
                 cx="50%"
                 cy="50%"
-                innerRadius={72}
-                outerRadius={86}
+                innerRadius="30%"
+                outerRadius="42%"
                 paddingAngle={0}
                 startAngle={90}
                 endAngle={450}
                 stroke="none"
               >
-                {overflowData.map((entry) => (
+                {renderBase.map((entry) => (
                   <Cell key={entry.label} fill={entry.color} stroke="none" />
                 ))}
               </Pie>
-            ) : null}
-            <text
-              x="50%"
-              y={hasOverflow ? "46%" : "50%"}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              className="capacity-usage__center"
-            >
-              {centerDisplay}
-            </text>
-            {overflowLabel ? (
+              {hasOverflow ? (
+                <Pie
+                  dataKey="value"
+                  data={overflowData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="46%"
+                  outerRadius="52%"
+                  paddingAngle={0}
+                  startAngle={90}
+                  endAngle={450}
+                  stroke="none"
+                >
+                  {overflowData.map((entry) => (
+                    <Cell key={entry.label} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+              ) : null}
               <text
                 x="50%"
-                y="60%"
+                y={hasOverflow ? "46%" : "50%"}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="capacity-usage__subtitle"
+                className="capacity-usage__center"
               >
-                {overflowLabel}
+                {centerDisplay}
               </text>
-            ) : null}
-          </PieChart>
-        </ResponsiveContainer>
+              {overflowLabel ? (
+                <text
+                  x="50%"
+                  y="60%"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="capacity-usage__subtitle"
+                >
+                  {overflowLabel}
+                </text>
+              ) : null}
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
