@@ -273,14 +273,14 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
         </div>
 
         {!isTraffic && sparklineData.length > 1 ? (
-          <div className={`kpi-sparkline-region${isVrm ? " kpi-sparkline-region--vrm" : ""}`}>
-            <div
-              className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}
-              onMouseLeave={isVrm ? handleSparklineLeave : undefined}
-            >
+          <div
+            className={`kpi-sparkline-region${isVrm ? " kpi-sparkline-region--vrm" : ""}`}
+            onMouseLeave={isVrm ? handleSparklineLeave : undefined}
+            data-testid={isVrm ? "vrm-sparkline-region" : undefined}
+          >
+            <div className={`kpi-sparkline-shell${isVrm ? " kpi-sparkline-shell--vrm" : ""}`}>
               <div
                 className={`kpi-sparkline-anchor${isVrm ? " kpi-sparkline-anchor--vrm" : ""}`}
-                onMouseLeave={isVrm ? handleSparklineLeave : undefined}
                 data-testid={isVrm ? "vrm-sparkline-shell" : undefined}
                 style={isVrm ? { paddingBottom: 0 } : undefined}
                 ref={sparklineRef}
@@ -294,7 +294,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     <XAxis dataKey="index" hide />
                     <YAxis
                       type="number"
-                      domain={[0, "dataMax"]}
+                      domain={[(dataMin: number) => Math.min(0, dataMin), (dataMax: number) => Math.max(0, dataMax)]}
                       padding={{ bottom: 0, top: 0 }}
                       allowDataOverflow={false}
                       hide
@@ -318,6 +318,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                       fill={primarySeries?.color ?? "#2d6cdf"}
                       fillOpacity={0.2}
                       isAnimationActive={false}
+                      baseValue={0}
                     />
                     {isVrm && vrmHover && hoveredNumericValue !== null ? (
                       <ReferenceDot
@@ -338,22 +339,22 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
                     data-testid="vrm-sparkline-overlay"
                     onMouseMove={handleOverlayHover}
                     onMouseEnter={handleOverlayHover}
-                    onMouseLeave={handleSparklineLeave}
                   />
                 ) : null}
               </div>
-              {isVrm && vrmHover ? (
-                <div
-                  className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
-                  aria-label="VRM sparkline hover strip"
-                >
-                  <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
-                  <div className="kpi-sparkline-strip__value">
-                    {formatKpiValue(vrmHover.value, primarySeries?.unit)}
-                  </div>
-                </div>
-              ) : null}
             </div>
+            {isVrm && vrmHover ? (
+              <div
+                className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
+                aria-label="VRM sparkline hover strip"
+                data-testid="vrm-sparkline-footer"
+              >
+                <div className="kpi-sparkline-strip__time">{vrmHover.label}</div>
+                <div className="kpi-sparkline-strip__value">
+                  {formatKpiValue(vrmHover.value, primarySeries?.unit)}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

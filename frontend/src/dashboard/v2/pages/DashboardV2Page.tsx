@@ -84,8 +84,11 @@ interface DashboardV2PageProps {
   dashboardId?: string;
 }
 
-const renderLoading = (label: string) => (
-  <div className="dashboard-v2__placeholder" aria-live="polite">
+const renderLoading = (label: string, variant: "card" | "kpi" = "card") => (
+  <div
+    className={`dashboard-v2__placeholder dashboard-v2__placeholder--${variant}`}
+    aria-live="polite"
+  >
     Loading {label}…
   </div>
 );
@@ -125,7 +128,7 @@ const KpiTile = ({
 
   let content: JSX.Element;
   if (state.status === "loading") {
-    content = renderLoading(title);
+    content = renderLoading(title, "kpi");
   } else if (state.status === "error") {
     content = renderError(state.error ?? `Failed to load ${title}`);
   } else if (!result) {
@@ -144,7 +147,11 @@ const KpiTile = ({
   const showRemove = Boolean(onRemove) && !locked;
 
   return (
-    <div className="dashboard-v2__kpi-tile vrm-kpi-tile vrm-kpi-tile--panel" data-state={state.status}>
+    <div
+      className="dashboard-v2__kpi-tile vrm-kpi-tile vrm-kpi-tile--panel"
+      data-state={state.status}
+      style={{ paddingBottom: 0 }}
+    >
       {showRemove ? (
         <div className="dashboard-v2__kpi-controls">
           <button type="button" className="dashboard-v2__remove-button" onClick={onRemove}>
@@ -953,5 +960,5 @@ const DashboardV2PageWithBoundary = (props: DashboardV2PageProps) => (
   </ErrorBoundary>
 );
 
-export { DashboardV2Page };
+export { DashboardV2Page, renderLoading, renderError };
 export default DashboardV2PageWithBoundary;
