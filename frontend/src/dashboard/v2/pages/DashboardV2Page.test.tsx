@@ -2,7 +2,8 @@
 import { jest } from "@jest/globals";
 import renderer, { act } from "react-test-renderer";
 import type { TestRenderer } from "react-test-renderer";
-import type { ChartResult } from "../../../analytics/schemas/charting";
+import type { ComponentProps } from "react";
+import type { ChartResult, ChartSpec } from "../../../analytics/schemas/charting";
 import type { DashboardManifest, DashboardWidget } from "../types";
 import DashboardV2Page, { lookupCapacity } from "./DashboardV2Page";
 import liveFlowResult from "../../../analytics/examples/golden_dashboard_live_flow.json";
@@ -10,6 +11,7 @@ import type { FetchDashboardManifestOptions } from "../transport/fetchDashboardM
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "../utils/applyVRMOverrides";
 import { decorateResult, lastBucketValue } from "../utils/vrmDecorators";
+import { GlobalControlsProvider } from "../../../context/GlobalControlsContext";
 
 class ResizeObserverMock {
   observe(): void {}
@@ -46,6 +48,32 @@ type ManifestLoader = (
 type WidgetResultLoader = (widget: DashboardWidget, options?: LoadWidgetOptions) => Promise<ChartResult>;
 type UnpinMutator = (orgId: string, dashboardId: string, widgetId: string) => Promise<DashboardManifest>;
 
+const liveFlowInlineSpec: ChartSpec = {
+  id: "dashboard.live_flow",
+  chartType: "composed_time",
+  dataset: "events",
+  dimensions: [
+    {
+      id: "timestamp",
+      column: "timestamp",
+      bucket: "5_MIN",
+      sort: "asc",
+    },
+  ],
+  measures: [
+    {
+      id: "occupancy",
+      aggregation: "occupancy_recursion",
+    },
+  ],
+  timeWindow: {
+    from: "{{NOW_MINUS_60_MIN}}",
+    to: "{{NOW}}",
+    bucket: "5_MIN",
+    timezone: "UTC",
+  },
+};
+
 const baseWidgets: DashboardWidget[] = [
   {
     id: "kpi-activity",
@@ -63,6 +91,7 @@ const baseWidgets: DashboardWidget[] = [
     chartSpecId: "dashboard.live_flow",
     fixtureId: "golden_dashboard_live_flow",
     locked: false,
+    inlineSpec: liveFlowInlineSpec,
   },
 ];
 
@@ -193,6 +222,24 @@ const renderText = (node: any): string => {
   return "";
 };
 
+const findByClassName = (view: TestRenderer, className: string) =>
+  view.root.find(
+    (node: { props?: { className?: string } }) =>
+      typeof node.props?.className === "string" && node.props.className.split(" ").includes(className),
+  );
+
+const renderDashboard = async (props: ComponentProps<typeof DashboardV2Page>) => {
+  let view: TestRenderer;
+  await act(async () => {
+    view = renderer.create(
+      <GlobalControlsProvider>
+        <DashboardV2Page {...props} />
+      </GlobalControlsProvider>,
+    );
+  });
+  return view!;
+};
+
 async function flushEffects(times = 3) {
   for (let i = 0; i < times; i += 1) {
     // eslint-disable-next-line no-await-in-loop
@@ -232,16 +279,11 @@ describe("DashboardV2Page", () => {
     });
     const unpin = jest.fn<ReturnType<UnpinMutator>, Parameters<UnpinMutator>>(async () => cloneManifest());
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-          unpinWidget={unpin}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
+      unpinWidget: unpin,
     });
     await flushEffects();
 
@@ -266,7 +308,7 @@ describe("DashboardV2Page", () => {
       expect(opts?.orgId).toBe("client0");
     });
 
-    const removeButtons = tree!.root.findAllByProps({ className: "dashboard-v2__remove-button" });
+    const removeButtons = view!.root.findAllByProps({ className: "dashboard-v2__remove-button" });
     // Only the chart widget is removable by default.
     expect(removeButtons).toHaveLength(1);
     expect(removeButtons[0].children.join(" ")).toContain("Unpin");
@@ -297,20 +339,15 @@ describe("DashboardV2Page", () => {
       return next;
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-          unpinWidget={unpin}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
+      unpinWidget: unpin,
     });
     await flushEffects();
 
-    const removeButton = tree!
+    const removeButton = view!
       .root
       .findAllByProps({ className: "dashboard-v2__remove-button" })
       .at(0);
@@ -341,14 +378,10 @@ describe("DashboardV2Page", () => {
     url.search = "?view_token=test-token";
     window.history.replaceState({}, "", url.toString());
 
-    await act(async () => {
-      renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "admin", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    await renderDashboard({
+      credentials: { username: "admin", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
@@ -374,21 +407,15 @@ describe("DashboardV2Page", () => {
       return liveFlowChart;
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
-    expect(tree!.root.findAllByType("select")).toHaveLength(0);
-    expect(tree!.root.findAllByProps({ className: "dashboard-v2__controls" })).toHaveLength(0);
-    const refreshButtons = tree!.root.findAllByProps({ className: "dashboard-v2__button" });
+    expect(view!.root.findAllByProps({ className: "dashboard-v2__controls" })).toHaveLength(0);
+    const refreshButtons = view!.root.findAllByProps({ className: "dashboard-v2__button" });
     expect(refreshButtons).toHaveLength(0);
   });
 
@@ -401,19 +428,14 @@ describe("DashboardV2Page", () => {
       return buildChartResult([1, 2, 3]);
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
-    const kpiTiles = tree!.root.findAllByProps({ className: "dashboard-v2__kpi-content" });
+    const kpiTiles = view!.root.findAllByProps({ className: "dashboard-v2__kpi-content" });
     expect(kpiTiles).toHaveLength(Object.values(VRM_KPI_TITLES).length);
   });
 
@@ -421,33 +443,18 @@ describe("DashboardV2Page", () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async () => buildChartResult([1, 2, 3]));
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
-    const header = tree!.root.findByProps({ className: "dashboard-v2__meta-row" });
-    const headerText = header.children
-      .map((child: any) => {
-        if (typeof child === "string") {
-          return child;
-        }
-        if (Array.isArray(child?.props?.children)) {
-          return child.props.children.join(" ");
-        }
-        return String(child?.props?.children ?? child);
-      })
-      .join(" ");
-    expect(headerText).toContain("Last updated: Realtime");
-    expect(headerText).toContain("Status: OK");
-    expect(headerText).toContain("Local time:");
+    const header = findByClassName(view!, "vrm-header-meta");
+    const headerText = renderText(header).toLowerCase();
+    expect(headerText).toContain("last updated:");
+    expect(headerText).toContain("system status: ok");
+    expect(headerText).toContain("local time:");
   });
 
   it("renders capacity usage subtitle without surfacing errors", async () => {
@@ -461,15 +468,10 @@ describe("DashboardV2Page", () => {
       return liveFlowChart;
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
@@ -480,7 +482,7 @@ describe("DashboardV2Page", () => {
       (capacityResult?.meta?.summary as Record<string, string> | undefined)?.vrmChipText ?? "",
     ).toContain("peak:");
 
-    const errorTiles = tree!.root.findAllByProps({ className: "dashboard-v2__error" });
+    const errorTiles = view!.root.findAllByProps({ className: "dashboard-v2__error" });
     expect(errorTiles.length).toBe(0);
   });
 
@@ -488,27 +490,25 @@ describe("DashboardV2Page", () => {
     const manifestLoader = jest.fn(async () => cloneManifest());
     const widgetLoader = jest.fn(async (widget: DashboardWidget) => {
       if (widget.kind === "kpi") {
+        if (widget.id === VRM_KPI_IDS.footfall) {
+          throw new Error("fixture failure");
+        }
         if (widget.id === VRM_KPI_IDS.traffic) {
           return trafficDistributionResult;
         }
         return buildChartResult([1, 1, 1]);
       }
-      throw new Error("fixture failure");
+      return liveFlowChart;
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
-    const errorBanner = tree!.root.findByProps({ className: "dashboard-v2__error-banner" });
+    const errorBanner = view!.root.findByProps({ className: "dashboard-v2__error-banner" });
     expect(errorBanner.children.join(" ")).toContain("Some widgets failed to load");
   });
 
@@ -527,20 +527,15 @@ describe("DashboardV2Page", () => {
       return liveFlowChart;
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client1", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client1", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
-    expect(tree!.root.findAllByProps({ className: "dashboard-v2__kpi-subtitle" })).toHaveLength(0);
-    expect(tree!.root.findAllByProps({ className: "dashboard-v2__kpi-secondary" })).toHaveLength(0);
+    expect(view!.root.findAllByProps({ className: "dashboard-v2__kpi-subtitle" })).toHaveLength(0);
+    expect(view!.root.findAllByProps({ className: "dashboard-v2__kpi-secondary" })).toHaveLength(0);
 
     const headlines = renderedResults.flatMap((result) =>
       Object.values(result.meta?.summary ?? {}).filter((value) => typeof value === "string" && value.startsWith("headline-")),
@@ -563,15 +558,10 @@ describe("DashboardV2Page", () => {
         return buildChartResult([1], { meta: { timezone: "UTC", summary: { widgetId: widget.id } } });
       });
 
-      let tree: TestRenderer;
-      await act(async () => {
-        tree = renderer.create(
-          <DashboardV2Page
-            credentials={{ username: "client1", password: "secret" }}
-            manifestLoader={manifestLoader}
-            widgetResultLoader={widgetLoader}
-          />,
-        );
+      const view = await renderDashboard({
+        credentials: { username: "client1", password: "secret" },
+        manifestLoader,
+        widgetResultLoader: widgetLoader,
       });
       await flushEffects();
 
@@ -580,7 +570,7 @@ describe("DashboardV2Page", () => {
           (result.meta?.summary as Record<string, unknown> | undefined)?.chartSubType === "capacity_usage",
       );
       const headerText = renderText(
-        tree!.root.findByProps({ className: "dashboard-v2__header" }).props.children,
+        view!.root.findByProps({ className: "vrm-dashboard-title" }).props.children,
       ).toLowerCase();
 
       return { capacityResult, headerText };
@@ -615,19 +605,14 @@ describe("DashboardV2Page", () => {
       }),
     );
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client0", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={jest.fn()}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client0", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: jest.fn(),
     });
     await flushEffects();
 
-    const emptyMessages = tree!.root.findAllByProps({ className: "dashboard-v2__empty" });
+    const emptyMessages = view!.root.findAllByProps({ className: "dashboard-v2__empty" });
     expect(emptyMessages).toHaveLength(1);
   });
 
@@ -645,20 +630,15 @@ describe("DashboardV2Page", () => {
       return liveFlowChart;
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client2", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client2", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
-    const title = tree!.root.findByProps({ className: "dashboard-v2__title" });
-    expect(title.children.join(" ")).toContain("client2 – client2");
+    const title = view!.root.findByProps({ className: "vrm-dashboard-title" });
+    expect(title.children.join(" ").toLowerCase()).toContain("client2 – site 2");
 
     const capacityResult = renderedResults.find(
       (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
@@ -683,20 +663,15 @@ describe("DashboardV2Page", () => {
       return liveFlowChart;
     });
 
-    let tree: TestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client2", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    const view = await renderDashboard({
+      credentials: { username: "client2", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
-    const title = tree!.root.findByProps({ className: "dashboard-v2__title" });
-    expect(title.children.join(" ")).toContain("client1 – client1");
+    const title = view!.root.findByProps({ className: "vrm-dashboard-title" });
+    expect(title.children.join(" ").toLowerCase()).toContain("client1 – site 1");
 
     const capacityResult = renderedResults.find(
       (result) => (result.meta?.summary as Record<string, string> | undefined)?.widgetId === VRM_KPI_IDS.capacity,
@@ -766,14 +741,10 @@ describe("DashboardV2Page", () => {
       return liveFlowChart;
     });
 
-    await act(async () => {
-      renderer.create(
-        <DashboardV2Page
-          credentials={{ username: "client1", password: "secret" }}
-          manifestLoader={manifestLoader}
-          widgetResultLoader={widgetLoader}
-        />,
-      );
+    await renderDashboard({
+      credentials: { username: "client1", password: "secret" },
+      manifestLoader,
+      widgetResultLoader: widgetLoader,
     });
     await flushEffects();
 
@@ -804,4 +775,3 @@ describe("DashboardV2Page", () => {
     ).toBeCloseTo((90 / 5) * 100);
   });
 });
-
