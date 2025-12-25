@@ -290,6 +290,18 @@
   border-radius: var(--vrm-radii-card);
 }
 
+.site-flow-card__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--vrm-spacing-2);
+}
+
+.site-flow-card__controls .vrm-select {
+  min-width: 140px;
+}
+
 .dashboard-v2__chart-card {
   min-height: 360px;
   background: var(--vrm-bg-panel);

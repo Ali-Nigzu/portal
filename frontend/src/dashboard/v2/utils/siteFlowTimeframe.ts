@@ -1,0 +1,98 @@
+import type { TimeBucket, TimeWindow } from "../../../analytics/schemas/charting";
+
+export type SiteFlowTimeframe =
+  | "today"
+  | "yesterday"
+  | "last_week"
+  | "last_month"
+  | "last_quarter"
+  | "last_year"
+  | "all_time";
+
+export const SITE_FLOW_TIMEFRAME_OPTIONS: Array<{ value: SiteFlowTimeframe; label: string }> = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "last_week", label: "Last Week" },
+  { value: "last_month", label: "Last Month" },
+  { value: "last_quarter", label: "Last Quarter" },
+  { value: "last_year", label: "Last Year" },
+  { value: "all_time", label: "All Time" },
+];
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+const startOfDay = (date: Date, timezone?: string): Date => {
+  if (timezone === "UTC") {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+  }
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const endOfDay = (date: Date, timezone?: string): Date => {
+  if (timezone === "UTC") {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+  }
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+};
+
+export const resolveSiteFlowTimeRange = (
+  timeframe: SiteFlowTimeframe,
+  timezone?: string,
+  anchor: Date = new Date(),
+): Pick<TimeWindow, "from" | "to"> => {
+  const to = anchor.toISOString();
+
+  switch (timeframe) {
+    case "today": {
+      const from = startOfDay(anchor, timezone).toISOString();
+      return { from, to };
+    }
+    case "yesterday": {
+      const yesterday = new Date(anchor.getTime() - DAY_IN_MS);
+      const from = startOfDay(yesterday, timezone).toISOString();
+      const toYesterday = endOfDay(yesterday, timezone).toISOString();
+      return { from, to: toYesterday };
+    }
+    case "last_week": {
+      const from = new Date(anchor.getTime() - 7 * DAY_IN_MS).toISOString();
+      return { from, to };
+    }
+    case "last_month": {
+      const from = new Date(anchor.getTime() - 30 * DAY_IN_MS).toISOString();
+      return { from, to };
+    }
+    case "last_quarter": {
+      const from = new Date(anchor.getTime() - 90 * DAY_IN_MS).toISOString();
+      return { from, to };
+    }
+    case "last_year": {
+      const from = new Date(anchor.getTime() - 365 * DAY_IN_MS).toISOString();
+      return { from, to };
+    }
+    case "all_time":
+    default: {
+      return { from: new Date(0).toISOString(), to };
+    }
+  }
+};
+
+export const bucketForSiteFlowTimeframe = (timeframe: SiteFlowTimeframe): TimeBucket => {
+  switch (timeframe) {
+    case "today":
+    case "yesterday":
+      return "HOUR";
+    case "last_week":
+    case "last_month":
+      return "DAY";
+    case "last_quarter":
+      return "WEEK";
+    case "last_year":
+    case "all_time":
+    default:
+      return "MONTH";
+  }
+};
