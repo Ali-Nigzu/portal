@@ -33,6 +33,7 @@ export type TimeBucket =
   | "15_MIN"
   | "30_MIN"
   | "HOUR"
+  | "6_HOUR"
   | "DAY"
   | "WEEK"
   | "MONTH";
@@ -228,4 +229,3 @@ export const CHART_SPEC_SCHEMA_ID =
   "https://line-analytics/schemas/chart-spec.schema.json" as const;
 export const CHART_RESULT_SCHEMA_ID =
   "https://line-analytics/schemas/chart-result.schema.json" as const;
-

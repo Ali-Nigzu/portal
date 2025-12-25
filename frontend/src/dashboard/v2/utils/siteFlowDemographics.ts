@@ -1,4 +1,4 @@
-import type { ChartResult, ChartSeries, ChartSpec, TimeBucket } from "../../../analytics/schemas/charting";
+import type { ChartResult, ChartSeries, ChartSpec, TimeBucket, TimeWindow } from "../../../analytics/schemas/charting";
 import type { DashboardTimeRangeOption, DashboardWidget } from "../types";
 
 // DEBUG MAP (temporary)
@@ -134,6 +134,15 @@ export const resolveDemographicsTimeWindow = (
   anchor: Date = new Date(),
   bucketOverride?: TimeBucket,
 ): ChartSpec["timeWindow"] => resolveTimeWindow(timeRange, timezone, anchor, bucketOverride);
+
+export const resolveDemographicsTimeWindowFromRange = (
+  range: Pick<TimeWindow, "from" | "to">,
+  timezone: string | undefined,
+): ChartSpec["timeWindow"] => ({
+  from: range.from,
+  to: range.to,
+  ...(timezone ? { timezone } : {}),
+});
 
 export const isSiteFlowWidget = (widget: DashboardWidget): boolean =>
   widget.id === "live-flow" || widget.chartSpecId === "dashboard.live_flow";
