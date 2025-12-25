@@ -385,11 +385,9 @@ class SpecCompiler:
             )
         ]
         if bucket != "RAW" and use_calendar and not excessive_calendar:
-            base_ctes.append(
-                self._render_calendar(
-                    bucket, clamp_to_data=vrm_occupancy_enabled or occupancy_present
-                )
-            )
+            spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+            clamp_to_data = (vrm_occupancy_enabled or occupancy_present) and spec_id != "dashboard.live_flow"
+            base_ctes.append(self._render_calendar(bucket, clamp_to_data=clamp_to_data))
 
         for measure in measures:
             aggregation = measure["aggregation"]

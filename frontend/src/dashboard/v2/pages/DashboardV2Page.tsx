@@ -346,7 +346,6 @@ const DashboardV2Page = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeRangeId, setSelectedTimeRangeId] = useState<string | null>(null);
   const [runNonce, setRunNonce] = useState(0);
-  const [localTime, setLocalTime] = useState<Date>(() => new Date());
   const [siteFlowMode, setSiteFlowMode] = useState<"activity" | "demographics">(
     "activity",
   );
@@ -397,11 +396,6 @@ const DashboardV2Page = ({
       resolvedUiClient,
     });
   }, [manifest?.orgId, orgId, resolvedUiClient, viewToken]);
-
-  useEffect(() => {
-    const interval = setInterval(() => setLocalTime(new Date()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
 
   const loadManifest = useCallback(async () => {
     setStatus("loading");

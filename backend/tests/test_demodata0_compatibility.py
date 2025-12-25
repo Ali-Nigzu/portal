@@ -56,6 +56,13 @@ def test_scoped_cte_projects_canonical_fields():
     )
 
     assert "ROW_NUMBER() OVER" in sql
-    assert "CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Unknown' END" in sql
+    normalized_sql = " ".join(sql.split())
+    expected = (
+        "CASE WHEN sex = 0 THEN 'Male' WHEN sex = 1 THEN 'Female' "
+        "WHEN LOWER(CAST(sex AS STRING)) IN ('m', 'male') THEN 'Male' "
+        "WHEN LOWER(CAST(sex AS STRING)) IN ('f', 'female') THEN 'Female' "
+        "ELSE 'Unknown' END"
+    )
+    assert expected in normalized_sql
     assert "CASE" in sql and "age_bucket" in sql
     assert "timestamp < TIMESTAMP(@now)" in sql
