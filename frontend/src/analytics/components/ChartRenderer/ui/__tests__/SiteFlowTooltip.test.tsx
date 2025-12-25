@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/await-async-query */
 import React from "react";
 import renderer from "react-test-renderer";
 
@@ -65,13 +66,22 @@ describe("SiteFlowTooltip", () => {
     );
     const text = JSON.stringify(tree.toJSON());
     expect(text).toContain("Occupancy");
-    expect(text).toContain("Min:");
-    expect(text).toContain("Max:");
+    expect(text).toContain("Min");
+    expect(text).toContain("Max");
     expect(text).not.toContain("raw:");
     expect(text).not.toContain("coverage:");
+    expect(text).not.toContain("events");
+    expect(text).not.toContain("people");
     expect(text).not.toContain("Occupancy (min)");
     expect(text).not.toContain("Occupancy (max)");
     expect(text).not.toContain("Occupancy (avg)");
+    const exitsIndex = text.indexOf("Exits");
+    const entrancesIndex = text.indexOf("Entrances");
+    expect(exitsIndex).toBeGreaterThanOrEqual(0);
+    expect(entrancesIndex).toBeGreaterThanOrEqual(0);
+    expect(exitsIndex).toBeLessThan(entrancesIndex);
+    const listItems = tree.root.findAllByType("li");
+    expect(listItems).toHaveLength(5);
   });
 
   it("respects legend toggles for entrances/exits/occupancy", () => {

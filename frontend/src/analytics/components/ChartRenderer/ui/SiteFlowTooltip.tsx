@@ -1,7 +1,7 @@
 import type { TooltipContentProps } from "recharts";
 import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesVisibilityMap } from "../managers";
-import { formatValue } from "../utils/format";
+import { formatNumeric } from "../utils/format";
 import { formatTooltipTimestamp } from "../utils/formatTooltipTimestamp";
 
 type SiteFlowTooltipProps = Partial<TooltipContentProps<number, string>> & {
@@ -63,6 +63,15 @@ export const SiteFlowTooltip = ({
       }
       const series = seriesMap.get(seriesId);
       return !series?.hideInTooltip;
+    })
+    .sort((a, b) => {
+      const order = new Map([
+        ["exits", 0],
+        ["entrances", 1],
+      ]);
+      const aKey = order.get(String(a.dataKey)) ?? 99;
+      const bKey = order.get(String(b.dataKey)) ?? 99;
+      return aKey - bKey;
     });
 
   return (
@@ -82,33 +91,63 @@ export const SiteFlowTooltip = ({
                 {series?.label ?? seriesId}
               </span>
               <span className="series-value">
-                {formatValue(entry.value as number | null | undefined, series?.unit)}
+                {formatNumeric(entry.value as number | null | undefined)}
               </span>
             </li>
           );
         })}
         {occupancyVisible ? (
-          <li key="occupancy-summary">
-            <span className="series-label">
-              <span
-                className="swatch"
-                style={{
-                  backgroundColor:
-                    seriesMap.get("occupancy_avg")?.color ??
-                    seriesMap.get("occupancy_min")?.color ??
-                    "var(--vrm-color-accent-occupancy, #2d6cdf)",
-                }}
-              />
-              Occupancy
-            </span>
-            <span className="series-value">
-              {formatValue(occupancyValues.avg, "people")}
-            </span>
-            <span className="series-meta">
-              Min: {formatValue(occupancyValues.min, "people")} &nbsp; Max:{" "}
-              {formatValue(occupancyValues.max, "people")}
-            </span>
-          </li>
+          <>
+            <li key="occupancy-summary">
+              <span className="series-label">
+                <span
+                  className="swatch"
+                  style={{
+                    backgroundColor:
+                      seriesMap.get("occupancy_avg")?.color ??
+                      seriesMap.get("occupancy_min")?.color ??
+                      "var(--vrm-color-accent-occupancy, #2d6cdf)",
+                  }}
+                />
+                Occupancy
+              </span>
+              <span className="series-value">
+                {formatNumeric(occupancyValues.avg)}
+              </span>
+            </li>
+            <li key="occupancy-min">
+              <span className="series-label">
+                <span
+                  className="swatch"
+                  style={{
+                    backgroundColor:
+                      seriesMap.get("occupancy_min")?.color ??
+                      "var(--vrm-color-accent-occupancy, #2d6cdf)",
+                  }}
+                />
+                Min
+              </span>
+              <span className="series-value">
+                {formatNumeric(occupancyValues.min)}
+              </span>
+            </li>
+            <li key="occupancy-max">
+              <span className="series-label">
+                <span
+                  className="swatch"
+                  style={{
+                    backgroundColor:
+                      seriesMap.get("occupancy_max")?.color ??
+                      "var(--vrm-color-accent-occupancy, #2d6cdf)",
+                  }}
+                />
+                Max
+              </span>
+              <span className="series-value">
+                {formatNumeric(occupancyValues.max)}
+              </span>
+            </li>
+          </>
         ) : null}
       </ul>
     </div>

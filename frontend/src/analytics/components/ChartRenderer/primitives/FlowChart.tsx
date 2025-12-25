@@ -125,7 +125,14 @@ export const FlowChart = ({
                 />
               );
             };
-            const dotProp = seriesItem.noDots ? false : dotRenderer;
+            const isOccupancySeries = seriesItem.seriesGroup === "occupancy";
+            const isOccupancyAvg = seriesItem.id === "occupancy_avg";
+            const dotProp = isOccupancySeries ? false : seriesItem.noDots ? false : dotRenderer;
+            const activeDotProp = isOccupancyAvg
+              ? dotRenderer
+              : seriesItem.noDots || isOccupancySeries
+              ? false
+              : dotRenderer;
             if (seriesItem.geometry === "bar" || seriesItem.geometry === "column") {
               return (
                 <Bar
@@ -168,7 +175,7 @@ export const FlowChart = ({
                   strokeOpacity={seriesItem.strokeOpacity}
                   strokeWidth={2}
                   dot={dotProp}
-                  activeDot={seriesItem.noDots ? false : dotRenderer}
+                  activeDot={activeDotProp}
                   yAxisId={yAxisId}
                   hide={hidden}
                   isAnimationActive={false}
