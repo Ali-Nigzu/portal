@@ -9,7 +9,6 @@ import type {
   DashboardManifest,
   DashboardWidget,
   DashboardWidgetState,
-  DashboardTimeRangeOption,
 } from "../types";
 import { fetchDashboardManifest, type FetchDashboardManifestOptions } from "../transport/fetchDashboardManifest";
 import {
@@ -34,13 +33,21 @@ import {
   isSiteFlowWidget,
   type DemographicWidgetKind,
   mapChartResultsToDemographics,
-  resolveDemographicsTimeWindow,
+  resolveDemographicsTimeWindowFromRange,
   type SiteFlowDemographicsData,
 } from "../utils/siteFlowDemographics";
+import {
+  type SiteFlowTimeframe,
+  SITE_FLOW_TIMEFRAME_OPTIONS,
+  bucketForSiteFlowTimeframe,
+  resolveSiteFlowTimeRange,
+} from "../utils/siteFlowTimeframe";
+import type { ChartSpec, ChartDimension } from "../../../analytics/schemas/charting";
 
 export { lookupCapacity } from "../utils/vrmDecorators";
 
 const GRID_ROW_HEIGHT = 96;
+const TIMESTAMP_DIMENSION_ID = "timestamp";
 
 const formatTitleCase = (value?: string | null) => {
   if (!value) return "Site";
@@ -215,25 +222,27 @@ const ChartCard = ({
 };
 
 const SiteFlowCard = ({
-  state,
-  result,
   subtitle,
   locked,
   onRemove,
   widgetId,
   mode,
   onModeChange,
+  timeframe,
+  onTimeframeChange,
   demographics,
+  activity,
 }: {
-  state: DashboardWidgetState;
-  result?: Parameters<typeof ChartRenderer>[0]["result"];
   subtitle?: string;
   locked?: boolean;
   onRemove?: () => void;
   widgetId: string;
   mode: "activity" | "demographics";
   onModeChange: (mode: "activity" | "demographics") => void;
+  timeframe: SiteFlowTimeframe;
+  onTimeframeChange: (timeframe: SiteFlowTimeframe) => void;
   demographics: { status: "idle" | "loading" | "ready" | "error"; data?: SiteFlowDemographicsData; error?: string };
+  activity: { status: "idle" | "loading" | "ready" | "error"; result?: Parameters<typeof ChartRenderer>[0]["result"]; error?: string };
 }) => {
   const renderSiteFlowBody = () => {
     if (mode === "demographics") {
@@ -249,16 +258,16 @@ const SiteFlowCard = ({
       return <SiteFlowDemographicsView data={demographics.data} />;
     }
 
-    if (state.status === "loading") {
+    if (activity.status === "loading") {
       return renderLoading("Site Flow");
     }
-    if (state.status === "error") {
-      return renderError(state.error ?? "Failed to load Site Flow");
+    if (activity.status === "error") {
+      return renderError(activity.error ?? "Failed to load Site Flow");
     }
-    if (!result) {
+    if (!activity.result) {
       return renderError("No data available");
     }
-    return <ChartRenderer result={result} height={360} widgetId={widgetId} />;
+    return <ChartRenderer result={activity.result} height={360} widgetId={widgetId} />;
   };
 
   const footer = !locked && onRemove ? (
@@ -276,15 +285,29 @@ const SiteFlowCard = ({
       className="dashboard-v2__chart-card vrm-card vrm-card--chart-panel"
       footer={footer}
       dateSelector={
-        <select
-          className="vrm-select"
-          aria-label="Select Site Flow view"
-          value={mode}
-          onChange={(event) => onModeChange(event.target.value as "activity" | "demographics")}
-        >
-          <option value="activity">Activity</option>
-          <option value="demographics">Demographics</option>
-        </select>
+        <div className="site-flow-card__controls">
+          <select
+            className="vrm-select"
+            aria-label="Select Site Flow view"
+            value={mode}
+            onChange={(event) => onModeChange(event.target.value as "activity" | "demographics")}
+          >
+            <option value="activity">Activity</option>
+            <option value="demographics">Demographics</option>
+          </select>
+          <select
+            className="vrm-select"
+            aria-label="Select Site Flow timeframe"
+            value={timeframe}
+            onChange={(event) => onTimeframeChange(event.target.value as SiteFlowTimeframe)}
+          >
+            {SITE_FLOW_TIMEFRAME_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       }
     >
       {renderSiteFlowBody()}
@@ -323,10 +346,15 @@ const DashboardV2Page = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeRangeId, setSelectedTimeRangeId] = useState<string | null>(null);
   const [runNonce, setRunNonce] = useState(0);
-  const [localTime, setLocalTime] = useState<Date>(() => new Date());
   const [siteFlowMode, setSiteFlowMode] = useState<"activity" | "demographics">(
     "activity",
   );
+  const [siteFlowTimeframe, setSiteFlowTimeframe] = useState<SiteFlowTimeframe>("all_time");
+  const [siteFlowActivity, setSiteFlowActivity] = useState<{
+    status: "idle" | "loading" | "ready" | "error";
+    result?: Parameters<typeof ChartRenderer>[0]["result"];
+    error?: string;
+  }>({ status: "idle" });
   const [siteFlowDemographics, setSiteFlowDemographics] = useState<{
     status: "idle" | "loading" | "ready" | "error";
     data?: SiteFlowDemographicsData;
@@ -368,11 +396,6 @@ const DashboardV2Page = ({
       resolvedUiClient,
     });
   }, [manifest?.orgId, orgId, resolvedUiClient, viewToken]);
-
-  useEffect(() => {
-    const interval = setInterval(() => setLocalTime(new Date()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
 
   const loadManifest = useCallback(async () => {
     setStatus("loading");
@@ -485,15 +508,21 @@ const DashboardV2Page = ({
     setStatus("loading");
     setError(null);
 
+    const widgetsToLoad = manifest.widgets.filter((widget) => !isSiteFlowWidget(widget));
+
     setWidgetState((previous) => {
       const next: Record<string, DashboardWidgetState> = {};
       manifest.widgets.forEach((widget) => {
         const prior = previous[widget.id];
-        next[widget.id] = {
-          widget,
-          status: "loading",
-          result: prior?.result,
-        };
+        if (isSiteFlowWidget(widget)) {
+          next[widget.id] = prior ? { ...prior, widget } : { widget, status: "idle" };
+        } else {
+          next[widget.id] = {
+            widget,
+            status: "loading",
+            result: prior?.result,
+          };
+        }
       });
       return next;
     });
@@ -503,7 +532,7 @@ const DashboardV2Page = ({
 
     const run = async () => {
       await Promise.all(
-        manifest.widgets.map(async (widget) => {
+        widgetsToLoad.map(async (widget) => {
           try {
             const result = await widgetResultLoaderImpl(widget, {
               signal: controller.signal,
@@ -614,7 +643,7 @@ const DashboardV2Page = ({
 
   useEffect(() => {
     if (!siteFlowWidget || !manifest) {
-      setSiteFlowDemographics((previous) =>
+      setSiteFlowActivity((previous) =>
         previous.status === "idle" ? previous : { status: "idle" },
       );
       return;
@@ -622,23 +651,91 @@ const DashboardV2Page = ({
 
     const controller = new AbortController();
     const timezone = manifest.timeControls?.timezone;
-    const kinds: DemographicWidgetKind[] = ["age", "gender", "race"];
-    const resolvedTimeRange =
-      selectedTimeRange ?? ({
-        id: "all_time_default",
-        label: "All time",
-        durationMinutes: null,
-        allTime: true,
-      } satisfies DashboardTimeRangeOption);
     const anchor = new Date();
-    const timeWindow = resolveDemographicsTimeWindow(resolvedTimeRange, timezone, anchor);
+    const timeRange = resolveSiteFlowTimeRange(siteFlowTimeframe, timezone, anchor);
+    const bucket = bucketForSiteFlowTimeframe(siteFlowTimeframe);
+
+    if (!siteFlowWidget.inlineSpec) {
+      setSiteFlowActivity({ status: "error", error: "Site Flow spec unavailable" });
+      return () => controller.abort();
+    }
+
+    const spec = JSON.parse(JSON.stringify(siteFlowWidget.inlineSpec)) as ChartSpec;
+    spec.timeWindow = {
+      ...(spec.timeWindow ?? { from: "", to: "" }),
+      from: timeRange.from,
+      to: timeRange.to,
+      bucket,
+      ...(timezone ? { timezone } : {}),
+    };
+    if (Array.isArray(spec.dimensions)) {
+      spec.dimensions = spec.dimensions.map((dimension) => {
+        if ((dimension as { id?: string }).id === TIMESTAMP_DIMENSION_ID) {
+          return { ...(dimension as ChartDimension), bucket };
+        }
+        return dimension;
+      });
+    }
+
+    const widget = { ...siteFlowWidget, inlineSpec: spec };
+    setSiteFlowActivity({ status: "loading" });
+
+    widgetResultLoaderImpl(widget, {
+      signal: controller.signal,
+      timezone,
+      orgId,
+      viewToken,
+    })
+      .then((result) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const decorated = decorateResult(widget.id, result, clientContextId);
+        setSiteFlowActivity({ status: "ready", result: decorated });
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : "Failed to load Site Flow";
+        setSiteFlowActivity({ status: "error", error: message });
+      });
+
+    return () => controller.abort();
+  }, [
+    clientContextId,
+    manifest,
+    orgId,
+    siteFlowTimeframe,
+    siteFlowWidget,
+    viewToken,
+    widgetResultLoaderImpl,
+    runNonce,
+  ]);
+
+  useEffect(() => {
+    if (!siteFlowWidget || !manifest) {
+      setSiteFlowDemographics((previous) =>
+        previous.status === "idle" ? previous : { status: "idle" },
+      );
+      return;
+    }
+    if (siteFlowMode !== "demographics") {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timezone = manifest.timeControls?.timezone;
+    const kinds: DemographicWidgetKind[] = ["age", "gender", "race"];
+    const anchor = new Date();
+    const timeRange = resolveSiteFlowTimeRange(siteFlowTimeframe, timezone, anchor);
+    const timeWindow = resolveDemographicsTimeWindowFromRange(timeRange, timezone);
 
     setSiteFlowDemographics({ status: "loading" });
 
     const loadDemographic = async (kind: DemographicWidgetKind) =>
       widgetResultLoaderImpl(buildDemographicsWidget(kind, timeWindow), {
         signal: controller.signal,
-        timeRange: resolvedTimeRange ?? undefined,
         timezone,
         orgId,
         viewToken,
@@ -673,7 +770,8 @@ const DashboardV2Page = ({
     widgetResultLoaderImpl,
     orgId,
     viewToken,
-    selectedTimeRange,
+    siteFlowTimeframe,
+    siteFlowMode,
     siteFlowWidget,
     runNonce,
   ]);
@@ -921,8 +1019,6 @@ const DashboardV2Page = ({
                 {isSiteFlowWidget(state.widget) ? (
                   <SiteFlowCard
                     subtitle={state.widget.subtitle}
-                    state={state}
-                    result={state.result}
                     locked={state.widget.locked}
                     widgetId={state.widget.id}
                     onRemove={
@@ -930,7 +1026,10 @@ const DashboardV2Page = ({
                     }
                     mode={siteFlowMode}
                     onModeChange={setSiteFlowMode}
+                    timeframe={siteFlowTimeframe}
+                    onTimeframeChange={setSiteFlowTimeframe}
                     demographics={siteFlowDemographics}
+                    activity={siteFlowActivity}
                   />
                 ) : (
                   <ChartCard

@@ -53,3 +53,18 @@ def test_live_flow_recent_window_keeps_granularity() -> None:
     bucket, sql, _ = _compile(spec)
     assert bucket == "5_MIN"
     assert "INTERVAL 5 MINUTE" in sql
+
+
+def test_live_flow_calendar_not_clamped_to_data() -> None:
+    spec = copy.deepcopy(get_dashboard_spec("dashboard.live_flow"))
+    spec["timeWindow"] = {
+        "from": "2024-01-01T00:00:00Z",
+        "to": "2024-01-02T00:00:00Z",
+        "bucket": "5_MIN",
+        "timezone": "UTC",
+    }
+    spec["dimensions"][0]["bucket"] = "5_MIN"
+
+    _, sql, _ = _compile(spec)
+    assert "calendar_data_bounds" not in sql
+    assert "GREATEST(TIMESTAMP(@start_ts), COALESCE(min_ts" not in sql

@@ -146,7 +146,9 @@ def test_scoped_cte_projects_canonical_columns() -> None:
         "site_id, cam_id, cam_id AS camera_id, ROW_NUMBER() OVER ( PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, "
         "event DESC, track_id ) AS index, track_id, event, -- Keep event timestamp raw for downstream hour extraction (no truncation). "
         "timestamp AS timestamp, CASE WHEN age_bucket IS NULL THEN 'Unknown' ELSE CAST(age_bucket AS STRING) END AS age_bucket, "
-        "CASE sex WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Unknown' END AS sex, COALESCE(CAST(Race AS STRING), 'Unknown') AS race"
+        "CASE WHEN sex = 0 THEN 'Male' WHEN sex = 1 THEN 'Female' WHEN LOWER(CAST(sex AS STRING)) IN ('m', 'male') THEN 'Male' "
+        "WHEN LOWER(CAST(sex AS STRING)) IN ('f', 'female') THEN 'Female' ELSE 'Unknown' END AS sex, "
+        "COALESCE(CAST(Race AS STRING), 'Unknown') AS race"
     )
     assert projection == " ".join(expected.split())
 
@@ -171,4 +173,3 @@ def test_raw_events_selects_coalesced_demographics() -> None:
     plan = compile_contract_query(Metric.RAW_EVENTS, [], ctx)
     assert "COALESCE(CAST(sex AS STRING), 'Unknown') AS sex" in plan.sql
     assert "COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket" in plan.sql
-

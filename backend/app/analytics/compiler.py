@@ -20,6 +20,7 @@ _BUCKET_SECONDS = {
     "15_MIN": 15 * 60,
     "30_MIN": 30 * 60,
     "HOUR": 60 * 60,
+    "6_HOUR": 6 * 60 * 60,
     "DAY": 24 * 60 * 60,
     "WEEK": 7 * 24 * 60 * 60,
     "MONTH": None,  # handled via TIMESTAMP_TRUNC MONTH
@@ -28,7 +29,7 @@ _BUCKET_SECONDS = {
 _RETENTION_MIN_COHORT = 100
 _RETENTION_MAX_COHORTS = {"WEEK": 52, "MONTH": 24}
 
-_BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"]
+_BUCKET_ORDER = ["5_MIN", "15_MIN", "30_MIN", "HOUR", "6_HOUR", "DAY", "WEEK", "MONTH"]
 _MAX_CALENDAR_BUCKETS = 4000
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,9 @@ def _bucket_expression(bucket: str, *, field: str = "timestamp") -> str:
         return field
     if bucket in {"DAY", "WEEK", "MONTH"}:
         return f"TIMESTAMP_TRUNC({field}, {bucket})"
+    if bucket == "6_HOUR":
+        seconds = _BUCKET_SECONDS["6_HOUR"]
+        return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS({field}), {seconds}) * {seconds})"
     seconds = _BUCKET_SECONDS[bucket]
     return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS({field}), {seconds}) * {seconds})"
 
@@ -58,6 +62,9 @@ def _bucket_trunc_expression(bucket: str) -> str:
         return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(TIMESTAMP(@start_ts)), {seconds}) * {seconds})"
     if bucket == "HOUR":
         return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), HOUR)"
+    if bucket == "6_HOUR":
+        seconds = _BUCKET_SECONDS["6_HOUR"]
+        return f"TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(TIMESTAMP(@start_ts)), {seconds}) * {seconds})"
     if bucket == "DAY":
         return "TIMESTAMP_TRUNC(TIMESTAMP(@start_ts), DAY)"
     if bucket == "WEEK":
@@ -76,6 +83,8 @@ def _bucket_interval_expression(bucket: str) -> str:
         return "INTERVAL 30 MINUTE"
     if bucket == "HOUR":
         return "INTERVAL 1 HOUR"
+    if bucket == "6_HOUR":
+        return "INTERVAL 6 HOUR"
     if bucket == "DAY":
         return "INTERVAL 1 DAY"
     if bucket == "WEEK":
@@ -376,11 +385,9 @@ class SpecCompiler:
             )
         ]
         if bucket != "RAW" and use_calendar and not excessive_calendar:
-            base_ctes.append(
-                self._render_calendar(
-                    bucket, clamp_to_data=vrm_occupancy_enabled or occupancy_present
-                )
-            )
+            spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+            clamp_to_data = (vrm_occupancy_enabled or occupancy_present) and spec_id != "dashboard.live_flow"
+            base_ctes.append(self._render_calendar(bucket, clamp_to_data=clamp_to_data))
 
         for measure in measures:
             aggregation = measure["aggregation"]
