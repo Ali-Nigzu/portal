@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable
 
 CHART_TYPES = {"composed_time", "categorical", "heatmap", "retention", "single_value"}
-TIME_BUCKETS = {"RAW", "5_MIN", "15_MIN", "30_MIN", "HOUR", "DAY", "WEEK", "MONTH"}
+TIME_BUCKETS = {"RAW", "5_MIN", "15_MIN", "30_MIN", "HOUR", "6_HOUR", "DAY", "WEEK", "MONTH"}
 MEASURE_AGGREGATIONS = {
     "occupancy_recursion",
     "count",
@@ -152,4 +152,3 @@ def validate_chart_result(payload: Dict[str, Any]) -> None:
     _ensure(isinstance(meta.get("timezone"), str), "Timezone must be string")
     if "coverage" in meta:
         _validate_series_data(meta["coverage"])
-
