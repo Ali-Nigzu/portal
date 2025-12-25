@@ -14,11 +14,19 @@ import pandas as pd
 
 from ..bigquery_client import BigQueryDataFrameError
 from .cache import SpecCache
-from .compiler import CompiledQuery, CompilerContext, SpecCompiler, _safe_bucket_count
+from .compiler import (
+    CompiledQuery,
+    CompilerContext,
+    SpecCompiler,
+    _parse_iso8601,
+    _resolve_time_params,
+    _safe_bucket_count,
+)
 from .contracts import (
     ValidationError as ContractValidationError,
     validate_chart_result,
 )
+from .data_contract import ALL_TIME_START
 from .hashing import build_cache_key
 from .router import TableRouter
 
@@ -212,11 +220,20 @@ class AnalyticsEngine:
                 "timestamp_column": event_timestamp_column,
             },
         )
+        spec, early_result = self._rewrite_all_time_window_if_needed(
+            spec,
+            table_name=table_name,
+            event_timestamp_column=event_timestamp_column,
+        )
         cache_key = build_cache_key(spec, table_name=table_name)
         if not bypass_cache:
             cached = self.cache.get(cache_key)
             if cached is not None:
                 return cached
+        if early_result is not None:
+            if not bypass_cache:
+                self.cache.set(cache_key, early_result, ttl=cache_ttl)
+            return early_result
 
         delegated = self._maybe_delegate_kpi_bundle(
             spec,
@@ -278,6 +295,118 @@ class AnalyticsEngine:
         result = self._normalise(spec, compiled, frame)
         validate_chart_result(result)
         self.cache.set(cache_key, result, ttl=cache_ttl)
+        return result
+
+    def _rewrite_all_time_window_if_needed(
+        self,
+        spec: Dict[str, Any],
+        *,
+        table_name: str,
+        event_timestamp_column: str,
+    ) -> tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+        spec_id = spec.get("id", "") if isinstance(spec, dict) else ""
+        if spec_id != "dashboard.live_flow":
+            return spec, None
+        time_window = spec.get("timeWindow") or {}
+        start_value = time_window.get("from")
+        if not self._is_epoch_sentinel(start_value):
+            return spec, None
+        bounds = self._resolve_data_bounds(
+            spec,
+            table_name=table_name,
+            event_timestamp_column=event_timestamp_column,
+        )
+        if bounds is None:
+            empty_result = self._empty_live_flow_result(
+                spec,
+                table_name=table_name,
+                event_timestamp_column=event_timestamp_column,
+            )
+            return spec, empty_result
+        min_ts, max_ts = bounds
+        next_window = dict(time_window)
+        next_window["from"] = min_ts
+        next_window["to"] = max_ts
+        spec["timeWindow"] = next_window
+        return spec, None
+
+    @staticmethod
+    def _is_epoch_sentinel(value: object) -> bool:
+        parsed = _parse_iso8601(value)
+        if parsed is None:
+            return False
+        return parsed <= ALL_TIME_START
+
+    def _resolve_data_bounds(
+        self,
+        spec: Dict[str, Any],
+        *,
+        table_name: str,
+        event_timestamp_column: str,
+    ) -> Optional[tuple[str, str]]:
+        time_window = spec.get("timeWindow") or {}
+        timezone = time_window.get("timezone", "UTC")
+        start_ts, end_ts, now = _resolve_time_params(time_window, timezone)
+        params: Dict[str, object] = {
+            "start_ts": start_ts,
+            "end_ts": end_ts,
+            "now": now,
+        }
+        filters_sql = self.compiler._build_filters(spec.get("filters", []), params)
+        scoped_cte = self.compiler._render_scoped(
+            table_name,
+            filters_sql,
+            event_timestamp_column=event_timestamp_column,
+        )
+        sql = "\n".join(
+            [
+                "WITH",
+                scoped_cte,
+                "SELECT MIN(timestamp) AS min_ts, MAX(timestamp) AS max_ts",
+                "FROM scoped",
+            ]
+        )
+        frame = self.bigquery_client.query_dataframe(
+            sql,
+            params,
+            job_context=f"{spec.get('id')}::bounds",
+        )
+        if frame.empty:
+            return None
+        record = frame.iloc[0]
+        min_ts = record.get("min_ts")
+        max_ts = record.get("max_ts")
+        if min_ts is None or max_ts is None:
+            return None
+        return _to_iso(min_ts), _to_iso(max_ts)
+
+    def _empty_live_flow_result(
+        self,
+        spec: Dict[str, Any],
+        *,
+        table_name: str,
+        event_timestamp_column: str,
+    ) -> Dict[str, Any]:
+        compiled = self.compiler.compile(
+            spec,
+            CompilerContext(
+                table_name=table_name, event_timestamp_column=event_timestamp_column
+            ),
+        )
+        empty_frame = pd.DataFrame(
+            columns=[
+                "measure_id",
+                "bucket_start",
+                "value",
+                "coverage",
+                "raw_count",
+                "occupancy_min",
+                "occupancy_max",
+                "occupancy_avg",
+            ]
+        )
+        result = self._normalise(spec, compiled, empty_frame)
+        validate_chart_result(result)
         return result
 
     def _maybe_delegate_kpi_bundle(
@@ -768,4 +897,3 @@ class AnalyticsEngine:
 
 class UnsupportedChartExecution(RuntimeError):
     """Raised when the engine cannot normalise the requested chart type yet."""
-
