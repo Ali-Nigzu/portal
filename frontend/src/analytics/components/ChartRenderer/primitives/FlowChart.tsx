@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import {
   ResponsiveContainer,
@@ -19,6 +19,7 @@ import { buildCartesianDataset } from "./utils";
 import { ChartTooltip } from "../ui/ChartTooltip";
 import { SiteFlowTooltip } from "../ui/SiteFlowTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
+import { formatBrushTimestamp } from "../utils/formatBrushTimestamp";
 
 export const FlowChart = ({
   result,
@@ -52,9 +53,32 @@ export const FlowChart = ({
   }, [series]);
 
   const dataset = useMemo(() => buildCartesianDataset(sortedSeries), [sortedSeries]);
+  const [brushRange, setBrushRange] = useState({ startIndex: 0, endIndex: 0 });
   const seriesMap = useMemo(() => {
     return new Map<string, ChartSeries>(sortedSeries.map((item) => [item.id, item]));
   }, [sortedSeries]);
+
+  useEffect(() => {
+    if (dataset.data.length === 0) {
+      setBrushRange({ startIndex: 0, endIndex: 0 });
+      return;
+    }
+    setBrushRange({
+      startIndex: 0,
+      endIndex: Math.max(dataset.data.length - 1, 0),
+    });
+  }, [dataset.data.length]);
+
+  const startTimestamp = dataset.data[brushRange.startIndex]?.x;
+  const endTimestamp = dataset.data[brushRange.endIndex]?.x;
+  const startLabel = startTimestamp ? formatBrushTimestamp(startTimestamp) : "—";
+  const endLabel = endTimestamp ? formatBrushTimestamp(endTimestamp) : "—";
+  const startLabelCompact = startTimestamp
+    ? formatBrushTimestamp(startTimestamp, { compact: true })
+    : "—";
+  const endLabelCompact = endTimestamp
+    ? formatBrushTimestamp(endTimestamp, { compact: true })
+    : "—";
 
   return (
     <div className={className} style={{ height }}>
@@ -188,9 +212,41 @@ export const FlowChart = ({
             }
             return null;
           })}
-          <Brush dataKey="x" height={24} travellerWidth={12} />
+          <Brush
+            dataKey="x"
+            height={24}
+            travellerWidth={12}
+            stroke="var(--border-strong, rgba(130, 144, 166, 0.35))"
+            fill="var(--surface-muted, rgba(15, 19, 26, 0.35))"
+            tickFormatter={() => ""}
+            onChange={(nextRange) => setBrushRange(nextRange)}
+            startIndex={brushRange.startIndex}
+            endIndex={brushRange.endIndex}
+          />
         </ComposedChart>
       </ResponsiveContainer>
+      {dataset.data.length > 0 ? (
+        <div className="analytics-brush-labels">
+          <div className="analytics-brush-label">
+            <span className="analytics-brush-caption">Start</span>
+            <span className="analytics-brush-value analytics-brush-value--full">
+              {startLabel}
+            </span>
+            <span className="analytics-brush-value analytics-brush-value--compact">
+              {startLabelCompact}
+            </span>
+          </div>
+          <div className="analytics-brush-label analytics-brush-label--end">
+            <span className="analytics-brush-caption">End</span>
+            <span className="analytics-brush-value analytics-brush-value--full">
+              {endLabel}
+            </span>
+            <span className="analytics-brush-value analytics-brush-value--compact">
+              {endLabelCompact}
+            </span>
+          </div>
+        </div>
+      ) : null}
       <SeriesLegend
         series={series}
         visibility={visibility}

@@ -142,6 +142,75 @@
   color: #f4b63d;
 }
 
+.analytics-brush-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--vrm-spacing-3, 12px);
+  margin-top: var(--vrm-spacing-2, 8px);
+  font-size: var(--vrm-typography-font-size-caption, 12px);
+  color: var(--vrm-color-text-muted, #8290a6);
+}
+
+.analytics-brush-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.analytics-brush-label--end {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.analytics-brush-caption {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.analytics-brush-value {
+  color: var(--vrm-color-text-primary, #ffffff);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.analytics-brush-value--compact {
+  display: none;
+}
+
+.analytics-chart-surface .recharts-brush .recharts-brush-slide {
+  fill: rgba(15, 19, 26, 0.45);
+  stroke: rgba(130, 144, 166, 0.35);
+}
+
+.analytics-chart-surface .recharts-brush .recharts-brush-traveller {
+  fill: rgba(201, 210, 225, 0.9);
+  stroke: rgba(255, 255, 255, 0.6);
+}
+
+@media (max-width: 720px) {
+  .analytics-brush-labels {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--vrm-spacing-2, 8px);
+  }
+
+  .analytics-brush-label--end {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .analytics-brush-value--full {
+    display: none;
+  }
+
+  .analytics-brush-value--compact {
+    display: inline;
+  }
+}
+
 .heatmap-chart {
   width: 100%;
   overflow: auto;
