@@ -88,7 +88,7 @@ export const FlowChart = ({
                 <ChartTooltip meta={dataset.meta} seriesMap={seriesMap} />
               )
             }
-            cursor={{ stroke: "var(--border-strong, #d0d5dd)" }}
+            cursor={isSiteFlow ? false : { stroke: "var(--border-strong, #d0d5dd)" }}
           />
           {sortedSeries.map((seriesItem) => {
             const yAxisId = axisConfig.bindings[seriesItem.id] ?? "Y1";
@@ -102,7 +102,7 @@ export const FlowChart = ({
               const bucketKey = payload?.x ?? "";
               const metaForPoint = dataset.meta[bucketKey]?.[seriesItem.id] ?? {};
               const coverage = metaForPoint.coverage ?? 1;
-              if (coverage >= 1) {
+              if (!isOccupancyAvg && coverage >= 1) {
                 return (
                   <circle
                     cx={cx}

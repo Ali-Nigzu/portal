@@ -118,11 +118,21 @@ describe("FlowChart occupancy hover dots", () => {
     const byKey = new Map(lines.map((line) => [line.props.dataKey, line.props]));
     const areas = tree.root.findAllByType("area-mock");
     const areasByKey = new Map(areas.map((area) => [area.props.dataKey, area.props]));
+    const tooltip = tree.root.findByType("tooltip-mock");
 
     expect(byKey.get("occupancy_min")?.activeDot).toBe(false);
     expect(byKey.get("occupancy_max")?.activeDot).toBe(false);
     expect(typeof byKey.get("occupancy_avg")?.activeDot).toBe("function");
     expect(areasByKey.get("occupancy_band_base")?.activeDot).toBe(false);
     expect(areasByKey.get("occupancy_band_span")?.activeDot).toBe(false);
+    expect(tooltip.props.cursor).toBe(false);
+
+    const activeDot = byKey.get("occupancy_avg")?.activeDot as (props: any) => any;
+    const renderedDot = activeDot({
+      cx: 12,
+      cy: 34,
+      payload: { x: "2025-12-24T20:35:00Z" },
+    });
+    expect(renderedDot?.props?.r).toBeGreaterThan(0);
   });
 });
