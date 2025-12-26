@@ -17,9 +17,11 @@ import type { ChartSeries } from "../../../schemas/charting";
 import type { ChartPrimitiveProps } from "./types";
 import { buildCartesianDataset } from "./utils";
 import { ChartTooltip } from "../ui/ChartTooltip";
+import { SiteFlowTooltip } from "../ui/SiteFlowTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
 
 export const FlowChart = ({
+  result,
   series,
   axisConfig,
   visibility,
@@ -27,6 +29,8 @@ export const FlowChart = ({
   height,
   className,
 }: ChartPrimitiveProps) => {
+  const summary = result.meta?.summary as { title?: string } | undefined;
+  const isSiteFlow = summary?.title === "Site Flow";
   const sortedSeries = useMemo(() => {
     const prioritizedGroup = "occupancy";
     return series
@@ -74,8 +78,17 @@ export const FlowChart = ({
             />
           ))}
           <Tooltip
-            content={<ChartTooltip meta={dataset.meta} seriesMap={seriesMap} />}
-            cursor={{ stroke: "var(--border-strong, #d0d5dd)" }}
+            content={
+              isSiteFlow ? (
+                <SiteFlowTooltip
+                  seriesMap={seriesMap}
+                  visibility={visibility}
+                />
+              ) : (
+                <ChartTooltip meta={dataset.meta} seriesMap={seriesMap} />
+              )
+            }
+            cursor={isSiteFlow ? false : { stroke: "var(--border-strong, #d0d5dd)" }}
           />
           {sortedSeries.map((seriesItem) => {
             const yAxisId = axisConfig.bindings[seriesItem.id] ?? "Y1";
@@ -89,7 +102,7 @@ export const FlowChart = ({
               const bucketKey = payload?.x ?? "";
               const metaForPoint = dataset.meta[bucketKey]?.[seriesItem.id] ?? {};
               const coverage = metaForPoint.coverage ?? 1;
-              if (coverage >= 1) {
+              if (!isOccupancyAvg && coverage >= 1) {
                 return (
                   <circle
                     cx={cx}
@@ -112,7 +125,15 @@ export const FlowChart = ({
                 />
               );
             };
-            const dotProp = seriesItem.noDots ? false : dotRenderer;
+            const isOccupancySeries = seriesItem.seriesGroup === "occupancy";
+            const isOccupancyAvg = seriesItem.id === "occupancy_avg";
+            const shouldDisableDots = seriesItem.noDots || isOccupancySeries;
+            const dotProp = shouldDisableDots ? false : dotRenderer;
+            const activeDotProp = isOccupancyAvg
+              ? dotRenderer
+              : shouldDisableDots
+              ? false
+              : dotRenderer;
             if (seriesItem.geometry === "bar" || seriesItem.geometry === "column") {
               return (
                 <Bar
@@ -128,6 +149,7 @@ export const FlowChart = ({
               );
             }
             if (seriesItem.geometry === "area") {
+              const areaDotProps = shouldDisableDots ? { dot: false, activeDot: false } : {};
               return (
                 <Area
                   key={seriesItem.id}
@@ -142,6 +164,7 @@ export const FlowChart = ({
                   strokeDasharray={hasLowCoverage ? "6 4" : undefined}
                   stackId={seriesItem.stack}
                   isAnimationActive={false}
+                  {...areaDotProps}
                 />
               );
             }
@@ -155,7 +178,7 @@ export const FlowChart = ({
                   strokeOpacity={seriesItem.strokeOpacity}
                   strokeWidth={2}
                   dot={dotProp}
-                  activeDot={seriesItem.noDots ? false : dotRenderer}
+                  activeDot={activeDotProp}
                   yAxisId={yAxisId}
                   hide={hidden}
                   isAnimationActive={false}
