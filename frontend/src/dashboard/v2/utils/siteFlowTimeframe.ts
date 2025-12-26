@@ -86,9 +86,8 @@ export const bucketForSiteFlowTimeframe = (timeframe: SiteFlowTimeframe): TimeBu
     case "yesterday":
       return "HOUR";
     case "last_week":
-      return "DAY";
     case "last_month":
-      return "6_HOUR";
+      return "DAY";
     case "last_quarter":
       return "WEEK";
     case "last_year":

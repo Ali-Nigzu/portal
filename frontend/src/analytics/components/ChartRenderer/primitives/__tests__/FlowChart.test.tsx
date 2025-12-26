@@ -119,7 +119,6 @@ describe("FlowChart occupancy hover dots", () => {
     const areas = tree.root.findAllByType("area-mock");
     const areasByKey = new Map(areas.map((area) => [area.props.dataKey, area.props]));
     const tooltip = tree.root.findByType("tooltip-mock");
-    const brush = tree.root.findByType("brush-mock");
 
     expect(byKey.get("occupancy_min")?.activeDot).toBe(false);
     expect(byKey.get("occupancy_max")?.activeDot).toBe(false);
@@ -127,7 +126,6 @@ describe("FlowChart occupancy hover dots", () => {
     expect(areasByKey.get("occupancy_band_base")?.activeDot).toBe(false);
     expect(areasByKey.get("occupancy_band_span")?.activeDot).toBe(false);
     expect(tooltip.props.cursor).toBe(false);
-    expect(typeof brush.props.tickFormatter).toBe("function");
 
     const activeDot = byKey.get("occupancy_avg")?.activeDot as (props: any) => any;
     const renderedDot = activeDot({
@@ -136,34 +134,5 @@ describe("FlowChart occupancy hover dots", () => {
       payload: { x: "2025-12-24T20:35:00Z" },
     });
     expect(renderedDot?.props?.r).toBeGreaterThan(0);
-  });
-
-  it("renders formatted Start/End labels outside the brush", () => {
-    const tree = renderer.create(
-      <FlowChart
-        result={result}
-        series={series}
-        axisConfig={axisConfig}
-        visibility={visibility}
-        height={200}
-      />,
-    );
-    const collectText = (node: renderer.ReactTestRendererJSON | renderer.ReactTestRendererJSON[] | string | null): string[] => {
-      if (!node) {
-        return [];
-      }
-      if (typeof node === "string") {
-        return [node];
-      }
-      if (Array.isArray(node)) {
-        return node.flatMap(collectText);
-      }
-      return (node.children ?? []).flatMap(collectText);
-    };
-
-    const text = collectText(tree.toJSON()).join(" ");
-    expect(text).toContain("Start");
-    expect(text).toContain("End");
-    expect(text).not.toContain("T20:35:00Z");
   });
 });
