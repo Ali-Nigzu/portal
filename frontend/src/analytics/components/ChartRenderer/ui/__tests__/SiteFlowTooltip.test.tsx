@@ -66,8 +66,8 @@ describe("SiteFlowTooltip", () => {
     );
     const text = JSON.stringify(tree.toJSON());
     expect(text).toContain("Occupancy");
-    expect(text).toContain("Min");
-    expect(text).toContain("Max");
+    expect(text).toContain("Min:");
+    expect(text).toContain("Max:");
     expect(text).not.toContain("raw:");
     expect(text).not.toContain("coverage:");
     expect(text).not.toContain("events");
@@ -81,7 +81,7 @@ describe("SiteFlowTooltip", () => {
     expect(entrancesIndex).toBeGreaterThanOrEqual(0);
     expect(exitsIndex).toBeLessThan(entrancesIndex);
     const listItems = tree.root.findAllByType("li");
-    expect(listItems).toHaveLength(5);
+    expect(listItems).toHaveLength(3);
   });
 
   it("respects legend toggles for entrances/exits/occupancy", () => {

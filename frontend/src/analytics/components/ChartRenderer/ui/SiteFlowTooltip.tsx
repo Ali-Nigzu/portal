@@ -97,57 +97,27 @@ export const SiteFlowTooltip = ({
           );
         })}
         {occupancyVisible ? (
-          <>
-            <li key="occupancy-summary">
-              <span className="series-label">
-                <span
-                  className="swatch"
-                  style={{
-                    backgroundColor:
-                      seriesMap.get("occupancy_avg")?.color ??
-                      seriesMap.get("occupancy_min")?.color ??
-                      "var(--vrm-color-accent-occupancy, #2d6cdf)",
-                  }}
-                />
-                Occupancy
-              </span>
-              <span className="series-value">
-                {formatNumeric(occupancyValues.avg)}
-              </span>
-            </li>
-            <li key="occupancy-min">
-              <span className="series-label">
-                <span
-                  className="swatch"
-                  style={{
-                    backgroundColor:
-                      seriesMap.get("occupancy_min")?.color ??
-                      "var(--vrm-color-accent-occupancy, #2d6cdf)",
-                  }}
-                />
-                Min
-              </span>
-              <span className="series-value">
-                {formatNumeric(occupancyValues.min)}
-              </span>
-            </li>
-            <li key="occupancy-max">
-              <span className="series-label">
-                <span
-                  className="swatch"
-                  style={{
-                    backgroundColor:
-                      seriesMap.get("occupancy_max")?.color ??
-                      "var(--vrm-color-accent-occupancy, #2d6cdf)",
-                  }}
-                />
-                Max
-              </span>
-              <span className="series-value">
-                {formatNumeric(occupancyValues.max)}
-              </span>
-            </li>
-          </>
+          <li key="occupancy-summary">
+            <span className="series-label">
+              <span
+                className="swatch"
+                style={{
+                  backgroundColor:
+                    seriesMap.get("occupancy_avg")?.color ??
+                    seriesMap.get("occupancy_min")?.color ??
+                    "var(--vrm-color-accent-occupancy, #2d6cdf)",
+                }}
+              />
+              Occupancy
+            </span>
+            <span className="series-value">
+              {formatNumeric(occupancyValues.avg)}
+            </span>
+            <span className="series-meta">
+              Min: {formatNumeric(occupancyValues.min)} &nbsp; Max:{" "}
+              {formatNumeric(occupancyValues.max)}
+            </span>
+          </li>
         ) : null}
       </ul>
     </div>
