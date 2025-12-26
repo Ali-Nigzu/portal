@@ -127,10 +127,11 @@ export const FlowChart = ({
             };
             const isOccupancySeries = seriesItem.seriesGroup === "occupancy";
             const isOccupancyAvg = seriesItem.id === "occupancy_avg";
-            const dotProp = isOccupancySeries ? false : seriesItem.noDots ? false : dotRenderer;
+            const shouldDisableDots = seriesItem.noDots || isOccupancySeries;
+            const dotProp = shouldDisableDots ? false : dotRenderer;
             const activeDotProp = isOccupancyAvg
               ? dotRenderer
-              : seriesItem.noDots || isOccupancySeries
+              : shouldDisableDots
               ? false
               : dotRenderer;
             if (seriesItem.geometry === "bar" || seriesItem.geometry === "column") {
@@ -148,6 +149,7 @@ export const FlowChart = ({
               );
             }
             if (seriesItem.geometry === "area") {
+              const areaDotProps = shouldDisableDots ? { dot: false, activeDot: false } : {};
               return (
                 <Area
                   key={seriesItem.id}
@@ -162,6 +164,7 @@ export const FlowChart = ({
                   strokeDasharray={hasLowCoverage ? "6 4" : undefined}
                   stackId={seriesItem.stack}
                   isAnimationActive={false}
+                  {...areaDotProps}
                 />
               );
             }

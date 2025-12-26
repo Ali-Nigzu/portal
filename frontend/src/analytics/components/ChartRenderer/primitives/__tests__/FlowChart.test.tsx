@@ -25,6 +25,22 @@ jest.mock("recharts", () => ({
 
 const series: ChartSeries[] = [
   {
+    id: "occupancy_band_base",
+    label: "Occupancy band base",
+    geometry: "area",
+    unit: "people",
+    seriesGroup: "occupancy",
+    data: [{ x: "2025-12-24T20:35:00Z", y: 10 }],
+  },
+  {
+    id: "occupancy_band_span",
+    label: "Occupancy (min–max)",
+    geometry: "area",
+    unit: "people",
+    seriesGroup: "occupancy",
+    data: [{ x: "2025-12-24T20:35:00Z", y: 10 }],
+  },
+  {
     id: "occupancy_min",
     label: "Occupancy (min)",
     geometry: "line",
@@ -59,13 +75,21 @@ const axisConfig: AxisConfig = {
       id: "Y1",
       unit: "people",
       visible: true,
-      seriesIds: ["occupancy_min", "occupancy_max", "occupancy_avg"],
+      seriesIds: [
+        "occupancy_band_base",
+        "occupancy_band_span",
+        "occupancy_min",
+        "occupancy_max",
+        "occupancy_avg",
+      ],
     },
   ],
   bindings: {},
 };
 
 const visibility: SeriesVisibilityMap = {
+  occupancy_band_base: true,
+  occupancy_band_span: true,
   occupancy_min: true,
   occupancy_max: true,
   occupancy_avg: true,
@@ -92,9 +116,13 @@ describe("FlowChart occupancy hover dots", () => {
 
     const lines = tree.root.findAllByType("line-mock");
     const byKey = new Map(lines.map((line) => [line.props.dataKey, line.props]));
+    const areas = tree.root.findAllByType("area-mock");
+    const areasByKey = new Map(areas.map((area) => [area.props.dataKey, area.props]));
 
     expect(byKey.get("occupancy_min")?.activeDot).toBe(false);
     expect(byKey.get("occupancy_max")?.activeDot).toBe(false);
     expect(typeof byKey.get("occupancy_avg")?.activeDot).toBe("function");
+    expect(areasByKey.get("occupancy_band_base")?.activeDot).toBe(false);
+    expect(areasByKey.get("occupancy_band_span")?.activeDot).toBe(false);
   });
 });
