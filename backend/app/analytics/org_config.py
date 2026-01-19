@@ -32,6 +32,8 @@ DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
 DEFAULT_SNAPSHOT_TABLES: Dict[str, str] = {
     "client1": "camosbase.sitedemodata.snapshots",
     "client2": "camosbase.sitedemodata.snapshots",
+    "demodata0.client1": "camosbase.sitedemodata.snapshots",
+    "demodata0.client2": "camosbase.sitedemodata.snapshots",
 }
 
 

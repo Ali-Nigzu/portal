@@ -206,7 +206,7 @@ const buildDemographicResult = (values: number[], kind: "age" | "gender" | "race
       label: kind,
       geometry: "bar",
       data: values.map((value, index) => ({
-        x: index,
+        x: String(index),
         y: value,
         value,
       })),
