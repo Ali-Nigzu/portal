@@ -107,8 +107,23 @@ class BigQueryClient:
         self._bqstorage_client: Optional[object] = None
         self._bqstorage_unavailable = False
 
+    def _validate_settings(self) -> None:
+        missing = []
+        if not self.settings.project:
+            missing.append("BQ_PROJECT")
+        if not self.settings.dataset:
+            missing.append("BQ_DATASET")
+        if not self.settings.location:
+            missing.append("BQ_LOCATION")
+        if missing:
+            raise RuntimeError(
+                "BigQuery configuration missing required environment variables: "
+                + ", ".join(missing)
+            )
+
     def _ensure_client(self) -> bigquery.Client:
         if self._client is None:
+            self._validate_settings()
             self._client = bigquery.Client(
                 project=self.settings.project,
                 credentials=self._credentials,

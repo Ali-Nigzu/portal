@@ -804,6 +804,15 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
         "analytics.run.resolved_table",
         extra={"org": org_id, "table": table_name},
     )
+    if is_snapshot_mode_enabled(org_id):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "snapshot_only_org",
+                "message": "This organisation must use /api/snapshots/latest",
+                "org": org_id,
+            },
+        )
     if ANALYTICS_OFFLINE_MODE:
         try:
             result = build_offline_chart_result(spec)
