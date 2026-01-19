@@ -5,6 +5,9 @@ import { validateChartResult } from "../../../analytics/components/ChartRenderer
 import { loadChartFixture, type ChartFixtureName } from "../../../analytics/utils/loadChartFixture";
 import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildWidgetSpec } from "../utils/buildWidgetSpec";
+import { isSnapshotOrg } from "../utils/snapshotMode";
+import { buildSnapshotWidgetResult, type SnapshotResponse } from "../utils/snapshotPayload";
+import type { SiteFlowTimeframe } from "../utils/siteFlowTimeframe";
 
 // DEBUG MAP (temporary)
 // - Site Flow widget transport: frontend/src/dashboard/v2/transport/loadWidgetResult.ts
@@ -19,9 +22,11 @@ export interface LoadWidgetOptions {
   timezone?: string;
   orgId?: string;
   viewToken?: string;
+  siteFlowTimeframe?: SiteFlowTimeframe;
 }
 
 const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
+const SNAPSHOT_ENDPOINT = "/api/snapshots/latest";
 const MIN_ANALYTICS_TIMEOUT_MS = 3_600_000; // 1 hour safeguard to align with backend allowance
 
 const envAnalyticsTimeoutMs = Number(process.env.REACT_APP_DASHBOARD_ANALYTICS_TIMEOUT_MS);
@@ -36,6 +41,38 @@ export const isAbortError = (error: unknown): boolean => {
     return error.name === "AbortError";
   }
   return typeof error === "object" && error !== null && (error as { name?: string }).name === "AbortError";
+};
+
+type SnapshotCacheEntry = {
+  orgId: string;
+  requestTs: string;
+  promise: Promise<SnapshotResponse>;
+};
+
+let snapshotCache: SnapshotCacheEntry | null = null;
+
+export const resetSnapshotCache = () => {
+  snapshotCache = null;
+};
+
+const fetchSnapshot = async (
+  orgId: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<SnapshotResponse> => {
+  const requestTs = new Date().toISOString();
+  if (snapshotCache && snapshotCache.orgId === orgId) {
+    return snapshotCache.promise;
+  }
+  const url = `${API_BASE_URL}${SNAPSHOT_ENDPOINT}?ts=${encodeURIComponent(requestTs)}&org=${encodeURIComponent(orgId)}`;
+  const promise = fetch(url, { method: "GET", signal: options.signal }).then(async (response) => {
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Snapshot fetch failed: ${response.status} ${text}`);
+    }
+    return (await response.json()) as SnapshotResponse;
+  });
+  snapshotCache = { orgId, requestTs, promise };
+  return promise;
 };
 
 async function runLiveQuery(
@@ -139,7 +176,24 @@ export async function loadWidgetResult(
   widget: DashboardWidget,
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
-  const { signal, timeRange, timezone, mode, orgId, viewToken } = options;
+  const { signal, timeRange, timezone, mode, orgId, viewToken, siteFlowTimeframe } = options;
+  if (orgId && isSnapshotOrg(orgId)) {
+    const snapshot = await fetchSnapshot(orgId, { signal });
+    const timeframe = siteFlowTimeframe ?? "all_time";
+    const result = buildSnapshotWidgetResult(widget.id, snapshot, timeframe);
+    const validationIssues = validateChartResult(result);
+    if (validationIssues.length > 0) {
+      const issues = validationIssues.map((issue) => issue.message).join(", ");
+      const error = new Error(`Chart result failed validation: ${issues}`);
+      logError("dashboard.widgets", "validation_error", {
+        widgetId: widget.id,
+        issues,
+      });
+      throw error;
+    }
+    logInfo("dashboard.widgets", "load_success", { widgetId: widget.id, mode: "snapshots" });
+    return result;
+  }
   const spec = buildWidgetSpec(widget, { timeRange, timezone });
   const selectedMode = resolveMode(widget, mode);
 

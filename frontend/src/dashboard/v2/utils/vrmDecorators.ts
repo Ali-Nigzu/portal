@@ -1,5 +1,6 @@
 import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/schemas/charting";
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
+import { isSnapshotOrg } from "./snapshotMode";
 
 const CAPACITY_BY_CLIENT: Record<string, number> = {
   client1: 5,
@@ -788,7 +789,14 @@ export const decorateResult = (
   if (!fixedIds.has(widgetId)) {
     return result;
   }
+  const snapshotMode = isSnapshotOrg(orgId);
   markCompact(result);
+  if (snapshotMode && widgetId === VRM_KPI_IDS.capacity) {
+    return result;
+  }
+  if (snapshotMode && widgetId === VRM_KPI_IDS.traffic) {
+    return result;
+  }
   if (widgetId === VRM_KPI_IDS.traffic) {
     const decorated = applyTrafficDistributionShare(result, orgId);
     if (process.env.NODE_ENV !== "production") {
@@ -824,4 +832,3 @@ export const decorateResult = (
   }
   return result;
 };
-

@@ -236,9 +236,14 @@ const filterOutOldKpis = (manifest: DashboardManifest) => {
 
 export function applyVRMOverrides(
   manifest: DashboardManifest,
+  options: { snapshotMode?: boolean } = {},
 ): DashboardManifest {
   const filteredWidgets = filterOutOldKpis(manifest).map(maybeApplySiteFlow);
-  const nextWidgets = [...filteredWidgets, ...vrmWidgets];
+  const snapshotMode = options.snapshotMode ?? false;
+  const injectedWidgets = snapshotMode
+    ? vrmWidgets.map((widget) => ({ ...widget, inlineSpec: undefined, fixedTimeWindow: undefined }))
+    : vrmWidgets;
+  const nextWidgets = [...filteredWidgets, ...injectedWidgets];
 
   return {
     ...manifest,

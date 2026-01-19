@@ -15,6 +15,7 @@ import {
   loadWidgetResult,
   type LoadWidgetOptions,
   isAbortError,
+  resetSnapshotCache,
 } from "../transport/loadWidgetResult";
 import { unpinDashboardWidget } from "../transport/mutateDashboardManifest";
 import { determineOrgId } from "../../../utils/org";
@@ -27,6 +28,7 @@ import {
   lastBucketValue,
   resolveUiClient,
 } from "../utils/vrmDecorators";
+import { isSnapshotOrg } from "../utils/snapshotMode";
 import { SiteFlowDemographicsView } from "../components/SiteFlowDemographicsView";
 import {
   buildDemographicsWidget,
@@ -384,6 +386,10 @@ const DashboardV2Page = ({
   }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
 
   const clientContextId = resolvedUiClient;
+  const snapshotMode = useMemo(() => {
+    const candidates = [manifest?.orgId, orgId, credentials.orgId, credentials.username];
+    return candidates.some((candidate) => isSnapshotOrg(candidate));
+  }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") {
@@ -416,7 +422,10 @@ const DashboardV2Page = ({
       if (controller.signal.aborted) {
         return;
       }
-      const vrmManifest = applyVRMOverrides(data);
+      const snapshotModeForManifest = isSnapshotOrg(
+        data.orgId ?? orgId ?? credentials.orgId ?? credentials.username,
+      );
+      const vrmManifest = applyVRMOverrides(data, { snapshotMode: snapshotModeForManifest });
       logInfo("dashboard.manifest", "ui_fetch_success", {
         orgId,
         viewToken,
@@ -447,7 +456,7 @@ const DashboardV2Page = ({
         abortControllerRef.current = null;
       }
     }
-  }, [manifestLoaderImpl, orgId, resolvedDashboardId, viewToken]);
+  }, [manifestLoaderImpl, orgId, resolvedDashboardId, credentials.orgId, credentials.username, viewToken]);
 
   useEffect(() => {
     loadManifest();
@@ -540,6 +549,7 @@ const DashboardV2Page = ({
               timezone,
               orgId,
               viewToken,
+              siteFlowTimeframe: snapshotMode ? siteFlowTimeframe : undefined,
             });
             if (controller.signal.aborted) {
               return;
@@ -639,6 +649,8 @@ const DashboardV2Page = ({
     orgId,
     viewToken,
     clientContextId,
+    snapshotMode,
+    siteFlowTimeframe,
   ]);
 
   useEffect(() => {
@@ -651,33 +663,37 @@ const DashboardV2Page = ({
 
     const controller = new AbortController();
     const timezone = manifest.timeControls?.timezone;
-    const anchor = new Date();
-    const timeRange = resolveSiteFlowTimeRange(siteFlowTimeframe, timezone, anchor);
-    const bucket = bucketForSiteFlowTimeframe(siteFlowTimeframe);
+    let widget = siteFlowWidget;
 
-    if (!siteFlowWidget.inlineSpec) {
-      setSiteFlowActivity({ status: "error", error: "Site Flow spec unavailable" });
-      return () => controller.abort();
+    if (!snapshotMode) {
+      const anchor = new Date();
+      const timeRange = resolveSiteFlowTimeRange(siteFlowTimeframe, timezone, anchor);
+      const bucket = bucketForSiteFlowTimeframe(siteFlowTimeframe);
+
+      if (!siteFlowWidget.inlineSpec) {
+        setSiteFlowActivity({ status: "error", error: "Site Flow spec unavailable" });
+        return () => controller.abort();
+      }
+
+      const spec = JSON.parse(JSON.stringify(siteFlowWidget.inlineSpec)) as ChartSpec;
+      spec.timeWindow = {
+        ...(spec.timeWindow ?? { from: "", to: "" }),
+        from: timeRange.from,
+        to: timeRange.to,
+        bucket,
+        ...(timezone ? { timezone } : {}),
+      };
+      if (Array.isArray(spec.dimensions)) {
+        spec.dimensions = spec.dimensions.map((dimension) => {
+          if ((dimension as { id?: string }).id === TIMESTAMP_DIMENSION_ID) {
+            return { ...(dimension as ChartDimension), bucket };
+          }
+          return dimension;
+        });
+      }
+
+      widget = { ...siteFlowWidget, inlineSpec: spec };
     }
-
-    const spec = JSON.parse(JSON.stringify(siteFlowWidget.inlineSpec)) as ChartSpec;
-    spec.timeWindow = {
-      ...(spec.timeWindow ?? { from: "", to: "" }),
-      from: timeRange.from,
-      to: timeRange.to,
-      bucket,
-      ...(timezone ? { timezone } : {}),
-    };
-    if (Array.isArray(spec.dimensions)) {
-      spec.dimensions = spec.dimensions.map((dimension) => {
-        if ((dimension as { id?: string }).id === TIMESTAMP_DIMENSION_ID) {
-          return { ...(dimension as ChartDimension), bucket };
-        }
-        return dimension;
-      });
-    }
-
-    const widget = { ...siteFlowWidget, inlineSpec: spec };
     setSiteFlowActivity({ status: "loading" });
 
     widgetResultLoaderImpl(widget, {
@@ -685,6 +701,7 @@ const DashboardV2Page = ({
       timezone,
       orgId,
       viewToken,
+      siteFlowTimeframe: snapshotMode ? siteFlowTimeframe : undefined,
     })
       .then((result) => {
         if (controller.signal.aborted) {
@@ -708,6 +725,7 @@ const DashboardV2Page = ({
     orgId,
     siteFlowTimeframe,
     siteFlowWidget,
+    snapshotMode,
     viewToken,
     widgetResultLoaderImpl,
     runNonce,
@@ -739,6 +757,7 @@ const DashboardV2Page = ({
         timezone,
         orgId,
         viewToken,
+        siteFlowTimeframe: snapshotMode ? siteFlowTimeframe : undefined,
       });
 
     Promise.all(kinds.map((kind) => loadDemographic(kind)))
@@ -773,6 +792,7 @@ const DashboardV2Page = ({
     siteFlowTimeframe,
     siteFlowMode,
     siteFlowWidget,
+    snapshotMode,
     runNonce,
   ]);
 
@@ -803,10 +823,12 @@ const DashboardV2Page = ({
 
   const handleRefresh = () => {
     setStatus("loading");
+    resetSnapshotCache();
     setRunNonce((value) => value + 1);
   };
 
   const handleReloadManifest = () => {
+    resetSnapshotCache();
     loadManifest();
   };
 

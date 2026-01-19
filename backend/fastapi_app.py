@@ -9,7 +9,7 @@ import uuid
 import base64
 import logging
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any, Tuple
 
 from cachetools import TTLCache
@@ -92,6 +92,8 @@ from backend.app.analytics.org_config import (
     BigQueryConfigurationError,
     OrganisationNotConfiguredError,
     resolve_table_for_org,
+    is_snapshot_mode_enabled,
+    resolve_snapshot_table_for_org,
 )
 from backend.app.data_processor import DataProcessor, _resolve_time_bounds
 from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
@@ -115,6 +117,28 @@ analytics_spec_cache = SpecCache(LocalCacheBackend(), default_ttl=ANALYTICS_RUN_
 ALLOWED_ORIGINS = get_allowed_origins()
 
 ANALYTICS_OFFLINE_MODE = os.getenv("ANALYTICS_OFFLINE_MODE", "").lower() == "true"
+
+SNAPSHOT_QUERY_SQL = """
+SELECT ts, payload
+FROM `{table}`
+WHERE DATE(ts) = DATE(@t_min) AND ts <= @t_min
+ORDER BY ts DESC
+LIMIT 1
+"""
+
+
+def _parse_iso_timestamp(value: str) -> datetime:
+    trimmed = value.strip()
+    if trimmed.endswith("Z"):
+        trimmed = trimmed[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(trimmed)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _floor_to_minute(timestamp: datetime) -> datetime:
+    return timestamp.replace(second=0, microsecond=0)
 
 
 @app.on_event("startup")
@@ -183,6 +207,76 @@ async def register_interest(submission: RegisterInterestRequest):
     except Exception as e:
         logger.error(f"Interest submission error: {e}")
         raise HTTPException(status_code=500, detail="Unable to process submission")
+
+
+@app.get("/api/snapshots/latest")
+async def get_latest_snapshot(
+    ts: Optional[str] = Query(None, description="ISO-8601 timestamp"),
+    org: str = Query(..., description="Organisation identifier"),
+):
+    if not is_snapshot_mode_enabled(org):
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "snapshot_not_configured", "message": f"Snapshots not enabled for org {org}"},
+        )
+
+    try:
+        request_time = _parse_iso_timestamp(ts) if ts else datetime.now(timezone.utc)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_timestamp", "message": "Invalid ISO-8601 timestamp"},
+        ) from exc
+
+    t_min = _floor_to_minute(request_time)
+    table_name = resolve_snapshot_table_for_org(org)
+    sql = SNAPSHOT_QUERY_SQL.format(table=table_name)
+
+    try:
+        results_df = bigquery_client.query_dataframe(
+            sql,
+            {"t_min": t_min},
+            job_context=f"{org}::snapshots_latest",
+        )
+    except BigQueryDataFrameError as exc:
+        logger.error(
+            "Snapshot query failed for %s (job_id=%s): %s", org, exc.job_id, exc
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "bigquery_error",
+                "message": "BigQuery dataframe conversion failed",
+                "job_id": exc.job_id,
+            },
+        ) from exc
+
+    if results_df.empty:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "snapshot_not_found",
+                "message": "No snapshot available for the requested timestamp",
+                "t_min": t_min.isoformat(),
+            },
+        )
+
+    row = results_df.iloc[0]
+    try:
+        payload = json.loads(row["payload"])
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "payload_parse_failed", "message": "Failed to parse snapshot payload"},
+        ) from exc
+
+    snapshot_ts = row["ts"]
+    if isinstance(snapshot_ts, pd.Timestamp):
+        snapshot_ts = snapshot_ts.to_pydatetime()
+    if hasattr(snapshot_ts, "isoformat"):
+        snapshot_ts = snapshot_ts.isoformat()
+
+    return {"ts": snapshot_ts, "payload": payload, "mode": "snapshots"}
 
 
 @app.post("/api/login", response_model=LoginResponse)
@@ -1523,5 +1617,3 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
-
-

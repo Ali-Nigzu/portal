@@ -29,6 +29,11 @@ DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
     "client2": "nigzsu.demodata0.client1",
 }
 
+DEFAULT_SNAPSHOT_TABLES: Dict[str, str] = {
+    "client1": "camosbase.sitedemodata.snapshots",
+    "client2": "camosbase.sitedemodata.snapshots",
+}
+
 
 def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
     """Parse per-organisation event timestamp column overrides.
@@ -143,6 +148,7 @@ def build_org_event_timestamp_columns(
 # The resolved table mapping used by production code. Tests may monkeypatch this.
 ORG_TABLE_MAP: Dict[str, str] = build_org_table_map()
 ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = build_org_event_timestamp_columns()
+SNAPSHOT_TABLE_MAP: Dict[str, str] = dict(DEFAULT_SNAPSHOT_TABLES)
 
 
 def resolve_table_for_org(organisation: str) -> str:
@@ -159,6 +165,18 @@ def resolve_table_for_org(organisation: str) -> str:
             "analytics.org_table.sanitised_compat", extra={"original": table_id, "sanitised": stripped_table_id}
         )
     return _qualify_table_name(stripped_table_id)
+
+
+def is_snapshot_mode_enabled(organisation: str) -> bool:
+    return organisation in SNAPSHOT_TABLE_MAP
+
+
+def resolve_snapshot_table_for_org(organisation: str) -> str:
+    try:
+        table_id = SNAPSHOT_TABLE_MAP[organisation]
+    except KeyError as exc:
+        raise OrganisationNotConfiguredError(organisation) from exc
+    return _qualify_table_name(table_id)
 
 
 def override_org_table_map(mapping: Dict[str, str]) -> None:
