@@ -386,11 +386,11 @@ const DashboardV2Page = ({
   }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
 
   const clientContextId = resolvedUiClient;
-  const snapshotMode = useMemo(() => {
+  const snapshotOrgId = useMemo(() => {
     const candidates = [manifest?.orgId, orgId, credentials.orgId, credentials.username];
-    return candidates.some((candidate) => isSnapshotOrg(candidate));
+    return candidates.find((candidate) => isSnapshotOrg(candidate));
   }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
-  const snapshotOrgId = snapshotMode ? manifest?.orgId ?? orgId ?? undefined : undefined;
+  const snapshotMode = Boolean(snapshotOrgId);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") {
