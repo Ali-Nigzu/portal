@@ -36,8 +36,7 @@ export type TimeBucket =
   | "6_HOUR"
   | "DAY"
   | "WEEK"
-  | "MONTH"
-  | "YEAR";
+  | "MONTH";
 
 export interface ChartDimension {
   id: string;

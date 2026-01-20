@@ -96,21 +96,3 @@ export const bucketForSiteFlowTimeframe = (timeframe: SiteFlowTimeframe): TimeBu
       return "MONTH";
   }
 };
-
-export const bucketForSnapshotTimeframe = (timeframe: SiteFlowTimeframe): TimeBucket => {
-  switch (timeframe) {
-    case "today":
-    case "yesterday":
-      return "HOUR";
-    case "last_week":
-      return "DAY";
-    case "last_month":
-      return "WEEK";
-    case "last_quarter":
-    case "last_year":
-      return "MONTH";
-    case "all_time":
-    default:
-      return "YEAR";
-  }
-};

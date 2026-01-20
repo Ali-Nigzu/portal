@@ -92,14 +92,14 @@ def test_table_router_requires_fully_qualified_names():
 
 
 def test_cache_key_includes_table_prefix(chart_spec):
-    key = build_cache_key(chart_spec, table_name="camosbase.analytics.client0")
-    assert key.startswith("camosbase.analytics.client0:")
+    key = build_cache_key(chart_spec, table_name="nigzsu.analytics.client0")
+    assert key.startswith("nigzsu.analytics.client0:")
     assert hash_spec(chart_spec) in key
 
 
 def test_compiler_generates_expected_sql(chart_spec):
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="camosbase.analytics.client0")
+    context = CompilerContext(table_name="nigzsu.analytics.client0")
     compiled = compiler.compile(chart_spec, context)
 
     assert "scoped AS" in compiled.sql
@@ -128,7 +128,7 @@ def test_compiler_supports_text_operators(chart_spec):
         ]
     )
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="camosbase.analytics.client0")
+    context = CompilerContext(table_name="nigzsu.analytics.client0")
     compiled = compiler.compile(spec, context)
     sql = compiled.sql
     assert "STRPOS" in sql
@@ -167,7 +167,7 @@ def test_engine_executes_and_caches(chart_spec):
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "camosbase.dataset.client0"}),
+        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
         bigquery_client=stub,
         cache=cache,
     )
@@ -209,7 +209,7 @@ def test_compiler_generates_dwell_pipeline():
         },
     }
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="camosbase.analytics.client0")
+    context = CompilerContext(table_name="nigzsu.analytics.client0")
     compiled = compiler.compile(spec, context)
 
     sql = compiled.sql
@@ -236,7 +236,7 @@ def test_compiler_generates_retention_pipeline():
         },
     }
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="camosbase.analytics.client0")
+    context = CompilerContext(table_name="nigzsu.analytics.client0")
     compiled = compiler.compile(spec, context)
 
     sql = compiled.sql
@@ -286,7 +286,7 @@ def test_engine_normalises_dwell_and_sessions():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "camosbase.dataset.client0"}),
+        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
         bigquery_client=stub,
         cache=cache,
     )
@@ -345,7 +345,7 @@ def test_engine_normalises_retention_heatmap():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "camosbase.dataset.client0"}),
+        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
         bigquery_client=stub,
         cache=cache,
     )
@@ -398,7 +398,7 @@ def test_engine_handles_missing_retention_lag_values():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "camosbase.dataset.client0"}),
+        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
         bigquery_client=stub,
         cache=cache,
     )

@@ -9,7 +9,7 @@ import uuid
 import base64
 import logging
 import pandas as pd
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from typing import Optional, Dict, List, Any, Tuple
 
 from cachetools import TTLCache
@@ -92,9 +92,6 @@ from backend.app.analytics.org_config import (
     BigQueryConfigurationError,
     OrganisationNotConfiguredError,
     resolve_table_for_org,
-    is_snapshot_mode_enabled,
-    resolve_snapshot_table_for_org,
-    normalize_org_id,
 )
 from backend.app.data_processor import DataProcessor, _resolve_time_bounds
 from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
@@ -119,290 +116,6 @@ ALLOWED_ORIGINS = get_allowed_origins()
 
 ANALYTICS_OFFLINE_MODE = os.getenv("ANALYTICS_OFFLINE_MODE", "").lower() == "true"
 
-SNAPSHOT_QUERY_SQL = """
-SELECT ts, payload
-FROM `{table}`
-WHERE DATE(ts) = DATE(@t_min) AND ts <= @t_min
-ORDER BY ts DESC
-LIMIT 1
-"""
-
-
-def _parse_iso_timestamp(value: str) -> datetime:
-    trimmed = value.strip()
-    if trimmed.endswith("Z"):
-        trimmed = trimmed[:-1] + "+00:00"
-    parsed = datetime.fromisoformat(trimmed)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def _floor_to_minute(timestamp: datetime) -> datetime:
-    return timestamp.replace(second=0, microsecond=0)
-
-
-def _fetch_latest_snapshot(
-    *,
-    org: str,
-    request_time: datetime,
-) -> Tuple[datetime, list]:
-    t_min = _floor_to_minute(request_time)
-    table_name = resolve_snapshot_table_for_org(org)
-    sql = SNAPSHOT_QUERY_SQL.format(table=table_name)
-
-    def _query_snapshot(ts_min: datetime) -> pd.DataFrame:
-        return bigquery_client.query_dataframe(
-            sql,
-            {"t_min": ts_min},
-            job_context=f"{org}::snapshots_latest",
-        )
-
-    results_df = _query_snapshot(t_min)
-    if results_df.empty:
-        previous_day = t_min - timedelta(days=1)
-        results_df = _query_snapshot(previous_day)
-    if results_df.empty:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "error": "snapshot_not_found",
-                "message": "No snapshot available for the requested timestamp",
-                "t_min": t_min.isoformat(),
-            },
-        )
-    row = results_df.iloc[0]
-    try:
-        payload = json.loads(row["payload"])
-    except (TypeError, json.JSONDecodeError) as exc:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "payload_parse_failed", "message": "Failed to parse snapshot payload"},
-        ) from exc
-
-    snapshot_ts = row["ts"]
-    if isinstance(snapshot_ts, pd.Timestamp):
-        snapshot_ts = snapshot_ts.to_pydatetime()
-    if not isinstance(snapshot_ts, datetime):
-        snapshot_ts = request_time
-    return snapshot_ts, payload
-
-
-def _to_iso(value: datetime) -> str:
-    return value.isoformat().replace("+00:00", "Z")
-
-
-def _build_time_series(values: list, end: datetime, step_minutes: int) -> list:
-    step_ms = step_minutes * 60_000
-    length = len(values)
-    return [
-        {
-            "x": _to_iso(end - pd.Timedelta(milliseconds=(length - 1 - index) * step_ms)),
-            "y": value,
-            "value": value,
-        }
-        for index, value in enumerate(values)
-    ]
-
-
-def _snapshot_chart_result(
-    spec_id: str,
-    snapshot_ts: datetime,
-    payload: list,
-    *,
-    bucket: str = "15_MIN",
-) -> Dict[str, Any]:
-    series_96 = lambda idx: payload[idx] if isinstance(payload[idx], list) else []
-    if spec_id.endswith("vrm.entrances"):
-        data = _build_time_series(series_96(0), snapshot_ts, 15)
-        return {
-            "chartType": "single_value",
-            "xDimension": {"id": "timestamp", "type": "time", "bucket": "15_MIN", "timezone": "UTC"},
-            "series": [{"id": "entrances", "label": "Entrances", "geometry": "line", "data": data}],
-            "meta": {"timezone": "UTC", "summary": {"presentation": "vrm", "title": "Entrances"}},
-        }
-    if spec_id.endswith("vrm.occupancy"):
-        data = _build_time_series(series_96(1), snapshot_ts, 15)
-        return {
-            "chartType": "single_value",
-            "xDimension": {"id": "timestamp", "type": "time", "bucket": "15_MIN", "timezone": "UTC"},
-            "series": [{"id": "occupancy", "label": "Occupancy", "geometry": "line", "data": data}],
-            "meta": {"timezone": "UTC", "summary": {"presentation": "vrm", "title": "Occupancy"}},
-        }
-    if spec_id.endswith("vrm.exits"):
-        data = _build_time_series(series_96(2), snapshot_ts, 15)
-        return {
-            "chartType": "single_value",
-            "xDimension": {"id": "timestamp", "type": "time", "bucket": "15_MIN", "timezone": "UTC"},
-            "series": [{"id": "exits", "label": "Exits", "geometry": "line", "data": data}],
-            "meta": {"timezone": "UTC", "summary": {"presentation": "vrm", "title": "Exits"}},
-        }
-    if spec_id.endswith("vrm.footfall"):
-        data = _build_time_series(series_96(3), snapshot_ts, 15)
-        return {
-            "chartType": "single_value",
-            "xDimension": {"id": "timestamp", "type": "time", "bucket": "15_MIN", "timezone": "UTC"},
-            "series": [{"id": "footfall", "label": "Footfall", "geometry": "line", "data": data}],
-            "meta": {"timezone": "UTC", "summary": {"presentation": "vrm", "title": "Footfall"}},
-        }
-    if spec_id.endswith("vrm.dwell"):
-        data = _build_time_series(series_96(4), snapshot_ts, 15)
-        return {
-            "chartType": "single_value",
-            "xDimension": {"id": "timestamp", "type": "time", "bucket": "15_MIN", "timezone": "UTC"},
-            "series": [{"id": "dwell", "label": "Dwell Time", "geometry": "line", "data": data}],
-            "meta": {"timezone": "UTC", "summary": {"presentation": "vrm", "title": "Dwell Time"}},
-        }
-    if spec_id.endswith("vrm.capacity_usage"):
-        values = payload[5] if len(payload) > 5 and isinstance(payload[5], list) else []
-        current_pct = values[0] if len(values) > 0 else 0
-        peak_pct = values[1] if len(values) > 1 else 0
-        return {
-            "chartType": "categorical",
-            "xDimension": {"id": "capacity_segment", "type": "category"},
-            "series": [
-                {
-                    "id": "capacity",
-                    "label": "Capacity usage",
-                    "geometry": "bar",
-                    "unit": "percentage",
-                    "data": [
-                        {"x": "Usage", "value": current_pct, "y": current_pct},
-                        {"x": "Peak extra", "value": peak_pct, "y": peak_pct},
-                        {"x": "Remaining", "value": 0, "y": 0},
-                    ],
-                }
-            ],
-            "meta": {
-                "timezone": "UTC",
-                "summary": {
-                    "presentation": "vrm",
-                    "chartStyle": "capacity_usage",
-                    "chartSubType": "capacity_usage",
-                    "title": "Capacity",
-                    "headlineValue": current_pct,
-                },
-            },
-        }
-    if spec_id.endswith("vrm.traffic_distribution"):
-        values = payload[6] if len(payload) > 6 and isinstance(payload[6], list) else []
-        labels = ["Cam 0", "Cam 1", "Cam 2"]
-        return {
-            "chartType": "categorical",
-            "xDimension": {"id": "camera", "type": "category"},
-            "series": [
-                {
-                    "id": "traffic_share",
-                    "label": "Traffic by Camera",
-                    "geometry": "bar",
-                    "unit": "percentage",
-                    "data": [
-                        {"x": labels[idx] if idx < len(labels) else f"Cam {idx}", "y": val, "value": val}
-                        for idx, val in enumerate(values)
-                    ],
-                }
-            ],
-            "meta": {
-                "timezone": "UTC",
-                "summary": {
-                    "presentation": "vrm",
-                    "chartStyle": "traffic_distribution",
-                    "chartSubType": "traffic_distribution",
-                    "title": "Traffic Split",
-                },
-            },
-        }
-    if spec_id in {"dashboard.live_flow"} or spec_id.startswith("dashboard.site_flow"):
-        rollups = payload[7] if len(payload) > 7 and isinstance(payload[7], list) else []
-        rollup_index = 0
-        if bucket == "DAY":
-            rollup_index = 2
-        elif bucket == "WEEK":
-            rollup_index = 3
-        elif bucket == "MONTH":
-            rollup_index = 5
-        rollup = rollups[rollup_index] if rollup_index < len(rollups) else []
-        entrances = rollup[0] if len(rollup) > 0 else []
-        exits = rollup[1] if len(rollup) > 1 else []
-        occupancy_avg = rollup[2] if len(rollup) > 2 else []
-        occupancy_min = rollup[3] if len(rollup) > 3 else []
-        occupancy_max = rollup[4] if len(rollup) > 4 else []
-        step_minutes = 60
-        if bucket == "DAY":
-            step_minutes = 24 * 60
-        elif bucket == "WEEK":
-            step_minutes = 7 * 24 * 60
-        elif bucket == "MONTH":
-            step_minutes = 30 * 24 * 60
-        length = max(len(entrances), len(exits), len(occupancy_avg), len(occupancy_min), len(occupancy_max), 0)
-        timestamps = _build_time_series([0] * length, snapshot_ts, step_minutes)
-        return {
-            "chartType": "composed_time",
-            "xDimension": {"id": "timestamp", "type": "time", "bucket": bucket, "timezone": "UTC"},
-            "series": [
-                {
-                    "id": "entrances",
-                    "label": "Entrances",
-                    "geometry": "line",
-                    "data": [
-                        {"x": timestamps[idx]["x"], "y": entrances[idx] if idx < len(entrances) else 0, "value": entrances[idx] if idx < len(entrances) else 0}
-                        for idx in range(length)
-                    ],
-                },
-                {
-                    "id": "exits",
-                    "label": "Exits",
-                    "geometry": "line",
-                    "data": [
-                        {"x": timestamps[idx]["x"], "y": exits[idx] if idx < len(exits) else 0, "value": exits[idx] if idx < len(exits) else 0}
-                        for idx in range(length)
-                    ],
-                },
-                {
-                    "id": "occupancy",
-                    "label": "Occupancy",
-                    "geometry": "line",
-                    "data": [
-                        {
-                            "x": timestamps[idx]["x"],
-                            "y": occupancy_avg[idx] if idx < len(occupancy_avg) else None,
-                            "value": occupancy_avg[idx] if idx < len(occupancy_avg) else None,
-                            "occupancy_min": occupancy_min[idx] if idx < len(occupancy_min) else None,
-                            "occupancy_max": occupancy_max[idx] if idx < len(occupancy_max) else None,
-                            "occupancy_avg": occupancy_avg[idx] if idx < len(occupancy_avg) else None,
-                        }
-                        for idx in range(length)
-                    ],
-                },
-            ],
-            "meta": {"timezone": "UTC", "summary": {"title": "Site Flow", "presentation": "vrm"}},
-        }
-    if spec_id.endswith("demographics.age") or spec_id.endswith("demographics.gender") or spec_id.endswith("demographics.race"):
-        rollups = payload[7] if len(payload) > 7 and isinstance(payload[7], list) else []
-        rollup = rollups[0] if rollups else []
-        idx = 5 if spec_id.endswith("demographics.age") else 6 if spec_id.endswith("demographics.gender") else 7
-        values = rollup[idx] if len(rollup) > idx else []
-        return {
-            "chartType": "categorical",
-            "xDimension": {"id": "category", "type": "category"},
-            "series": [
-                {
-                    "id": "demographic",
-                    "label": "Demographic",
-                    "geometry": "bar",
-                    "data": [
-                        {"x": str(i), "y": val, "value": val}
-                        for i, val in enumerate(values)
-                    ],
-                }
-            ],
-            "meta": {"timezone": "UTC", "summary": {"title": "Demographics"}},
-        }
-    raise HTTPException(
-        status_code=400,
-        detail={"error": "snapshot_spec_unsupported", "message": f"Spec {spec_id} not supported for snapshots"},
-    )
-
 
 @app.on_event("startup")
 async def startup_health_check():
@@ -414,7 +127,8 @@ async def startup_health_check():
         bigquery_client.run_health_check()
     except Exception as exc:
         logger.error("BigQuery startup health check failed: %s", exc)
-        raise
+        # Do not crash the server in environments without BigQuery access
+        return
 
 app.add_middleware(
     CORSMiddleware,
@@ -469,55 +183,6 @@ async def register_interest(submission: RegisterInterestRequest):
     except Exception as e:
         logger.error(f"Interest submission error: {e}")
         raise HTTPException(status_code=500, detail="Unable to process submission")
-
-
-@app.get("/api/snapshots/latest")
-async def get_latest_snapshot(
-    request: Request,
-    ts: Optional[str] = Query(None, description="ISO-8601 timestamp"),
-    org: Optional[str] = Query(None, description="Organisation identifier"),
-    view_token: Optional[str] = Query(None, alias="viewToken"),
-):
-    resolved_view_token = view_token or request.query_params.get("view_token")
-    if resolved_view_token:
-        org, _ = _resolve_view_token_context(resolved_view_token, resolve_table=False)
-    if org:
-        org = normalize_org_id(org)
-    if not org:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "missing_org", "message": "org or viewToken is required"},
-        )
-    if not is_snapshot_mode_enabled(org):
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "snapshot_not_configured", "message": f"Snapshots not enabled for org {org}"},
-        )
-
-    try:
-        request_time = _parse_iso_timestamp(ts) if ts else datetime.now(timezone.utc)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "invalid_timestamp", "message": "Invalid ISO-8601 timestamp"},
-        ) from exc
-
-    try:
-        snapshot_ts, payload = _fetch_latest_snapshot(org=org, request_time=request_time)
-    except BigQueryDataFrameError as exc:
-        logger.error(
-            "Snapshot query failed for %s (job_id=%s): %s", org, exc.job_id, exc
-        )
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "error": "bigquery_error",
-                "message": "BigQuery dataframe conversion failed",
-                "job_id": exc.job_id,
-            },
-        ) from exc
-
-    return {"ts": _to_iso(snapshot_ts), "payload": payload, "mode": "snapshots"}
 
 
 @app.post("/api/login", response_model=LoginResponse)
@@ -618,7 +283,7 @@ def _resolve_view_token_context(view_token: str, *, resolve_table: bool = True) 
         raise HTTPException(status_code=404, detail="Client not found")
 
     user_record = users[client_id]
-    org_id = normalize_org_id(_org_id_for_user_record(client_id, user_record))
+    org_id = _org_id_for_user_record(client_id, user_record)
     table_name = _resolve_table_for_org(org_id) if resolve_table else None
     return org_id, table_name
 
@@ -648,7 +313,7 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                 )
 
             user_record = users[username]
-            org_id = normalize_org_id(_org_id_for_user_record(username, user_record))
+            org_id = _org_id_for_user_record(username, user_record)
             table_name = _resolve_table_for_org(org_id)
             return org_id, table_name
         except HTTPException:
@@ -673,7 +338,7 @@ class AnalyticsRunRequest(BaseModel):
 
 def _resolve_table_for_org(org_id: str) -> str:
     try:
-        return resolve_table_for_org(normalize_org_id(org_id))
+        return resolve_table_for_org(org_id)
     except OrganisationNotConfiguredError:
         raise HTTPException(
             status_code=404,
@@ -731,8 +396,7 @@ def _resolve_analytics_context(
 ) -> Tuple[str, str]:
     explicit_org = payload.org_id or request.query_params.get("orgId")
     if explicit_org:
-        normalized_org = normalize_org_id(explicit_org)
-        return normalized_org, _resolve_table_for_org(normalized_org)
+        return explicit_org, _resolve_table_for_org(explicit_org)
 
     view_token = (
         payload.view_token
@@ -744,16 +408,15 @@ def _resolve_analytics_context(
         return _authenticate_chart_data_request(request, view_token)
     except HTTPException as exc:
         logger.info(
-            "analytics.run.auth_failed",
+            "analytics.run.auth_fallback",
             extra={
                 "reason": getattr(exc, "detail", str(exc)),
                 "status": getattr(exc, "status_code", None),
             },
         )
-        raise HTTPException(
-            status_code=401,
-            detail={"error": "auth_required", "message": "orgId or viewToken is required"},
-        ) from exc
+
+    default_org = next(iter(org_config.DEFAULT_ORG_TABLE_IDS))
+    return default_org, _resolve_table_for_org(default_org)
 
 
 @app.get("/api/chart-data", response_model=ChartDataResponse)
@@ -1028,6 +691,10 @@ async def search_events(
 @app.post("/analytics/run")
 @app.post("/api/analytics/run")
 async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
+    logger.info(
+        "analytics.run.start",
+        extra={"spec_id": payload.spec.get("id"), "org": payload.org_id},
+    )
     spec = ensure_time_window(dict(payload.spec))
     try:
         validate_chart_spec(spec)
@@ -1038,62 +705,106 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
             detail={"error": "invalid_spec", "message": str(exc)},
         ) from exc
 
-    org_id = payload.org_id or request.query_params.get("orgId")
-    view_token = (
-        payload.view_token
-        or request.query_params.get("viewToken")
-        or request.query_params.get("view_token")
+    org_id, table_name = _resolve_analytics_context(request, payload)
+    logger.info(
+        "analytics.run.resolved_table",
+        extra={"org": org_id, "table": table_name},
     )
-    if not org_id and view_token:
-        org_id, _ = _resolve_view_token_context(view_token, resolve_table=False)
-    if org_id:
-        org_id = normalize_org_id(org_id)
-    if not org_id:
-        raise HTTPException(
-            status_code=401,
-            detail={"error": "auth_required", "message": "orgId or viewToken is required"},
+    if ANALYTICS_OFFLINE_MODE:
+        try:
+            result = build_offline_chart_result(spec)
+            logger.info(
+                "analytics.run.offline_result",
+                extra={"spec_id": payload.spec.get("id"), "org": org_id},
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.exception("Analytics offline fixture failed for %s", org_id)
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "offline_fixture_failed", "message": str(exc)},
+            ) from exc
+    else:
+        timestamp_columns = org_config.build_org_event_timestamp_columns()
+        resolved_timestamp = timestamp_columns.get(org_id)
+
+        engine = AnalyticsEngine(
+            table_router=TableRouter(
+                {org_id: table_name}, timestamp_columns=timestamp_columns
+            ),
+            bigquery_client=bigquery_client,
+            cache=analytics_spec_cache,
         )
 
-    if is_snapshot_mode_enabled(org_id):
-        logger.info(
-            "snapshots.run.start",
-            extra={"spec_id": spec.get("id"), "org": org_id},
-        )
-        request_time = datetime.now(timezone.utc)
         try:
-            snapshot_ts, payload_data = _fetch_latest_snapshot(org=org_id, request_time=request_time)
+            result = engine.execute(
+                spec,
+                organisation=org_id,
+                bypass_cache=payload.bypass_cache,
+                cache_ttl=payload.cache_ttl_seconds,
+            )
+        except ContractValidationError as exc:
+            logger.warning("Analytics execution rejected spec for %s: %s", org_id, exc)
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "invalid_spec", "message": str(exc)},
+            ) from exc
         except BigQueryDataFrameError as exc:
             logger.error(
-                "Snapshot query failed for %s (job_id=%s): %s", org_id, exc.job_id, exc
+                "Analytics run failed for %s (job_id=%s): %s", org_id, exc.job_id, exc
             )
             raise HTTPException(
                 status_code=502,
                 detail={
                     "error": "bigquery_error",
-                    "message": "BigQuery dataframe conversion failed",
-                    "job_id": exc.job_id,
+                    "message": str(exc),
+                    "jobId": exc.job_id,
                 },
             ) from exc
-        bucket = (spec.get("timeWindow") or {}).get("bucket") or "HOUR"
-        result = _snapshot_chart_result(
-            spec.get("id", ""),
-            snapshot_ts,
-            payload_data if isinstance(payload_data, list) else [],
-            bucket=bucket,
-        )
-        return result
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("Analytics run execution error for %s", org_id)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "analytics_execution_failed",
+                    "message": str(exc),
+                },
+            ) from exc
 
-    logger.info(
-        "analytics.run.start",
-        extra={"spec_id": payload.spec.get("id"), "org": org_id},
-    )
-    raise HTTPException(
-        status_code=410,
-        detail={
-            "error": "analytics_run_disabled",
-            "message": "Analytics run is disabled; use /api/snapshots/latest",
-        },
-    )
+    spec_id = payload.spec.get("id") if isinstance(payload.spec, dict) else None
+    if spec_id == "kpi-vrm-traffic":
+        try:
+            sample_series = []
+            for series in result.get("series", [])[:5]:
+                sample_series.append(
+                    {
+                        "id": series.get("id"),
+                        "geometry": series.get("geometry"),
+                        "unit": series.get("unit"),
+                        "data": series.get("data", [])[:10],
+                    }
+                )
+            logger.info(
+                "analytics.run.debug_traffic",
+                extra={
+                    "org": org_id,
+                    "spec_id": spec_id,
+                    "chart_type": result.get("chartType"),
+                    "chart_style": (result.get("meta", {}) or {})
+                    .get("summary", {})
+                    .get("chartStyle"),
+                    "chart_sub_type": (result.get("meta", {}) or {})
+                    .get("summary", {})
+                    .get("chartSubType"),
+                    "x_dimension": result.get("xDimension"),
+                    "series_preview": sample_series,
+                },
+            )
+        except Exception:  # pragma: no cover - debug logging only
+            logger.exception("analytics.run.debug_traffic_logging_failed")
+
+    return result
 
 
 @app.get("/analytics/run")
@@ -1715,8 +1426,6 @@ async def fetch_dashboard_manifest(
     resolved_view_token = view_token or request.query_params.get("view_token")
     if resolved_view_token:
         org_id, _ = _resolve_view_token_context(resolved_view_token, resolve_table=False)
-    if org_id:
-        org_id = normalize_org_id(org_id)
 
     if not org_id:
         raise HTTPException(
@@ -1814,3 +1523,5 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+

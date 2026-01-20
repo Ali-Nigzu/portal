@@ -1,11 +1,11 @@
-"""Scoped event adaptation behaviour for sitedemodata sources."""
+"""Scoped event adaptation behaviour for demodata0 sources."""
 from __future__ import annotations
 
 from pathlib import Path
 
 import pandas as pd
 
-FIXTURE = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "fixtures" / "events_sitedemodata_client0.csv"
+FIXTURE = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "fixtures" / "events_demodata0_client0.csv"
 
 
 def _materialise_scoped_projection(now: pd.Timestamp) -> pd.DataFrame:

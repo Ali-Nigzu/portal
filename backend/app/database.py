@@ -36,8 +36,7 @@ def load_users():
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "orgId": "client1",
-                "table_name": "",
+                "table_name": "nigzsu.demodata0.client0",
                 "last_login": None,
                 "data_sources": []
             },
@@ -45,8 +44,7 @@ def load_users():
                 "password": hash_password("client456"),
                 "role": "client",
                 "name": "Test Client 2",
-                "orgId": "client2",
-                "table_name": "",
+                "table_name": "nigzsu.demodata0.client1",
                 "last_login": None,
                 "data_sources": []
             }

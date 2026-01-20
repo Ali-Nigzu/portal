@@ -87,7 +87,7 @@ def _load_credentials() -> Optional[service_account.Credentials]:
 def _normalize_project(project: Optional[str]) -> Optional[str]:
     if project:
         return project
-    return None
+    return os.getenv("BQ_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT")
 
 
 @dataclass
@@ -101,81 +101,18 @@ class BigQueryClient:
     """Wrapper around the google-cloud-bigquery client with convenience helpers."""
 
     def __init__(self) -> None:
-        project = os.getenv("BQ_PROJECT")
-        dataset = os.getenv("BQ_DATASET")
-        location = os.getenv("BQ_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION")
-        if project and project != "camosbase":
-            logger.error(
-                "BigQuery project mismatch detected; overriding to camosbase (got %s)",
-                project,
-            )
-            project = "camosbase"
-        if dataset and dataset != "sitedemodata":
-            logger.error(
-                "BigQuery dataset mismatch detected; overriding to sitedemodata (got %s)",
-                dataset,
-            )
-            dataset = "sitedemodata"
-        if location and str(location).upper() != "EU":
-            logger.error(
-                "BigQuery location mismatch detected; overriding to EU (got %s)",
-                location,
-            )
-            location = "EU"
         self.settings = BigQuerySettings(
-            project=_normalize_project(project),
-            dataset=dataset,
-            location=location,
+            project=_normalize_project(os.getenv("BQ_PROJECT")),
+            dataset=os.getenv("BQ_DATASET"),
+            location=os.getenv("BQ_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION"),
         )
         self._credentials = _load_credentials()
         self._client: Optional[bigquery.Client] = None
         self._bqstorage_client: Optional[object] = None
         self._bqstorage_unavailable = False
 
-    def _validate_settings(self) -> None:
-        missing = []
-        if not self.settings.project:
-            missing.append("BQ_PROJECT")
-        if not self.settings.dataset:
-            missing.append("BQ_DATASET")
-        if not self.settings.location:
-            missing.append("BQ_LOCATION")
-        if missing:
-            raise RuntimeError(
-                "BigQuery configuration missing required environment variables: "
-                + ", ".join(missing)
-                + f" (BQ_PROJECT={self.settings.project}, "
-                f"BQ_DATASET={self.settings.dataset}, "
-                f"BQ_LOCATION={self.settings.location})"
-            )
-        if self.settings.project != "camosbase":
-            raise RuntimeError(
-                "BigQuery project must be camosbase "
-                f"(got {self.settings.project}; "
-                f"BQ_PROJECT={self.settings.project}, "
-                f"BQ_DATASET={self.settings.dataset}, "
-                f"BQ_LOCATION={self.settings.location})"
-            )
-        if self.settings.dataset != "sitedemodata":
-            raise RuntimeError(
-                "BigQuery dataset must be sitedemodata "
-                f"(got {self.settings.dataset}; "
-                f"BQ_PROJECT={self.settings.project}, "
-                f"BQ_DATASET={self.settings.dataset}, "
-                f"BQ_LOCATION={self.settings.location})"
-            )
-        if str(self.settings.location).upper() != "EU":
-            raise RuntimeError(
-                "BigQuery location must be EU "
-                f"(got {self.settings.location}; "
-                f"BQ_PROJECT={self.settings.project}, "
-                f"BQ_DATASET={self.settings.dataset}, "
-                f"BQ_LOCATION={self.settings.location})"
-            )
-
     def _ensure_client(self) -> bigquery.Client:
         if self._client is None:
-            self._validate_settings()
             self._client = bigquery.Client(
                 project=self.settings.project,
                 credentials=self._credentials,
