@@ -1,7 +1,7 @@
 import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/schemas/charting";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
-import { bucketForSnapshotTimeframe } from "./siteFlowTimeframe";
+import { bucketForSiteFlowTimeframe } from "./siteFlowTimeframe";
 
 export interface SnapshotResponse {
   ts: string;
@@ -181,7 +181,7 @@ const buildSiteFlowResult = (
 
   return {
     chartType: "composed_time",
-    xDimension: { id: "timestamp", type: "time", bucket: bucketForSnapshotTimeframe(timeframe), timezone: "UTC" },
+    xDimension: { id: "timestamp", type: "time", bucket: bucketForSiteFlowTimeframe(timeframe), timezone: "UTC" },
     series: [
       buildSeries("entrances", entrances),
       buildSeries("exits", exits),
