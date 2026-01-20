@@ -390,6 +390,7 @@ const DashboardV2Page = ({
     const candidates = [manifest?.orgId, orgId, credentials.orgId, credentials.username];
     return candidates.some((candidate) => isSnapshotOrg(candidate));
   }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
+  const snapshotOrgId = snapshotMode ? manifest?.orgId ?? orgId ?? undefined : undefined;
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") {
@@ -550,6 +551,7 @@ const DashboardV2Page = ({
               orgId,
               viewToken,
               siteFlowTimeframe: snapshotMode ? siteFlowTimeframe : undefined,
+              snapshotOrgId,
             });
             if (controller.signal.aborted) {
               return;
@@ -651,6 +653,7 @@ const DashboardV2Page = ({
     clientContextId,
     snapshotMode,
     siteFlowTimeframe,
+    snapshotOrgId,
   ]);
 
   useEffect(() => {
@@ -702,6 +705,7 @@ const DashboardV2Page = ({
       orgId,
       viewToken,
       siteFlowTimeframe: snapshotMode ? siteFlowTimeframe : undefined,
+      snapshotOrgId,
     })
       .then((result) => {
         if (controller.signal.aborted) {
@@ -729,6 +733,7 @@ const DashboardV2Page = ({
     viewToken,
     widgetResultLoaderImpl,
     runNonce,
+    snapshotOrgId,
   ]);
 
   useEffect(() => {
@@ -758,6 +763,7 @@ const DashboardV2Page = ({
         orgId,
         viewToken,
         siteFlowTimeframe: snapshotMode ? siteFlowTimeframe : undefined,
+        snapshotOrgId,
       });
 
     Promise.all(kinds.map((kind) => loadDemographic(kind)))
@@ -794,6 +800,7 @@ const DashboardV2Page = ({
     siteFlowWidget,
     snapshotMode,
     runNonce,
+    snapshotOrgId,
   ]);
 
   const kpiWidgets = useMemo(() => {

@@ -23,6 +23,7 @@ export interface LoadWidgetOptions {
   orgId?: string;
   viewToken?: string;
   siteFlowTimeframe?: SiteFlowTimeframe;
+  snapshotOrgId?: string;
 }
 
 const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
@@ -176,9 +177,19 @@ export async function loadWidgetResult(
   widget: DashboardWidget,
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
-  const { signal, timeRange, timezone, mode, orgId, viewToken, siteFlowTimeframe } = options;
-  if (orgId && isSnapshotOrg(orgId)) {
-    const snapshot = await fetchSnapshot(orgId, { signal });
+  const {
+    signal,
+    timeRange,
+    timezone,
+    mode,
+    orgId,
+    viewToken,
+    siteFlowTimeframe,
+    snapshotOrgId,
+  } = options;
+  const snapshotTargetOrg = snapshotOrgId ?? orgId;
+  if (snapshotTargetOrg && isSnapshotOrg(snapshotTargetOrg)) {
+    const snapshot = await fetchSnapshot(snapshotTargetOrg, { signal });
     const timeframe = siteFlowTimeframe ?? "all_time";
     const result = buildSnapshotWidgetResult(widget.id, snapshot, timeframe);
     const validationIssues = validateChartResult(result);
