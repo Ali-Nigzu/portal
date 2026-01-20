@@ -97,10 +97,31 @@ class BigQueryClient:
     """Wrapper around the google-cloud-bigquery client with convenience helpers."""
 
     def __init__(self) -> None:
+        project = os.getenv("BQ_PROJECT")
+        dataset = os.getenv("BQ_DATASET")
+        location = os.getenv("BQ_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION")
+        if project and project != "camosbase":
+            logger.error(
+                "BigQuery project mismatch detected; overriding to camosbase (got %s)",
+                project,
+            )
+            project = "camosbase"
+        if dataset and dataset != "sitedemodata":
+            logger.error(
+                "BigQuery dataset mismatch detected; overriding to sitedemodata (got %s)",
+                dataset,
+            )
+            dataset = "sitedemodata"
+        if location and str(location).upper() != "EU":
+            logger.error(
+                "BigQuery location mismatch detected; overriding to EU (got %s)",
+                location,
+            )
+            location = "EU"
         self.settings = BigQuerySettings(
-            project=_normalize_project(os.getenv("BQ_PROJECT")),
-            dataset=os.getenv("BQ_DATASET"),
-            location=os.getenv("BQ_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION"),
+            project=_normalize_project(project),
+            dataset=dataset,
+            location=location,
         )
         self._credentials = _load_credentials()
         self._client: Optional[bigquery.Client] = None
