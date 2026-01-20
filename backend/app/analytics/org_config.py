@@ -21,12 +21,12 @@ class BigQueryConfigurationError(RuntimeError):
 DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
     # Route the default demo orgs directly to the raw B1 tables to preserve event-level
     # timestamps (e.g., for hour-of-day demographics) instead of the legacy compat views.
-    "client0": "nigzsu.demodata0.client0",
-    "client1": "nigzsu.demodata0.client1",
+    "client0": "client0",
+    "client1": "client1",
     # Fully-qualified VRM demo tables
-    "demodata0.client0": "nigzsu.demodata0.client0",
-    "demodata0.client1": "nigzsu.demodata0.client1",
-    "client2": "nigzsu.demodata0.client1",
+    "demodata0.client0": "client0",
+    "demodata0.client1": "client1",
+    "client2": "client1",
 }
 
 
