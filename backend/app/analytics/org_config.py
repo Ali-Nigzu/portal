@@ -18,22 +18,11 @@ class BigQueryConfigurationError(RuntimeError):
     """Raised when required BigQuery configuration is missing."""
 
 
-DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
-    # Route the default demo orgs directly to the raw B1 tables to preserve event-level
-    # timestamps (e.g., for hour-of-day demographics) instead of the legacy compat views.
-    "client0": "nigzsu.demodata0.client0",
-    "client1": "nigzsu.demodata0.client1",
-    # Fully-qualified VRM demo tables
-    "demodata0.client0": "nigzsu.demodata0.client0",
-    "demodata0.client1": "nigzsu.demodata0.client1",
-    "client2": "nigzsu.demodata0.client1",
-}
+DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {}
 
 DEFAULT_SNAPSHOT_TABLES: Dict[str, str] = {
     "client1": "camosbase.sitedemodata.snapshots",
     "client2": "camosbase.sitedemodata.snapshots",
-    "demodata0.client1": "camosbase.sitedemodata.snapshots",
-    "demodata0.client2": "camosbase.sitedemodata.snapshots",
 }
 
 
@@ -68,23 +57,12 @@ def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
 
 # Default mappings for known organisations. Some entries are "locked" to avoid
 # accidental overrides by misconfigured environment variables.
-DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {
-    # VRM demo datasets use the raw event timestamp column named "timestamp"
-    "demodata0.client0": "timestamp",
-    "demodata0.client1": "timestamp",
-    "client0": "timestamp",
-    "client1": "timestamp",
-}
+DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {}
 
 # Organisations whose default timestamp columns should not be overridden by
 # environment variables (to avoid emitting invalid SQL when schemas differ from
 # deployment settings).
-LOCKED_ORG_EVENT_TIMESTAMP_COLUMNS = {
-    "demodata0.client0",
-    "demodata0.client1",
-    "client0",
-    "client1",
-}
+LOCKED_ORG_EVENT_TIMESTAMP_COLUMNS = set()
 
 
 def _strip_compat_suffix(table_id: str) -> str:

@@ -785,6 +785,13 @@ async def search_events(
 @app.post("/analytics/run")
 @app.post("/api/analytics/run")
 async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "error": "analytics_run_disabled",
+            "message": "Analytics run is disabled; use /api/snapshots/latest",
+        },
+    )
     logger.info(
         "analytics.run.start",
         extra={"spec_id": payload.spec.get("id"), "org": payload.org_id},

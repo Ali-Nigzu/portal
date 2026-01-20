@@ -120,6 +120,18 @@ class BigQueryClient:
                 "BigQuery configuration missing required environment variables: "
                 + ", ".join(missing)
             )
+        if self.settings.project != "camosbase":
+            raise RuntimeError(
+                f"BigQuery project must be camosbase (got {self.settings.project})"
+            )
+        if self.settings.dataset != "sitedemodata":
+            raise RuntimeError(
+                f"BigQuery dataset must be sitedemodata (got {self.settings.dataset})"
+            )
+        if str(self.settings.location).upper() != "EU":
+            raise RuntimeError(
+                f"BigQuery location must be EU (got {self.settings.location})"
+            )
 
     def _ensure_client(self) -> bigquery.Client:
         if self._client is None:

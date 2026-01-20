@@ -1,9 +1,4 @@
-const SNAPSHOT_ORGS = new Set([
-  "client1",
-  "client2",
-  "demodata0.client1",
-  "demodata0.client2",
-]);
+const SNAPSHOT_ORGS = new Set(["client1", "client2"]);
 
 const normalizeOrgId = (orgId: string | undefined): string | null => {
   if (!orgId) return null;
