@@ -212,8 +212,16 @@ async def register_interest(submission: RegisterInterestRequest):
 @app.get("/api/snapshots/latest")
 async def get_latest_snapshot(
     ts: Optional[str] = Query(None, description="ISO-8601 timestamp"),
-    org: str = Query(..., description="Organisation identifier"),
+    org: Optional[str] = Query(None, description="Organisation identifier"),
+    view_token: Optional[str] = Query(None, alias="viewToken"),
 ):
+    if view_token:
+        org, _ = _resolve_view_token_context(view_token, resolve_table=False)
+    if not org:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "missing_org", "message": "org or viewToken is required"},
+        )
     if not is_snapshot_mode_enabled(org):
         raise HTTPException(
             status_code=404,

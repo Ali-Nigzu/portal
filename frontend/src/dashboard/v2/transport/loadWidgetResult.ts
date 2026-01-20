@@ -45,7 +45,7 @@ export const isAbortError = (error: unknown): boolean => {
 };
 
 type SnapshotCacheEntry = {
-  orgId: string;
+  cacheKey: string;
   requestTs: string;
   promise: Promise<SnapshotResponse>;
 };
@@ -57,14 +57,26 @@ export const resetSnapshotCache = () => {
 };
 
 const fetchSnapshot = async (
-  orgId: string,
+  params: { orgId?: string; viewToken?: string },
   options: { signal?: AbortSignal } = {},
 ): Promise<SnapshotResponse> => {
   const requestTs = new Date().toISOString();
-  if (snapshotCache && snapshotCache.orgId === orgId) {
+  const cacheKey = params.orgId
+    ? `org:${params.orgId}`
+    : params.viewToken
+      ? `viewToken:${params.viewToken}`
+      : "unknown";
+  if (snapshotCache && snapshotCache.cacheKey === cacheKey) {
     return snapshotCache.promise;
   }
-  const url = `${API_BASE_URL}${SNAPSHOT_ENDPOINT}?ts=${encodeURIComponent(requestTs)}&org=${encodeURIComponent(orgId)}`;
+  const query = new URLSearchParams({ ts: requestTs });
+  if (params.orgId) {
+    query.set("org", params.orgId);
+  }
+  if (params.viewToken) {
+    query.set("viewToken", params.viewToken);
+  }
+  const url = `${API_BASE_URL}${SNAPSHOT_ENDPOINT}?${query.toString()}`;
   const promise = fetch(url, { method: "GET", signal: options.signal }).then(async (response) => {
     if (!response.ok) {
       const text = await response.text();
@@ -72,7 +84,7 @@ const fetchSnapshot = async (
     }
     return (await response.json()) as SnapshotResponse;
   });
-  snapshotCache = { orgId, requestTs, promise };
+  snapshotCache = { cacheKey, requestTs, promise };
   return promise;
 };
 
@@ -189,7 +201,24 @@ export async function loadWidgetResult(
   } = options;
   const snapshotTargetOrg = snapshotOrgId ?? orgId;
   if (snapshotTargetOrg && isSnapshotOrg(snapshotTargetOrg)) {
-    const snapshot = await fetchSnapshot(snapshotTargetOrg, { signal });
+    const snapshot = await fetchSnapshot({ orgId: snapshotTargetOrg, viewToken }, { signal });
+    const timeframe = siteFlowTimeframe ?? "all_time";
+    const result = buildSnapshotWidgetResult(widget.id, snapshot, timeframe);
+    const validationIssues = validateChartResult(result);
+    if (validationIssues.length > 0) {
+      const issues = validationIssues.map((issue) => issue.message).join(", ");
+      const error = new Error(`Chart result failed validation: ${issues}`);
+      logError("dashboard.widgets", "validation_error", {
+        widgetId: widget.id,
+        issues,
+      });
+      throw error;
+    }
+    logInfo("dashboard.widgets", "load_success", { widgetId: widget.id, mode: "snapshots" });
+    return result;
+  }
+  if (viewToken) {
+    const snapshot = await fetchSnapshot({ viewToken }, { signal });
     const timeframe = siteFlowTimeframe ?? "all_time";
     const result = buildSnapshotWidgetResult(widget.id, snapshot, timeframe);
     const validationIssues = validateChartResult(result);
