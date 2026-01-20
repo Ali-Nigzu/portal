@@ -307,13 +307,7 @@ class BigQueryClient:
             client = self._ensure_client()
             job = client.query("SELECT 1 AS ok", location=self.settings.location)
             result = job.result()
-            storage_client = self._get_bqstorage_client()
-            dataframe_kwargs: Dict[str, Any] = {}
-            if storage_client is not None:
-                dataframe_kwargs["bqstorage_client"] = storage_client
-            else:
-                dataframe_kwargs["create_bqstorage_client"] = False
-            df = result.to_dataframe(**dataframe_kwargs)
+            df = result.to_dataframe(create_bqstorage_client=False)
             logger.info(
                 "✅ BigQuery connectivity check succeeded (rows=%d, pandas=%s, db-dtypes=%s)",
                 len(df),
