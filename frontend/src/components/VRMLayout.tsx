@@ -87,7 +87,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({ userRole = 'client', onLogout, ch
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
 
-  const viewToken = new URLSearchParams(location.search).get('view_token');
+  const viewTokenParams = new URLSearchParams(location.search);
+  const viewToken =
+    viewTokenParams.get('view_token') ?? viewTokenParams.get('viewToken');
   const getNavigationPath = (path: string) => {
     return viewToken ? `${path}?view_token=${viewToken}` : path;
   };

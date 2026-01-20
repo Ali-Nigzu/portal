@@ -77,13 +77,24 @@ const fetchSnapshot = async (
     query.set("viewToken", params.viewToken);
   }
   const url = `${API_BASE_URL}${SNAPSHOT_ENDPOINT}?${query.toString()}`;
-  const promise = fetch(url, { method: "GET", signal: options.signal }).then(async (response) => {
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Snapshot fetch failed: ${response.status} ${text}`);
+  const promise = (async () => {
+    try {
+      const response = await fetch(url, { method: "GET", signal: options.signal });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Snapshot fetch failed: ${response.status} ${text}`);
+      }
+      return (await response.json()) as SnapshotResponse;
+    } catch (error) {
+      if (isAbortError(error)) {
+        const abortError = new Error("Snapshot request was cancelled");
+        abortError.name = "AbortError";
+        (abortError as { code?: string }).code = "ABORTED";
+        throw abortError;
+      }
+      throw error;
     }
-    return (await response.json()) as SnapshotResponse;
-  });
+  })();
   snapshotCache = { cacheKey, requestTs, promise };
   return promise;
 };

@@ -172,7 +172,8 @@ const App: React.FC = () => {
     sessionStorage.removeItem('camOS_credentials');
     
     // Check if we're in a view token session
-    const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
+    const params = new URLSearchParams(window.location.search);
+    const hasViewToken = params.has('view_token') || params.has('viewToken');
     
     if (hasViewToken) {
       // If viewing via view token, close the tab or redirect to home without token
@@ -189,7 +190,8 @@ const App: React.FC = () => {
     }
   };
 
-  const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
+  const viewTokenParams = new URLSearchParams(window.location.search);
+  const hasViewToken = viewTokenParams.has('view_token') || viewTokenParams.has('viewToken');
   const analyticsExperience = EXPERIENCE_GATES.analytics;
 
   return (

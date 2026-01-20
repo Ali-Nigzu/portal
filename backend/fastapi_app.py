@@ -9,7 +9,7 @@ import uuid
 import base64
 import logging
 import pandas as pd
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, List, Any, Tuple
 
 from cachetools import TTLCache
@@ -150,11 +150,18 @@ def _fetch_latest_snapshot(
     t_min = _floor_to_minute(request_time)
     table_name = resolve_snapshot_table_for_org(org)
     sql = SNAPSHOT_QUERY_SQL.format(table=table_name)
-    results_df = bigquery_client.query_dataframe(
-        sql,
-        {"t_min": t_min},
-        job_context=f"{org}::snapshots_latest",
-    )
+
+    def _query_snapshot(ts_min: datetime) -> pd.DataFrame:
+        return bigquery_client.query_dataframe(
+            sql,
+            {"t_min": ts_min},
+            job_context=f"{org}::snapshots_latest",
+        )
+
+    results_df = _query_snapshot(t_min)
+    if results_df.empty:
+        previous_day = t_min - timedelta(days=1)
+        results_df = _query_snapshot(previous_day)
     if results_df.empty:
         raise HTTPException(
             status_code=404,
