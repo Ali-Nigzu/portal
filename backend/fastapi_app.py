@@ -407,8 +407,7 @@ async def startup_health_check():
         bigquery_client.run_health_check()
     except Exception as exc:
         logger.error("BigQuery startup health check failed: %s", exc)
-        # Do not crash the server in environments without BigQuery access
-        return
+        raise
 
 app.add_middleware(
     CORSMiddleware,
@@ -642,7 +641,7 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                 )
 
             user_record = users[username]
-            org_id = _org_id_for_user_record(username, user_record)
+            org_id = normalize_org_id(_org_id_for_user_record(username, user_record))
             table_name = _resolve_table_for_org(org_id)
             return org_id, table_name
         except HTTPException:
