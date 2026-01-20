@@ -29,15 +29,15 @@ def _build_spec() -> dict:
 
 
 def test_compiled_sql_targets_direct_table(monkeypatch):
-    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
-    monkeypatch.setenv("BQ_DATASET", "demodata0")
+    monkeypatch.setenv("BQ_PROJECT", "camosbase")
+    monkeypatch.setenv("BQ_DATASET", "sitedemodata")
 
     original = dict(org_config.ORG_TABLE_MAP)
     org_config.override_org_table_map(org_config.build_org_table_map())
 
     try:
         table_name = org_config.resolve_table_for_org("client0")
-        assert table_name == "nigzsu.demodata0.client0"
+        assert table_name == "camosbase.sitedemodata.client0"
         captured: dict[str, object] = {}
 
         class CapturingClient:
@@ -58,14 +58,14 @@ def test_compiled_sql_targets_direct_table(monkeypatch):
 
         sql = captured.get("sql") or ""
         assert "client0_compat" not in sql
-        assert "nigzsu.demodata0.client0" in sql
+        assert "camosbase.sitedemodata.client0" in sql
     finally:
         org_config.override_org_table_map(original)
 
 
 def test_analytics_run_pipeline_uses_direct_table(monkeypatch):
-    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
-    monkeypatch.setenv("BQ_DATASET", "demodata0")
+    monkeypatch.setenv("BQ_PROJECT", "camosbase")
+    monkeypatch.setenv("BQ_DATASET", "sitedemodata")
 
     import importlib
     import pandas as pd
@@ -101,6 +101,6 @@ def test_analytics_run_pipeline_uses_direct_table(monkeypatch):
         assert response.status_code == 200
         sql = captured.get("sql") or ""
         assert "client0_compat" not in sql
-        assert "nigzsu.demodata0.client0" in sql
+        assert "camosbase.sitedemodata.client0" in sql
     finally:
         org_config.override_org_table_map(original_map)

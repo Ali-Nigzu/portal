@@ -105,7 +105,7 @@ def test_retention_heatmap_chartresult_passes_validator():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"client0": "camosbase.dataset.client0"}),
         bigquery_client=stub,
         cache=cache,
     )
@@ -184,7 +184,7 @@ def test_retention_heatmap_all_time_range_fills_matrix():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"client0": "camosbase.dataset.client0"}),
         bigquery_client=stub,
         cache=cache,
     )

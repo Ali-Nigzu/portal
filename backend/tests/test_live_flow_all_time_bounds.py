@@ -24,7 +24,7 @@ class BoundsStubBigQueryClient:
 def _build_engine(stub: BoundsStubBigQueryClient) -> AnalyticsEngine:
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     return AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"client0": "camosbase.dataset.client0"}),
         bigquery_client=stub,
         cache=cache,
     )

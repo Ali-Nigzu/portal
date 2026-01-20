@@ -145,7 +145,7 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
             "password": "secret",
             "role": "client",
             "name": "Test Client 1",
-            "table_name": "nigzsu.demodata0.client0",
+            "table_name": "camosbase.sitedemodata.client0",
         }
     }
 
@@ -169,5 +169,5 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert captured.get("org_id") == "demodata0.client0"
+    assert captured.get("org_id") == "sitedemodata.client0"
     assert calls["count"] == 1

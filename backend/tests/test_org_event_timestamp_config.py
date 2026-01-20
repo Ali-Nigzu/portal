@@ -35,8 +35,8 @@ def test_default_mapping_includes_demodata(monkeypatch):
 
     mapping = org_config.build_org_event_timestamp_columns()
 
-    assert mapping["demodata0.client0"] == "timestamp"
-    assert mapping["demodata0.client1"] == "timestamp"
+    assert mapping["sitedemodata.client0"] == "timestamp"
+    assert mapping["sitedemodata.client1"] == "timestamp"
     assert mapping["client0"] == "timestamp"
     assert mapping["client1"] == "timestamp"
 
@@ -44,13 +44,13 @@ def test_default_mapping_includes_demodata(monkeypatch):
 def test_env_override_ignored_for_locked_orgs(monkeypatch, caplog):
     monkeypatch.setenv(
         "EVENT_TIMESTAMP_COLUMNS",
-        json.dumps({"demodata0.client0": "event_ts", "other": "custom_ts"}),
+        json.dumps({"sitedemodata.client0": "event_ts", "other": "custom_ts"}),
     )
     monkeypatch.setattr(org_config, "ORG_EVENT_TIMESTAMP_COLUMNS", {})
 
     with caplog.at_level("WARNING"):
         mapping = org_config.build_org_event_timestamp_columns()
 
-    assert mapping["demodata0.client0"] == "timestamp"
+    assert mapping["sitedemodata.client0"] == "timestamp"
     assert mapping["other"] == "custom_ts"
     assert any("timestamp_column.env_ignored" in record.message for record in caplog.records)

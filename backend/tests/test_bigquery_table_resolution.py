@@ -12,15 +12,15 @@ from backend.app.bigquery_client import BigQueryClient
 
 
 def test_resolved_table_query_surfaces_not_found(monkeypatch):
-    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
-    monkeypatch.setenv("BQ_DATASET", "demodata0")
+    monkeypatch.setenv("BQ_PROJECT", "camosbase")
+    monkeypatch.setenv("BQ_DATASET", "sitedemodata")
 
     importlib.reload(org_config)
     original = dict(org_config.ORG_TABLE_MAP)
 
     try:
         table = org_config.resolve_table_for_org("client0")
-        assert table == "nigzsu.demodata0.client0"
+        assert table == "camosbase.sitedemodata.client0"
 
         captured_sql: dict[str, str] = {}
 

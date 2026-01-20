@@ -23,8 +23,8 @@ def clear_cache():
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
-    monkeypatch.setenv("BQ_DATASET", "demodata0")
+    monkeypatch.setenv("BQ_PROJECT", "camosbase")
+    monkeypatch.setenv("BQ_DATASET", "sitedemodata")
     original_map = dict(org_config.ORG_TABLE_MAP)
     org_config.override_org_table_map(org_config.build_org_table_map())
 
@@ -41,7 +41,7 @@ def client(monkeypatch):
             "role": "client",
             "name": "Client 1",
             # Mirrors the live configuration: direct table mapping without compat views.
-            "table_name": "nigzsu.demodata0.client0",
+            "table_name": "camosbase.sitedemodata.client0",
             "data_sources": [],
             "last_login": None,
         },
