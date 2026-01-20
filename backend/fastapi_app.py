@@ -94,6 +94,7 @@ from backend.app.analytics.org_config import (
     resolve_table_for_org,
     is_snapshot_mode_enabled,
     resolve_snapshot_table_for_org,
+    normalize_org_id,
 )
 from backend.app.data_processor import DataProcessor, _resolve_time_bounds
 from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
@@ -466,12 +467,16 @@ async def register_interest(submission: RegisterInterestRequest):
 
 @app.get("/api/snapshots/latest")
 async def get_latest_snapshot(
+    request: Request,
     ts: Optional[str] = Query(None, description="ISO-8601 timestamp"),
     org: Optional[str] = Query(None, description="Organisation identifier"),
     view_token: Optional[str] = Query(None, alias="viewToken"),
 ):
-    if view_token:
-        org, _ = _resolve_view_token_context(view_token, resolve_table=False)
+    resolved_view_token = view_token or request.query_params.get("view_token")
+    if resolved_view_token:
+        org, _ = _resolve_view_token_context(resolved_view_token, resolve_table=False)
+    if org:
+        org = normalize_org_id(org)
     if not org:
         raise HTTPException(
             status_code=400,
@@ -607,7 +612,7 @@ def _resolve_view_token_context(view_token: str, *, resolve_table: bool = True) 
         raise HTTPException(status_code=404, detail="Client not found")
 
     user_record = users[client_id]
-    org_id = _org_id_for_user_record(client_id, user_record)
+    org_id = normalize_org_id(_org_id_for_user_record(client_id, user_record))
     table_name = _resolve_table_for_org(org_id) if resolve_table else None
     return org_id, table_name
 
@@ -662,7 +667,7 @@ class AnalyticsRunRequest(BaseModel):
 
 def _resolve_table_for_org(org_id: str) -> str:
     try:
-        return resolve_table_for_org(org_id)
+        return resolve_table_for_org(normalize_org_id(org_id))
     except OrganisationNotConfiguredError:
         raise HTTPException(
             status_code=404,
@@ -720,7 +725,8 @@ def _resolve_analytics_context(
 ) -> Tuple[str, str]:
     explicit_org = payload.org_id or request.query_params.get("orgId")
     if explicit_org:
-        return explicit_org, _resolve_table_for_org(explicit_org)
+        normalized_org = normalize_org_id(explicit_org)
+        return normalized_org, _resolve_table_for_org(normalized_org)
 
     view_token = (
         payload.view_token
@@ -1034,6 +1040,8 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
     )
     if not org_id and view_token:
         org_id, _ = _resolve_view_token_context(view_token, resolve_table=False)
+    if org_id:
+        org_id = normalize_org_id(org_id)
     if not org_id:
         raise HTTPException(
             status_code=401,
@@ -1701,6 +1709,8 @@ async def fetch_dashboard_manifest(
     resolved_view_token = view_token or request.query_params.get("view_token")
     if resolved_view_token:
         org_id, _ = _resolve_view_token_context(resolved_view_token, resolve_table=False)
+    if org_id:
+        org_id = normalize_org_id(org_id)
 
     if not org_id:
         raise HTTPException(

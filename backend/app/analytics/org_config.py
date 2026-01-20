@@ -130,12 +130,20 @@ ORG_TABLE_MAP: Dict[str, str] = build_org_table_map()
 ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = build_org_event_timestamp_columns()
 SNAPSHOT_TABLE_MAP: Dict[str, str] = dict(DEFAULT_SNAPSHOT_TABLES)
 
+def normalize_org_id(org: str) -> str:
+    normalized = org.strip().lower()
+    if normalized.endswith("_compat"):
+        normalized = normalized[: -len("_compat")]
+    if "." in normalized:
+        normalized = normalized.split(".")[-1]
+    return normalized
+
 
 def resolve_table_for_org(organisation: str) -> str:
     """Return the fully-qualified table name for ``organisation``."""
 
     try:
-        table_id = ORG_TABLE_MAP[organisation]
+        table_id = ORG_TABLE_MAP[normalize_org_id(organisation)]
     except KeyError as exc:
         raise OrganisationNotConfiguredError(organisation) from exc
 
@@ -148,12 +156,12 @@ def resolve_table_for_org(organisation: str) -> str:
 
 
 def is_snapshot_mode_enabled(organisation: str) -> bool:
-    return organisation in SNAPSHOT_TABLE_MAP
+    return normalize_org_id(organisation) in SNAPSHOT_TABLE_MAP
 
 
 def resolve_snapshot_table_for_org(organisation: str) -> str:
     try:
-        table_id = SNAPSHOT_TABLE_MAP[organisation]
+        table_id = SNAPSHOT_TABLE_MAP[normalize_org_id(organisation)]
     except KeyError as exc:
         raise OrganisationNotConfiguredError(organisation) from exc
     return _qualify_table_name(table_id)

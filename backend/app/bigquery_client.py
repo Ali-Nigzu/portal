@@ -83,7 +83,7 @@ def _load_credentials() -> Optional[service_account.Credentials]:
 def _normalize_project(project: Optional[str]) -> Optional[str]:
     if project:
         return project
-    return os.getenv("BQ_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT")
+    return None
 
 
 @dataclass
@@ -119,18 +119,33 @@ class BigQueryClient:
             raise RuntimeError(
                 "BigQuery configuration missing required environment variables: "
                 + ", ".join(missing)
+                + f" (BQ_PROJECT={self.settings.project}, "
+                f"BQ_DATASET={self.settings.dataset}, "
+                f"BQ_LOCATION={self.settings.location})"
             )
         if self.settings.project != "camosbase":
             raise RuntimeError(
-                f"BigQuery project must be camosbase (got {self.settings.project})"
+                "BigQuery project must be camosbase "
+                f"(got {self.settings.project}; "
+                f"BQ_PROJECT={self.settings.project}, "
+                f"BQ_DATASET={self.settings.dataset}, "
+                f"BQ_LOCATION={self.settings.location})"
             )
         if self.settings.dataset != "sitedemodata":
             raise RuntimeError(
-                f"BigQuery dataset must be sitedemodata (got {self.settings.dataset})"
+                "BigQuery dataset must be sitedemodata "
+                f"(got {self.settings.dataset}; "
+                f"BQ_PROJECT={self.settings.project}, "
+                f"BQ_DATASET={self.settings.dataset}, "
+                f"BQ_LOCATION={self.settings.location})"
             )
         if str(self.settings.location).upper() != "EU":
             raise RuntimeError(
-                f"BigQuery location must be EU (got {self.settings.location})"
+                "BigQuery location must be EU "
+                f"(got {self.settings.location}; "
+                f"BQ_PROJECT={self.settings.project}, "
+                f"BQ_DATASET={self.settings.dataset}, "
+                f"BQ_LOCATION={self.settings.location})"
             )
 
     def _ensure_client(self) -> bigquery.Client:
