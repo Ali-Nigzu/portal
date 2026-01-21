@@ -282,7 +282,13 @@ const buildAnchoredTimestamps = (
   return Array.from({ length }, (_, index) => addMonths(start, index));
 };
 
-const sliceSeries = (values: number[], count: number): number[] => values.slice(0, count);
+const normalizeSeriesLength = (values: number[], count: number): number[] => {
+  const sliced = values.slice(0, count);
+  if (sliced.length >= count) {
+    return sliced;
+  }
+  return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
+};
 
 const lastNonZeroIndex = (values: number[]): number => {
   for (let index = values.length - 1; index >= 0; index -= 1) {
@@ -299,6 +305,7 @@ const buildSiteFlowResult = (
   timeframe: SiteFlowTimeframe,
   snapshotTsRaw?: string,
   source?: string,
+  rollupIndex?: number,
 ): ChartResult => {
   const entrances = asNumberArray(rollup?.[0]);
   const exits = asNumberArray(rollup?.[1]);
@@ -317,7 +324,9 @@ const buildSiteFlowResult = (
   const desiredLength =
     timeframe === "last_week" ? 7 : timeframe === "last_quarter" ? 12 : timeframe === "last_year" ? 12 : length;
 
-  let sliceCount = Math.min(length, desiredLength);
+  let sliceCount = timeframe === "last_week" || timeframe === "last_quarter" || timeframe === "last_year"
+    ? desiredLength
+    : length;
   if (timeframe === "today" && length > 0) {
     const lastNonZero = Math.max(
       lastNonZeroIndex(entrances),
@@ -339,6 +348,12 @@ const buildSiteFlowResult = (
     lastNonZeroIndex(occupancyAvg),
   );
 
+  const normalizedEntrances = normalizeSeriesLength(entrances, sliceCount);
+  const normalizedExits = normalizeSeriesLength(exits, sliceCount);
+  const normalizedOccAvg = normalizeSeriesLength(occupancyAvg, sliceCount);
+  const normalizedOccMin = normalizeSeriesLength(occupancyMin, sliceCount);
+  const normalizedOccMax = normalizeSeriesLength(occupancyMax, sliceCount);
+
   const buildSeries = (id: string, values: number[]): ChartSeries => ({
     id,
     label: id,
@@ -356,11 +371,11 @@ const buildSiteFlowResult = (
     geometry: "line",
     data: timestamps.map((timestamp, index) => ({
       x: toIso(timestamp),
-      occupancy_avg: occupancyAvg[index] ?? null,
-      occupancy_min: occupancyMin[index] ?? null,
-      occupancy_max: occupancyMax[index] ?? null,
-      value: occupancyAvg[index] ?? null,
-      y: occupancyAvg[index] ?? null,
+      occupancy_avg: normalizedOccAvg[index] ?? null,
+      occupancy_min: normalizedOccMin[index] ?? null,
+      occupancy_max: normalizedOccMax[index] ?? null,
+      value: normalizedOccAvg[index] ?? null,
+      y: normalizedOccAvg[index] ?? null,
     })),
   };
 
@@ -371,6 +386,7 @@ const buildSiteFlowResult = (
       snapshotTsParsed: snapshotTs.toISOString(),
       timeframe,
       source,
+      rollupIndex,
       valuesLength: {
         entrances: entrances.length,
         exits: exits.length,
@@ -393,8 +409,8 @@ const buildSiteFlowResult = (
     chartType: "composed_time",
     xDimension: { id: "timestamp", type: "time", bucket, timezone: "UTC" },
     series: [
-      buildSeries("entrances", sliceSeries(entrances, sliceCount)),
-      buildSeries("exits", sliceSeries(exits, sliceCount)),
+      buildSeries("entrances", normalizedEntrances),
+      buildSeries("exits", normalizedExits),
       {
         ...occupancySeries,
         data: occupancySeries.data.slice(0, sliceCount),
@@ -948,7 +964,7 @@ export const buildSnapshotWidgetResult = (
       const rollupIndex = ROLLUP_INDEX[timeframe];
       const rollup = Array.isArray(rollups) ? (rollups[rollupIndex] as unknown[]) : [];
       const source = Array.isArray(rollups) ? `rollup_${rollupIndex}` : "unknown";
-      return buildSiteFlowResult(rollup ?? [], snapshotTs, timeframe, snapshot.ts, source);
+      return buildSiteFlowResult(rollup ?? [], snapshotTs, timeframe, snapshot.ts, source, rollupIndex);
     }
     case "site-flow-demographics-age": {
       const rollups = payload[7];
