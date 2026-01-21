@@ -251,15 +251,16 @@ const buildAnchoredTimestamps = (
   }
 
   if (timeframe === "last_week") {
-    const start = startOfWeek(anchor);
+    const endDayStart = startOfDay(anchor);
+    const start = addDays(endDayStart, -(length - 1));
     return Array.from({ length }, (_, index) => addDays(start, index));
   }
 
   if (timeframe === "last_month") {
     if (length <= 5) {
-      const endWeekStart = startOfWeek(anchor);
-      const start = addDays(endWeekStart, -7 * (length - 1));
-      return Array.from({ length }, (_, index) => addDays(start, index * 7));
+      const monthStart = startOfMonth(anchor);
+      const firstWeekStart = startOfWeek(monthStart);
+      return Array.from({ length }, (_, index) => addDays(firstWeekStart, index * 7));
     }
     const start = startOfMonth(anchor);
     return Array.from({ length }, (_, index) => addDays(start, index));
@@ -336,11 +337,13 @@ const buildSiteFlowResult = (
   );
   let idxNow: number | null = null;
   let sliceLenTime: number | null = null;
+  const dayStart = startOfDay(snapshotTs);
+  const weekStart = startOfWeek(snapshotTs);
+  const monthStart = startOfMonth(snapshotTs);
+  const bucketMsToday = length > 0 ? DAY_MS / length : null;
   if (timeframe === "today" && length > 0) {
-    const start = startOfDay(snapshotTs);
-    const elapsedMs = snapshotTs.getTime() - start.getTime();
-    const bucketMs = DAY_MS / length;
-    idxNow = Math.floor(elapsedMs / bucketMs);
+    const elapsedMs = snapshotTs.getTime() - dayStart.getTime();
+    idxNow = Math.floor(elapsedMs / (bucketMsToday ?? DAY_MS));
     sliceLenTime = clamp(idxNow + 1, 0, length);
     const sliceLenNonZero = idxNonZero >= 0 ? idxNonZero + 1 : sliceLenTime;
     sliceCount = Math.min(sliceLenTime, sliceLenNonZero);
@@ -404,6 +407,10 @@ const buildSiteFlowResult = (
       sliceLenTime,
       nonZeroLastIndex,
       sliceCount,
+      dayStartIso: dayStart.toISOString(),
+      weekStartIso: weekStart.toISOString(),
+      monthStartIso: monthStart.toISOString(),
+      bucketMsToday,
       computedStartIso: timestamps[0]?.toISOString(),
       computedEndIso: timestamps[timestamps.length - 1]?.toISOString(),
       firstPointXIso: timestamps[0]?.toISOString(),
