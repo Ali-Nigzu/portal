@@ -349,7 +349,11 @@ const buildSiteFlowResult = (
     sliceCount = Math.min(sliceLenTime, sliceLenNonZero);
   }
 
-  const timestamps = buildAnchoredTimestamps(timeframe, snapshotTs, sliceCount);
+  const timestamps =
+    timeframe === "today"
+      ? Array.from({ length }, (_, index) => new Date(dayStart.getTime() + index * (bucketMsToday ?? DAY_MS)))
+          .slice(0, sliceCount)
+      : buildAnchoredTimestamps(timeframe, snapshotTs, sliceCount);
   const bucket = inferBucketForLegacy(timeframe, sliceCount);
   const bucketStepMs =
     sliceCount > 1 ? timestamps[1].getTime() - timestamps[0].getTime() : null;
@@ -415,6 +419,26 @@ const buildSiteFlowResult = (
       computedEndIso: timestamps[timestamps.length - 1]?.toISOString(),
       firstPointXIso: timestamps[0]?.toISOString(),
       lastPointXIso: timestamps[timestamps.length - 1]?.toISOString(),
+    });
+  }
+
+  if (process.env.NODE_ENV !== "production" && timeframe === "today") {
+    const lastLabel = timestamps[timestamps.length - 1];
+    const anchorIso = snapshotTs.toISOString();
+    const lastLabelIso = lastLabel?.toISOString();
+    const lastLabelIsFuture = Boolean(lastLabel && lastLabel.getTime() > snapshotTs.getTime());
+    // eslint-disable-next-line no-console
+    console.log("[Snapshots] Site Flow today debug", {
+      payloadTsRaw: snapshotTsRaw,
+      payloadTsParsedISO: anchorIso,
+      dayStartISO: dayStart.toISOString(),
+      N: length,
+      bucketMs: bucketMsToday,
+      idxNow,
+      sliceLen: sliceCount,
+      firstLabelISO: timestamps[0]?.toISOString(),
+      lastLabelISO: lastLabelIso,
+      lastLabelIsFuture,
     });
   }
 
