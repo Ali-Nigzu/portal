@@ -28,7 +28,7 @@ def client(monkeypatch):
     monkeypatch.setenv("BQ_PROJECT", "project")
     monkeypatch.setenv("BQ_DATASET", "dataset")
     original_map = dict(org_config.ORG_TABLE_MAP)
-    org_config.override_org_table_map({"client0": "client0"})
+    org_config.override_org_table_map({"clientA": "clientA"})
 
     calls = {"count": 0}
 
@@ -79,7 +79,7 @@ def _build_spec() -> dict:
 @pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
 def test_analytics_run_endpoint_executes_spec(client, endpoint):
     http_client, calls = client
-    response = http_client.post(endpoint, json={"spec": _build_spec(), "orgId": "client0"})
+    response = http_client.post(endpoint, json={"spec": _build_spec(), "orgId": "clientA"})
 
     assert response.status_code == 200
     payload = response.json()
@@ -116,7 +116,7 @@ def test_analytics_run_endpoint_handles_timestamp_resolution_error(monkeypatch, 
 
     monkeypatch.setattr(TableRouter, "resolve_event_timestamp_column", raise_timestamp_error)
 
-    response = http_client.post(endpoint, json={"spec": spec, "orgId": "client0"})
+    response = http_client.post(endpoint, json={"spec": spec, "orgId": "clientA"})
 
     assert response.status_code == 422
     payload = response.json()
@@ -131,7 +131,7 @@ def test_analytics_run_endpoint_applies_default_time_window(client, endpoint):
     spec = _build_spec()
     spec.pop("timeWindow", None)
 
-    response = http_client.post(endpoint, json={"spec": spec, "orgId": "client0"})
+    response = http_client.post(endpoint, json={"spec": spec, "orgId": "clientA"})
 
     assert response.status_code == 200
     assert calls["count"] == 1
@@ -145,7 +145,7 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
             "password": "secret",
             "role": "client",
             "name": "Test Client 1",
-            "table_name": "nigzsu.demodata0.client0",
+            "table_name": "example.demo_data.clientA",
         }
     }
 
@@ -157,7 +157,7 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
 
     def fake_resolve(org_id: str) -> str:
         captured["org_id"] = org_id
-        return "project.dataset.client0"
+        return "project.dataset.clientA"
 
     monkeypatch.setattr("backend.fastapi_app._resolve_table_for_org", fake_resolve)
 
@@ -169,5 +169,5 @@ def test_analytics_run_basic_auth_resolves_org(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert captured.get("org_id") == "demodata0.client0"
+    assert captured.get("org_id") == "demo_data.clientA"
     assert calls["count"] == 1

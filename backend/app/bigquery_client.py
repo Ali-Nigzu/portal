@@ -61,6 +61,10 @@ def _load_analytics_timeout() -> int:
 ANALYTICS_BQ_TIMEOUT_SECONDS = _load_analytics_timeout()
 
 
+def _bqstorage_enabled() -> bool:
+    return os.getenv("BQ_ENABLE_BQSTORAGE", "").lower() in {"1", "true", "yes"}
+
+
 def _load_credentials() -> Optional[service_account.Credentials]:
     """Load service account credentials from environment configuration."""
     credentials_json = os.getenv("BQ_SERVICE_ACCOUNT_JSON")
@@ -197,12 +201,12 @@ class BigQueryClient:
         timeout_seconds = ANALYTICS_BQ_TIMEOUT_SECONDS
         try:
             result = job.result(timeout=timeout_seconds)
-            storage_client = self._get_bqstorage_client()
-            dataframe_kwargs: Dict[str, Any] = {}
-            if storage_client is not None:
-                dataframe_kwargs["bqstorage_client"] = storage_client
-            else:
-                dataframe_kwargs["create_bqstorage_client"] = False
+            dataframe_kwargs: Dict[str, Any] = {"create_bqstorage_client": False}
+            if _bqstorage_enabled():
+                storage_client = self._get_bqstorage_client()
+                if storage_client is not None:
+                    dataframe_kwargs["bqstorage_client"] = storage_client
+                    dataframe_kwargs.pop("create_bqstorage_client", None)
             df = result.to_dataframe(**dataframe_kwargs)
             stats = getattr(job, "_properties", {}).get("statistics", {}) if job else {}
             query_stats = stats.get("query", {}) if isinstance(stats, dict) else {}
@@ -244,13 +248,7 @@ class BigQueryClient:
             client = self._ensure_client()
             job = client.query("SELECT 1 AS ok", location=self.settings.location)
             result = job.result()
-            storage_client = self._get_bqstorage_client()
-            dataframe_kwargs: Dict[str, Any] = {}
-            if storage_client is not None:
-                dataframe_kwargs["bqstorage_client"] = storage_client
-            else:
-                dataframe_kwargs["create_bqstorage_client"] = False
-            df = result.to_dataframe(**dataframe_kwargs)
+            df = result.to_dataframe(create_bqstorage_client=False)
             logger.info(
                 "✅ BigQuery connectivity check succeeded (rows=%d, pandas=%s, db-dtypes=%s)",
                 len(df),

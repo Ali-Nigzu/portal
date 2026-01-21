@@ -69,8 +69,8 @@ def _assert_canonical_event_scope(sql: str) -> None:
 
 def _context(bucket: str) -> QueryContext:
     return QueryContext(
-        org_id="client0",
-        table_name="project.dataset.client0",
+        org_id="clientA",
+        table_name="project.dataset.clientA",
         start=datetime(2024, 1, 1, tzinfo=UTC),
         end=datetime(2024, 1, 2, tzinfo=UTC),
         bucket=bucket,
@@ -80,7 +80,7 @@ def _context(bucket: str) -> QueryContext:
 def test_dashboard_live_flow_preserves_canonical_event_scope() -> None:
     spec = DASHBOARD_SPEC_CATALOGUE["dashboard.live_flow"]
     compiler = SpecCompiler()
-    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
+    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.clientA"))
     _assert_canonical_event_scope(compiled.sql)
 
 
@@ -121,8 +121,8 @@ def test_calendar_uses_timestamp_bounds() -> None:
 
 def test_all_time_range_defaults_to_epoch_start() -> None:
     ctx = QueryContext(
-        org_id="client0",
-        table_name="project.dataset.client0",
+        org_id="clientA",
+        table_name="project.dataset.clientA",
         time_range=TimeRangeKey.ALL_TIME,
     )
     plan = compile_contract_query(Metric.ACTIVITY, [Dimension.TIME], ctx)
@@ -133,8 +133,8 @@ def test_all_time_range_defaults_to_epoch_start() -> None:
 
 def test_time_series_calendar_never_uses_week_interval_for_timestamps() -> None:
     ctx = QueryContext(
-        org_id="client0",
-        table_name="project.dataset.client0",
+        org_id="clientA",
+        table_name="project.dataset.clientA",
         start=datetime(2024, 1, 1, tzinfo=UTC),
         end=datetime(2024, 6, 1, tzinfo=UTC),
         bucket="WEEK",
@@ -159,7 +159,7 @@ def test_kpi_compilation_omits_calendar_generation() -> None:
         },
         "filters": [],
     }
-    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
+    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.clientA"))
     assert "GENERATE_TIMESTAMP_ARRAY" not in compiled.sql
     assert "calendar AS" not in compiled.sql
 
@@ -169,7 +169,7 @@ def test_live_flow_all_time_avoids_dense_calendar() -> None:
     spec["timeWindow"]["from"] = "1970-01-01T00:00:00Z"
     spec["timeWindow"]["to"] = "2024-01-01T00:00:00Z"
     compiler = SpecCompiler()
-    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.client0"))
+    compiled = compiler.compile(spec, CompilerContext(table_name="project.dataset.clientA"))
     assert compiled.sql.count("GENERATE_TIMESTAMP_ARRAY") == 1
     assert "INTERVAL 5 MINUTE" not in compiled.sql
     assert "INTERVAL 7 DAY" in compiled.sql
@@ -221,8 +221,8 @@ def test_retention_final_select_includes_matrix_columns() -> None:
 
 def test_dwell_all_time_grouping_avoids_calendar_cross_join() -> None:
     ctx = QueryContext(
-        org_id="client0",
-        table_name="project.dataset.client0",
+        org_id="clientA",
+        table_name="project.dataset.clientA",
         time_range=TimeRangeKey.ALL_TIME,
     )
     plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME, Dimension.CAMERA], ctx)
@@ -232,8 +232,8 @@ def test_dwell_all_time_grouping_avoids_calendar_cross_join() -> None:
 
 def test_dwell_bucketed_selects_do_not_reference_raw_entrance_ts() -> None:
     ctx = QueryContext(
-        org_id="client0",
-        table_name="project.dataset.client0",
+        org_id="clientA",
+        table_name="project.dataset.clientA",
         time_range=TimeRangeKey.ALL_TIME,
     )
     plan = compile_contract_query(Metric.AVG_DWELL, [Dimension.TIME, Dimension.CAMERA], ctx)

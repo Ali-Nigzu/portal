@@ -24,7 +24,7 @@ def test_login_response_includes_org_id(login_client: TestClient, monkeypatch):
             "password": "secret",
             "role": "client",
             "name": "Client 1",
-            "table_name": "nigzsu.demodata0.client0",
+            "table_name": "example.demo_data.clientA",
         }
     }
     monkeypatch.setattr("backend.fastapi_app.load_users", lambda: fake_users)
@@ -33,11 +33,11 @@ def test_login_response_includes_org_id(login_client: TestClient, monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["user"]["orgId"] == "demodata0.client0"
-    assert body["user"]["org_id"] == "demodata0.client0"
+    assert body["user"]["orgId"] == "demo_data.clientA"
+    assert body["user"]["org_id"] == "demo_data.clientA"
 
 
-def test_login_defaults_admin_to_client0_org(login_client: TestClient, monkeypatch):
+def test_login_defaults_admin_to_clientA_org(login_client: TestClient, monkeypatch):
     fake_users = {
         "admin": {
             "password": "admin123",
@@ -51,5 +51,5 @@ def test_login_defaults_admin_to_client0_org(login_client: TestClient, monkeypat
 
     assert response.status_code == 200
     body = response.json()
-    assert body["user"]["orgId"] == "client0"
-    assert body["user"]["org_id"] == "client0"
+    assert body["user"]["orgId"] == "clientA"
+    assert body["user"]["org_id"] == "clientA"

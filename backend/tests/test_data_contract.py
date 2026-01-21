@@ -18,7 +18,7 @@ UTC = timezone.utc
 
 def _context(**overrides) -> QueryContext:
     base = {
-        "org_id": "client0",
+        "org_id": "clientA",
         "table_name": "project.dataset.events",
         "start": datetime(2024, 1, 1, tzinfo=UTC),
         "end": datetime(2024, 1, 2, tzinfo=UTC),
@@ -28,7 +28,7 @@ def _context(**overrides) -> QueryContext:
 
 
 def test_time_range_resolution_sets_bounds() -> None:
-    ctx = QueryContext(org_id="client0", table_name="project.dataset.events", time_range=TimeRangeKey.LAST_24_HOURS)
+    ctx = QueryContext(org_id="clientA", table_name="project.dataset.events", time_range=TimeRangeKey.LAST_24_HOURS)
     assert ctx.start is not None
     assert ctx.end is not None
     assert ctx.bucket == "HOUR"
@@ -36,13 +36,13 @@ def test_time_range_resolution_sets_bounds() -> None:
 
 
 def test_time_range_week_window() -> None:
-    ctx = QueryContext(org_id="client0", table_name="project.dataset.events", time_range=TimeRangeKey.LAST_7_DAYS)
+    ctx = QueryContext(org_id="clientA", table_name="project.dataset.events", time_range=TimeRangeKey.LAST_7_DAYS)
     assert ctx.bucket == "DAY"
     assert ctx.end - ctx.start == timedelta(days=7)
 
 
 def test_time_range_month_window() -> None:
-    ctx = QueryContext(org_id="client0", table_name="project.dataset.events", time_range=TimeRangeKey.LAST_30_DAYS)
+    ctx = QueryContext(org_id="clientA", table_name="project.dataset.events", time_range=TimeRangeKey.LAST_30_DAYS)
     assert ctx.bucket == "DAY"
     assert ctx.end - ctx.start == timedelta(days=30)
 

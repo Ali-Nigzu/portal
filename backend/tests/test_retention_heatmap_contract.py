@@ -105,12 +105,12 @@ def test_retention_heatmap_chartresult_passes_validator():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"clientA": "example.dataset.clientA"}),
         bigquery_client=stub,
         cache=cache,
     )
 
-    result = engine.execute(_retention_spec(), organisation="client0", bypass_cache=True)
+    result = engine.execute(_retention_spec(), organisation="clientA", bypass_cache=True)
 
     validate_chart_result(result)
     assert _frontend_validate_heatmap(result) == []
@@ -184,12 +184,12 @@ def test_retention_heatmap_all_time_range_fills_matrix():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"clientA": "example.dataset.clientA"}),
         bigquery_client=stub,
         cache=cache,
     )
 
-    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    result = engine.execute(spec, organisation="clientA", bypass_cache=True)
 
     validate_chart_result(result)
     assert _frontend_validate_heatmap(result) == []

@@ -61,7 +61,7 @@ def test_kpi_bundle_reuses_single_query() -> None:
 
     stub = StubBigQueryClient(frame)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "project.dataset.table"}),
+        table_router=TableRouter({"clientA": "project.dataset.table"}),
         bigquery_client=stub,
         cache=SpecCache(LocalCacheBackend(), default_ttl=60),
     )
@@ -70,9 +70,9 @@ def test_kpi_bundle_reuses_single_query() -> None:
     entrances_spec = _with_window("dashboard.kpi.entrances_today")
     dwell_spec = _with_window("dashboard.kpi.avg_dwell_today")
 
-    activity = engine.execute(activity_spec, organisation="client0")
-    entrances = engine.execute(entrances_spec, organisation="client0")
-    dwell = engine.execute(dwell_spec, organisation="client0")
+    activity = engine.execute(activity_spec, organisation="clientA")
+    entrances = engine.execute(entrances_spec, organisation="clientA")
+    dwell = engine.execute(dwell_spec, organisation="clientA")
 
     assert stub.calls == 1
     assert activity["series"][0]["id"] == "activity_total"

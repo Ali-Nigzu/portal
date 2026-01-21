@@ -12,8 +12,8 @@ from backend.app.analytics.data_contract import (
 
 def _compile_sql(metric: Metric, dimensions: list[Dimension]) -> str:
     ctx = QueryContext(
-        org_id="client0",
-        table_name="project.dataset.client0",
+        org_id="clientA",
+        table_name="project.dataset.clientA",
         time_range=TimeRangeKey.ALL_TIME,
     )
     return compile_contract_query(metric, dimensions, ctx).sql

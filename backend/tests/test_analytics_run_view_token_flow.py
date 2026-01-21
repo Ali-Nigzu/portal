@@ -23,8 +23,8 @@ def clear_cache():
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
-    monkeypatch.setenv("BQ_DATASET", "demodata0")
+    monkeypatch.setenv("BQ_PROJECT", "example")
+    monkeypatch.setenv("BQ_DATASET", "demo_data")
     original_map = dict(org_config.ORG_TABLE_MAP)
     org_config.override_org_table_map(org_config.build_org_table_map())
 
@@ -41,7 +41,7 @@ def client(monkeypatch):
             "role": "client",
             "name": "Client 1",
             # Mirrors the live configuration: direct table mapping without compat views.
-            "table_name": "nigzsu.demodata0.client0",
+            "table_name": "example.demo_data.clientA",
             "data_sources": [],
             "last_login": None,
         },
@@ -121,7 +121,7 @@ def test_analytics_run_honours_view_token_flow(client):
     # Admin-style auth used by the dashboard flow
     auth_header = "Basic " + base64.b64encode(b"admin:admin123").decode("ascii")
 
-    # Create a view token for client1 (maps to client0 org via table_name)
+    # Create a view token for client1 (maps to clientA org via table_name)
     token_response = http_client.post(
         "/api/admin/create-view-token", json={"client_id": "client1"}, headers={"Authorization": auth_header}
     )
@@ -138,4 +138,4 @@ def test_analytics_run_honours_view_token_flow(client):
     payload = response.json()
     assert payload["chartType"] == "composed_time"
     assert payload["series"]
-    assert resolved["table"].endswith(".client0")
+    assert resolved["table"].endswith(".clientA")

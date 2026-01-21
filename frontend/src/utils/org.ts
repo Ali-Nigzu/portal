@@ -1,12 +1,11 @@
 import { Credentials } from '../types/credentials';
 
-const DEFAULT_ORG_ID = 'client0';
+const DEFAULT_ORG_ID = 'client1';
 
 const USERNAME_TO_ORG_MAP: Record<string, string> = {
-  client0: 'client0',
   client1: 'client1',
   client2: 'client2',
-  admin: 'client0',
+  admin: 'client1',
 };
 
 export const deriveOrgIdFromTableName = (tableName?: string | null): string | undefined => {

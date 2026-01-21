@@ -704,7 +704,7 @@ class SpecCompiler:
     ) -> str:
         """Canonical events CTE over the resolved org table.
 
-        - Base table is resolved via org routing (e.g. `nigzsu.demodata0.client0`).
+        - Base table is resolved via org routing.
         - Synthetic index reconstructs ordering with
           ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id).
         - Demographic columns are selected raw and aliased (Race → race) for consistent downstream usage.

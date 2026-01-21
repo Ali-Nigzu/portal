@@ -4,7 +4,7 @@ Pydantic Data Models for camOS Analytics API
 
 from datetime import datetime
 from typing import Optional, Dict, List, Any, Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
@@ -39,14 +39,20 @@ class CreateUserRequest(BaseModel):
     password: str
     name: str
     role: str
-    table_name: Optional[str] = None
+    org_id: Optional[str] = Field(default=None, alias="orgId")
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class UpdateUserRequest(BaseModel):
     name: Optional[str] = None
     password: Optional[str] = None
     role: Optional[str] = None
-    table_name: Optional[str] = None
+    org_id: Optional[str] = Field(default=None, alias="orgId")
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class CreateViewTokenRequest(BaseModel):

@@ -92,14 +92,14 @@ def test_table_router_requires_fully_qualified_names():
 
 
 def test_cache_key_includes_table_prefix(chart_spec):
-    key = build_cache_key(chart_spec, table_name="nigzsu.analytics.client0")
-    assert key.startswith("nigzsu.analytics.client0:")
+    key = build_cache_key(chart_spec, table_name="example.analytics.clientA")
+    assert key.startswith("example.analytics.clientA:")
     assert hash_spec(chart_spec) in key
 
 
 def test_compiler_generates_expected_sql(chart_spec):
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="nigzsu.analytics.client0")
+    context = CompilerContext(table_name="example.analytics.clientA")
     compiled = compiler.compile(chart_spec, context)
 
     assert "scoped AS" in compiled.sql
@@ -128,7 +128,7 @@ def test_compiler_supports_text_operators(chart_spec):
         ]
     )
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="nigzsu.analytics.client0")
+    context = CompilerContext(table_name="example.analytics.clientA")
     compiled = compiler.compile(spec, context)
     sql = compiled.sql
     assert "STRPOS" in sql
@@ -167,12 +167,12 @@ def test_engine_executes_and_caches(chart_spec):
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"clientA": "example.dataset.clientA"}),
         bigquery_client=stub,
         cache=cache,
     )
 
-    result = engine.execute(chart_spec, organisation="client0")
+    result = engine.execute(chart_spec, organisation="clientA")
     assert stub.calls == 1
     assert result["chartType"] == "composed_time"
     assert result["series"][0]["id"] == "occupancy"
@@ -182,12 +182,12 @@ def test_engine_executes_and_caches(chart_spec):
     assert result["meta"]["surges"], "Expected surge detection metadata"
 
     # Second call should hit cache and avoid extra BigQuery round-trip
-    cached = engine.execute(chart_spec, organisation="client0")
+    cached = engine.execute(chart_spec, organisation="clientA")
     assert stub.calls == 1
     assert cached == result
 
     # Bypass cache triggers another BigQuery call
-    engine.execute(chart_spec, organisation="client0", bypass_cache=True)
+    engine.execute(chart_spec, organisation="clientA", bypass_cache=True)
     assert stub.calls == 2
 
 
@@ -209,7 +209,7 @@ def test_compiler_generates_dwell_pipeline():
         },
     }
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="nigzsu.analytics.client0")
+    context = CompilerContext(table_name="example.analytics.clientA")
     compiled = compiler.compile(spec, context)
 
     sql = compiled.sql
@@ -236,7 +236,7 @@ def test_compiler_generates_retention_pipeline():
         },
     }
     compiler = SpecCompiler()
-    context = CompilerContext(table_name="nigzsu.analytics.client0")
+    context = CompilerContext(table_name="example.analytics.clientA")
     compiled = compiler.compile(spec, context)
 
     sql = compiled.sql
@@ -286,12 +286,12 @@ def test_engine_normalises_dwell_and_sessions():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"clientA": "example.dataset.clientA"}),
         bigquery_client=stub,
         cache=cache,
     )
 
-    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    result = engine.execute(spec, organisation="clientA", bypass_cache=True)
     assert result["chartType"] == "composed_time"
     dwell_series = next(item for item in result["series"] if item["id"] == "avg_dwell")
     assert dwell_series["unit"] == "minutes"
@@ -345,12 +345,12 @@ def test_engine_normalises_retention_heatmap():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"clientA": "example.dataset.clientA"}),
         bigquery_client=stub,
         cache=cache,
     )
 
-    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    result = engine.execute(spec, organisation="clientA", bypass_cache=True)
     assert result["chartType"] == "retention"
     series = result["series"][0]
     assert series["geometry"] == "heatmap"
@@ -398,11 +398,11 @@ def test_engine_handles_missing_retention_lag_values():
     stub = StubBigQueryClient(frame)
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     engine = AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"clientA": "example.dataset.clientA"}),
         bigquery_client=stub,
         cache=cache,
     )
 
-    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    result = engine.execute(spec, organisation="clientA", bypass_cache=True)
     series = result["series"][0]
     assert series["data"] == []

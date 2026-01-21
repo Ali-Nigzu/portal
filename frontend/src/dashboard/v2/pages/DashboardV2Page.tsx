@@ -685,6 +685,7 @@ const DashboardV2Page = ({
       timezone,
       orgId,
       viewToken,
+      snapshotTimeframe: siteFlowTimeframe,
     })
       .then((result) => {
         if (controller.signal.aborted) {
@@ -739,6 +740,7 @@ const DashboardV2Page = ({
         timezone,
         orgId,
         viewToken,
+        snapshotTimeframe: siteFlowTimeframe,
       });
 
     Promise.all(kinds.map((kind) => loadDemographic(kind)))

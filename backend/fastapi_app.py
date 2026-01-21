@@ -9,7 +9,7 @@ import uuid
 import base64
 import logging
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any, Tuple
 
 from cachetools import TTLCache
@@ -80,6 +80,12 @@ from backend.app.view_tokens import (
     create_view_token,
     validate_view_token,
     view_tokens
+)
+from backend.app.snapshots import (
+    SNAPSHOT_ORG_IDS,
+    fetch_latest_snapshot,
+    is_snapshot_org,
+    SnapshotLookupError,
 )
 from backend.app.analytics.data_contract import (
     Metric,
@@ -208,7 +214,6 @@ async def login(login_request: LoginRequest):
             'username': username,
             'role': user_data['role'],
             'name': user_data['name'],
-            'table_name': user_data.get('table_name', ''),
             'orgId': org_id,
             'org_id': org_id,
         }
@@ -263,15 +268,17 @@ async def get_view_dashboard_info(token: str):
     
     client_data = users[client_id]
     
+    org_id = _org_id_for_user_record(client_id, client_data)
+
     return {
         'client_id': client_id,
         'name': client_data['name'],
-        'table_name': client_data.get('table_name', ''),
+        'orgId': org_id,
         'token_valid': True
     }
 
 
-def _resolve_view_token_context(view_token: str, *, resolve_table: bool = True) -> Tuple[str, Optional[str]]:
+def _resolve_view_token_context(view_token: str) -> str:
     token_data = validate_view_token(view_token)
     if not token_data:
         raise HTTPException(status_code=401, detail="Invalid or expired view token")
@@ -284,12 +291,11 @@ def _resolve_view_token_context(view_token: str, *, resolve_table: bool = True) 
 
     user_record = users[client_id]
     org_id = _org_id_for_user_record(client_id, user_record)
-    table_name = _resolve_table_for_org(org_id) if resolve_table else None
-    return org_id, table_name
+    return org_id
 
 
-def _authenticate_chart_data_request(request: Request, view_token: Optional[str]) -> Tuple[str, str]:
-    """Helper function to authenticate chart data requests (view token or Basic auth)"""
+def _authenticate_chart_data_request(request: Request, view_token: Optional[str]) -> str:
+    """Helper function to authenticate chart data requests (view token or Basic auth)."""
     if view_token:
         return _resolve_view_token_context(view_token)
 
@@ -314,8 +320,7 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
 
             user_record = users[username]
             org_id = _org_id_for_user_record(username, user_record)
-            table_name = _resolve_table_for_org(org_id)
-            return org_id, table_name
+            return org_id
         except HTTPException:
             raise
         except Exception as e:
@@ -351,72 +356,56 @@ def _resolve_table_for_org(org_id: str) -> str:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-def _derive_org_id_from_table_name(table_name: Optional[str]) -> Optional[str]:
-    if not table_name:
-        return None
-
-    segments = [segment.strip() for segment in table_name.split(".") if segment and segment.strip()]
-    if not segments:
-        return None
-
-    # Preserve dataset + table when available so multi-tenant slugs remain distinct
-    table_segment = segments[-1]
-    if table_segment.endswith("_compat"):
-        table_segment = table_segment[: -len("_compat")]
-
-    if len(segments) >= 2:
-        dataset_segment = segments[-2]
-        slug = f"{dataset_segment}.{table_segment}"
-    else:
-        slug = table_segment
-
-    return slug or None
-
-
-_USERNAME_ORG_OVERRIDES = {
-    "admin": "client0",
-}
-
-
 def _org_id_for_user_record(username: str, user_record: Dict[str, Any]) -> str:
     explicit = user_record.get("orgId") or user_record.get("org_id")
     if isinstance(explicit, str) and explicit.strip():
         return explicit.strip()
-    derived = _derive_org_id_from_table_name(user_record.get("table_name"))
-    if derived:
-        return derived
-    override = _USERNAME_ORG_OVERRIDES.get(username)
-    if override:
-        return override
-    return username
+    raise HTTPException(
+        status_code=422,
+        detail={
+            "error": "missing_org",
+            "message": f"User '{username}' is missing orgId configuration",
+        },
+    )
 
 
-def _resolve_analytics_context(
-    request: Request, payload: AnalyticsRunRequest
-) -> Tuple[str, str]:
+def _resolve_analytics_context(request: Request, payload: AnalyticsRunRequest) -> str:
     explicit_org = payload.org_id or request.query_params.get("orgId")
     if explicit_org:
-        return explicit_org, _resolve_table_for_org(explicit_org)
+        return explicit_org
 
     view_token = (
         payload.view_token
         or request.query_params.get("viewToken")
         or request.query_params.get("view_token")
     )
+    if view_token:
+        return _resolve_view_token_context(view_token)
 
-    try:
-        return _authenticate_chart_data_request(request, view_token)
-    except HTTPException as exc:
-        logger.info(
-            "analytics.run.auth_fallback",
-            extra={
-                "reason": getattr(exc, "detail", str(exc)),
-                "status": getattr(exc, "status_code", None),
-            },
-        )
+    raise HTTPException(
+        status_code=422,
+        detail={"error": "missing_org", "message": "orgId or viewToken is required"},
+    )
 
-    default_org = next(iter(org_config.DEFAULT_ORG_TABLE_IDS))
-    return default_org, _resolve_table_for_org(default_org)
+
+def _resolve_snapshot_org(
+    *,
+    org_id: Optional[str],
+    view_token: Optional[str],
+    request: Request,
+) -> str:
+    explicit_org = org_id or request.query_params.get("org") or request.query_params.get("orgId")
+    if explicit_org:
+        return explicit_org
+
+    resolved_view_token = view_token or request.query_params.get("viewToken") or request.query_params.get("view_token")
+    if resolved_view_token:
+        return _resolve_view_token_context(resolved_view_token)
+
+    raise HTTPException(
+        status_code=422,
+        detail={"error": "missing_org", "message": "org or viewToken is required"},
+    )
 
 
 @app.get("/api/chart-data", response_model=ChartDataResponse)
@@ -432,6 +421,13 @@ async def get_chart_data(
     view_token: Optional[str] = None
 ):
     """Return analytics payload backed by BigQuery aggregations."""
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "error": "snapshots_only",
+            "message": "Chart analytics are disabled in snapshots-only mode",
+        },
+    )
     try:
         org_id, table_name = _authenticate_chart_data_request(request, view_token)
 
@@ -604,6 +600,13 @@ async def search_events(
     view_token: Optional[str] = None
 ):
     """Search BigQuery event logs with pagination."""
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "error": "snapshots_only",
+            "message": "Event search is disabled in snapshots-only mode",
+        },
+    )
     try:
         _org_id, table_name = _authenticate_chart_data_request(request, view_token)
 
@@ -688,123 +691,71 @@ async def search_events(
         raise HTTPException(status_code=500, detail=f"Failed to search events: {exc}")
 
 
+@app.get("/api/snapshots/latest")
+async def get_latest_snapshot(
+    request: Request,
+    org: Optional[str] = Query(None, alias="org"),
+    ts: Optional[str] = Query(None, alias="ts"),
+    view_token: Optional[str] = Query(None, alias="viewToken"),
+):
+    resolved_org = _resolve_snapshot_org(org_id=org, view_token=view_token, request=request)
+    if not is_snapshot_org(resolved_org):
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "unknown_org",
+                "message": f"Snapshots are only available for {sorted(SNAPSHOT_ORG_IDS)}",
+            },
+        )
+
+    resolved_ts: Optional[datetime] = None
+    if ts:
+        try:
+            resolved_ts = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "invalid_timestamp", "message": "ts must be ISO-8601"},
+            ) from exc
+
+    try:
+        snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
+    except SnapshotLookupError as exc:
+        logger.error("Snapshot lookup failed for %s: %s", resolved_org, exc)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "snapshot_lookup_failed", "message": str(exc)},
+        ) from exc
+
+    if snapshot is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "snapshot_not_found", "message": "No snapshot found"},
+        )
+
+    return {
+        "ts": snapshot.ts,
+        "payload": snapshot.payload,
+        "mode": "snapshots",
+        "orgId": snapshot.org_id,
+    }
+
+
 @app.post("/analytics/run")
 @app.post("/api/analytics/run")
 async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
+    org_id = _resolve_analytics_context(request, payload)
     logger.info(
-        "analytics.run.start",
-        extra={"spec_id": payload.spec.get("id"), "org": payload.org_id},
+        "analytics.run.blocked",
+        extra={"spec_id": payload.spec.get("id"), "org": org_id},
     )
-    spec = ensure_time_window(dict(payload.spec))
-    try:
-        validate_chart_spec(spec)
-    except ContractValidationError as exc:
-        logger.warning("Analytics spec validation failed: %s", exc)
-        raise HTTPException(
-            status_code=422,
-            detail={"error": "invalid_spec", "message": str(exc)},
-        ) from exc
-
-    org_id, table_name = _resolve_analytics_context(request, payload)
-    logger.info(
-        "analytics.run.resolved_table",
-        extra={"org": org_id, "table": table_name},
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "error": "snapshots_only",
+            "message": "Analytics run is disabled in snapshots-only mode",
+        },
     )
-    if ANALYTICS_OFFLINE_MODE:
-        try:
-            result = build_offline_chart_result(spec)
-            logger.info(
-                "analytics.run.offline_result",
-                extra={"spec_id": payload.spec.get("id"), "org": org_id},
-            )
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.exception("Analytics offline fixture failed for %s", org_id)
-            raise HTTPException(
-                status_code=500,
-                detail={"error": "offline_fixture_failed", "message": str(exc)},
-            ) from exc
-    else:
-        timestamp_columns = org_config.build_org_event_timestamp_columns()
-        resolved_timestamp = timestamp_columns.get(org_id)
-
-        engine = AnalyticsEngine(
-            table_router=TableRouter(
-                {org_id: table_name}, timestamp_columns=timestamp_columns
-            ),
-            bigquery_client=bigquery_client,
-            cache=analytics_spec_cache,
-        )
-
-        try:
-            result = engine.execute(
-                spec,
-                organisation=org_id,
-                bypass_cache=payload.bypass_cache,
-                cache_ttl=payload.cache_ttl_seconds,
-            )
-        except ContractValidationError as exc:
-            logger.warning("Analytics execution rejected spec for %s: %s", org_id, exc)
-            raise HTTPException(
-                status_code=422,
-                detail={"error": "invalid_spec", "message": str(exc)},
-            ) from exc
-        except BigQueryDataFrameError as exc:
-            logger.error(
-                "Analytics run failed for %s (job_id=%s): %s", org_id, exc.job_id, exc
-            )
-            raise HTTPException(
-                status_code=502,
-                detail={
-                    "error": "bigquery_error",
-                    "message": str(exc),
-                    "jobId": exc.job_id,
-                },
-            ) from exc
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.exception("Analytics run execution error for %s", org_id)
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "error": "analytics_execution_failed",
-                    "message": str(exc),
-                },
-            ) from exc
-
-    spec_id = payload.spec.get("id") if isinstance(payload.spec, dict) else None
-    if spec_id == "kpi-vrm-traffic":
-        try:
-            sample_series = []
-            for series in result.get("series", [])[:5]:
-                sample_series.append(
-                    {
-                        "id": series.get("id"),
-                        "geometry": series.get("geometry"),
-                        "unit": series.get("unit"),
-                        "data": series.get("data", [])[:10],
-                    }
-                )
-            logger.info(
-                "analytics.run.debug_traffic",
-                extra={
-                    "org": org_id,
-                    "spec_id": spec_id,
-                    "chart_type": result.get("chartType"),
-                    "chart_style": (result.get("meta", {}) or {})
-                    .get("summary", {})
-                    .get("chartStyle"),
-                    "chart_sub_type": (result.get("meta", {}) or {})
-                    .get("summary", {})
-                    .get("chartSubType"),
-                    "x_dimension": result.get("xDimension"),
-                    "series_preview": sample_series,
-                },
-            )
-        except Exception:  # pragma: no cover - debug logging only
-            logger.exception("analytics.run.debug_traffic_logging_failed")
-
-    return result
 
 
 @app.get("/analytics/run")
@@ -827,7 +778,7 @@ async def get_users(user: dict = Depends(authenticate_user)):
             'username': username,
             'name': user_data['name'],
             'role': user_data['role'],
-            'table_name': user_data.get('table_name', ''),
+            'orgId': user_data.get('orgId') or user_data.get('org_id'),
             'last_login': user_data.get('last_login'),
             'data_sources': user_data.get('data_sources', [])
         })
@@ -848,12 +799,15 @@ async def create_user(
     
     if create_request.username in users:
         raise HTTPException(status_code=400, detail="Username already exists")
+
+    if create_request.role == "client" and not create_request.org_id:
+        raise HTTPException(status_code=422, detail="Client users must include orgId")
     
     users[create_request.username] = {
         'password': hash_password(create_request.password),
         'name': create_request.name,
         'role': create_request.role,
-        'table_name': create_request.table_name or '',
+        'orgId': create_request.org_id,
         'last_login': None,
         'data_sources': []
     }
@@ -885,8 +839,8 @@ async def update_user(
         users[username]['password'] = hash_password(update_request.password)
     if update_request.role is not None:
         users[username]['role'] = update_request.role
-    if update_request.table_name is not None:
-        users[username]['table_name'] = update_request.table_name
+    if update_request.org_id is not None:
+        users[username]['orgId'] = update_request.org_id
     
     save_users(users)
     
@@ -1425,7 +1379,7 @@ async def fetch_dashboard_manifest(
     """Return the dashboard manifest for the requested organisation."""
     resolved_view_token = view_token or request.query_params.get("view_token")
     if resolved_view_token:
-        org_id, _ = _resolve_view_token_context(resolved_view_token, resolve_table=False)
+        org_id = _resolve_view_token_context(resolved_view_token)
 
     if not org_id:
         raise HTTPException(
@@ -1523,5 +1477,3 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
-
-
