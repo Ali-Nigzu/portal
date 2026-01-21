@@ -210,16 +210,16 @@ const inferBucketForLegacy = (
     return "RAW";
   }
   if (timeframe === "last_week") {
-    return length <= 7 ? "DAY" : "HOUR";
+    return "DAY";
   }
   if (timeframe === "last_month") {
     return length <= 7 ? "WEEK" : "DAY";
   }
   if (timeframe === "last_quarter") {
-    return length <= 4 ? "MONTH" : "WEEK";
+    return "WEEK";
   }
   if (timeframe === "last_year") {
-    return length <= 12 ? "MONTH" : "WEEK";
+    return "MONTH";
   }
   return length <= 12 ? "MONTH" : "WEEK";
 };
@@ -264,19 +264,15 @@ const buildAnchoredTimestamps = (
   }
 
   if (timeframe === "last_quarter") {
-    const start = startOfQuarter(anchor);
-    if (length <= 4) {
-      return Array.from({ length }, (_, index) => addMonths(start, index));
-    }
+    const endWeekStart = startOfWeek(anchor);
+    const start = addDays(endWeekStart, -7 * (length - 1));
     return Array.from({ length }, (_, index) => addDays(start, index * 7));
   }
 
   if (timeframe === "last_year") {
-    const start = startOfYear(anchor);
-    if (length <= 12) {
-      return Array.from({ length }, (_, index) => addMonths(start, index));
-    }
-    return Array.from({ length }, (_, index) => addDays(start, index * 7));
+    const endMonthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 0, 0, 0, 0);
+    const start = addMonths(endMonthStart, -(length - 1));
+    return Array.from({ length }, (_, index) => addMonths(start, index));
   }
 
   const start = startOfYear(anchor);
@@ -288,10 +284,21 @@ const buildAnchoredTimestamps = (
 
 const sliceSeries = (values: number[], count: number): number[] => values.slice(0, count);
 
+const lastNonZeroIndex = (values: number[]): number => {
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if (values[index] !== 0) {
+      return index;
+    }
+  }
+  return -1;
+};
+
 const buildSiteFlowResult = (
   rollup: unknown[],
   snapshotTs: Date,
   timeframe: SiteFlowTimeframe,
+  snapshotTsRaw?: string,
+  source?: string,
 ): ChartResult => {
   const entrances = asNumberArray(rollup?.[0]);
   const exits = asNumberArray(rollup?.[1]);
@@ -307,17 +314,30 @@ const buildSiteFlowResult = (
     occupancyMax.length,
   );
 
-  let sliceCount = length;
+  const desiredLength =
+    timeframe === "last_week" ? 7 : timeframe === "last_quarter" ? 12 : timeframe === "last_year" ? 12 : length;
+
+  let sliceCount = Math.min(length, desiredLength);
   if (timeframe === "today" && length > 0) {
-    const start = startOfDay(snapshotTs);
-    const elapsedMs = snapshotTs.getTime() - start.getTime();
-    const bucketMs = DAY_MS / length;
-    const lastIndex = Math.floor(elapsedMs / bucketMs);
-    sliceCount = clamp(lastIndex + 1, 0, length);
+    const lastNonZero = Math.max(
+      lastNonZeroIndex(entrances),
+      lastNonZeroIndex(exits),
+      lastNonZeroIndex(occupancyAvg),
+      lastNonZeroIndex(occupancyMin),
+      lastNonZeroIndex(occupancyMax),
+    );
+    sliceCount = clamp(lastNonZero + 1, 0, length);
   }
 
   const timestamps = buildAnchoredTimestamps(timeframe, snapshotTs, sliceCount);
   const bucket = inferBucketForLegacy(timeframe, sliceCount);
+  const bucketStepMs =
+    sliceCount > 1 ? timestamps[1].getTime() - timestamps[0].getTime() : null;
+  const nonZeroLastIndex = Math.max(
+    lastNonZeroIndex(entrances),
+    lastNonZeroIndex(exits),
+    lastNonZeroIndex(occupancyAvg),
+  );
 
   const buildSeries = (id: string, values: number[]): ChartSeries => ({
     id,
@@ -343,6 +363,31 @@ const buildSiteFlowResult = (
       y: occupancyAvg[index] ?? null,
     })),
   };
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("[Snapshots] Site Flow debug", {
+      snapshotTsRaw,
+      snapshotTsParsed: snapshotTs.toISOString(),
+      timeframe,
+      source,
+      valuesLength: {
+        entrances: entrances.length,
+        exits: exits.length,
+        occupancyAvg: occupancyAvg.length,
+        occupancyMin: occupancyMin.length,
+        occupancyMax: occupancyMax.length,
+      },
+      bucket,
+      bucketStepMs,
+      sliceCount,
+      computedStartIso: timestamps[0]?.toISOString(),
+      computedEndIso: timestamps[timestamps.length - 1]?.toISOString(),
+      firstPointXIso: timestamps[0]?.toISOString(),
+      lastPointXIso: timestamps[timestamps.length - 1]?.toISOString(),
+      nonZeroLastIndex,
+    });
+  }
 
   return {
     chartType: "composed_time",
@@ -902,7 +947,8 @@ export const buildSnapshotWidgetResult = (
       const rollups = payload[7];
       const rollupIndex = ROLLUP_INDEX[timeframe];
       const rollup = Array.isArray(rollups) ? (rollups[rollupIndex] as unknown[]) : [];
-      return buildSiteFlowResult(rollup ?? [], snapshotTs, timeframe);
+      const source = Array.isArray(rollups) ? `rollup_${rollupIndex}` : "unknown";
+      return buildSiteFlowResult(rollup ?? [], snapshotTs, timeframe, snapshot.ts, source);
     }
     case "site-flow-demographics-age": {
       const rollups = payload[7];
