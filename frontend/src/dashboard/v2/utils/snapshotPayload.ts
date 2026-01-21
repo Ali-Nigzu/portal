@@ -256,10 +256,12 @@ const buildAnchoredTimestamps = (
   }
 
   if (timeframe === "last_month") {
-    const start = startOfMonth(anchor);
-    if (length <= 7) {
+    if (length <= 5) {
+      const endWeekStart = startOfWeek(anchor);
+      const start = addDays(endWeekStart, -7 * (length - 1));
       return Array.from({ length }, (_, index) => addDays(start, index * 7));
     }
+    const start = startOfMonth(anchor);
     return Array.from({ length }, (_, index) => addDays(start, index));
   }
 
@@ -327,26 +329,28 @@ const buildSiteFlowResult = (
   let sliceCount = timeframe === "last_week" || timeframe === "last_quarter" || timeframe === "last_year"
     ? desiredLength
     : length;
+  const idxNonZero = Math.max(
+    lastNonZeroIndex(entrances),
+    lastNonZeroIndex(exits),
+    lastNonZeroIndex(occupancyAvg),
+  );
+  let idxNow: number | null = null;
+  let sliceLenTime: number | null = null;
   if (timeframe === "today" && length > 0) {
-    const lastNonZero = Math.max(
-      lastNonZeroIndex(entrances),
-      lastNonZeroIndex(exits),
-      lastNonZeroIndex(occupancyAvg),
-      lastNonZeroIndex(occupancyMin),
-      lastNonZeroIndex(occupancyMax),
-    );
-    sliceCount = clamp(lastNonZero + 1, 0, length);
+    const start = startOfDay(snapshotTs);
+    const elapsedMs = snapshotTs.getTime() - start.getTime();
+    const bucketMs = DAY_MS / length;
+    idxNow = Math.floor(elapsedMs / bucketMs);
+    sliceLenTime = clamp(idxNow + 1, 0, length);
+    const sliceLenNonZero = idxNonZero >= 0 ? idxNonZero + 1 : sliceLenTime;
+    sliceCount = Math.min(sliceLenTime, sliceLenNonZero);
   }
 
   const timestamps = buildAnchoredTimestamps(timeframe, snapshotTs, sliceCount);
   const bucket = inferBucketForLegacy(timeframe, sliceCount);
   const bucketStepMs =
     sliceCount > 1 ? timestamps[1].getTime() - timestamps[0].getTime() : null;
-  const nonZeroLastIndex = Math.max(
-    lastNonZeroIndex(entrances),
-    lastNonZeroIndex(exits),
-    lastNonZeroIndex(occupancyAvg),
-  );
+  const nonZeroLastIndex = idxNonZero;
 
   const normalizedEntrances = normalizeSeriesLength(entrances, sliceCount);
   const normalizedExits = normalizeSeriesLength(exits, sliceCount);
@@ -396,12 +400,14 @@ const buildSiteFlowResult = (
       },
       bucket,
       bucketStepMs,
+      idxNow,
+      sliceLenTime,
+      nonZeroLastIndex,
       sliceCount,
       computedStartIso: timestamps[0]?.toISOString(),
       computedEndIso: timestamps[timestamps.length - 1]?.toISOString(),
       firstPointXIso: timestamps[0]?.toISOString(),
       lastPointXIso: timestamps[timestamps.length - 1]?.toISOString(),
-      nonZeroLastIndex,
     });
   }
 
