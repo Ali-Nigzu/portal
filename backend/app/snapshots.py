@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Iterable, Optional
 
 from google.cloud import bigquery
@@ -14,7 +14,6 @@ from .bigquery_client import bigquery_client
 
 SNAPSHOT_ORG_IDS = {"client1", "client2"}
 
-_ORG_COLUMN_CANDIDATES = ("org_id", "org", "client_id")
 _TIMESTAMP_COLUMN_CANDIDATES = ("ts", "timestamp", "snapshot_ts", "created_at")
 _PAYLOAD_COLUMN_CANDIDATES = ("payload", "snapshot_payload", "data")
 
@@ -58,10 +57,9 @@ def _resolve_snapshot_columns() -> tuple[str, str, str]:
     table_name = _snapshot_table_name()
     table = client.get_table(table_name)
     column_names = {field.name for field in table.schema}
-    org_column = _select_column(column_names, _ORG_COLUMN_CANDIDATES, "org")
     ts_column = _select_column(column_names, _TIMESTAMP_COLUMN_CANDIDATES, "timestamp")
     payload_column = _select_column(column_names, _PAYLOAD_COLUMN_CANDIDATES, "payload")
-    return org_column, ts_column, payload_column
+    return ts_column, payload_column
 
 
 def _coerce_payload(raw: Any) -> list[Any]:
@@ -82,27 +80,28 @@ def _format_timestamp(value: Any) -> str:
     return str(value)
 
 
-def fetch_latest_snapshot(org_id: str) -> Optional[SnapshotRow]:
+def fetch_latest_snapshot(org_id: str, *, as_of: Optional[datetime] = None) -> Optional[SnapshotRow]:
     normalized = _normalize_org_id(org_id)
     table_name = _snapshot_table_name()
-    org_column, ts_column, payload_column = _resolve_snapshot_columns()
+    ts_column, payload_column = _resolve_snapshot_columns()
+    resolved_as_of = as_of or datetime.now(timezone.utc)
 
     sql = (
         f"SELECT {ts_column} AS ts, {payload_column} AS payload "
         f"FROM `{table_name}` "
-        f"WHERE {org_column} = @org_id "
+        f"WHERE {ts_column} <= @as_of "
         f"ORDER BY {ts_column} DESC "
         f"LIMIT 1"
     )
     job_config = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("org_id", "STRING", normalized)]
+        query_parameters=[bigquery.ScalarQueryParameter("as_of", "TIMESTAMP", resolved_as_of)]
     )
     client = bigquery_client._ensure_client()
     job = client.query(sql, job_config=job_config, location=bigquery_client.settings.location)
-    rows = list(job.result())
-    if not rows:
+    result = job.result(page_size=1)
+    row = next(iter(result), None)
+    if not row:
         return None
-    row = rows[0]
     return SnapshotRow(
         org_id=normalized,
         ts=_format_timestamp(row["ts"]),

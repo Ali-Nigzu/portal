@@ -9,7 +9,7 @@ import uuid
 import base64
 import logging
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any, Tuple
 
 from cachetools import TTLCache
@@ -695,6 +695,7 @@ async def search_events(
 async def get_latest_snapshot(
     request: Request,
     org: Optional[str] = Query(None, alias="org"),
+    ts: Optional[str] = Query(None, alias="ts"),
     view_token: Optional[str] = Query(None, alias="viewToken"),
 ):
     resolved_org = _resolve_snapshot_org(org_id=org, view_token=view_token, request=request)
@@ -707,8 +708,18 @@ async def get_latest_snapshot(
             },
         )
 
+    resolved_ts: Optional[datetime] = None
+    if ts:
+        try:
+            resolved_ts = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "invalid_timestamp", "message": "ts must be ISO-8601"},
+            ) from exc
+
     try:
-        snapshot = fetch_latest_snapshot(resolved_org)
+        snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
     except SnapshotLookupError as exc:
         logger.error("Snapshot lookup failed for %s: %s", resolved_org, exc)
         raise HTTPException(
