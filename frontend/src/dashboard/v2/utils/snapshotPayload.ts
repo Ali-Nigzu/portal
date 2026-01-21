@@ -11,6 +11,7 @@ export interface SnapshotResponse {
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const NAIVE_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/;
 
 const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
   today: 0,
@@ -52,6 +53,13 @@ const toIso = (value: Date): string => value.toISOString();
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
+
+const parseSnapshotTimestamp = (value: string): Date => {
+  if (NAIVE_TIMESTAMP_REGEX.test(value)) {
+    return new Date(`${value.replace(" ", "T")}Z`);
+  }
+  return new Date(value);
+};
 
 const buildTimeSeriesPoints = (values: number[], end: Date, stepMs: number): DataPoint[] =>
   values.map((value, index) => ({
@@ -108,6 +116,7 @@ const buildTrafficResult = (values: number[]): ChartResult => {
         presentation: "vrm",
         chartStyle: "traffic_distribution",
         chartSubType: "traffic_distribution",
+        traffic_distribution_source: "snapshot_pct",
         title: "Traffic Split",
       },
     },
@@ -170,6 +179,9 @@ const buildCapacityResult = (values: number[]): ChartResult => {
         chartSubType: "capacity_usage",
         title: "Capacity",
         headlineValue: currentPct,
+        capacity_usage_source: "snapshot_pct",
+        capacity_current_pct: currentPct,
+        capacity_peak_pct: peakPct,
       },
     },
   };
@@ -807,7 +819,7 @@ export const buildSnapshotWidgetResult = (
   snapshot: SnapshotResponse,
   timeframe: SiteFlowTimeframe,
 ): ChartResult => {
-  const snapshotTs = new Date(snapshot.ts);
+  const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
   const payload = snapshot.payload ?? [];
   if (!Array.isArray(payload)) {
     throw new Error("Snapshot payload is not an array");
