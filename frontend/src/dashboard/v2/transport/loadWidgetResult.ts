@@ -5,6 +5,9 @@ import { validateChartResult } from "../../../analytics/components/ChartRenderer
 import { loadChartFixture, type ChartFixtureName } from "../../../analytics/utils/loadChartFixture";
 import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildWidgetSpec } from "../utils/buildWidgetSpec";
+import { isSnapshotOrg } from "../utils/snapshotMode";
+import { buildSnapshotWidgetResult, type SnapshotResponse } from "../utils/snapshotPayload";
+import type { SiteFlowTimeframe } from "../utils/siteFlowTimeframe";
 
 // DEBUG MAP (temporary)
 // - Site Flow widget transport: frontend/src/dashboard/v2/transport/loadWidgetResult.ts
@@ -19,9 +22,11 @@ export interface LoadWidgetOptions {
   timezone?: string;
   orgId?: string;
   viewToken?: string;
+  snapshotTimeframe?: SiteFlowTimeframe;
 }
 
 const DASHBOARD_RUN_ENDPOINT = "/api/analytics/run";
+const SNAPSHOT_ENDPOINT = "/api/snapshots/latest";
 const MIN_ANALYTICS_TIMEOUT_MS = 3_600_000; // 1 hour safeguard to align with backend allowance
 
 const envAnalyticsTimeoutMs = Number(process.env.REACT_APP_DASHBOARD_ANALYTICS_TIMEOUT_MS);
@@ -37,6 +42,32 @@ export const isAbortError = (error: unknown): boolean => {
   }
   return typeof error === "object" && error !== null && (error as { name?: string }).name === "AbortError";
 };
+
+async function loadSnapshotPayload(
+  options: { signal?: AbortSignal; orgId?: string; viewToken?: string },
+): Promise<SnapshotResponse> {
+  const params = new URLSearchParams();
+  if (options.viewToken) {
+    params.append("viewToken", options.viewToken);
+  } else if (options.orgId) {
+    params.append("org", options.orgId);
+  } else {
+    throw new Error("orgId or viewToken is required to load snapshots");
+  }
+
+  const response = await fetch(`${API_BASE_URL}${SNAPSHOT_ENDPOINT}?${params.toString()}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Snapshot fetch failed: ${response.status} ${text}`);
+  }
+
+  return (await response.json()) as SnapshotResponse;
+}
 
 async function runLiveQuery(
   body: unknown,
@@ -142,6 +173,9 @@ export async function loadWidgetResult(
   const { signal, timeRange, timezone, mode, orgId, viewToken } = options;
   const spec = buildWidgetSpec(widget, { timeRange, timezone });
   const selectedMode = resolveMode(widget, mode);
+  const snapshotTimeframe = options.snapshotTimeframe ?? "all_time";
+  const shouldUseSnapshots =
+    selectedMode === "live" && (Boolean(viewToken) || isSnapshotOrg(orgId));
 
   let result: ChartResult;
   logInfo("dashboard.widgets", "load_start", {
@@ -156,6 +190,9 @@ export async function loadWidgetResult(
         throw new Error(`Widget ${widget.id} is missing a fixture mapping`);
       }
       result = await loadChartFixture(widget.fixtureId as ChartFixtureName);
+    } else if (shouldUseSnapshots) {
+      const snapshot = await loadSnapshotPayload({ signal, orgId, viewToken });
+      result = buildSnapshotWidgetResult(widget.id, snapshot, snapshotTimeframe);
     } else {
       const payload = viewToken ? { spec, viewToken } : { spec, orgId };
       result = await runLiveQuery(payload, {

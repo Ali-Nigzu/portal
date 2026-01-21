@@ -54,7 +54,7 @@ def _vrm_traffic_spec() -> dict:
 
 @pytest.mark.parametrize("endpoint", ["/analytics/run", "/api/analytics/run"])
 def test_offline_mode_returns_fixture(client, endpoint):
-    response = client.post(endpoint, json={"spec": _vrm_traffic_spec(), "orgId": "client0"})
+    response = client.post(endpoint, json={"spec": _vrm_traffic_spec(), "orgId": "clientA"})
     assert response.status_code == 200
     payload = response.json()
     validate_chart_result(payload)

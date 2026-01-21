@@ -29,15 +29,15 @@ def _build_spec() -> dict:
 
 
 def test_compiled_sql_targets_direct_table(monkeypatch):
-    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
-    monkeypatch.setenv("BQ_DATASET", "demodata0")
+    monkeypatch.setenv("BQ_PROJECT", "example")
+    monkeypatch.setenv("BQ_DATASET", "demo_data")
 
     original = dict(org_config.ORG_TABLE_MAP)
     org_config.override_org_table_map(org_config.build_org_table_map())
 
     try:
-        table_name = org_config.resolve_table_for_org("client0")
-        assert table_name == "nigzsu.demodata0.client0"
+        table_name = org_config.resolve_table_for_org("clientA")
+        assert table_name == "example.demo_data.clientA"
         captured: dict[str, object] = {}
 
         class CapturingClient:
@@ -49,23 +49,23 @@ def test_compiled_sql_targets_direct_table(monkeypatch):
                 )
 
         engine = AnalyticsEngine(
-            table_router=TableRouter({"client0": table_name}),
+            table_router=TableRouter({"clientA": table_name}),
             bigquery_client=CapturingClient(),
             cache=SpecCache(LocalCacheBackend()),
         )
 
-        engine.execute(_build_spec(), organisation="client0", bypass_cache=True)
+        engine.execute(_build_spec(), organisation="clientA", bypass_cache=True)
 
         sql = captured.get("sql") or ""
-        assert "client0_compat" not in sql
-        assert "nigzsu.demodata0.client0" in sql
+        assert "clientA_compat" not in sql
+        assert "example.demo_data.clientA" in sql
     finally:
         org_config.override_org_table_map(original)
 
 
 def test_analytics_run_pipeline_uses_direct_table(monkeypatch):
-    monkeypatch.setenv("BQ_PROJECT", "nigzsu")
-    monkeypatch.setenv("BQ_DATASET", "demodata0")
+    monkeypatch.setenv("BQ_PROJECT", "example")
+    monkeypatch.setenv("BQ_DATASET", "demo_data")
 
     import importlib
     import pandas as pd
@@ -95,12 +95,12 @@ def test_analytics_run_pipeline_uses_direct_table(monkeypatch):
 
         response = client.post(
             "/api/analytics/run",
-            json={"spec": _build_spec(), "orgId": "client0", "bypassCache": True},
+            json={"spec": _build_spec(), "orgId": "clientA", "bypassCache": True},
         )
 
         assert response.status_code == 200
         sql = captured.get("sql") or ""
-        assert "client0_compat" not in sql
-        assert "nigzsu.demodata0.client0" in sql
+        assert "clientA_compat" not in sql
+        assert "example.demo_data.clientA" in sql
     finally:
         org_config.override_org_table_map(original_map)

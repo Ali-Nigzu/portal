@@ -24,7 +24,7 @@ class BoundsStubBigQueryClient:
 def _build_engine(stub: BoundsStubBigQueryClient) -> AnalyticsEngine:
     cache = SpecCache(LocalCacheBackend(), default_ttl=60)
     return AnalyticsEngine(
-        table_router=TableRouter({"client0": "nigzsu.dataset.client0"}),
+        table_router=TableRouter({"clientA": "example.dataset.clientA"}),
         bigquery_client=stub,
         cache=cache,
     )
@@ -52,7 +52,7 @@ def test_live_flow_all_time_rewrites_epoch_bounds() -> None:
     stub = BoundsStubBigQueryClient(bounds_frame, data_frame)
     engine = _build_engine(stub)
 
-    engine.execute(spec, organisation="client0", bypass_cache=True)
+    engine.execute(spec, organisation="clientA", bypass_cache=True)
 
     assert len(stub.calls) == 2
     compiled_params = stub.calls[1]["params"]
@@ -70,7 +70,7 @@ def test_live_flow_all_time_empty_bounds_returns_empty_series() -> None:
     stub = BoundsStubBigQueryClient(bounds_frame, data_frame)
     engine = _build_engine(stub)
 
-    result = engine.execute(spec, organisation="client0", bypass_cache=True)
+    result = engine.execute(spec, organisation="clientA", bypass_cache=True)
 
     assert len(stub.calls) == 1
     assert result["chartType"] == "composed_time"

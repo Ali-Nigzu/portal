@@ -35,7 +35,7 @@ def _spec_with_window(end: str) -> dict:
 def test_now_param_clamps_to_current_time(monkeypatch):
     monkeypatch.setattr(compiler, "datetime", FixedDatetime)
     spec = _spec_with_window("2024-01-05T00:00:00Z")
-    compiled = SpecCompiler().compile(spec, CompilerContext(table_name="project.dataset.client0"))
+    compiled = SpecCompiler().compile(spec, CompilerContext(table_name="project.dataset.clientA"))
 
     assert compiled.params["now"].startswith("2024-01-03T12:00:00+")
 
@@ -43,6 +43,6 @@ def test_now_param_clamps_to_current_time(monkeypatch):
 def test_now_param_uses_end_when_before_now(monkeypatch):
     monkeypatch.setattr(compiler, "datetime", FutureDatetime)
     spec = _spec_with_window("2024-01-02T00:00:00Z")
-    compiled = SpecCompiler().compile(spec, CompilerContext(table_name="project.dataset.client0"))
+    compiled = SpecCompiler().compile(spec, CompilerContext(table_name="project.dataset.clientA"))
 
     assert compiled.params["now"].startswith("2024-01-02T00:00:00+")

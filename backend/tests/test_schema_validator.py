@@ -42,7 +42,7 @@ def build_table(columns, partition_field="timestamp", clustering=("site_id", "ca
 def test_validate_events_table_passes_with_expected_configuration():
     table = build_table(EVENT_COLUMNS)
     client = FakeClient(table)
-    result = validate_events_table(client, "nigzsu.client_events.client0")
+    result = validate_events_table(client, "example.client_events.clientA")
 
     assert isinstance(result, TableValidationResult)
     assert result.is_valid
@@ -55,7 +55,7 @@ def test_validate_events_table_detects_missing_columns_and_partitioning():
     table = build_table(columns, partition_field=None, clustering=("site_id",))
     client = FakeClient(table)
 
-    result = validate_events_table(client, "nigzsu.client_events.client1")
+    result = validate_events_table(client, "example.client_events.client1")
 
     assert not result.is_valid
     assert result.missing_columns == ["age_bucket"]
@@ -68,7 +68,7 @@ def test_validate_events_table_flags_unexpected_columns_and_partition_field():
     table = build_table(columns, partition_field="created_at")
     client = FakeClient(table)
 
-    result = validate_events_table(client, "nigzsu.client_events.client2")
+    result = validate_events_table(client, "example.client_events.client2")
 
     assert not result.is_valid
     assert result.unexpected_columns == ["extra_col"]

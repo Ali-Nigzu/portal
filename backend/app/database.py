@@ -29,6 +29,7 @@ def load_users():
                 "password": hash_password("admin123"),
                 "role": "admin",
                 "name": "System Administrator",
+                "orgId": "client1",
                 "last_login": None,
                 "data_sources": []
             },
@@ -36,7 +37,7 @@ def load_users():
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "table_name": "demodata0.client0",
+                "orgId": "client1",
                 "last_login": None,
                 "data_sources": []
             },
@@ -44,7 +45,7 @@ def load_users():
                 "password": hash_password("client456"),
                 "role": "client",
                 "name": "Test Client 2",
-                "table_name": "demodata0.client1",
+                "orgId": "client2",
                 "last_login": None,
                 "data_sources": []
             }
@@ -63,6 +64,12 @@ def load_users():
             modified = True
         if 'data_sources' not in user_data:
             user_data['data_sources'] = []
+            modified = True
+        if 'orgId' not in user_data and 'org_id' not in user_data:
+            if user_data.get('role') == 'client':
+                user_data['orgId'] = username
+            else:
+                user_data['orgId'] = 'client1'
             modified = True
     
     if modified:
@@ -87,27 +94,10 @@ def save_users(users_data: dict):
 
 
 def get_active_table_name(client_id: str, users: dict) -> Optional[str]:
-    """Get the fully-qualified analytics table for a client."""
+    """Legacy table lookup (unused in snapshots-only mode)."""
     if client_id not in users:
         return None
-
-    client_data = users[client_id]
-    table_name = client_data.get('table_name')
-
-    if not table_name:
-        return None
-
-    if table_name.count('.') == 1:
-        project = os.getenv('BQ_PROJECT')
-        if project:
-            return f"{project}.{table_name}"
-    if table_name.count('.') < 1:
-        project = os.getenv('BQ_PROJECT')
-        dataset = os.getenv('BQ_DATASET')
-        if project and dataset:
-            return f"{project}.{dataset}.{table_name}"
-
-    return table_name
+    return None
 
 
 def load_alarm_logs():

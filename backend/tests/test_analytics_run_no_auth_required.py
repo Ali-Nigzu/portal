@@ -53,7 +53,7 @@ def test_analytics_run_allows_dev_requests_without_auth(monkeypatch):
     monkeypatch.setenv("BQ_DATASET", "dataset")
 
     original_map = dict(org_config.ORG_TABLE_MAP)
-    org_config.override_org_table_map({"client0": "client0"})
+    org_config.override_org_table_map({"clientA": "clientA"})
 
     def fake_query_dataframe(sql: str, params: dict, job_context: str | None = None):
         return pd.DataFrame(

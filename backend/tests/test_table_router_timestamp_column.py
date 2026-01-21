@@ -88,7 +88,7 @@ def test_table_router_errors_when_only_disallowed_columns(monkeypatch):
 
 def test_table_router_respects_demodata_timestamp_override(monkeypatch):
     monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
-    org_id = "demodata0.client0"
+    org_id = "demo_data.clientA"
     router = TableRouter(
         {org_id: "project.dataset.table"}, timestamp_columns={org_id: "timestamp"}
     )
@@ -107,7 +107,7 @@ def test_table_router_respects_demodata_timestamp_override(monkeypatch):
 
 def test_table_router_uses_b1_timestamp_for_default_client(monkeypatch):
     monkeypatch.delenv("EVENT_TIMESTAMP_COLUMN", raising=False)
-    org_id = "client0"
+    org_id = "clientA"
     router = TableRouter({org_id: "project.dataset.table"}, timestamp_columns={org_id: "timestamp"})
 
     def _schema(table_name: str):

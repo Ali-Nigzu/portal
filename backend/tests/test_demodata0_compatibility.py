@@ -1,11 +1,11 @@
-"""Scoped event adaptation behaviour for demodata0 sources."""
+"""Scoped event adaptation behaviour for demo_data sources."""
 from __future__ import annotations
 
 from pathlib import Path
 
 import pandas as pd
 
-FIXTURE = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "fixtures" / "events_demodata0_client0.csv"
+FIXTURE = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "fixtures" / "events_demo_data_clientA.csv"
 
 
 def _materialise_scoped_projection(now: pd.Timestamp) -> pd.DataFrame:
@@ -52,7 +52,7 @@ def test_scoped_cte_projects_canonical_fields():
     from backend.app.analytics.compiler import SpecCompiler
 
     sql = SpecCompiler()._render_scoped(
-        "project.dataset.client0", "", event_timestamp_column="timestamp"
+        "project.dataset.clientA", "", event_timestamp_column="timestamp"
     )
 
     assert "ROW_NUMBER() OVER" in sql

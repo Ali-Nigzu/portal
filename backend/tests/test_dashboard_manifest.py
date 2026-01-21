@@ -20,7 +20,7 @@ from backend.app.view_tokens import create_view_token, view_tokens
 from backend.fastapi_app import app
 
 
-_FIXTURE_PATH = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "examples" / "dashboard_manifest_client0.json"
+_FIXTURE_PATH = Path(__file__).resolve().parents[2] / "shared" / "analytics" / "examples" / "dashboard_manifest_clientA.json"
 
 
 def load_fixture() -> dict:
@@ -34,12 +34,12 @@ def api_client() -> TestClient:
 
 
 def test_dashboard_manifest_matches_fixture():
-    manifest = get_dashboard_manifest("client0")
+    manifest = get_dashboard_manifest("clientA")
     assert manifest == load_fixture()
 
 
 def test_dashboard_manifest_includes_time_controls():
-    manifest = get_dashboard_manifest("client0")
+    manifest = get_dashboard_manifest("clientA")
     controls = manifest.get("timeControls")
     assert controls is not None
     option_ids = {option["id"] for option in controls.get("options", [])}
@@ -49,11 +49,11 @@ def test_dashboard_manifest_includes_time_controls():
 
 def test_pin_and_remove_widget_round_trip():
     widget_id = "kpi-custom-testing"
-    manifest = get_dashboard_manifest("client0")
+    manifest = get_dashboard_manifest("clientA")
     assert all(widget["id"] != widget_id for widget in manifest["widgets"])
 
     pinned_manifest = pin_widget_to_manifest(
-        org_id="client0",
+        org_id="clientA",
         widget={
             "id": widget_id,
             "title": "Pinned activity",
@@ -67,7 +67,7 @@ def test_pin_and_remove_widget_round_trip():
     assert widget_id in pinned_manifest["layout"]["kpiBand"]
 
     restored_manifest = remove_widget_from_manifest(
-        org_id="client0",
+        org_id="clientA",
         widget_id=widget_id,
     )
     assert all(widget["id"] != widget_id for widget in restored_manifest["widgets"])
@@ -75,11 +75,11 @@ def test_pin_and_remove_widget_round_trip():
 
 
 def test_locked_widgets_cannot_be_removed():
-    manifest = get_dashboard_manifest("client0")
+    manifest = get_dashboard_manifest("clientA")
     locked_widget = manifest["widgets"][0]
     assert locked_widget.get("locked") is True
     with pytest.raises(ManifestValidationError):
-        remove_widget_from_manifest(org_id="client0", widget_id=locked_widget["id"])
+        remove_widget_from_manifest(org_id="clientA", widget_id=locked_widget["id"])
 
 
 def test_pin_widget_is_idempotent():
@@ -90,27 +90,27 @@ def test_pin_widget_is_idempotent():
         "inlineSpec": get_dashboard_spec("dashboard.kpi.activity_today"),
     }
 
-    first = pin_widget_to_manifest(org_id="client0", widget=widget)
+    first = pin_widget_to_manifest(org_id="clientA", widget=widget)
     assert any(w["id"] == "duplicate-check" for w in first["widgets"])
 
-    second = pin_widget_to_manifest(org_id="client0", widget=widget)
+    second = pin_widget_to_manifest(org_id="clientA", widget=widget)
     occurrences = [w for w in second["widgets"] if w["id"] == "duplicate-check"]
     assert len(occurrences) == 1
     assert second["layout"]["kpiBand"].count("duplicate-check") == 1
 
-    remove_widget_from_manifest(org_id="client0", widget_id="duplicate-check")
+    remove_widget_from_manifest(org_id="clientA", widget_id="duplicate-check")
 
 
 def test_remove_missing_widget_is_noop():
-    manifest_before = get_dashboard_manifest("client0")
-    result = remove_widget_from_manifest(org_id="client0", widget_id="missing-widget")
+    manifest_before = get_dashboard_manifest("clientA")
+    result = remove_widget_from_manifest(org_id="clientA", widget_id="missing-widget")
     assert result == manifest_before
 
 
 def test_chart_widgets_require_grid_placement():
     with pytest.raises(ManifestValidationError):
         pin_widget_to_manifest(
-            org_id="client0",
+            org_id="clientA",
             widget={
                 "id": "invalid-chart",
                 "title": "Invalid Chart",
@@ -122,9 +122,9 @@ def test_chart_widgets_require_grid_placement():
 
 
 def test_manifest_state_rolls_back_on_error():
-    manifest_before = get_dashboard_manifest("client0")
+    manifest_before = get_dashboard_manifest("clientA")
     duplicate_manifest = pin_widget_to_manifest(
-        org_id="client0",
+        org_id="clientA",
         widget={
             "id": manifest_before["widgets"][0]["id"],
             "title": "Collision",
@@ -132,7 +132,7 @@ def test_manifest_state_rolls_back_on_error():
             "inlineSpec": get_dashboard_spec("dashboard.kpi.activity_today"),
         },
     )
-    manifest_after = get_dashboard_manifest("client0")
+    manifest_after = get_dashboard_manifest("clientA")
     assert duplicate_manifest == manifest_before
     assert manifest_after == manifest_before
 
@@ -146,10 +146,10 @@ def test_dashboard_specs_validate(spec_id: str):
 
 
 def test_manifest_endpoint_serves_default_manifest(api_client: TestClient):
-    response = api_client.get("/api/dashboards/dashboard-default", params={"orgId": "client0"})
+    response = api_client.get("/api/dashboards/dashboard-default", params={"orgId": "clientA"})
     assert response.status_code == 200
     payload = response.json()
-    assert payload["orgId"] == "client0"
+    assert payload["orgId"] == "clientA"
     widget_kinds = {widget.get("kind") for widget in payload.get("widgets", [])}
     assert "kpi" in widget_kinds
     assert "chart" in widget_kinds
@@ -165,4 +165,4 @@ def test_manifest_endpoint_accepts_view_token(api_client: TestClient):
     assert response.status_code == 200
     payload = response.json()
     # client2 resolves to the demodata slug (dataset + table) so downstream capacity uses K=750
-    assert payload["orgId"] == "demodata0.client1"
+    assert payload["orgId"] == "demo_data.client1"
