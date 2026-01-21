@@ -36,7 +36,7 @@ def load_users():
                 "password": hash_password("client123"),
                 "role": "client",
                 "name": "Test Client 1",
-                "table_name": "client0",
+                "table_name": "demodata0.client0",
                 "last_login": None,
                 "data_sources": []
             },
@@ -44,7 +44,7 @@ def load_users():
                 "password": hash_password("client456"),
                 "role": "client",
                 "name": "Test Client 2",
-                "table_name": "client1",
+                "table_name": "demodata0.client1",
                 "last_login": None,
                 "data_sources": []
             }
@@ -97,7 +97,11 @@ def get_active_table_name(client_id: str, users: dict) -> Optional[str]:
     if not table_name:
         return None
 
-    if table_name.count('.') < 2:
+    if table_name.count('.') == 1:
+        project = os.getenv('BQ_PROJECT')
+        if project:
+            return f"{project}.{table_name}"
+    if table_name.count('.') < 1:
         project = os.getenv('BQ_PROJECT')
         dataset = os.getenv('BQ_DATASET')
         if project and dataset:

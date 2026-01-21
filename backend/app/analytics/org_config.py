@@ -21,12 +21,12 @@ class BigQueryConfigurationError(RuntimeError):
 DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
     # Route the default demo orgs directly to the raw B1 tables to preserve event-level
     # timestamps (e.g., for hour-of-day demographics) instead of the legacy compat views.
-    "client0": "client0",
-    "client1": "client1",
+    "client0": "demodata0.client0",
+    "client1": "demodata0.client1",
     # Fully-qualified VRM demo tables
-    "demodata0.client0": "client0",
-    "demodata0.client1": "client1",
-    "client2": "client1",
+    "demodata0.client0": "demodata0.client0",
+    "demodata0.client1": "demodata0.client1",
+    "client2": "demodata0.client1",
 }
 
 
@@ -98,6 +98,13 @@ def _qualify_table_name(table_id: str) -> str:
         return table_id
 
     project = os.getenv("BQ_PROJECT")
+    if table_id.count(".") == 1:
+        if not project:
+            raise BigQueryConfigurationError(
+                "BQ_PROJECT must be set to resolve analytics tables"
+            )
+        return f"{project}.{table_id}"
+
     dataset = os.getenv("BQ_DATASET")
     if not project or not dataset:
         raise BigQueryConfigurationError(
