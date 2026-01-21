@@ -10,11 +10,7 @@ export interface SnapshotResponse {
 }
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
-const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
-const WEEK_MS = 7 * DAY_MS;
-const MONTH_MS = 30 * DAY_MS;
-const YEAR_MS = 365 * DAY_MS;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
   today: 0,
@@ -24,16 +20,6 @@ const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
   last_quarter: 4,
   last_year: 5,
   all_time: 6,
-};
-
-const ROLLUP_STEP_MS: Record<SiteFlowTimeframe, number> = {
-  today: HOUR_MS,
-  yesterday: HOUR_MS,
-  last_week: DAY_MS,
-  last_month: WEEK_MS,
-  last_quarter: MONTH_MS,
-  last_year: MONTH_MS,
-  all_time: YEAR_MS,
 };
 
 type SnapshotSeries = Record<string, number[]>;
@@ -64,6 +50,9 @@ const isBlockPayload = (payload: unknown[]): payload is unknown[] =>
 
 const toIso = (value: Date): string => value.toISOString();
 
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
 const buildTimeSeriesPoints = (values: number[], end: Date, stepMs: number): DataPoint[] =>
   values.map((value, index) => ({
     x: toIso(new Date(end.getTime() - (values.length - 1 - index) * stepMs)),
@@ -93,9 +82,12 @@ const buildKpiResult = (values: number[], snapshotTs: Date, widgetId: string): C
 });
 
 const buildTrafficResult = (values: number[]): ChartResult => {
-  const labels = ["Cam 0", "Cam 1", "Cam 2"];
-  const data = values.map((value, index) => ({
-    x: labels[index] ?? `Cam ${index + 1}`,
+  const labels = ["Camera 0", "Camera 1", "Camera 2"];
+  const normalized = Array.from({ length: 3 }, (_, index) =>
+    typeof values[index] === "number" ? values[index] : 0,
+  );
+  const data = normalized.map((value, index) => ({
+    x: labels[index] ?? `Camera ${index + 1}`,
     y: value,
     value,
   }));
@@ -124,7 +116,7 @@ const buildTrafficResult = (values: number[]): ChartResult => {
 
 const buildTrafficResultFromSplit = (entries: Array<{ label: string; value: number }>): ChartResult => {
   const data = entries.map((entry, index) => ({
-    x: entry.label ?? `Cam ${index + 1}`,
+    x: entry.label ?? `Camera ${index + 1}`,
     y: entry.value ?? 0,
     value: entry.value ?? 0,
   }));
@@ -152,7 +144,9 @@ const buildTrafficResultFromSplit = (entries: Array<{ label: string; value: numb
 };
 
 const buildCapacityResult = (values: number[]): ChartResult => {
-  const [currentPct = 0, peakPct = 0] = values;
+  const [currentRaw = 0, peakRaw = 0] = values;
+  const currentPct = clamp(currentRaw, 0, 100);
+  const peakPct = clamp(Math.max(peakRaw, currentRaw), 0, 100);
   return {
     chartType: "categorical",
     xDimension: { id: "capacity_segment", type: "category" },
@@ -196,6 +190,92 @@ const buildCapacityResultFromBlock = (value: unknown): ChartResult => {
   return buildCapacityResult([computedPct, 0]);
 };
 
+const inferBucketForLegacy = (
+  timeframe: SiteFlowTimeframe,
+  length: number,
+): "RAW" | "HOUR" | "DAY" | "WEEK" | "MONTH" => {
+  if (timeframe === "today" || timeframe === "yesterday") {
+    return "RAW";
+  }
+  if (timeframe === "last_week") {
+    return length <= 7 ? "DAY" : "HOUR";
+  }
+  if (timeframe === "last_month") {
+    return length <= 7 ? "WEEK" : "DAY";
+  }
+  if (timeframe === "last_quarter") {
+    return length <= 4 ? "MONTH" : "WEEK";
+  }
+  if (timeframe === "last_year") {
+    return length <= 12 ? "MONTH" : "WEEK";
+  }
+  return length <= 12 ? "MONTH" : "WEEK";
+};
+
+const addDays = (date: Date, days: number): Date => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const addMonths = (date: Date, months: number): Date =>
+  new Date(date.getFullYear(), date.getMonth() + months, 1, 0, 0, 0, 0);
+
+const addYears = (date: Date, years: number): Date =>
+  new Date(date.getFullYear() + years, 0, 1, 0, 0, 0, 0);
+
+const buildAnchoredTimestamps = (
+  timeframe: SiteFlowTimeframe,
+  anchor: Date,
+  length: number,
+): Date[] => {
+  if (length <= 0) {
+    return [];
+  }
+  if (timeframe === "today" || timeframe === "yesterday") {
+    const start = timeframe === "today" ? startOfDay(anchor) : startOfDay(new Date(anchor.getTime() - DAY_MS));
+    const stepMs = DAY_MS / length;
+    return Array.from({ length }, (_, index) => new Date(start.getTime() + index * stepMs));
+  }
+
+  if (timeframe === "last_week") {
+    const start = startOfWeek(anchor);
+    return Array.from({ length }, (_, index) => addDays(start, index));
+  }
+
+  if (timeframe === "last_month") {
+    const start = startOfMonth(anchor);
+    if (length <= 7) {
+      return Array.from({ length }, (_, index) => addDays(start, index * 7));
+    }
+    return Array.from({ length }, (_, index) => addDays(start, index));
+  }
+
+  if (timeframe === "last_quarter") {
+    const start = startOfQuarter(anchor);
+    if (length <= 4) {
+      return Array.from({ length }, (_, index) => addMonths(start, index));
+    }
+    return Array.from({ length }, (_, index) => addDays(start, index * 7));
+  }
+
+  if (timeframe === "last_year") {
+    const start = startOfYear(anchor);
+    if (length <= 12) {
+      return Array.from({ length }, (_, index) => addMonths(start, index));
+    }
+    return Array.from({ length }, (_, index) => addDays(start, index * 7));
+  }
+
+  const start = startOfYear(anchor);
+  if (length <= 5) {
+    return Array.from({ length }, (_, index) => addYears(start, index));
+  }
+  return Array.from({ length }, (_, index) => addMonths(start, index));
+};
+
+const sliceSeries = (values: number[], count: number): number[] => values.slice(0, count);
+
 const buildSiteFlowResult = (
   rollup: unknown[],
   snapshotTs: Date,
@@ -206,7 +286,6 @@ const buildSiteFlowResult = (
   const occupancyAvg = asNumberArray(rollup?.[2]);
   const occupancyMin = asNumberArray(rollup?.[3]);
   const occupancyMax = asNumberArray(rollup?.[4]);
-  const stepMs = ROLLUP_STEP_MS[timeframe];
 
   const length = Math.max(
     entrances.length,
@@ -215,18 +294,25 @@ const buildSiteFlowResult = (
     occupancyMin.length,
     occupancyMax.length,
   );
-  const timestamps = buildTimeSeriesPoints(
-    Array.from({ length }, () => 0),
-    snapshotTs,
-    stepMs,
-  ).map((point) => point.x);
+
+  let sliceCount = length;
+  if (timeframe === "today" && length > 0) {
+    const start = startOfDay(snapshotTs);
+    const elapsedMs = snapshotTs.getTime() - start.getTime();
+    const bucketMs = DAY_MS / length;
+    const lastIndex = Math.floor(elapsedMs / bucketMs);
+    sliceCount = clamp(lastIndex + 1, 0, length);
+  }
+
+  const timestamps = buildAnchoredTimestamps(timeframe, snapshotTs, sliceCount);
+  const bucket = inferBucketForLegacy(timeframe, sliceCount);
 
   const buildSeries = (id: string, values: number[]): ChartSeries => ({
     id,
     label: id,
     geometry: "line",
-    data: timestamps.map((x, index) => ({
-      x,
+    data: timestamps.map((timestamp, index) => ({
+      x: toIso(timestamp),
       y: values[index] ?? 0,
       value: values[index] ?? 0,
     })),
@@ -236,8 +322,8 @@ const buildSiteFlowResult = (
     id: "occupancy",
     label: "Occupancy",
     geometry: "line",
-    data: timestamps.map((x, index) => ({
-      x,
+    data: timestamps.map((timestamp, index) => ({
+      x: toIso(timestamp),
       occupancy_avg: occupancyAvg[index] ?? null,
       occupancy_min: occupancyMin[index] ?? null,
       occupancy_max: occupancyMax[index] ?? null,
@@ -248,11 +334,14 @@ const buildSiteFlowResult = (
 
   return {
     chartType: "composed_time",
-    xDimension: { id: "timestamp", type: "time", bucket: bucketForSiteFlowTimeframe(timeframe), timezone: "UTC" },
+    xDimension: { id: "timestamp", type: "time", bucket, timezone: "UTC" },
     series: [
-      buildSeries("entrances", entrances),
-      buildSeries("exits", exits),
-      occupancySeries,
+      buildSeries("entrances", sliceSeries(entrances, sliceCount)),
+      buildSeries("exits", sliceSeries(exits, sliceCount)),
+      {
+        ...occupancySeries,
+        data: occupancySeries.data.slice(0, sliceCount),
+      },
     ],
     meta: {
       timezone: "UTC",
