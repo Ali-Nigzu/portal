@@ -458,6 +458,7 @@ const buildSiteFlowResult = (
       summary: {
         title: "Site Flow",
         presentation: "vrm",
+        siteFlowTimeframe: timeframe,
       },
     },
   };
