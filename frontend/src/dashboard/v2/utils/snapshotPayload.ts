@@ -56,13 +56,10 @@ const clamp = (value: number, min: number, max: number): number =>
 
 const parseSnapshotTimestamp = (value: string): Date => {
   if (NAIVE_TIMESTAMP_REGEX.test(value)) {
-    return new Date(`${value.replace(" ", "T")}Z`);
+    return new Date(value.replace(" ", "T"));
   }
   return new Date(value);
 };
-
-const sumUntilIndex = (values: number[], endIndex: number): number =>
-  values.slice(0, Math.max(0, endIndex + 1)).reduce((sum, value) => sum + value, 0);
 
 const floorToBucket = (date: Date, bucketMs: number): Date =>
   new Date(Math.floor(date.getTime() / bucketMs) * bucketMs);
@@ -94,54 +91,49 @@ const applyTodayDeltaLabel = (
     });
   }
   const dayStart = startOfDay(anchor);
-  const bucketStartCurrent = floorToBucket(anchor, bucketMs);
-  const bucketStartMs = bucketStartCurrent.getTime();
-  const dayStartMs = dayStart.getTime();
-  const nowBucketStartISO = bucketStartCurrent.toISOString();
-  const midnightISO = dayStart.toISOString();
-  const startIndex = values.findIndex((_, index) => {
-    const offset = (values.length - 1 - index) * bucketMs;
-    return bucketStartMs - offset >= dayStartMs;
+  const anchorMs = anchor.getTime();
+  const midnightMs = dayStart.getTime();
+  let deltaValue = 0;
+  let startIndex = values.length;
+  let endIndex = -1;
+  values.forEach((value, index) => {
+    const bucketEndMs = anchorMs - (values.length - 1 - index) * bucketMs;
+    const bucketStartMs = bucketEndMs - bucketMs;
+    if (bucketEndMs > midnightMs && bucketStartMs <= anchorMs) {
+      if (startIndex === values.length) {
+        startIndex = index;
+      }
+      endIndex = index;
+      deltaValue += value;
+    }
   });
-  const safeStartIndex = startIndex >= 0 ? startIndex : values.length;
-  const deltaValue = values.slice(safeStartIndex).reduce((sum, value) => sum + value, 0);
+  const safeStartIndex = startIndex === values.length ? values.length : startIndex;
   if (process.env.NODE_ENV !== "production") {
-    const sumFromStart = sumUntilIndex(values, Math.min(values.length - 1, safeStartIndex - 1));
-    const k = clamp(Math.floor((bucketStartMs - dayStartMs) / bucketMs) + 1, 0, values.length);
-    const i0b = Math.max(0, values.length - k);
-    const deltaScan = values.slice(safeStartIndex).reduce((sum, value) => sum + value, 0);
-    const deltaK = values.slice(i0b).reduce((sum, value) => sum + value, 0);
-    const deltaWrongPrefix = sumUntilIndex(values, Math.max(0, k - 1));
-    const tLast = new Date(bucketStartMs).toISOString();
-    const tPrev = new Date(bucketStartMs - bucketMs).toISOString();
-    const tFirst = new Date(bucketStartMs - (values.length - 1) * bucketMs).toISOString();
-    const firstIncludedStartISO =
+    const bucketEnd95Ms = anchorMs - (values.length - 1 - (values.length - 1)) * bucketMs;
+    const bucketStart95Ms = bucketEnd95Ms - bucketMs;
+    const bucketStartStartIndex =
       safeStartIndex < values.length
-        ? new Date(bucketStartMs - (values.length - 1 - safeStartIndex) * bucketMs).toISOString()
+        ? anchorMs - (values.length - 1 - safeStartIndex) * bucketMs - bucketMs
         : null;
+    const firstIncludedStartISO =
+      bucketStartStartIndex !== null ? new Date(bucketStartStartIndex).toISOString() : null;
     // eslint-disable-next-line no-console
     console.log("[Snapshots] KPI delta calc", {
       widgetId,
       payloadIndex,
       snapshotTsRaw,
       payloadTsISO: anchor.toISOString(),
+      payloadTsLocal: anchor.toString(),
+      payloadTsTimezoneOffset: anchor.getTimezoneOffset(),
       valuesLength: values.length,
       bucketMs,
-      midnightISO,
-      bucketStartISO: nowBucketStartISO,
+      midnightISO: dayStart.toISOString(),
       startIndex: safeStartIndex,
+      endIndex,
       firstIncludedStartISO,
-      lastIncludedEndISO: tLast,
-      sumFromStart,
-      sumTail: deltaValue,
-      k,
-      i0b,
-      deltaScan,
-      deltaK,
-      deltaWrongPrefix,
-      tLast,
-      tPrev,
-      tFirst,
+      lastIncludedEndISO: new Date(bucketEnd95Ms).toISOString(),
+      bucket95StartISO: new Date(bucketStart95Ms).toISOString(),
+      bucket95EndISO: new Date(bucketEnd95Ms).toISOString(),
       deltaLabelWritten: Math.round(deltaValue),
     });
   }
