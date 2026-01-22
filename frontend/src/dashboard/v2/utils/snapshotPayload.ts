@@ -67,8 +67,28 @@ const floorToBucket = (date: Date, bucketMs: number): Date =>
 // Legacy snapshot KPI payload indices:
 // payload[0] = entrances_96, payload[1] = occupancy_96, payload[2] = exits_96,
 // payload[3] = footfall_96, payload[4] = dwell_96.
-// Delta math: rolling 96x15m series, index 95 is the current bucket (floorTo15m(snapshotTs)),
-// include buckets whose bucketStart >= local midnight.
+// Delta math (15-min buckets aligned to the UI bucket): use the tail of the rolling series
+// ending at snapshot.ts so only buckets since local midnight are included.
+// Example:
+// snapshot.ts = 2026-01-19 00:01:00 -> currentBucketStart = 00:00 -> k=1 -> startIndex=95 -> delta=values[95]
+// snapshot.ts = 2026-01-19 03:20:00 -> currentBucketStart = 03:15 -> k=14 -> startIndex=82 -> sum values[82..95]
+export const computeRollingKpiDelta = (
+  values: number[],
+  anchor: Date,
+  bucketMs: number,
+): { delta: number; startIndex: number; k: number; currentBucketStart: Date; dayStart: Date } => {
+  const currentBucketStart = floorToBucket(anchor, bucketMs);
+  const dayStart = startOfDay(anchor);
+  const k = clamp(
+    Math.floor((currentBucketStart.getTime() - dayStart.getTime()) / bucketMs) + 1,
+    0,
+    values.length,
+  );
+  const startIndex = Math.max(0, values.length - k);
+  const delta = values.slice(startIndex).reduce((sum, value) => sum + value, 0);
+  return { delta, startIndex, k, currentBucketStart, dayStart };
+};
+
 const applyTodayDeltaLabel = (
   result: ChartResult,
   values: number[],
@@ -90,33 +110,12 @@ const applyTodayDeltaLabel = (
       bucketMs,
     });
   }
-  const dayStart = startOfDay(anchor);
-  const anchorMs = anchor.getTime();
-  const midnightMs = dayStart.getTime();
-  let deltaValue = 0;
-  let startIndex = values.length;
-  let endIndex = -1;
-  values.forEach((value, index) => {
-    const bucketEndMs = anchorMs - (values.length - 1 - index) * bucketMs;
-    const bucketStartMs = bucketEndMs - bucketMs;
-    if (bucketEndMs > midnightMs && bucketStartMs <= anchorMs) {
-      if (startIndex === values.length) {
-        startIndex = index;
-      }
-      endIndex = index;
-      deltaValue += value;
-    }
-  });
-  const safeStartIndex = startIndex === values.length ? values.length : startIndex;
+  const { delta: deltaValue, startIndex, k, currentBucketStart, dayStart } =
+    computeRollingKpiDelta(values, anchor, bucketMs);
+  const endIndex = values.length ? values.length - 1 : -1;
   if (process.env.NODE_ENV !== "production") {
-    const bucketEnd95Ms = anchorMs - (values.length - 1 - (values.length - 1)) * bucketMs;
-    const bucketStart95Ms = bucketEnd95Ms - bucketMs;
-    const bucketStartStartIndex =
-      safeStartIndex < values.length
-        ? anchorMs - (values.length - 1 - safeStartIndex) * bucketMs - bucketMs
-        : null;
-    const firstIncludedStartISO =
-      bucketStartStartIndex !== null ? new Date(bucketStartStartIndex).toISOString() : null;
+    const bucketStartMs = currentBucketStart.getTime();
+    const currentBucketEnd = new Date(bucketStartMs + bucketMs);
     // eslint-disable-next-line no-console
     console.log("[Snapshots] KPI delta calc", {
       widgetId,
@@ -127,13 +126,14 @@ const applyTodayDeltaLabel = (
       payloadTsTimezoneOffset: anchor.getTimezoneOffset(),
       valuesLength: values.length,
       bucketMs,
-      midnightISO: dayStart.toISOString(),
-      startIndex: safeStartIndex,
+      dayStartISO: dayStart.toISOString(),
+      currentBucketStartISO: currentBucketStart.toISOString(),
+      currentBucketEndISO: currentBucketEnd.toISOString(),
+      k,
+      startIndex,
       endIndex,
-      firstIncludedStartISO,
-      lastIncludedEndISO: new Date(bucketEnd95Ms).toISOString(),
-      bucket95StartISO: new Date(bucketStart95Ms).toISOString(),
-      bucket95EndISO: new Date(bucketEnd95Ms).toISOString(),
+      valuesFromStart: values.slice(startIndex, startIndex + 5),
+      valuesFromEnd: values.slice(-5),
       deltaLabelWritten: Math.round(deltaValue),
     });
   }
