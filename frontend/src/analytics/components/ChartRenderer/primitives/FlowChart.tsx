@@ -20,6 +20,7 @@ import { ChartTooltip } from "../ui/ChartTooltip";
 import { SiteFlowTooltip } from "../ui/SiteFlowTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
 import { formatBrushTimestamp } from "../utils/formatBrushTimestamp";
+import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
 
 export const FlowChart = ({
   result,
@@ -30,8 +31,10 @@ export const FlowChart = ({
   height,
   className,
 }: ChartPrimitiveProps) => {
-  const summary = result.meta?.summary as { title?: string } | undefined;
+  const summary = result.meta?.summary as { title?: string; siteFlowTimeframe?: string } | undefined;
   const isSiteFlow = summary?.title === "Site Flow";
+  const siteFlowTimeframe = summary?.siteFlowTimeframe;
+  const siteFlowBucket = result.xDimension?.bucket;
   const sortedSeries = useMemo(() => {
     const prioritizedGroup = "occupancy";
     return series
@@ -85,7 +88,15 @@ export const FlowChart = ({
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={dataset.data} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-strong, #d0d5dd)" />
-          <XAxis dataKey="x" tick={{ fill: "var(--text-muted, #475467)" }} />
+          <XAxis
+            dataKey="x"
+            tick={{ fill: "var(--text-muted, #475467)" }}
+            tickFormatter={
+              isSiteFlow
+                ? (value) => formatSiteFlowTick(siteFlowTimeframe, siteFlowBucket, String(value))
+                : undefined
+            }
+          />
           {axisConfig.axes.map((axis) => (
             <YAxis
               key={axis.id}
@@ -107,6 +118,8 @@ export const FlowChart = ({
                 <SiteFlowTooltip
                   seriesMap={seriesMap}
                   visibility={visibility}
+                  timeframe={siteFlowTimeframe}
+                  bucket={siteFlowBucket}
                 />
               ) : (
                 <ChartTooltip meta={dataset.meta} seriesMap={seriesMap} />
