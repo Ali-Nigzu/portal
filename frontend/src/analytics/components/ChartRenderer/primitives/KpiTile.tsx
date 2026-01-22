@@ -82,6 +82,14 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
   const deltaLabelOverride =
     isVrm && typeof summary.deltaLabel === "string" ? (summary.deltaLabel as string) : null;
+  if (process.env.NODE_ENV !== "production" && isVrm) {
+    // eslint-disable-next-line no-console
+    console.log("[VRM KPI] delta render", {
+      widgetId: result.meta?.summary?.widgetId,
+      deltaLabel: deltaLabelOverride,
+      deltaValue: delta,
+    });
+  }
 
   const sparklineHeight = isVrm ? 64 : 48;
 

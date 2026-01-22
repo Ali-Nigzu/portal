@@ -71,6 +71,8 @@ const applyTodayDeltaLabel = (
   result: ChartResult,
   values: number[],
   anchor: Date,
+  widgetId: string,
+  snapshotTsRaw?: string,
 ): ChartResult => {
   if (!values.length) {
     return result;
@@ -82,6 +84,24 @@ const applyTodayDeltaLabel = (
   const k = clamp(Math.floor(elapsedMs / bucketMs) + 1, 0, values.length);
   const startIndex = Math.max(0, values.length - k);
   const deltaValue = values.slice(startIndex).reduce((sum, value) => sum + value, 0);
+  if (process.env.NODE_ENV !== "production") {
+    const sumFromStart = sumUntilIndex(values, Math.min(k - 1, values.length - 1));
+    // eslint-disable-next-line no-console
+    console.log("[Snapshots] KPI delta calc", {
+      widgetId,
+      snapshotTsRaw,
+      payloadTsISO: anchor.toISOString(),
+      valuesLength: values.length,
+      bucketMs,
+      midnightISO: dayStart.toISOString(),
+      bucketStartISO: bucketStart.toISOString(),
+      k,
+      startIndex,
+      sumFromStart,
+      sumTail: deltaValue,
+      deltaLabelWritten: Math.round(deltaValue),
+    });
+  }
   result.meta = result.meta ?? { timezone: "UTC", summary: {} };
   result.meta.summary = result.meta.summary ?? {};
   result.meta.summary.deltaLabel = `${Math.round(deltaValue)}`;
@@ -1028,14 +1048,40 @@ export const buildSnapshotWidgetResult = (
     case VRM_KPI_IDS.entrances: {
       const result = buildKpiResult(asNumberArray(payload[0]), snapshotTs, widgetId);
       const todaySeries = getTodayRollupSeries(payload, 0);
-      return todaySeries.length ? applyTodayDeltaLabel(result, todaySeries, snapshotTs) : result;
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.log("[Snapshots] KPI delta path", {
+          widgetId,
+          payloadType: Array.isArray(payload) ? "array" : typeof payload,
+          hasRollups: Array.isArray(payload[7]),
+          todaySeriesLength: todaySeries.length,
+          snapshotTsRaw: snapshot.ts,
+          payloadTsISO: snapshotTs.toISOString(),
+        });
+      }
+      return todaySeries.length
+        ? applyTodayDeltaLabel(result, todaySeries, snapshotTs, widgetId, snapshot.ts)
+        : result;
     }
     case VRM_KPI_IDS.occupancy:
       return buildKpiResult(asNumberArray(payload[1]), snapshotTs, widgetId);
     case VRM_KPI_IDS.exits: {
       const result = buildKpiResult(asNumberArray(payload[2]), snapshotTs, widgetId);
       const todaySeries = getTodayRollupSeries(payload, 1);
-      return todaySeries.length ? applyTodayDeltaLabel(result, todaySeries, snapshotTs) : result;
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.log("[Snapshots] KPI delta path", {
+          widgetId,
+          payloadType: Array.isArray(payload) ? "array" : typeof payload,
+          hasRollups: Array.isArray(payload[7]),
+          todaySeriesLength: todaySeries.length,
+          snapshotTsRaw: snapshot.ts,
+          payloadTsISO: snapshotTs.toISOString(),
+        });
+      }
+      return todaySeries.length
+        ? applyTodayDeltaLabel(result, todaySeries, snapshotTs, widgetId, snapshot.ts)
+        : result;
     }
     case VRM_KPI_IDS.footfall:
       return buildKpiResult(asNumberArray(payload[3]), snapshotTs, widgetId);
