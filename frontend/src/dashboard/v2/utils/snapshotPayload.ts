@@ -82,6 +82,8 @@ const applyTodayDeltaLabel = (
   const bucketStart = floorToBucket(anchor, bucketMs);
   const bucketStartMs = bucketStart.getTime();
   const dayStartMs = dayStart.getTime();
+  const nowBucketStartISO = bucketStart.toISOString();
+  const midnightISO = dayStart.toISOString();
   const startIndex = values.findIndex((_, index) => {
     const offset = (values.length - 1 - index) * bucketMs;
     return bucketStartMs - offset >= dayStartMs;
@@ -90,6 +92,15 @@ const applyTodayDeltaLabel = (
   const deltaValue = values.slice(safeStartIndex).reduce((sum, value) => sum + value, 0);
   if (process.env.NODE_ENV !== "production") {
     const sumFromStart = sumUntilIndex(values, Math.min(values.length - 1, safeStartIndex - 1));
+    const k = clamp(Math.floor((bucketStartMs - dayStartMs) / bucketMs) + 1, 0, values.length);
+    const i0b = Math.max(0, values.length - k);
+    const deltaScan = values.slice(safeStartIndex).reduce((sum, value) => sum + value, 0);
+    const deltaK = values.slice(i0b).reduce((sum, value) => sum + value, 0);
+    const deltaWrongPrefix = sumUntilIndex(values, Math.max(0, k - 1));
+    const t95 = new Date(bucketStartMs).toISOString();
+    const t94 = new Date(bucketStartMs - bucketMs).toISOString();
+    const t80 = new Date(bucketStartMs - (values.length - 1 - 80) * bucketMs).toISOString();
+    const t0 = new Date(bucketStartMs - (values.length - 1) * bucketMs).toISOString();
     // eslint-disable-next-line no-console
     console.log("[Snapshots] KPI delta calc", {
       widgetId,
@@ -97,11 +108,20 @@ const applyTodayDeltaLabel = (
       payloadTsISO: anchor.toISOString(),
       valuesLength: values.length,
       bucketMs,
-      midnightISO: dayStart.toISOString(),
-      bucketStartISO: bucketStart.toISOString(),
+      midnightISO,
+      bucketStartISO: nowBucketStartISO,
       startIndex: safeStartIndex,
       sumFromStart,
       sumTail: deltaValue,
+      k,
+      i0b,
+      deltaScan,
+      deltaK,
+      deltaWrongPrefix,
+      t95,
+      t94,
+      t80,
+      t0,
       deltaLabelWritten: Math.round(deltaValue),
     });
   }
@@ -112,6 +132,40 @@ const applyTodayDeltaLabel = (
 };
 
 const getKpiSeries = (payload: unknown[], index: number): number[] => asNumberArray(payload[index]);
+
+const logKpiSeriesDebug = (
+  widgetId: string,
+  payloadIndex: number,
+  series: number[],
+  snapshotTsRaw: string,
+  snapshotTsIso: string,
+) => {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+  const first10 = series.slice(0, 10);
+  const last10 = series.slice(-10);
+  const sumAll = series.reduce((sum, value) => sum + value, 0);
+  const last10Zero = last10.every((value) => value === 0);
+  const first10Zero = first10.every((value) => value === 0);
+  const badLen = series.length !== 96;
+  // eslint-disable-next-line no-console
+  console.log("[Snapshots] KPI series debug", {
+    widgetId,
+    payloadIndex,
+    snapshotTsRaw,
+    payloadTsISO: snapshotTsIso,
+    length: series.length,
+    sumAll,
+    first10,
+    last10,
+    warnings: {
+      KPI_DELTA_BAD_LEN: badLen,
+      KPI_DELTA_LOOKS_PADDED_NOT_ROLLING: last10Zero && !first10Zero,
+      KPI_DELTA_LOOKS_ROLLING: first10Zero && !last10Zero,
+    },
+  });
+};
 
 const buildTimeSeriesPoints = (values: number[], end: Date, stepMs: number): DataPoint[] =>
   values.map((value, index) => ({
@@ -1051,6 +1105,7 @@ export const buildSnapshotWidgetResult = (
           payloadTsISO: snapshotTs.toISOString(),
         });
       }
+      logKpiSeriesDebug(widgetId, 0, series, snapshot.ts, snapshotTs.toISOString());
       return series.length
         ? applyTodayDeltaLabel(result, series, snapshotTs, widgetId, snapshot.ts)
         : result;
@@ -1059,6 +1114,7 @@ export const buildSnapshotWidgetResult = (
       return buildKpiResult(asNumberArray(payload[1]), snapshotTs, widgetId);
     case VRM_KPI_IDS.exits: {
       const series = getKpiSeries(payload, 2);
+      const seriesAlt = getKpiSeries(payload, 1);
       const result = buildKpiResult(asNumberArray(payload[2]), snapshotTs, widgetId);
       if (process.env.NODE_ENV !== "production") {
         // eslint-disable-next-line no-console
@@ -1070,9 +1126,32 @@ export const buildSnapshotWidgetResult = (
           payloadTsISO: snapshotTs.toISOString(),
         });
       }
-      return series.length
+      logKpiSeriesDebug(widgetId, 2, series, snapshot.ts, snapshotTs.toISOString());
+      logKpiSeriesDebug(`${widgetId}-alt`, 1, seriesAlt, snapshot.ts, snapshotTs.toISOString());
+      const primaryResult = series.length
         ? applyTodayDeltaLabel(result, series, snapshotTs, widgetId, snapshot.ts)
         : result;
+      if (process.env.NODE_ENV !== "production" && seriesAlt.length) {
+        const deltaAlt = applyTodayDeltaLabel(
+          {
+            ...primaryResult,
+            meta: primaryResult.meta
+              ? { ...primaryResult.meta, summary: { ...(primaryResult.meta.summary ?? {}) } }
+              : primaryResult.meta,
+          },
+          seriesAlt,
+          snapshotTs,
+          `${widgetId}-alt`,
+          snapshot.ts,
+        );
+        // eslint-disable-next-line no-console
+        console.log("[Snapshots] KPI delta alt compare", {
+          widgetId,
+          deltaLabelPrimary: primaryResult.meta?.summary?.deltaLabel,
+          deltaLabelAlt: deltaAlt.meta?.summary?.deltaLabel,
+        });
+      }
+      return primaryResult;
     }
     case VRM_KPI_IDS.footfall:
       return buildKpiResult(asNumberArray(payload[3]), snapshotTs, widgetId);
