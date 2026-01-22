@@ -67,8 +67,8 @@ const floorToBucket = (date: Date, bucketMs: number): Date =>
 // Legacy snapshot KPI payload indices:
 // payload[0] = entrances_96, payload[1] = occupancy_96, payload[2] = exits_96,
 // payload[3] = footfall_96, payload[4] = dwell_96.
-// Delta math (15-min buckets aligned to the UI bucket): use the tail of the rolling series
-// ending at snapshot.ts so only buckets since local midnight are included.
+// Delta math (sliding 15-min buckets): use the rolling series ending at snapshot.ts and
+// include buckets whose [start,end] overlaps [local midnight, snapshot.ts].
 // Example:
 // snapshot.ts = 2026-01-19 00:01:00 -> currentBucketStart = 00:00 -> k=1 -> startIndex=95 -> delta=values[95]
 // snapshot.ts = 2026-01-19 03:20:00 -> currentBucketStart = 03:15 -> k=14 -> startIndex=82 -> sum values[82..95]
@@ -76,17 +76,27 @@ export const computeRollingKpiDelta = (
   values: number[],
   anchor: Date,
   bucketMs: number,
-): { delta: number; startIndex: number; k: number; currentBucketStart: Date; dayStart: Date } => {
-  const currentBucketStart = floorToBucket(anchor, bucketMs);
+): { delta: number; startIndex: number; endIndex: number; k: number; dayStart: Date } => {
   const dayStart = startOfDay(anchor);
-  const k = clamp(
-    Math.floor((currentBucketStart.getTime() - dayStart.getTime()) / bucketMs) + 1,
-    0,
-    values.length,
-  );
-  const startIndex = Math.max(0, values.length - k);
-  const delta = values.slice(startIndex).reduce((sum, value) => sum + value, 0);
-  return { delta, startIndex, k, currentBucketStart, dayStart };
+  const midnightMs = dayStart.getTime();
+  const anchorMs = anchor.getTime();
+  let delta = 0;
+  let startIndex = values.length;
+  let endIndex = -1;
+  values.forEach((value, index) => {
+    const bucketEndMs = anchorMs - (values.length - 1 - index) * bucketMs;
+    const bucketStartMs = bucketEndMs - bucketMs;
+    if (bucketEndMs > midnightMs && bucketStartMs <= anchorMs) {
+      if (startIndex === values.length) {
+        startIndex = index;
+      }
+      endIndex = index;
+      delta += value;
+    }
+  });
+  const safeStartIndex = startIndex === values.length ? values.length : startIndex;
+  const k = endIndex >= safeStartIndex && safeStartIndex < values.length ? endIndex - safeStartIndex + 1 : 0;
+  return { delta, startIndex: safeStartIndex, endIndex, k, dayStart };
 };
 
 const applyTodayDeltaLabel = (
@@ -110,12 +120,24 @@ const applyTodayDeltaLabel = (
       bucketMs,
     });
   }
-  const { delta: deltaValue, startIndex, k, currentBucketStart, dayStart } =
+  const { delta: deltaValue, startIndex, endIndex, k, dayStart } =
     computeRollingKpiDelta(values, anchor, bucketMs);
-  const endIndex = values.length ? values.length - 1 : -1;
   if (process.env.NODE_ENV !== "production") {
-    const bucketStartMs = currentBucketStart.getTime();
-    const currentBucketEnd = new Date(bucketStartMs + bucketMs);
+    const anchorMs = anchor.getTime();
+    const startBucketStart =
+      startIndex < values.length
+        ? new Date(anchorMs - (values.length - 1 - startIndex) * bucketMs - bucketMs)
+        : null;
+    const startBucketEnd =
+      startIndex < values.length
+        ? new Date(anchorMs - (values.length - 1 - startIndex) * bucketMs)
+        : null;
+    const endBucketStart =
+      endIndex >= 0
+        ? new Date(anchorMs - (values.length - 1 - endIndex) * bucketMs - bucketMs)
+        : null;
+    const endBucketEnd =
+      endIndex >= 0 ? new Date(anchorMs - (values.length - 1 - endIndex) * bucketMs) : null;
     // eslint-disable-next-line no-console
     console.log("[Snapshots] KPI delta calc", {
       widgetId,
@@ -127,11 +149,13 @@ const applyTodayDeltaLabel = (
       valuesLength: values.length,
       bucketMs,
       dayStartISO: dayStart.toISOString(),
-      currentBucketStartISO: currentBucketStart.toISOString(),
-      currentBucketEndISO: currentBucketEnd.toISOString(),
       k,
       startIndex,
       endIndex,
+      startBucketStartISO: startBucketStart?.toISOString() ?? null,
+      startBucketEndISO: startBucketEnd?.toISOString() ?? null,
+      endBucketStartISO: endBucketStart?.toISOString() ?? null,
+      endBucketEndISO: endBucketEnd?.toISOString() ?? null,
       valuesFromStart: values.slice(startIndex, startIndex + 5),
       valuesFromEnd: values.slice(-5),
       deltaLabelWritten: Math.round(deltaValue),

@@ -7,10 +7,15 @@ describe("computeRollingKpiDelta", () => {
     const values = Array.from({ length: 96 }, (_, index) => (index === 95 ? 7 : 0));
     const anchor = new Date("2026-01-19T00:01:00");
 
-    const { delta, startIndex, k } = computeRollingKpiDelta(values, anchor, FIFTEEN_MINUTES_MS);
+    const { delta, startIndex, k, endIndex } = computeRollingKpiDelta(
+      values,
+      anchor,
+      FIFTEEN_MINUTES_MS,
+    );
 
     expect(k).toBe(1);
     expect(startIndex).toBe(95);
+    expect(endIndex).toBe(95);
     expect(delta).toBe(7);
   });
 
@@ -21,10 +26,15 @@ describe("computeRollingKpiDelta", () => {
     }
     const anchor = new Date("2026-01-19T03:20:00");
 
-    const { delta, startIndex, k } = computeRollingKpiDelta(values, anchor, FIFTEEN_MINUTES_MS);
+    const { delta, startIndex, k, endIndex } = computeRollingKpiDelta(
+      values,
+      anchor,
+      FIFTEEN_MINUTES_MS,
+    );
 
     expect(k).toBe(14);
     expect(startIndex).toBe(82);
+    expect(endIndex).toBe(95);
     expect(delta).toBe(14);
   });
 });
