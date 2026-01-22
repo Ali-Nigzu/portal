@@ -61,6 +61,40 @@ const parseSnapshotTimestamp = (value: string): Date => {
   return new Date(value);
 };
 
+const sumUntilIndex = (values: number[], endIndex: number): number =>
+  values.slice(0, Math.max(0, endIndex + 1)).reduce((sum, value) => sum + value, 0);
+
+const applyTodayDeltaLabel = (
+  result: ChartResult,
+  values: number[],
+  anchor: Date,
+): ChartResult => {
+  if (!values.length) {
+    return result;
+  }
+  const bucketMs = DAY_MS / values.length;
+  const dayStart = startOfDay(anchor);
+  const elapsedMs = anchor.getTime() - dayStart.getTime();
+  const idxNow = Math.floor(elapsedMs / bucketMs);
+  const deltaValue = sumUntilIndex(values, Math.min(idxNow, values.length - 1));
+  result.meta = result.meta ?? { timezone: "UTC", summary: {} };
+  result.meta.summary = result.meta.summary ?? {};
+  result.meta.summary.deltaLabel = `${Math.round(deltaValue)}`;
+  return result;
+};
+
+const getTodayRollupSeries = (payload: unknown[], seriesIndex: number): number[] => {
+  const rollups = payload[7];
+  if (!Array.isArray(rollups)) {
+    return [];
+  }
+  const todayRollup = rollups[0];
+  if (!Array.isArray(todayRollup)) {
+    return [];
+  }
+  return asNumberArray(todayRollup[seriesIndex]);
+};
+
 const buildTimeSeriesPoints = (values: number[], end: Date, stepMs: number): DataPoint[] =>
   values.map((value, index) => ({
     x: toIso(new Date(end.getTime() - (values.length - 1 - index) * stepMs)),
@@ -278,11 +312,14 @@ const buildAnchoredTimestamps = (
     return Array.from({ length }, (_, index) => addMonths(start, index));
   }
 
-  const start = startOfYear(anchor);
-  if (length <= 5) {
+  if (timeframe === "all_time") {
+    const anchorYear = anchor.getFullYear();
+    const start = new Date(anchorYear - (length - 1), 0, 1, 0, 0, 0, 0);
     return Array.from({ length }, (_, index) => addYears(start, index));
   }
-  return Array.from({ length }, (_, index) => addMonths(start, index));
+
+  const start = startOfYear(anchor);
+  return Array.from({ length }, (_, index) => addYears(start, index));
 };
 
 const normalizeSeriesLength = (values: number[], count: number): number[] => {
@@ -983,12 +1020,18 @@ export const buildSnapshotWidgetResult = (
   }
 
   switch (widgetId) {
-    case VRM_KPI_IDS.entrances:
-      return buildKpiResult(asNumberArray(payload[0]), snapshotTs, widgetId);
+    case VRM_KPI_IDS.entrances: {
+      const result = buildKpiResult(asNumberArray(payload[0]), snapshotTs, widgetId);
+      const todaySeries = getTodayRollupSeries(payload, 0);
+      return todaySeries.length ? applyTodayDeltaLabel(result, todaySeries, snapshotTs) : result;
+    }
     case VRM_KPI_IDS.occupancy:
       return buildKpiResult(asNumberArray(payload[1]), snapshotTs, widgetId);
-    case VRM_KPI_IDS.exits:
-      return buildKpiResult(asNumberArray(payload[2]), snapshotTs, widgetId);
+    case VRM_KPI_IDS.exits: {
+      const result = buildKpiResult(asNumberArray(payload[2]), snapshotTs, widgetId);
+      const todaySeries = getTodayRollupSeries(payload, 1);
+      return todaySeries.length ? applyTodayDeltaLabel(result, todaySeries, snapshotTs) : result;
+    }
     case VRM_KPI_IDS.footfall:
       return buildKpiResult(asNumberArray(payload[3]), snapshotTs, widgetId);
     case VRM_KPI_IDS.dwell:
