@@ -908,7 +908,6 @@ const buildSiteFlowResultFromSeries = (
       summary: {
         title: "Site Flow",
         presentation: "vrm",
-        siteFlowTimeframe: timeframe,
       },
     },
   };
