@@ -67,22 +67,37 @@ const sumUntilIndex = (values: number[], endIndex: number): number =>
 const floorToBucket = (date: Date, bucketMs: number): Date =>
   new Date(Math.floor(date.getTime() / bucketMs) * bucketMs);
 
+// Legacy snapshot KPI payload indices:
+// payload[0] = entrances_96, payload[1] = occupancy_96, payload[2] = exits_96,
+// payload[3] = footfall_96, payload[4] = dwell_96.
+// Delta math: rolling 96x15m series, index 95 is the current bucket (floorTo15m(snapshotTs)),
+// include buckets whose bucketStart >= local midnight.
 const applyTodayDeltaLabel = (
   result: ChartResult,
   values: number[],
   anchor: Date,
   widgetId: string,
+  payloadIndex: number,
   snapshotTsRaw?: string,
 ): ChartResult => {
   if (!values.length) {
     return result;
   }
-  const bucketMs = FIFTEEN_MINUTES_MS;
+  const bucketMs = values.length === 96 ? FIFTEEN_MINUTES_MS : DAY_MS / values.length;
+  if (process.env.NODE_ENV !== "production" && values.length !== 96) {
+    // eslint-disable-next-line no-console
+    console.warn("[Snapshots] KPI delta unexpected series length", {
+      widgetId,
+      payloadIndex,
+      valuesLength: values.length,
+      bucketMs,
+    });
+  }
   const dayStart = startOfDay(anchor);
-  const bucketStart = floorToBucket(anchor, bucketMs);
-  const bucketStartMs = bucketStart.getTime();
+  const bucketStartCurrent = floorToBucket(anchor, bucketMs);
+  const bucketStartMs = bucketStartCurrent.getTime();
   const dayStartMs = dayStart.getTime();
-  const nowBucketStartISO = bucketStart.toISOString();
+  const nowBucketStartISO = bucketStartCurrent.toISOString();
   const midnightISO = dayStart.toISOString();
   const startIndex = values.findIndex((_, index) => {
     const offset = (values.length - 1 - index) * bucketMs;
@@ -97,13 +112,17 @@ const applyTodayDeltaLabel = (
     const deltaScan = values.slice(safeStartIndex).reduce((sum, value) => sum + value, 0);
     const deltaK = values.slice(i0b).reduce((sum, value) => sum + value, 0);
     const deltaWrongPrefix = sumUntilIndex(values, Math.max(0, k - 1));
-    const t95 = new Date(bucketStartMs).toISOString();
-    const t94 = new Date(bucketStartMs - bucketMs).toISOString();
-    const t80 = new Date(bucketStartMs - (values.length - 1 - 80) * bucketMs).toISOString();
-    const t0 = new Date(bucketStartMs - (values.length - 1) * bucketMs).toISOString();
+    const tLast = new Date(bucketStartMs).toISOString();
+    const tPrev = new Date(bucketStartMs - bucketMs).toISOString();
+    const tFirst = new Date(bucketStartMs - (values.length - 1) * bucketMs).toISOString();
+    const firstIncludedStartISO =
+      safeStartIndex < values.length
+        ? new Date(bucketStartMs - (values.length - 1 - safeStartIndex) * bucketMs).toISOString()
+        : null;
     // eslint-disable-next-line no-console
     console.log("[Snapshots] KPI delta calc", {
       widgetId,
+      payloadIndex,
       snapshotTsRaw,
       payloadTsISO: anchor.toISOString(),
       valuesLength: values.length,
@@ -111,6 +130,8 @@ const applyTodayDeltaLabel = (
       midnightISO,
       bucketStartISO: nowBucketStartISO,
       startIndex: safeStartIndex,
+      firstIncludedStartISO,
+      lastIncludedEndISO: tLast,
       sumFromStart,
       sumTail: deltaValue,
       k,
@@ -118,10 +139,9 @@ const applyTodayDeltaLabel = (
       deltaScan,
       deltaK,
       deltaWrongPrefix,
-      t95,
-      t94,
-      t80,
-      t0,
+      tLast,
+      tPrev,
+      tFirst,
       deltaLabelWritten: Math.round(deltaValue),
     });
   }
@@ -1107,14 +1127,14 @@ export const buildSnapshotWidgetResult = (
       }
       logKpiSeriesDebug(widgetId, 0, series, snapshot.ts, snapshotTs.toISOString());
       return series.length
-        ? applyTodayDeltaLabel(result, series, snapshotTs, widgetId, snapshot.ts)
+        ? applyTodayDeltaLabel(result, series, snapshotTs, widgetId, 0, snapshot.ts)
         : result;
     }
     case VRM_KPI_IDS.occupancy:
       return buildKpiResult(asNumberArray(payload[1]), snapshotTs, widgetId);
     case VRM_KPI_IDS.exits: {
-      const series = getKpiSeries(payload, 1);
-      const result = buildKpiResult(asNumberArray(payload[2]), snapshotTs, widgetId);
+      const series = getKpiSeries(payload, 2);
+      const result = buildKpiResult(series, snapshotTs, widgetId);
       if (process.env.NODE_ENV !== "production") {
         // eslint-disable-next-line no-console
         console.log("[Snapshots] KPI delta path", {
@@ -1125,9 +1145,9 @@ export const buildSnapshotWidgetResult = (
           payloadTsISO: snapshotTs.toISOString(),
         });
       }
-      logKpiSeriesDebug(widgetId, 1, series, snapshot.ts, snapshotTs.toISOString());
+      logKpiSeriesDebug(widgetId, 2, series, snapshot.ts, snapshotTs.toISOString());
       return series.length
-        ? applyTodayDeltaLabel(result, series, snapshotTs, widgetId, snapshot.ts)
+        ? applyTodayDeltaLabel(result, series, snapshotTs, widgetId, 2, snapshot.ts)
         : result;
     }
     case VRM_KPI_IDS.footfall:
