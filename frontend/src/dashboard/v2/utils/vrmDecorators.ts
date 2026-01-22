@@ -401,6 +401,8 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
   trafficDistributionResult.meta.summary!.chartStyle = "traffic_distribution";
   trafficDistributionResult.meta.summary!.chartSubType = "traffic_distribution";
   const seriesList = trafficDistributionResult.series ?? [];
+  const summary = trafficDistributionResult.meta.summary as Record<string, unknown>;
+  const isSnapshotPct = summary.traffic_distribution_source === "snapshot_pct";
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
@@ -414,6 +416,53 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
 
   if (seriesList.length === 0) {
     return buildTrafficPlaceholderResult();
+  }
+
+  if (isSnapshotPct) {
+    const baseSeries = seriesList[0];
+    const baseData = baseSeries?.data ?? [];
+    const normalized = Array.from({ length: 3 }, (_, index) => {
+      const point = baseData[index];
+      const rawValue = Number(point?.value ?? point?.y ?? 0);
+      return {
+        camera: String(point?.x ?? `Camera ${index}`),
+        value: Number.isFinite(rawValue) ? rawValue : 0,
+      };
+    });
+
+    let topCamera = normalized[0]?.camera ?? "Camera 0";
+    let topShare = normalized[0]?.value ?? 0;
+    normalized.forEach(({ camera, value }) => {
+      if (value >= topShare) {
+        topShare = value;
+        topCamera = camera;
+      }
+    });
+
+    const shareData: DataPoint[] = normalized.map(({ camera, value }) => ({
+      x: camera,
+      value,
+      y: value,
+    }));
+
+    trafficDistributionResult.chartType = "categorical";
+    trafficDistributionResult.xDimension = { id: "camera", type: "category" } as ChartResult["xDimension"];
+    trafficDistributionResult.series = [
+      {
+        id: "traffic_share",
+        label: "Traffic by Camera",
+        geometry: "bar",
+        unit: "percentage",
+        data: shareData,
+      },
+    ];
+    setHeadlineValue(trafficDistributionResult, topShare);
+    addSummaryText(trafficDistributionResult, "headline", `${topCamera} – ${Math.round(topShare)}%`);
+    addSummaryText(trafficDistributionResult, "chartSubType", "traffic_distribution");
+    addSummaryText(trafficDistributionResult, "legendTitle", "Camera");
+    addSummaryText(trafficDistributionResult, "chartStyle", "traffic_distribution");
+    addSummaryText(trafficDistributionResult, "title", "Traffic Split");
+    return trafficDistributionResult;
   }
 
   const parseTimestamp = (value: unknown): Date | null => {
@@ -628,12 +677,47 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
   }
 
   const summary = next.meta!.summary as Record<string, unknown>;
+  const isSnapshotPct = summary.capacity_usage_source === "snapshot_pct";
   summary.vrmResolvedClient = uiClient ?? null;
   summary.vrmCapacity = capacity;
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
     console.log("VRM capacity usage context", { orgId, resolvedUiClient: uiClient, capacity });
+  }
+
+  if (isSnapshotPct) {
+    const currentRaw = Number(summary.capacity_current_pct ?? series.data[0]?.value ?? series.data[0]?.y ?? 0);
+    const peakRaw = Number(summary.capacity_peak_pct ?? currentRaw);
+    const currentPct = Math.min(Math.max(currentRaw, 0), 100);
+    const peakPct = Math.min(Math.max(peakRaw, currentPct), 100);
+    const peakExtra = Math.max(0, peakPct - currentPct);
+    const remainder = Math.max(0, 100 - peakPct);
+
+    summary.capacity_usage_now = currentPct;
+    summary.peak_capacity_usage_today = peakPct;
+    summary.occupancy_delta_15m = null;
+    summary.peak_occupancy_today = null;
+
+    addSummaryText(next, "vrmChipText", `peak: ${Math.round(peakPct)}%`);
+    addSummaryText(next, "chartStyle", "capacity_usage");
+    addSummaryText(next, "chartSubType", "capacity_usage");
+    addSummaryText(next, "title", "Capacity");
+
+    next.chartType = "categorical";
+    next.xDimension = { id: "capacity_segment", type: "category" } as ChartResult["xDimension"];
+    series.unit = "percentage";
+    series.label = "Capacity usage";
+    series.geometry = "bar";
+    series.data = [
+      { x: "Usage", value: currentPct, y: currentPct },
+      { x: "Peak extra", value: peakExtra, y: peakExtra },
+      { x: "Remaining", value: remainder, y: remainder },
+    ];
+
+    setHeadlineValue(next, currentPct);
+    logVrmDebug(VRM_KPI_IDS.capacity, series, currentPct);
+    return next;
   }
 
   const occupancyPoints = [...series.data];
@@ -824,4 +908,3 @@ export const decorateResult = (
   }
   return result;
 };
-
