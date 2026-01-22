@@ -64,6 +64,9 @@ const parseSnapshotTimestamp = (value: string): Date => {
 const sumUntilIndex = (values: number[], endIndex: number): number =>
   values.slice(0, Math.max(0, endIndex + 1)).reduce((sum, value) => sum + value, 0);
 
+const floorToBucket = (date: Date, bucketMs: number): Date =>
+  new Date(Math.floor(date.getTime() / bucketMs) * bucketMs);
+
 const applyTodayDeltaLabel = (
   result: ChartResult,
   values: number[],
@@ -74,9 +77,11 @@ const applyTodayDeltaLabel = (
   }
   const bucketMs = DAY_MS / values.length;
   const dayStart = startOfDay(anchor);
-  const elapsedMs = anchor.getTime() - dayStart.getTime();
-  const idxNow = Math.floor(elapsedMs / bucketMs);
-  const deltaValue = sumUntilIndex(values, Math.min(idxNow, values.length - 1));
+  const bucketStart = floorToBucket(anchor, bucketMs);
+  const elapsedMs = bucketStart.getTime() - dayStart.getTime();
+  const k = clamp(Math.floor(elapsedMs / bucketMs) + 1, 0, values.length);
+  const startIndex = Math.max(0, values.length - k);
+  const deltaValue = values.slice(startIndex).reduce((sum, value) => sum + value, 0);
   result.meta = result.meta ?? { timezone: "UTC", summary: {} };
   result.meta.summary = result.meta.summary ?? {};
   result.meta.summary.deltaLabel = `${Math.round(deltaValue)}`;
