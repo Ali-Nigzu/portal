@@ -1113,8 +1113,7 @@ export const buildSnapshotWidgetResult = (
     case VRM_KPI_IDS.occupancy:
       return buildKpiResult(asNumberArray(payload[1]), snapshotTs, widgetId);
     case VRM_KPI_IDS.exits: {
-      const series = getKpiSeries(payload, 2);
-      const seriesAlt = getKpiSeries(payload, 1);
+      const series = getKpiSeries(payload, 1);
       const result = buildKpiResult(asNumberArray(payload[2]), snapshotTs, widgetId);
       if (process.env.NODE_ENV !== "production") {
         // eslint-disable-next-line no-console
@@ -1126,32 +1125,10 @@ export const buildSnapshotWidgetResult = (
           payloadTsISO: snapshotTs.toISOString(),
         });
       }
-      logKpiSeriesDebug(widgetId, 2, series, snapshot.ts, snapshotTs.toISOString());
-      logKpiSeriesDebug(`${widgetId}-alt`, 1, seriesAlt, snapshot.ts, snapshotTs.toISOString());
-      const primaryResult = series.length
+      logKpiSeriesDebug(widgetId, 1, series, snapshot.ts, snapshotTs.toISOString());
+      return series.length
         ? applyTodayDeltaLabel(result, series, snapshotTs, widgetId, snapshot.ts)
         : result;
-      if (process.env.NODE_ENV !== "production" && seriesAlt.length) {
-        const deltaAlt = applyTodayDeltaLabel(
-          {
-            ...primaryResult,
-            meta: primaryResult.meta
-              ? { ...primaryResult.meta, summary: { ...(primaryResult.meta.summary ?? {}) } }
-              : primaryResult.meta,
-          },
-          seriesAlt,
-          snapshotTs,
-          `${widgetId}-alt`,
-          snapshot.ts,
-        );
-        // eslint-disable-next-line no-console
-        console.log("[Snapshots] KPI delta alt compare", {
-          widgetId,
-          deltaLabelPrimary: primaryResult.meta?.summary?.deltaLabel,
-          deltaLabelAlt: deltaAlt.meta?.summary?.deltaLabel,
-        });
-      }
-      return primaryResult;
     }
     case VRM_KPI_IDS.footfall:
       return buildKpiResult(asNumberArray(payload[3]), snapshotTs, widgetId);
