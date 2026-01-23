@@ -80,17 +80,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const rawCount = compact ? null : (latestPoint as unknown as { rawCount?: number | null })?.rawCount ?? null;
   const deltaCandidate = primarySeries.summary?.delta;
   const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
-  const deltaLabelOverride =
-    isVrm && typeof summary.deltaLabel === "string" ? (summary.deltaLabel as string) : null;
-  if (process.env.NODE_ENV !== "production" && isVrm) {
-    // eslint-disable-next-line no-console
-    console.log("[VRM KPI] delta render", {
-      widgetId: result.meta?.summary?.widgetId,
-      deltaLabel: deltaLabelOverride,
-      deltaValue: delta,
-    });
-  }
-
   const sparklineHeight = isVrm ? 64 : 48;
 
   const formattedDelta = formatDelta(delta);
@@ -205,12 +194,10 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const unitLabel = formatUnitLabel(primarySeries?.unit);
   const showUnit = Boolean(unitLabel && !isVrm);
   const deltaChip =
-    deltaLabelOverride !== null ? (
-      <div className="kpi-delta tone-neutral">{deltaLabelOverride}</div>
-    ) : delta !== null ? (
+    delta !== null ? (
       <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
     ) : null;
-  const showHeaderDelta = isVrm && !isTraffic && !hideDelta && (deltaLabelOverride !== null || delta !== null);
+  const showHeaderDelta = isVrm && !isTraffic && !hideDelta && delta !== null;
   const vrmChipText =
     isVrm && typeof summary.vrmChipText === "string" ? (summary.vrmChipText as string) : null;
   const showVrmChip = Boolean(vrmChipText) && !showHeaderDelta;
