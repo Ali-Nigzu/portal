@@ -1,7 +1,6 @@
 import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/schemas/charting";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
-import { bucketForSiteFlowTimeframe } from "./siteFlowTimeframe";
 
 export interface SnapshotResponse {
   ts: string;
@@ -37,6 +36,9 @@ interface NormalizedTimeSeries {
 
 const asNumberArray = (value: unknown): number[] =>
   Array.isArray(value) ? value.map((item) => (typeof item === "number" ? item : 0)) : [];
+
+const getKpiSeries = (payload: unknown[], index: number): number[] =>
+  asNumberArray(Array.isArray(payload) ? payload[index] : []);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -987,15 +989,15 @@ export const buildSnapshotWidgetResult = (
       return buildKpiResult(series, snapshotTs, widgetId);
     }
     case VRM_KPI_IDS.occupancy:
-      return buildKpiResult(asNumberArray(payload[1]), snapshotTs, widgetId);
+      return buildKpiResult(getKpiSeries(payload, 1), snapshotTs, widgetId);
     case VRM_KPI_IDS.exits: {
       const series = getKpiSeries(payload, 2);
       return buildKpiResult(series, snapshotTs, widgetId);
     }
     case VRM_KPI_IDS.footfall:
-      return buildKpiResult(asNumberArray(payload[3]), snapshotTs, widgetId);
+      return buildKpiResult(getKpiSeries(payload, 3), snapshotTs, widgetId);
     case VRM_KPI_IDS.dwell:
-      return buildKpiResult(asNumberArray(payload[4]), snapshotTs, widgetId);
+      return buildKpiResult(getKpiSeries(payload, 4), snapshotTs, widgetId);
     case VRM_KPI_IDS.capacity:
       return buildCapacityResult(asNumberArray(payload[5]));
     case VRM_KPI_IDS.traffic:

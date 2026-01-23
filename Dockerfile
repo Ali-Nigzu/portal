@@ -5,9 +5,10 @@ FROM node:20-alpine AS react-build
 
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 COPY frontend/ ./
+RUN npm test -- --watchAll=false
 RUN npm run build
 
 # --------------------------------------------
