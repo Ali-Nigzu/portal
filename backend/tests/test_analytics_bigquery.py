@@ -65,18 +65,18 @@ def mock_bigquery(monkeypatch):
 
     records_df = pd.DataFrame([
         {
-            "track_id": "abc",
+            "track_id": "ABC12",
             "event": 1,
             "timestamp": pd.Timestamp("2024-01-02T02:15:00Z"),
-            "sex": "male",
-            "age_bucket": "25-34",
+            "sex": "M",
+            "age_bucket": "0-4",
         },
         {
             "track_id": "xyz",
             "event": 0,
             "timestamp": pd.Timestamp("2024-01-02T01:45:00Z"),
-            "sex": "female",
-            "age_bucket": "18-24",
+            "sex": "F",
+            "age_bucket": "14-25",
         },
     ])
 
@@ -94,11 +94,26 @@ def mock_bigquery(monkeypatch):
         track_like = params.get("track_like")
         if not track_like:
             return df
-        return df[df["track_id"].str.contains(str(track_like), case=False, na=False)]
+        needle = str(track_like).strip("%")
+        return df[df["track_id"].str.contains(needle, case=False, na=False)]
+
+    def _apply_sex_filter(df: pd.DataFrame, params: Dict[str, Any]) -> pd.DataFrame:
+        sexes = params.get("sex_filters")
+        if not sexes:
+            return df
+        return df[df["sex"].isin(sexes)]
+
+    def _apply_age_filter(df: pd.DataFrame, params: Dict[str, Any]) -> pd.DataFrame:
+        ages = params.get("age_filters")
+        if not ages:
+            return df
+        return df[df["age_bucket"].isin(ages)]
 
     def fake_query_dataframe(sql: str, params: Dict[str, Any], job_context: Any = None):
         if "COUNT(*) AS total_records" in sql:
             filtered_records = _apply_track_filter(records_df, params)
+            filtered_records = _apply_sex_filter(filtered_records, params)
+            filtered_records = _apply_age_filter(filtered_records, params)
             if job_context and "search_summary" in str(job_context):
                 entrances = int((filtered_records["event"] == 1).sum())
                 exits = int((filtered_records["event"] == 0).sum())
@@ -124,6 +139,8 @@ def mock_bigquery(monkeypatch):
             offset = int(params.get('offset', 0) or 0)
             limit = int(params.get('limit', len(records_df)))
             filtered_records = _apply_track_filter(records_df, params)
+            filtered_records = _apply_sex_filter(filtered_records, params)
+            filtered_records = _apply_age_filter(filtered_records, params)
             return filtered_records.iloc[offset:offset + limit]
         if "dwell_minutes" in sql:
             return dwell_contract_df
@@ -181,7 +198,7 @@ def test_search_events_returns_paginated_rows(client):
     assert body["total"] == 2
     assert body["total_pages"] == 2
     assert len(body["events"]) == 1
-    assert body["events"][0]["track_number"] == "abc"
+    assert body["events"][0]["track_number"] == "ABC12"
     assert body["events"][0]["event"] == "entry"
 
 
@@ -189,12 +206,12 @@ def test_search_events_track_id_sanitization_matches(client):
     response = client.get(
         "/api/search-events",
         headers=_auth_header("client1", "client123"),
-        params={"track_id": "abc"},
+        params={"track_id": "ab12"},
     )
     response_hash = client.get(
         "/api/search-events",
         headers=_auth_header("client1", "client123"),
-        params={"track_id": "#aBc"},
+        params={"track_id": "#Ab12"},
     )
 
     assert response.status_code == 200
@@ -204,5 +221,51 @@ def test_search_events_track_id_sanitization_matches(client):
     body_hash = response_hash.json()
     assert body["total"] == 1
     assert body_hash["total"] == 1
-    assert body["events"][0]["track_number"] == "abc"
-    assert body_hash["events"][0]["track_number"] == "abc"
+    assert body["events"][0]["track_number"] == "ABC12"
+    assert body_hash["events"][0]["track_number"] == "ABC12"
+
+
+def test_search_events_sex_filter(client):
+    response_male = client.get(
+        "/api/search-events",
+        headers=_auth_header("client1", "client123"),
+        params={"sex": "M"},
+    )
+    response_female = client.get(
+        "/api/search-events",
+        headers=_auth_header("client1", "client123"),
+        params={"sex": "F"},
+    )
+
+    assert response_male.status_code == 200
+    assert response_female.status_code == 200
+
+    body_male = response_male.json()
+    body_female = response_female.json()
+    assert body_male["total"] == 1
+    assert body_female["total"] == 1
+    assert body_male["events"][0]["sex"] == "M"
+    assert body_female["events"][0]["sex"] == "F"
+
+
+def test_search_events_age_filter(client):
+    response_age = client.get(
+        "/api/search-events",
+        headers=_auth_header("client1", "client123"),
+        params={"age": "0"},
+    )
+    response_age_label = client.get(
+        "/api/search-events",
+        headers=_auth_header("client1", "client123"),
+        params={"age": "14-25"},
+    )
+
+    assert response_age.status_code == 200
+    assert response_age_label.status_code == 200
+
+    body_age = response_age.json()
+    body_label = response_age_label.json()
+    assert body_age["total"] == 1
+    assert body_label["total"] == 1
+    assert body_age["events"][0]["age_estimate"] == "0-4"
+    assert body_label["events"][0]["age_estimate"] == "14-25"

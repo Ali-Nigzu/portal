@@ -627,17 +627,45 @@ async def search_events(
         if event and event.lower() != 'all':
             resolved_events = [1 if event.lower() == 'entry' else 0]
 
-        resolved_sex = sex if sex and sex.lower() != 'all' else None
-        resolved_age = age if age and age.lower() != 'all' else None
+        resolved_sex = None
+        if sex and sex.lower() != 'all':
+            normalized_sex = sex.strip().lower()
+            if normalized_sex in {"m", "male", "0"}:
+                resolved_sex = "M"
+            elif normalized_sex in {"f", "female", "1"}:
+                resolved_sex = "F"
+            elif normalized_sex:
+                resolved_sex = normalized_sex.upper()
+
+        resolved_age = None
+        if age and age.lower() != 'all':
+            normalized_age = age.strip().lower()
+            age_map = {
+                "0": "0-4",
+                "1": "5-13",
+                "2": "14-25",
+                "3": "26-45",
+                "4": "46-65",
+                "5": "66+",
+                "0-4": "0-4",
+                "5-13": "5-13",
+                "14-25": "14-25",
+                "26-45": "26-45",
+                "46-65": "46-65",
+                "66+": "66+",
+            }
+            resolved_age = age_map.get(normalized_age)
         resolved_race = race if race and race.lower() != 'all' else None
 
         resolved_track = None
+        resolved_track_like = None
         if track_id:
             cleaned_track = track_id.strip()
             if cleaned_track.startswith("#"):
                 cleaned_track = cleaned_track[1:].strip()
             if cleaned_track:
-                resolved_track = cleaned_track
+                resolved_track = cleaned_track.lower()
+                resolved_track_like = f"%{resolved_track}%"
 
         logger.debug(
             "Event search filters resolved: %s",
@@ -668,7 +696,7 @@ async def search_events(
             races=[resolved_race] if resolved_race else None,
             site_ids=[site_id] if site_id else None,
             camera_ids=[camera_id] if camera_id else None,
-            track_id_like=resolved_track,
+            track_id_like=resolved_track_like,
         )
 
         summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], base_ctx)

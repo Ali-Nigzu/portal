@@ -162,8 +162,10 @@ def test_metric_queries_use_timestamp_bounds() -> None:
 def test_event_summary_filters_apply_coalesce() -> None:
     ctx = _context(sexes=["Unknown"], age_buckets=["14-25"])
     plan = compile_contract_query(Metric.EVENT_SUMMARY, [], ctx)
-    assert "COALESCE(CAST(sex AS STRING), 'Unknown') IN UNNEST(@sex_filters)" in plan.sql
-    assert "COALESCE(CAST(age_bucket AS STRING), 'Unknown') IN UNNEST(@age_filters)" in plan.sql
+    assert "CASE WHEN sex = 0 THEN 'M' WHEN sex = 1 THEN 'F'" in plan.sql
+    assert "CASE WHEN age_bucket IS NULL THEN 'Unknown'" in plan.sql
+    assert "IN UNNEST(@sex_filters)" in plan.sql
+    assert "IN UNNEST(@age_filters)" in plan.sql
     assert plan.params["sex_filters"] == ["Unknown"]
     assert plan.params["age_filters"] == ["14-25"]
 
@@ -171,5 +173,12 @@ def test_event_summary_filters_apply_coalesce() -> None:
 def test_raw_events_selects_coalesced_demographics() -> None:
     ctx = _context()
     plan = compile_contract_query(Metric.RAW_EVENTS, [], ctx)
-    assert "COALESCE(CAST(sex AS STRING), 'Unknown') AS sex" in plan.sql
-    assert "COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket" in plan.sql
+    assert "CASE WHEN sex = 0 THEN 'M' WHEN sex = 1 THEN 'F'" in plan.sql
+    assert "CASE WHEN age_bucket IS NULL THEN 'Unknown'" in plan.sql
+
+
+def test_track_id_filter_uses_lowercase_like() -> None:
+    ctx = _context(track_id_like="%abc%")
+    plan = compile_contract_query(Metric.RAW_EVENTS, [], ctx)
+    assert "LOWER(track_id) LIKE @track_like" in plan.sql
+    assert plan.params["track_like"] == "%abc%"

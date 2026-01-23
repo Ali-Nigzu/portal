@@ -53,8 +53,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     { value: '2', label: 'Dark' },
   ];
   const sexOptions = [
-    { value: '0', label: 'Male' },
-    { value: '1', label: 'Female' },
+    { value: 'M', label: 'Male' },
+    { value: 'F', label: 'Female' },
   ];
   const siteOptions = [
     { value: '1', label: 'Client 1 (Site 1)' },
@@ -165,7 +165,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     if (normalized === '1' || normalized === 'f' || normalized === 'female') {
       return 'Female';
     }
-    return value.toString();
+    return 'Unknown';
   };
 
   const formatAgeBucket = (value: EventData['age_estimate']) => {
