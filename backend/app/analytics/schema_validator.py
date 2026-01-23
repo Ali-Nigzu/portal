@@ -12,13 +12,12 @@ except ImportError:  # pragma: no cover - fallback for type checking without Big
 EVENT_COLUMNS: Sequence[str] = (
     "site_id",
     "cam_id",
-    "index",
     "track_id",
     "event",
     "timestamp",
     "sex",
     "age_bucket",
-    "Race",
+    "race",
 )
 
 

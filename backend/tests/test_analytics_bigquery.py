@@ -90,17 +90,24 @@ def mock_bigquery(monkeypatch):
         }
     ])
 
+    def _apply_track_filter(df: pd.DataFrame, params: Dict[str, Any]) -> pd.DataFrame:
+        track_like = params.get("track_like")
+        if not track_like:
+            return df
+        return df[df["track_id"].str.contains(str(track_like), case=False, na=False)]
+
     def fake_query_dataframe(sql: str, params: Dict[str, Any], job_context: Any = None):
         if "COUNT(*) AS total_records" in sql:
+            filtered_records = _apply_track_filter(records_df, params)
             if job_context and "search_summary" in str(job_context):
-                entrances = int((records_df["event"] == 1).sum())
-                exits = int((records_df["event"] == 0).sum())
+                entrances = int((filtered_records["event"] == 1).sum())
+                exits = int((filtered_records["event"] == 0).sum())
                 return pd.DataFrame(
                     [
                         {
-                            "total_records": len(records_df),
-                            "min_timestamp": records_df["timestamp"].min(),
-                            "max_timestamp": records_df["timestamp"].max(),
+                            "total_records": len(filtered_records),
+                            "min_timestamp": filtered_records["timestamp"].min(),
+                            "max_timestamp": filtered_records["timestamp"].max(),
                             "entrances": entrances,
                             "exits": exits,
                         }
@@ -116,7 +123,8 @@ def mock_bigquery(monkeypatch):
         if "LIMIT @limit" in sql and "OFFSET @offset" in sql:
             offset = int(params.get('offset', 0) or 0)
             limit = int(params.get('limit', len(records_df)))
-            return records_df.iloc[offset:offset + limit]
+            filtered_records = _apply_track_filter(records_df, params)
+            return filtered_records.iloc[offset:offset + limit]
         if "dwell_minutes" in sql:
             return dwell_contract_df
         raise AssertionError(f"Unexpected SQL received: {sql}")
@@ -175,3 +183,26 @@ def test_search_events_returns_paginated_rows(client):
     assert len(body["events"]) == 1
     assert body["events"][0]["track_number"] == "abc"
     assert body["events"][0]["event"] == "entry"
+
+
+def test_search_events_track_id_sanitization_matches(client):
+    response = client.get(
+        "/api/search-events",
+        headers=_auth_header("client1", "client123"),
+        params={"track_id": "abc"},
+    )
+    response_hash = client.get(
+        "/api/search-events",
+        headers=_auth_header("client1", "client123"),
+        params={"track_id": "#aBc"},
+    )
+
+    assert response.status_code == 200
+    assert response_hash.status_code == 200
+
+    body = response.json()
+    body_hash = response_hash.json()
+    assert body["total"] == 1
+    assert body_hash["total"] == 1
+    assert body["events"][0]["track_number"] == "abc"
+    assert body_hash["events"][0]["track_number"] == "abc"

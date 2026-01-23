@@ -6,11 +6,11 @@ import { Credentials } from '../types/credentials';
 
 interface EventData {
   index: number;
-  track_number: number;
+  track_number: string;
   event: string;
   timestamp: string;
-  sex: string;
-  age_estimate: string;
+  sex: string | number | null;
+  age_estimate: string | number | null;
   hour: number;
   day_of_week: string;
   date: string;
@@ -28,7 +28,10 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     event: '',
     sex: '',
     age: '',
-    trackId: ''
+    trackId: '',
+    race: '',
+    siteId: '',
+    cameraId: ''
   });
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -36,6 +39,35 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalEvents, setTotalEvents] = useState(0);
   const eventsPerPage = 20;
+  const ageBuckets = [
+    { value: '0', label: '0-4' },
+    { value: '1', label: '5-13' },
+    { value: '2', label: '14-25' },
+    { value: '3', label: '26-45' },
+    { value: '4', label: '46-65' },
+    { value: '5', label: '66+' },
+  ];
+  const raceOptions = [
+    { value: '0', label: 'Light' },
+    { value: '1', label: 'Mix' },
+    { value: '2', label: 'Dark' },
+  ];
+  const sexOptions = [
+    { value: '0', label: 'Male' },
+    { value: '1', label: 'Female' },
+  ];
+  const siteOptions = [
+    { value: '1', label: 'Client 1 (Site 1)' },
+    { value: '2', label: 'Client 2 (Site 2)' },
+  ];
+
+  const sanitizeTrackId = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return '';
+    }
+    return trimmed.startsWith('#') ? trimmed.slice(1).trim() : trimmed;
+  };
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -65,8 +97,18 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       if (filter.age) {
         searchParams.append('age', filter.age);
       }
-      if (filter.trackId) {
-        searchParams.append('track_id', filter.trackId);
+      const sanitizedTrackId = sanitizeTrackId(filter.trackId);
+      if (sanitizedTrackId) {
+        searchParams.append('track_id', sanitizedTrackId);
+      }
+      if (filter.race) {
+        searchParams.append('race', filter.race);
+      }
+      if (filter.siteId) {
+        searchParams.append('site_id', filter.siteId);
+      }
+      if (filter.cameraId) {
+        searchParams.append('camera_id', filter.cameraId);
       }
       
       const headers: HeadersInit = {
@@ -112,8 +154,30 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     setCurrentPage(1);
   };
 
-  // Server-side filtering and pagination - no client-side filtering needed
-  const uniqueAges = ['0-4', '5-13', '14-25', '26-45', '46-65', '66+'];
+  const formatSex = (value: EventData['sex']) => {
+    if (value === null || value === undefined) {
+      return 'Unknown';
+    }
+    const normalized = value.toString().toLowerCase();
+    if (normalized === '0' || normalized === 'm' || normalized === 'male') {
+      return 'Male';
+    }
+    if (normalized === '1' || normalized === 'f' || normalized === 'female') {
+      return 'Female';
+    }
+    return value.toString();
+  };
+
+  const formatAgeBucket = (value: EventData['age_estimate']) => {
+    if (value === null || value === undefined) {
+      return 'Unknown';
+    }
+    const numeric = parseInt(value.toString(), 10);
+    if (!Number.isNaN(numeric) && ageBuckets[numeric]) {
+      return ageBuckets[numeric].label;
+    }
+    return value.toString();
+  };
 
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -144,7 +208,15 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   };
 
   const clearAllFilters = () => {
-    setFilter({ event: '', sex: '', age: '', trackId: '' });
+    setFilter({
+      event: '',
+      sex: '',
+      age: '',
+      trackId: '',
+      race: '',
+      siteId: '',
+      cameraId: ''
+    });
     setStartDate(null);
     setEndDate(null);
     setCurrentPage(1);
@@ -250,7 +322,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 type="text"
                 value={filter.trackId}
                 onChange={(e) => setFilter(prev => ({ ...prev, trackId: e.target.value }))}
-                placeholder="Search by track number"
+                placeholder="Search by track ID"
                 className="vrm-input"
               />
             </div>
@@ -272,7 +344,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             </div>
           </div>
 
-          {/* Second Row: Gender, Age Group */}
+          {/* Second Row: Gender, Age Group, Race */}
           <div className="vrm-filter-grid">
             <div>
               <label className="vrm-label" htmlFor="event-gender">
@@ -285,8 +357,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 className="vrm-select"
               >
                 <option value="">All Genders</option>
-                <option value="M">Male</option>
-                <option value="F">Female</option>
+                {sexOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
 
@@ -301,10 +374,62 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 className="vrm-select"
               >
                 <option value="">All Ages</option>
-                {uniqueAges.map(age => (
-                  <option key={age} value={age}>{age}</option>
+                {ageBuckets.map(age => (
+                  <option key={age.value} value={age.value}>{age.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="vrm-label" htmlFor="event-race">
+                Race
+              </label>
+              <select
+                id="event-race"
+                value={filter.race}
+                onChange={(e) => setFilter(prev => ({ ...prev, race: e.target.value }))}
+                className="vrm-select"
+              >
+                <option value="">All Races</option>
+                {raceOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Third Row: Site/Client, Camera */}
+          <div className="vrm-filter-grid">
+            <div>
+              <label className="vrm-label" htmlFor="event-site">
+                Client/Site
+              </label>
+              <select
+                id="event-site"
+                value={filter.siteId}
+                onChange={(e) => setFilter(prev => ({ ...prev, siteId: e.target.value }))}
+                className="vrm-select"
+              >
+                <option value="">All Sites</option>
+                {siteOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="vrm-label" htmlFor="event-camera-id">
+                Camera ID
+              </label>
+              <input
+                id="event-camera-id"
+                type="number"
+                value={filter.cameraId}
+                onChange={(e) => setFilter(prev => ({ ...prev, cameraId: e.target.value }))}
+                placeholder="Filter by camera ID"
+                className="vrm-input"
+                min="0"
+              />
             </div>
           </div>
         </div>
@@ -349,9 +474,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                       <td>{formatTimestamp(event.timestamp)}</td>
                       <td>
                         <div style={{ fontSize: 'var(--vrm-typography-font-size-body)' }}>
-                          <div>{event.sex === 'M' ? 'Male' : 'Female'}</div>
+                          <div>{formatSex(event.sex)}</div>
                           <div style={{ color: 'var(--vrm-text-muted)', marginTop: 'var(--vrm-spacing-1)' }}>
-                            Age: {event.age_estimate}
+                            Age: {formatAgeBucket(event.age_estimate)}
                           </div>
                         </div>
                       </td>

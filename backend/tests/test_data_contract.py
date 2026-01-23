@@ -148,7 +148,7 @@ def test_scoped_cte_projects_canonical_columns() -> None:
         "timestamp AS timestamp, CASE WHEN age_bucket IS NULL THEN 'Unknown' ELSE CAST(age_bucket AS STRING) END AS age_bucket, "
         "CASE WHEN sex = 0 THEN 'Male' WHEN sex = 1 THEN 'Female' WHEN LOWER(CAST(sex AS STRING)) IN ('m', 'male') THEN 'Male' "
         "WHEN LOWER(CAST(sex AS STRING)) IN ('f', 'female') THEN 'Female' ELSE 'Unknown' END AS sex, "
-        "COALESCE(CAST(Race AS STRING), 'Unknown') AS race"
+        "COALESCE(CAST(race AS STRING), 'Unknown') AS race"
     )
     assert projection == " ".join(expected.split())
 

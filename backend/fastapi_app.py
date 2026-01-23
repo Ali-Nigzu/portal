@@ -294,7 +294,11 @@ def _resolve_view_token_context(view_token: str) -> str:
     return org_id
 
 
-def _authenticate_chart_data_request(request: Request, view_token: Optional[str]) -> str:
+def _authenticate_chart_data_request(
+    request: Request,
+    view_token: Optional[str],
+    client_id: Optional[str] = None,
+) -> str:
     """Helper function to authenticate chart data requests (view token or Basic auth)."""
     if view_token:
         return _resolve_view_token_context(view_token)
@@ -319,8 +323,15 @@ def _authenticate_chart_data_request(request: Request, view_token: Optional[str]
                 )
 
             user_record = users[username]
-            org_id = _org_id_for_user_record(username, user_record)
-            return org_id
+            if user_record.get("role") == "admin" and client_id:
+                if client_id not in users:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Client '{client_id}' not found",
+                    )
+                target_record = users[client_id]
+                return _org_id_for_user_record(client_id, target_record)
+            return _org_id_for_user_record(username, user_record)
         except HTTPException:
             raise
         except Exception as e:
@@ -422,7 +433,9 @@ async def get_chart_data(
 ):
     """Return analytics payload backed by BigQuery aggregations."""
     try:
-        org_id = _authenticate_chart_data_request(request, view_token)
+        org_id = _authenticate_chart_data_request(
+            request, view_token, request.query_params.get("client_id")
+        )
         table_name = _resolve_table_for_org(org_id)
 
         kpi_filters = {
@@ -588,15 +601,21 @@ async def search_events(
     event: Optional[str] = None,
     sex: Optional[str] = None,
     age: Optional[str] = None,
+    race: Optional[str] = None,
+    site_id: Optional[str] = None,
+    camera_id: Optional[str] = None,
     track_id: Optional[str] = None,
     page: int = 1,
     per_page: int = 20,
-    view_token: Optional[str] = None
+    view_token: Optional[str] = None,
+    client_id: Optional[str] = None,
 ):
     """Search BigQuery event logs with pagination."""
     try:
-        org_id = _authenticate_chart_data_request(request, view_token)
+        org_id = _authenticate_chart_data_request(request, view_token, client_id)
         table_name = _resolve_table_for_org(org_id)
+
+        logger.debug("Event search params: %s", dict(request.query_params))
 
         filters: Dict[str, Optional[str]] = {
             'start_date': start_date,
@@ -610,6 +629,32 @@ async def search_events(
 
         resolved_sex = sex if sex and sex.lower() != 'all' else None
         resolved_age = age if age and age.lower() != 'all' else None
+        resolved_race = race if race and race.lower() != 'all' else None
+
+        resolved_track = None
+        if track_id:
+            cleaned_track = track_id.strip()
+            if cleaned_track.startswith("#"):
+                cleaned_track = cleaned_track[1:].strip()
+            if cleaned_track:
+                resolved_track = cleaned_track
+
+        logger.debug(
+            "Event search filters resolved: %s",
+            {
+                "start": bounds["start_ts"],
+                "end": bounds["end_ts"],
+                "event": resolved_events,
+                "sex": resolved_sex,
+                "age_bucket": resolved_age,
+                "race": resolved_race,
+                "site_id": site_id,
+                "camera_id": camera_id,
+                "track": resolved_track,
+                "page": page,
+                "per_page": per_page,
+            },
+        )
 
         base_ctx = QueryContext(
             org_id=org_id,
@@ -620,7 +665,10 @@ async def search_events(
             events=resolved_events,
             sexes=[resolved_sex] if resolved_sex else None,
             age_buckets=[resolved_age] if resolved_age else None,
-            track_id_like=f"%{track_id}%" if track_id else None,
+            races=[resolved_race] if resolved_race else None,
+            site_ids=[site_id] if site_id else None,
+            camera_ids=[camera_id] if camera_id else None,
+            track_id_like=resolved_track,
         )
 
         summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], base_ctx)

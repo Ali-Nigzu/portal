@@ -70,13 +70,12 @@ ALL_TIME_START = datetime(1970, 1, 1, tzinfo=UTC)
 EVENT_TABLE_COLUMNS: Sequence[str] = (
     "site_id",
     "cam_id",
-    "index",
     "track_id",
     "event",
     "timestamp",
     "sex",
     "age_bucket",
-    "Race",
+    "race",
 )
 
 
@@ -321,7 +320,7 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
         "SELECT"
         " COALESCE(CAST(sex AS STRING), 'Unknown') AS sex,"
         " COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket,"
-        " COALESCE(CAST(Race AS STRING), 'Unknown') AS race,"
+        " COALESCE(CAST(race AS STRING), 'Unknown') AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
@@ -374,10 +373,10 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
     }
     if ctx.site_ids:
         params["site_ids"] = ctx.site_ids
-        clauses.append("site_id IN UNNEST(@site_ids)")
+        clauses.append("CAST(site_id AS STRING) IN UNNEST(@site_ids)")
     if ctx.camera_ids:
         params["camera_ids"] = ctx.camera_ids
-        clauses.append("cam_id IN UNNEST(@camera_ids)")
+        clauses.append("CAST(cam_id AS STRING) IN UNNEST(@camera_ids)")
     if ctx.sexes:
         params["sex_filters"] = ctx.sexes
         clauses.append(
@@ -390,13 +389,13 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
         )
     if ctx.races:
         params["race_filters"] = ctx.races
-        clauses.append("COALESCE(CAST(Race AS STRING), 'Unknown') IN UNNEST(@race_filters)")
+        clauses.append("COALESCE(CAST(race AS STRING), 'Unknown') IN UNNEST(@race_filters)")
     if ctx.events:
         params["event_filters"] = ctx.events
         clauses.append("event IN UNNEST(@event_filters)")
     if ctx.track_id_like:
         params["track_like"] = ctx.track_id_like
-        clauses.append("track_id LIKE @track_like")
+        clauses.append("LOWER(track_id) LIKE CONCAT('%', LOWER(@track_like), '%')")
     if not clauses:
         return "", params
     return " AND " + " AND ".join(clauses), params
@@ -430,4 +429,3 @@ def build_query(metric: Metric, dims: List[Dimension], ctx: QueryContext) -> str
 
     plan = compile_contract_query(metric, dims, ctx)
     return plan.sql
-
