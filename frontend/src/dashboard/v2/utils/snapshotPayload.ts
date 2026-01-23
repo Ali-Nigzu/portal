@@ -56,12 +56,10 @@ const clamp = (value: number, min: number, max: number): number =>
 
 const parseSnapshotTimestamp = (value: string): Date => {
   if (NAIVE_TIMESTAMP_REGEX.test(value)) {
-    return new Date(value.replace(" ", "T"));
+    return new Date(`${value.replace(" ", "T")}Z`);
   }
   return new Date(value);
 };
-
-const getKpiSeries = (payload: unknown[], index: number): number[] => asNumberArray(payload[index]);
 
 const buildTimeSeriesPoints = (values: number[], end: Date, stepMs: number): DataPoint[] =>
   values.map((value, index) => ({
@@ -280,14 +278,11 @@ const buildAnchoredTimestamps = (
     return Array.from({ length }, (_, index) => addMonths(start, index));
   }
 
-  if (timeframe === "all_time") {
-    const anchorYear = anchor.getFullYear();
-    const start = new Date(anchorYear - (length - 1), 0, 1, 0, 0, 0, 0);
+  const start = startOfYear(anchor);
+  if (length <= 5) {
     return Array.from({ length }, (_, index) => addYears(start, index));
   }
-
-  const start = startOfYear(anchor);
-  return Array.from({ length }, (_, index) => addYears(start, index));
+  return Array.from({ length }, (_, index) => addMonths(start, index));
 };
 
 const normalizeSeriesLength = (values: number[], count: number): number[] => {
@@ -913,7 +908,6 @@ const buildSiteFlowResultFromSeries = (
       summary: {
         title: "Site Flow",
         presentation: "vrm",
-        siteFlowTimeframe: timeframe,
       },
     },
   };

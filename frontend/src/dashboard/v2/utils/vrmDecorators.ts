@@ -691,6 +691,7 @@ export const applyCapacityUsage = (result: ChartResult, orgId: string | undefine
     summary.occupancy_delta_15m = null;
     summary.peak_occupancy_today = null;
 
+    addSummaryText(next, "vrmChipText", `peak: ${Math.round(peakPct)}%`);
     addSummaryText(next, "chartStyle", "capacity_usage");
     addSummaryText(next, "chartSubType", "capacity_usage");
     addSummaryText(next, "title", "Capacity");
