@@ -196,13 +196,11 @@ describe("applyVRMOverrides", () => {
     expect(footfallHeadline.lastBucket).toBe(9);
     expect(footfallHeadline.total24h).toBe(15);
     expect(footfallResult.meta?.summary?.headlineValue).toBe(9);
-    expect(footfallResult.meta?.summary?.vrmChipText).toBeUndefined();
 
     const capacityHeadline = getCapacityUsageHeadline(rawCapacityResult as any, "client1");
     expect(capacityHeadline.currentUsage).toBe(80);
     expect(capacityHeadline.peakToday).toBe(80);
     expect(capacityResult.meta?.summary?.headlineValue).toBe(80);
-    expect(capacityResult.meta?.summary?.vrmChipText).toBe("peak: 80%");
   });
 
   it("uses UI client identifiers for capacity mapping", () => {

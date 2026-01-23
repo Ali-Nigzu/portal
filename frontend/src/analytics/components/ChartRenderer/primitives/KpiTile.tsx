@@ -179,9 +179,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
 
   const unitLabel = formatUnitLabel(primarySeries?.unit);
   const showUnit = Boolean(unitLabel && !isVrm);
-  const vrmChipText =
-    isVrm && typeof summary.vrmChipText === "string" ? (summary.vrmChipText as string) : null;
-  const showVrmChip = Boolean(vrmChipText);
 
   const trafficRows =
     isTraffic && primarySeries?.data?.length
@@ -227,7 +224,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           <div className="kpi-header">
             {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
             <div className="kpi-header-right">
-              {showVrmChip ? <div className="kpi-chip">{vrmChipText}</div> : null}
               {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
             </div>
           </div>

@@ -361,18 +361,6 @@
   color: #f97066;
 }
 
-.kpi-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: var(--vrm-radii-chip, 16px);
-  font-size: var(--vrm-typography-font-size-caption, 12px);
-  background: rgba(255, 255, 255, 0.08);
-  width: fit-content;
-  color: var(--vrm-color-text-muted, #8290a6);
-}
-
 .kpi-sparkline {
   height: 48px;
   position: relative;
