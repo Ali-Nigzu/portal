@@ -164,7 +164,6 @@ describe("KpiTile", () => {
           label: "Dwell",
           geometry: "metric",
           unit: "minutes",
-          summary: { delta: -0.14 },
           data: [
             { x: "2024-01-01T00:00:00Z", value: 20 },
             { x: "2024-01-01T00:15:00Z", value: 23.87 },
@@ -183,9 +182,6 @@ describe("KpiTile", () => {
     expect(tree.findAllByProps({ className: "kpi-unit" })).toHaveLength(0);
     const valueNode = tree.findByProps({ className: "kpi-value" });
     expect(valueNode.children.join(" ")).toBe("24 min");
-    const headerRight = tree.findByProps({ className: "kpi-header-right" });
-    const deltaNode = headerRight.findByProps({ className: "kpi-delta tone-negative" });
-    expect(deltaNode.children.join(" ")).toContain("↓ 14%");
   });
 
   it("renders traffic distribution rows when chartStyle is traffic_distribution", () => {

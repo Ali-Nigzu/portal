@@ -982,12 +982,16 @@ export const buildSnapshotWidgetResult = (
   }
 
   switch (widgetId) {
-    case VRM_KPI_IDS.entrances:
-      return buildKpiResult(asNumberArray(payload[0]), snapshotTs, widgetId);
+    case VRM_KPI_IDS.entrances: {
+      const series = getKpiSeries(payload, 0);
+      return buildKpiResult(series, snapshotTs, widgetId);
+    }
     case VRM_KPI_IDS.occupancy:
       return buildKpiResult(asNumberArray(payload[1]), snapshotTs, widgetId);
-    case VRM_KPI_IDS.exits:
-      return buildKpiResult(asNumberArray(payload[2]), snapshotTs, widgetId);
+    case VRM_KPI_IDS.exits: {
+      const series = getKpiSeries(payload, 2);
+      return buildKpiResult(series, snapshotTs, widgetId);
+    }
     case VRM_KPI_IDS.footfall:
       return buildKpiResult(asNumberArray(payload[3]), snapshotTs, widgetId);
     case VRM_KPI_IDS.dwell:

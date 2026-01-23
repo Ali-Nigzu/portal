@@ -82,6 +82,7 @@ export const FlowChart = ({
   const endLabelCompact = endTimestamp
     ? formatBrushTimestamp(endTimestamp, { compact: true })
     : "—";
+  const showBrush = !isSiteFlow;
 
   return (
     <div className={className} style={{ height }}>
@@ -225,20 +226,22 @@ export const FlowChart = ({
             }
             return null;
           })}
-          <Brush
-            dataKey="x"
-            height={24}
-            travellerWidth={12}
-            stroke="var(--border-strong, rgba(130, 144, 166, 0.35))"
-            fill="var(--surface-muted, rgba(15, 19, 26, 0.35))"
-            tickFormatter={() => ""}
-            onChange={(nextRange) => setBrushRange(nextRange)}
-            startIndex={brushRange.startIndex}
-            endIndex={brushRange.endIndex}
-          />
+          {showBrush ? (
+            <Brush
+              dataKey="x"
+              height={24}
+              travellerWidth={12}
+              stroke="var(--border-strong, rgba(130, 144, 166, 0.35))"
+              fill="var(--surface-muted, rgba(15, 19, 26, 0.35))"
+              tickFormatter={() => ""}
+              onChange={(nextRange) => setBrushRange(nextRange)}
+              startIndex={brushRange.startIndex}
+              endIndex={brushRange.endIndex}
+            />
+          ) : null}
         </ComposedChart>
       </ResponsiveContainer>
-      {dataset.data.length > 0 ? (
+      {showBrush && dataset.data.length > 0 ? (
         <div className="analytics-brush-labels">
           <div className="analytics-brush-label">
             <span className="analytics-brush-caption">Start</span>
