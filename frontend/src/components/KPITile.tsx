@@ -3,8 +3,6 @@ interface KPITileProps {
   title: string;
   value: string;
   unit?: string;
-  deltaLabel?: string;
-  trend?: 'up' | 'down' | 'neutral';
   color?: string;
   caption?: string;
   badgeLabel?: string;
@@ -17,8 +15,6 @@ const KPITile: React.FC<KPITileProps> = ({
   title,
   value,
   unit,
-  deltaLabel,
-  trend = 'neutral',
   color = 'var(--vrm-color-accent-occupancy)',
   caption,
   badgeLabel,
@@ -26,7 +22,6 @@ const KPITile: React.FC<KPITileProps> = ({
   onClick,
   className,
 }) => {
-  const trendClass = trend === 'up' ? 'vrm-kpi-delta--up' : trend === 'down' ? 'vrm-kpi-delta--down' : 'vrm-kpi-delta--neutral';
   const badgeClass = `vrm-kpi-badge vrm-kpi-badge--${badgeTone}`;
   const Wrapper = onClick ? 'button' : 'div';
 
@@ -41,7 +36,6 @@ const KPITile: React.FC<KPITileProps> = ({
       <div className="vrm-kpi-header vrm-kpi-tile__header">
         <span className="vrm-kpi-title vrm-kpi-tile__label">{title}</span>
         <div className="vrm-kpi-tile__meta">
-          {deltaLabel && <span className={`vrm-kpi-delta ${trendClass}`}>{deltaLabel}</span>}
           {badgeLabel && <span className={badgeClass}>{badgeLabel}</span>}
         </div>
       </div>

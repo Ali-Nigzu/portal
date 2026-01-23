@@ -62,6 +62,8 @@ describe("SiteFlowTooltip", () => {
         label="2025-12-24T20:35:00Z"
         seriesMap={seriesMap}
         visibility={baseVisibility}
+        timeframe="today"
+        bucket="HOUR"
       />,
     );
     const text = JSON.stringify(tree.toJSON());
@@ -100,6 +102,8 @@ describe("SiteFlowTooltip", () => {
         label="2025-12-24T20:35:00Z"
         seriesMap={seriesMap}
         visibility={visibility}
+        timeframe="today"
+        bucket="HOUR"
       />,
     );
     const text = JSON.stringify(tree.toJSON());

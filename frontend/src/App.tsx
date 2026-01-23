@@ -5,13 +5,11 @@ import EventLogsPage from './pages/EventLogsPage';
 import AlarmLogsPage from './pages/AlarmLogsPage';
 import DeviceListPage from './pages/DeviceListPage';
 import ReportsPage from './pages/ReportsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
+import AnalyticsComingSoonPage from './pages/AnalyticsComingSoonPage';
 import AdminPage from './pages/AdminPage';
 import LandingPage from './pages/LandingPage';
 import './styles/VRMTheme.css';
 import { GlobalControlsProvider } from './context/GlobalControlsContext';
-import { EXPERIENCE_GATES } from './config';
-import AnalyticsV2Page from './analytics/v2/pages/AnalyticsV2Page';
 import DashboardV2Page from './dashboard/v2/pages/DashboardV2Page';
 import { Credentials } from './types/credentials';
 import { deriveOrgIdFromTableName, determineOrgId } from './utils/org';
@@ -190,7 +188,6 @@ const App: React.FC = () => {
   };
 
   const hasViewToken = new URLSearchParams(window.location.search).has('view_token');
-  const analyticsExperience = EXPERIENCE_GATES.analytics;
 
   return (
     <Router>
@@ -236,48 +233,25 @@ const App: React.FC = () => {
                 }
               </VRMLayout>
             } />
-            <Route
-              path="/analytics"
-              element={
+            {(() => {
+              const analyticsElement = (
                 <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
                   {userRole === 'admin' && !hasViewToken ? (
                     <Navigate to="/admin" replace />
-                  ) : analyticsExperience.default === 'v2' ? (
-                    <AnalyticsV2Page credentials={credentials} />
                   ) : (
-                    <AnalyticsPage credentials={credentials} />
+                    <AnalyticsComingSoonPage />
                   )}
                 </VRMLayout>
-              }
-            />
-            {analyticsExperience.default === 'legacy' && analyticsExperience.routes.v2 ? (
-              <Route
-                path="/analytics/v2"
-                element={
-                  <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-                    {userRole === 'admin' && !hasViewToken ? (
-                      <Navigate to="/admin" replace />
-                    ) : (
-                      <AnalyticsV2Page credentials={credentials} />
-                    )}
-                  </VRMLayout>
-                }
-              />
-            ) : null}
-            {analyticsExperience.default === 'v2' && analyticsExperience.routes.legacy ? (
-              <Route
-                path="/analytics/legacy"
-                element={
-                  <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
-                    {userRole === 'admin' && !hasViewToken ? (
-                      <Navigate to="/admin" replace />
-                    ) : (
-                      <AnalyticsPage credentials={credentials} />
-                    )}
-                  </VRMLayout>
-                }
-              />
-            ) : null}
+              );
+              return (
+                <>
+                  <Route path="/analytics" element={analyticsElement} />
+                  <Route path="/analytics/v2" element={analyticsElement} />
+                  <Route path="/analytics/legacy" element={analyticsElement} />
+                  <Route path="/analytics/*" element={analyticsElement} />
+                </>
+              );
+            })()}
             <Route path="/reports" element={
               <VRMLayout userRole={hasViewToken ? 'client' : userRole} onLogout={handleLogout}>
                 {userRole === 'admin' && !hasViewToken ? 
