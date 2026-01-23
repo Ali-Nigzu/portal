@@ -42,7 +42,7 @@ export const formatSiteFlowTick = (
     case "last_year":
       return formatMonth(parsed, false);
     case "all_time":
-      return String(parsed.getFullYear());
+      return bucket === "MONTH" ? formatMonth(parsed, true) : String(parsed.getFullYear());
     default:
       return label;
   }
@@ -71,7 +71,7 @@ export const formatSiteFlowTooltip = (
     case "last_year":
       return formatMonth(parsed, false);
     case "all_time":
-      return String(parsed.getFullYear());
+      return bucket === "MONTH" ? formatMonth(parsed, true) : String(parsed.getFullYear());
     default:
       return label;
   }
