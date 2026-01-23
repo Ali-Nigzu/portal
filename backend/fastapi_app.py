@@ -421,15 +421,9 @@ async def get_chart_data(
     view_token: Optional[str] = None
 ):
     """Return analytics payload backed by BigQuery aggregations."""
-    raise HTTPException(
-        status_code=410,
-        detail={
-            "error": "snapshots_only",
-            "message": "Chart analytics are disabled in snapshots-only mode",
-        },
-    )
     try:
-        org_id, table_name = _authenticate_chart_data_request(request, view_token)
+        org_id = _authenticate_chart_data_request(request, view_token)
+        table_name = _resolve_table_for_org(org_id)
 
         kpi_filters = {
             'start_date': kpi_start_date or start_date,
@@ -600,15 +594,9 @@ async def search_events(
     view_token: Optional[str] = None
 ):
     """Search BigQuery event logs with pagination."""
-    raise HTTPException(
-        status_code=410,
-        detail={
-            "error": "snapshots_only",
-            "message": "Event search is disabled in snapshots-only mode",
-        },
-    )
     try:
-        _org_id, table_name = _authenticate_chart_data_request(request, view_token)
+        org_id = _authenticate_chart_data_request(request, view_token)
+        table_name = _resolve_table_for_org(org_id)
 
         filters: Dict[str, Optional[str]] = {
             'start_date': start_date,
@@ -624,7 +612,7 @@ async def search_events(
         resolved_age = age if age and age.lower() != 'all' else None
 
         base_ctx = QueryContext(
-            org_id=_org_id,
+            org_id=org_id,
             table_name=table_name,
             start=bounds['start_ts'],
             end=bounds['end_ts'],

@@ -18,7 +18,10 @@ class BigQueryConfigurationError(RuntimeError):
     """Raised when required BigQuery configuration is missing."""
 
 
-DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {}
+DEFAULT_ORG_TABLE_IDS: Dict[str, str] = {
+    "client1": "camosbase.sitedemodata.logs",
+    "client2": "camosbase.sitedemodata.logs",
+}
 
 
 def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
@@ -52,12 +55,15 @@ def _parse_event_timestamp_columns(value: str | None) -> Dict[str, str]:
 
 # Default mappings for known organisations. Some entries are "locked" to avoid
 # accidental overrides by misconfigured environment variables.
-DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {}
+DEFAULT_ORG_EVENT_TIMESTAMP_COLUMNS: Dict[str, str] = {
+    "client1": "timestamp",
+    "client2": "timestamp",
+}
 
 # Organisations whose default timestamp columns should not be overridden by
 # environment variables (to avoid emitting invalid SQL when schemas differ from
 # deployment settings).
-LOCKED_ORG_EVENT_TIMESTAMP_COLUMNS: set[str] = set()
+LOCKED_ORG_EVENT_TIMESTAMP_COLUMNS: set[str] = {"client1", "client2"}
 
 
 def _strip_compat_suffix(table_id: str) -> str:
