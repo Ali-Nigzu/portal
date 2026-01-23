@@ -28,16 +28,6 @@ const formatKpiValue = (value: number | null | undefined, unit?: string) => {
 
 const formatUnitLabel = (unit?: string | null) => (unit ? unit.toUpperCase() : null);
 
-function formatDelta(delta: number | null | undefined): { text: string; tone: "positive" | "negative" | "neutral" } {
-  if (delta === null || delta === undefined) {
-    return { text: "—", tone: "neutral" };
-  }
-  const tone = delta === 0 ? "neutral" : delta > 0 ? "positive" : "negative";
-  const symbol = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
-  const percent = `${Math.abs(Math.round(delta * 100))}%`;
-  return { text: `${symbol} ${percent}`, tone };
-}
-
 export const KpiTile = ({ series, height, className, result }: ChartPrimitiveProps) => {
   const primarySeries = series[0];
   const sparklineData = useMemo(() => {
@@ -78,11 +68,8 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
   const compact = Boolean(summary?.compact);
   const coverage = compact ? null : latestPoint?.coverage ?? null;
   const rawCount = compact ? null : (latestPoint as unknown as { rawCount?: number | null })?.rawCount ?? null;
-  const deltaCandidate = primarySeries.summary?.delta;
-  const delta = typeof deltaCandidate === "number" ? deltaCandidate : null;
   const sparklineHeight = isVrm ? 64 : 48;
 
-  const formattedDelta = formatDelta(delta);
   const coverageInfo = formatCoverage(coverage);
   const showRaw = !compact && shouldShowRawCount(rawCount);
   const secondaryText =
@@ -93,7 +80,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
     typeof result.meta?.summary?.tertiaryText === "string"
       ? (result.meta?.summary?.tertiaryText as string)
       : undefined;
-  const hideDelta = Boolean(result.meta?.summary?.hideDelta);
   const headerLabel = isVrm
     ? (typeof summary.title === "string"
         ? (summary.title as string)
@@ -193,14 +179,9 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
 
   const unitLabel = formatUnitLabel(primarySeries?.unit);
   const showUnit = Boolean(unitLabel && !isVrm);
-  const deltaChip =
-    delta !== null ? (
-      <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
-    ) : null;
-  const showHeaderDelta = isVrm && !isTraffic && !hideDelta && delta !== null;
   const vrmChipText =
     isVrm && typeof summary.vrmChipText === "string" ? (summary.vrmChipText as string) : null;
-  const showVrmChip = Boolean(vrmChipText) && !showHeaderDelta;
+  const showVrmChip = Boolean(vrmChipText);
 
   const trafficRows =
     isTraffic && primarySeries?.data?.length
@@ -246,7 +227,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           <div className="kpi-header">
             {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
             <div className="kpi-header-right">
-              {showHeaderDelta ? deltaChip : null}
               {showVrmChip ? <div className="kpi-delta tone-neutral">{vrmChipText}</div> : null}
               {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
             </div>
@@ -259,9 +239,6 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
             <div className={`kpi-coverage ${coverageInfo.tone}`}>
               coverage: {coverageInfo.label}
             </div>
-          ) : null}
-          {!isVrm && !hideDelta && delta !== null ? (
-            <div className={`kpi-delta tone-${formattedDelta.tone}`}>{formattedDelta.text}</div>
           ) : null}
           {trafficRows.length > 0 ? (
             <div className="kpi-traffic" aria-label="Traffic distribution rows">
