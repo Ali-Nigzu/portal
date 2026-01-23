@@ -85,6 +85,8 @@ SEX_EXPRESSION = (
     "ELSE 'Unknown' END"
 )
 
+TRACK_ID_EXPRESSION = "LOWER(CAST(track_id AS STRING))"
+
 AGE_BUCKET_EXPRESSION = (
     "CASE WHEN age_bucket IS NULL THEN 'Unknown' "
     "WHEN CAST(age_bucket AS STRING) = '0' THEN '0-4' "
@@ -409,7 +411,7 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
         clauses.append("event IN UNNEST(@event_filters)")
     if ctx.track_id_like:
         params["track_like"] = ctx.track_id_like
-        clauses.append("LOWER(track_id) LIKE @track_like")
+        clauses.append(f"{TRACK_ID_EXPRESSION} LIKE @track_like")
     if not clauses:
         return "", params
     return " AND " + " AND ".join(clauses), params

@@ -252,7 +252,7 @@ def test_search_events_age_filter(client):
     response_age = client.get(
         "/api/search-events",
         headers=_auth_header("client1", "client123"),
-        params={"age": "0"},
+        params={"age": "0-4"},
     )
     response_age_label = client.get(
         "/api/search-events",

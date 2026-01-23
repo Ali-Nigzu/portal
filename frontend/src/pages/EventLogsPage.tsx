@@ -40,12 +40,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const [totalEvents, setTotalEvents] = useState(0);
   const eventsPerPage = 20;
   const ageBuckets = [
-    { value: '0', label: '0-4' },
-    { value: '1', label: '5-13' },
-    { value: '2', label: '14-25' },
-    { value: '3', label: '26-45' },
-    { value: '4', label: '46-65' },
-    { value: '5', label: '66+' },
+    { value: '0-4', label: '0-4' },
+    { value: '5-13', label: '5-13' },
+    { value: '14-25', label: '14-25' },
+    { value: '26-45', label: '26-45' },
+    { value: '46-65', label: '46-65' },
+    { value: '66+', label: '66+' },
   ];
   const raceOptions = [
     { value: '0', label: 'Light' },
@@ -172,11 +172,16 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     if (value === null || value === undefined) {
       return 'Unknown';
     }
-    const numeric = parseInt(value.toString(), 10);
+    const raw = value.toString();
+    const mapped = ageBuckets.find((bucket) => bucket.value === raw);
+    if (mapped) {
+      return mapped.label;
+    }
+    const numeric = parseInt(raw, 10);
     if (!Number.isNaN(numeric) && ageBuckets[numeric]) {
       return ageBuckets[numeric].label;
     }
-    return value.toString();
+    return raw;
   };
 
   const formatTimestamp = (timestamp: string) => {

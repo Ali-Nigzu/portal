@@ -180,5 +180,5 @@ def test_raw_events_selects_coalesced_demographics() -> None:
 def test_track_id_filter_uses_lowercase_like() -> None:
     ctx = _context(track_id_like="%abc%")
     plan = compile_contract_query(Metric.RAW_EVENTS, [], ctx)
-    assert "LOWER(track_id) LIKE @track_like" in plan.sql
+    assert "LOWER(CAST(track_id AS STRING)) LIKE @track_like" in plan.sql
     assert plan.params["track_like"] == "%abc%"
