@@ -227,7 +227,7 @@ export const KpiTile = ({ series, height, className, result }: ChartPrimitivePro
           <div className="kpi-header">
             {headerLabel ? <div className="kpi-label">{headerLabel}</div> : <div className="kpi-label" />}
             <div className="kpi-header-right">
-              {showVrmChip ? <div className="kpi-delta tone-neutral">{vrmChipText}</div> : null}
+              {showVrmChip ? <div className="kpi-chip">{vrmChipText}</div> : null}
               {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
             </div>
           </div>

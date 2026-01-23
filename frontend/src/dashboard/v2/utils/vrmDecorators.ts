@@ -55,11 +55,6 @@ const ensureSummary = (result: ChartResult) => {
   result.meta.summary = result.meta.summary ?? {};
 };
 
-const suppressDelta = (result: ChartResult) => {
-  ensureSummary(result);
-  result.meta.summary!.hideDelta = 1 as unknown as string | number | null;
-};
-
 export const markCompact = (result: ChartResult) => {
   ensureSummary(result);
   result.meta.summary!.presentation = "vrm";
@@ -370,7 +365,6 @@ export const buildTrafficPlaceholderResult = (): ChartResult => ({
       headline: "Camera – 100%",
       presentation: "vrm",
       compact: 1 as unknown as number,
-      hideDelta: 1 as unknown as number,
       chartStyle: "traffic_distribution",
       chartSubType: "traffic_distribution",
       title: "Traffic Split",
@@ -392,7 +386,6 @@ const deriveCameraLabel = (series: ChartSeries, index: number): string => {
 export const applyTrafficDistributionShare = (result: ChartResult, orgId?: string): ChartResult => {
   const trafficDistributionResult = cloneResult(result);
   markCompact(trafficDistributionResult);
-  suppressDelta(trafficDistributionResult);
   ensureSummary(trafficDistributionResult);
   // ChartRenderer traffic routing relies on both top-level and summary style hints.
   // Ensure they are always present for decorated VRM traffic results.
@@ -667,7 +660,6 @@ export const applyTrafficDistributionShare = (result: ChartResult, orgId?: strin
 export const applyCapacityUsage = (result: ChartResult, orgId: string | undefined): ChartResult => {
   const next = cloneResult(result);
   markCompact(next);
-  suppressDelta(next);
   ensureSummary(next);
   const series = next.series[0];
   const uiClient = resolveUiClient(orgId);
@@ -800,7 +792,6 @@ export const applyOccupancyDelta = (result: ChartResult): ChartResult => {
 const applyBasicVrmHeadline = (widgetId: string, result: ChartResult) => {
   const next = cloneResult(result);
   markCompact(next);
-  suppressDelta(next);
   applyLastBucketHeadline(widgetId, next);
   return next;
 };
@@ -812,7 +803,6 @@ const applyVrmTotalChip = (widgetId: string, result: ChartResult): ChartResult =
   applyLastBucketHeadline(widgetId, next);
   const total = sumSeries(next.series?.[0]);
   addSummaryText(next, "vrmChipText", `${Math.round(total)}`);
-  suppressDelta(next);
   return next;
 };
 
@@ -827,9 +817,6 @@ const applyFootfallDelta = (result: ChartResult): ChartResult => {
   const summary = next.meta?.summary as Record<string, unknown> | undefined;
   if (summary?.vrmChipText) {
     delete summary.vrmChipText;
-  }
-  if (summary?.hideDelta) {
-    delete summary.hideDelta;
   }
   return next;
 };

@@ -3,7 +3,6 @@ interface KPITileProps {
   title: string;
   value: string;
   unit?: string;
-  trend?: 'up' | 'down' | 'neutral';
   color?: string;
   caption?: string;
   badgeLabel?: string;
@@ -16,7 +15,6 @@ const KPITile: React.FC<KPITileProps> = ({
   title,
   value,
   unit,
-  trend = 'neutral',
   color = 'var(--vrm-color-accent-occupancy)',
   caption,
   badgeLabel,
