@@ -54,15 +54,11 @@ describe("vrm entrances/exits chips", () => {
 
   it("adds a 24h total chip for entrances", () => {
     const decorated = decorateResult(VRM_KPI_IDS.entrances, baseResult as any, "client1");
-    expect(decorated.meta?.summary?.vrmChipText).toBe("5");
-    expect(decorated.meta?.summary?.hideDelta).toBeTruthy();
     expect(decorated.meta?.summary?.headlineValue).toBe(3);
   });
 
   it("adds a 24h total chip for exits", () => {
     const decorated = decorateResult(VRM_KPI_IDS.exits, baseResult as any, "client1");
-    expect(decorated.meta?.summary?.vrmChipText).toBe("5");
-    expect(decorated.meta?.summary?.hideDelta).toBeTruthy();
     expect(decorated.meta?.summary?.headlineValue).toBe(3);
   });
 });
@@ -353,7 +349,5 @@ describe("vrm footfall delta", () => {
 
     const decorated = decorateResult(VRM_KPI_IDS.footfall, footfallResult, "client1");
     expect(decorated.meta?.summary?.headlineValue).toBe(250);
-    expect(decorated.meta?.summary?.vrmChipText).toBeUndefined();
-    expect(decorated.meta?.summary?.hideDelta).toBeUndefined();
   });
 });

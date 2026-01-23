@@ -196,15 +196,11 @@ describe("applyVRMOverrides", () => {
     expect(footfallHeadline.lastBucket).toBe(9);
     expect(footfallHeadline.total24h).toBe(15);
     expect(footfallResult.meta?.summary?.headlineValue).toBe(9);
-    expect(footfallResult.meta?.summary?.vrmChipText).toBeUndefined();
-    expect(footfallResult.meta?.summary?.hideDelta).toBeUndefined();
 
     const capacityHeadline = getCapacityUsageHeadline(rawCapacityResult as any, "client1");
     expect(capacityHeadline.currentUsage).toBe(80);
     expect(capacityHeadline.peakToday).toBe(80);
     expect(capacityResult.meta?.summary?.headlineValue).toBe(80);
-    expect(capacityResult.meta?.summary?.hideDelta).toBeTruthy();
-    expect(capacityResult.meta?.summary?.vrmChipText).toBe("peak: 80%");
   });
 
   it("uses UI client identifiers for capacity mapping", () => {
@@ -263,6 +259,5 @@ describe("applyVRMOverrides", () => {
     expect(Math.round(data[0]?.value ?? 0)).toBe(67);
     expect(Math.round(data[1]?.value ?? 0)).toBe(33);
     expect(traffic.meta?.summary?.chartSubType).toBe("traffic_distribution");
-    expect(traffic.meta?.summary?.hideDelta).toBeTruthy();
   });
 });

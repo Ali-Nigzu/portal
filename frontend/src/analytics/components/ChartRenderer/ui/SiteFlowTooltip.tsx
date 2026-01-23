@@ -2,11 +2,13 @@ import type { TooltipContentProps } from "recharts";
 import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesVisibilityMap } from "../managers";
 import { formatNumeric } from "../utils/format";
-import { formatTooltipTimestamp } from "../utils/formatTooltipTimestamp";
+import { formatSiteFlowTooltip } from "../utils/formatSiteFlowTick";
 
 type SiteFlowTooltipProps = Partial<TooltipContentProps<number, string>> & {
   seriesMap: Map<string, ChartSeries>;
   visibility: SeriesVisibilityMap;
+  timeframe?: string;
+  bucket?: string;
 };
 
 type OccupancyValues = {
@@ -45,12 +47,14 @@ export const SiteFlowTooltip = ({
   label,
   seriesMap,
   visibility,
+  timeframe,
+  bucket,
 }: SiteFlowTooltipProps) => {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
 
-  const formattedLabel = formatTooltipTimestamp(String(label ?? ""));
+  const formattedLabel = formatSiteFlowTooltip(timeframe, bucket, String(label ?? ""));
   const occupancyVisible = visibility.occupancy_avg ?? visibility.occupancy ?? false;
   const occupancyValues = occupancyVisible ? resolveOccupancyValues(payload) : {};
 

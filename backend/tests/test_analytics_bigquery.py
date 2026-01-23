@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.fastapi_app import app, analytics_cache, bigquery_client
+from backend.app.analytics.org_config import resolve_table_for_org
 
 
 @pytest.fixture(autouse=True)
@@ -158,6 +159,9 @@ def test_chart_data_matches_expected_schema(client):
 
 
 def test_search_events_returns_paginated_rows(client):
+    assert resolve_table_for_org("client1") == "camosbase.sitedemodata.logs"
+    assert resolve_table_for_org("client2") == "camosbase.sitedemodata.logs"
+
     response = client.get(
         "/api/search-events",
         headers=_auth_header("client1", "client123"),

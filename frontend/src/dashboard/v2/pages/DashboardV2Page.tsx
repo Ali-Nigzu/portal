@@ -42,6 +42,7 @@ import {
   bucketForSiteFlowTimeframe,
   resolveSiteFlowTimeRange,
 } from "../utils/siteFlowTimeframe";
+import { isSnapshotOrg } from "../utils/snapshotMode";
 import type { ChartSpec, ChartDimension } from "../../../analytics/schemas/charting";
 
 export { lookupCapacity } from "../utils/vrmDecorators";
@@ -349,7 +350,14 @@ const DashboardV2Page = ({
   const [siteFlowMode, setSiteFlowMode] = useState<"activity" | "demographics">(
     "activity",
   );
-  const [siteFlowTimeframe, setSiteFlowTimeframe] = useState<SiteFlowTimeframe>("all_time");
+  const isSnapshotMode = useMemo(
+    () => Boolean(viewToken) || isSnapshotOrg(orgId),
+    [orgId, viewToken],
+  );
+  const hasUserSetSiteFlowTimeframe = useRef(false);
+  const [siteFlowTimeframe, setSiteFlowTimeframe] = useState<SiteFlowTimeframe>(() =>
+    isSnapshotMode ? "today" : "all_time",
+  );
   const [siteFlowActivity, setSiteFlowActivity] = useState<{
     status: "idle" | "loading" | "ready" | "error";
     result?: Parameters<typeof ChartRenderer>[0]["result"];
@@ -384,6 +392,16 @@ const DashboardV2Page = ({
   }, [credentials.orgId, credentials.username, manifest?.orgId, orgId]);
 
   const clientContextId = resolvedUiClient;
+  const handleSiteFlowTimeframeChange = useCallback((next: SiteFlowTimeframe) => {
+    hasUserSetSiteFlowTimeframe.current = true;
+    setSiteFlowTimeframe(next);
+  }, []);
+
+  useEffect(() => {
+    if (isSnapshotMode && !hasUserSetSiteFlowTimeframe.current) {
+      setSiteFlowTimeframe("today");
+    }
+  }, [isSnapshotMode]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") {
@@ -1029,7 +1047,7 @@ const DashboardV2Page = ({
                     mode={siteFlowMode}
                     onModeChange={setSiteFlowMode}
                     timeframe={siteFlowTimeframe}
-                    onTimeframeChange={setSiteFlowTimeframe}
+                    onTimeframeChange={handleSiteFlowTimeframeChange}
                     demographics={siteFlowDemographics}
                     activity={siteFlowActivity}
                   />
