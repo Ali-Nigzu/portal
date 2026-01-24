@@ -331,7 +331,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
 
       if (reportType === 'site-activity') {
         const metrics = buildSiteActivityMetrics(rollup);
-        const bucketLabels = buildSiteFlowBucketLabels(
+        const bucketLabelData = buildSiteFlowBucketLabels(
           timePeriod,
           snapshotTs,
           [
@@ -341,7 +341,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
             metrics.occupancySeries,
             metrics.dwellSeries,
           ],
-        ).labels;
+        );
+        const bucketLabels = timePeriod === 'all_time'
+          ? bucketLabelData.timestamps.map((timestamp) => String(timestamp.getFullYear()))
+          : bucketLabelData.labels;
         const footfallSeries = bucketLabels.length > 0
           ? metrics.footfallSeries.slice(0, bucketLabels.length)
           : metrics.footfallSeries;
