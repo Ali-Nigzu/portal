@@ -43,6 +43,9 @@ const collapseIfInverted = (start: Date, end: Date): { start: Date; end: Date } 
 const formatDay = (value: Date): string =>
   value.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
+const formatTime = (value: Date): string =>
+  value.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+
 const formatDayRange = (start: Date, end: Date): string => {
   if (start.getTime() === end.getTime()) {
     return formatDay(end);
@@ -85,23 +88,23 @@ export const getReportHeaderRange = (
   const window = resolveSiteFlowWindow(timeframe, end);
   const { start, end: clampedEnd } = collapseIfInverted(window.from, end);
 
-  if (timeframe === "today" || timeframe === "yesterday") {
+  if (timeframe === "today") {
+    return { start, end: clampedEnd, labelLine: `${formatDay(clampedEnd)} up to ${formatTime(clampedEnd)}` };
+  }
+
+  if (timeframe === "yesterday") {
     return { start, end: clampedEnd, labelLine: formatDay(clampedEnd) };
   }
 
   if (timeframe === "last_week" || timeframe === "last_month") {
-    const labelLine =
-      timeframe === "last_month" && start.getTime() <= clampedEnd.getTime()
-        ? formatMonthYear(start)
-        : formatDayRange(start, clampedEnd);
-    return { start, end: clampedEnd, labelLine };
+    return { start, end: clampedEnd, labelLine: formatDayRange(start, clampedEnd) };
   }
 
   if (timeframe === "last_quarter" || timeframe === "last_year") {
     return { start, end: clampedEnd, labelLine: formatMonthRange(start, clampedEnd) };
   }
 
-  return { start, end: clampedEnd, labelLine: formatDay(clampedEnd) };
+  return { start, end: clampedEnd, labelLine: formatDayRange(start, clampedEnd) };
 };
 
 export const formatReportDateRange = (
