@@ -24,7 +24,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState({
+  const [draftFilters, setDraftFilters] = useState({
     event: '',
     sex: '',
     age: '',
@@ -33,8 +33,19 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     siteId: '',
     cameraId: ''
   });
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [appliedFilters, setAppliedFilters] = useState({
+    event: '',
+    sex: '',
+    age: '',
+    trackId: '',
+    race: '',
+    cameraId: ''
+  });
+  const [draftStartDate, setDraftStartDate] = useState<Date | null>(null);
+  const [draftEndDate, setDraftEndDate] = useState<Date | null>(null);
+  const [appliedStartDate, setAppliedStartDate] = useState<Date | null>(null);
+  const [appliedEndDate, setAppliedEndDate] = useState<Date | null>(null);
+  const [searchToken, setSearchToken] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalEvents, setTotalEvents] = useState(0);
@@ -144,14 +155,43 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     } finally {
       setLoading(false);
     }
-  }, [credentials.username, credentials.password, currentPage, startDate, endDate, filter]);
+  }, [
+    buildSearchParams,
+    credentials.username,
+    credentials.password,
+  ]);
 
   useEffect(() => {
     fetchEvents();
-  }, [fetchEvents]);
+  }, [fetchEvents, searchToken]);
 
   const handleSearch = () => {
+    setAppliedFilters({ ...draftFilters });
+    setAppliedStartDate(clampToToday(draftStartDate));
+    setAppliedEndDate(clampToToday(draftEndDate));
     setCurrentPage(1);
+    setSearchToken((prev) => prev + 1);
+  };
+
+  const handleTrackIdKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleSearch();
+    }
+  };
+
+  const formatSex = (value: EventData['sex']) => {
+    if (value === null || value === undefined) {
+      return 'Unknown';
+    }
+    const normalized = value.toString().toLowerCase();
+    if (normalized === '0' || normalized === 'm' || normalized === 'male') {
+      return 'Male';
+    }
+    if (normalized === '1' || normalized === 'f' || normalized === 'female') {
+      return 'Female';
+    }
+    return 'Unknown';
   };
 
   const formatSex = (value: EventData['sex']) => {
@@ -227,6 +267,43 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     setCurrentPage(1);
   };
 
+  const handleExport = async () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewToken = urlParams.get('view_token');
+      const clientId = urlParams.get('client_id');
+      const searchParams = buildSearchParams(false);
+      let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}/export?${searchParams.toString()}`;
+
+      const headers: HeadersInit = {};
+      if (viewToken) {
+        apiUrl += `&view_token=${encodeURIComponent(viewToken)}`;
+      } else {
+        const auth = btoa(`${credentials.username}:${credentials.password}`);
+        headers['Authorization'] = `Basic ${auth}`;
+        if (clientId) {
+          apiUrl += `&client_id=${encodeURIComponent(clientId)}`;
+        }
+      }
+
+      const response = await fetch(apiUrl, { headers });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'event-logs.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(`Failed to export events: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="vrm-loading-state">
@@ -293,12 +370,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 Start Date
               </label>
               <DatePicker
-                selected={startDate}
-                onChange={(date: Date | null) => setStartDate(date)}
+                selected={draftStartDate}
+                onChange={(date: Date | null) => setDraftStartDate(clampToToday(date))}
                 placeholderText="Select start date"
                 dateFormat="yyyy-MM-dd"
                 className="vrm-date-picker"
-                maxDate={endDate || undefined}
+                maxDate={draftEndDate || today}
                 id="event-start-date"
               />
             </div>
@@ -308,12 +385,13 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 End Date
               </label>
               <DatePicker
-                selected={endDate}
-                onChange={(date: Date | null) => setEndDate(date)}
+                selected={draftEndDate}
+                onChange={(date: Date | null) => setDraftEndDate(clampToToday(date))}
                 placeholderText="Select end date"
                 dateFormat="yyyy-MM-dd"
                 className="vrm-date-picker"
-                minDate={startDate || undefined}
+                minDate={draftStartDate || undefined}
+                maxDate={today}
                 id="event-end-date"
               />
             </div>
@@ -338,8 +416,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </label>
               <select
                 id="event-type"
-                value={filter.event}
-                onChange={(e) => setFilter(prev => ({ ...prev, event: e.target.value }))}
+                value={draftFilters.event}
+                onChange={(e) => setDraftFilters(prev => ({ ...prev, event: e.target.value }))}
                 className="vrm-select"
               >
                 <option value="">All Events</option>
@@ -357,8 +435,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </label>
               <select
                 id="event-gender"
-                value={filter.sex}
-                onChange={(e) => setFilter(prev => ({ ...prev, sex: e.target.value }))}
+                value={draftFilters.sex}
+                onChange={(e) => setDraftFilters(prev => ({ ...prev, sex: e.target.value }))}
                 className="vrm-select"
               >
                 <option value="">All Genders</option>
@@ -374,8 +452,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </label>
               <select
                 id="event-age-group"
-                value={filter.age}
-                onChange={(e) => setFilter(prev => ({ ...prev, age: e.target.value }))}
+                value={draftFilters.age}
+                onChange={(e) => setDraftFilters(prev => ({ ...prev, age: e.target.value }))}
                 className="vrm-select"
               >
                 <option value="">All Ages</option>
@@ -437,6 +515,24 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               />
             </div>
           </div>
+
+          {/* Third Row: Camera */}
+          <div className="vrm-filter-grid">
+            <div>
+              <label className="vrm-label" htmlFor="event-camera-id">
+                Camera ID
+              </label>
+              <input
+                id="event-camera-id"
+                type="number"
+                value={draftFilters.cameraId}
+                onChange={(e) => setDraftFilters(prev => ({ ...prev, cameraId: e.target.value }))}
+                placeholder="Filter by camera ID"
+                className="vrm-input"
+                min="0"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -447,7 +543,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             Activity Events ({totalEvents.toLocaleString()} total)
           </h3>
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Export CSV</button>
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleExport}>
+              Export CSV
+            </button>
             <button className="vrm-btn vrm-btn-sm" onClick={fetchEvents}>Refresh</button>
           </div>
         </div>

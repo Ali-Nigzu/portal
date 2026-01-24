@@ -78,6 +78,7 @@ def test_event_summary_query_shape() -> None:
     plan = compile_contract_query(Metric.EVENT_SUMMARY, [], ctx)
     assert "COUNTIF(event = 1)" in plan.sql
     assert "COUNTIF(event = 0)" in plan.sql
+    assert "timestamp <= CURRENT_TIMESTAMP()" in plan.sql
     assert plan.params["start_ts"] == ctx.start
     assert plan.params["end_ts"] == ctx.end
 
