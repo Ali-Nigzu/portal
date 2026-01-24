@@ -275,9 +275,11 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
       const searchParams = buildSearchParams(false);
-      let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}/export?${searchParams.toString()}`;
+      let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}?${searchParams.toString()}`;
 
-      const headers: HeadersInit = {};
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
       if (viewToken) {
         apiUrl += `&view_token=${encodeURIComponent(viewToken)}`;
       } else {
@@ -292,8 +294,41 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const result = await response.json();
+      const exportEvents = result.events || [];
+      if (!Array.isArray(exportEvents) || exportEvents.length === 0) {
+        throw new Error('No events available for export.');
+      }
+
+      const columns: Array<keyof EventData> = [
+        'index',
+        'track_number',
+        'event',
+        'timestamp',
+        'sex',
+        'age_estimate',
+        'hour',
+        'day_of_week',
+        'date',
+      ];
+      const escapeCsv = (value: unknown) => {
+        if (value === null || value === undefined) {
+          return '';
+        }
+        const text = String(value);
+        if (/[",\n]/.test(text)) {
+          return `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+      };
+      const csvRows = [
+        columns.join(','),
+        ...exportEvents.map((event: EventData) =>
+          columns.map((column) => escapeCsv(event[column])).join(','),
+        ),
+      ];
+      const csvBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(csvBlob);
       const link = document.createElement('a');
       link.href = url;
       link.download = 'event-logs.csv';
@@ -375,7 +410,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 onChange={(date: Date | null) => setDraftStartDate(clampToToday(date))}
                 placeholderText="Select start date"
                 dateFormat="yyyy-MM-dd"
-                className="vrm-date-picker"
+                className="vrm-date-picker event-logs-filter-control"
                 maxDate={draftEndDate || today}
                 id="event-start-date"
               />
@@ -390,7 +425,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 onChange={(date: Date | null) => setDraftEndDate(clampToToday(date))}
                 placeholderText="Select end date"
                 dateFormat="yyyy-MM-dd"
-                className="vrm-date-picker"
+                className="vrm-date-picker event-logs-filter-control"
                 minDate={draftStartDate || undefined}
                 maxDate={today}
                 id="event-end-date"
@@ -408,7 +443,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, trackId: e.target.value }))}
                 onKeyDown={handleTrackIdKeyDown}
                 placeholder="Search by track ID"
-                className="vrm-input"
+                className="vrm-input event-logs-filter-control"
               />
             </div>
 
@@ -420,7 +455,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-type"
                 value={draftFilters.event}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, event: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Events</option>
                 <option value="entry">Entry</option>
@@ -428,10 +463,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </select>
             </div>
 
-          </div>
-
-          {/* Second Row: Sex, Age Group, Race */}
-          <div className="event-logs-filter-grid">
             <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-sex">
                 Sex
@@ -440,7 +471,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-sex"
                 value={draftFilters.sex}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, sex: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Sexes</option>
                 {sexOptions.map(option => (
@@ -457,7 +488,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-age-group"
                 value={draftFilters.age}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, age: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Ages</option>
                 {ageBuckets.map(age => (
@@ -466,7 +497,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </select>
             </div>
 
-            <div>
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-race">
                 Race
               </label>
@@ -474,7 +505,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-race"
                 value={draftFilters.race}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, race: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Races</option>
                 {raceOptions.map(option => (
@@ -512,7 +543,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleExport}>
               Export CSV
             </button>
-            <button className="vrm-btn vrm-btn-sm" onClick={fetchEvents}>Refresh</button>
           </div>
         </div>
         <div className="vrm-card-body vrm-card-body--flush">
