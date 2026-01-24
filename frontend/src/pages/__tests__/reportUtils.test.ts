@@ -3,8 +3,8 @@ import {
   formatReportDateRange,
   buildVisitorProfileMetrics,
   resolveRollup,
+  getReportHeaderRange,
 } from "../reports/reportUtils";
-import { resolveSiteFlowWindow } from "../../dashboard/v2/utils/siteFlowBuckets";
 
 describe("reportUtils", () => {
   it("computes site activity metrics from rollup arrays", () => {
@@ -56,9 +56,30 @@ describe("reportUtils", () => {
 
   it("resolves timeframe range labels", () => {
     const snapshotTs = new Date("2026-01-19T00:00:00Z");
-    const window = resolveSiteFlowWindow("all_time", snapshotTs);
-    const range = formatReportDateRange(snapshotTs, "all_time", window);
-    expect(range.subtitle).toBe("All time → 19 Jan 2026");
+    const now = new Date("2026-02-02T12:00:00Z");
+    const range = formatReportDateRange(snapshotTs, "all_time", now);
+    expect(range.subtitle).toBe("All Time • 2024 – 2026");
+    expect(range.end.toISOString()).toBe(snapshotTs.toISOString());
+  });
+
+  it("clamps header end to now and snapshot timestamps", () => {
+    const snapshotTs = new Date("2026-01-10T00:00:00Z");
+    const now = new Date("2026-01-08T12:00:00Z");
+    const header = getReportHeaderRange("last_month", snapshotTs, now);
+    expect(header.end.toISOString()).toBe(now.toISOString());
+    expect(header.start.getTime()).toBeLessThanOrEqual(header.end.getTime());
+  });
+
+  it("uses clamped end anchors for last month and last year headers", () => {
+    const snapshotTs = new Date("2026-01-24T08:00:00Z");
+    const now = new Date("2026-02-10T09:00:00Z");
+    const lastMonthHeader = getReportHeaderRange("last_month", snapshotTs, now);
+    const lastYearHeader = getReportHeaderRange("last_year", snapshotTs, now);
+
+    expect(lastMonthHeader.end.toISOString()).toBe(snapshotTs.toISOString());
+    expect(lastYearHeader.end.toISOString()).toBe(snapshotTs.toISOString());
+    expect(lastMonthHeader.labelLine).toBe("week of 29 Dec 2025 to week of 19 Jan 2026");
+    expect(lastYearHeader.labelLine).toBe("Feb 2025 – Jan 2026");
   });
 
   it("picks rollup index based on timeframe", () => {

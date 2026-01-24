@@ -1,3 +1,5 @@
+import { resolveSiteFlowWindow, startOfWeek } from "../../dashboard/v2/utils/siteFlowBuckets";
+
 export type ReportTimeframe =
   | "today"
   | "yesterday"
@@ -28,30 +30,70 @@ const sum = (values: number[]): number => values.reduce((acc, value) => acc + va
 
 const mean = (values: number[]): number => (values.length ? sum(values) / values.length : 0);
 
-const min = (values: number[]): number =>
-  values.length ? Math.min(...values) : 0;
+const min = (values: number[]): number => (values.length ? Math.min(...values) : 0);
 
-const max = (values: number[]): number =>
-  values.length ? Math.max(...values) : 0;
+const max = (values: number[]): number => (values.length ? Math.max(...values) : 0);
+
+const clampEnd = (snapshotTs: Date, now: Date): Date =>
+  snapshotTs.getTime() <= now.getTime() ? snapshotTs : now;
+
+const collapseIfInverted = (start: Date, end: Date): { start: Date; end: Date } =>
+  end.getTime() < start.getTime() ? { start: end, end } : { start, end };
 
 const formatDay = (value: Date): string =>
-  value.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  value.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-const formatMonthYear = (value: Date): string =>
-  value.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+const formatTime = (value: Date): string =>
+  value.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
 
 const formatDayRange = (start: Date, end: Date): string => {
+  if (start.getTime() === end.getTime()) {
+    return formatDay(end);
+  }
   if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return `${start.getDate()}–${end.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+    return `${start.getDate()}–${formatDay(end)}`;
   }
   return `${formatDay(start)}–${formatDay(end)}`;
 };
 
+const formatMonthYear = (value: Date): string =>
+  value.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+
 const formatMonthRange = (start: Date, end: Date): string => {
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${start.toLocaleDateString("en-GB", { month: "short" })}–${formatMonthYear(end)}`;
+  if (start.getTime() === end.getTime()) {
+    return formatMonthYear(end);
   }
-  return `${formatMonthYear(start)}–${formatMonthYear(end)}`;
+  return `${formatMonthYear(start)} – ${formatMonthYear(end)}`;
+};
+
+const formatWeekOf = (value: Date): string => `week of ${formatDay(startOfWeek(value))}`;
+
+const formatWeekOfRange = (start: Date, end: Date): string =>
+  `${formatWeekOf(start)} to ${formatWeekOf(end)}`;
+
+const startOfPreviousDay = (value: Date): Date => {
+  const next = new Date(value);
+  next.setDate(next.getDate() - 1);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const addDays = (value: Date, days: number): Date => {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const startOfTrailingYear = (end: Date): Date =>
+  new Date(end.getFullYear() - 1, end.getMonth() + 1, 1, 0, 0, 0, 0);
+
+const startOfAllTimeCoverage = (end: Date): Date =>
+  new Date(end.getFullYear() - 2, 0, 1, 0, 0, 0, 0);
+
+const startOfWeekBucketRange = (end: Date, buckets: number): { start: Date; endWeekStart: Date } => {
+  const endWeekStart = startOfWeek(end);
+  const start = addDays(endWeekStart, -7 * (buckets - 1));
+  return { start, endWeekStart };
 };
 
 export const getTimeframeOption = (timeframe: ReportTimeframe) =>
@@ -67,30 +109,60 @@ export const resolveRollup = (payload: unknown[], timeframe: ReportTimeframe): u
   return rollup as unknown[];
 };
 
+export const getReportHeaderRange = (
+  timeframe: ReportTimeframe,
+  snapshotTs: Date,
+  now: Date = new Date(),
+  startOverride?: Date,
+): { start: Date; end: Date; labelLine: string } => {
+  const end = clampEnd(snapshotTs, now);
+  const window = resolveSiteFlowWindow(timeframe, end);
+  const resolvedStart = startOverride ?? window.from;
+  const { start, end: clampedEnd } = collapseIfInverted(resolvedStart, end);
+
+  if (timeframe === "today") {
+    return { start, end: clampedEnd, labelLine: `${formatDay(clampedEnd)} (up to ${formatTime(clampedEnd)})` };
+  }
+
+  if (timeframe === "yesterday") {
+    const yesterdayStart = startOfPreviousDay(clampedEnd);
+    return { start: yesterdayStart, end: clampedEnd, labelLine: formatDay(yesterdayStart) };
+  }
+
+  if (timeframe === "last_week") {
+    const weekStart = startOfWeek(clampedEnd);
+    return { start: weekStart, end: clampedEnd, labelLine: formatDayRange(weekStart, clampedEnd) };
+  }
+
+  if (timeframe === "last_month") {
+    const { start: monthStart, endWeekStart } = startOfWeekBucketRange(clampedEnd, 4);
+    return { start: monthStart, end: clampedEnd, labelLine: formatWeekOfRange(monthStart, endWeekStart) };
+  }
+
+  if (timeframe === "last_quarter") {
+    const { start: quarterStart, endWeekStart } = startOfWeekBucketRange(clampedEnd, 12);
+    return { start: quarterStart, end: clampedEnd, labelLine: formatWeekOfRange(quarterStart, endWeekStart) };
+  }
+
+  if (timeframe === "last_year") {
+    const trailingYearStart = startOfTrailingYear(clampedEnd);
+    return { start: trailingYearStart, end: clampedEnd, labelLine: formatMonthRange(trailingYearStart, clampedEnd) };
+  }
+
+  const allTimeStart = startOverride ?? startOfAllTimeCoverage(clampedEnd);
+  const yearLabel = `${allTimeStart.getFullYear()} – ${clampedEnd.getFullYear()}`;
+  return { start: allTimeStart, end: clampedEnd, labelLine: yearLabel };
+};
+
 export const formatReportDateRange = (
   snapshotTs: Date,
   timeframe: ReportTimeframe,
-  window: { from: Date; to: Date },
-): { label: string; subtitle: string } => {
+  now: Date = new Date(),
+  startOverride?: Date,
+): { label: string; subtitle: string; start: Date; end: Date } => {
   const { label } = getTimeframeOption(timeframe);
-
-  if (timeframe === "today" || timeframe === "yesterday") {
-    const dayLabel = formatDay(window.from);
-    return { label, subtitle: `${label} • ${dayLabel}` };
-  }
-  if (timeframe === "last_week") {
-    return { label, subtitle: `${label} • ${formatDayRange(window.from, window.to)}` };
-  }
-  if (timeframe === "last_month") {
-    return { label, subtitle: `${label} • ${formatDayRange(window.from, window.to)}` };
-  }
-  if (timeframe === "last_quarter") {
-    return { label, subtitle: `${label} • ${formatMonthRange(window.from, window.to)}` };
-  }
-  if (timeframe === "last_year") {
-    return { label, subtitle: `${label} • ${formatMonthRange(window.from, window.to)}` };
-  }
-  return { label, subtitle: `All time → ${formatDay(snapshotTs)}` };
+  const { start, end, labelLine } = getReportHeaderRange(timeframe, snapshotTs, now, startOverride);
+  return { label, subtitle: `${label} • ${labelLine}`, start, end };
 };
 
 export interface SiteActivityMetrics {

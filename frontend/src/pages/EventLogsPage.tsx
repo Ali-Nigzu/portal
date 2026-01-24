@@ -30,7 +30,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     age: '',
     trackId: '',
     race: '',
-    siteId: '',
     cameraId: ''
   });
   const [appliedFilters, setAppliedFilters] = useState({
@@ -67,10 +66,17 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     { value: 'M', label: 'Male' },
     { value: 'F', label: 'Female' },
   ];
-  const siteOptions = [
-    { value: '1', label: 'Client 1 (Site 1)' },
-    { value: '2', label: 'Client 2 (Site 2)' },
-  ];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const clampToToday = (date: Date | null): Date | null => {
+    if (!date) {
+      return null;
+    }
+    const next = new Date(date);
+    next.setHours(0, 0, 0, 0);
+    return next.getTime() > today.getTime() ? new Date(today) : next;
+  };
 
   const sanitizeTrackId = (value: string) => {
     const trimmed = value.trim();
@@ -80,6 +86,42 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     return trimmed.startsWith('#') ? trimmed.slice(1).trim() : trimmed;
   };
 
+  const buildSearchParams = useCallback((includePagination: boolean): URLSearchParams => {
+    const searchParams = new URLSearchParams();
+    if (includePagination) {
+      searchParams.append('page', currentPage.toString());
+      searchParams.append('per_page', eventsPerPage.toString());
+    }
+
+    if (appliedStartDate) {
+      searchParams.append('start_date', appliedStartDate.toISOString().split('T')[0]);
+    }
+    if (appliedEndDate) {
+      searchParams.append('end_date', appliedEndDate.toISOString().split('T')[0]);
+    }
+    if (appliedFilters.event) {
+      searchParams.append('event', appliedFilters.event);
+    }
+    if (appliedFilters.sex) {
+      searchParams.append('sex', appliedFilters.sex);
+    }
+    if (appliedFilters.age) {
+      searchParams.append('age', appliedFilters.age);
+    }
+    const sanitizedTrackId = sanitizeTrackId(appliedFilters.trackId);
+    if (sanitizedTrackId) {
+      searchParams.append('track_id', sanitizedTrackId);
+    }
+    if (appliedFilters.race) {
+      searchParams.append('race', appliedFilters.race);
+    }
+    if (appliedFilters.cameraId) {
+      searchParams.append('camera_id', appliedFilters.cameraId);
+    }
+
+    return searchParams;
+  }, [appliedEndDate, appliedFilters, appliedStartDate, currentPage, eventsPerPage]);
+
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
@@ -88,39 +130,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
       
-      // Build search query parameters
-      const searchParams = new URLSearchParams();
-      searchParams.append('page', currentPage.toString());
-      searchParams.append('per_page', eventsPerPage.toString());
-      
-      if (startDate) {
-        searchParams.append('start_date', startDate.toISOString().split('T')[0]);
-      }
-      if (endDate) {
-        searchParams.append('end_date', endDate.toISOString().split('T')[0]);
-      }
-      if (filter.event) {
-        searchParams.append('event', filter.event);
-      }
-      if (filter.sex) {
-        searchParams.append('sex', filter.sex);
-      }
-      if (filter.age) {
-        searchParams.append('age', filter.age);
-      }
-      const sanitizedTrackId = sanitizeTrackId(filter.trackId);
-      if (sanitizedTrackId) {
-        searchParams.append('track_id', sanitizedTrackId);
-      }
-      if (filter.race) {
-        searchParams.append('race', filter.race);
-      }
-      if (filter.siteId) {
-        searchParams.append('site_id', filter.siteId);
-      }
-      if (filter.cameraId) {
-        searchParams.append('camera_id', filter.cameraId);
-      }
+      const searchParams = buildSearchParams(true);
       
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -155,11 +165,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     } finally {
       setLoading(false);
     }
-  }, [
-    buildSearchParams,
-    credentials.username,
-    credentials.password,
-  ]);
+  }, [buildSearchParams, credentials.password, credentials.username]);
 
   useEffect(() => {
     fetchEvents();
@@ -178,20 +184,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       event.preventDefault();
       handleSearch();
     }
-  };
-
-  const formatSex = (value: EventData['sex']) => {
-    if (value === null || value === undefined) {
-      return 'Unknown';
-    }
-    const normalized = value.toString().toLowerCase();
-    if (normalized === '0' || normalized === 'm' || normalized === 'male') {
-      return 'Male';
-    }
-    if (normalized === '1' || normalized === 'f' || normalized === 'female') {
-      return 'Female';
-    }
-    return 'Unknown';
   };
 
   const formatSex = (value: EventData['sex']) => {
@@ -253,18 +245,28 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   };
 
   const clearAllFilters = () => {
-    setFilter({
+    setDraftFilters({
       event: '',
       sex: '',
       age: '',
       trackId: '',
       race: '',
-      siteId: '',
       cameraId: ''
     });
-    setStartDate(null);
-    setEndDate(null);
+    setAppliedFilters({
+      event: '',
+      sex: '',
+      age: '',
+      trackId: '',
+      race: '',
+      cameraId: ''
+    });
+    setDraftStartDate(null);
+    setDraftEndDate(null);
+    setAppliedStartDate(null);
+    setAppliedEndDate(null);
     setCurrentPage(1);
+    setSearchToken((prev) => prev + 1);
   };
 
   const handleExport = async () => {
@@ -402,8 +404,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               <input
                 id="event-track-id"
                 type="text"
-                value={filter.trackId}
-                onChange={(e) => setFilter(prev => ({ ...prev, trackId: e.target.value }))}
+                value={draftFilters.trackId}
+                onChange={(e) => setDraftFilters(prev => ({ ...prev, trackId: e.target.value }))}
+                onKeyDown={handleTrackIdKeyDown}
                 placeholder="Search by track ID"
                 className="vrm-input"
               />
@@ -425,19 +428,21 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </select>
             </div>
 
-          {/* Second Row: Gender, Age Group, Race */}
-          <div className="vrm-filter-grid">
-            <div>
-              <label className="vrm-label" htmlFor="event-gender">
-                Gender
+          </div>
+
+          {/* Second Row: Sex, Age Group, Race */}
+          <div className="event-logs-filter-grid">
+            <div className="event-logs-filter-field">
+              <label className="vrm-label" htmlFor="event-sex">
+                Sex
               </label>
               <select
-                id="event-gender"
+                id="event-sex"
                 value={draftFilters.sex}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, sex: e.target.value }))}
                 className="vrm-select"
               >
-                <option value="">All Genders</option>
+                <option value="">All Sexes</option>
                 {sexOptions.map(option => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
@@ -467,8 +472,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </label>
               <select
                 id="event-race"
-                value={filter.race}
-                onChange={(e) => setFilter(prev => ({ ...prev, race: e.target.value }))}
+                value={draftFilters.race}
+                onChange={(e) => setDraftFilters(prev => ({ ...prev, race: e.target.value }))}
                 className="vrm-select"
               >
                 <option value="">All Races</option>
@@ -494,58 +499,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             </div>
           </div>
 
-          {/* Third Row: Site/Client, Camera */}
-          <div className="vrm-filter-grid">
-            <div>
-              <label className="vrm-label" htmlFor="event-site">
-                Client/Site
-              </label>
-              <select
-                id="event-site"
-                value={filter.siteId}
-                onChange={(e) => setFilter(prev => ({ ...prev, siteId: e.target.value }))}
-                className="vrm-select"
-              >
-                <option value="">All Sites</option>
-                {siteOptions.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="vrm-label" htmlFor="event-camera-id">
-                Camera ID
-              </label>
-              <input
-                id="event-camera-id"
-                type="number"
-                value={filter.cameraId}
-                onChange={(e) => setFilter(prev => ({ ...prev, cameraId: e.target.value }))}
-                placeholder="Filter by camera ID"
-                className="vrm-input"
-                min="0"
-              />
-            </div>
-          </div>
-
-          {/* Third Row: Camera */}
-          <div className="vrm-filter-grid">
-            <div>
-              <label className="vrm-label" htmlFor="event-camera-id">
-                Camera ID
-              </label>
-              <input
-                id="event-camera-id"
-                type="number"
-                value={draftFilters.cameraId}
-                onChange={(e) => setDraftFilters(prev => ({ ...prev, cameraId: e.target.value }))}
-                placeholder="Filter by camera ID"
-                className="vrm-input"
-                min="0"
-              />
-            </div>
-          </div>
         </div>
       </div>
 

@@ -70,7 +70,7 @@ export const resolveSiteFlowWindow = (
       return { from: startOfYear(anchor), to: endOfYear(anchor) };
     case "all_time":
     default:
-      return { from: new Date(0), to: anchor };
+      return { from: startOfYear(anchor), to: anchor };
   }
 };
 
@@ -82,9 +82,6 @@ const addDays = (date: Date, days: number): Date => {
 
 const addMonths = (date: Date, months: number): Date =>
   new Date(date.getFullYear(), date.getMonth() + months, 1, 0, 0, 0, 0);
-
-const addYears = (date: Date, years: number): Date =>
-  new Date(date.getFullYear() + years, 0, 1, 0, 0, 0, 0);
 
 export const inferSiteFlowBucket = (
   timeframe: SiteFlowTimeframe,
@@ -194,10 +191,8 @@ export const buildAnchoredTimestamps = (
     return Array.from({ length }, (_, index) => addMonths(start, index));
   }
 
-  const start = startOfYear(anchor);
-  if (length <= 5) {
-    return Array.from({ length }, (_, index) => addYears(start, index));
-  }
+  const endMonthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 0, 0, 0, 0);
+  const start = addMonths(endMonthStart, -(length - 1));
   return Array.from({ length }, (_, index) => addMonths(start, index));
 };
 

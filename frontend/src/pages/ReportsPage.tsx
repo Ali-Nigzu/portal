@@ -14,7 +14,7 @@ import {
   resolveRollup,
   type ReportTimeframe,
 } from './reports/reportUtils';
-import { buildSiteFlowBucketLabels, resolveSiteFlowWindow } from '../dashboard/v2/utils/siteFlowBuckets';
+import { buildSiteFlowBucketLabels, startOfYear } from '../dashboard/v2/utils/siteFlowBuckets';
 
 interface ReportsPageProps {
   credentials?: Credentials;
@@ -102,6 +102,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
 
   const formatNumber = (value: number) => value.toLocaleString();
 
+  const inferAllTimeStart = (end: Date, seriesList: number[][]): Date => {
+    const maxLength = Math.max(...seriesList.map((series) => series.length), 0);
+    if (maxLength <= 0) {
+      return startOfYear(end);
+    }
+    const endMonthStart = new Date(end.getFullYear(), end.getMonth(), 1, 0, 0, 0, 0);
+    return new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() - (maxLength - 1), 1, 0, 0, 0, 0);
+  };
+
   const drawBarChart = (
     doc: jsPDF,
     valuesA: number[],
@@ -114,27 +123,51 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
   ) => {
     const maxValue = Math.max(...valuesA, ...valuesB, 0);
     const barCount = labels.length || 1;
-    const barWidth = width / barCount;
-    const seriesGap = barWidth * 0.15;
-    const innerWidth = barWidth - seriesGap;
-    const scale = maxValue > 0 ? height / maxValue : 0;
+    const axisPaddingLeft = 16;
+    const axisPaddingBottom = 10;
+    const axisPaddingTop = 4;
+    const axisPaddingRight = 4;
+    const plotX = x + axisPaddingLeft;
+    const plotY = y + axisPaddingTop;
+    const plotWidth = Math.max(width - axisPaddingLeft - axisPaddingRight, 1);
+    const plotHeight = Math.max(height - axisPaddingTop - axisPaddingBottom, 1);
+    const axisY = plotY + plotHeight;
+    const barWidth = plotWidth / barCount;
+    const seriesGap = barWidth * 0.2;
+    const innerWidth = Math.max(barWidth - seriesGap, 1);
+    const scale = maxValue > 0 ? plotHeight / maxValue : 0;
     const labelStep = barCount > 12 ? Math.ceil(barCount / 6) : 1;
+    const tickCount = 4;
+
+    doc.setDrawColor(210, 210, 210);
+    doc.setLineWidth(0.2);
+    doc.line(plotX, plotY, plotX, axisY);
+    doc.line(plotX, axisY, plotX + plotWidth, axisY);
+
+    doc.setFontSize(7);
+    doc.setTextColor(140, 140, 140);
+    for (let tick = 0; tick <= tickCount; tick += 1) {
+      const value = (maxValue / tickCount) * tick;
+      const tickY = axisY - (value / (maxValue || 1)) * plotHeight;
+      doc.line(plotX - 1.5, tickY, plotX, tickY);
+      doc.text(formatNumber(Math.round(value)), plotX - 2.5, tickY + 1.5, { align: 'right' });
+    }
 
     labels.forEach((label, index) => {
-      const baseX = x + index * barWidth;
+      const baseX = plotX + index * barWidth;
       const valueA = valuesA[index] ?? 0;
       const valueB = valuesB[index] ?? 0;
       const barHeightA = valueA * scale;
       const barHeightB = valueB * scale;
 
       doc.setFillColor(33, 150, 243);
-      doc.rect(baseX + seriesGap / 2, y + height - barHeightA, innerWidth / 2, barHeightA, 'F');
+      doc.rect(baseX + seriesGap / 2, axisY - barHeightA, innerWidth / 2, barHeightA, 'F');
       doc.setFillColor(120, 144, 156);
-      doc.rect(baseX + seriesGap / 2 + innerWidth / 2, y + height - barHeightB, innerWidth / 2, barHeightB, 'F');
+      doc.rect(baseX + seriesGap / 2 + innerWidth / 2, axisY - barHeightB, innerWidth / 2, barHeightB, 'F');
       if (index % labelStep === 0) {
         doc.setFontSize(7);
         doc.setTextColor(120, 120, 120);
-        doc.text(label, baseX + barWidth / 2, y + height + 5, { align: 'center' });
+        doc.text(label, baseX + barWidth / 2, axisY + 5, { align: 'center' });
       }
     });
   };
@@ -151,19 +184,44 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const maxValue = Math.max(...values, 0);
     const minValue = Math.min(...values, 0);
     const range = maxValue - minValue || 1;
-    const step = values.length > 1 ? width / (values.length - 1) : width;
+    const axisPaddingLeft = 16;
+    const axisPaddingBottom = 10;
+    const axisPaddingTop = 4;
+    const axisPaddingRight = 4;
+    const plotX = x + axisPaddingLeft;
+    const plotY = y + axisPaddingTop;
+    const plotWidth = Math.max(width - axisPaddingLeft - axisPaddingRight, 1);
+    const plotHeight = Math.max(height - axisPaddingTop - axisPaddingBottom, 1);
+    const axisY = plotY + plotHeight;
+    const step = values.length > 1 ? plotWidth / (values.length - 1) : plotWidth;
     const labelStep = labels.length > 12 ? Math.ceil(labels.length / 6) : 1;
+    const tickCount = 4;
+
+    doc.setDrawColor(210, 210, 210);
+    doc.setLineWidth(0.2);
+    doc.line(plotX, plotY, plotX, axisY);
+    doc.line(plotX, axisY, plotX + plotWidth, axisY);
+
+    doc.setFontSize(7);
+    doc.setTextColor(140, 140, 140);
+    for (let tick = 0; tick <= tickCount; tick += 1) {
+      const value = minValue + (range / tickCount) * tick;
+      const tickY = axisY - ((value - minValue) / range) * plotHeight;
+      doc.line(plotX - 1.5, tickY, plotX, tickY);
+      doc.text(formatNumber(Math.round(value)), plotX - 2.5, tickY + 1.5, { align: 'right' });
+    }
 
     doc.setDrawColor(33, 150, 243);
+    doc.setLineWidth(0.6);
     values.forEach((value, index) => {
       if (index === 0) {
         return;
       }
       const prevValue = values[index - 1] ?? 0;
-      const x1 = x + (index - 1) * step;
-      const y1 = y + height - ((prevValue - minValue) / range) * height;
-      const x2 = x + index * step;
-      const y2 = y + height - ((value - minValue) / range) * height;
+      const x1 = plotX + (index - 1) * step;
+      const y1 = axisY - ((prevValue - minValue) / range) * plotHeight;
+      const x2 = plotX + index * step;
+      const y2 = axisY - ((value - minValue) / range) * plotHeight;
       doc.line(x1, y1, x2, y2);
     });
 
@@ -173,8 +231,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       if (index % labelStep !== 0) {
         return;
       }
-      const labelX = x + index * step;
-      doc.text(label, labelX, y + height + 5, { align: 'center' });
+      const labelX = plotX + index * step;
+      doc.text(label, labelX, axisY + 5, { align: 'center' });
     });
   };
 
@@ -218,9 +276,31 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       const doc = new jsPDF();
       const template = reportTemplates.find(t => t.id === reportType);
       const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
+      const now = new Date();
+      const headerEnd = snapshotTs.getTime() <= now.getTime() ? snapshotTs : now;
       const rollup = resolveRollup(snapshot.payload ?? [], timePeriod);
-      const timeframeWindow = resolveSiteFlowWindow(timePeriod, snapshotTs);
-      const { subtitle } = formatReportDateRange(snapshotTs, timePeriod, timeframeWindow);
+      let headerStartOverride: Date | undefined;
+
+      if (reportType === 'site-activity' && timePeriod === 'all_time') {
+        const metricsForHeader = buildSiteActivityMetrics(rollup);
+        headerStartOverride = inferAllTimeStart(headerEnd, [
+          metricsForHeader.entrancesSeries,
+          metricsForHeader.exitsSeries,
+          metricsForHeader.occupancySeries,
+          metricsForHeader.dwellSeries,
+        ]);
+      }
+
+      if (reportType === 'visitor-profile' && timePeriod === 'all_time') {
+        const visitorMetricsForHeader = buildVisitorProfileMetrics(rollup);
+        headerStartOverride = inferAllTimeStart(headerEnd, [
+          visitorMetricsForHeader.agePct,
+          visitorMetricsForHeader.sexPct,
+          visitorMetricsForHeader.racePct,
+        ]);
+      }
+
+      const { subtitle } = formatReportDateRange(snapshotTs, timePeriod, now, headerStartOverride);
 
       doc.setFontSize(22);
       doc.setTextColor(33, 150, 243);
@@ -251,64 +331,122 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           ],
         ).labels;
 
+        const margin = 20;
+        const contentWidth = 170;
+        const chartHeight = 44;
+        const chartGap = 10;
+        const titleHeight = 6;
+        const legendHeight = 6;
+        const axisPaddingBottom = 10;
+        const axisPaddingTop = 4;
+        const chartBlockHeight = titleHeight + legendHeight + axisPaddingTop + chartHeight + axisPaddingBottom;
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const bottomMargin = 20;
+        const ensureSpace = (requiredHeight: number, cursorY: number): number => {
+          if (cursorY + requiredHeight <= pageHeight - bottomMargin) {
+            return cursorY;
+          }
+          doc.addPage();
+          return margin;
+        };
+
         drawKpiTile(doc, 'Total Entrances', formatNumber(metrics.totalEntrances), 20, 55);
         drawKpiTile(doc, 'Total Exits', formatNumber(metrics.totalExits), 67, 55);
         drawKpiTile(doc, 'Avg Occupancy', formatNumber(metrics.occupancyAvg), 114, 55);
         drawKpiTile(doc, 'Peak Occupancy', formatNumber(metrics.occupancyMax), 161, 55);
         drawKpiTile(doc, 'Avg Dwell (min)', formatNumber(metrics.dwellAvg), 20, 80);
 
+        let chartCursorY = 106;
+
+        chartCursorY = ensureSpace(chartBlockHeight, chartCursorY);
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
-        doc.text('Entrances vs Exits', 20, 112);
+        doc.text('Entrances vs Exits', margin, chartCursorY + titleHeight);
         drawLegend(
           doc,
           [
             { label: 'Entrances', color: [33, 150, 243] },
             { label: 'Exits', color: [120, 144, 156] },
           ],
-          130,
-          112,
+          margin,
+          chartCursorY + titleHeight + legendHeight,
         );
-        drawBarChart(doc, metrics.entrancesSeries, metrics.exitsSeries, bucketLabels, 20, 116, 170, 32);
+        drawBarChart(
+          doc,
+          metrics.entrancesSeries,
+          metrics.exitsSeries,
+          bucketLabels,
+          margin,
+          chartCursorY + titleHeight + legendHeight,
+          contentWidth,
+          chartHeight + axisPaddingBottom + axisPaddingTop,
+        );
+        chartCursorY += chartBlockHeight + chartGap;
 
-        doc.text('Occupancy', 20, 158);
-        drawLineChart(doc, metrics.occupancySeries, bucketLabels, 20, 162, 170, 26);
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Min ${metrics.occupancyMin} • Max ${metrics.occupancyMax}`, 20, 191);
-
-        if (metrics.dwellSeries.length > 0) {
-          doc.setFontSize(11);
-          doc.setTextColor(0, 0, 0);
-          doc.text('Dwell (minutes)', 20, 201);
-          drawLineChart(doc, metrics.dwellSeries, bucketLabels, 20, 205, 170, 18);
-        }
-
-        let yPos = 230;
+        chartCursorY = ensureSpace(chartBlockHeight, chartCursorY);
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
-        doc.text('Bucket summary', 20, yPos);
+        doc.text('Occupancy', margin, chartCursorY + titleHeight);
+        drawLineChart(
+          doc,
+          metrics.occupancySeries,
+          bucketLabels,
+          margin,
+          chartCursorY + titleHeight + legendHeight,
+          contentWidth,
+          chartHeight + axisPaddingBottom + axisPaddingTop,
+        );
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Min ${metrics.occupancyMin} • Max ${metrics.occupancyMax}`, margin, chartCursorY + chartBlockHeight);
+        chartCursorY += chartBlockHeight + chartGap;
+
+        if (metrics.dwellSeries.length > 0) {
+          chartCursorY = ensureSpace(chartBlockHeight, chartCursorY);
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          doc.text('Dwell (minutes)', margin, chartCursorY + titleHeight);
+          drawLineChart(
+            doc,
+            metrics.dwellSeries,
+            bucketLabels,
+            margin,
+            chartCursorY + titleHeight + legendHeight,
+            contentWidth,
+            chartHeight + axisPaddingBottom + axisPaddingTop,
+          );
+          chartCursorY += chartBlockHeight + chartGap;
+        }
+
+        let yPos = chartCursorY;
+        const tableRowHeight = 4.5;
+        const tableHeaderHeight = 11;
+        const tableHeightEstimate = tableHeaderHeight + bucketLabels.length * tableRowHeight + 8;
+        yPos = ensureSpace(tableHeightEstimate, yPos);
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Bucket summary', margin, yPos);
         yPos += 6;
 
         const tableHeaders = ['Bucket', 'Entrances', 'Exits', 'Occupancy', 'Dwell', 'Notes'];
         doc.setFontSize(9);
         doc.setTextColor(80, 80, 80);
         tableHeaders.forEach((header, index) => {
-          doc.text(header, 20 + index * 28, yPos);
+          doc.text(header, margin + index * 28, yPos);
         });
         yPos += 5;
 
         bucketLabels.forEach((label, index) => {
-          if (yPos > 270) {
+          if (yPos > pageHeight - bottomMargin) {
             doc.addPage();
-            yPos = 20;
+            yPos = margin;
           }
           if (index === metrics.peakOccupancyBucket) {
             doc.setFillColor(227, 242, 253);
-            doc.rect(18, yPos - 3.5, 174, 5, 'F');
+            doc.rect(margin - 2, yPos - 3.5, contentWidth + 4, 5, 'F');
           } else if (index % 2 === 1) {
             doc.setFillColor(245, 247, 250);
-            doc.rect(18, yPos - 3.5, 174, 5, 'F');
+            doc.rect(margin - 2, yPos - 3.5, contentWidth + 4, 5, 'F');
           }
           const notes: string[] = [];
           if (index === metrics.peakEntrancesBucket) {
@@ -328,7 +466,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           row.forEach((value, colIndex) => {
             doc.setFontSize(8);
             doc.setTextColor(0, 0, 0);
-            doc.text(String(value), 20 + colIndex * 28, yPos);
+            doc.text(String(value), margin + colIndex * 28, yPos);
           });
           yPos += 4.5;
         });
