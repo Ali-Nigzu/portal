@@ -59,8 +59,12 @@ def _parse_timestamp(value: Optional[str], *, is_end: bool = False) -> Optional[
 
 
 def _resolve_time_bounds(filters: Dict[str, Optional[str]]) -> Dict[str, datetime]:
+    now = datetime.now(tz=UTC)
     start_ts = _parse_timestamp(filters.get("start_date")) or DEFAULT_START
-    end_ts = _parse_timestamp(filters.get("end_date"), is_end=True) or DEFAULT_END
+    end_ts = _parse_timestamp(filters.get("end_date"), is_end=True) or now
+
+    if end_ts > now:
+        end_ts = now
 
     if start_ts > end_ts:
         start_ts, end_ts = end_ts, start_ts
