@@ -24,6 +24,7 @@
   "scripts": {
     "start": "HOST=0.0.0.0 craco start",
     "build": "react-scripts build",
+    "check": "react-scripts test --watchAll=false --runInBand --no-cache && react-scripts build",
     "test": "CI=true NODE_OPTIONS=--max_old_space_size=6144 react-scripts test --watchAll=false --runInBand --forceExit",
     "ci": "npm test -- --watchAll=false && npm run build",
     "lint": "eslint src --ext .js,.ts,.tsx",

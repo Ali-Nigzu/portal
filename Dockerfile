@@ -8,7 +8,6 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ ./
-RUN npm test -- --watchAll=false
 RUN npm run build
 
 # --------------------------------------------
