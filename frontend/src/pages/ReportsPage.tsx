@@ -127,7 +127,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const singleSeries = options?.singleSeries ?? false;
     const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
-    const axisPaddingBottom = rotateWeekLabels ? 14 : 10;
+    const axisPaddingBottom = rotateWeekLabels ? 20 : 10;
     const axisPaddingTop = 4;
     const axisPaddingRight = 4;
     const plotX = x + axisPaddingLeft;
@@ -175,7 +175,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         doc.setFontSize(7);
         doc.setTextColor(120, 120, 120);
         if (rotateWeekLabels) {
-          doc.text(label, baseX + barWidth / 2, axisY + 8, {
+          doc.text(label, baseX + barWidth / 2, axisY + 12, {
             align: 'center',
             angle: 90,
             baseline: 'top',
@@ -202,7 +202,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const range = maxValue - minValue || 1;
     const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
-    const axisPaddingBottom = rotateWeekLabels ? 14 : 10;
+    const axisPaddingBottom = rotateWeekLabels ? 20 : 10;
     const axisPaddingTop = 4;
     const axisPaddingRight = 4;
     const plotX = x + axisPaddingLeft;
@@ -250,7 +250,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       }
       const labelX = plotX + index * step;
       if (rotateWeekLabels) {
-        doc.text(label, labelX, axisY + 8, { align: 'center', angle: 90, baseline: 'top' });
+        doc.text(label, labelX, axisY + 12, { align: 'center', angle: 90, baseline: 'top' });
       } else {
         doc.text(label, labelX, axisY + 5, { align: 'center' });
       }
@@ -495,10 +495,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           yPos += 4.5;
         });
 
-        yPos = ensureSpace(8, yPos);
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Peak Dwell marks the bucket with the highest average dwell time.', margin, yPos + 4);
       } else if (reportType === 'visitor-profile') {
         const metrics = buildVisitorProfileMetrics(rollup);
 
