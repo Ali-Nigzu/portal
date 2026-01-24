@@ -189,8 +189,11 @@ export const buildSiteActivityMetrics = (rollup: unknown[]): SiteActivityMetrics
   const entrancesSeries = toNumberArray(rollup?.[0]);
   const exitsSeries = toNumberArray(rollup?.[1]);
   const occupancySeries = toNumberArray(rollup?.[2]);
-  const footfallSeries = toNumberArray(rollup?.[3]);
   const dwellSeries = toNumberArray(rollup?.[4]);
+  const footfallSeries = Array.from(
+    { length: Math.max(entrancesSeries.length, exitsSeries.length) },
+    (_, index) => (entrancesSeries[index] ?? 0) + (exitsSeries[index] ?? 0),
+  );
 
   const totalEntrances = sum(entrancesSeries);
   const totalExits = sum(exitsSeries);

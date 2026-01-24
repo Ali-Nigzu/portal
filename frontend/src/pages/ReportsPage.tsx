@@ -127,7 +127,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const singleSeries = options?.singleSeries ?? false;
     const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
-    const axisPaddingBottom = 10;
+    const axisPaddingBottom = rotateWeekLabels ? 14 : 10;
     const axisPaddingTop = 4;
     const axisPaddingRight = 4;
     const plotX = x + axisPaddingLeft;
@@ -175,7 +175,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         doc.setFontSize(7);
         doc.setTextColor(120, 120, 120);
         if (rotateWeekLabels) {
-          doc.text(label, baseX + barWidth / 2, axisY + 6, { align: 'center', angle: 90 });
+          doc.text(label, baseX + barWidth / 2, axisY + 8, {
+            align: 'center',
+            angle: 90,
+            baseline: 'top',
+          });
         } else {
           doc.text(label, baseX + barWidth / 2, axisY + 5, { align: 'center' });
         }
@@ -198,7 +202,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const range = maxValue - minValue || 1;
     const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
-    const axisPaddingBottom = 10;
+    const axisPaddingBottom = rotateWeekLabels ? 14 : 10;
     const axisPaddingTop = 4;
     const axisPaddingRight = 4;
     const plotX = x + axisPaddingLeft;
@@ -246,7 +250,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       }
       const labelX = plotX + index * step;
       if (rotateWeekLabels) {
-        doc.text(label, labelX, axisY + 6, { align: 'center', angle: 90 });
+        doc.text(label, labelX, axisY + 8, { align: 'center', angle: 90, baseline: 'top' });
       } else {
         doc.text(label, labelX, axisY + 5, { align: 'center' });
       }
@@ -338,6 +342,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
             metrics.dwellSeries,
           ],
         ).labels;
+        const footfallSeries = bucketLabels.length > 0
+          ? metrics.footfallSeries.slice(0, bucketLabels.length)
+          : metrics.footfallSeries;
         const rotateWeekLabels = bucketLabels.some((label) => {
           const normalized = label.toLowerCase();
           return normalized.startsWith('week of ') || normalized.startsWith('wk of ');
@@ -374,17 +381,28 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text('Footfall', margin, chartCursorY + titleHeight);
-        drawBarChart(
-          doc,
-          metrics.footfallSeries,
-          [],
-          bucketLabels,
-          margin,
-          chartCursorY + titleHeight + legendHeight,
-          contentWidth,
-          chartHeight + axisPaddingBottom + axisPaddingTop,
-          { rotateWeekLabels, singleSeries: true },
-        );
+        if (footfallSeries.length === 0) {
+          doc.setFontSize(9);
+          doc.setTextColor(120, 120, 120);
+          doc.text(
+            'No data available.',
+            margin + contentWidth / 2,
+            chartCursorY + titleHeight + legendHeight + chartHeight / 2,
+            { align: 'center' },
+          );
+        } else {
+          drawBarChart(
+            doc,
+            footfallSeries,
+            [],
+            bucketLabels,
+            margin,
+            chartCursorY + titleHeight + legendHeight,
+            contentWidth,
+            chartHeight + axisPaddingBottom + axisPaddingTop,
+            { rotateWeekLabels, singleSeries: true },
+          );
+        }
         chartCursorY += chartBlockHeight + chartGap;
 
         chartCursorY = ensureSpace(chartBlockHeight, chartCursorY);
