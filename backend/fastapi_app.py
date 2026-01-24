@@ -717,18 +717,86 @@ async def search_events(
 
         logger.debug("Event search params: %s", dict(request.query_params))
 
-        base_ctx = _resolve_event_search_context(
+        filters: Dict[str, Optional[str]] = {
+            'start_date': start_date,
+            'end_date': end_date,
+        }
+        bounds = _resolve_time_bounds(filters)
+
+        resolved_events: Optional[List[int]] = None
+        if event and event.lower() != 'all':
+            resolved_events = [1 if event.lower() == 'entry' else 0]
+
+        resolved_sex = None
+        if sex and sex.lower() != 'all':
+            normalized_sex = sex.strip().lower()
+            if normalized_sex in {"m", "male", "0"}:
+                resolved_sex = "M"
+            elif normalized_sex in {"f", "female", "1"}:
+                resolved_sex = "F"
+            elif normalized_sex:
+                resolved_sex = normalized_sex.upper()
+
+        resolved_age = None
+        if age and age.lower() != 'all':
+            normalized_age = age.strip().lower()
+            age_map = {
+                "0": "0-4",
+                "1": "5-13",
+                "2": "14-25",
+                "3": "26-45",
+                "4": "46-65",
+                "5": "66+",
+                "0-4": "0-4",
+                "5-13": "5-13",
+                "14-25": "14-25",
+                "26-45": "26-45",
+                "46-65": "46-65",
+                "66+": "66+",
+            }
+            resolved_age = age_map.get(normalized_age)
+        resolved_race = race if race and race.lower() != 'all' else None
+
+        resolved_track = None
+        resolved_track_like = None
+        if track_id:
+            cleaned_track = track_id.strip()
+            if cleaned_track.startswith("#"):
+                cleaned_track = cleaned_track[1:].strip()
+            if cleaned_track:
+                resolved_track = cleaned_track.lower()
+                resolved_track_like = f"%{resolved_track}%"
+
+        logger.debug(
+            "Event search filters resolved: %s",
+            {
+                "start": bounds["start_ts"],
+                "end": bounds["end_ts"],
+                "event": resolved_events,
+                "sex": resolved_sex,
+                "age_bucket": resolved_age,
+                "race": resolved_race,
+                "site_id": site_id,
+                "camera_id": camera_id,
+                "track": resolved_track,
+                "page": page,
+                "per_page": per_page,
+            },
+        )
+
+        base_ctx = QueryContext(
             org_id=org_id,
             table_name=table_name,
-            start_date=start_date,
-            end_date=end_date,
-            event=event,
-            sex=sex,
-            age=age,
-            race=race,
-            site_id=site_id,
-            camera_id=camera_id,
-            track_id=track_id,
+            start=bounds['start_ts'],
+            end=bounds['end_ts'],
+            time_range=TimeRangeKey.CUSTOM,
+            events=resolved_events,
+            sexes=[resolved_sex] if resolved_sex else None,
+            age_buckets=[resolved_age] if resolved_age else None,
+            races=[resolved_race] if resolved_race else None,
+            site_ids=[site_id] if site_id else None,
+            camera_ids=[camera_id] if camera_id else None,
+            track_id_like=resolved_track_like,
         )
 
         summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], base_ctx)
