@@ -65,6 +65,9 @@ def _resolve_time_bounds(filters: Dict[str, Optional[str]]) -> Dict[str, datetim
 
     if end_ts > now:
         end_ts = now
+    if start_ts > now:
+        start_ts = now
+        end_ts = now
 
     if start_ts > end_ts:
         start_ts, end_ts = end_ts, start_ts

@@ -372,6 +372,7 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
         f" {AGE_BUCKET_EXPRESSION} AS age_bucket"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
+        " AND timestamp <= CURRENT_TIMESTAMP()"
         f"{filters}"
         " ORDER BY timestamp DESC"
         " LIMIT @limit OFFSET @offset"

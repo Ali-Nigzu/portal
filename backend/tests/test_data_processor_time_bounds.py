@@ -21,3 +21,9 @@ def test_resolve_time_bounds_defaults_end_to_now() -> None:
     after = datetime.now(tz=UTC)
     assert bounds["end_ts"] <= after
     assert bounds["end_ts"] >= before
+
+
+def test_resolve_time_bounds_future_start_yields_empty_window() -> None:
+    future_start = (datetime.now(tz=UTC) + timedelta(days=5)).date().isoformat()
+    bounds = _resolve_time_bounds({"start_date": future_start, "end_date": None})
+    assert bounds["start_ts"] == bounds["end_ts"]

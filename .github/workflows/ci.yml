@@ -12,8 +12,8 @@ permissions:
   packages: write
 
 jobs:
-  frontend-check:
-    name: Frontend check
+  frontend-build:
+    name: Frontend build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,14 +30,14 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
-      - name: Run frontend check
-        run: npm run check
+      - name: Run frontend build
+        run: npm run build
         working-directory: frontend
 
   docker-build:
     name: Docker build & push
     runs-on: ubuntu-latest
-    needs: frontend-check
+    needs: frontend-build
     defaults:
       run:
         shell: bash

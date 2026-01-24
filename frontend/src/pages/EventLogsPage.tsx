@@ -66,6 +66,18 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     { value: 'M', label: 'Male' },
     { value: 'F', label: 'Female' },
   ];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const clampToToday = (value: Date | null) => {
+    if (!value) {
+      return null;
+    }
+    const normalized = new Date(value);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized > today ? new Date(today) : normalized;
+  };
+
   const sanitizeTrackId = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -73,6 +85,46 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     }
     return trimmed.startsWith('#') ? trimmed.slice(1).trim() : trimmed;
   };
+
+  const buildSearchParams = useCallback((includePagination: boolean) => {
+    const params = new URLSearchParams();
+    if (includePagination) {
+      params.append('page', currentPage.toString());
+      params.append('per_page', eventsPerPage.toString());
+    }
+    if (appliedStartDate) {
+      params.append('start_date', appliedStartDate.toISOString().split('T')[0]);
+    }
+    if (appliedEndDate) {
+      params.append('end_date', appliedEndDate.toISOString().split('T')[0]);
+    }
+    if (appliedFilters.event) {
+      params.append('event', appliedFilters.event);
+    }
+    if (appliedFilters.sex) {
+      params.append('sex', appliedFilters.sex);
+    }
+    if (appliedFilters.age) {
+      params.append('age', appliedFilters.age);
+    }
+    const sanitizedTrackId = sanitizeTrackId(appliedFilters.trackId);
+    if (sanitizedTrackId) {
+      params.append('track_id', sanitizedTrackId);
+    }
+    if (appliedFilters.race) {
+      params.append('race', appliedFilters.race);
+    }
+    if (appliedFilters.cameraId) {
+      params.append('camera_id', appliedFilters.cameraId);
+    }
+    return params;
+  }, [
+    appliedEndDate,
+    appliedFilters,
+    appliedStartDate,
+    currentPage,
+    eventsPerPage,
+  ]);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -83,35 +135,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       const clientId = urlParams.get('client_id');
       
       // Build search query parameters
-      const searchParams = new URLSearchParams();
-      searchParams.append('page', currentPage.toString());
-      searchParams.append('per_page', eventsPerPage.toString());
-      
-      if (appliedStartDate) {
-        searchParams.append('start_date', appliedStartDate.toISOString().split('T')[0]);
-      }
-      if (appliedEndDate) {
-        searchParams.append('end_date', appliedEndDate.toISOString().split('T')[0]);
-      }
-      if (appliedFilters.event) {
-        searchParams.append('event', appliedFilters.event);
-      }
-      if (appliedFilters.sex) {
-        searchParams.append('sex', appliedFilters.sex);
-      }
-      if (appliedFilters.age) {
-        searchParams.append('age', appliedFilters.age);
-      }
-      const sanitizedTrackId = sanitizeTrackId(appliedFilters.trackId);
-      if (sanitizedTrackId) {
-        searchParams.append('track_id', sanitizedTrackId);
-      }
-      if (appliedFilters.race) {
-        searchParams.append('race', appliedFilters.race);
-      }
-      if (appliedFilters.cameraId) {
-        searchParams.append('camera_id', appliedFilters.cameraId);
-      }
+      const searchParams = buildSearchParams(true);
       
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -147,12 +171,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       setLoading(false);
     }
   }, [
+    buildSearchParams,
     credentials.username,
     credentials.password,
-    currentPage,
-    appliedStartDate,
-    appliedEndDate,
-    appliedFilters,
   ]);
 
   useEffect(() => {
@@ -161,8 +182,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
 
   const handleSearch = () => {
     setAppliedFilters({ ...draftFilters });
-    setAppliedStartDate(draftStartDate ? new Date(draftStartDate) : null);
-    setAppliedEndDate(draftEndDate ? new Date(draftEndDate) : null);
+    setAppliedStartDate(clampToToday(draftStartDate));
+    setAppliedEndDate(clampToToday(draftEndDate));
     setCurrentPage(1);
     setSearchToken((prev) => prev + 1);
   };
@@ -246,6 +267,43 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     setCurrentPage(1);
   };
 
+  const handleExport = async () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewToken = urlParams.get('view_token');
+      const clientId = urlParams.get('client_id');
+      const searchParams = buildSearchParams(false);
+      let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}/export?${searchParams.toString()}`;
+
+      const headers: HeadersInit = {};
+      if (viewToken) {
+        apiUrl += `&view_token=${encodeURIComponent(viewToken)}`;
+      } else {
+        const auth = btoa(`${credentials.username}:${credentials.password}`);
+        headers['Authorization'] = `Basic ${auth}`;
+        if (clientId) {
+          apiUrl += `&client_id=${encodeURIComponent(clientId)}`;
+        }
+      }
+
+      const response = await fetch(apiUrl, { headers });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'event-logs.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(`Failed to export events: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="vrm-loading-state">
@@ -313,11 +371,11 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </label>
               <DatePicker
                 selected={draftStartDate}
-                onChange={(date: Date | null) => setDraftStartDate(date)}
+                onChange={(date: Date | null) => setDraftStartDate(clampToToday(date))}
                 placeholderText="Select start date"
                 dateFormat="yyyy-MM-dd"
                 className="vrm-date-picker"
-                maxDate={draftEndDate || undefined}
+                maxDate={draftEndDate || today}
                 id="event-start-date"
               />
             </div>
@@ -328,11 +386,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </label>
               <DatePicker
                 selected={draftEndDate}
-                onChange={(date: Date | null) => setDraftEndDate(date)}
+                onChange={(date: Date | null) => setDraftEndDate(clampToToday(date))}
                 placeholderText="Select end date"
                 dateFormat="yyyy-MM-dd"
                 className="vrm-date-picker"
                 minDate={draftStartDate || undefined}
+                maxDate={today}
                 id="event-end-date"
               />
             </div>
@@ -450,7 +509,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             Activity Events ({totalEvents.toLocaleString()} total)
           </h3>
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">Export CSV</button>
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleExport}>
+              Export CSV
+            </button>
             <button className="vrm-btn vrm-btn-sm" onClick={fetchEvents}>Refresh</button>
           </div>
         </div>

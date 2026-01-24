@@ -7,6 +7,8 @@ import os
 import json
 import uuid
 import base64
+import csv
+import io
 import logging
 import pandas as pd
 from datetime import datetime, timezone
@@ -16,7 +18,7 @@ from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from backend.app import auth
 
@@ -88,9 +90,12 @@ from backend.app.snapshots import (
     SnapshotLookupError,
 )
 from backend.app.analytics.data_contract import (
+    AGE_BUCKET_EXPRESSION,
+    SEX_EXPRESSION,
     Metric,
     QueryContext,
     TimeRangeKey,
+    _render_filters,
     compile_contract_query,
 )
 from backend.app.analytics.fixtures import build_offline_chart_result
@@ -110,6 +115,23 @@ app = FastAPI(
     description="Intelligent CCTV data analytics with auto-scaling insights",
     version="2.0.0"
 )
+
+
+def _write_csv(headers: List[str], rows: List[List[object]]) -> io.StringIO:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(headers)
+    writer.writerows(rows)
+    buffer.seek(0)
+    return buffer
+
+
+def _csv_response(content: str) -> Response:
+    return Response(
+        content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="event-logs.csv"'},
+    )
 #app.include_router(auth.router, prefix="/api")
 
 ANALYTICS_CACHE_TTL = int(os.getenv("ANALYTICS_CACHE_TTL", "120"))
@@ -593,6 +615,84 @@ async def get_chart_data(
         raise HTTPException(status_code=500, detail=f"Failed to process chart data: {exc}")
 
 
+def _resolve_event_search_context(
+    *,
+    org_id: str,
+    table_name: str,
+    start_date: Optional[str],
+    end_date: Optional[str],
+    event: Optional[str],
+    sex: Optional[str],
+    age: Optional[str],
+    race: Optional[str],
+    site_id: Optional[str],
+    camera_id: Optional[str],
+    track_id: Optional[str],
+) -> QueryContext:
+    filters: Dict[str, Optional[str]] = {
+        'start_date': start_date,
+        'end_date': end_date,
+    }
+    bounds = _resolve_time_bounds(filters)
+
+    resolved_events: Optional[List[int]] = None
+    if event and event.lower() != 'all':
+        resolved_events = [1 if event.lower() == 'entry' else 0]
+
+    resolved_sex = None
+    if sex and sex.lower() != 'all':
+        normalized_sex = sex.strip().lower()
+        if normalized_sex in {"m", "male", "0"}:
+            resolved_sex = "M"
+        elif normalized_sex in {"f", "female", "1"}:
+            resolved_sex = "F"
+        elif normalized_sex:
+            resolved_sex = normalized_sex.upper()
+
+    resolved_age = None
+    if age and age.lower() != 'all':
+        normalized_age = age.strip().lower()
+        age_map = {
+            "0": "0-4",
+            "1": "5-13",
+            "2": "14-25",
+            "3": "26-45",
+            "4": "46-65",
+            "5": "66+",
+            "0-4": "0-4",
+            "5-13": "5-13",
+            "14-25": "14-25",
+            "26-45": "26-45",
+            "46-65": "46-65",
+            "66+": "66+",
+        }
+        resolved_age = age_map.get(normalized_age)
+    resolved_race = race if race and race.lower() != 'all' else None
+
+    resolved_track_like = None
+    if track_id:
+        cleaned_track = track_id.strip()
+        if cleaned_track.startswith("#"):
+            cleaned_track = cleaned_track[1:].strip()
+        if cleaned_track:
+            resolved_track_like = f"%{cleaned_track.lower()}%"
+
+    return QueryContext(
+        org_id=org_id,
+        table_name=table_name,
+        start=bounds['start_ts'],
+        end=bounds['end_ts'],
+        time_range=TimeRangeKey.CUSTOM,
+        events=resolved_events,
+        sexes=[resolved_sex] if resolved_sex else None,
+        age_buckets=[resolved_age] if resolved_age else None,
+        races=[resolved_race] if resolved_race else None,
+        site_ids=[site_id] if site_id else None,
+        camera_ids=[camera_id] if camera_id else None,
+        track_id_like=resolved_track_like,
+    )
+
+
 @app.get("/api/search-events")
 async def search_events(
     request: Request,
@@ -617,86 +717,18 @@ async def search_events(
 
         logger.debug("Event search params: %s", dict(request.query_params))
 
-        filters: Dict[str, Optional[str]] = {
-            'start_date': start_date,
-            'end_date': end_date,
-        }
-        bounds = _resolve_time_bounds(filters)
-
-        resolved_events: Optional[List[int]] = None
-        if event and event.lower() != 'all':
-            resolved_events = [1 if event.lower() == 'entry' else 0]
-
-        resolved_sex = None
-        if sex and sex.lower() != 'all':
-            normalized_sex = sex.strip().lower()
-            if normalized_sex in {"m", "male", "0"}:
-                resolved_sex = "M"
-            elif normalized_sex in {"f", "female", "1"}:
-                resolved_sex = "F"
-            elif normalized_sex:
-                resolved_sex = normalized_sex.upper()
-
-        resolved_age = None
-        if age and age.lower() != 'all':
-            normalized_age = age.strip().lower()
-            age_map = {
-                "0": "0-4",
-                "1": "5-13",
-                "2": "14-25",
-                "3": "26-45",
-                "4": "46-65",
-                "5": "66+",
-                "0-4": "0-4",
-                "5-13": "5-13",
-                "14-25": "14-25",
-                "26-45": "26-45",
-                "46-65": "46-65",
-                "66+": "66+",
-            }
-            resolved_age = age_map.get(normalized_age)
-        resolved_race = race if race and race.lower() != 'all' else None
-
-        resolved_track = None
-        resolved_track_like = None
-        if track_id:
-            cleaned_track = track_id.strip()
-            if cleaned_track.startswith("#"):
-                cleaned_track = cleaned_track[1:].strip()
-            if cleaned_track:
-                resolved_track = cleaned_track.lower()
-                resolved_track_like = f"%{resolved_track}%"
-
-        logger.debug(
-            "Event search filters resolved: %s",
-            {
-                "start": bounds["start_ts"],
-                "end": bounds["end_ts"],
-                "event": resolved_events,
-                "sex": resolved_sex,
-                "age_bucket": resolved_age,
-                "race": resolved_race,
-                "site_id": site_id,
-                "camera_id": camera_id,
-                "track": resolved_track,
-                "page": page,
-                "per_page": per_page,
-            },
-        )
-
-        base_ctx = QueryContext(
+        base_ctx = _resolve_event_search_context(
             org_id=org_id,
             table_name=table_name,
-            start=bounds['start_ts'],
-            end=bounds['end_ts'],
-            time_range=TimeRangeKey.CUSTOM,
-            events=resolved_events,
-            sexes=[resolved_sex] if resolved_sex else None,
-            age_buckets=[resolved_age] if resolved_age else None,
-            races=[resolved_race] if resolved_race else None,
-            site_ids=[site_id] if site_id else None,
-            camera_ids=[camera_id] if camera_id else None,
-            track_id_like=resolved_track_like,
+            start_date=start_date,
+            end_date=end_date,
+            event=event,
+            sex=sex,
+            age=age,
+            race=race,
+            site_id=site_id,
+            camera_id=camera_id,
+            track_id=track_id,
         )
 
         summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], base_ctx)
@@ -708,6 +740,14 @@ async def search_events(
         total_count = (
             int(summary_df.iloc[0]['total_records']) if not summary_df.empty else 0
         )
+        if total_count == 0:
+            return {
+                'events': [],
+                'total': 0,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': 0,
+            }
 
         offset = max(page - 1, 0) * per_page
         paged_ctx = base_ctx.model_copy(update={'limit': per_page, 'offset': offset})
@@ -753,6 +793,111 @@ async def search_events(
     except Exception as exc:
         logger.error("Event search error: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to search events: {exc}")
+
+
+@app.get("/api/search-events/export")
+async def export_search_events(
+    request: Request,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    event: Optional[str] = None,
+    sex: Optional[str] = None,
+    age: Optional[str] = None,
+    race: Optional[str] = None,
+    site_id: Optional[str] = None,
+    camera_id: Optional[str] = None,
+    track_id: Optional[str] = None,
+    view_token: Optional[str] = None,
+    client_id: Optional[str] = None,
+):
+    """Export BigQuery event logs as CSV for the current applied filters."""
+    try:
+        org_id = _authenticate_chart_data_request(request, view_token, client_id)
+        table_name = _resolve_table_for_org(org_id)
+
+        ctx = _resolve_event_search_context(
+            org_id=org_id,
+            table_name=table_name,
+            start_date=start_date,
+            end_date=end_date,
+            event=event,
+            sex=sex,
+            age=age,
+            race=race,
+            site_id=site_id,
+            camera_id=camera_id,
+            track_id=track_id,
+        )
+
+        summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], ctx)
+        summary_df = bigquery_client.query_dataframe(
+            summary_plan.sql,
+            summary_plan.params,
+            job_context=f"{table_name}::search_export_summary",
+        )
+        total_count = (
+            int(summary_df.iloc[0]['total_records']) if not summary_df.empty else 0
+        )
+
+        headers = ["timestamp", "event", "track_id", "cam_id", "sex", "age_bucket", "race"]
+        if total_count == 0:
+            csv_buffer = _write_csv(headers, [])
+            return _csv_response(csv_buffer.getvalue())
+
+        filters_sql, params = _render_filters(ctx)
+        export_sql = (
+            "SELECT"
+            " timestamp,"
+            " event,"
+            " track_id,"
+            " cam_id,"
+            f" {SEX_EXPRESSION} AS sex,"
+            f" {AGE_BUCKET_EXPRESSION} AS age_bucket,"
+            " COALESCE(CAST(race AS STRING), 'Unknown') AS race"
+            f" FROM `{ctx.table_name}`"
+            " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
+            " AND timestamp <= CURRENT_TIMESTAMP()"
+            f"{filters_sql}"
+            " ORDER BY timestamp DESC"
+        )
+        export_df = bigquery_client.query_dataframe(
+            export_sql,
+            params,
+            job_context=f"{table_name}::search_export",
+        )
+
+        rows = []
+        if not export_df.empty:
+            for _, row in export_df.iterrows():
+                rows.append([
+                    pd.to_datetime(row["timestamp"]).isoformat(),
+                    "entry" if int(row["event"]) == 1 else "exit",
+                    row.get("track_id"),
+                    row.get("cam_id"),
+                    row.get("sex"),
+                    row.get("age_bucket"),
+                    row.get("race"),
+                ])
+
+        csv_buffer = _write_csv(headers, rows)
+        return _csv_response(csv_buffer.getvalue())
+
+    except BigQueryDataFrameError as exc:
+        logger.error(
+            "Event export failed for %s (job_id=%s): %s", table_name, exc.job_id, exc
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "BigQuery dataframe conversion failed",
+                "job_id": exc.job_id,
+            },
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Event export error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to export events: {exc}")
 
 
 @app.get("/api/snapshots/latest")
