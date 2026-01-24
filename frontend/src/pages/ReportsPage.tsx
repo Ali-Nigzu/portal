@@ -119,10 +119,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     x: number,
     y: number,
     width: number,
-    height: number
+    height: number,
+    options?: { rotateWeekLabels?: boolean; singleSeries?: boolean }
   ) => {
     const maxValue = Math.max(...valuesA, ...valuesB, 0);
     const barCount = labels.length || 1;
+    const singleSeries = options?.singleSeries ?? false;
+    const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
     const axisPaddingBottom = 10;
     const axisPaddingTop = 4;
@@ -161,13 +164,21 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       const barHeightB = valueB * scale;
 
       doc.setFillColor(33, 150, 243);
-      doc.rect(baseX + seriesGap / 2, axisY - barHeightA, innerWidth / 2, barHeightA, 'F');
-      doc.setFillColor(120, 144, 156);
-      doc.rect(baseX + seriesGap / 2 + innerWidth / 2, axisY - barHeightB, innerWidth / 2, barHeightB, 'F');
+      if (singleSeries) {
+        doc.rect(baseX + seriesGap / 2, axisY - barHeightA, innerWidth, barHeightA, 'F');
+      } else {
+        doc.rect(baseX + seriesGap / 2, axisY - barHeightA, innerWidth / 2, barHeightA, 'F');
+        doc.setFillColor(120, 144, 156);
+        doc.rect(baseX + seriesGap / 2 + innerWidth / 2, axisY - barHeightB, innerWidth / 2, barHeightB, 'F');
+      }
       if (index % labelStep === 0) {
         doc.setFontSize(7);
         doc.setTextColor(120, 120, 120);
-        doc.text(label, baseX + barWidth / 2, axisY + 5, { align: 'center' });
+        if (rotateWeekLabels) {
+          doc.text(label, baseX + barWidth / 2, axisY + 6, { align: 'center', angle: 90 });
+        } else {
+          doc.text(label, baseX + barWidth / 2, axisY + 5, { align: 'center' });
+        }
       }
     });
   };
@@ -179,11 +190,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     x: number,
     y: number,
     width: number,
-    height: number
+    height: number,
+    options?: { rotateWeekLabels?: boolean }
   ) => {
     const maxValue = Math.max(...values, 0);
     const minValue = Math.min(...values, 0);
     const range = maxValue - minValue || 1;
+    const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
     const axisPaddingBottom = 10;
     const axisPaddingTop = 4;
@@ -232,7 +245,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         return;
       }
       const labelX = plotX + index * step;
-      doc.text(label, labelX, axisY + 5, { align: 'center' });
+      if (rotateWeekLabels) {
+        doc.text(label, labelX, axisY + 6, { align: 'center', angle: 90 });
+      } else {
+        doc.text(label, labelX, axisY + 5, { align: 'center' });
+      }
     });
   };
 
@@ -247,17 +264,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.text(value, x + 3, y + 16);
-  };
-
-  const drawLegend = (doc: jsPDF, items: Array<{ label: string; color: [number, number, number] }>, x: number, y: number) => {
-    items.forEach((item, index) => {
-      const offsetX = x + index * 45;
-      doc.setFillColor(...item.color);
-      doc.rect(offsetX, y - 3, 6, 6, 'F');
-      doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
-      doc.text(item.label, offsetX + 9, y + 2);
-    });
   };
 
   const generatePDFReport = () => {
@@ -286,6 +292,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         headerStartOverride = inferAllTimeStart(headerEnd, [
           metricsForHeader.entrancesSeries,
           metricsForHeader.exitsSeries,
+          metricsForHeader.footfallSeries,
           metricsForHeader.occupancySeries,
           metricsForHeader.dwellSeries,
         ]);
@@ -326,10 +333,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           [
             metrics.entrancesSeries,
             metrics.exitsSeries,
+            metrics.footfallSeries,
             metrics.occupancySeries,
             metrics.dwellSeries,
           ],
         ).labels;
+        const rotateWeekLabels = bucketLabels.some((label) => {
+          const normalized = label.toLowerCase();
+          return normalized.startsWith('week of ') || normalized.startsWith('wk of ');
+        });
 
         const margin = 20;
         const contentWidth = 170;
@@ -361,25 +373,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         chartCursorY = ensureSpace(chartBlockHeight, chartCursorY);
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
-        doc.text('Entrances vs Exits', margin, chartCursorY + titleHeight);
-        drawLegend(
-          doc,
-          [
-            { label: 'Entrances', color: [33, 150, 243] },
-            { label: 'Exits', color: [120, 144, 156] },
-          ],
-          margin,
-          chartCursorY + titleHeight + legendHeight,
-        );
+        doc.text('Footfall', margin, chartCursorY + titleHeight);
         drawBarChart(
           doc,
-          metrics.entrancesSeries,
-          metrics.exitsSeries,
+          metrics.footfallSeries,
+          [],
           bucketLabels,
           margin,
           chartCursorY + titleHeight + legendHeight,
           contentWidth,
           chartHeight + axisPaddingBottom + axisPaddingTop,
+          { rotateWeekLabels, singleSeries: true },
         );
         chartCursorY += chartBlockHeight + chartGap;
 
@@ -395,10 +399,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           chartCursorY + titleHeight + legendHeight,
           contentWidth,
           chartHeight + axisPaddingBottom + axisPaddingTop,
+          { rotateWeekLabels },
         );
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Min ${metrics.occupancyMin} • Max ${metrics.occupancyMax}`, margin, chartCursorY + chartBlockHeight);
         chartCursorY += chartBlockHeight + chartGap;
 
         if (metrics.dwellSeries.length > 0) {
@@ -414,6 +416,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
             chartCursorY + titleHeight + legendHeight,
             contentWidth,
             chartHeight + axisPaddingBottom + axisPaddingTop,
+            { rotateWeekLabels },
           );
           chartCursorY += chartBlockHeight + chartGap;
         }
@@ -455,6 +458,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           if (index === metrics.peakOccupancyBucket) {
             notes.push('Peak Occupancy');
           }
+          if (index === metrics.peakDwellBucket) {
+            notes.push('Peak Dwell');
+          }
           const row = [
             label,
             formatNumber(metrics.entrancesSeries[index] ?? 0),
@@ -470,6 +476,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           });
           yPos += 4.5;
         });
+
+        yPos = ensureSpace(8, yPos);
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Peak Dwell marks the bucket with the highest average dwell time.', margin, yPos + 4);
       } else if (reportType === 'visitor-profile') {
         const metrics = buildVisitorProfileMetrics(rollup);
 

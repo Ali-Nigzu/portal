@@ -168,6 +168,7 @@ export const formatReportDateRange = (
 export interface SiteActivityMetrics {
   entrancesSeries: number[];
   exitsSeries: number[];
+  footfallSeries: number[];
   occupancySeries: number[];
   dwellSeries: number[];
   totalEntrances: number;
@@ -175,6 +176,7 @@ export interface SiteActivityMetrics {
   netFlow: number;
   peakEntrancesBucket: number;
   peakExitsBucket: number;
+  peakDwellBucket: number;
   peakOccupancyBucket: number;
   occupancyMin: number;
   occupancyMax: number;
@@ -187,6 +189,7 @@ export const buildSiteActivityMetrics = (rollup: unknown[]): SiteActivityMetrics
   const entrancesSeries = toNumberArray(rollup?.[0]);
   const exitsSeries = toNumberArray(rollup?.[1]);
   const occupancySeries = toNumberArray(rollup?.[2]);
+  const footfallSeries = toNumberArray(rollup?.[3]);
   const dwellSeries = toNumberArray(rollup?.[4]);
 
   const totalEntrances = sum(entrancesSeries);
@@ -197,6 +200,7 @@ export const buildSiteActivityMetrics = (rollup: unknown[]): SiteActivityMetrics
     ? entrancesSeries.indexOf(max(entrancesSeries))
     : 0;
   const peakExitsBucket = exitsSeries.length ? exitsSeries.indexOf(max(exitsSeries)) : 0;
+  const peakDwellBucket = dwellSeries.length ? dwellSeries.indexOf(max(dwellSeries)) : 0;
   const peakOccupancyBucket = occupancySeries.length
     ? occupancySeries.indexOf(max(occupancySeries))
     : 0;
@@ -210,6 +214,7 @@ export const buildSiteActivityMetrics = (rollup: unknown[]): SiteActivityMetrics
   return {
     entrancesSeries,
     exitsSeries,
+    footfallSeries,
     occupancySeries,
     dwellSeries,
     totalEntrances,
@@ -217,6 +222,7 @@ export const buildSiteActivityMetrics = (rollup: unknown[]): SiteActivityMetrics
     netFlow,
     peakEntrancesBucket,
     peakExitsBucket,
+    peakDwellBucket,
     peakOccupancyBucket,
     occupancyMin,
     occupancyMax,
