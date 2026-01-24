@@ -127,7 +127,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const singleSeries = options?.singleSeries ?? false;
     const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
-    const axisPaddingBottom = rotateWeekLabels ? 20 : 10;
+    const axisPaddingBottom = rotateWeekLabels ? 22 : 10;
     const axisPaddingTop = 4;
     const axisPaddingRight = 4;
     const plotX = x + axisPaddingLeft;
@@ -175,9 +175,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         doc.setFontSize(7);
         doc.setTextColor(120, 120, 120);
         if (rotateWeekLabels) {
-          doc.text(label, baseX + barWidth / 2, axisY + 12, {
+          doc.text(label, baseX + barWidth / 2, axisY + 10, {
             align: 'center',
-            angle: 90,
+            angle: 50,
             baseline: 'top',
           });
         } else {
@@ -202,7 +202,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const range = maxValue - minValue || 1;
     const rotateWeekLabels = options?.rotateWeekLabels ?? false;
     const axisPaddingLeft = 16;
-    const axisPaddingBottom = rotateWeekLabels ? 20 : 10;
+    const axisPaddingBottom = rotateWeekLabels ? 22 : 10;
     const axisPaddingTop = 4;
     const axisPaddingRight = 4;
     const plotX = x + axisPaddingLeft;
@@ -250,7 +250,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       }
       const labelX = plotX + index * step;
       if (rotateWeekLabels) {
-        doc.text(label, labelX, axisY + 12, { align: 'center', angle: 90, baseline: 'top' });
+        doc.text(label, labelX, axisY + 10, { align: 'center', angle: 50, baseline: 'top' });
       } else {
         doc.text(label, labelX, axisY + 5, { align: 'center' });
       }
