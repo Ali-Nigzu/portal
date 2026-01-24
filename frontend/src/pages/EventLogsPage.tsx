@@ -330,7 +330,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   }
 
   return (
-    <div>
+    <div className="event-logs-page">
       {/* Page Header */}
       <div className="vrm-page-header">
         <h1 className="vrm-page-title">
@@ -344,7 +344,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       </div>
 
       {/* Filters */}
-      <div className="vrm-card vrm-card--spaced">
+      <div className="vrm-card vrm-card--spaced event-logs-filters-card">
         <div className="vrm-card-header">
           <h3 className="vrm-card-title">Filters</h3>
           <div className="vrm-card-actions">
@@ -362,10 +362,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             </button>
           </div>
         </div>
-        <div className="vrm-card-body">
-          {/* First Row: Date Pickers, Track ID, Event Type */}
-          <div className="vrm-filter-grid">
-            <div>
+        <div className="vrm-card-body event-logs-filters-body">
+          <div className="event-logs-filter-grid">
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-start-date">
                 Start Date
               </label>
@@ -380,7 +379,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               />
             </div>
 
-            <div>
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-end-date">
                 End Date
               </label>
@@ -396,7 +395,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               />
             </div>
 
-            <div>
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-track-id">
                 Track ID
               </label>
@@ -410,7 +409,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               />
             </div>
 
-            <div>
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-type">
                 Event Type
               </label>
@@ -425,7 +424,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 <option value="exit">Exit</option>
               </select>
             </div>
-          </div>
 
           {/* Second Row: Gender, Age Group, Race */}
           <div className="vrm-filter-grid">
@@ -446,7 +444,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </select>
             </div>
 
-            <div>
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-age-group">
                 Age Group
               </label>
@@ -538,7 +536,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
 
       {/* Events Table */}
       <div className="vrm-card">
-        <div className="vrm-card-header">
+        <div className="vrm-card-header event-logs-table-header">
           <h3 className="vrm-card-title">
             Activity Events ({totalEvents.toLocaleString()} total)
           </h3>
