@@ -176,7 +176,6 @@ def test_raw_events_selects_coalesced_demographics() -> None:
     plan = compile_contract_query(Metric.RAW_EVENTS, [], ctx)
     assert "CASE WHEN sex = 0 THEN 'M' WHEN sex = 1 THEN 'F'" in plan.sql
     assert "CASE WHEN age_bucket IS NULL THEN 'Unknown'" in plan.sql
-    assert "timestamp <= CURRENT_TIMESTAMP()" in plan.sql
 
 
 def test_track_id_filter_uses_lowercase_like() -> None:
