@@ -70,13 +70,32 @@ ALL_TIME_START = datetime(1970, 1, 1, tzinfo=UTC)
 EVENT_TABLE_COLUMNS: Sequence[str] = (
     "site_id",
     "cam_id",
-    "index",
     "track_id",
     "event",
     "timestamp",
     "sex",
     "age_bucket",
-    "Race",
+    "race",
+)
+
+SEX_EXPRESSION = (
+    "CASE WHEN sex = 0 THEN 'M' WHEN sex = 1 THEN 'F' "
+    "WHEN LOWER(CAST(sex AS STRING)) IN ('m', 'male') THEN 'M' "
+    "WHEN LOWER(CAST(sex AS STRING)) IN ('f', 'female') THEN 'F' "
+    "ELSE 'Unknown' END"
+)
+
+TRACK_ID_EXPRESSION = "LOWER(CAST(track_id AS STRING))"
+
+AGE_BUCKET_EXPRESSION = (
+    "CASE WHEN age_bucket IS NULL THEN 'Unknown' "
+    "WHEN CAST(age_bucket AS STRING) = '0' THEN '0-4' "
+    "WHEN CAST(age_bucket AS STRING) = '1' THEN '5-13' "
+    "WHEN CAST(age_bucket AS STRING) = '2' THEN '14-25' "
+    "WHEN CAST(age_bucket AS STRING) = '3' THEN '26-45' "
+    "WHEN CAST(age_bucket AS STRING) = '4' THEN '46-65' "
+    "WHEN CAST(age_bucket AS STRING) = '5' THEN '66+' "
+    "ELSE CAST(age_bucket AS STRING) END"
 )
 
 
@@ -319,9 +338,9 @@ def _build_demographics_query(ctx: QueryContext) -> ContractQuery:
     filters, params = _render_filters(ctx)
     sql = (
         "SELECT"
-        " COALESCE(CAST(sex AS STRING), 'Unknown') AS sex,"
-        " COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket,"
-        " COALESCE(CAST(Race AS STRING), 'Unknown') AS race,"
+        f" {SEX_EXPRESSION} AS sex,"
+        f" {AGE_BUCKET_EXPRESSION} AS age_bucket,"
+        " COALESCE(CAST(race AS STRING), 'Unknown') AS race,"
         " COUNT(*) AS count"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
@@ -347,8 +366,8 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
     params["offset"] = resolved_offset
     sql = (
         "SELECT track_id, event, timestamp,"
-        " COALESCE(CAST(sex AS STRING), 'Unknown') AS sex,"
-        " COALESCE(CAST(age_bucket AS STRING), 'Unknown') AS age_bucket"
+        f" {SEX_EXPRESSION} AS sex,"
+        f" {AGE_BUCKET_EXPRESSION} AS age_bucket"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         f"{filters}"
@@ -374,29 +393,25 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
     }
     if ctx.site_ids:
         params["site_ids"] = ctx.site_ids
-        clauses.append("site_id IN UNNEST(@site_ids)")
+        clauses.append("CAST(site_id AS STRING) IN UNNEST(@site_ids)")
     if ctx.camera_ids:
         params["camera_ids"] = ctx.camera_ids
-        clauses.append("cam_id IN UNNEST(@camera_ids)")
+        clauses.append("CAST(cam_id AS STRING) IN UNNEST(@camera_ids)")
     if ctx.sexes:
         params["sex_filters"] = ctx.sexes
-        clauses.append(
-            "COALESCE(CAST(sex AS STRING), 'Unknown') IN UNNEST(@sex_filters)"
-        )
+        clauses.append(f"{SEX_EXPRESSION} IN UNNEST(@sex_filters)")
     if ctx.age_buckets:
         params["age_filters"] = ctx.age_buckets
-        clauses.append(
-            "COALESCE(CAST(age_bucket AS STRING), 'Unknown') IN UNNEST(@age_filters)"
-        )
+        clauses.append(f"{AGE_BUCKET_EXPRESSION} IN UNNEST(@age_filters)")
     if ctx.races:
         params["race_filters"] = ctx.races
-        clauses.append("COALESCE(CAST(Race AS STRING), 'Unknown') IN UNNEST(@race_filters)")
+        clauses.append("COALESCE(CAST(race AS STRING), 'Unknown') IN UNNEST(@race_filters)")
     if ctx.events:
         params["event_filters"] = ctx.events
         clauses.append("event IN UNNEST(@event_filters)")
     if ctx.track_id_like:
         params["track_like"] = ctx.track_id_like
-        clauses.append("track_id LIKE @track_like")
+        clauses.append(f"{TRACK_ID_EXPRESSION} LIKE @track_like")
     if not clauses:
         return "", params
     return " AND " + " AND ".join(clauses), params
@@ -430,4 +445,3 @@ def build_query(metric: Metric, dims: List[Dimension], ctx: QueryContext) -> str
 
     plan = compile_contract_query(metric, dims, ctx)
     return plan.sql
-

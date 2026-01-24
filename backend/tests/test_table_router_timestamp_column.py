@@ -95,7 +95,7 @@ def test_table_router_respects_demodata_timestamp_override(monkeypatch):
 
     def _schema(table_name: str):
         assert table_name == "project.dataset.table"
-        return ["site_id", "timestamp", "event", "Race"]
+        return ["site_id", "timestamp", "event", "race"]
 
     assert (
         router.resolve_event_timestamp_column(
@@ -112,7 +112,7 @@ def test_table_router_uses_b1_timestamp_for_default_client(monkeypatch):
 
     def _schema(table_name: str):
         assert table_name == "project.dataset.table"
-        return ["site_id", "timestamp", "event", "Race"]
+        return ["site_id", "timestamp", "event", "race"]
 
     assert (
         router.resolve_event_timestamp_column(
