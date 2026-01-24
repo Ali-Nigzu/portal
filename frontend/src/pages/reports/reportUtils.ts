@@ -34,12 +34,24 @@ const min = (values: number[]): number =>
 const max = (values: number[]): number =>
   values.length ? Math.max(...values) : 0;
 
-const formatDate = (value: Date): string => value.toISOString().split("T")[0];
+const formatDay = (value: Date): string =>
+  value.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-const subtractDays = (value: Date, days: number): Date => {
-  const copy = new Date(value);
-  copy.setDate(copy.getDate() - days);
-  return copy;
+const formatMonthYear = (value: Date): string =>
+  value.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+
+const formatDayRange = (start: Date, end: Date): string => {
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${start.getDate()}–${end.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+  }
+  return `${formatDay(start)}–${formatDay(end)}`;
+};
+
+const formatMonthRange = (start: Date, end: Date): string => {
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${start.toLocaleDateString("en-GB", { month: "short" })}–${formatMonthYear(end)}`;
+  }
+  return `${formatMonthYear(start)}–${formatMonthYear(end)}`;
 };
 
 export const getTimeframeOption = (timeframe: ReportTimeframe) =>
@@ -55,45 +67,30 @@ export const resolveRollup = (payload: unknown[], timeframe: ReportTimeframe): u
   return rollup as unknown[];
 };
 
-export const buildTimeframeRange = (
+export const formatReportDateRange = (
   snapshotTs: Date,
   timeframe: ReportTimeframe,
-): { label: string; startLabel: string; endLabel: string } => {
+  window: { from: Date; to: Date },
+): { label: string; subtitle: string } => {
   const { label } = getTimeframeOption(timeframe);
-  const endLabel = formatDate(snapshotTs);
 
-  if (timeframe === "today") {
-    return { label, startLabel: formatDate(snapshotTs), endLabel };
-  }
-  if (timeframe === "yesterday") {
-    return { label, startLabel: formatDate(subtractDays(snapshotTs, 1)), endLabel };
+  if (timeframe === "today" || timeframe === "yesterday") {
+    const dayLabel = formatDay(window.from);
+    return { label, subtitle: `${label} • ${dayLabel}` };
   }
   if (timeframe === "last_week") {
-    return { label, startLabel: formatDate(subtractDays(snapshotTs, 7)), endLabel };
+    return { label, subtitle: `${label} • ${formatDayRange(window.from, window.to)}` };
   }
   if (timeframe === "last_month") {
-    return { label, startLabel: formatDate(subtractDays(snapshotTs, 30)), endLabel };
+    return { label, subtitle: `${label} • ${formatDayRange(window.from, window.to)}` };
   }
   if (timeframe === "last_quarter") {
-    return { label, startLabel: formatDate(subtractDays(snapshotTs, 90)), endLabel };
+    return { label, subtitle: `${label} • ${formatMonthRange(window.from, window.to)}` };
   }
   if (timeframe === "last_year") {
-    return { label, startLabel: formatDate(subtractDays(snapshotTs, 365)), endLabel };
+    return { label, subtitle: `${label} • ${formatMonthRange(window.from, window.to)}` };
   }
-  return { label, startLabel: "Start: dataset", endLabel };
-};
-
-export const buildBucketLabels = (length: number): string[] => {
-  if (length === 24) {
-    return Array.from({ length }, (_, i) => `${i}:00`);
-  }
-  if (length === 7) {
-    return Array.from({ length }, (_, i) => `D${i + 1}`);
-  }
-  if (length === 4) {
-    return Array.from({ length }, (_, i) => `W${i + 1}`);
-  }
-  return Array.from({ length }, (_, i) => `P${i + 1}`);
+  return { label, subtitle: `All time → ${formatDay(snapshotTs)}` };
 };
 
 export interface SiteActivityMetrics {

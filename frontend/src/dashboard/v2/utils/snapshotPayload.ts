@@ -1,6 +1,14 @@
 import type { ChartResult, ChartSeries, DataPoint } from "../../../analytics/schemas/charting";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
+import {
+  buildSiteFlowBucketLabels,
+  resolveSiteFlowSliceCount,
+  resolveSiteFlowWindow,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+} from "./siteFlowBuckets";
 
 export interface SnapshotResponse {
   ts: string;
@@ -9,7 +17,6 @@ export interface SnapshotResponse {
 }
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 const NAIVE_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/;
 
 const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
@@ -206,89 +213,6 @@ const buildCapacityResultFromBlock = (value: unknown): ChartResult => {
   return buildCapacityResult([computedPct, 0]);
 };
 
-const inferBucketForLegacy = (
-  timeframe: SiteFlowTimeframe,
-  length: number,
-): "RAW" | "HOUR" | "DAY" | "WEEK" | "MONTH" => {
-  if (timeframe === "today" || timeframe === "yesterday") {
-    return "RAW";
-  }
-  if (timeframe === "last_week") {
-    return "DAY";
-  }
-  if (timeframe === "last_month") {
-    return length <= 7 ? "WEEK" : "DAY";
-  }
-  if (timeframe === "last_quarter") {
-    return "WEEK";
-  }
-  if (timeframe === "last_year") {
-    return "MONTH";
-  }
-  return length <= 12 ? "MONTH" : "WEEK";
-};
-
-const addDays = (date: Date, days: number): Date => {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-};
-
-const addMonths = (date: Date, months: number): Date =>
-  new Date(date.getFullYear(), date.getMonth() + months, 1, 0, 0, 0, 0);
-
-const addYears = (date: Date, years: number): Date =>
-  new Date(date.getFullYear() + years, 0, 1, 0, 0, 0, 0);
-
-const buildAnchoredTimestamps = (
-  timeframe: SiteFlowTimeframe,
-  anchor: Date,
-  length: number,
-): Date[] => {
-  if (length <= 0) {
-    return [];
-  }
-  if (timeframe === "today" || timeframe === "yesterday") {
-    const start = timeframe === "today" ? startOfDay(anchor) : startOfDay(new Date(anchor.getTime() - DAY_MS));
-    const stepMs = DAY_MS / length;
-    return Array.from({ length }, (_, index) => new Date(start.getTime() + index * stepMs));
-  }
-
-  if (timeframe === "last_week") {
-    const endDayStart = startOfDay(anchor);
-    const start = addDays(endDayStart, -(length - 1));
-    return Array.from({ length }, (_, index) => addDays(start, index));
-  }
-
-  if (timeframe === "last_month") {
-    if (length <= 5) {
-      const monthStart = startOfMonth(anchor);
-      const firstWeekStart = startOfWeek(monthStart);
-      return Array.from({ length }, (_, index) => addDays(firstWeekStart, index * 7));
-    }
-    const start = startOfMonth(anchor);
-    return Array.from({ length }, (_, index) => addDays(start, index));
-  }
-
-  if (timeframe === "last_quarter") {
-    const endWeekStart = startOfWeek(anchor);
-    const start = addDays(endWeekStart, -7 * (length - 1));
-    return Array.from({ length }, (_, index) => addDays(start, index * 7));
-  }
-
-  if (timeframe === "last_year") {
-    const endMonthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 0, 0, 0, 0);
-    const start = addMonths(endMonthStart, -(length - 1));
-    return Array.from({ length }, (_, index) => addMonths(start, index));
-  }
-
-  const start = startOfYear(anchor);
-  if (length <= 5) {
-    return Array.from({ length }, (_, index) => addYears(start, index));
-  }
-  return Array.from({ length }, (_, index) => addMonths(start, index));
-};
-
 const normalizeSeriesLength = (values: number[], count: number): number[] => {
   const sliced = values.slice(0, count);
   if (sliced.length >= count) {
@@ -320,48 +244,30 @@ const buildSiteFlowResult = (
   const occupancyMin = asNumberArray(rollup?.[3]);
   const occupancyMax = asNumberArray(rollup?.[4]);
 
-  const length = Math.max(
-    entrances.length,
-    exits.length,
-    occupancyAvg.length,
-    occupancyMin.length,
-    occupancyMax.length,
+  const { bucket, timestamps, sliceCount } = buildSiteFlowBucketLabels(
+    timeframe,
+    snapshotTs,
+    [entrances, exits, occupancyAvg, occupancyMin, occupancyMax],
   );
-
-  const desiredLength =
-    timeframe === "last_week" ? 7 : timeframe === "last_quarter" ? 12 : timeframe === "last_year" ? 12 : length;
-
-  let sliceCount = timeframe === "last_week" || timeframe === "last_quarter" || timeframe === "last_year"
-    ? desiredLength
-    : length;
-  const idxNonZero = Math.max(
+  const { length, bucketMsToday, dayStart } = resolveSiteFlowSliceCount(
+    timeframe,
+    snapshotTs,
+    [entrances, exits, occupancyAvg, occupancyMin, occupancyMax],
+  );
+  const bucketStepMs = sliceCount > 1 ? timestamps[1].getTime() - timestamps[0].getTime() : null;
+  const nonZeroLastIndex = Math.max(
     lastNonZeroIndex(entrances),
     lastNonZeroIndex(exits),
     lastNonZeroIndex(occupancyAvg),
   );
-  let idxNow: number | null = null;
-  let sliceLenTime: number | null = null;
-  const dayStart = startOfDay(snapshotTs);
+  const idxNow = timeframe === "today" && bucketMsToday
+    ? Math.floor((snapshotTs.getTime() - dayStart.getTime()) / bucketMsToday)
+    : null;
+  const sliceLenTime = idxNow !== null
+    ? clamp(idxNow + 1, 0, length)
+    : null;
   const weekStart = startOfWeek(snapshotTs);
   const monthStart = startOfMonth(snapshotTs);
-  const bucketMsToday = length > 0 ? DAY_MS / length : null;
-  if (timeframe === "today" && length > 0) {
-    const elapsedMs = snapshotTs.getTime() - dayStart.getTime();
-    idxNow = Math.floor(elapsedMs / (bucketMsToday ?? DAY_MS));
-    sliceLenTime = clamp(idxNow + 1, 0, length);
-    const sliceLenNonZero = idxNonZero >= 0 ? idxNonZero + 1 : sliceLenTime;
-    sliceCount = Math.min(sliceLenTime, sliceLenNonZero);
-  }
-
-  const timestamps =
-    timeframe === "today"
-      ? Array.from({ length }, (_, index) => new Date(dayStart.getTime() + index * (bucketMsToday ?? DAY_MS)))
-          .slice(0, sliceCount)
-      : buildAnchoredTimestamps(timeframe, snapshotTs, sliceCount);
-  const bucket = inferBucketForLegacy(timeframe, sliceCount);
-  const bucketStepMs =
-    sliceCount > 1 ? timestamps[1].getTime() - timestamps[0].getTime() : null;
-  const nonZeroLastIndex = idxNonZero;
 
   const normalizedEntrances = normalizeSeriesLength(entrances, sliceCount);
   const normalizedExits = normalizeSeriesLength(exits, sliceCount);
@@ -565,71 +471,6 @@ const normalizeTimeSeriesBlock = (block: TimeSeriesBlock): NormalizedTimeSeries 
   return { timestamps: trimmedTimestamps, series: trimmedSeries };
 };
 
-const startOfDay = (date: Date): Date => {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-};
-
-const endOfDay = (date: Date): Date => {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
-};
-
-const startOfWeek = (date: Date): Date => {
-  const next = startOfDay(date);
-  const day = next.getDay();
-  const diff = (day + 6) % 7;
-  next.setDate(next.getDate() - diff);
-  return next;
-};
-
-const endOfWeek = (date: Date): Date => {
-  const next = startOfWeek(date);
-  next.setDate(next.getDate() + 6);
-  return endOfDay(next);
-};
-
-const startOfMonth = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-
-const endOfMonth = (date: Date): Date => new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-
-const startOfQuarter = (date: Date): Date => {
-  const quarterStartMonth = Math.floor(date.getMonth() / 3) * 3;
-  return new Date(date.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0);
-};
-
-const endOfQuarter = (date: Date): Date => {
-  const quarterStart = startOfQuarter(date);
-  return new Date(quarterStart.getFullYear(), quarterStart.getMonth() + 3, 0, 23, 59, 59, 999);
-};
-
-const startOfYear = (date: Date): Date => new Date(date.getFullYear(), 0, 1, 0, 0, 0, 0);
-
-const endOfYear = (date: Date): Date => new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
-
-const resolveTimeframeWindow = (timeframe: SiteFlowTimeframe, anchor: Date): { from: Date; to: Date } => {
-  switch (timeframe) {
-    case "today":
-      return { from: startOfDay(anchor), to: anchor };
-    case "yesterday": {
-      const yesterday = new Date(anchor.getTime() - DAY_MS);
-      return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
-    }
-    case "last_week":
-      return { from: startOfWeek(anchor), to: endOfWeek(anchor) };
-    case "last_month":
-      return { from: startOfMonth(anchor), to: endOfMonth(anchor) };
-    case "last_quarter":
-      return { from: startOfQuarter(anchor), to: endOfQuarter(anchor) };
-    case "last_year":
-      return { from: startOfYear(anchor), to: endOfYear(anchor) };
-    case "all_time":
-    default:
-      return { from: new Date(0), to: anchor };
-  }
-};
 
 const filterSeriesByWindow = (
   timeSeries: NormalizedTimeSeries,
@@ -836,7 +677,7 @@ const buildSiteFlowResultFromSeries = (
   snapshotTs: Date,
   timeframe: SiteFlowTimeframe,
 ): ChartResult => {
-  const window = resolveTimeframeWindow(timeframe, snapshotTs);
+  const window = resolveSiteFlowWindow(timeframe, snapshotTs);
   let filteredSeries = filterSeriesByWindow(timeSeries, window);
 
   if (timeframe === "last_week") {

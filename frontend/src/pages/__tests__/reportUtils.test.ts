@@ -1,9 +1,10 @@
 import {
   buildSiteActivityMetrics,
-  buildTimeframeRange,
+  formatReportDateRange,
   buildVisitorProfileMetrics,
   resolveRollup,
 } from "../reports/reportUtils";
+import { resolveSiteFlowWindow } from "../../dashboard/v2/utils/siteFlowBuckets";
 
 describe("reportUtils", () => {
   it("computes site activity metrics from rollup arrays", () => {
@@ -55,9 +56,9 @@ describe("reportUtils", () => {
 
   it("resolves timeframe range labels", () => {
     const snapshotTs = new Date("2026-01-19T00:00:00Z");
-    const range = buildTimeframeRange(snapshotTs, "all_time");
-    expect(range.startLabel).toBe("Start: dataset");
-    expect(range.endLabel).toBe("2026-01-19");
+    const window = resolveSiteFlowWindow("all_time", snapshotTs);
+    const range = formatReportDateRange(snapshotTs, "all_time", window);
+    expect(range.subtitle).toBe("All time → 19 Jan 2026");
   });
 
   it("picks rollup index based on timeframe", () => {

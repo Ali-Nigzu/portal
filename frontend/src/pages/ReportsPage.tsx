@@ -8,13 +8,13 @@ import {
   RACE_BUCKET_LABELS,
   SEX_BUCKET_LABELS,
   TIMEFRAME_OPTIONS,
-  buildBucketLabels,
   buildSiteActivityMetrics,
-  buildTimeframeRange,
+  formatReportDateRange,
   buildVisitorProfileMetrics,
   resolveRollup,
   type ReportTimeframe,
 } from './reports/reportUtils';
+import { buildSiteFlowBucketLabels, resolveSiteFlowWindow } from '../dashboard/v2/utils/siteFlowBuckets';
 
 interface ReportsPageProps {
   credentials?: Credentials;
@@ -118,6 +118,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const seriesGap = barWidth * 0.15;
     const innerWidth = barWidth - seriesGap;
     const scale = maxValue > 0 ? height / maxValue : 0;
+    const labelStep = barCount > 12 ? Math.ceil(barCount / 6) : 1;
 
     labels.forEach((label, index) => {
       const baseX = x + index * barWidth;
@@ -130,9 +131,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       doc.rect(baseX + seriesGap / 2, y + height - barHeightA, innerWidth / 2, barHeightA, 'F');
       doc.setFillColor(120, 144, 156);
       doc.rect(baseX + seriesGap / 2 + innerWidth / 2, y + height - barHeightB, innerWidth / 2, barHeightB, 'F');
-      doc.setFontSize(7);
-      doc.setTextColor(120, 120, 120);
-      doc.text(label, baseX + barWidth / 2, y + height + 5, { align: 'center' });
+      if (index % labelStep === 0) {
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text(label, baseX + barWidth / 2, y + height + 5, { align: 'center' });
+      }
     });
   };
 
@@ -149,6 +152,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     const minValue = Math.min(...values, 0);
     const range = maxValue - minValue || 1;
     const step = values.length > 1 ? width / (values.length - 1) : width;
+    const labelStep = labels.length > 12 ? Math.ceil(labels.length / 6) : 1;
 
     doc.setDrawColor(33, 150, 243);
     values.forEach((value, index) => {
@@ -166,6 +170,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     doc.setFontSize(7);
     doc.setTextColor(120, 120, 120);
     labels.forEach((label, index) => {
+      if (index % labelStep !== 0) {
+        return;
+      }
       const labelX = x + index * step;
       doc.text(label, labelX, y + height + 5, { align: 'center' });
     });
@@ -182,6 +189,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.text(value, x + 3, y + 16);
+  };
+
+  const drawLegend = (doc: jsPDF, items: Array<{ label: string; color: [number, number, number] }>, x: number, y: number) => {
+    items.forEach((item, index) => {
+      const offsetX = x + index * 45;
+      doc.setFillColor(...item.color);
+      doc.rect(offsetX, y - 3, 6, 6, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(item.label, offsetX + 9, y + 2);
+    });
   };
 
   const generatePDFReport = () => {
@@ -201,7 +219,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       const template = reportTemplates.find(t => t.id === reportType);
       const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
       const rollup = resolveRollup(snapshot.payload ?? [], timePeriod);
-      const timeframeRange = buildTimeframeRange(snapshotTs, timePeriod);
+      const timeframeWindow = resolveSiteFlowWindow(timePeriod, snapshotTs);
+      const { subtitle } = formatReportDateRange(snapshotTs, timePeriod, timeframeWindow);
 
       doc.setFontSize(22);
       doc.setTextColor(33, 150, 243);
@@ -214,58 +233,58 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
-      doc.text(
-        `${timeframeRange.label} • ${timeframeRange.startLabel} → ${timeframeRange.endLabel}`,
-        105,
-        43,
-        { align: 'center' },
-      );
+      doc.text(subtitle, 105, 43, { align: 'center' });
 
       doc.setDrawColor(220, 220, 220);
       doc.line(20, 48, 190, 48);
 
       if (reportType === 'site-activity') {
         const metrics = buildSiteActivityMetrics(rollup);
-        const bucketLabels = buildBucketLabels(
-          Math.max(
-            metrics.entrancesSeries.length,
-            metrics.exitsSeries.length,
-            metrics.occupancySeries.length,
-            metrics.dwellSeries.length,
-            1,
-          ),
-        );
+        const bucketLabels = buildSiteFlowBucketLabels(
+          timePeriod,
+          snapshotTs,
+          [
+            metrics.entrancesSeries,
+            metrics.exitsSeries,
+            metrics.occupancySeries,
+            metrics.dwellSeries,
+          ],
+        ).labels;
 
         drawKpiTile(doc, 'Total Entrances', formatNumber(metrics.totalEntrances), 20, 55);
         drawKpiTile(doc, 'Total Exits', formatNumber(metrics.totalExits), 67, 55);
-        drawKpiTile(doc, 'Net Flow', formatNumber(metrics.netFlow), 114, 55);
-        drawKpiTile(doc, 'Avg Occupancy', formatNumber(metrics.occupancyAvg), 161, 55);
-        drawKpiTile(doc, 'Peak Occupancy', formatNumber(metrics.occupancyMax), 20, 80);
-        drawKpiTile(doc, 'Avg Dwell (min)', formatNumber(metrics.dwellAvg), 67, 80);
+        drawKpiTile(doc, 'Avg Occupancy', formatNumber(metrics.occupancyAvg), 114, 55);
+        drawKpiTile(doc, 'Peak Occupancy', formatNumber(metrics.occupancyMax), 161, 55);
+        drawKpiTile(doc, 'Avg Dwell (min)', formatNumber(metrics.dwellAvg), 20, 80);
 
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text('Entrances vs Exits', 20, 112);
-        drawBarChart(doc, metrics.entrancesSeries, metrics.exitsSeries, bucketLabels, 20, 116, 170, 35);
+        drawLegend(
+          doc,
+          [
+            { label: 'Entrances', color: [33, 150, 243] },
+            { label: 'Exits', color: [120, 144, 156] },
+          ],
+          130,
+          112,
+        );
+        drawBarChart(doc, metrics.entrancesSeries, metrics.exitsSeries, bucketLabels, 20, 116, 170, 32);
 
-        doc.text('Occupancy', 20, 160);
-        drawLineChart(doc, metrics.occupancySeries, bucketLabels, 20, 164, 170, 28);
+        doc.text('Occupancy', 20, 158);
+        drawLineChart(doc, metrics.occupancySeries, bucketLabels, 20, 162, 170, 26);
         doc.setFontSize(9);
         doc.setTextColor(100, 100, 100);
-        doc.text(
-          `Min ${metrics.occupancyMin} • Max ${metrics.occupancyMax}`,
-          20,
-          195,
-        );
+        doc.text(`Min ${metrics.occupancyMin} • Max ${metrics.occupancyMax}`, 20, 191);
 
         if (metrics.dwellSeries.length > 0) {
           doc.setFontSize(11);
           doc.setTextColor(0, 0, 0);
-          doc.text('Dwell (minutes)', 20, 205);
-          drawLineChart(doc, metrics.dwellSeries, bucketLabels, 20, 209, 170, 20);
+          doc.text('Dwell (minutes)', 20, 201);
+          drawLineChart(doc, metrics.dwellSeries, bucketLabels, 20, 205, 170, 18);
         }
 
-        let yPos = 236;
+        let yPos = 230;
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text('Bucket summary', 20, yPos);
@@ -283,6 +302,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           if (yPos > 270) {
             doc.addPage();
             yPos = 20;
+          }
+          if (index === metrics.peakOccupancyBucket) {
+            doc.setFillColor(227, 242, 253);
+            doc.rect(18, yPos - 3.5, 174, 5, 'F');
+          } else if (index % 2 === 1) {
+            doc.setFillColor(245, 247, 250);
+            doc.rect(18, yPos - 3.5, 174, 5, 'F');
           }
           const notes: string[] = [];
           if (index === metrics.peakEntrancesBucket) {
@@ -327,7 +353,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           20,
           82,
           80,
-          30,
+          26,
         );
 
         doc.text('Sex split', 110, 78);
@@ -339,36 +365,36 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           110,
           82,
           80,
-          30,
+          26,
         );
 
-        doc.text('Race split', 20, 125);
+        doc.text('Race split', 20, 122);
         drawBarChart(
           doc,
           metrics.racePct,
           [],
           RACE_BUCKET_LABELS,
           20,
-          129,
+          126,
           80,
-          30,
+          26,
         );
 
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
-        doc.text('Summary', 110, 125);
+        doc.text('Summary', 110, 122);
         doc.setFontSize(9);
-        doc.text(`Top age bucket: ${metrics.dominantAgeBucket}`, 110, 132);
-        doc.text(`Sex split: ${metrics.sexSplit.Male}% / ${metrics.sexSplit.Female}%`, 110, 138);
+        doc.text(`Top age bucket: ${metrics.dominantAgeBucket}`, 110, 130);
+        doc.text(`Sex split: ${metrics.sexSplit.Male}% / ${metrics.sexSplit.Female}%`, 110, 136);
         doc.text(
           `Race split: ${metrics.raceSplit.Light}% / ${metrics.raceSplit.Mix}% / ${metrics.raceSplit.Dark}%`,
           110,
-          144,
+          142,
         );
 
         if (metrics.totalEntrances === 0) {
           doc.setTextColor(120, 120, 120);
-          doc.text('No entrances in this period.', 20, 165);
+          doc.text('No entrances in this period.', 20, 164);
         }
       } else {
         doc.setFontSize(12);
