@@ -83,10 +83,12 @@ export const getReportHeaderRange = (
   timeframe: ReportTimeframe,
   snapshotTs: Date,
   now: Date = new Date(),
+  startOverride?: Date,
 ): { start: Date; end: Date; labelLine: string } => {
   const end = clampEnd(snapshotTs, now);
   const window = resolveSiteFlowWindow(timeframe, end);
-  const { start, end: clampedEnd } = collapseIfInverted(window.from, end);
+  const resolvedStart = startOverride ?? window.from;
+  const { start, end: clampedEnd } = collapseIfInverted(resolvedStart, end);
 
   if (timeframe === "today") {
     return { start, end: clampedEnd, labelLine: `${formatDay(clampedEnd)} up to ${formatTime(clampedEnd)}` };
@@ -112,9 +114,10 @@ export const formatReportDateRange = (
   snapshotTs: Date,
   timeframe: ReportTimeframe,
   now: Date = new Date(),
+  startOverride?: Date,
 ): { label: string; subtitle: string; start: Date; end: Date } => {
   const { label } = getTimeframeOption(timeframe);
-  const { start, end, labelLine } = getReportHeaderRange(timeframe, snapshotTs, now);
+  const { start, end, labelLine } = getReportHeaderRange(timeframe, snapshotTs, now, startOverride);
   return { label, subtitle: `${label} • ${labelLine}`, start, end };
 };
 

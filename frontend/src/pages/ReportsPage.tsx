@@ -14,7 +14,7 @@ import {
   resolveRollup,
   type ReportTimeframe,
 } from './reports/reportUtils';
-import { buildSiteFlowBucketLabels } from '../dashboard/v2/utils/siteFlowBuckets';
+import { buildSiteFlowBucketLabels, startOfYear } from '../dashboard/v2/utils/siteFlowBuckets';
 
 interface ReportsPageProps {
   credentials?: Credentials;
@@ -101,6 +101,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
   };
 
   const formatNumber = (value: number) => value.toLocaleString();
+
+  const inferAllTimeStart = (end: Date, seriesList: number[][]): Date => {
+    const maxLength = Math.max(...seriesList.map((series) => series.length), 0);
+    if (maxLength <= 0) {
+      return startOfYear(end);
+    }
+    const endMonthStart = new Date(end.getFullYear(), end.getMonth(), 1, 0, 0, 0, 0);
+    return new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() - (maxLength - 1), 1, 0, 0, 0, 0);
+  };
 
   const drawBarChart = (
     doc: jsPDF,
@@ -268,8 +277,30 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       const template = reportTemplates.find(t => t.id === reportType);
       const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
       const now = new Date();
+      const headerEnd = snapshotTs.getTime() <= now.getTime() ? snapshotTs : now;
       const rollup = resolveRollup(snapshot.payload ?? [], timePeriod);
-      const { subtitle } = formatReportDateRange(snapshotTs, timePeriod, now);
+      let headerStartOverride: Date | undefined;
+
+      if (reportType === 'site-activity' && timePeriod === 'all_time') {
+        const metricsForHeader = buildSiteActivityMetrics(rollup);
+        headerStartOverride = inferAllTimeStart(headerEnd, [
+          metricsForHeader.entrancesSeries,
+          metricsForHeader.exitsSeries,
+          metricsForHeader.occupancySeries,
+          metricsForHeader.dwellSeries,
+        ]);
+      }
+
+      if (reportType === 'visitor-profile' && timePeriod === 'all_time') {
+        const visitorMetricsForHeader = buildVisitorProfileMetrics(rollup);
+        headerStartOverride = inferAllTimeStart(headerEnd, [
+          visitorMetricsForHeader.agePct,
+          visitorMetricsForHeader.sexPct,
+          visitorMetricsForHeader.racePct,
+        ]);
+      }
+
+      const { subtitle } = formatReportDateRange(snapshotTs, timePeriod, now, headerStartOverride);
 
       doc.setFontSize(22);
       doc.setTextColor(33, 150, 243);

@@ -70,7 +70,7 @@ export const resolveSiteFlowWindow = (
       return { from: startOfYear(anchor), to: endOfYear(anchor) };
     case "all_time":
     default:
-      return { from: new Date(0), to: anchor };
+      return { from: startOfYear(anchor), to: anchor };
   }
 };
 
