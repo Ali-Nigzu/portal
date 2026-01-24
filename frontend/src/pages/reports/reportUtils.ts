@@ -1,3 +1,5 @@
+import { resolveSiteFlowWindow } from "../../dashboard/v2/utils/siteFlowBuckets";
+
 export type ReportTimeframe =
   | "today"
   | "yesterday"
@@ -28,30 +30,37 @@ const sum = (values: number[]): number => values.reduce((acc, value) => acc + va
 
 const mean = (values: number[]): number => (values.length ? sum(values) / values.length : 0);
 
-const min = (values: number[]): number =>
-  values.length ? Math.min(...values) : 0;
+const min = (values: number[]): number => (values.length ? Math.min(...values) : 0);
 
-const max = (values: number[]): number =>
-  values.length ? Math.max(...values) : 0;
+const max = (values: number[]): number => (values.length ? Math.max(...values) : 0);
+
+const clampEnd = (snapshotTs: Date, now: Date): Date =>
+  snapshotTs.getTime() <= now.getTime() ? snapshotTs : now;
+
+const collapseIfInverted = (start: Date, end: Date): { start: Date; end: Date } =>
+  end.getTime() < start.getTime() ? { start: end, end } : { start, end };
 
 const formatDay = (value: Date): string =>
-  value.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-
-const formatMonthYear = (value: Date): string =>
-  value.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  value.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 const formatDayRange = (start: Date, end: Date): string => {
+  if (start.getTime() === end.getTime()) {
+    return formatDay(end);
+  }
   if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return `${start.getDate()}–${end.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+    return `${start.getDate()}–${formatDay(end)}`;
   }
   return `${formatDay(start)}–${formatDay(end)}`;
 };
 
+const formatMonthYear = (value: Date): string =>
+  value.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+
 const formatMonthRange = (start: Date, end: Date): string => {
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${start.toLocaleDateString("en-GB", { month: "short" })}–${formatMonthYear(end)}`;
+  if (start.getTime() === end.getTime()) {
+    return formatMonthYear(end);
   }
-  return `${formatMonthYear(start)}–${formatMonthYear(end)}`;
+  return `${formatMonthYear(start)} – ${formatMonthYear(end)}`;
 };
 
 export const getTimeframeOption = (timeframe: ReportTimeframe) =>
@@ -67,30 +76,42 @@ export const resolveRollup = (payload: unknown[], timeframe: ReportTimeframe): u
   return rollup as unknown[];
 };
 
+export const getReportHeaderRange = (
+  timeframe: ReportTimeframe,
+  snapshotTs: Date,
+  now: Date = new Date(),
+): { start: Date; end: Date; labelLine: string } => {
+  const end = clampEnd(snapshotTs, now);
+  const window = resolveSiteFlowWindow(timeframe, end);
+  const { start, end: clampedEnd } = collapseIfInverted(window.from, end);
+
+  if (timeframe === "today" || timeframe === "yesterday") {
+    return { start, end: clampedEnd, labelLine: formatDay(clampedEnd) };
+  }
+
+  if (timeframe === "last_week" || timeframe === "last_month") {
+    const labelLine =
+      timeframe === "last_month" && start.getTime() <= clampedEnd.getTime()
+        ? formatMonthYear(start)
+        : formatDayRange(start, clampedEnd);
+    return { start, end: clampedEnd, labelLine };
+  }
+
+  if (timeframe === "last_quarter" || timeframe === "last_year") {
+    return { start, end: clampedEnd, labelLine: formatMonthRange(start, clampedEnd) };
+  }
+
+  return { start, end: clampedEnd, labelLine: formatDay(clampedEnd) };
+};
+
 export const formatReportDateRange = (
   snapshotTs: Date,
   timeframe: ReportTimeframe,
-  window: { from: Date; to: Date },
-): { label: string; subtitle: string } => {
+  now: Date = new Date(),
+): { label: string; subtitle: string; start: Date; end: Date } => {
   const { label } = getTimeframeOption(timeframe);
-
-  if (timeframe === "today" || timeframe === "yesterday") {
-    const dayLabel = formatDay(window.from);
-    return { label, subtitle: `${label} • ${dayLabel}` };
-  }
-  if (timeframe === "last_week") {
-    return { label, subtitle: `${label} • ${formatDayRange(window.from, window.to)}` };
-  }
-  if (timeframe === "last_month") {
-    return { label, subtitle: `${label} • ${formatDayRange(window.from, window.to)}` };
-  }
-  if (timeframe === "last_quarter") {
-    return { label, subtitle: `${label} • ${formatMonthRange(window.from, window.to)}` };
-  }
-  if (timeframe === "last_year") {
-    return { label, subtitle: `${label} • ${formatMonthRange(window.from, window.to)}` };
-  }
-  return { label, subtitle: `All time → ${formatDay(snapshotTs)}` };
+  const { start, end, labelLine } = getReportHeaderRange(timeframe, snapshotTs, now);
+  return { label, subtitle: `${label} • ${labelLine}`, start, end };
 };
 
 export interface SiteActivityMetrics {
