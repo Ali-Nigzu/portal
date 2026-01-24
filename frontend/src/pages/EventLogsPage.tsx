@@ -477,6 +477,21 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 ))}
               </select>
             </div>
+
+            <div className="event-logs-filter-field">
+              <label className="vrm-label" htmlFor="event-camera-id">
+                Camera ID
+              </label>
+              <input
+                id="event-camera-id"
+                type="number"
+                value={draftFilters.cameraId}
+                onChange={(e) => setDraftFilters(prev => ({ ...prev, cameraId: e.target.value }))}
+                placeholder="Filter by camera ID"
+                className="vrm-input event-logs-filter-control"
+                min="0"
+              />
+            </div>
           </div>
 
           {/* Third Row: Site/Client, Camera */}

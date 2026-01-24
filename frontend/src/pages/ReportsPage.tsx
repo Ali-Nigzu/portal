@@ -1,550 +1,407 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
-import { API_ENDPOINTS } from '../config';
+import { API_BASE_URL } from '../config';
 import { Credentials } from '../types/credentials';
-
-interface EventData {
-  index: number;
-  track_number: number;
-  event: string;
-  timestamp: string;
-  sex: string;
-  age_estimate: string;
-  hour: number;
-  day_of_week: string;
-  date: string;
-}
+import type { SnapshotResponse } from '../dashboard/v2/utils/snapshotPayload';
+import {
+  AGE_BUCKET_LABELS,
+  RACE_BUCKET_LABELS,
+  SEX_BUCKET_LABELS,
+  TIMEFRAME_OPTIONS,
+  buildSiteActivityMetrics,
+  formatReportDateRange,
+  buildVisitorProfileMetrics,
+  resolveRollup,
+  type ReportTimeframe,
+} from './reports/reportUtils';
+import { buildSiteFlowBucketLabels, resolveSiteFlowWindow } from '../dashboard/v2/utils/siteFlowBuckets';
 
 interface ReportsPageProps {
   credentials?: Credentials;
 }
 
 const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
-  const [reportType, setReportType] = useState('occupancy-summary');
-  const [timePeriod, setTimePeriod] = useState('last-7-days');
-  const [format, setFormat] = useState('pdf');
+  const [reportType, setReportType] = useState('site-activity');
+  const [timePeriod, setTimePeriod] = useState<ReportTimeframe>('today');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [events, setEvents] = useState<EventData[]>([]);
+  const [snapshot, setSnapshot] = useState<SnapshotResponse | null>(null);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchEvents = useCallback(async () => {
-    if (!credentials) {
-      setLoading(false);
-      return;
-    }
-    
+  const fetchSnapshot = useCallback(async () => {
     try {
       setLoading(true);
-      
+      setSnapshotError(null);
+
       const urlParams = new URLSearchParams(window.location.search);
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
-      
-      let apiUrl = API_ENDPOINTS.CHART_DATA;
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
+
+      const params = new URLSearchParams();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+
       if (viewToken) {
-        apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
+        params.append('viewToken', viewToken);
+      } else if (clientId) {
+        params.append('org', clientId);
       } else {
+        throw new Error('Missing view_token or client_id for snapshot lookup.');
+      }
+
+      if (!viewToken && credentials) {
         const auth = btoa(`${credentials.username}:${credentials.password}`);
         headers['Authorization'] = `Basic ${auth}`;
-        
-        if (clientId) {
-          apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
-        }
       }
-      
-      const response = await fetch(apiUrl, { headers });
+
+      const response = await fetch(`${API_BASE_URL}/api/snapshots/latest?${params.toString()}`, { headers });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        throw new Error(`Snapshot fetch failed: ${response.status} ${text}`);
       }
 
       const result = await response.json();
-      setEvents(result.data || []);
+      setSnapshot(result as SnapshotResponse);
     } catch (err) {
-      console.error('Failed to fetch events:', err);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setSnapshotError(message);
     } finally {
       setLoading(false);
     }
   }, [credentials]);
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
-
-  useEffect(() => {
-    if (timePeriod === 'custom-range') {
-      setShowDatePicker(true);
-    } else {
-      setShowDatePicker(false);
-    }
-  }, [timePeriod]);
+    fetchSnapshot();
+  }, [fetchSnapshot]);
 
   const reportTemplates = [
     {
-      id: 'occupancy-summary',
-      name: 'Occupancy Summary Report',
-      description: 'Daily, weekly, and monthly occupancy patterns with peak hours analysis',
-      type: 'Standard Report'
+      id: 'site-activity',
+      name: 'Site Activity',
+      description: 'Entrances, exits, occupancy, and dwell trends for the selected period.',
+      type: 'Operational Report'
     },
     {
-      id: 'traffic-analysis',
-      name: 'Traffic Flow Analysis',
-      description: 'Entry/exit patterns, flow rates, and demographic breakdowns',
-      type: 'Analytics Report'
-    },
-    {
-      id: 'demographics-report', 
-      name: 'Demographics Report',
-      description: 'Age and gender distribution analysis with trend comparisons',
+      id: 'visitor-profile',
+      name: 'Visitor Profile',
+      description: 'Age, sex, and race distribution across entrances.',
       type: 'Demographics Report'
     },
     {
       id: 'device-performance',
-      name: 'Device Performance Report',
+      name: 'System Performance',
       description: 'Camera and sensor status, uptime, and data quality metrics',
       type: 'Technical Report'
     }
   ];
 
-  const getFilteredEvents = () => {
-    let filtered = [...events];
-    
-    if (timePeriod === 'all-time') {
-      return filtered;
-    }
-    
-    if (timePeriod !== 'custom-range') {
-      const now = new Date();
-      let startDate = new Date();
-      
-      if (timePeriod === 'last-7-days') {
-        startDate.setDate(now.getDate() - 7);
-      } else if (timePeriod === 'last-30-days') {
-        startDate.setDate(now.getDate() - 30);
-      } else if (timePeriod === 'past-year') {
-        startDate.setDate(now.getDate() - 365);
-      } else if (timePeriod === 'this-month') {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else if (timePeriod === 'last-month') {
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        filtered = filtered.filter(e => {
-          const eventDate = new Date(e.timestamp);
-          return eventDate >= startDate && eventDate <= endOfLastMonth;
-        });
-        return filtered;
-      }
-      
-      filtered = filtered.filter(e => new Date(e.timestamp) >= startDate);
-    } else if (startDate && endDate) {
-      filtered = filtered.filter(e => {
-        const eventDate = new Date(e.timestamp);
-        const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-        const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        return eventDateOnly >= startDateOnly && eventDateOnly <= endDateOnly;
-      });
-    }
-    
-    return filtered;
+  const parseSnapshotTimestamp = (value: string) => {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
   };
 
-  const generateOccupancyData = () => {
-    const filtered = getFilteredEvents();
-    const entries = filtered.filter(e => e.event.toLowerCase() === 'entry').length;
-    const exits = filtered.filter(e => e.event.toLowerCase() === 'exit').length;
-    const currentOccupancy = Math.max(0, entries - exits);
-    
-    const trackMap: {[key: number]: Date[]} = {};
-    filtered.forEach(e => {
-      if (!trackMap[e.track_number]) trackMap[e.track_number] = [];
-      trackMap[e.track_number].push(new Date(e.timestamp));
-    });
-    
-    const dwellTimes: number[] = [];
-    Object.values(trackMap).forEach(timestamps => {
-      if (timestamps.length >= 2) {
-        const sorted = timestamps.sort((a, b) => a.getTime() - b.getTime());
-        const dwellMinutes = (sorted[sorted.length - 1].getTime() - sorted[0].getTime()) / 60000;
-        if (dwellMinutes > 0 && dwellMinutes < 1440) {
-          dwellTimes.push(dwellMinutes);
-        }
+  const formatNumber = (value: number) => value.toLocaleString();
+
+  const drawBarChart = (
+    doc: jsPDF,
+    valuesA: number[],
+    valuesB: number[],
+    labels: string[],
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ) => {
+    const maxValue = Math.max(...valuesA, ...valuesB, 0);
+    const barCount = labels.length || 1;
+    const barWidth = width / barCount;
+    const seriesGap = barWidth * 0.15;
+    const innerWidth = barWidth - seriesGap;
+    const scale = maxValue > 0 ? height / maxValue : 0;
+    const labelStep = barCount > 12 ? Math.ceil(barCount / 6) : 1;
+
+    labels.forEach((label, index) => {
+      const baseX = x + index * barWidth;
+      const valueA = valuesA[index] ?? 0;
+      const valueB = valuesB[index] ?? 0;
+      const barHeightA = valueA * scale;
+      const barHeightB = valueB * scale;
+
+      doc.setFillColor(33, 150, 243);
+      doc.rect(baseX + seriesGap / 2, y + height - barHeightA, innerWidth / 2, barHeightA, 'F');
+      doc.setFillColor(120, 144, 156);
+      doc.rect(baseX + seriesGap / 2 + innerWidth / 2, y + height - barHeightB, innerWidth / 2, barHeightB, 'F');
+      if (index % labelStep === 0) {
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text(label, baseX + barWidth / 2, y + height + 5, { align: 'center' });
       }
     });
-    
-    const avgDwellTime = dwellTimes.length > 0 
-      ? Math.round(dwellTimes.reduce((a, b) => a + b, 0) / dwellTimes.length)
-      : 0;
-    
-    const sortedEvents = [...filtered].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    
-    const hourlyOccupancy: {[key: number]: number} = {};
-    let runningOccupancy = 0;
-    let lastTimestamp: Date | null = null;
-    
-    sortedEvents.forEach(e => {
-      const currentTimestamp = new Date(e.timestamp);
-      
-      if (lastTimestamp) {
-        let tempTime = new Date(lastTimestamp);
-        tempTime.setMinutes(0, 0, 0);
-        tempTime.setHours(tempTime.getHours() + 1);
-        
-        while (tempTime <= currentTimestamp) {
-          const tempHour = tempTime.getHours();
-          hourlyOccupancy[tempHour] = Math.max(hourlyOccupancy[tempHour] || 0, runningOccupancy);
-          tempTime.setHours(tempTime.getHours() + 1);
-        }
-      }
-      
-      const currentHour = currentTimestamp.getHours();
-      hourlyOccupancy[currentHour] = Math.max(hourlyOccupancy[currentHour] || 0, runningOccupancy);
-      
-      if (e.event.toLowerCase() === 'entry') {
-        runningOccupancy++;
-      } else if (e.event.toLowerCase() === 'exit') {
-        runningOccupancy = Math.max(0, runningOccupancy - 1);
-      }
-      
-      hourlyOccupancy[currentHour] = Math.max(hourlyOccupancy[currentHour] || 0, runningOccupancy);
-      
-      lastTimestamp = currentTimestamp;
-    });
-    
-    if (lastTimestamp && runningOccupancy > 0) {
-      let windowEnd = new Date();
-      
-      if (timePeriod === 'last-month') {
-        const now = new Date();
-        windowEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      } else if (timePeriod === 'custom-range' && endDate) {
-        windowEnd = new Date(endDate);
-        windowEnd.setHours(23, 59, 59, 999);
-      }
-      
-      const lastTime = lastTimestamp as Date;
-      let tempTime = new Date(lastTime);
-      tempTime.setMinutes(0, 0, 0);
-      tempTime.setHours(tempTime.getHours() + 1);
-      
-      while (tempTime <= windowEnd && tempTime.getTime() - lastTime.getTime() < 24 * 60 * 60 * 1000) {
-        const tempHour = tempTime.getHours();
-        hourlyOccupancy[tempHour] = Math.max(hourlyOccupancy[tempHour] || 0, runningOccupancy);
-        tempTime.setHours(tempTime.getHours() + 1);
-      }
-    }
-    
-    let peakHour = 0;
-    let peakCount = 0;
-    Object.entries(hourlyOccupancy).forEach(([hour, count]) => {
-      if (count > peakCount) {
-        peakCount = count;
-        peakHour = parseInt(hour);
-      }
-    });
-    
-    return {
-      currentOccupancy,
-      totalEntries: entries,
-      totalExits: exits,
-      occupancyRate: entries > 0 ? ((currentOccupancy / entries) * 100).toFixed(1) + '%' : '0%',
-      averageDwellTime: avgDwellTime,
-      peakOccupancyTime: `${peakHour.toString().padStart(2, '0')}:00`,
-      peakOccupancyCount: peakCount,
-      hourlyOccupancy: Object.entries(hourlyOccupancy).map(([hour, count]) => ({
-        hour: `${hour.toString().padStart(2, '0')}:00`,
-        count
-      })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
-    };
   };
 
-  const generateTrafficData = () => {
-    const filtered = getFilteredEvents();
-    const entries = filtered.filter(e => e.event.toLowerCase() === 'entry');
-    const exits = filtered.filter(e => e.event.toLowerCase() === 'exit');
-    
-    const hourCounts: {[key: number]: {entries: number, exits: number}} = {};
-    filtered.forEach(e => {
-      const hour = e.hour;
-      if (!hourCounts[hour]) hourCounts[hour] = {entries: 0, exits: 0};
-      if (e.event.toLowerCase() === 'entry') hourCounts[hour].entries++;
-      if (e.event.toLowerCase() === 'exit') hourCounts[hour].exits++;
-    });
-    
-    let peakHour = 0;
-    let peakRate = 0;
-    Object.entries(hourCounts).forEach(([hour, counts]) => {
-      const rate = counts.entries + counts.exits;
-      if (rate > peakRate) {
-        peakRate = rate;
-        peakHour = parseInt(hour);
+  const drawLineChart = (
+    doc: jsPDF,
+    values: number[],
+    labels: string[],
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ) => {
+    const maxValue = Math.max(...values, 0);
+    const minValue = Math.min(...values, 0);
+    const range = maxValue - minValue || 1;
+    const step = values.length > 1 ? width / (values.length - 1) : width;
+    const labelStep = labels.length > 12 ? Math.ceil(labels.length / 6) : 1;
+
+    doc.setDrawColor(33, 150, 243);
+    values.forEach((value, index) => {
+      if (index === 0) {
+        return;
       }
+      const prevValue = values[index - 1] ?? 0;
+      const x1 = x + (index - 1) * step;
+      const y1 = y + height - ((prevValue - minValue) / range) * height;
+      const x2 = x + index * step;
+      const y2 = y + height - ((value - minValue) / range) * height;
+      doc.line(x1, y1, x2, y2);
     });
-    
-    const totalFlow = entries.length + exits.length;
-    const hours = Object.keys(hourCounts).length || 1;
-    const avgFlowRate = Math.round(totalFlow / hours);
-    
-    return {
-      totalEntries: entries.length,
-      totalExits: exits.length,
-      peakFlowTime: `${peakHour.toString().padStart(2, '0')}:00`,
-      peakFlowRate: peakRate,
-      averageFlowRate: avgFlowRate,
-      flowByHour: Object.entries(hourCounts).map(([hour, counts]) => ({
-        hour: `${hour.toString().padStart(2, '0')}:00`,
-        entries: counts.entries,
-        exits: counts.exits
-      })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
-    };
+
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    labels.forEach((label, index) => {
+      if (index % labelStep !== 0) {
+        return;
+      }
+      const labelX = x + index * step;
+      doc.text(label, labelX, y + height + 5, { align: 'center' });
+    });
   };
 
-  const generateDemographicsData = () => {
-    const filtered = getFilteredEvents();
-    const totalVisitors = new Set(filtered.map(e => e.track_number)).size;
-    
-    const genderCounts = { male: 0, female: 0, unidentified: 0 };
-    const ageCounts: {[key: string]: number} = {
-      '0-8': 0,
-      '9-16': 0,
-      '17-25': 0,
-      '25-40': 0,
-      '40-60': 0,
-      '60+': 0
-    };
-    const genderAgeCounts: {[key: string]: number} = {};
-    
-    filtered.forEach(e => {
-      const sex = e.sex.toLowerCase();
-      let gender = 'unidentified';
-      if (sex === 'm' || sex === 'male') {
-        genderCounts.male++;
-        gender = 'male';
-      } else if (sex === 'f' || sex === 'female') {
-        genderCounts.female++;
-        gender = 'female';
-      } else {
-        genderCounts.unidentified++;
-      }
-      
-      const ageStr = e.age_estimate.toString().toLowerCase();
-      let ageGroup = '';
-      if (ageStr.includes('0,8')) {
-        ageCounts['0-8']++;
-        ageGroup = '0-8';
-      } else if (ageStr.includes('9,16')) {
-        ageCounts['9-16']++;
-        ageGroup = '9-16';
-      } else if (ageStr.includes('17,25')) {
-        ageCounts['17-25']++;
-        ageGroup = '17-25';
-      } else if (ageStr.includes('25,40')) {
-        ageCounts['25-40']++;
-        ageGroup = '25-40';
-      } else if (ageStr.includes('40,60')) {
-        ageCounts['40-60']++;
-        ageGroup = '40-60';
-      } else if (ageStr.includes('60+') || ageStr.includes('60)')) {
-        ageCounts['60+']++;
-        ageGroup = '60+';
-      }
-      
-      if (ageGroup && gender !== 'unidentified') {
-        const key = `${gender}_${ageGroup}`;
-        genderAgeCounts[key] = (genderAgeCounts[key] || 0) + 1;
-      }
-    });
-    
-    const totalGender = genderCounts.male + genderCounts.female + genderCounts.unidentified;
-    const genderPcts = totalGender > 0 ? {
-      male: ((genderCounts.male / totalGender) * 100).toFixed(1),
-      female: ((genderCounts.female / totalGender) * 100).toFixed(1),
-      unidentified: ((genderCounts.unidentified / totalGender) * 100).toFixed(1)
-    } : {
-      male: '0.0',
-      female: '0.0',
-      unidentified: '0.0'
-    };
-    
-    const totalAge = Object.values(ageCounts).reduce((a, b) => a + b, 0);
-    const agePcts: {[key: string]: string} = {};
-    Object.entries(ageCounts).forEach(([age, count]) => {
-      agePcts[age] = totalAge > 0 ? ((count / totalAge) * 100).toFixed(1) : '0.0';
-    });
-    
-    let peakDemographic = 'Male 25-40 age group';
-    let maxCount = 0;
-    Object.entries(genderAgeCounts).forEach(([key, count]) => {
-      if (count > maxCount) {
-        maxCount = count;
-        const [gender, age] = key.split('_');
-        const genderLabel = gender.charAt(0).toUpperCase() + gender.slice(1);
-        peakDemographic = `${genderLabel} ${age} age group`;
-      }
-    });
-    
-    return {
-      totalVisitors,
-      genderDistribution: {
-        male: genderPcts.male + '%',
-        female: genderPcts.female + '%',
-        unidentified: genderPcts.unidentified + '%'
-      },
-      ageDistribution: {
-        '0-8': agePcts['0-8'] + '%',
-        '9-16': agePcts['9-16'] + '%',
-        '17-25': agePcts['17-25'] + '%',
-        '25-40': agePcts['25-40'] + '%',
-        '40-60': agePcts['40-60'] + '%',
-        '60+': agePcts['60+'] + '%'
-      },
-      peakDemographic
-    };
+  const drawKpiTile = (doc: jsPDF, label: string, value: string, x: number, y: number) => {
+    doc.setFillColor(248, 250, 252);
+    doc.rect(x, y, 45, 22, 'F');
+    doc.setDrawColor(220, 220, 220);
+    doc.rect(x, y, 45, 22);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(label, x + 3, y + 7);
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(value, x + 3, y + 16);
   };
 
-  const generateDeviceData = () => {
-    return {
-      message: 'Device performance data is not available in the current data source. This report requires camera/sensor metadata that is not present in the CSV data.'
-    };
-  };
-
-  const getReportData = (reportTypeId: string) => {
-    switch (reportTypeId) {
-      case 'occupancy-summary':
-        return generateOccupancyData();
-      case 'traffic-analysis':
-        return generateTrafficData();
-      case 'demographics-report':
-        return generateDemographicsData();
-      case 'device-performance':
-        return generateDeviceData();
-      default:
-        return {};
-    }
+  const drawLegend = (doc: jsPDF, items: Array<{ label: string; color: [number, number, number] }>, x: number, y: number) => {
+    items.forEach((item, index) => {
+      const offsetX = x + index * 45;
+      doc.setFillColor(...item.color);
+      doc.rect(offsetX, y - 3, 6, 6, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(item.label, offsetX + 9, y + 2);
+    });
   };
 
   const generatePDFReport = () => {
+    if (!snapshot) {
+      alert('Snapshot data is not available yet.');
+      return;
+    }
+    if (!Array.isArray(snapshot.payload) || !Array.isArray(snapshot.payload[7])) {
+      alert('Snapshot payload is missing legacy rollup data.');
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
       const doc = new jsPDF();
-      const data = getReportData(reportType);
       const template = reportTemplates.find(t => t.id === reportType);
-      
-      // Header
-      doc.setFontSize(24);
+      const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
+      const rollup = resolveRollup(snapshot.payload ?? [], timePeriod);
+      const timeframeWindow = resolveSiteFlowWindow(timePeriod, snapshotTs);
+      const { subtitle } = formatReportDateRange(snapshotTs, timePeriod, timeframeWindow);
+
+      doc.setFontSize(22);
       doc.setTextColor(33, 150, 243);
-      doc.text('camOS', 105, 20, { align: 'center' });
-      
-      // Report Title
-      doc.setFontSize(18);
+      doc.text('camOS', 105, 18, { align: 'center' });
+
+      doc.setFontSize(16);
       doc.setTextColor(0, 0, 0);
-      doc.text(template?.name || 'Report', 105, 35, { align: 'center' });
-      
-      // Date
+      doc.text(`${template?.name ?? 'Report'} Report`, 105, 30, { align: 'center' });
+
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 42, { align: 'center' });
-      doc.text(`Period: ${timePeriod.replace('-', ' ').toUpperCase()}`, 105, 48, { align: 'center' });
-      
-      // Divider
-      doc.setDrawColor(200, 200, 200);
-      doc.line(20, 52, 190, 52);
-      
-      let yPos = 62;
-      
-      // Report-specific content
-      doc.setFontSize(14);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Key Metrics', 20, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, { align: 'center' });
+      doc.text(subtitle, 105, 43, { align: 'center' });
 
-      if (reportType === 'occupancy-summary') {
-        const d: any = data;
-        doc.text(`Current Occupancy: ${d.currentOccupancy} (${d.occupancyRate})`, 25, yPos);
-        yPos += 6;
-        doc.text(`Total Entries: ${d.totalEntries.toLocaleString()}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Total Exits: ${d.totalExits.toLocaleString()}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Average Dwell Time: ${d.averageDwellTime} minutes`, 25, yPos);
-        yPos += 6;
-        doc.text(`Peak Occupancy Time: ${d.peakOccupancyTime} (${d.peakOccupancyCount} occupancy)`, 25, yPos);
-        yPos += 10;
-        
-        if (d.hourlyOccupancy && d.hourlyOccupancy.length > 0) {
-          doc.text('Hourly Occupancy Patterns:', 25, yPos);
-          yPos += 6;
-          d.hourlyOccupancy.slice(0, 15).forEach((item: any) => {
-            doc.text(`  ${item.hour}: ${item.count} occupancy`, 30, yPos);
-            yPos += 5;
-          });
+      doc.setDrawColor(220, 220, 220);
+      doc.line(20, 48, 190, 48);
+
+      if (reportType === 'site-activity') {
+        const metrics = buildSiteActivityMetrics(rollup);
+        const bucketLabels = buildSiteFlowBucketLabels(
+          timePeriod,
+          snapshotTs,
+          [
+            metrics.entrancesSeries,
+            metrics.exitsSeries,
+            metrics.occupancySeries,
+            metrics.dwellSeries,
+          ],
+        ).labels;
+
+        drawKpiTile(doc, 'Total Entrances', formatNumber(metrics.totalEntrances), 20, 55);
+        drawKpiTile(doc, 'Total Exits', formatNumber(metrics.totalExits), 67, 55);
+        drawKpiTile(doc, 'Avg Occupancy', formatNumber(metrics.occupancyAvg), 114, 55);
+        drawKpiTile(doc, 'Peak Occupancy', formatNumber(metrics.occupancyMax), 161, 55);
+        drawKpiTile(doc, 'Avg Dwell (min)', formatNumber(metrics.dwellAvg), 20, 80);
+
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Entrances vs Exits', 20, 112);
+        drawLegend(
+          doc,
+          [
+            { label: 'Entrances', color: [33, 150, 243] },
+            { label: 'Exits', color: [120, 144, 156] },
+          ],
+          130,
+          112,
+        );
+        drawBarChart(doc, metrics.entrancesSeries, metrics.exitsSeries, bucketLabels, 20, 116, 170, 32);
+
+        doc.text('Occupancy', 20, 158);
+        drawLineChart(doc, metrics.occupancySeries, bucketLabels, 20, 162, 170, 26);
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Min ${metrics.occupancyMin} • Max ${metrics.occupancyMax}`, 20, 191);
+
+        if (metrics.dwellSeries.length > 0) {
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+          doc.text('Dwell (minutes)', 20, 201);
+          drawLineChart(doc, metrics.dwellSeries, bucketLabels, 20, 205, 170, 18);
         }
-      } else if (reportType === 'traffic-analysis') {
-        const d: any = data;
-        doc.text(`Total Entries: ${d.totalEntries.toLocaleString()}`, 25, yPos);
+
+        let yPos = 230;
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Bucket summary', 20, yPos);
         yPos += 6;
-        doc.text(`Total Exits: ${d.totalExits.toLocaleString()}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Peak Flow Time: ${d.peakFlowTime} (${d.peakFlowRate} events/hour)`, 25, yPos);
-        yPos += 6;
-        doc.text(`Average Flow Rate: ${d.averageFlowRate} events/hour`, 25, yPos);
-        yPos += 10;
-        
-        if (d.flowByHour && d.flowByHour.length > 0) {
-          doc.text('Flow by Hour:', 25, yPos);
-          yPos += 6;
-          d.flowByHour.slice(0, 15).forEach((item: any) => {
-            doc.text(`  ${item.hour}: ${item.entries} entries, ${item.exits} exits`, 30, yPos);
-            yPos += 5;
-          });
-        }
-      } else if (reportType === 'demographics-report') {
-        const d: any = data;
-        doc.text(`Total Visitors: ${d.totalVisitors.toLocaleString()}`, 25, yPos);
-        yPos += 6;
-        doc.text(`Peak Demographic: ${d.peakDemographic}`, 25, yPos);
-        yPos += 10;
-        
-        doc.text('Gender Distribution:', 25, yPos);
-        yPos += 6;
-        doc.text(`  Male: ${d.genderDistribution.male}`, 30, yPos);
-        yPos += 5;
-        doc.text(`  Female: ${d.genderDistribution.female}`, 30, yPos);
-        yPos += 5;
-        doc.text(`  Unidentified: ${d.genderDistribution.unidentified}`, 30, yPos);
-        yPos += 10;
-        
-        doc.text('Age Distribution:', 25, yPos);
-        yPos += 6;
-        Object.entries(d.ageDistribution).forEach(([age, pct]) => {
-          doc.text(`  ${age}: ${pct}`, 30, yPos);
-          yPos += 5;
+
+        const tableHeaders = ['Bucket', 'Entrances', 'Exits', 'Occupancy', 'Dwell', 'Notes'];
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        tableHeaders.forEach((header, index) => {
+          doc.text(header, 20 + index * 28, yPos);
         });
         yPos += 5;
-      } else if (reportType === 'device-performance') {
-        const d: any = data;
-        if (d.message) {
-          doc.text(d.message, 25, yPos, { maxWidth: 160 });
+
+        bucketLabels.forEach((label, index) => {
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+          if (index === metrics.peakOccupancyBucket) {
+            doc.setFillColor(227, 242, 253);
+            doc.rect(18, yPos - 3.5, 174, 5, 'F');
+          } else if (index % 2 === 1) {
+            doc.setFillColor(245, 247, 250);
+            doc.rect(18, yPos - 3.5, 174, 5, 'F');
+          }
+          const notes: string[] = [];
+          if (index === metrics.peakEntrancesBucket) {
+            notes.push('Peak Entrances');
+          }
+          if (index === metrics.peakOccupancyBucket) {
+            notes.push('Peak Occupancy');
+          }
+          const row = [
+            label,
+            formatNumber(metrics.entrancesSeries[index] ?? 0),
+            formatNumber(metrics.exitsSeries[index] ?? 0),
+            formatNumber(metrics.occupancySeries[index] ?? 0),
+            formatNumber(metrics.dwellSeries[index] ?? 0),
+            notes.join(', '),
+          ];
+          row.forEach((value, colIndex) => {
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            doc.text(String(value), 20 + colIndex * 28, yPos);
+          });
+          yPos += 4.5;
+        });
+      } else if (reportType === 'visitor-profile') {
+        const metrics = buildVisitorProfileMetrics(rollup);
+
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Visitor Profile Report', 20, 60);
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.text(`Based on ${formatNumber(metrics.totalEntrances)} entrances in this period.`, 20, 66);
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Age distribution', 20, 78);
+        drawBarChart(
+          doc,
+          metrics.agePct,
+          [],
+          AGE_BUCKET_LABELS,
+          20,
+          82,
+          80,
+          26,
+        );
+
+        doc.text('Sex split', 110, 78);
+        drawBarChart(
+          doc,
+          metrics.sexPct,
+          [],
+          SEX_BUCKET_LABELS,
+          110,
+          82,
+          80,
+          26,
+        );
+
+        doc.text('Race split', 20, 122);
+        drawBarChart(
+          doc,
+          metrics.racePct,
+          [],
+          RACE_BUCKET_LABELS,
+          20,
+          126,
+          80,
+          26,
+        );
+
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Summary', 110, 122);
+        doc.setFontSize(9);
+        doc.text(`Top age bucket: ${metrics.dominantAgeBucket}`, 110, 130);
+        doc.text(`Sex split: ${metrics.sexSplit.Male}% / ${metrics.sexSplit.Female}%`, 110, 136);
+        doc.text(
+          `Race split: ${metrics.raceSplit.Light}% / ${metrics.raceSplit.Mix}% / ${metrics.raceSplit.Dark}%`,
+          110,
+          142,
+        );
+
+        if (metrics.totalEntrances === 0) {
+          doc.setTextColor(120, 120, 120);
+          doc.text('No entrances in this period.', 20, 164);
         }
+      } else {
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text('System performance data is not available in snapshot reports.', 20, 80);
       }
-      
-      // Footer
+
       const pageCount = doc.internal.pages.length - 1;
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -553,189 +410,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
         doc.text('Confidential - camOS Business Intelligence', 105, 285, { align: 'center' });
       }
-      
-      // Save the PDF
+
       const filename = `${template?.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(filename);
-      
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF report');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const generateExcelReport = () => {
-    setIsGenerating(true);
-
-    try {
-      const data = getReportData(reportType);
-      const template = reportTemplates.find(t => t.id === reportType);
-      
-      let worksheetData: any[] = [];
-
-      if (reportType === 'occupancy-summary') {
-        const d: any = data;
-        worksheetData = [
-          ['Occupancy Summary Report'],
-          ['Generated:', new Date().toLocaleString()],
-          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
-          [],
-          ['Metric', 'Value'],
-          ['Current Occupancy', d.currentOccupancy],
-          ['Total Entries', d.totalEntries],
-          ['Total Exits', d.totalExits],
-          ['Occupancy Rate', d.occupancyRate],
-          ['Average Dwell Time', `${d.averageDwellTime} minutes`],
-          ['Peak Occupancy Time', d.peakOccupancyTime],
-          ['Peak Occupancy Count', d.peakOccupancyCount],
-          [],
-          ['Hourly Occupancy'],
-          ['Hour', 'Occupancy'],
-          ...d.hourlyOccupancy.map((item: any) => [item.hour, item.count])
-        ];
-      } else if (reportType === 'traffic-analysis') {
-        const d: any = data;
-        worksheetData = [
-          ['Traffic Flow Analysis Report'],
-          ['Generated:', new Date().toLocaleString()],
-          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
-          [],
-          ['Metric', 'Value'],
-          ['Total Entries', d.totalEntries],
-          ['Total Exits', d.totalExits],
-          ['Peak Flow Time', d.peakFlowTime],
-          ['Peak Flow Rate', `${d.peakFlowRate} events/hour`],
-          ['Average Flow Rate', `${d.averageFlowRate} events/hour`],
-          [],
-          ['Flow by Hour'],
-          ['Hour', 'Entries', 'Exits'],
-          ...d.flowByHour.map((item: any) => [item.hour, item.entries, item.exits])
-        ];
-      } else if (reportType === 'demographics-report') {
-        const d: any = data;
-        worksheetData = [
-          ['Demographics Report'],
-          ['Generated:', new Date().toLocaleString()],
-          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
-          [],
-          ['Metric', 'Value'],
-          ['Total Visitors', d.totalVisitors],
-          ['Peak Demographic', d.peakDemographic],
-          [],
-          ['Gender Distribution'],
-          ['Male', d.genderDistribution.male],
-          ['Female', d.genderDistribution.female],
-          ['Unidentified', d.genderDistribution.unidentified],
-          [],
-          ['Age Distribution'],
-          ...Object.entries(d.ageDistribution).map(([age, pct]) => [age, pct])
-        ];
-      } else if (reportType === 'device-performance') {
-        const d: any = data;
-        worksheetData = [
-          ['Device Performance Report'],
-          ['Generated:', new Date().toLocaleString()],
-          ['Period:', timePeriod.replace('-', ' ').toUpperCase()],
-          [],
-          [d.message || 'No data available']
-        ];
-      }
-
-      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
-
-      const filename = `${template?.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(workbook, filename);
-
-    } catch (error) {
-      console.error('Error generating Excel:', error);
-      alert('Failed to generate Excel report');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const generateCSVReport = () => {
-    setIsGenerating(true);
-
-    try {
-      const data = getReportData(reportType);
-      const template = reportTemplates.find(t => t.id === reportType);
-      
-      let csvContent = '';
-
-      if (reportType === 'occupancy-summary') {
-        const d: any = data;
-        csvContent = `Occupancy Summary Report\n`;
-        csvContent += `Generated,${new Date().toLocaleString()}\n`;
-        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
-        csvContent += `Metric,Value\n`;
-        csvContent += `Current Occupancy,${d.currentOccupancy}\n`;
-        csvContent += `Total Entries,${d.totalEntries}\n`;
-        csvContent += `Total Exits,${d.totalExits}\n`;
-        csvContent += `Occupancy Rate,${d.occupancyRate}\n`;
-        csvContent += `Average Dwell Time,${d.averageDwellTime} minutes\n`;
-        csvContent += `Peak Occupancy Time,${d.peakOccupancyTime}\n`;
-        csvContent += `Peak Occupancy Count,${d.peakOccupancyCount}\n\n`;
-        csvContent += `Hourly Occupancy\nHour,Occupancy\n`;
-        d.hourlyOccupancy.forEach((item: any) => {
-          csvContent += `${item.hour},${item.count}\n`;
-        });
-      } else if (reportType === 'traffic-analysis') {
-        const d: any = data;
-        csvContent = `Traffic Flow Analysis Report\n`;
-        csvContent += `Generated,${new Date().toLocaleString()}\n`;
-        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
-        csvContent += `Metric,Value\n`;
-        csvContent += `Total Entries,${d.totalEntries}\n`;
-        csvContent += `Total Exits,${d.totalExits}\n`;
-        csvContent += `Peak Flow Time,${d.peakFlowTime}\n`;
-        csvContent += `Peak Flow Rate,${d.peakFlowRate} events/hour\n`;
-        csvContent += `Average Flow Rate,${d.averageFlowRate} events/hour\n\n`;
-        csvContent += `Flow by Hour\nHour,Entries,Exits\n`;
-        d.flowByHour.forEach((item: any) => {
-          csvContent += `${item.hour},${item.entries},${item.exits}\n`;
-        });
-      } else if (reportType === 'demographics-report') {
-        const d: any = data;
-        csvContent = `Demographics Report\n`;
-        csvContent += `Generated,${new Date().toLocaleString()}\n`;
-        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
-        csvContent += `Metric,Value\n`;
-        csvContent += `Total Visitors,${d.totalVisitors}\n`;
-        csvContent += `Peak Demographic,${d.peakDemographic}\n\n`;
-        csvContent += `Gender Distribution\n`;
-        csvContent += `Male,${d.genderDistribution.male}\n`;
-        csvContent += `Female,${d.genderDistribution.female}\n`;
-        csvContent += `Unidentified,${d.genderDistribution.unidentified}\n\n`;
-        csvContent += `Age Distribution\nAge Group,Percentage\n`;
-        Object.entries(d.ageDistribution).forEach(([age, pct]) => {
-          csvContent += `${age},${pct}\n`;
-        });
-      } else if (reportType === 'device-performance') {
-        const d: any = data;
-        csvContent = `Device Performance Report\n`;
-        csvContent += `Generated,${new Date().toLocaleString()}\n`;
-        csvContent += `Period,${timePeriod.replace('-', ' ').toUpperCase()}\n\n`;
-        csvContent += `${d.message || 'No data available'}\n`;
-      }
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${template?.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-    } catch (error) {
-      console.error('Error generating CSV:', error);
-      alert('Failed to generate CSV report');
     } finally {
       setIsGenerating(false);
     }
@@ -746,14 +426,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       alert('Not available');
       return;
     }
-    
-    if (format === 'pdf') {
-      generatePDFReport();
-    } else if (format === 'excel') {
-      generateExcelReport();
-    } else if (format === 'csv') {
-      generateCSVReport();
-    }
+    generatePDFReport();
   };
 
   return (
@@ -776,7 +449,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
           <h3 className="vrm-card-title">Report Configuration</h3>
         </div>
         <div className="vrm-card-body">
-          <div className="vrm-grid vrm-grid-3">
+          <div className="vrm-grid vrm-grid-2">
             <div>
               <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
                 Report Type
@@ -805,7 +478,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
               </label>
               <select 
                 value={timePeriod}
-                onChange={(e) => setTimePeriod(e.target.value)}
+                onChange={(e) => setTimePeriod(e.target.value as ReportTimeframe)}
                 style={{ 
                   width: '100%', 
                   padding: '8px 12px', 
@@ -815,77 +488,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                   color: 'var(--vrm-text-primary)'
                 }}
               >
-                <option value="last-7-days">Last 7 Days</option>
-                <option value="last-30-days">Last 30 Days</option>
-                <option value="past-year">Past Year</option>
-                <option value="this-month">This Month</option>
-                <option value="last-month">Last Month</option>
-                <option value="all-time">All Time</option>
-                <option value="custom-range">Custom Range</option>
-              </select>
-            </div>
-            
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                Format
-              </label>
-              <select 
-                value={format}
-                onChange={(e) => setFormat(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '8px 12px', 
-                  backgroundColor: 'var(--vrm-bg-tertiary)', 
-                  border: '1px solid var(--vrm-border)', 
-                  borderRadius: '6px', 
-                  color: 'var(--vrm-text-primary)'
-                }}
-              >
-                <option value="pdf">PDF Report</option>
-                <option value="excel">Excel Spreadsheet</option>
-                <option value="csv">CSV Data</option>
+                {TIMEFRAME_OPTIONS.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
-          
-          {showDatePicker && (
-            <div style={{ marginTop: '20px', padding: '16px', backgroundColor: 'var(--vrm-bg-secondary)', borderRadius: '6px', border: '1px solid var(--vrm-border)' }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                    Start Date
-                  </label>
-                  <DatePicker
-                    selected={startDate}
-                    onChange={(date) => setStartDate(date)}
-                    selectsStart
-                    startDate={startDate}
-                    endDate={endDate}
-                    dateFormat="yyyy-MM-dd"
-                    className="vrm-date-picker"
-                    placeholderText="Select start date"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', color: 'var(--vrm-text-secondary)', fontSize: '14px' }}>
-                    End Date
-                  </label>
-                  <DatePicker
-                    selected={endDate}
-                    onChange={(date) => setEndDate(date)}
-                    selectsEnd
-                    startDate={startDate}
-                    endDate={endDate}
-                    minDate={startDate || undefined}
-                    dateFormat="yyyy-MM-dd"
-                    className="vrm-date-picker"
-                    placeholderText="Select end date"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-          
+
           <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
             <button 
               className="vrm-btn" 
@@ -896,6 +507,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
               {isGenerating ? 'Generating...' : 'Generate & Download Report'}
             </button>
           </div>
+          {snapshotError && (
+            <div style={{ marginTop: '12px', color: 'var(--vrm-accent-red)', fontSize: '12px' }}>
+              {snapshotError}
+            </div>
+          )}
         </div>
       </div>
 
