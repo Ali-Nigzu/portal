@@ -70,19 +70,16 @@ describe("KpiTile VRM sparkline", () => {
 
     const yAxis = tree.root.findByType("y-axis-mock");
     expect(Array.isArray(yAxis.props.domain)).toBe(true);
-    expect(yAxis.props.domain[0]).toBe(0);
+    expect(typeof yAxis.props.domain[0]).toBe("function");
+    expect(yAxis.props.domain[0](5)).toBe(0);
     expect(typeof yAxis.props.domain[1]).toBe("function");
+    expect(yAxis.props.domain[1](-5)).toBe(0);
 
-    const sparkline = tree.root.find((node) => node.props.className?.includes("kpi-sparkline--vrm"));
-    expect(sparkline.props.style).toBeUndefined();
+    const sparkline = tree.root.find((node) => node.props.className?.includes("kpi-sparkline-anchor--vrm"));
+    expect(sparkline.props.style).toEqual({ paddingBottom: 0 });
 
     const tooltips = tree.root.findAllByType("tooltip-mock");
-    expect(tooltips).toHaveLength(1);
-    expect(tooltips[0].props.wrapperStyle).toEqual({
-      visibility: "hidden",
-      pointerEvents: "none",
-      display: "none",
-    });
+    expect(tooltips).toHaveLength(0);
     const overlay = tree.root.find((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
 
     act(() => {
@@ -93,7 +90,7 @@ describe("KpiTile VRM sparkline", () => {
     });
 
     const json = tree.toJSON();
-    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
+    expect(JSON.stringify(json)).toContain("VRM sparkline hover strip");
     expect(JSON.stringify(json)).toContain("2");
   });
 
@@ -113,7 +110,7 @@ describe("KpiTile VRM sparkline", () => {
     });
 
     const json = tree.toJSON();
-    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
+    expect(JSON.stringify(json)).toContain("VRM sparkline hover strip");
     expect(JSON.stringify(json)).toContain("3");
   });
 
@@ -133,13 +130,13 @@ describe("KpiTile VRM sparkline", () => {
       });
     });
 
-    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline popover" });
-    expect(popover.props.className).toContain("kpi-sparkline__popover--vrm");
+    const popover = tree.root.findByProps({ "aria-label": "VRM sparkline hover strip" });
+    expect(popover.props.className).toContain("kpi-sparkline-strip--vrm");
 
     let cursor: any = popover.parent;
     let anchored = false;
     while (cursor) {
-      if (cursor.props?.className?.includes("kpi-sparkline-shell--vrm")) {
+      if (cursor.props?.className?.includes("kpi-sparkline-region--vrm")) {
         anchored = true;
         break;
       }
@@ -147,7 +144,7 @@ describe("KpiTile VRM sparkline", () => {
     }
 
     expect(anchored).toBe(true);
-    expect(popover.parent?.props?.className).toContain("kpi-sparkline");
+    expect(popover.parent?.props?.className).toContain("kpi-sparkline-region");
   });
 
   it("clamps overlay hover to the first bucket", () => {
@@ -166,7 +163,7 @@ describe("KpiTile VRM sparkline", () => {
     });
 
     const json = tree.toJSON();
-    expect(JSON.stringify(json)).toContain("VRM sparkline popover");
+    expect(JSON.stringify(json)).toContain("VRM sparkline hover strip");
     expect(JSON.stringify(json)).toContain("1");
   });
 
@@ -189,13 +186,13 @@ describe("KpiTile VRM sparkline", () => {
     const overlays = tree.root.findAll((node: any) => node.props["data-testid"] === "vrm-sparkline-overlay");
     expect(overlays).toHaveLength(1);
 
-    const popovers = tree.root.findAllByProps({ "aria-label": "VRM sparkline popover" });
+    const popovers = tree.root.findAllByProps({ "aria-label": "VRM sparkline hover strip" });
     expect(popovers).toHaveLength(1);
 
     let cursor: any = popovers[0]?.parent;
     let anchoredToShell = false;
     while (cursor) {
-      if (typeof cursor.props?.className === "string" && cursor.props.className.includes("kpi-sparkline-shell--vrm")) {
+      if (typeof cursor.props?.className === "string" && cursor.props.className.includes("kpi-sparkline-region--vrm")) {
         anchoredToShell = true;
         break;
       }
@@ -222,9 +219,9 @@ describe("KpiTile VRM sparkline", () => {
 
     const dots = tree.root.findAllByType("reference-dot-mock");
     expect(dots).toHaveLength(1);
-    expect(dots[0].props.r).toBeGreaterThanOrEqual(5);
-    expect(dots[0].props.fill).toBe("#ffffff");
-    expect(dots[0].props.strokeWidth).toBeGreaterThanOrEqual(2);
+    expect(dots[0].props.r).toBe(3.5);
+    expect(dots[0].props.fill).toBe("rgba(255,255,255,0.1)");
+    expect(dots[0].props.strokeWidth).toBe(1.5);
   });
 
   it("keeps default tooltip for non-VRM charts", () => {
