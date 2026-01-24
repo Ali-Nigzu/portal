@@ -1,4 +1,4 @@
-import { resolveSiteFlowWindow, startOfYear } from "../../dashboard/v2/utils/siteFlowBuckets";
+import { resolveSiteFlowWindow, startOfWeek } from "../../dashboard/v2/utils/siteFlowBuckets";
 
 export type ReportTimeframe =
   | "today"
@@ -66,6 +66,24 @@ const formatMonthRange = (start: Date, end: Date): string => {
   return `${formatMonthYear(start)} – ${formatMonthYear(end)}`;
 };
 
+const formatWeekOf = (value: Date): string => `week of ${formatDay(startOfWeek(value))}`;
+
+const formatWeekOfRange = (start: Date, end: Date): string =>
+  `${formatWeekOf(start)} to ${formatWeekOf(end)}`;
+
+const startOfPreviousDay = (value: Date): Date => {
+  const next = new Date(value);
+  next.setDate(next.getDate() - 1);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const startOfTrailingYear = (end: Date): Date =>
+  new Date(end.getFullYear() - 1, end.getMonth() + 1, 1, 0, 0, 0, 0);
+
+const startOfAllTimeCoverage = (end: Date): Date =>
+  new Date(end.getFullYear() - 2, 0, 1, 0, 0, 0, 0);
+
 export const getTimeframeOption = (timeframe: ReportTimeframe) =>
   TIMEFRAME_OPTIONS.find((option) => option.id === timeframe) ?? TIMEFRAME_OPTIONS[0];
 
@@ -91,23 +109,30 @@ export const getReportHeaderRange = (
   const { start, end: clampedEnd } = collapseIfInverted(resolvedStart, end);
 
   if (timeframe === "today") {
-    return { start, end: clampedEnd, labelLine: `${formatDay(clampedEnd)} up to ${formatTime(clampedEnd)}` };
+    return { start, end: clampedEnd, labelLine: `${formatDay(clampedEnd)} (up to ${formatTime(clampedEnd)})` };
   }
 
   if (timeframe === "yesterday") {
-    return { start, end: clampedEnd, labelLine: formatDay(clampedEnd) };
+    const yesterdayStart = startOfPreviousDay(clampedEnd);
+    return { start: yesterdayStart, end: clampedEnd, labelLine: formatDay(yesterdayStart) };
   }
 
-  if (timeframe === "last_week" || timeframe === "last_month") {
+  if (timeframe === "last_week") {
     return { start, end: clampedEnd, labelLine: formatDayRange(start, clampedEnd) };
   }
 
-  if (timeframe === "last_quarter" || timeframe === "last_year") {
-    return { start, end: clampedEnd, labelLine: formatMonthRange(start, clampedEnd) };
+  if (timeframe === "last_month" || timeframe === "last_quarter") {
+    return { start, end: clampedEnd, labelLine: formatWeekOfRange(start, clampedEnd) };
   }
 
-  const allTimeStart = startOfYear(clampedEnd);
-  return { start: allTimeStart, end: clampedEnd, labelLine: formatMonthRange(allTimeStart, clampedEnd) };
+  if (timeframe === "last_year") {
+    const trailingYearStart = startOfTrailingYear(clampedEnd);
+    return { start: trailingYearStart, end: clampedEnd, labelLine: formatMonthRange(trailingYearStart, clampedEnd) };
+  }
+
+  const allTimeStart = startOverride ?? startOfAllTimeCoverage(clampedEnd);
+  const yearLabel = `${allTimeStart.getFullYear()} – ${clampedEnd.getFullYear()}`;
+  return { start: allTimeStart, end: clampedEnd, labelLine: yearLabel };
 };
 
 export const formatReportDateRange = (
