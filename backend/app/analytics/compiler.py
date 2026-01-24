@@ -707,7 +707,7 @@ class SpecCompiler:
         - Base table is resolved via org routing.
         - Synthetic index reconstructs ordering with
           ROW_NUMBER() OVER (PARTITION BY site_id, cam_id, track_id ORDER BY timestamp, event DESC, track_id).
-        - Demographic columns are selected raw and aliased (Race → race) for consistent downstream usage.
+        - Demographic columns are selected raw and aliased (race → race) for consistent downstream usage.
         - "No future" rule enforced with `timestamp < @now` alongside the requested window.
         """
         scoped = dedent(
@@ -737,7 +737,7 @@ class SpecCompiler:
                             WHEN LOWER(CAST(sex AS STRING)) IN ('f', 'female') THEN 'Female'
                             ELSE 'Unknown'
                         END AS sex,
-                        COALESCE(CAST(Race AS STRING), 'Unknown') AS race
+                        COALESCE(CAST(race AS STRING), 'Unknown') AS race
                     FROM `{table_name}`
                     WHERE {event_timestamp_column} BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)
                         AND {event_timestamp_column} < TIMESTAMP(@now)
