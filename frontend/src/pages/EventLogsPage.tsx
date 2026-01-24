@@ -431,8 +431,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           </div>
 
           {/* Second Row: Sex, Age Group, Race */}
-          <div className="vrm-filter-grid">
-            <div>
+          <div className="event-logs-filter-grid">
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-sex">
                 Sex
               </label>

@@ -1,4 +1,4 @@
-import { resolveSiteFlowWindow } from "../../dashboard/v2/utils/siteFlowBuckets";
+import { resolveSiteFlowWindow, startOfYear } from "../../dashboard/v2/utils/siteFlowBuckets";
 
 export type ReportTimeframe =
   | "today"
@@ -104,7 +104,8 @@ export const getReportHeaderRange = (
     return { start, end: clampedEnd, labelLine: formatMonthRange(start, clampedEnd) };
   }
 
-  return { start, end: clampedEnd, labelLine: formatDayRange(start, clampedEnd) };
+  const allTimeStart = startOfYear(clampedEnd);
+  return { start: allTimeStart, end: clampedEnd, labelLine: formatMonthRange(allTimeStart, clampedEnd) };
 };
 
 export const formatReportDateRange = (

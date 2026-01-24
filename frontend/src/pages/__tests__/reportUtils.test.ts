@@ -58,7 +58,7 @@ describe("reportUtils", () => {
     const snapshotTs = new Date("2026-01-19T00:00:00Z");
     const now = new Date("2026-02-02T12:00:00Z");
     const range = formatReportDateRange(snapshotTs, "all_time", now);
-    expect(range.subtitle).toBe("All Time • 19 Jan 2026");
+    expect(range.subtitle).toBe("All Time • Jan 2026 – Jan 2026");
     expect(range.end.toISOString()).toBe(snapshotTs.toISOString());
   });
 
@@ -78,7 +78,7 @@ describe("reportUtils", () => {
 
     expect(lastMonthHeader.end.toISOString()).toBe(snapshotTs.toISOString());
     expect(lastYearHeader.end.toISOString()).toBe(snapshotTs.toISOString());
-    expect(lastMonthHeader.labelLine).toBe("Jan 2026");
+    expect(lastMonthHeader.labelLine).toBe("1–24 Jan 2026");
     expect(lastYearHeader.labelLine.startsWith("Jan 2026")).toBe(true);
   });
 
