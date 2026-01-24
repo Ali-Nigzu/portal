@@ -18,7 +18,7 @@ export const endOfDay = (date: Date): Date => {
 export const startOfWeek = (date: Date): Date => {
   const next = startOfDay(date);
   const day = next.getDay();
-  const diff = day;
+  const diff = (day + 6) % 7;
   next.setDate(next.getDate() - diff);
   return next;
 };

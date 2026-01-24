@@ -78,7 +78,7 @@ describe("reportUtils", () => {
 
     expect(lastMonthHeader.end.toISOString()).toBe(snapshotTs.toISOString());
     expect(lastYearHeader.end.toISOString()).toBe(snapshotTs.toISOString());
-    expect(lastMonthHeader.labelLine).toBe("week of 28 Dec 2025 to week of 18 Jan 2026");
+    expect(lastMonthHeader.labelLine).toBe("week of 29 Dec 2025 to week of 19 Jan 2026");
     expect(lastYearHeader.labelLine).toBe("Feb 2025 – Jan 2026");
   });
 

@@ -78,11 +78,23 @@ const startOfPreviousDay = (value: Date): Date => {
   return next;
 };
 
+const addDays = (value: Date, days: number): Date => {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
 const startOfTrailingYear = (end: Date): Date =>
   new Date(end.getFullYear() - 1, end.getMonth() + 1, 1, 0, 0, 0, 0);
 
 const startOfAllTimeCoverage = (end: Date): Date =>
   new Date(end.getFullYear() - 2, 0, 1, 0, 0, 0, 0);
+
+const startOfWeekBucketRange = (end: Date, buckets: number): { start: Date; endWeekStart: Date } => {
+  const endWeekStart = startOfWeek(end);
+  const start = addDays(endWeekStart, -7 * (buckets - 1));
+  return { start, endWeekStart };
+};
 
 export const getTimeframeOption = (timeframe: ReportTimeframe) =>
   TIMEFRAME_OPTIONS.find((option) => option.id === timeframe) ?? TIMEFRAME_OPTIONS[0];
@@ -118,11 +130,18 @@ export const getReportHeaderRange = (
   }
 
   if (timeframe === "last_week") {
-    return { start, end: clampedEnd, labelLine: formatDayRange(start, clampedEnd) };
+    const weekStart = startOfWeek(clampedEnd);
+    return { start: weekStart, end: clampedEnd, labelLine: formatDayRange(weekStart, clampedEnd) };
   }
 
-  if (timeframe === "last_month" || timeframe === "last_quarter") {
-    return { start, end: clampedEnd, labelLine: formatWeekOfRange(start, clampedEnd) };
+  if (timeframe === "last_month") {
+    const { start: monthStart, endWeekStart } = startOfWeekBucketRange(clampedEnd, 4);
+    return { start: monthStart, end: clampedEnd, labelLine: formatWeekOfRange(monthStart, endWeekStart) };
+  }
+
+  if (timeframe === "last_quarter") {
+    const { start: quarterStart, endWeekStart } = startOfWeekBucketRange(clampedEnd, 12);
+    return { start: quarterStart, end: clampedEnd, labelLine: formatWeekOfRange(quarterStart, endWeekStart) };
   }
 
   if (timeframe === "last_year") {
