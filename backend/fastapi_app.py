@@ -702,11 +702,6 @@ async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
     )
 
 
-@app.get("/api/analytics/run")
-async def analytics_run_get():
-    raise HTTPException(status_code=405, detail="Method Not Allowed")
-
-
 @app.get("/api/admin/users")
 async def get_users(user: dict = Depends(authenticate_user)):
     """Get all users (admin only)"""
