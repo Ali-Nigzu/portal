@@ -85,9 +85,10 @@ export const TrafficDistribution = ({
     const numericValue = Number(rawValue);
     const value = Number.isFinite(numericValue) ? numericValue : 0;
     const label = useRawLabels || labelKey ? rawLabel : `Cam ${cameraId}`;
+    const cleanCamId = normalizedCameraId.replace(/^\D+/, "");
     return {
       label,
-      camId: cameraId,
+      camId: useRawLabels || labelKey ? rawLabel : (cleanCamId || cameraId),
       value,
       color: sliceColors[index % sliceColors.length],
     };
@@ -144,7 +145,10 @@ export const TrafficDistribution = ({
   renderLegend[0]);
 
   const pieLegend = renderLegend.map((entry) => ({ ...entry, value: entry.renderValue }));
-  const topCameraLabel = renderTopSlice.camId ? String(renderTopSlice.camId) : "—";
+  const topCameraLabel =
+    renderTopSlice.camId === null || renderTopSlice.camId === undefined || renderTopSlice.camId === ""
+      ? "—"
+      : String(renderTopSlice.camId);
 
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
