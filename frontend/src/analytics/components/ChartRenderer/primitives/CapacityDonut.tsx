@@ -35,6 +35,10 @@ export const CapacityDonut = ({
     return { label: segment, value, color: capacityColors[index % capacityColors.length] };
   });
 
+  const usageValue = mappedData.find((entry) => entry.label === "Usage")?.value ?? 0;
+  const peakExtraValue = mappedData.find((entry) => entry.label === "Peak extra")?.value ?? 0;
+  const peakTotalValue = usageValue + peakExtraValue;
+
   const total = mappedData.reduce((sum, entry) => sum + entry.value, 0);
   const renderData =
     total > 0
@@ -53,15 +57,18 @@ export const CapacityDonut = ({
 
   const centerDisplay = `${Math.round(centerValue)}%`;
 
-  const tooltipFormatter = (value: number, _name: string, props: any) => {
+  const tooltipFormatter = (_value: number, _name: string, props: any) => {
     const label = (props?.payload as { label?: string })?.label ?? "";
-    const baseLabel = label === "Peak extra" ? "Peak add-on" : label === "Usage" ? "Current" : "Remaining";
-    const numericValue = Math.max(0, Math.round(extractNumeric(value)));
-    const valueLabel =
-      label === "Remaining"
-        ? `${numericValue}% (capacity not reached)`
-        : `${numericValue}%`;
-    return [valueLabel, baseLabel];
+    if (label === "Remaining") {
+      return null;
+    }
+    if (label === "Peak extra") {
+      return [`${Math.max(0, Math.round(peakTotalValue))}%`, "Peak"];
+    }
+    if (label === "Usage") {
+      return [`${Math.max(0, Math.round(usageValue))}%`, "Current"];
+    }
+    return null;
   };
 
   return (
@@ -70,7 +77,7 @@ export const CapacityDonut = ({
       <div className="capacity-usage__content">
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
-            <Tooltip formatter={tooltipFormatter} labelFormatter={() => ""} />
+            <Tooltip formatter={tooltipFormatter} labelFormatter={() => ""} filterNull />
             <Pie
               dataKey="value"
               data={normalizedData}
@@ -84,7 +91,12 @@ export const CapacityDonut = ({
               stroke="none"
             >
               {normalizedData.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} stroke="none" />
+                <Cell
+                  key={entry.label}
+                  fill={entry.color}
+                  stroke="none"
+                  style={entry.label === "Remaining" ? { pointerEvents: "none" } : undefined}
+                />
               ))}
             </Pie>
             <text

@@ -49,7 +49,8 @@ interface GlobalControlsContextValue extends GlobalControlsState {
 
 const GlobalControlsContext = createContext<GlobalControlsContextValue | undefined>(undefined);
 
-const formatLocalTime = () => new Date().toLocaleString();
+const formatLocalTime = () =>
+  new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 const STORAGE_KEY = 'camOS.globalControls';
 
 interface PersistedState {
