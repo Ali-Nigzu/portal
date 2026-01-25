@@ -12,7 +12,7 @@ interface HeaderStatusStripProps {
 }
 
 const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
-  const { lastUpdated, systemStatus, localTime, realtime } = useGlobalControls();
+  const { systemStatus, localTime } = useGlobalControls();
 
   const RealtimeWaveIcon = () => (
     <svg
@@ -38,14 +38,10 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
       <div className="vrm-header-meta-group">
         <span className="vrm-header-chip" title="Last updated timestamp">
           Last updated:{' '}
-          {realtime ? (
-            <span className="vrm-header-chip-highlight">
-              <RealtimeWaveIcon />
-              Realtime
-            </span>
-          ) : (
-            lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—'
-          )}
+          <span className="vrm-header-chip-highlight">
+            <RealtimeWaveIcon />
+            Realtime
+          </span>
         </span>
       </div>
 
