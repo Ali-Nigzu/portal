@@ -2,7 +2,6 @@ import { API_BASE_URL, ANALYTICS_V2_TRANSPORT, type AnalyticsTransportMode } fro
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 import { validateChartResult } from "../../../analytics/components/ChartRenderer/validation";
-import { loadChartFixture, type ChartFixtureName } from "../../../analytics/utils/loadChartFixture";
 import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildWidgetSpec } from "../utils/buildWidgetSpec";
 import { isSnapshotOrg } from "../utils/snapshotMode";
@@ -160,10 +159,7 @@ async function runLiveQuery(
 
 function resolveMode(widget: DashboardWidget, requested?: AnalyticsTransportMode): AnalyticsTransportMode {
   const mode = requested ?? ANALYTICS_V2_TRANSPORT;
-  if (mode === "fixtures" && !widget.fixtureId) {
-    return "live";
-  }
-  return mode;
+  return mode === "fixtures" ? "live" : mode;
 }
 
 export async function loadWidgetResult(
@@ -185,12 +181,7 @@ export async function loadWidgetResult(
   });
 
   try {
-    if (selectedMode === "fixtures") {
-      if (!widget.fixtureId) {
-        throw new Error(`Widget ${widget.id} is missing a fixture mapping`);
-      }
-      result = await loadChartFixture(widget.fixtureId as ChartFixtureName);
-    } else if (shouldUseSnapshots) {
+    if (shouldUseSnapshots) {
       const snapshot = await loadSnapshotPayload({ signal, orgId, viewToken });
       result = buildSnapshotWidgetResult(widget.id, snapshot, snapshotTimeframe);
     } else {

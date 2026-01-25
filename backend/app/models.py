@@ -2,7 +2,6 @@
 Pydantic Data Models for camOS Analytics API
 """
 
-from datetime import datetime
 from typing import Optional, Dict, List, Any, Literal
 from pydantic import BaseModel, Field
 
@@ -15,23 +14,6 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     user: Dict[str, Any]
     message: str
-
-
-class ChartDataResponse(BaseModel):
-    data: List[Dict[str, Any]]
-    summary: Dict[str, Any]
-    intelligence: Dict[str, Any]
-
-
-class DataIntelligence(BaseModel):
-    """Smart insights about the dataset"""
-    total_records: int
-    date_span_days: int
-    latest_timestamp: Optional[datetime]
-    optimal_granularity: str
-    peak_hours: List[int]
-    demographics_breakdown: Dict[str, Any]
-    temporal_patterns: Dict[str, Any]
 
 
 class CreateUserRequest(BaseModel):
