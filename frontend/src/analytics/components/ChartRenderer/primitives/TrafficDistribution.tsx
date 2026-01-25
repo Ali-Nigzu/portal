@@ -146,12 +146,8 @@ export const TrafficDistribution = ({
         renderValue: entry.value,
         displayValue: entry.value,
       }));
-  const renderTopSlice = renderLegend.reduce((winner, candidate) =>
-    candidate.renderValue >= winner.renderValue ? candidate : winner,
-  renderLegend[0]);
 
   const pieLegend = renderLegend.map((entry) => ({ ...entry, value: entry.renderValue }));
-  const centerValue = renderTopSlice.displayValue ?? renderTopSlice.value ?? 0;
 
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
@@ -187,9 +183,6 @@ export const TrafficDistribution = ({
               {pieLegend.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} stroke="none" />
               ))}
-              <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="traffic-distribution__center">
-                {`${Math.round(centerValue)}%`}
-              </text>
             </Pie>
           </PieChart>
         </ResponsiveContainer>

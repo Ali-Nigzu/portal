@@ -658,11 +658,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
         <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
           Admin Panel
         </h1>
-        <div className="vrm-breadcrumb">
-          <span>Dashboard</span>
-          <span>›</span>
-          <span>Admin</span>
-        </div>
       </div>
 
       {alert && (

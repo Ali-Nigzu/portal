@@ -6,11 +6,17 @@ import { Credentials } from '../types/credentials';
 
 interface EventData {
   index: number;
+  site_id?: string | number | null;
+  cam_id?: string | number | null;
+  camera_id?: string | number | null;
+  track_id?: string | number | null;
   track_number: string;
   event: string;
   timestamp: string;
   sex: string | number | null;
   age_estimate: string | number | null;
+  age_bucket?: string | number | null;
+  race?: string | number | null;
   hour: number;
   day_of_week: string;
   date: string;
@@ -22,7 +28,7 @@ interface EventLogsPageProps {
 
 const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const [events, setEvents] = useState<EventData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draftFilters, setDraftFilters] = useState({
     event: '',
@@ -168,6 +174,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   }, [buildSearchParams, credentials.password, credentials.username]);
 
   useEffect(() => {
+    if (searchToken === 0) {
+      return;
+    }
     fetchEvents();
   }, [fetchEvents, searchToken]);
 
@@ -274,10 +283,17 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       const urlParams = new URLSearchParams(window.location.search);
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
+      if (totalEvents <= 0) {
+        throw new Error('No events available for export.');
+      }
       const searchParams = buildSearchParams(false);
-      let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}/export?${searchParams.toString()}`;
+      searchParams.append('page', '1');
+      searchParams.append('per_page', totalEvents.toString());
+      let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}?${searchParams.toString()}`;
 
-      const headers: HeadersInit = {};
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
       if (viewToken) {
         apiUrl += `&view_token=${encodeURIComponent(viewToken)}`;
       } else {
@@ -292,8 +308,152 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const result = await response.json();
+      const exportEvents = result.events || [];
+      if (!Array.isArray(exportEvents) || exportEvents.length === 0) {
+        throw new Error('No events available for export.');
+      }
+
+      const baseColumns = [
+        'site_id',
+        'cam_id',
+        'track_id',
+        'event',
+        'timestamp',
+        'sex',
+        'age_bucket',
+        'race',
+      ];
+      const extraColumns = Object.keys(exportEvents[0] ?? {}).filter((key) => !baseColumns.includes(key));
+      const columns = [...baseColumns, ...extraColumns];
+      const escapeCsv = (value: unknown) => {
+        if (value === null || value === undefined) {
+          return '';
+        }
+        const text = String(value);
+        if (/[",\n]/.test(text)) {
+          return `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+      };
+      const mapEventValue = (value: unknown) => {
+        if (value === 0 || value === '0') {
+          return 'Exit';
+        }
+        if (value === 1 || value === '1') {
+          return 'Entrance';
+        }
+        if (typeof value === 'string') {
+          const normalized = value.toLowerCase();
+          if (normalized === 'exit') {
+            return 'Exit';
+          }
+          if (normalized === 'entry' || normalized === 'entrance') {
+            return 'Entrance';
+          }
+        }
+        return value;
+      };
+      const mapSexValue = (value: unknown) => {
+        if (value === 0 || value === '0') {
+          return 'Male';
+        }
+        if (value === 1 || value === '1') {
+          return 'Female';
+        }
+        if (typeof value === 'string') {
+          const normalized = value.toLowerCase();
+          if (normalized === 'm' || normalized === 'male') {
+            return 'Male';
+          }
+          if (normalized === 'f' || normalized === 'female') {
+            return 'Female';
+          }
+        }
+        return value;
+      };
+      const mapRaceValue = (value: unknown) => {
+        if (value === 0 || value === '0') {
+          return 'Light';
+        }
+        if (value === 1 || value === '1') {
+          return 'Mix';
+        }
+        if (value === 2 || value === '2') {
+          return 'Dark';
+        }
+        if (typeof value === 'string') {
+          const normalized = value.toLowerCase();
+          if (normalized === 'light') {
+            return 'Light';
+          }
+          if (normalized === 'mix') {
+            return 'Mix';
+          }
+          if (normalized === 'dark') {
+            return 'Dark';
+          }
+        }
+        return value;
+      };
+      const mapAgeBucketValue = (value: unknown) => {
+        if (value === null || value === undefined) {
+          return value;
+        }
+        const raw = value.toString();
+        const mapped = ageBuckets.find((bucket) => bucket.value === raw);
+        if (mapped) {
+          return mapped.label;
+        }
+        const numeric = parseInt(raw, 10);
+        if (!Number.isNaN(numeric) && ageBuckets[numeric]) {
+          return ageBuckets[numeric].label;
+        }
+        return value;
+      };
+      const formatExportTimestamp = (value: unknown) => {
+        if (typeof value !== 'string') {
+          return value;
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return date.toISOString().replace('T', ' ').replace('Z', '');
+      };
+      const resolveExportValue = (event: EventData, column: string) => {
+        if (column === 'track_id') {
+          return event.track_id ?? event.track_number;
+        }
+        if (column === 'cam_id') {
+          return event.cam_id ?? event.camera_id;
+        }
+        if (column === 'age_bucket') {
+          return mapAgeBucketValue(event.age_bucket ?? event.age_estimate);
+        }
+        if (column === 'sex') {
+          return mapSexValue(event.sex);
+        }
+        if (column === 'event') {
+          return mapEventValue(event.event);
+        }
+        if (column === 'race') {
+          return mapRaceValue(event.race);
+        }
+        if (column === 'timestamp') {
+          return formatExportTimestamp(event.timestamp);
+        }
+        const eventRecord = event as unknown as Record<string, unknown>;
+        return eventRecord[column];
+      };
+      const csvRows = [
+        columns.join(','),
+        ...exportEvents.map((event: EventData) =>
+          columns.map((column) => escapeCsv(resolveExportValue(event, column))).join(','),
+        ),
+      ];
+      const csvBlob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(csvBlob);
       const link = document.createElement('a');
       link.href = url;
       link.download = 'event-logs.csv';
@@ -338,11 +498,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         <h1 className="vrm-page-title">
           Event logs
         </h1>
-        <div className="vrm-breadcrumb">
-          <span>Dashboard</span>
-          <span>›</span>
-          <span>Event logs</span>
-        </div>
       </div>
 
       {/* Filters */}
@@ -375,7 +530,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 onChange={(date: Date | null) => setDraftStartDate(clampToToday(date))}
                 placeholderText="Select start date"
                 dateFormat="yyyy-MM-dd"
-                className="vrm-date-picker"
+                className="vrm-date-picker event-logs-filter-control"
                 maxDate={draftEndDate || today}
                 id="event-start-date"
               />
@@ -390,7 +545,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 onChange={(date: Date | null) => setDraftEndDate(clampToToday(date))}
                 placeholderText="Select end date"
                 dateFormat="yyyy-MM-dd"
-                className="vrm-date-picker"
+                className="vrm-date-picker event-logs-filter-control"
                 minDate={draftStartDate || undefined}
                 maxDate={today}
                 id="event-end-date"
@@ -408,7 +563,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, trackId: e.target.value }))}
                 onKeyDown={handleTrackIdKeyDown}
                 placeholder="Search by track ID"
-                className="vrm-input"
+                className="vrm-input event-logs-filter-control"
               />
             </div>
 
@@ -420,7 +575,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-type"
                 value={draftFilters.event}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, event: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Events</option>
                 <option value="entry">Entry</option>
@@ -428,10 +583,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </select>
             </div>
 
-          </div>
-
-          {/* Second Row: Sex, Age Group, Race */}
-          <div className="event-logs-filter-grid">
             <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-sex">
                 Sex
@@ -440,7 +591,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-sex"
                 value={draftFilters.sex}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, sex: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Sexes</option>
                 {sexOptions.map(option => (
@@ -457,7 +608,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-age-group"
                 value={draftFilters.age}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, age: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Ages</option>
                 {ageBuckets.map(age => (
@@ -466,7 +617,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               </select>
             </div>
 
-            <div>
+            <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-race">
                 Race
               </label>
@@ -474,7 +625,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                 id="event-race"
                 value={draftFilters.race}
                 onChange={(e) => setDraftFilters(prev => ({ ...prev, race: e.target.value }))}
-                className="vrm-select"
+                className="vrm-select event-logs-filter-control"
               >
                 <option value="">All Races</option>
                 {raceOptions.map(option => (
@@ -512,7 +663,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleExport}>
               Export CSV
             </button>
-            <button className="vrm-btn vrm-btn-sm" onClick={fetchEvents}>Refresh</button>
           </div>
         </div>
         <div className="vrm-card-body vrm-card-body--flush">
