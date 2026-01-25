@@ -128,7 +128,7 @@ export const TrafficDistribution = ({
       <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
         <div className="traffic-distribution__title">{title}</div>
         <div className="traffic-distribution__content">
-          <div className="traffic-distribution__empty">No traffic data available.</div>
+          <div className="traffic-distribution__center">—</div>
         </div>
       </div>
     );
@@ -144,7 +144,7 @@ export const TrafficDistribution = ({
   renderLegend[0]);
 
   const pieLegend = renderLegend.map((entry) => ({ ...entry, value: entry.renderValue }));
-  const topCameraLabel = renderTopSlice.camId ? `Cam ${renderTopSlice.camId}` : renderTopSlice.label;
+  const topCameraLabel = renderTopSlice.camId ? String(renderTopSlice.camId) : "—";
 
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>

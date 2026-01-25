@@ -367,9 +367,10 @@ def _build_raw_events_query(ctx: QueryContext, *, limit: int = 10000) -> Contrac
     params["limit"] = resolved_limit
     params["offset"] = resolved_offset
     sql = (
-        "SELECT track_id, event, timestamp,"
+        "SELECT site_id, cam_id, track_id, event, timestamp,"
         f" {SEX_EXPRESSION} AS sex,"
-        f" {AGE_BUCKET_EXPRESSION} AS age_bucket"
+        f" {AGE_BUCKET_EXPRESSION} AS age_bucket,"
+        " COALESCE(CAST(race AS STRING), 'Unknown') AS race"
         f" FROM `{ctx.table_name}`"
         " WHERE timestamp BETWEEN TIMESTAMP(@start_ts) AND TIMESTAMP(@end_ts)"
         " AND timestamp <= CURRENT_TIMESTAMP()"
