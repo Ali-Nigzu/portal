@@ -24,6 +24,7 @@ def hash_password(password: str) -> str:
 def load_users():
     """Load user credentials from JSON file"""
     if not os.path.exists(USERS_FILE):
+        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
         users_data = {
             "admin": {
                 "password": hash_password("admin123"),
@@ -81,6 +82,7 @@ def load_users():
 def save_users(users_data: dict):
     """Save users data to JSON file using atomic write"""
     file_dir = os.path.dirname(USERS_FILE) or '.'
+    os.makedirs(file_dir, exist_ok=True)
     
     temp_fd, temp_path = tempfile.mkstemp(dir=file_dir, suffix='.tmp')
     try:
@@ -110,6 +112,7 @@ def load_alarm_logs():
 
 def save_alarm_logs(alarm_data: dict):
     """Save alarm logs to JSON file"""
+    os.makedirs(os.path.dirname(ALARM_LOGS_FILE), exist_ok=True)
     with open(ALARM_LOGS_FILE, 'w') as f:
         json.dump(alarm_data, f, indent=2)
 
@@ -124,5 +127,6 @@ def load_device_lists():
 
 def save_device_lists(device_data: dict):
     """Save device lists to JSON file"""
+    os.makedirs(os.path.dirname(DEVICE_LISTS_FILE), exist_ok=True)
     with open(DEVICE_LISTS_FILE, 'w') as f:
         json.dump(device_data, f, indent=2)
