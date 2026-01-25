@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
-from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,11 +37,6 @@ from backend.app.models import (
     DashboardManifest,
     PinDashboardWidgetRequest,
 )
-from backend.app.analytics.contracts import (
-    validate_chart_spec,
-    ValidationError as ContractValidationError,
-)
-from backend.app.analytics.time_windows import ensure_time_window
 from backend.app.analytics.dashboard_catalogue import (
     ManifestValidationError,
     get_dashboard_manifest,
@@ -306,16 +300,6 @@ def _authenticate_chart_data_request(
             )
 
 
-class AnalyticsRunRequest(BaseModel):
-    spec: Dict[str, Any]
-    org_id: Optional[str] = Field(default=None, alias="orgId")
-    view_token: Optional[str] = Field(default=None, alias="viewToken")
-    bypass_cache: bool = Field(default=False, alias="bypassCache")
-    cache_ttl_seconds: Optional[int] = Field(default=None, alias="cacheTtlSeconds")
-
-    class Config:
-        allow_population_by_field_name = True
-
 
 def _resolve_table_for_org(org_id: str) -> str:
     try:
@@ -344,24 +328,6 @@ def _org_id_for_user_record(username: str, user_record: Dict[str, Any]) -> str:
         },
     )
 
-
-def _resolve_analytics_context(request: Request, payload: AnalyticsRunRequest) -> str:
-    explicit_org = payload.org_id or request.query_params.get("orgId")
-    if explicit_org:
-        return explicit_org
-
-    view_token = (
-        payload.view_token
-        or request.query_params.get("viewToken")
-        or request.query_params.get("view_token")
-    )
-    if view_token:
-        return _resolve_view_token_context(view_token)
-
-    raise HTTPException(
-        status_code=422,
-        detail={"error": "missing_org", "message": "orgId or viewToken is required"},
-    )
 
 
 def _resolve_snapshot_org(
@@ -685,21 +651,6 @@ async def get_latest_snapshot(
         "orgId": snapshot.org_id,
     }
 
-
-@app.post("/api/analytics/run")
-async def execute_analytics_run(payload: AnalyticsRunRequest, request: Request):
-    org_id = _resolve_analytics_context(request, payload)
-    logger.info(
-        "analytics.run.blocked",
-        extra={"spec_id": payload.spec.get("id"), "org": org_id},
-    )
-    raise HTTPException(
-        status_code=410,
-        detail={
-            "error": "snapshots_only",
-            "message": "Analytics run is disabled in snapshots-only mode",
-        },
-    )
 
 
 @app.get("/api/admin/users")

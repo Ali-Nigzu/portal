@@ -7,7 +7,7 @@ import os
 import json
 import tempfile
 import shutil
-from typing import Optional, Dict
+from typing import Dict
 import hashlib
 import secrets
 
@@ -93,13 +93,6 @@ def save_users(users_data: dict):
         if os.path.exists(temp_path):
             os.unlink(temp_path)
         raise e
-
-
-def get_active_table_name(client_id: str, users: dict) -> Optional[str]:
-    """Legacy table lookup (unused in snapshots-only mode)."""
-    if client_id not in users:
-        return None
-    return None
 
 
 def load_alarm_logs():
