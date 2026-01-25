@@ -79,7 +79,6 @@ from backend.app.snapshots import (
 from backend.app.analytics.data_contract import (
     Metric,
     QueryContext,
-    TimeRangeKey,
     compile_contract_query,
 )
 from backend.app.analytics.org_config import (
@@ -417,7 +416,6 @@ def _resolve_event_search_context(
         table_name=table_name,
         start=bounds['start_ts'],
         end=bounds['end_ts'],
-        time_range=TimeRangeKey.CUSTOM,
         events=resolved_events,
         sexes=[resolved_sex] if resolved_sex else None,
         age_buckets=[resolved_age] if resolved_age else None,
@@ -524,7 +522,6 @@ async def search_events(
             table_name=table_name,
             start=bounds['start_ts'],
             end=bounds['end_ts'],
-            time_range=TimeRangeKey.CUSTOM,
             events=resolved_events,
             sexes=[resolved_sex] if resolved_sex else None,
             age_buckets=[resolved_age] if resolved_age else None,
@@ -534,7 +531,7 @@ async def search_events(
             track_id_like=resolved_track_like,
         )
 
-        summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, [], base_ctx)
+        summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, base_ctx)
         summary_df = bigquery_client.query_dataframe(
             summary_plan.sql,
             summary_plan.params,
@@ -554,7 +551,7 @@ async def search_events(
 
         offset = max(page - 1, 0) * per_page
         paged_ctx = base_ctx.model_copy(update={'limit': per_page, 'offset': offset})
-        events_plan = compile_contract_query(Metric.RAW_EVENTS, [], paged_ctx)
+        events_plan = compile_contract_query(Metric.RAW_EVENTS, paged_ctx)
         results_df = bigquery_client.query_dataframe(
             events_plan.sql,
             events_plan.params,

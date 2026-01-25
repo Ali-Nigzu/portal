@@ -639,9 +639,3 @@ def list_dashboard_specs() -> Dict[str, ChartSpec]:
 
 def list_manifests() -> Dict[str, Manifest]:
     return MANIFEST_REPOSITORY.list()
-# DEBUG MAP (temporary)
-# - Live Flow spec: backend/app/analytics/dashboard_catalogue.py:~190
-# - Live Flow compile path: backend/app/analytics/compiler.py:compile/_render_calendar/_activity_counts_cte
-# - KPI band spec(s): frontend/src/dashboard/v2/utils/applyVRMOverrides.ts
-# - Demographics spec(s)/compiler: backend/app/analytics/compiler.py:_render_demographic_count
-# - Time window handling: backend/app/analytics/compiler.py:_resolve_time_params/_coarsen_bucket_if_needed
