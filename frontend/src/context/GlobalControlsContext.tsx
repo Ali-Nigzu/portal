@@ -139,6 +139,7 @@ export const GlobalControlsProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     const timer = window.setInterval(() => {
       setLocalTime(formatLocalTime());
+      setLastUpdated(new Date().toISOString());
     }, 1000 * 60);
 
     return () => window.clearInterval(timer);
