@@ -803,11 +803,6 @@ const DashboardV2Page = ({
       );
   }, [manifest, widgetState]);
 
-  const handleTimeRangeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setStatus("loading");
-    setSelectedTimeRangeId(event.target.value);
-  };
-
   const handleUnpinWidget = useCallback(
     async (widgetId: string) => {
       if (!manifest) {
@@ -866,25 +861,6 @@ const DashboardV2Page = ({
               <HeaderStatusStrip className="vrm-dashboard-header-meta" />
             </div>
           </div>
-          {manifest?.timeControls?.options?.length ? (
-            <div className="dashboard-v2__controls">
-              <div className="dashboard-v2__control-group">
-                <label className="dashboard-v2__control">
-                  <span>Time range</span>
-                  <select
-                    value={selectedTimeRangeId ?? manifest.timeControls?.options?.[0]?.id ?? ""}
-                    onChange={handleTimeRangeChange}
-                  >
-                    {(manifest.timeControls.options ?? []).map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-          ) : null}
         </header>
 
         {status === "error" && error ? (

@@ -411,16 +411,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         }
         return value;
       };
-      const formatExportTimestamp = (value: unknown) => {
-        if (typeof value !== 'string') {
-          return value;
-        }
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) {
-          return value;
-        }
-        return date.toISOString().replace('T', ' ').replace('Z', '');
-      };
       const resolveExportValue = (event: EventData, column: string) => {
         const eventRecord = event as unknown as Record<string, unknown>;
         if (column === 'track_id') {
@@ -445,7 +435,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           return mapRaceValue(event.race ?? eventRecord.race ?? eventRecord.race_bucket);
         }
         if (column === 'timestamp') {
-          return formatExportTimestamp(event.timestamp);
+          return eventRecord.timestamp ?? event.timestamp;
         }
         return eventRecord[column];
       };
