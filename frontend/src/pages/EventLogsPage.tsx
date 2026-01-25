@@ -325,7 +325,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         'race',
       ];
       const extraColumns = Object.keys(exportEvents[0] ?? {}).filter(
-        (key) => !baseColumns.includes(key) && key !== 'track_number',
+        (key) => !baseColumns.includes(key) && key !== 'track_number' && key !== 'age_estimate',
       );
       const columns = [...baseColumns, ...extraColumns];
       const escapeCsv = (value: unknown) => {
