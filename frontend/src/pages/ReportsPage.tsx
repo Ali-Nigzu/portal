@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import { API_BASE_URL } from '../config';
 import { Credentials } from '../types/credentials';
+import { determineOrgId } from '../utils/org';
 import type { SnapshotResponse } from '../dashboard/v2/utils/snapshotPayload';
 import {
   AGE_BUCKET_LABELS,
@@ -36,14 +37,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       const urlParams = new URLSearchParams(window.location.search);
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
+      const resolvedClientId = clientId ?? (credentials ? determineOrgId(credentials) : null);
 
       const params = new URLSearchParams();
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
 
       if (viewToken) {
         params.append('viewToken', viewToken);
-      } else if (clientId) {
-        params.append('org', clientId);
+      } else if (resolvedClientId) {
+        params.append('org', resolvedClientId);
       } else {
         throw new Error('Missing view_token or client_id for snapshot lookup.');
       }
@@ -91,7 +93,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       id: 'device-performance',
       name: 'System Performance',
       description: 'Camera and sensor status, uptime, and data quality metrics',
-      type: 'Technical Report'
+      type: 'Technical Report',
+      disabled: true
     }
   ];
 
@@ -602,11 +605,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
         <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
           Reports
         </h1>
-        <div className="vrm-breadcrumb">
-          <span>Dashboard</span>
-          <span>›</span>
-          <span>Reports</span>
-        </div>
       </div>
 
       {/* Report Configuration */}
@@ -632,7 +630,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                   color: 'var(--vrm-text-primary)'
                 }}
               >
-                {reportTemplates.map(template => (
+                {reportTemplates.filter((template) => !template.disabled).map(template => (
                   <option key={template.id} value={template.id}>{template.name}</option>
                 ))}
               </select>
@@ -695,21 +693,47 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                 borderRadius: '8px',
                 border: `1px solid ${reportType === template.id ? 'var(--vrm-accent-blue)' : 'var(--vrm-border)'}`,
                 transition: 'all 0.2s ease',
-                cursor: 'pointer'
+                cursor: template.disabled ? 'not-allowed' : 'pointer',
+                opacity: template.disabled ? 0.6 : 1,
+                position: 'relative'
               }}
-              onClick={() => setReportType(template.id)}
+              onClick={() => {
+                if (template.disabled) {
+                  return;
+                }
+                setReportType(template.id);
+              }}
               onMouseEnter={(e) => {
-                if (reportType !== template.id) {
+                if (reportType !== template.id && !template.disabled) {
                   e.currentTarget.style.borderColor = 'var(--vrm-accent-blue)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (reportType !== template.id) {
+                if (reportType !== template.id && !template.disabled) {
                   e.currentTarget.style.borderColor = 'var(--vrm-border)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
               }}>
+                {template.disabled ? (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '-32px',
+                      transform: 'rotate(45deg)',
+                      backgroundColor: 'var(--vrm-accent-blue)',
+                      color: 'white',
+                      padding: '4px 40px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '0.4px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Coming soon
+                  </div>
+                ) : null}
                 <div style={{ marginBottom: '12px' }}>
                   <h4 style={{ color: 'var(--vrm-text-primary)', margin: 0, fontSize: '16px', fontWeight: '600' }}>
                     {template.name}

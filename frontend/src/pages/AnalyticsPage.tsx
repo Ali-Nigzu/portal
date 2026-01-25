@@ -83,11 +83,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ credentials }) => {
         <div className="vrm-section">
           <div>
             <h1 className="vrm-page-title">Advanced analytics</h1>
-            <div className="vrm-breadcrumb">
-              <span>Analytics</span>
-              <span>›</span>
-              <span>Breakdowns</span>
-            </div>
           </div>
         </div>
 

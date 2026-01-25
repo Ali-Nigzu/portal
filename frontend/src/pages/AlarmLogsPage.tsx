@@ -185,11 +185,6 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
         <h1 style={{ color: 'var(--vrm-text-primary)', fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
           Alarm logs
         </h1>
-        <div className="vrm-breadcrumb">
-          <span>Dashboard</span>
-          <span>›</span>
-          <span>Alarm logs</span>
-        </div>
       </div>
 
       {/* Client Selector (Admin Only) */}

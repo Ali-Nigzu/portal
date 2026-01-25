@@ -22,11 +22,7 @@ import { getViewTokenFromLocation } from "../../../utils/viewToken";
 import { Credentials } from "../../../types/credentials";
 import "../styles/DashboardV2Page.css";
 import { VRM_KPI_IDS, applyVRMOverrides } from "../utils/applyVRMOverrides";
-import {
-  decorateResult,
-  lastBucketValue,
-  resolveUiClient,
-} from "../utils/vrmDecorators";
+import { decorateResult, resolveUiClient } from "../utils/vrmDecorators";
 import { SiteFlowDemographicsView } from "../components/SiteFlowDemographicsView";
 import {
   buildDemographicsWidget,
@@ -346,7 +342,6 @@ const DashboardV2Page = ({
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeRangeId, setSelectedTimeRangeId] = useState<string | null>(null);
-  const [runNonce, setRunNonce] = useState(0);
   const [siteFlowMode, setSiteFlowMode] = useState<"activity" | "demographics">(
     "activity",
   );
@@ -369,16 +364,6 @@ const DashboardV2Page = ({
     error?: string;
   }>({ status: "idle" });
   const abortControllerRef = useRef<AbortController | null>(null);
-  const vrmDebugEnabled = useMemo(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    if (process.env.NODE_ENV === "production") {
-      return false;
-    }
-    const params = new URLSearchParams(window.location.search);
-    return params.has("vrmDebug");
-  }, []);
 
   const resolvedUiClient = useMemo(() => {
     const candidates = [manifest?.orgId, orgId, credentials.orgId, credentials.username];
@@ -652,7 +637,6 @@ const DashboardV2Page = ({
   }, [
     manifest,
     selectedTimeRange,
-    runNonce,
     widgetResultLoaderImpl,
     orgId,
     viewToken,
@@ -729,7 +713,6 @@ const DashboardV2Page = ({
     siteFlowWidget,
     viewToken,
     widgetResultLoaderImpl,
-    runNonce,
   ]);
 
   useEffect(() => {
@@ -793,7 +776,6 @@ const DashboardV2Page = ({
     siteFlowTimeframe,
     siteFlowMode,
     siteFlowWidget,
-    runNonce,
   ]);
 
   const kpiWidgets = useMemo(() => {
@@ -820,20 +802,6 @@ const DashboardV2Page = ({
         (entry): entry is (typeof entry & { state: DashboardWidgetState }) => Boolean(entry.state),
       );
   }, [manifest, widgetState]);
-
-  const handleRefresh = () => {
-    setStatus("loading");
-    setRunNonce((value) => value + 1);
-  };
-
-  const handleReloadManifest = () => {
-    loadManifest();
-  };
-
-  const handleTimeRangeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setStatus("loading");
-    setSelectedTimeRangeId(event.target.value);
-  };
 
   const handleUnpinWidget = useCallback(
     async (widgetId: string) => {
@@ -877,15 +845,6 @@ const DashboardV2Page = ({
   const clientDisplayName = useMemo(() => formatTitleCase(siteUiOrgId), [siteUiOrgId]);
   const siteId = siteIdFromQuery ?? siteOrgId ?? "—";
   const siteDisplayId = useMemo(() => deriveSiteDisplayId(siteId), [siteId]);
-  const isVrmDashboard = useMemo(() => {
-    const ids = manifest?.layout?.kpiBand ?? [];
-    if (!ids.length) {
-      return false;
-    }
-    const vrmIds = new Set<string>(Object.values(VRM_KPI_IDS));
-    return ids.every((id) => vrmIds.has(id));
-  }, [manifest?.layout?.kpiBand]);
-
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
       <div className="dashboard-v2__content vrm-dashboard-shell">
@@ -902,34 +861,6 @@ const DashboardV2Page = ({
               <HeaderStatusStrip className="vrm-dashboard-header-meta" />
             </div>
           </div>
-          {!isVrmDashboard ? (
-            <div className="dashboard-v2__controls">
-              <div className="dashboard-v2__org">Site ID: {siteDisplayId}</div>
-              <div className="dashboard-v2__control-group">
-                {manifest?.timeControls?.options?.length ? (
-                  <label className="dashboard-v2__control">
-                    <span>Time range</span>
-                    <select
-                      value={selectedTimeRangeId ?? manifest.timeControls?.options?.[0]?.id ?? ""}
-                      onChange={handleTimeRangeChange}
-                    >
-                      {(manifest.timeControls.options ?? []).map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                <button type="button" className="dashboard-v2__button" onClick={handleRefresh}>
-                  Refresh data
-                </button>
-                <button type="button" className="dashboard-v2__button" onClick={handleReloadManifest}>
-                  Reload manifest
-                </button>
-              </div>
-            </div>
-          ) : null}
         </header>
 
         {status === "error" && error ? (
@@ -960,63 +891,6 @@ const DashboardV2Page = ({
           )}
         </section>
 
-        {vrmDebugEnabled && kpiWidgets.length > 0 ? (
-          <section className="dashboard-v2__debug" aria-label="VRM debug panel">
-            <h2>VRM KPI debug (last bucket vs summary)</h2>
-            <pre>
-              {JSON.stringify(
-                {
-                  orgId,
-                  manifestOrgId: manifest?.orgId,
-                  resolvedUiClient,
-                },
-                null,
-                2,
-              )}
-            </pre>
-            <ul>
-              {kpiWidgets.map((state) => {
-                const series = state.result?.series?.[0];
-                const lastBucket = lastBucketValue(series);
-                const sum =
-                  series?.data.reduce((total, point) => {
-                    const value = point.value ?? point.y ?? 0;
-                    return total + (typeof value === "number" ? value : 0);
-                  }, 0) ?? 0;
-                const headlineOverride = state.result?.meta?.summary
-                  ? (state.result.meta.summary as Record<string, unknown>).headlineValue
-                  : undefined;
-                const usedHeadline =
-                  typeof headlineOverride === "number"
-                    ? headlineOverride
-                    : series?.data?.[series.data.length - 1]?.value ??
-                      series?.data?.[series.data.length - 1]?.y ??
-                      null;
-                const summaryTotals = (state.result as { summary?: unknown } | undefined)?.summary;
-                return (
-                  <li key={state.widget.id}>
-                    <strong>{state.widget.title}</strong>
-                    <pre>
-                      {JSON.stringify(
-                        {
-                          widgetId: state.widget.id,
-                          seriesY: series?.data?.map((point) => point.value ?? point.y) ?? [],
-                          lastBucket,
-                          sum24h: sum,
-                          headlineOverride,
-                          usedHeadline,
-                          summaryTotals,
-                        },
-                        null,
-                        2,
-                      )}
-                    </pre>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ) : null}
 
         <section
           className="dashboard-v2__grid vrm-section vrm-section--chart"

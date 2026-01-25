@@ -830,11 +830,15 @@ async def search_events(
         for _, row in results_df.iterrows():
             timestamp = pd.to_datetime(row['timestamp'])
             events.append({
+                'site_id': row['site_id'],
+                'cam_id': row['cam_id'],
                 'track_number': row['track_id'],
+                'track_id': row['track_id'],
                 'event': 'entry' if row['event'] == 1 else 'exit',
                 'timestamp': timestamp.isoformat(),
                 'sex': row['sex'],
                 'age_estimate': row['age_bucket'],
+                'race': row['race'],
             })
 
         return {

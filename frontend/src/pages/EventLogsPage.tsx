@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { API_ENDPOINTS } from '../config';
@@ -6,11 +6,17 @@ import { Credentials } from '../types/credentials';
 
 interface EventData {
   index: number;
+  site_id?: string | number | null;
+  cam_id?: string | number | null;
+  camera_id?: string | number | null;
+  track_id?: string | number | null;
   track_number: string;
   event: string;
   timestamp: string;
   sex: string | number | null;
   age_estimate: string | number | null;
+  age_bucket?: string | number | null;
+  race?: string | number | null;
   hour: number;
   day_of_week: string;
   date: string;
@@ -22,8 +28,9 @@ interface EventLogsPageProps {
 
 const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const [events, setEvents] = useState<EventData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const [draftFilters, setDraftFilters] = useState({
     event: '',
     sex: '',
@@ -48,7 +55,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalEvents, setTotalEvents] = useState(0);
+  const skipNextFetch = useRef(false);
   const eventsPerPage = 20;
+  const storageKey = 'camOS.eventLogsState';
   const ageBuckets = [
     { value: '0-4', label: '0-4' },
     { value: '5-13', label: '5-13' },
@@ -68,6 +77,104 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   ];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const stored = window.sessionStorage.getItem(storageKey);
+    if (!stored) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(stored) as {
+        events?: EventData[];
+        totalPages?: number;
+        totalEvents?: number;
+        currentPage?: number;
+        draftFilters?: typeof draftFilters;
+        appliedFilters?: typeof appliedFilters;
+        draftStartDate?: string | null;
+        draftEndDate?: string | null;
+        appliedStartDate?: string | null;
+        appliedEndDate?: string | null;
+        searchToken?: number;
+      };
+      if (Array.isArray(parsed.events)) {
+        setEvents(parsed.events);
+      }
+      if (typeof parsed.totalPages === 'number') {
+        setTotalPages(parsed.totalPages);
+      }
+      if (typeof parsed.totalEvents === 'number') {
+        setTotalEvents(parsed.totalEvents);
+      }
+      if (typeof parsed.currentPage === 'number') {
+        setCurrentPage(parsed.currentPage);
+      }
+      if (parsed.draftFilters) {
+        setDraftFilters(parsed.draftFilters);
+      }
+      if (parsed.appliedFilters) {
+        setAppliedFilters(parsed.appliedFilters);
+      }
+      if (parsed.draftStartDate) {
+        setDraftStartDate(new Date(parsed.draftStartDate));
+      }
+      if (parsed.draftEndDate) {
+        setDraftEndDate(new Date(parsed.draftEndDate));
+      }
+      if (parsed.appliedStartDate) {
+        setAppliedStartDate(new Date(parsed.appliedStartDate));
+      }
+      if (parsed.appliedEndDate) {
+        setAppliedEndDate(new Date(parsed.appliedEndDate));
+      }
+      if (typeof parsed.searchToken === 'number') {
+        setSearchToken(parsed.searchToken);
+        if (parsed.searchToken > 0) {
+          skipNextFetch.current = true;
+        }
+      }
+    } catch (storedError) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.info('Failed to restore event logs state', storedError);
+      }
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const payload = {
+      events,
+      totalPages,
+      totalEvents,
+      currentPage,
+      draftFilters,
+      appliedFilters,
+      draftStartDate: draftStartDate ? draftStartDate.toISOString() : null,
+      draftEndDate: draftEndDate ? draftEndDate.toISOString() : null,
+      appliedStartDate: appliedStartDate ? appliedStartDate.toISOString() : null,
+      appliedEndDate: appliedEndDate ? appliedEndDate.toISOString() : null,
+      searchToken,
+    };
+    window.sessionStorage.setItem(storageKey, JSON.stringify(payload));
+  }, [
+    appliedEndDate,
+    appliedFilters,
+    appliedStartDate,
+    currentPage,
+    draftEndDate,
+    draftFilters,
+    draftStartDate,
+    events,
+    searchToken,
+    storageKey,
+    totalEvents,
+    totalPages,
+  ]);
 
   const clampToToday = (date: Date | null): Date | null => {
     if (!date) {
@@ -168,6 +275,13 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   }, [buildSearchParams, credentials.password, credentials.username]);
 
   useEffect(() => {
+    if (searchToken === 0) {
+      return;
+    }
+    if (skipNextFetch.current) {
+      skipNextFetch.current = false;
+      return;
+    }
     fetchEvents();
   }, [fetchEvents, searchToken]);
 
@@ -176,6 +290,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     setAppliedStartDate(clampToToday(draftStartDate));
     setAppliedEndDate(clampToToday(draftEndDate));
     setCurrentPage(1);
+    setExportNotice(null);
     setSearchToken((prev) => prev + 1);
   };
 
@@ -253,27 +368,21 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       race: '',
       cameraId: ''
     });
-    setAppliedFilters({
-      event: '',
-      sex: '',
-      age: '',
-      trackId: '',
-      race: '',
-      cameraId: ''
-    });
     setDraftStartDate(null);
     setDraftEndDate(null);
-    setAppliedStartDate(null);
-    setAppliedEndDate(null);
-    setCurrentPage(1);
-    setSearchToken((prev) => prev + 1);
+    setExportNotice(null);
   };
 
   const handleExport = async () => {
     try {
+      setExportNotice(null);
       const urlParams = new URLSearchParams(window.location.search);
       const viewToken = urlParams.get('view_token');
       const clientId = urlParams.get('client_id');
+      if (totalEvents <= 0 || events.length === 0) {
+        setExportNotice('No events to export.');
+        return;
+      }
       const searchParams = buildSearchParams(false);
       let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}?${searchParams.toString()}`;
 
@@ -373,11 +482,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         <h1 className="vrm-page-title">
           Event logs
         </h1>
-        <div className="vrm-breadcrumb">
-          <span>Dashboard</span>
-          <span>›</span>
-          <span>Event logs</span>
-        </div>
       </div>
 
       {/* Filters */}
@@ -546,7 +650,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           </div>
         </div>
         <div className="vrm-card-body vrm-card-body--flush">
-          {events.length > 0 ? (
+          {searchToken === 0 ? null : events.length > 0 ? (
             <div className="vrm-table-scroll">
               <table className="vrm-table">
                 <thead>

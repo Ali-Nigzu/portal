@@ -85,9 +85,10 @@ export const TrafficDistribution = ({
     const numericValue = Number(rawValue);
     const value = Number.isFinite(numericValue) ? numericValue : 0;
     const label = useRawLabels || labelKey ? rawLabel : `Cam ${cameraId}`;
+    const cleanCamId = normalizedCameraId.replace(/^\D+/, "");
     return {
       label,
-      camId: cameraId,
+      camId: useRawLabels || labelKey ? rawLabel : (cleanCamId || cameraId),
       value,
       color: sliceColors[index % sliceColors.length],
     };
@@ -114,7 +115,7 @@ export const TrafficDistribution = ({
     console.log("[VRM] TrafficDistribution: legend", { legend, totalValue, isVrmTraffic });
   }
 
-  if (!legend.length || (totalValue <= 0 && !isVrmTraffic)) {
+  if (!legend.length || totalValue <= 0) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log("[VRM] TrafficDistribution: empty view", {
@@ -128,30 +129,26 @@ export const TrafficDistribution = ({
       <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
         <div className="traffic-distribution__title">{title}</div>
         <div className="traffic-distribution__content">
-          <div className="traffic-distribution__empty">No traffic data available.</div>
+          <div className="traffic-distribution__center">—</div>
         </div>
       </div>
     );
   }
 
-  const zeroTotalFallback = isVrmTraffic && totalValue <= 0;
-  const renderLegend = zeroTotalFallback
-    ? legend.map((entry) => ({
-        ...entry,
-        renderValue: 1,
-        displayValue: 0,
-      }))
-    : legend.map((entry) => ({
-        ...entry,
-        renderValue: entry.value,
-        displayValue: entry.value,
-      }));
+  const renderLegend = legend.map((entry) => ({
+    ...entry,
+    renderValue: entry.value,
+    displayValue: entry.value,
+  }));
   const renderTopSlice = renderLegend.reduce((winner, candidate) =>
     candidate.renderValue >= winner.renderValue ? candidate : winner,
   renderLegend[0]);
 
   const pieLegend = renderLegend.map((entry) => ({ ...entry, value: entry.renderValue }));
-  const centerValue = renderTopSlice.displayValue ?? renderTopSlice.value ?? 0;
+  const topCameraLabel =
+    renderTopSlice.camId === null || renderTopSlice.camId === undefined || renderTopSlice.camId === ""
+      ? "—"
+      : String(renderTopSlice.camId);
 
   return (
     <div className={`traffic-distribution kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
@@ -187,8 +184,14 @@ export const TrafficDistribution = ({
               {pieLegend.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} stroke="none" />
               ))}
-              <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="traffic-distribution__center">
-                {`${Math.round(centerValue)}%`}
+              <text
+                x="50%"
+                y="50%"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="traffic-distribution__center"
+              >
+                {topCameraLabel}
               </text>
             </Pie>
           </PieChart>

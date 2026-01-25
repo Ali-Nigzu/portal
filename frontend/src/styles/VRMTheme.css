@@ -421,6 +421,18 @@ body {
   color: var(--vrm-accent-blue);
 }
 
+.vrm-realtime-wave path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 0;
+  animation: vrm-realtime-wave 1.4s linear infinite;
+}
+
+@keyframes vrm-realtime-wave {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
 .vrm-header-meta-group {
   display: inline-flex;
   align-items: center;
