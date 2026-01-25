@@ -57,7 +57,6 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
     title: "Site Flow Age Demographics",
     kind: "chart",
     chartSpecId: "dashboard.site_flow.demographics.age",
-    fixtureId: undefined,
     inlineSpec: {
       ...BASE_DEMOGRAPHIC_SPEC,
       id: "dashboard.site_flow.demographics.age",
@@ -77,7 +76,6 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
     title: "Site Flow Gender Demographics",
     kind: "chart",
     chartSpecId: "dashboard.site_flow.demographics.gender",
-    fixtureId: undefined,
     inlineSpec: {
       ...BASE_DEMOGRAPHIC_SPEC,
       id: "dashboard.site_flow.demographics.gender",
@@ -97,7 +95,6 @@ const DEMOGRAPHIC_WIDGET_BASE: Record<DemographicWidgetKind, DashboardWidget> = 
     title: "Site Flow Race Demographics",
     kind: "chart",
     chartSpecId: "dashboard.site_flow.demographics.race",
-    fixtureId: undefined,
     inlineSpec: {
       ...BASE_DEMOGRAPHIC_SPEC,
       id: "dashboard.site_flow.demographics.race",

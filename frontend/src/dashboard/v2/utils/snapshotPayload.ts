@@ -3,11 +3,6 @@ import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
 import {
   buildSiteFlowBucketLabels,
-  resolveSiteFlowWindow,
-  resolveSiteFlowSliceCount,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
 } from "./siteFlowBuckets";
 
 export interface SnapshotResponse {
@@ -29,36 +24,11 @@ const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
   all_time: 6,
 };
 
-type SnapshotSeries = Record<string, number[]>;
-
-interface TimeSeriesBlock {
-  timestamps: unknown[];
-  series: Record<string, unknown>;
-}
-
-interface NormalizedTimeSeries {
-  timestamps: Date[];
-  series: SnapshotSeries;
-}
-
 const asNumberArray = (value: unknown): number[] =>
   Array.isArray(value) ? value.map((item) => (typeof item === "number" ? item : 0)) : [];
 
 const getKpiSeries = (payload: unknown[], index: number): number[] =>
   asNumberArray(Array.isArray(payload) ? payload[index] : []);
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const isTimeSeriesBlock = (value: unknown): value is TimeSeriesBlock =>
-  isRecord(value) &&
-  Array.isArray(value.timestamps) &&
-  isRecord(value.series);
-
-const ENABLE_BLOCK_PAYLOAD = false;
-
-const isBlockPayload = (payload: unknown[]): payload is unknown[] =>
-  isRecord(payload?.[0]) && isTimeSeriesBlock(payload?.[1]);
 
 const toIso = (value: Date): string => value.toISOString();
 
@@ -134,35 +104,6 @@ const buildTrafficResult = (values: number[]): ChartResult => {
   };
 };
 
-const buildTrafficResultFromSplit = (entries: Array<{ label: string; value: number }>): ChartResult => {
-  const data = entries.map((entry, index) => ({
-    x: entry.label ?? `Camera ${index + 1}`,
-    y: entry.value ?? 0,
-    value: entry.value ?? 0,
-  }));
-  const series: ChartSeries = {
-    id: "traffic_share",
-    label: "Traffic by Camera",
-    geometry: "bar",
-    unit: "percentage",
-    data,
-  };
-  return {
-    chartType: "categorical",
-    xDimension: { id: "camera", type: "category" },
-    series: [series],
-    meta: {
-      timezone: "UTC",
-      summary: {
-        presentation: "vrm",
-        chartStyle: "traffic_distribution",
-        chartSubType: "traffic_distribution",
-        title: "Traffic Split",
-      },
-    },
-  };
-};
-
 const buildCapacityResult = (values: number[]): ChartResult => {
   const [currentRaw = 0, peakRaw = 0] = values;
   const currentPct = clamp(currentRaw, 0, 100);
@@ -198,21 +139,6 @@ const buildCapacityResult = (values: number[]): ChartResult => {
   };
 };
 
-const buildCapacityResultFromBlock = (value: unknown): ChartResult => {
-  if (!isRecord(value)) {
-    return buildCapacityResult([]);
-  }
-  const percentage = typeof value.percentage === "number" ? value.percentage : undefined;
-  const capacity = typeof value.capacity === "number" ? value.capacity : undefined;
-  const used = typeof value.used === "number" ? value.used : undefined;
-  const computedPct =
-    percentage ??
-    (typeof capacity === "number" && capacity > 0 && typeof used === "number"
-      ? (used / capacity) * 100
-      : 0);
-  return buildCapacityResult([computedPct, 0]);
-};
-
 const normalizeSeriesLength = (values: number[], count: number): number[] => {
   const sliced = values.slice(0, count);
   if (sliced.length >= count) {
@@ -221,22 +147,10 @@ const normalizeSeriesLength = (values: number[], count: number): number[] => {
   return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
 };
 
-const lastNonZeroIndex = (values: number[]): number => {
-  for (let index = values.length - 1; index >= 0; index -= 1) {
-    if (values[index] !== 0) {
-      return index;
-    }
-  }
-  return -1;
-};
-
 const buildSiteFlowResult = (
   rollup: unknown[],
   snapshotTs: Date,
   timeframe: SiteFlowTimeframe,
-  snapshotTsRaw?: string,
-  source?: string,
-  rollupIndex?: number,
 ): ChartResult => {
   const entrances = asNumberArray(rollup?.[0]);
   const exits = asNumberArray(rollup?.[1]);
@@ -249,25 +163,6 @@ const buildSiteFlowResult = (
     snapshotTs,
     [entrances, exits, occupancyAvg, occupancyMin, occupancyMax],
   );
-  const { length, bucketMsToday, dayStart } = resolveSiteFlowSliceCount(
-    timeframe,
-    snapshotTs,
-    [entrances, exits, occupancyAvg, occupancyMin, occupancyMax],
-  );
-  const bucketStepMs = sliceCount > 1 ? timestamps[1].getTime() - timestamps[0].getTime() : null;
-  const nonZeroLastIndex = Math.max(
-    lastNonZeroIndex(entrances),
-    lastNonZeroIndex(exits),
-    lastNonZeroIndex(occupancyAvg),
-  );
-  const idxNow = timeframe === "today" && bucketMsToday
-    ? Math.floor((snapshotTs.getTime() - dayStart.getTime()) / bucketMsToday)
-    : null;
-  const sliceLenTime = idxNow !== null
-    ? clamp(idxNow + 1, 0, length)
-    : null;
-  const weekStart = startOfWeek(snapshotTs);
-  const monthStart = startOfMonth(snapshotTs);
 
   const normalizedEntrances = normalizeSeriesLength(entrances, sliceCount);
   const normalizedExits = normalizeSeriesLength(exits, sliceCount);
@@ -299,58 +194,6 @@ const buildSiteFlowResult = (
       y: normalizedOccAvg[index] ?? null,
     })),
   };
-
-  if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
-    console.log("[Snapshots] Site Flow debug", {
-      snapshotTsRaw,
-      snapshotTsParsed: snapshotTs.toISOString(),
-      timeframe,
-      source,
-      rollupIndex,
-      valuesLength: {
-        entrances: entrances.length,
-        exits: exits.length,
-        occupancyAvg: occupancyAvg.length,
-        occupancyMin: occupancyMin.length,
-        occupancyMax: occupancyMax.length,
-      },
-      bucket,
-      bucketStepMs,
-      idxNow,
-      sliceLenTime,
-      nonZeroLastIndex,
-      sliceCount,
-      dayStartIso: dayStart.toISOString(),
-      weekStartIso: weekStart.toISOString(),
-      monthStartIso: monthStart.toISOString(),
-      bucketMsToday,
-      computedStartIso: timestamps[0]?.toISOString(),
-      computedEndIso: timestamps[timestamps.length - 1]?.toISOString(),
-      firstPointXIso: timestamps[0]?.toISOString(),
-      lastPointXIso: timestamps[timestamps.length - 1]?.toISOString(),
-    });
-  }
-
-  if (process.env.NODE_ENV !== "production" && timeframe === "today") {
-    const lastLabel = timestamps[timestamps.length - 1];
-    const anchorIso = snapshotTs.toISOString();
-    const lastLabelIso = lastLabel?.toISOString();
-    const lastLabelIsFuture = Boolean(lastLabel && lastLabel.getTime() > snapshotTs.getTime());
-    // eslint-disable-next-line no-console
-    console.log("[Snapshots] Site Flow today debug", {
-      payloadTsRaw: snapshotTsRaw,
-      payloadTsParsedISO: anchorIso,
-      dayStartISO: dayStart.toISOString(),
-      N: length,
-      bucketMs: bucketMsToday,
-      idxNow,
-      sliceLen: sliceCount,
-      firstLabelISO: timestamps[0]?.toISOString(),
-      lastLabelISO: lastLabelIso,
-      lastLabelIsFuture,
-    });
-  }
 
   return {
     chartType: "composed_time",
@@ -392,372 +235,6 @@ const buildDemographicResult = (values: number[], kind: "age" | "gender" | "race
   meta: { timezone: "UTC", summary: { title: kind } },
 });
 
-const buildDemographicResultFromRecord = (
-  values: Record<string, number>,
-  kind: "age" | "gender" | "race",
-): ChartResult => ({
-  chartType: "categorical",
-  xDimension: { id: kind, type: "category" },
-  series: [
-    {
-      id: `${kind}_distribution`,
-      label: kind,
-      geometry: "bar",
-      data: Object.entries(values).map(([label, value]) => ({
-        x: label,
-        y: value,
-        value,
-      })),
-    },
-  ],
-  meta: { timezone: "UTC", summary: { title: kind } },
-});
-
-const parseTimestamp = (value: unknown): Date | null => {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value;
-  }
-  if (typeof value === "number") {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-  if (typeof value === "string") {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-  return null;
-};
-
-const normalizeTimeSeriesBlock = (block: TimeSeriesBlock): NormalizedTimeSeries => {
-  const rawTimestamps = Array.isArray(block.timestamps) ? block.timestamps : [];
-  const parsed = rawTimestamps.map((value) => parseTimestamp(value));
-  const validIndexes = parsed
-    .map((value, index) => (value ? index : -1))
-    .filter((index) => index >= 0);
-
-  const timestamps = validIndexes.map((index) => parsed[index] as Date);
-  const series: SnapshotSeries = {};
-
-  Object.entries(block.series ?? {}).forEach(([key, value]) => {
-    if (!Array.isArray(value)) {
-      return;
-    }
-    const numbers = asNumberArray(value);
-    series[key] = validIndexes.map((index) => numbers[index]).filter((item) => item !== undefined);
-  });
-
-  const lengths = [timestamps.length, ...Object.values(series).map((values) => values.length)].filter(
-    (value) => value > 0,
-  );
-  const minLength = lengths.length > 0 ? Math.min(...lengths) : 0;
-  const trimmedTimestamps = minLength > 0 ? timestamps.slice(0, minLength) : [];
-  const trimmedSeries: SnapshotSeries = {};
-
-  Object.entries(series).forEach(([key, values]) => {
-    trimmedSeries[key] = minLength > 0 ? values.slice(0, minLength) : [];
-  });
-
-  if (trimmedTimestamps.length > 1) {
-    const first = trimmedTimestamps[0].getTime();
-    const last = trimmedTimestamps[trimmedTimestamps.length - 1].getTime();
-    if (first > last) {
-      trimmedTimestamps.reverse();
-      Object.keys(trimmedSeries).forEach((key) => {
-        trimmedSeries[key] = trimmedSeries[key].slice().reverse();
-      });
-    }
-  }
-
-  return { timestamps: trimmedTimestamps, series: trimmedSeries };
-};
-
-
-const filterSeriesByWindow = (
-  timeSeries: NormalizedTimeSeries,
-  window: { from: Date; to: Date },
-): NormalizedTimeSeries => {
-  const indices = timeSeries.timestamps
-    .map((timestamp, index) =>
-      timestamp >= window.from && timestamp <= window.to ? index : -1,
-    )
-    .filter((index) => index >= 0);
-
-  const timestamps = indices.map((index) => timeSeries.timestamps[index]);
-  const series: SnapshotSeries = {};
-
-  Object.entries(timeSeries.series).forEach(([key, values]) => {
-    series[key] = indices.map((index) => values[index]).filter((item) => item !== undefined);
-  });
-
-  return { timestamps, series };
-};
-
-const resolveAggregationKind = (seriesKey: string): "sum" | "avg" | "min" | "max" => {
-  const lower = seriesKey.toLowerCase();
-  if (lower.includes("min")) {
-    return "min";
-  }
-  if (lower.includes("max")) {
-    return "max";
-  }
-  if (lower.includes("occupancy") || lower.includes("usage") || lower.includes("percentage") || lower.includes("dwell")) {
-    return "avg";
-  }
-  return "sum";
-};
-
-const aggregateSeriesByBucket = (
-  timeSeries: NormalizedTimeSeries,
-  bucket: "day" | "month",
-): NormalizedTimeSeries => {
-  const bucketKeys: string[] = [];
-  const bucketStarts = new Map<string, Date>();
-
-  const getBucketStart = (date: Date): Date => {
-    if (bucket === "day") {
-      return startOfDay(date);
-    }
-    return new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-  };
-
-  timeSeries.timestamps.forEach((timestamp) => {
-    const start = getBucketStart(timestamp);
-    const key =
-      bucket === "day"
-        ? `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`
-        : `${start.getFullYear()}-${start.getMonth()}`;
-    if (!bucketStarts.has(key)) {
-      bucketStarts.set(key, start);
-      bucketKeys.push(key);
-    }
-  });
-
-  const timestamps = bucketKeys.map((key) => bucketStarts.get(key) as Date);
-  const series: SnapshotSeries = {};
-
-  Object.entries(timeSeries.series).forEach(([key, values]) => {
-    const kind = resolveAggregationKind(key);
-    const aggregates = new Map<
-      string,
-      { sum: number; count: number; min: number; max: number }
-    >();
-
-    values.forEach((value, index) => {
-      const timestamp = timeSeries.timestamps[index];
-      if (!timestamp) {
-        return;
-      }
-      const start = getBucketStart(timestamp);
-      const bucketKey =
-        bucket === "day"
-          ? `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`
-          : `${start.getFullYear()}-${start.getMonth()}`;
-      const current = aggregates.get(bucketKey) ?? {
-        sum: 0,
-        count: 0,
-        min: Number.POSITIVE_INFINITY,
-        max: Number.NEGATIVE_INFINITY,
-      };
-      aggregates.set(bucketKey, {
-        sum: current.sum + value,
-        count: current.count + 1,
-        min: Math.min(current.min, value),
-        max: Math.max(current.max, value),
-      });
-    });
-
-    series[key] = bucketKeys.map((bucketKey) => {
-      const stats = aggregates.get(bucketKey);
-      if (!stats) {
-        return 0;
-      }
-      switch (kind) {
-        case "min":
-          return Number.isFinite(stats.min) ? stats.min : 0;
-        case "max":
-          return Number.isFinite(stats.max) ? stats.max : 0;
-        case "avg":
-          return stats.count > 0 ? stats.sum / stats.count : 0;
-        case "sum":
-        default:
-          return stats.sum;
-      }
-    });
-  });
-
-  return { timestamps, series };
-};
-
-const buildTimeSeriesPointsFromTimestamps = (timestamps: Date[], values: number[]): DataPoint[] =>
-  timestamps.map((timestamp, index) => ({
-    x: toIso(timestamp),
-    y: values[index] ?? 0,
-    value: values[index] ?? 0,
-  }));
-
-const resolveSeriesValues = (
-  timeSeries: NormalizedTimeSeries,
-  keys: string[],
-  fallback: number[] = [],
-): number[] => {
-  for (const key of keys) {
-    const values = timeSeries.series[key];
-    if (Array.isArray(values) && values.length > 0) {
-      return values;
-    }
-  }
-  return fallback;
-};
-
-const ensureSeriesLength = (values: number[], length: number, fillValue = 0): number[] => {
-  if (values.length === length) {
-    return values;
-  }
-  const next = values.slice(0, length);
-  while (next.length < length) {
-    next.push(fillValue);
-  }
-  return next;
-};
-
-const bucketForSnapshotTimeframe = (timeframe: SiteFlowTimeframe): "RAW" | "DAY" | "WEEK" | "MONTH" => {
-  switch (timeframe) {
-    case "today":
-    case "yesterday":
-      return "RAW";
-    case "last_week":
-    case "last_month":
-      return "DAY";
-    case "last_quarter":
-      return "WEEK";
-    case "last_year":
-    case "all_time":
-    default:
-      return "MONTH";
-  }
-};
-
-const buildKpiResultFromSeries = (
-  timeSeries: NormalizedTimeSeries,
-  widgetId: string,
-): ChartResult => {
-  const seriesKeyMap: Record<string, string[]> = {
-    [VRM_KPI_IDS.entrances]: ["entrances", "in"],
-    [VRM_KPI_IDS.exits]: ["exits", "out"],
-    [VRM_KPI_IDS.occupancy]: ["occupancy", "occupancy_avg"],
-    [VRM_KPI_IDS.footfall]: ["footfall"],
-    [VRM_KPI_IDS.dwell]: ["dwell", "dwell_time"],
-  };
-  const values = resolveSeriesValues(timeSeries, seriesKeyMap[widgetId] ?? []);
-  const alignedValues = ensureSeriesLength(values, timeSeries.timestamps.length, 0);
-  return {
-    chartType: "single_value",
-    xDimension: { id: "timestamp", type: "time", bucket: "RAW", timezone: "UTC" },
-    series: [
-      {
-        id: widgetId,
-        label: VRM_KPI_TITLES[widgetId] ?? widgetId,
-        geometry: "line",
-        data: buildTimeSeriesPointsFromTimestamps(timeSeries.timestamps, alignedValues),
-      },
-    ],
-    meta: {
-      timezone: "UTC",
-      summary: {
-        widgetId,
-        title: VRM_KPI_TITLES[widgetId] ?? widgetId,
-        presentation: "vrm",
-      },
-    },
-  };
-};
-
-const buildSiteFlowResultFromSeries = (
-  timeSeries: NormalizedTimeSeries,
-  snapshotTs: Date,
-  timeframe: SiteFlowTimeframe,
-): ChartResult => {
-  const window = resolveSiteFlowWindow(timeframe, snapshotTs);
-  let filteredSeries = filterSeriesByWindow(timeSeries, window);
-
-  if (timeframe === "last_week") {
-    filteredSeries = aggregateSeriesByBucket(filteredSeries, "day");
-  }
-
-  if (timeframe === "last_year") {
-    filteredSeries = aggregateSeriesByBucket(filteredSeries, "month");
-  }
-
-  const timestamps = filteredSeries.timestamps;
-  const entrances = ensureSeriesLength(
-    resolveSeriesValues(filteredSeries, ["entrances", "in"]),
-    timestamps.length,
-    0,
-  );
-  const exits = ensureSeriesLength(
-    resolveSeriesValues(filteredSeries, ["exits", "out"]),
-    timestamps.length,
-    0,
-  );
-  const occupancyAvg = ensureSeriesLength(
-    resolveSeriesValues(filteredSeries, ["occupancy_avg", "occupancy", "usage"]),
-    timestamps.length,
-    0,
-  );
-  const occupancyMin = ensureSeriesLength(
-    resolveSeriesValues(filteredSeries, ["occupancy_min"]),
-    timestamps.length,
-    0,
-  );
-  const occupancyMax = ensureSeriesLength(
-    resolveSeriesValues(filteredSeries, ["occupancy_max"]),
-    timestamps.length,
-    0,
-  );
-
-  const buildSeries = (id: string, values: number[]): ChartSeries => ({
-    id,
-    label: id,
-    geometry: "line",
-    data: timestamps.map((timestamp, index) => ({
-      x: toIso(timestamp),
-      y: values[index] ?? 0,
-      value: values[index] ?? 0,
-    })),
-  });
-
-  const occupancySeries: ChartSeries = {
-    id: "occupancy",
-    label: "Occupancy",
-    geometry: "line",
-    data: timestamps.map((timestamp, index) => ({
-      x: toIso(timestamp),
-      occupancy_avg: occupancyAvg[index] ?? null,
-      occupancy_min: occupancyMin[index] ?? null,
-      occupancy_max: occupancyMax[index] ?? null,
-      value: occupancyAvg[index] ?? null,
-      y: occupancyAvg[index] ?? null,
-    })),
-  };
-
-  return {
-    chartType: "composed_time",
-    xDimension: { id: "timestamp", type: "time", bucket: bucketForSnapshotTimeframe(timeframe), timezone: "UTC" },
-    series: [
-      buildSeries("entrances", entrances),
-      buildSeries("exits", exits),
-      occupancySeries,
-    ],
-    meta: {
-      timezone: "UTC",
-      summary: {
-        title: "Site Flow",
-        presentation: "vrm",
-      },
-    },
-  };
-};
-
 export const buildSnapshotWidgetResult = (
   widgetId: string,
   snapshot: SnapshotResponse,
@@ -770,63 +247,6 @@ export const buildSnapshotWidgetResult = (
   }
   if (!Array.isArray(payload[7])) {
     throw new Error("Snapshot payload missing legacy rollup array at payload[7]");
-  }
-
-  if (ENABLE_BLOCK_PAYLOAD && isBlockPayload(payload)) {
-    const timeSeriesBlock = payload[1] as TimeSeriesBlock;
-    const normalizedSeries = normalizeTimeSeriesBlock(timeSeriesBlock);
-
-    switch (widgetId) {
-      case VRM_KPI_IDS.entrances:
-      case VRM_KPI_IDS.occupancy:
-      case VRM_KPI_IDS.exits:
-      case VRM_KPI_IDS.footfall:
-      case VRM_KPI_IDS.dwell:
-        return buildKpiResultFromSeries(normalizedSeries, widgetId);
-      case VRM_KPI_IDS.capacity:
-        return buildCapacityResultFromBlock(payload[3]);
-      case VRM_KPI_IDS.traffic: {
-        const trafficEntries = Array.isArray(payload[4])
-          ? payload[4]
-              .filter((entry): entry is { label: string; value: number } =>
-                isRecord(entry) && typeof entry.label === "string" && typeof entry.value === "number",
-              )
-          : [];
-        return buildTrafficResultFromSplit(trafficEntries);
-      }
-      case "live-flow":
-      case "site-flow":
-        return buildSiteFlowResultFromSeries(normalizedSeries, snapshotTs, timeframe);
-      case "site-flow-demographics-age": {
-        const demographics = payload[6];
-        if (isRecord(demographics) && isRecord(demographics.age)) {
-          return buildDemographicResultFromRecord(demographics.age as Record<string, number>, "age");
-        }
-        return buildDemographicResult([], "age");
-      }
-      case "site-flow-demographics-gender": {
-        const demographics = payload[6];
-        if (isRecord(demographics) && isRecord(demographics.gender)) {
-          return buildDemographicResultFromRecord(
-            demographics.gender as Record<string, number>,
-            "gender",
-          );
-        }
-        return buildDemographicResult([], "gender");
-      }
-      case "site-flow-demographics-race": {
-        const demographics = payload[6];
-        if (isRecord(demographics) && isRecord(demographics.race)) {
-          return buildDemographicResultFromRecord(
-            demographics.race as Record<string, number>,
-            "race",
-          );
-        }
-        return buildDemographicResult([], "race");
-      }
-      default:
-        throw new Error(`Snapshot payload mapping not implemented for widget ${widgetId}`);
-    }
   }
 
   switch (widgetId) {
@@ -853,8 +273,7 @@ export const buildSnapshotWidgetResult = (
       const rollups = payload[7];
       const rollupIndex = ROLLUP_INDEX[timeframe];
       const rollup = Array.isArray(rollups) ? (rollups[rollupIndex] as unknown[]) : [];
-      const source = Array.isArray(rollups) ? `rollup_${rollupIndex}` : "unknown";
-      return buildSiteFlowResult(rollup ?? [], snapshotTs, timeframe, snapshot.ts, source, rollupIndex);
+      return buildSiteFlowResult(rollup ?? [], snapshotTs, timeframe);
     }
     case "site-flow-demographics-age": {
       const rollups = payload[7];
