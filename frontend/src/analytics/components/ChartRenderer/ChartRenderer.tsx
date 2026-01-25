@@ -4,9 +4,7 @@ import { AxisManager, PaletteManager, SeriesManager } from "./managers";
 import type { SeriesVisibilityMap } from "./managers";
 import {
   TimeSeriesChart,
-  FlowChart,
   BarChart,
-  HeatmapChart,
   KpiTile,
   TrafficDistribution,
   CapacityDonut,
@@ -259,10 +257,6 @@ export const ChartRenderer = ({
     return <KpiTile {...chartProps} />;
   }
 
-  if (result.chartType === "heatmap" || result.chartType === "retention") {
-    return <HeatmapChart {...chartProps} />;
-  }
-
   if (result.chartType === "categorical") {
     if (process.env.NODE_ENV !== "production" && isTrafficDebugCandidate) {
       // eslint-disable-next-line no-console
@@ -272,19 +266,11 @@ export const ChartRenderer = ({
   }
 
   if (result.chartType === "composed_time") {
-    const geometries = new Set(result.series.map((series) => series.geometry));
-    const hasBar = geometries.has("bar") || geometries.has("column");
-    const hasArea = geometries.has("area");
-    const hasLine = geometries.has("line");
     if (process.env.NODE_ENV !== "production" && isTrafficDebugCandidate) {
       // eslint-disable-next-line no-console
       console.log("[VRM traffic] ChartRenderer decision", {
-        renderedPrimitive: (hasArea && hasBar) || (hasBar && hasLine) ? "FlowChart" : "TimeSeriesChart",
-        geometries: Array.from(geometries),
+        renderedPrimitive: "TimeSeriesChart",
       });
-    }
-    if ((hasArea && hasBar) || (hasBar && hasLine)) {
-      return <FlowChart {...chartProps} />;
     }
     return <TimeSeriesChart {...chartProps} />;
   }
