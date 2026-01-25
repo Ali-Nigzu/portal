@@ -12,7 +12,6 @@ import pandas as pd
 from datetime import datetime, timezone
 from typing import Optional, Dict, List, Any
 
-from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,8 +23,6 @@ from backend.app import auth
 from backend.app.models import (
     LoginRequest,
     LoginResponse,
-    ChartDataResponse,
-    DataIntelligence,
     CreateUserRequest,
     UpdateUserRequest,
     CreateViewTokenRequest,
@@ -96,7 +93,7 @@ from backend.app.analytics.org_config import (
     OrganisationNotConfiguredError,
     resolve_table_for_org,
 )
-from backend.app.data_processor import DataProcessor, _resolve_time_bounds
+from backend.app.data_processor import _resolve_time_bounds
 from backend.app.bigquery_client import BigQueryDataFrameError, bigquery_client
 
 logging.basicConfig(level=logging.INFO)
@@ -111,9 +108,6 @@ app = FastAPI(
     openapi_url=None,
 )
 #app.include_router(auth.router, prefix="/api")
-
-ANALYTICS_CACHE_TTL = int(os.getenv("ANALYTICS_CACHE_TTL", "120"))
-analytics_cache: TTLCache = TTLCache(maxsize=128, ttl=ANALYTICS_CACHE_TTL)
 
 ALLOWED_ORIGINS = get_allowed_origins()
 
@@ -388,180 +382,6 @@ def _resolve_snapshot_org(
         status_code=422,
         detail={"error": "missing_org", "message": "org or viewToken is required"},
     )
-
-
-@app.get("/api/chart-data", response_model=ChartDataResponse)
-async def get_chart_data(
-    request: Request,
-    kpi_start_date: Optional[str] = None,
-    kpi_end_date: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    gender: Optional[str] = None,
-    age_group: Optional[str] = None,
-    event: Optional[str] = None,
-    view_token: Optional[str] = None
-):
-    """Return analytics payload backed by BigQuery aggregations."""
-    try:
-        org_id = _authenticate_chart_data_request(
-            request, view_token, request.query_params.get("client_id")
-        )
-        table_name = _resolve_table_for_org(org_id)
-
-        kpi_filters = {
-            'start_date': kpi_start_date or start_date,
-            'end_date': kpi_end_date or end_date,
-            'gender': gender,
-            'age_group': age_group,
-            'event': event,
-        }
-
-        chart_filters = {
-            'start_date': start_date,
-            'end_date': end_date,
-            'gender': gender,
-            'age_group': age_group,
-            'event': event,
-        }
-
-        cache_key = json.dumps(
-            {
-                'table': table_name,
-                'kpi': kpi_filters,
-                'chart': chart_filters,
-            },
-            sort_keys=True,
-        )
-
-        cached_response = analytics_cache.get(cache_key)
-        if cached_response is not None:
-            logger.debug("Analytics cache hit for key %s", cache_key)
-            return cached_response
-
-        agg_data = DataProcessor.get_aggregated_analytics(table_name, kpi_filters, org_id=org_id)
-
-        stats_df = agg_data['stats']
-        stats = stats_df.iloc[0] if not stats_df.empty else None
-
-        def _to_datetime(value):
-            if value is None or (hasattr(pd, 'isna') and pd.isna(value)):
-                return None
-            if isinstance(value, pd.Timestamp):
-                return value.to_pydatetime()
-            if isinstance(value, datetime):
-                return value
-            return pd.to_datetime(value).to_pydatetime()
-
-        def _to_iso(value):
-            dt_value = _to_datetime(value)
-            return dt_value.isoformat() if dt_value else None
-
-        total_records = 0
-        min_dt = None
-        max_dt = None
-        entries = exits = 0
-        if stats is not None:
-            total_records = int(stats['total_records']) if not pd.isna(stats['total_records']) else 0
-            min_dt = _to_datetime(stats['min_timestamp'])
-            max_dt = _to_datetime(stats['max_timestamp'])
-            entries = int(stats['entries']) if not pd.isna(stats['entries']) else 0
-            exits = int(stats['exits']) if not pd.isna(stats['exits']) else 0
-
-        gender_counts: Dict[str, int] = {}
-        age_counts: Dict[str, int] = {}
-        for _, row in agg_data['demographics'].iterrows():
-            gender_counts[row['sex']] = gender_counts.get(row['sex'], 0) + int(row['count'])
-            age_counts[row['age_bucket']] = age_counts.get(row['age_bucket'], 0) + int(row['count'])
-
-        hourly_dist = {
-            int(row['hour']): int(row['count'])
-            for _, row in agg_data['hourly'].iterrows()
-        }
-        peak_hour = max(hourly_dist.items(), key=lambda x: x[1])[0] if hourly_dist else 12
-        peak_hours = sorted(hourly_dist.items(), key=lambda x: x[1], reverse=True)[:3]
-        peak_hours_list = [int(hour) for hour, _ in peak_hours]
-
-        date_span_days = 0
-        if min_dt and max_dt:
-            date_span_days = (max_dt - min_dt).days
-
-        optimal_granularity = 'hourly'
-        if date_span_days > 30:
-            optimal_granularity = 'weekly'
-        elif date_span_days > 7:
-            optimal_granularity = 'daily'
-
-        avg_dwell = 0.0
-        dwell_df = agg_data['dwell']
-        if not dwell_df.empty:
-            dwell_value = dwell_df.iloc[0]['avg_dwell_minutes']
-            if not pd.isna(dwell_value):
-                avg_dwell = float(dwell_value)
-
-        chart_data: List[Dict[str, Any]] = []
-        for _, row in agg_data['records'].iterrows():
-            timestamp = pd.to_datetime(row['timestamp'])
-            chart_data.append({
-                'timestamp': timestamp.isoformat(),
-                'hour': int(timestamp.hour),
-                'date': timestamp.date().isoformat(),
-                'event': 'entry' if row['event'] == 1 else 'exit',
-                'track_number': row['track_id'],
-                'sex': row['sex'],
-                'age_estimate': row['age_bucket'],
-                'day_of_week': timestamp.strftime('%A'),
-                'index': 0,
-            })
-
-        summary = {
-            'total_records': total_records,
-            'date_range': {
-                'start': _to_iso(min_dt),
-                'end': _to_iso(max_dt),
-            },
-            'demographics': {
-                'gender': gender_counts,
-                'age_groups': age_counts,
-            },
-        }
-
-        intelligence = {
-            'total_records': total_records,
-            'date_span_days': date_span_days,
-            'latest_timestamp': _to_iso(max_dt),
-            'optimal_granularity': optimal_granularity,
-            'peak_hours': peak_hours_list,
-            'demographics_breakdown': {
-                'gender': gender_counts,
-                'age_groups': age_counts,
-                'events': {'entry': entries, 'exit': exits},
-            },
-            'temporal_patterns': {
-                'hourly_distribution': hourly_dist,
-                'daily_distribution': {},
-                'peak_times': {
-                    'hour': peak_hour,
-                    'count': hourly_dist.get(peak_hour, 0),
-                },
-            },
-            'avg_dwell_minutes': avg_dwell,
-        }
-
-        response = ChartDataResponse(
-            data=chart_data,
-            summary=summary,
-            intelligence=intelligence,
-        )
-
-        analytics_cache[cache_key] = response
-        return response
-
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("Chart data error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to process chart data: {exc}")
 
 
 def _resolve_event_search_context(
