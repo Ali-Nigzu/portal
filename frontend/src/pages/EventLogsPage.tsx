@@ -422,11 +422,15 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         return date.toISOString().replace('T', ' ').replace('Z', '');
       };
       const resolveExportValue = (event: EventData, column: string) => {
+        const eventRecord = event as unknown as Record<string, unknown>;
         if (column === 'track_id') {
-          return event.track_id ?? event.track_number;
+          return event.track_id ?? eventRecord.track_id ?? event.track_number ?? eventRecord.track_number;
         }
         if (column === 'cam_id') {
-          return event.cam_id ?? event.camera_id;
+          return event.cam_id ?? event.camera_id ?? eventRecord.cam_id ?? eventRecord.camera_id ?? eventRecord.camId;
+        }
+        if (column === 'site_id') {
+          return event.site_id ?? eventRecord.site_id ?? eventRecord.siteId;
         }
         if (column === 'age_bucket') {
           return mapAgeBucketValue(event.age_bucket ?? event.age_estimate);
@@ -438,12 +442,11 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           return mapEventValue(event.event);
         }
         if (column === 'race') {
-          return mapRaceValue(event.race);
+          return mapRaceValue(event.race ?? eventRecord.race ?? eventRecord.race_bucket);
         }
         if (column === 'timestamp') {
           return formatExportTimestamp(event.timestamp);
         }
-        const eventRecord = event as unknown as Record<string, unknown>;
         return eventRecord[column];
       };
       const csvRows = [
@@ -666,7 +669,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
           </div>
         </div>
         <div className="vrm-card-body vrm-card-body--flush">
-          {events.length > 0 ? (
+          {searchToken === 0 ? null : events.length > 0 ? (
             <div className="vrm-table-scroll">
               <table className="vrm-table">
                 <thead>

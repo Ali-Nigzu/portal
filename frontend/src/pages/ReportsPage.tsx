@@ -91,7 +91,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       id: 'device-performance',
       name: 'System Performance',
       description: 'Camera and sensor status, uptime, and data quality metrics',
-      type: 'Technical Report'
+      type: 'Technical Report',
+      disabled: true
     }
   ];
 
@@ -627,7 +628,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                   color: 'var(--vrm-text-primary)'
                 }}
               >
-                {reportTemplates.map(template => (
+                {reportTemplates.filter((template) => !template.disabled).map(template => (
                   <option key={template.id} value={template.id}>{template.name}</option>
                 ))}
               </select>
@@ -690,21 +691,47 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                 borderRadius: '8px',
                 border: `1px solid ${reportType === template.id ? 'var(--vrm-accent-blue)' : 'var(--vrm-border)'}`,
                 transition: 'all 0.2s ease',
-                cursor: 'pointer'
+                cursor: template.disabled ? 'not-allowed' : 'pointer',
+                opacity: template.disabled ? 0.6 : 1,
+                position: 'relative'
               }}
-              onClick={() => setReportType(template.id)}
+              onClick={() => {
+                if (template.disabled) {
+                  return;
+                }
+                setReportType(template.id);
+              }}
               onMouseEnter={(e) => {
-                if (reportType !== template.id) {
+                if (reportType !== template.id && !template.disabled) {
                   e.currentTarget.style.borderColor = 'var(--vrm-accent-blue)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (reportType !== template.id) {
+                if (reportType !== template.id && !template.disabled) {
                   e.currentTarget.style.borderColor = 'var(--vrm-border)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
               }}>
+                {template.disabled ? (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '-32px',
+                      transform: 'rotate(45deg)',
+                      backgroundColor: 'var(--vrm-accent-blue)',
+                      color: 'white',
+                      padding: '4px 40px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '0.4px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Coming soon
+                  </div>
+                ) : null}
                 <div style={{ marginBottom: '12px' }}>
                   <h4 style={{ color: 'var(--vrm-text-primary)', margin: 0, fontSize: '16px', fontWeight: '600' }}>
                     {template.name}
