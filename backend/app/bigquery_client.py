@@ -5,17 +5,12 @@ from __future__ import annotations
 import json
 import logging
 import os
-import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from google.cloud import bigquery
-from google.oauth2 import service_account
-
-from typing import Optional
-import logging
 from google.oauth2 import service_account
 
 try:  # pragma: no cover - informational logging only
