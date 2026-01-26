@@ -47,17 +47,6 @@ class ViewTokenResponse(BaseModel):
     client_id: str
 
 
-class AlarmEvent(BaseModel):
-    id: str
-    instance: str
-    device: str
-    description: str
-    alarmStartedAt: str
-    alarmClearedAfter: Optional[str] = None
-    severity: str
-    client_id: str
-
-
 class RegisterInterestRequest(BaseModel):
     name: str
     email: str
@@ -91,18 +80,6 @@ class UpdateAlarmRequest(BaseModel):
     severity: Optional[str] = None
 
 
-class DeviceInfo(BaseModel):
-    id: str
-    name: str
-    type: str
-    status: str
-    lastSeen: str
-    dataSource: Optional[str] = None
-    location: Optional[str] = None
-    recordCount: Optional[int] = None
-    client_id: str
-
-
 class CreateDeviceRequest(BaseModel):
     name: str
     type: str
@@ -122,28 +99,6 @@ class UpdateDeviceRequest(BaseModel):
     dataSource: Optional[str] = None
     location: Optional[str] = None
     recordCount: Optional[int] = None
-
-
-class DataSource(BaseModel):
-    id: str
-    title: str
-    url: str
-    type: str
-    active: bool = False
-
-
-class CreateDataSourceRequest(BaseModel):
-    title: str
-    url: str
-    type: str
-    client_id: str
-
-
-class UpdateDataSourceRequest(BaseModel):
-    title: Optional[str] = None
-    url: Optional[str] = None
-    type: Optional[str] = None
-    active: Optional[bool] = None
 
 
 class DashboardWidget(BaseModel):
@@ -178,4 +133,3 @@ class DashboardManifest(BaseModel):
     widgets: List[DashboardWidget]
     layout: Dict[str, Any]
     timeControls: Optional[DashboardTimeControls] = None
-

@@ -11,7 +11,7 @@ from typing import Dict
 import hashlib
 import secrets
 
-from .config import USERS_FILE, ALARM_LOGS_FILE, DEVICE_LISTS_FILE
+from backend.app.config import USERS_FILE, ALARM_LOGS_FILE, DEVICE_LISTS_FILE
 
 
 def hash_password(password: str) -> str:
