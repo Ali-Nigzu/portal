@@ -3,19 +3,19 @@ import jsPDF from "jspdf";
 import { API_BASE_URL } from "../config";
 import { Credentials } from "../types/credentials";
 import { determineOrgId } from "../lib/org";
-import type { SnapshotResponse } from "../features/dashboard/utils/snapshotPayload";
+import type { SnapshotResponse } from "../lib/snapshots";
 import {
   AGE_BUCKET_LABELS,
   RACE_BUCKET_LABELS,
   SEX_BUCKET_LABELS,
   TIMEFRAME_OPTIONS,
   buildSiteActivityMetrics,
-  formatReportDateRange,
   buildVisitorProfileMetrics,
+  formatReportDateRange,
   resolveRollup,
   type ReportTimeframe,
-} from "./reports/reportUtils";
-import { buildSiteFlowBucketLabels } from "../features/dashboard/utils/siteFlowBuckets";
+} from "../features/reports/reportUtils";
+import { buildSiteFlowBucketLabels } from "../lib/siteFlowBuckets";
 import { startOfYear } from "../lib/timeWindows";
 interface ReportsPageProps {
   credentials?: Credentials;

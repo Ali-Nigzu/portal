@@ -1,7 +1,4 @@
-import type {
-  TimeBucket,
-  TimeWindow,
-} from "../../../analytics/schemas/charting";
+import type { TimeBucket, TimeWindow } from "../analytics/schemas/charting";
 export type SiteFlowTimeframe =
   | "today"
   | "yesterday"

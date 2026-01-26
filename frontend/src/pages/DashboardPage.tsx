@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Card } from "../analytics/components/Card";
-import { ChartRenderer } from "../analytics/components/ChartRenderer";
+import { Card } from "../analytics/components/Card/Card";
+import { ChartRenderer } from "../analytics/components/ChartRenderer/ChartRenderer";
 import ErrorBoundary from "../common/components/ErrorBoundary";
 import { logError, logInfo } from "../common/utils/logger";
 import HeaderStatusStrip from "../components/HeaderStatusStrip";
@@ -47,7 +47,7 @@ import {
   SITE_FLOW_TIMEFRAME_OPTIONS,
   bucketForSiteFlowTimeframe,
   resolveSiteFlowTimeRange,
-} from "../features/dashboard/utils/siteFlowTimeframe";
+} from "../lib/siteFlowTimeframe";
 import { isSnapshotOrg } from "../features/dashboard/utils/snapshotMode";
 import type { ChartSpec, ChartDimension } from "../analytics/schemas/charting";
 const GRID_ROW_HEIGHT = 96;
@@ -1000,5 +1000,4 @@ const DashboardPageWithBoundary = (props: DashboardPageProps) => (
     <DashboardPage {...props} />
   </ErrorBoundary>
 );
-export { DashboardPage, renderLoading, renderError };
 export default DashboardPageWithBoundary;
