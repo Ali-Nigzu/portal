@@ -19,8 +19,14 @@ const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [credentials, setCredentials] = useState<Credentials>({ username: '', password: '' });
   const [userRole, setUserRole] = useState<'client' | 'admin'>('client');
+  const hasViewToken = Boolean(getViewTokenFromLocation());
+  const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
 
   useEffect(() => {
+    if (hasViewToken) {
+      setIsSessionChecked(true);
+      return;
+    }
     const savedCredentials = sessionStorage.getItem('camOS_credentials');
     if (savedCredentials) {
       try {
@@ -34,7 +40,8 @@ const AppRoutes: React.FC = () => {
         sessionStorage.removeItem('camOS_credentials');
       }
     }
-  }, []);
+    setIsSessionChecked(true);
+  }, [hasViewToken]);
 
   const handleLogin = (nextCreds: Credentials) => {
     const resolvedOrgId = nextCreds.orgId ?? determineOrgId({ username: nextCreds.username });
@@ -62,9 +69,12 @@ const AppRoutes: React.FC = () => {
     }
   };
 
-  const hasViewToken = Boolean(getViewTokenFromLocation());
   const resolvedRole = hasViewToken ? 'client' : userRole;
   const shouldAllowAppRoutes = isLoggedIn || hasViewToken;
+
+  if (!isSessionChecked) {
+    return null;
+  }
 
   const renderClientRoute = (element: React.ReactNode) => (
     <VRMLayout userRole={resolvedRole} onLogout={handleLogout}>
