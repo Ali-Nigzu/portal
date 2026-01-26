@@ -9,7 +9,7 @@ from typing import Any, Iterable, Optional
 
 from google.cloud import bigquery
 
-from .bigquery_client import bigquery_client
+from .services.bigquery_client import bigquery_client
 
 
 SNAPSHOT_ORG_IDS = {"client1", "client2"}

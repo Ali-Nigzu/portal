@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from .database import load_users, save_users
+from .data.json_store import load_users, save_users
 
 security = HTTPBasic()
 

@@ -13,7 +13,7 @@ DEFAULT_START = datetime(1970, 1, 1, tzinfo=UTC)
 DEFAULT_END = datetime(2100, 1, 1, tzinfo=UTC)
 
 
-def _parse_timestamp(value: Optional[str], *, is_end: bool = False) -> Optional[datetime]:
+def parse_timestamp(value: Optional[str], *, is_end: bool = False) -> Optional[datetime]:
     """Parse ISO8601 or date-only strings into timezone-aware datetimes."""
     if not value:
         return None
@@ -40,10 +40,10 @@ def _parse_timestamp(value: Optional[str], *, is_end: bool = False) -> Optional[
     return dt
 
 
-def _resolve_time_bounds(filters: Dict[str, Optional[str]]) -> Dict[str, datetime]:
+def resolve_time_bounds(filters: Dict[str, Optional[str]]) -> Dict[str, datetime]:
     now = datetime.now(tz=UTC)
-    start_ts = _parse_timestamp(filters.get("start_date")) or DEFAULT_START
-    end_ts = _parse_timestamp(filters.get("end_date"), is_end=True) or now
+    start_ts = parse_timestamp(filters.get("start_date")) or DEFAULT_START
+    end_ts = parse_timestamp(filters.get("end_date"), is_end=True) or now
 
     if end_ts > now:
         end_ts = now
