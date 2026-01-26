@@ -16,7 +16,6 @@ from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from backend.app import auth
 
 
 from backend.app.models import (
@@ -35,21 +34,18 @@ from backend.app.models import (
     RegisterInterestRequest,
     RegisterInterestResponse,
     DashboardManifest,
-    PinDashboardWidgetRequest,
 )
 from backend.app.analytics.dashboard_catalogue import (
     ManifestValidationError,
     get_dashboard_manifest,
-    pin_widget_to_manifest,
     remove_widget_from_manifest,
 )
 from backend.app.auth import (
-    hash_password,
     verify_password,
     authenticate_user,
-    security
 )
 from backend.app.database import (
+    hash_password,
     load_users,
     save_users,
     load_alarm_logs,
@@ -63,7 +59,6 @@ from backend.app.config import (
     ALARM_LOGS_FILE,
     DEVICE_LISTS_FILE,
     INTEREST_SUBMISSIONS_FILE,
-    GCS_BUCKET
 )
 from backend.app.view_tokens import (
     create_view_token,
@@ -100,7 +95,6 @@ app = FastAPI(
     redoc_url=None,
     openapi_url=None,
 )
-#app.include_router(auth.router, prefix="/api")
 
 ALLOWED_ORIGINS = get_allowed_origins()
 
@@ -128,11 +122,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 )
 
-
-#@app.get("/")
-#async def root():
-#    """API health check"""
-#    return {"message": "camOS Analytics API v2.0", "status": "healthy"}
 
 
 @app.post("/api/register-interest", response_model=RegisterInterestResponse)
@@ -450,85 +439,35 @@ async def search_events(
 
         logger.debug("Event search params: %s", dict(request.query_params))
 
-        filters: Dict[str, Optional[str]] = {
-            'start_date': start_date,
-            'end_date': end_date,
-        }
-        bounds = _resolve_time_bounds(filters)
-
-        resolved_events: Optional[List[int]] = None
-        if event and event.lower() != 'all':
-            resolved_events = [1 if event.lower() == 'entry' else 0]
-
-        resolved_sex = None
-        if sex and sex.lower() != 'all':
-            normalized_sex = sex.strip().lower()
-            if normalized_sex in {"m", "male", "0"}:
-                resolved_sex = "M"
-            elif normalized_sex in {"f", "female", "1"}:
-                resolved_sex = "F"
-            elif normalized_sex:
-                resolved_sex = normalized_sex.upper()
-
-        resolved_age = None
-        if age and age.lower() != 'all':
-            normalized_age = age.strip().lower()
-            age_map = {
-                "0": "0-4",
-                "1": "5-13",
-                "2": "14-25",
-                "3": "26-45",
-                "4": "46-65",
-                "5": "66+",
-                "0-4": "0-4",
-                "5-13": "5-13",
-                "14-25": "14-25",
-                "26-45": "26-45",
-                "46-65": "46-65",
-                "66+": "66+",
-            }
-            resolved_age = age_map.get(normalized_age)
-        resolved_race = race if race and race.lower() != 'all' else None
-
-        resolved_track = None
-        resolved_track_like = None
-        if track_id:
-            cleaned_track = track_id.strip()
-            if cleaned_track.startswith("#"):
-                cleaned_track = cleaned_track[1:].strip()
-            if cleaned_track:
-                resolved_track = cleaned_track.lower()
-                resolved_track_like = f"%{resolved_track}%"
+        base_ctx = _resolve_event_search_context(
+            org_id=org_id,
+            table_name=table_name,
+            start_date=start_date,
+            end_date=end_date,
+            event=event,
+            sex=sex,
+            age=age,
+            race=race,
+            site_id=site_id,
+            camera_id=camera_id,
+            track_id=track_id,
+        )
 
         logger.debug(
             "Event search filters resolved: %s",
             {
-                "start": bounds["start_ts"],
-                "end": bounds["end_ts"],
-                "event": resolved_events,
-                "sex": resolved_sex,
-                "age_bucket": resolved_age,
-                "race": resolved_race,
-                "site_id": site_id,
-                "camera_id": camera_id,
-                "track": resolved_track,
+                "start": base_ctx.start,
+                "end": base_ctx.end,
+                "event": base_ctx.events,
+                "sex": base_ctx.sexes,
+                "age_bucket": base_ctx.age_buckets,
+                "race": base_ctx.races,
+                "site_id": base_ctx.site_ids,
+                "camera_id": base_ctx.camera_ids,
+                "track": track_id,
                 "page": page,
                 "per_page": per_page,
             },
-        )
-
-        base_ctx = QueryContext(
-            org_id=org_id,
-            table_name=table_name,
-            start=bounds['start_ts'],
-            end=bounds['end_ts'],
-            events=resolved_events,
-            sexes=[resolved_sex] if resolved_sex else None,
-            age_buckets=[resolved_age] if resolved_age else None,
-            races=[resolved_race] if resolved_race else None,
-            site_ids=[site_id] if site_id else None,
-            camera_ids=[camera_id] if camera_id else None,
-            track_id_like=resolved_track_like,
         )
 
         summary_plan = compile_contract_query(Metric.EVENT_SUMMARY, base_ctx)
@@ -1279,34 +1218,6 @@ async def fetch_dashboard_manifest(
         raise HTTPException(
             status_code=404,
             detail={"error": "manifest_not_found", "message": str(exc)},
-        )
-
-
-@app.post("/api/dashboards/{dashboard_id}/widgets", response_model=DashboardManifest)
-async def pin_dashboard_widget(
-    dashboard_id: str,
-    request: PinDashboardWidgetRequest,
-    org_id: str = Query(..., alias="orgId"),
-):
-    """Persist a widget inside the manifest for the given organisation."""
-    try:
-        manifest = pin_widget_to_manifest(
-            org_id=org_id,
-            dashboard_id=dashboard_id,
-            widget=request.widget.dict(exclude_none=True),
-            position=request.position or "end",
-            target_band=request.targetBand,
-        )
-        return manifest
-    except KeyError as exc:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "manifest_not_found", "message": str(exc)},
-        )
-    except ManifestValidationError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "manifest_validation", "message": str(exc)},
         )
 
 

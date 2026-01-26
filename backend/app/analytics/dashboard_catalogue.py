@@ -527,13 +527,6 @@ def _validate_manifest(manifest: Manifest) -> None:
             raise ManifestValidationError(f"KPI widget cannot have grid placement: {widget_id}")
 
 
-def _infer_next_grid_slot(placements: Mapping[str, Dict[str, int]]) -> Dict[str, int]:
-    if not placements:
-        return {"x": 0, "y": 0, "w": _DEFAULT_GRID_COLUMNS, "h": _DEFAULT_GRID_HEIGHT}
-    bottom = max(slot["y"] + slot["h"] for slot in placements.values())
-    return {"x": 0, "y": bottom, "w": _DEFAULT_GRID_COLUMNS, "h": _DEFAULT_GRID_HEIGHT}
-
-
 def get_dashboard_spec(spec_id: str) -> ChartSpec:
     spec = DASHBOARD_SPEC_CATALOGUE.get(spec_id)
     if spec is None:
@@ -544,63 +537,6 @@ def get_dashboard_spec(spec_id: str) -> ChartSpec:
 def get_dashboard_manifest(org_id: str, dashboard_id: str = "dashboard-default") -> Manifest:
     manifest = _load_manifest(org_id, dashboard_id)
     return _clone_for_response(manifest, org_id)
-
-
-def pin_widget_to_manifest(
-    *,
-    org_id: str,
-    widget: Widget,
-    dashboard_id: str = "dashboard-default",
-    position: str = "end",
-    target_band: Optional[str] = None,
-) -> Manifest:
-    manifest = _load_manifest(org_id, dashboard_id)
-    _ensure_layout_scaffolding(manifest)
-
-    widget_copy = deepcopy(widget)
-    widget_copy.setdefault("locked", False)
-    _validate_widget(widget_copy)
-
-    existing_ids = {existing.get("id") for existing in manifest.get("widgets", [])}
-    widget_id = widget_copy["id"]
-    if widget_id in existing_ids:
-        # Idempotent: return without mutating state.
-        return get_dashboard_manifest(org_id, dashboard_id)
-
-    widgets = manifest.setdefault("widgets", [])
-    if position == "start":
-        widgets.insert(0, widget_copy)
-    else:
-        widgets.append(widget_copy)
-
-    layout = manifest["layout"]
-    band_target = target_band or ("kpiBand" if widget_copy.get("kind") == "kpi" else "grid")
-
-    if band_target == "kpiBand":
-        if widget_copy.get("kind") != "kpi":
-            raise ManifestValidationError("Only KPI widgets can be placed in the KPI band")
-        band = layout.get("kpiBand", [])
-        band = [wid for wid in band if wid != widget_id]
-        if position == "start":
-            band.insert(0, widget_id)
-        else:
-            band.append(widget_id)
-        layout["kpiBand"] = band
-    else:
-        placements = layout.get("grid", {}).get("placements", {})
-        placement = widget_copy.get("layout", {}).get("grid") if widget_copy.get("layout") else None
-        if placement is None:
-            placement = _infer_next_grid_slot(placements)
-        placements[widget_id] = {
-            "x": int(placement.get("x", 0)),
-            "y": int(placement.get("y", 0)),
-            "w": int(placement.get("w", _DEFAULT_GRID_COLUMNS)),
-            "h": int(placement.get("h", _DEFAULT_GRID_HEIGHT)),
-        }
-
-    _validate_manifest(manifest)
-    _save_manifest(org_id, dashboard_id, manifest)
-    return get_dashboard_manifest(org_id, dashboard_id)
 
 
 def remove_widget_from_manifest(
