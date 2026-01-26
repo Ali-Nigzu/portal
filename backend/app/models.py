@@ -179,8 +179,3 @@ class DashboardManifest(BaseModel):
     layout: Dict[str, Any]
     timeControls: Optional[DashboardTimeControls] = None
 
-
-class PinDashboardWidgetRequest(BaseModel):
-    widget: DashboardWidget
-    position: Optional[str] = None
-    targetBand: Optional[str] = None

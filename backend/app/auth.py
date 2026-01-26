@@ -3,25 +3,14 @@ Authentication utilities for camOS Analytics API
 """
 
 import hashlib
-import secrets
 from datetime import datetime
-from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-
-from fastapi import APIRouter, Depends
-#from .auth import authenticate_user  # make sure this is correct path
 
 from .database import load_users, save_users
 
 security = HTTPBasic()
-
-
-def hash_password(password: str) -> str:
-    """Hash password using SHA-256 with salt"""
-    salt = secrets.token_hex(16)
-    password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
-    return f"{salt}:{password_hash}"
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
@@ -62,9 +51,3 @@ def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
         'role': user['role'],
         'name': user.get('name', credentials.username)
     }
-
-from fastapi import APIRouter, Depends
-from fastapi.security import HTTPBasicCredentials
-from .auth import authenticate_user  # import your authenticate_user function
-
-router = APIRouter()
