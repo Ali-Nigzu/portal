@@ -27,7 +27,8 @@ export const ChartTooltip = ({
       <div className="tooltip-header">{label}</div>
       <ul>
         {" "}
-        {payload.map((entry) => {
+        {payload
+          .map((entry) => {
             const seriesId = String(entry.dataKey);
             const series = seriesMap.get(seriesId);
             if (series?.hideInTooltip) {
@@ -77,7 +78,8 @@ export const ChartTooltip = ({
                 </span>
               </li>
             );
-          }).filter(Boolean)}{" "}
+          })
+          .filter(Boolean)}{" "}
       </ul>
     </div>
   );

@@ -47,9 +47,9 @@ export class SeriesManager {
   }
   getVisibleSeries(): Set<string> {
     return new Set(
-      Array.from(this.visibility.entries()).filter(([, visible]) => visible).map(
-        ([id]) => id,
-      ),
+      Array.from(this.visibility.entries())
+        .filter(([, visible]) => visible)
+        .map(([id]) => id),
     );
   }
   toObject(): SeriesVisibilityMap {

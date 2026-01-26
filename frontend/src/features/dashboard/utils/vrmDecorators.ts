@@ -172,14 +172,14 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     seriesGroup: "occupancy",
     data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_span })),
   };
-  const bars = result.series.filter(
-    (series) => series.id !== "occupancy" && series.id !== "throughput",
-  ).map((series) => {
-    if (series.id === "entrances" || series.id === "exits") {
-      return { ...series, geometry: "bar" as const, unit: "events" };
-    }
-    return series;
-  });
+  const bars = result.series
+    .filter((series) => series.id !== "occupancy" && series.id !== "throughput")
+    .map((series) => {
+      if (series.id === "entrances" || series.id === "exits") {
+        return { ...series, geometry: "bar" as const, unit: "events" };
+      }
+      return series;
+    });
   return {
     ...result,
     meta: {

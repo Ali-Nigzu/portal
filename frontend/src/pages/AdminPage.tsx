@@ -940,12 +940,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                   }}
                 >
                   <option value="">-- Select a client --</option>{" "}
-                  {users.filter((user) => user.role === "client").map((user) => (
-                    <option key={user.username} value={user.username}>
-                      {" "}
-                      {user.name} ({user.username}){" "}
-                    </option>
-                  ))}{" "}
+                  {users
+                    .filter((user) => user.role === "client")
+                    .map((user) => (
+                      <option key={user.username} value={user.username}>
+                        {" "}
+                        {user.name} ({user.username}){" "}
+                      </option>
+                    ))}{" "}
                 </select>{" "}
                 {selectedClient && (
                   <button
@@ -974,111 +976,97 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                         </thead>
                         <tbody>
                           {" "}
-                          {dataSources.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={6}
-                                style={{
-                                  textAlign: "center",
-                                  padding: "40px",
-                                  color: "var(--vrm-text-secondary)",
-                                }}
-                              >
-                                {" "}
-                                No data sources found for this client{" "}
-                              </td>
-                            </tr>
-                          ) : (
-                            dataSources.map((source, index) => (
-                              <tr key={source.id}>
-                                <td>
-                                  <code>Source {index + 1}</code>
-                                </td>
-                                <td>{source.title}</td>
-                                <td
-                                  style={{
-                                    maxWidth: "300px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {" "}
-                                  {source.url}{" "}
-                                </td>
-                                <td>
-                                  <span className="vrm-status vrm-status-online">
-                                    {" "}
-                                    {source.type}{" "}
-                                  </span>
-                                </td>
-                                <td>
-                                  {" "}
-                                  {source.active ? (
-                                    <span
-                                      className="vrm-status vrm-status-online"
-                                      style={{
-                                        backgroundColor: "#22c55e",
-                                        fontWeight: "bold",
-                                      }}
-                                    >
-                                      {" "}
-                                      Active{" "}
-                                    </span>
-                                  ) : (
-                                    <span
-                                      className="vrm-status"
-                                      style={{ backgroundColor: "#6b7280" }}
-                                    >
-                                      {" "}
-                                      Inactive{" "}
-                                    </span>
-                                  )}{" "}
-                                </td>
-                                <td>
-                                  <div
+                          {dataSources.length > 0
+                            ? dataSources.map((source, index) => (
+                                <tr key={source.id}>
+                                  <td>
+                                    <code>Source {index + 1}</code>
+                                  </td>
+                                  <td>{source.title}</td>
+                                  <td
                                     style={{
-                                      display: "flex",
-                                      gap: "8px",
-                                      flexWrap: "wrap",
+                                      maxWidth: "300px",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
                                     }}
                                   >
                                     {" "}
-                                    {!source.active && (
-                                      <button
-                                        className="vrm-btn vrm-btn-sm"
-                                        onClick={() =>
-                                          handleSetActiveDataSource(source.id)
-                                        }
+                                    {source.url}{" "}
+                                  </td>
+                                  <td>
+                                    <span className="vrm-status vrm-status-online">
+                                      {" "}
+                                      {source.type}{" "}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {" "}
+                                    {source.active ? (
+                                      <span
+                                        className="vrm-status vrm-status-online"
+                                        style={{
+                                          backgroundColor: "#22c55e",
+                                          fontWeight: "bold",
+                                        }}
                                       >
                                         {" "}
-                                        Set as Active{" "}
-                                      </button>
+                                        Active{" "}
+                                      </span>
+                                    ) : (
+                                      <span
+                                        className="vrm-status"
+                                        style={{ backgroundColor: "#6b7280" }}
+                                      >
+                                        {" "}
+                                        Inactive{" "}
+                                      </span>
                                     )}{" "}
-                                    <button
-                                      className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                      onClick={() => {
-                                        setEditingDataSource(source);
-                                        setShowEditDataSource(true);
+                                  </td>
+                                  <td>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        gap: "8px",
+                                        flexWrap: "wrap",
                                       }}
                                     >
                                       {" "}
-                                      Edit{" "}
-                                    </button>
-                                    <button
-                                      className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                      onClick={() =>
-                                        handleDeleteDataSource(source.id)
-                                      }
-                                    >
-                                      {" "}
-                                      Delete{" "}
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}{" "}
+                                      {!source.active && (
+                                        <button
+                                          className="vrm-btn vrm-btn-sm"
+                                          onClick={() =>
+                                            handleSetActiveDataSource(source.id)
+                                          }
+                                        >
+                                          {" "}
+                                          Set as Active{" "}
+                                        </button>
+                                      )}{" "}
+                                      <button
+                                        className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                        onClick={() => {
+                                          setEditingDataSource(source);
+                                          setShowEditDataSource(true);
+                                        }}
+                                      >
+                                        {" "}
+                                        Edit{" "}
+                                      </button>
+                                      <button
+                                        className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                        onClick={() =>
+                                          handleDeleteDataSource(source.id)
+                                        }
+                                      >
+                                        {" "}
+                                        Delete{" "}
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))
+                            : null}{" "}
                         </tbody>
                       </table>
                     </div>
@@ -1770,68 +1758,54 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                   </thead>
                   <tbody>
                     {" "}
-                    {alarms.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          style={{
-                            textAlign: "center",
-                            padding: "40px",
-                            color: "var(--vrm-text-secondary)",
-                          }}
-                        >
-                          {" "}
-                          No alarms found for this client{" "}
-                        </td>
-                      </tr>
-                    ) : (
-                      alarms.map((alarm) => (
-                        <tr key={alarm.id}>
-                          <td>
-                            <code>{alarm.instance}</code>
-                          </td>
-                          <td>{alarm.device}</td>
-                          <td>{alarm.description}</td>
-                          <td>{alarm.alarmStartedAt}</td>
-                          <td>{alarm.alarmClearedAfter || "Active"}</td>
-                          <td>
-                            <span
-                              className={`vrm-status ${
-                                alarm.severity === "high"
-                                  ? "vrm-status-offline"
-                                  : alarm.severity === "medium"
-                                    ? "vrm-status-warning"
-                                    : "vrm-status-online"
-                              }`}
-                            >
-                              {" "}
-                              {alarm.severity}{" "}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: "flex", gap: "8px" }}>
-                              <button
-                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                onClick={() => {
-                                  setEditingAlarm(alarm);
-                                  setShowEditAlarm(true);
-                                }}
+                    {alarms.length > 0
+                      ? alarms.map((alarm) => (
+                          <tr key={alarm.id}>
+                            <td>
+                              <code>{alarm.instance}</code>
+                            </td>
+                            <td>{alarm.device}</td>
+                            <td>{alarm.description}</td>
+                            <td>{alarm.alarmStartedAt}</td>
+                            <td>{alarm.alarmClearedAfter || "Active"}</td>
+                            <td>
+                              <span
+                                className={`vrm-status ${
+                                  alarm.severity === "high"
+                                    ? "vrm-status-offline"
+                                    : alarm.severity === "medium"
+                                      ? "vrm-status-warning"
+                                      : "vrm-status-online"
+                                }`}
                               >
                                 {" "}
-                                Edit{" "}
-                              </button>
-                              <button
-                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                onClick={() => handleDeleteAlarm(alarm.id)}
-                              >
-                                {" "}
-                                Delete{" "}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}{" "}
+                                {alarm.severity}{" "}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                  onClick={() => {
+                                    setEditingAlarm(alarm);
+                                    setShowEditAlarm(true);
+                                  }}
+                                >
+                                  {" "}
+                                  Edit{" "}
+                                </button>
+                                <button
+                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                  onClick={() => handleDeleteAlarm(alarm.id)}
+                                >
+                                  {" "}
+                                  Delete{" "}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      : null}{" "}
                   </tbody>
                 </table>
               </div>
@@ -2224,66 +2198,52 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
                   </thead>
                   <tbody>
                     {" "}
-                    {devices.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          style={{
-                            textAlign: "center",
-                            padding: "40px",
-                            color: "var(--vrm-text-secondary)",
-                          }}
-                        >
-                          {" "}
-                          No devices found for this client{" "}
-                        </td>
-                      </tr>
-                    ) : (
-                      devices.map((device) => (
-                        <tr key={device.id}>
-                          <td>{device.name}</td>
-                          <td>{device.type}</td>
-                          <td>
-                            <span
-                              className={`vrm-status ${
-                                device.status === "online"
-                                  ? "vrm-status-online"
-                                  : device.status === "offline"
-                                    ? "vrm-status-offline"
-                                    : "vrm-status-warning"
-                              }`}
-                            >
-                              {" "}
-                              {device.status}{" "}
-                            </span>
-                          </td>
-                          <td>{device.location || "-"}</td>
-                          <td>{device.lastSeen}</td>
-                          <td>{device.recordCount?.toLocaleString() || 0}</td>
-                          <td>
-                            <div style={{ display: "flex", gap: "8px" }}>
-                              <button
-                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                onClick={() => {
-                                  setEditingDevice(device);
-                                  setShowEditDevice(true);
-                                }}
+                    {devices.length > 0
+                      ? devices.map((device) => (
+                          <tr key={device.id}>
+                            <td>{device.name}</td>
+                            <td>{device.type}</td>
+                            <td>
+                              <span
+                                className={`vrm-status ${
+                                  device.status === "online"
+                                    ? "vrm-status-online"
+                                    : device.status === "offline"
+                                      ? "vrm-status-offline"
+                                      : "vrm-status-warning"
+                                }`}
                               >
                                 {" "}
-                                Edit{" "}
-                              </button>
-                              <button
-                                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                                onClick={() => handleDeleteDevice(device.id)}
-                              >
-                                {" "}
-                                Delete{" "}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}{" "}
+                                {device.status}{" "}
+                              </span>
+                            </td>
+                            <td>{device.location || "-"}</td>
+                            <td>{device.lastSeen}</td>
+                            <td>{device.recordCount?.toLocaleString() || 0}</td>
+                            <td>
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                  onClick={() => {
+                                    setEditingDevice(device);
+                                    setShowEditDevice(true);
+                                  }}
+                                >
+                                  {" "}
+                                  Edit{" "}
+                                </button>
+                                <button
+                                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                                  onClick={() => handleDeleteDevice(device.id)}
+                                >
+                                  {" "}
+                                  Delete{" "}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      : null}{" "}
                   </tbody>
                 </table>
               </div>

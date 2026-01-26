@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Card } from "../analytics/components/Card";
 import { ChartRenderer } from "../analytics/components/ChartRenderer";
 import ErrorBoundary from "../common/components/ErrorBoundary";
@@ -54,7 +55,9 @@ const TIMESTAMP_DIMENSION_ID = "timestamp";
 const formatTitleCase = (value?: string | null) => {
   if (!value) return "Site";
   const parts = value.split(/[\s._-]+/).filter(Boolean);
-  return parts.map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" ");
+  return parts
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
 };
 const deriveSiteDisplayId = (raw?: string | null) => {
   if (!raw) return "—";
@@ -86,15 +89,8 @@ interface DashboardPageProps {
   unpinWidget?: UnpinMutator;
   dashboardId?: string;
 }
-const renderLoading = (label: string, variant: "card" | "kpi" = "card") => (
-  <div
-    className={`dashboard-v2__placeholder dashboard-v2__placeholder--${variant}`}
-    aria-live="polite"
-  >
-    {" "}
-    Loading {label}…{" "}
-  </div>
-);
+const renderLoading = (_label: string, _variant: "card" | "kpi" = "card") =>
+  null;
 const renderError = (message: string) => (
   <div className="dashboard-v2__error" role="alert">
     {" "}
@@ -128,13 +124,11 @@ const KpiTile = ({
         },
       } as Parameters<typeof ChartRenderer>[0]["result"])
     : result;
-  let content: JSX.Element;
+  let content: ReactNode = null;
   if (state.status === "loading") {
     content = renderLoading(title, "kpi");
   } else if (state.status === "error") {
     content = renderError(state.error ?? `Failed to load ${title}`);
-  } else if (!result) {
-    content = renderError("No data available");
   } else {
     content = (
       <ChartRenderer
@@ -193,13 +187,11 @@ const ChartCard = ({
   onRemove?: () => void;
   widgetId: string;
 }) => {
-  let body: JSX.Element;
+  let body: ReactNode = null;
   if (state.status === "loading") {
     body = renderLoading(title);
   } else if (state.status === "error") {
     body = renderError(state.error ?? `Failed to load ${title}`);
-  } else if (!result) {
-    body = renderError("No data available");
   } else {
     body = <ChartRenderer result={result} height={360} widgetId={widgetId} />;
   }
@@ -262,24 +254,24 @@ const SiteFlowCard = ({
   const renderSiteFlowBody = () => {
     if (mode === "demographics") {
       if (demographics.status === "loading") {
-        return renderLoading("Demographics");
+        return null;
       }
       if (demographics.status === "error") {
         return renderError(demographics.error ?? "Failed to load demographics");
       }
       if (demographics.status !== "ready" || !demographics.data) {
-        return renderError("No demographics available");
+        return null;
       }
       return <SiteFlowDemographicsView data={demographics.data} />;
     }
     if (activity.status === "loading") {
-      return renderLoading("Site Flow");
+      return null;
     }
     if (activity.status === "error") {
       return renderError(activity.error ?? "Failed to load Site Flow");
     }
     if (!activity.result) {
-      return renderError("No data available");
+      return null;
     }
     return (
       <ChartRenderer
@@ -586,10 +578,7 @@ const DashboardPage = ({
             if (controller.signal.aborted) {
               return;
             }
-            if (
-              !import.meta.env.PROD &&
-              widget.id === VRM_KPI_IDS.traffic
-            ) {
+            if (!import.meta.env.PROD && widget.id === VRM_KPI_IDS.traffic) {
               const summary = result.meta?.summary as
                 | Record<string, unknown>
                 | undefined;
@@ -739,20 +728,22 @@ const DashboardPage = ({
       orgId,
       viewToken,
       snapshotTimeframe: siteFlowTimeframe,
-    }).then((result) => {
-      if (controller.signal.aborted) {
-        return;
-      }
-      const decorated = decorateResult(widget.id, result, clientContextId);
-      setSiteFlowActivity({ status: "ready", result: decorated });
-    }).catch((err) => {
-      if (controller.signal.aborted) {
-        return;
-      }
-      const message =
-        err instanceof Error ? err.message : "Failed to load Site Flow";
-      setSiteFlowActivity({ status: "error", error: message });
-    });
+    })
+      .then((result) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const decorated = decorateResult(widget.id, result, clientContextId);
+        setSiteFlowActivity({ status: "ready", result: decorated });
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const message =
+          err instanceof Error ? err.message : "Failed to load Site Flow";
+        setSiteFlowActivity({ status: "error", error: message });
+      });
     return () => controller.abort();
   }, [
     clientContextId,
@@ -795,8 +786,8 @@ const DashboardPage = ({
         viewToken,
         snapshotTimeframe: siteFlowTimeframe,
       });
-    Promise.all(kinds.map((kind) => loadDemographic(kind))).then(
-      ([ageResult, genderResult, raceResult]) => {
+    Promise.all(kinds.map((kind) => loadDemographic(kind)))
+      .then(([ageResult, genderResult, raceResult]) => {
         if (controller.signal.aborted) {
           return;
         }
@@ -807,15 +798,15 @@ const DashboardPage = ({
           timezone,
         });
         setSiteFlowDemographics({ status: "ready", data });
-      },
-    ).catch((err) => {
-      if (controller.signal.aborted) {
-        return;
-      }
-      const message =
-        err instanceof Error ? err.message : "Failed to load demographics";
-      setSiteFlowDemographics({ status: "error", error: message });
-    });
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const message =
+          err instanceof Error ? err.message : "Failed to load demographics";
+        setSiteFlowDemographics({ status: "error", error: message });
+      });
     return () => controller.abort();
   }, [
     manifest,
@@ -833,8 +824,8 @@ const DashboardPage = ({
     const kpiStates = manifest.layout.kpiBand.map(
       (widgetId) => widgetState[widgetId],
     );
-    return kpiStates.filter(
-      (state): state is DashboardWidgetState => Boolean(state),
+    return kpiStates.filter((state): state is DashboardWidgetState =>
+      Boolean(state),
     );
   }, [manifest, widgetState]);
   const chartWidgets = useMemo(() => {
@@ -845,12 +836,12 @@ const DashboardPage = ({
       }[];
     }
     const kpiSet = new Set(manifest.layout.kpiBand);
-    const mappedWidgets = manifest.widgets.filter(
-      (widget) => !kpiSet.has(widget.id),
-    ).map((widget) => ({
-      state: widgetState[widget.id],
-      placement: manifest.layout.grid.placements[widget.id],
-    }));
+    const mappedWidgets = manifest.widgets
+      .filter((widget) => !kpiSet.has(widget.id))
+      .map((widget) => ({
+        state: widgetState[widget.id],
+        placement: manifest.layout.grid.placements[widget.id],
+      }));
     return mappedWidgets.filter(
       (entry): entry is typeof entry & { state: DashboardWidgetState } =>
         Boolean(entry.state),
@@ -953,55 +944,49 @@ const DashboardPage = ({
           }}
         >
           {" "}
-          {chartWidgets.length === 0 ? (
-            <div className="dashboard-v2__empty" role="status">
-              {" "}
-              No charts pinned yet. Use “Pin to dashboard” from the analytics
-              workspace to build your layout.{" "}
-            </div>
-          ) : (
-            chartWidgets.map(({ state, placement }) => (
-              <div
-                key={state.widget.id}
-                className="dashboard-v2__grid-item"
-                style={buildGridStyle(placement)}
-              >
-                {" "}
-                {isSiteFlowWidget(state.widget) ? (
-                  <SiteFlowCard
-                    subtitle={state.widget.subtitle}
-                    locked={state.widget.locked}
-                    widgetId={state.widget.id}
-                    onRemove={
-                      state.widget.locked
-                        ? undefined
-                        : () => handleUnpinWidget(state.widget.id)
-                    }
-                    mode={siteFlowMode}
-                    onModeChange={setSiteFlowMode}
-                    timeframe={siteFlowTimeframe}
-                    onTimeframeChange={handleSiteFlowTimeframeChange}
-                    demographics={siteFlowDemographics}
-                    activity={siteFlowActivity}
-                  />
-                ) : (
-                  <ChartCard
-                    title={state.widget.title}
-                    subtitle={state.widget.subtitle}
-                    state={state}
-                    result={state.result}
-                    locked={state.widget.locked}
-                    widgetId={state.widget.id}
-                    onRemove={
-                      state.widget.locked
-                        ? undefined
-                        : () => handleUnpinWidget(state.widget.id)
-                    }
-                  />
-                )}{" "}
-              </div>
-            ))
-          )}{" "}
+          {chartWidgets.length === 0
+            ? null
+            : chartWidgets.map(({ state, placement }) => (
+                <div
+                  key={state.widget.id}
+                  className="dashboard-v2__grid-item"
+                  style={buildGridStyle(placement)}
+                >
+                  {" "}
+                  {isSiteFlowWidget(state.widget) ? (
+                    <SiteFlowCard
+                      subtitle={state.widget.subtitle}
+                      locked={state.widget.locked}
+                      widgetId={state.widget.id}
+                      onRemove={
+                        state.widget.locked
+                          ? undefined
+                          : () => handleUnpinWidget(state.widget.id)
+                      }
+                      mode={siteFlowMode}
+                      onModeChange={setSiteFlowMode}
+                      timeframe={siteFlowTimeframe}
+                      onTimeframeChange={handleSiteFlowTimeframeChange}
+                      demographics={siteFlowDemographics}
+                      activity={siteFlowActivity}
+                    />
+                  ) : (
+                    <ChartCard
+                      title={state.widget.title}
+                      subtitle={state.widget.subtitle}
+                      state={state}
+                      result={state.result}
+                      locked={state.widget.locked}
+                      widgetId={state.widget.id}
+                      onRemove={
+                        state.widget.locked
+                          ? undefined
+                          : () => handleUnpinWidget(state.widget.id)
+                      }
+                    />
+                  )}{" "}
+                </div>
+              ))}{" "}
         </section>
       </div>
     </div>

@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-import { companyLogoDataUri } from '../assets/companyLogo';
-import { Credentials } from '../types/credentials';
-import { deriveOrgIdFromTableName, determineOrgId } from '../lib/org';
+import { companyLogoDataUri } from "../assets/companyLogo";
+import { Credentials } from "../types/credentials";
+import { deriveOrgIdFromTableName, determineOrgId } from "../lib/org";
 
 interface LoginPageProps {
   onLogin: (credentials: Credentials) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -20,10 +20,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setError(null);
 
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
+      const response = await fetch("/api/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ username, password }),
       });
@@ -31,19 +31,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       if (response.ok) {
         const data = await response.json();
         const orgFromResponse =
-          data?.user?.orgId ?? data?.user?.org_id ?? deriveOrgIdFromTableName(data?.user?.table_name);
+          data?.user?.orgId ??
+          data?.user?.org_id ??
+          deriveOrgIdFromTableName(data?.user?.table_name);
         onLogin({
           username,
           password,
           orgId: orgFromResponse ?? determineOrgId({ username }),
         });
       } else if (response.status === 401) {
-        setError('Invalid username or password');
+        setError("Invalid username or password");
       } else {
-        setError('Connection error. Please try again.');
+        setError("Connection error. Please try again.");
       }
     } catch (err) {
-      setError('Unable to connect to server');
+      setError("Unable to connect to server");
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   return (
     <div className="vrm-auth-shell">
-      <div className="vrm-auth-card" role="dialog" aria-labelledby="camOS-login-title">
+      <div
+        className="vrm-auth-card"
+        role="dialog"
+        aria-labelledby="camOS-login-title"
+      >
         <div>
           <div className="vrm-auth-logo">
             <img src={companyLogoDataUri} alt="Company Logo" />
@@ -93,7 +99,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             />
           </div>
           {error && (
-            <div className="vrm-status vrm-status-warning vrm-auth-error" role="alert" aria-live="assertive">
+            <div
+              className="vrm-status vrm-status-warning vrm-auth-error"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}
@@ -101,10 +111,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <button
               type="submit"
               className="vrm-btn vrm-btn-primary"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               disabled={loading}
             >
-              {loading ? 'Signing in…' : 'Login'}
+              {loading ? "Signing in…" : "Login"}
             </button>
           </div>
         </form>

@@ -1,13 +1,15 @@
-import { Credentials } from '../types/credentials';
+import { Credentials } from "../types/credentials";
 
-const DEFAULT_ORG_ID = 'client1';
+const DEFAULT_ORG_ID = "client1";
 const USERNAME_TO_ORG_MAP: Record<string, string> = {
-  client1: 'client1',
-  client2: 'client2',
-  admin: 'client1',
+  client1: "client1",
+  client2: "client2",
+  admin: "client1",
 };
 
-export const deriveOrgIdFromTableName = (tableName?: string | null): string | undefined => {
+export const deriveOrgIdFromTableName = (
+  tableName?: string | null,
+): string | undefined => {
   if (!tableName) {
     return undefined;
   }
@@ -15,7 +17,7 @@ export const deriveOrgIdFromTableName = (tableName?: string | null): string | un
   if (!trimmed) {
     return undefined;
   }
-  const segments = trimmed.split('.');
+  const segments = trimmed.split(".");
   const slug = segments[segments.length - 1]?.trim();
   if (!slug) {
     return undefined;
@@ -27,11 +29,11 @@ export const determineOrgId = (credentials?: Partial<Credentials>): string => {
   if (credentials?.orgId) {
     return credentials.orgId;
   }
-  const username = credentials?.username?.trim() ?? '';
+  const username = credentials?.username?.trim() ?? "";
   if (username && USERNAME_TO_ORG_MAP[username]) {
     return USERNAME_TO_ORG_MAP[username];
   }
-  if (username.startsWith('client')) {
+  if (username.startsWith("client")) {
     return username;
   }
   return DEFAULT_ORG_ID;
