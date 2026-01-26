@@ -46,7 +46,7 @@ export const TrafficDistribution = ({
   const contentClassName = `traffic-distribution__content${
     isVrmTraffic ? " traffic-distribution__content--vrm" : ""
   }`;
-  if (process.env.NODE_ENV !== "production") {
+  if (!import.meta.env.PROD) {
     console.log("[VRM] TrafficDistribution: entry", {
       isVrmTraffic,
       seriesLength: series.length,
@@ -59,7 +59,7 @@ export const TrafficDistribution = ({
     });
   }
   if (!primary || data.length === 0) {
-    if (process.env.NODE_ENV !== "production") {
+    if (!import.meta.env.PROD) {
       console.log("[VRM traffic] TrafficDistribution early-exit", {
         reason: !primary ? "no-primary" : "no-data",
         seriesLength: series.length,
@@ -107,7 +107,7 @@ export const TrafficDistribution = ({
   });
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
   const nonFiniteValues = legend.map((entry) => entry.value).filter((value) => !Number.isFinite(value)).slice(0, 5);
-  if (process.env.NODE_ENV !== "production") {
+  if (!import.meta.env.PROD) {
     console.log("[VRM traffic] TrafficDistribution totals", {
       totalValue,
       legendCount: legend.length,
@@ -115,7 +115,7 @@ export const TrafficDistribution = ({
       nonFiniteValues,
     });
   }
-  if (process.env.NODE_ENV !== "production") {
+  if (!import.meta.env.PROD) {
     console.log("[VRM] TrafficDistribution: legend", {
       legend,
       totalValue,
@@ -123,7 +123,7 @@ export const TrafficDistribution = ({
     });
   }
   if (!legend.length || totalValue <= 0) {
-    if (process.env.NODE_ENV !== "production") {
+    if (!import.meta.env.PROD) {
       console.log("[VRM] TrafficDistribution: empty view", {
         totalValue,
         dataLength: data.length,

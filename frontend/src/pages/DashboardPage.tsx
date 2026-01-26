@@ -430,7 +430,7 @@ const DashboardPage = ({
     }
   }, [isSnapshotMode]);
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") {
+    if (import.meta.env.PROD) {
       return;
     }
     logInfo("dashboard.vrm", "vrm_context_resolved", {
@@ -587,7 +587,7 @@ const DashboardPage = ({
               return;
             }
             if (
-              process.env.NODE_ENV !== "production" &&
+              !import.meta.env.PROD &&
               widget.id === VRM_KPI_IDS.traffic
             ) {
               const summary = result.meta?.summary as
