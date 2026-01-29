@@ -239,6 +239,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     try {
       setLoading(true);
       const viewToken = getViewTokenFromLocation();
+      const urlParams = new URLSearchParams(window.location.search);
       const clientId = urlParams.get("client_id");
       const searchParams = buildSearchParams(true);
       const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -368,6 +369,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
   const handleExport = async () => {
     try {
       const viewToken = getViewTokenFromLocation();
+      const urlParams = new URLSearchParams(window.location.search);
       const clientId = urlParams.get("client_id");
       if (totalEvents <= 0 || events.length === 0) {
         return;
