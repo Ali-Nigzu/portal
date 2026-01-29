@@ -27,6 +27,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     eventsPerPage,
     handleSearch,
     fetchExportEvents,
+    fetchEvents,
   } = useEventLogsQuery(credentials);
   const ageBuckets = [
     { value: "0-4", label: "0-4" },
@@ -45,6 +46,16 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     { value: "M", label: "Male" },
     { value: "F", label: "Female" },
   ];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const clampToToday = (date: Date | null): Date | null => {
+    if (!date) {
+      return null;
+    }
+    const next = new Date(date);
+    next.setHours(0, 0, 0, 0);
+    return next.getTime() > today.getTime() ? new Date(today) : next;
+  };
   const handleTrackIdKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
   ) => {
