@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import jsPDF from "jspdf";
-import { API_BASE_URL } from "../../config";
 import { Credentials } from "../../types/credentials";
-import { determineOrgId } from "../../lib/org";
-import { getViewTokenFromLocation } from "../../lib/viewToken";
 import type { SnapshotResponse } from "../../lib/snapshots";
+import { fetchLatestSnapshot } from "./transport/fetchLatestSnapshot";
 import {
   AGE_BUCKET_LABELS,
   RACE_BUCKET_LABELS,
@@ -15,7 +13,7 @@ import {
   buildVisitorProfileMetrics,
   resolveRollup,
   type ReportTimeframe,
-} from "./reportUtils";
+} from "./utils/reportUtils";
 import { buildSiteFlowBucketLabels } from "../../lib/siteFlowBuckets";
 import { startOfYear } from "../../lib/timeWindows";
 interface ReportsPageProps {
@@ -32,33 +30,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     try {
       setLoading(true);
       setSnapshotError(null);
-      const urlParams = new URLSearchParams(window.location.search);
-      const viewToken = getViewTokenFromLocation();
-      const clientId = urlParams.get("client_id");
-      const resolvedClientId =
-        clientId ?? (credentials ? determineOrgId(credentials) : null);
-      const params = new URLSearchParams();
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (viewToken) {
-        params.append("viewToken", viewToken);
-      } else if (resolvedClientId) {
-        params.append("org", resolvedClientId);
-      } else {
-        throw new Error("Missing view_token or client_id for snapshot lookup.");
-      }
-      if (!viewToken && credentials) {
-        const auth = btoa(`${credentials.username}:${credentials.password}`);
-        headers["Authorization"] = `Basic ${auth}`;
-      }
-      const response = await fetch(
-        `${API_BASE_URL}/api/snapshots/latest?${params.toString()}`,
-        { headers },
-      );
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Snapshot fetch failed: ${response.status} ${text}`);
-      }
-      const result = await response.json();
+      const result = await fetchLatestSnapshot(credentials);
       setSnapshot(result as SnapshotResponse);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
