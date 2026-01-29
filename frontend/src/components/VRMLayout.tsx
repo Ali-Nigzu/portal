@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import "../styles/VRMTheme.css";
 import { companyLogoDataUri } from "../assets/companyLogo";
+import { getViewTokenFromLocation } from "../lib/viewToken";
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
   onLogout?: () => void;
@@ -112,7 +113,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
-  const viewToken = new URLSearchParams(location.search).get("view_token");
+  const viewToken = getViewTokenFromLocation(location.search);
   const getNavigationPath = (path: string) => {
     return viewToken ? `${path}?view_token=${viewToken}` : path;
   };
