@@ -3,9 +3,11 @@ import { logError, logInfo, logWarn } from "../../../common/utils/logger";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 import { validateChartResult } from "../../../analytics/components/ChartRenderer/validation";
 import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
-import { buildSnapshotWidgetResult } from "../utils/snapshotPayload";
-import type { SnapshotResponse } from "../../../lib/snapshots";
-import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
+import {
+  buildSnapshotWidgetResult,
+  type SnapshotResponse,
+} from "../utils/snapshotPayload";
+import type { SiteFlowTimeframe } from "../utils/siteFlowTimeframe";
 export interface LoadWidgetOptions {
   signal?: AbortSignal;
   timeRange?: DashboardTimeRangeOption;

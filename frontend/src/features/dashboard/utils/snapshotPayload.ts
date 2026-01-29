@@ -3,10 +3,14 @@ import type {
   ChartSeries,
   DataPoint,
 } from "../../../analytics/schemas/charting";
-import type { SnapshotResponse } from "../../../lib/snapshots";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
-import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
-import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
+import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
+import { buildSiteFlowBucketLabels } from "./siteFlowBuckets";
+export interface SnapshotResponse {
+  ts: string;
+  payload: unknown[];
+  mode: "snapshots";
+}
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const NAIVE_TIMESTAMP_REGEX =
   /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/;
