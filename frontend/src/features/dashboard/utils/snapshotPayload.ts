@@ -58,6 +58,16 @@ const normalizeSeriesLength = (values: number[], count: number): number[] => {
   }
   return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
 };
+const normalizeKpiSeriesLength = (values: number[], count: number): number[] => {
+  const sliced = values.slice(0, count);
+  if (sliced.length >= count) {
+    return sliced;
+  }
+  return [
+    ...Array.from({ length: count - sliced.length }, () => 0),
+    ...sliced,
+  ];
+};
 const buildKpiResult = (
   values: number[],
   snapshotTs: Date,
@@ -69,7 +79,7 @@ const buildKpiResult = (
     Math.floor(
       (end.getTime() - start.getTime()) / FIFTEEN_MINUTES_MS,
     ) + 1;
-  const normalizedValues = normalizeSeriesLength(values, bucketCount);
+  const normalizedValues = normalizeKpiSeriesLength(values, bucketCount);
   return {
     chartType: "single_value",
     xDimension: {
