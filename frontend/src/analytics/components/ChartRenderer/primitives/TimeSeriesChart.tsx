@@ -109,7 +109,7 @@ export const TimeSeriesChart = ({
                 variant={tooltipVariant}
               />
             }
-            cursor={{ stroke: "var(--border-strong, #d0d5dd)" }}
+            cursor={isSiteFlowActivity ? false : { stroke: "var(--border-strong, #d0d5dd)" }}
           />{" "}
           {series.map((seriesItem) => {
             const yAxisId = axisConfig.bindings[seriesItem.id] ?? "Y1";
@@ -166,6 +166,7 @@ export const TimeSeriesChart = ({
               );
             }
             if (seriesItem.geometry === "line") {
+              const showDots = seriesItem.id !== "occupancy";
               return (
                 <Line
                   key={seriesItem.id}
@@ -173,11 +174,12 @@ export const TimeSeriesChart = ({
                   dataKey={seriesItem.id}
                   stroke={seriesItem.color}
                   strokeWidth={2}
-                  dot={dotRenderer}
+                  dot={showDots ? dotRenderer : false}
                   yAxisId={yAxisId}
                   hide={hidden}
                   isAnimationActive={false}
                   strokeDasharray={hasLowCoverage ? "6 4" : undefined}
+                  activeDot={showDots ? undefined : false}
                 />
               );
             }

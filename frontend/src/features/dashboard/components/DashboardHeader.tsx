@@ -15,7 +15,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       <div className="vrm-dashboard-header-left">
         <div className="vrm-dashboard-avatar" aria-hidden="true" />
         <div className="vrm-dashboard-identity">
-          <div className="vrm-dashboard-identity-label">Active site</div>
           <div className="vrm-dashboard-title">{`${clientDisplayName} – Site ${siteDisplayId}`}</div>
         </div>
       </div>

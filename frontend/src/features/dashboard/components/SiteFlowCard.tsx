@@ -82,10 +82,14 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
       </div>
     ) : undefined;
 
+  const resolvedSubtitle =
+    subtitle === "Live occupancy, entrances, exits and throughput"
+      ? undefined
+      : subtitle;
   return (
     <Card
       title="Site Flow"
-      subtitle={subtitle}
+      subtitle={resolvedSubtitle}
       className="dashboard-v2__chart-card vrm-card vrm-card--chart-panel"
       footer={footer}
       dateSelector={

@@ -37,23 +37,30 @@ export const ChartTooltip = ({
       {};
     const occupancyMin = occupancyPayload.occupancy_min ?? null;
     const occupancyMax = occupancyPayload.occupancy_max ?? null;
+    const entranceColor = "var(--vrm-color-accent-entrances, #47c96f)";
+    const exitColor = "var(--vrm-color-accent-exits, #ff5964)";
+    const occupancyColor = "var(--vrm-color-accent-occupancy, #2685ff)";
     const rows: Array<JSX.Element> = [];
-    if (exitsEntry) {
+    if (entrancesEntry) {
       rows.push(
-        <li key="exits">
-          <span className="series-label">Exit</span>
-          <span className="series-value">
-            {formatNumeric(exitsEntry.value as number | null | undefined)}
+        <li key="entrances">
+          <span className="series-label" style={{ color: entranceColor }}>
+            Entrance
+          </span>
+          <span className="series-value" style={{ color: entranceColor }}>
+            {formatNumeric(entrancesEntry.value as number | null | undefined)}
           </span>
         </li>,
       );
     }
-    if (entrancesEntry) {
+    if (exitsEntry) {
       rows.push(
-        <li key="entrances">
-          <span className="series-label">Entrance</span>
-          <span className="series-value">
-            {formatNumeric(entrancesEntry.value as number | null | undefined)}
+        <li key="exits">
+          <span className="series-label" style={{ color: exitColor }}>
+            Exit
+          </span>
+          <span className="series-value" style={{ color: exitColor }}>
+            {formatNumeric(exitsEntry.value as number | null | undefined)}
           </span>
         </li>,
       );
@@ -61,8 +68,10 @@ export const ChartTooltip = ({
     if (occupancyEntry) {
       rows.push(
         <li key="occupancy">
-          <span className="series-label">Occupancy</span>
-          <span className="series-value">
+          <span className="series-label" style={{ color: occupancyColor }}>
+            Occupancy
+          </span>
+          <span className="series-value" style={{ color: occupancyColor }}>
             {formatNumeric(occupancyEntry.value as number | null | undefined)}
           </span>
           <span className="series-meta">

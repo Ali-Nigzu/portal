@@ -21,14 +21,25 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
       aria-hidden="true"
       focusable="false"
     >
-      <path
-        d="M2 8c4-6 10-6 14 0s10 6 14 0 10-6 14 0"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <g className="vrm-realtime-wave-track">
+        <path
+          d="M2 8c4-6 10-6 14 0s10 6 14 0 10-6 14 0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M2 8c4-6 10-6 14 0s10 6 14 0 10-6 14 0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          transform="translate(48 0)"
+        />
+      </g>
     </svg>
   );
   return (
