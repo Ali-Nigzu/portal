@@ -31,6 +31,7 @@ export const TimeSeriesChart = ({
   tooltipVariant,
   siteFlowTimeframe,
   result,
+  hideInactiveLegend,
 }: ChartPrimitiveProps) => {
   const dataset = useMemo(() => buildCartesianDataset(series), [series]);
   const [brushRange, setBrushRange] = useState({ startIndex: 0, endIndex: 0 });
@@ -243,6 +244,7 @@ export const TimeSeriesChart = ({
         series={series}
         visibility={visibility}
         onToggleSeries={onToggleSeries}
+        hideInactive={hideInactiveLegend}
       />
     </div>
   );

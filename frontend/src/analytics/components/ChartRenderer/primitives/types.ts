@@ -14,4 +14,5 @@ export interface ChartPrimitiveProps {
   showBrush?: boolean;
   tooltipVariant?: "site_flow_activity";
   siteFlowTimeframe?: string;
+  hideInactiveLegend?: boolean;
 }

@@ -48,17 +48,22 @@ export const resolveSiteFlowSliceCount = (
 } => {
   const length = Math.max(...seriesList.map((series) => series.length), 0);
   const sliceCount =
-    timeframe === "today" || timeframe === "yesterday"
-      ? 24
-      : timeframe === "last_week"
-        ? 7
-        : timeframe === "last_month"
-          ? 4
-          : timeframe === "last_quarter"
-            ? 12
-            : timeframe === "last_year"
+    timeframe === "today"
+      ? Math.min(
+          length > 0 ? length : 24,
+          Math.min(anchor.getHours() + 1, 24),
+        )
+      : timeframe === "yesterday"
+        ? 24
+        : timeframe === "last_week"
+          ? 7
+          : timeframe === "last_month"
+            ? 4
+            : timeframe === "last_quarter"
               ? 12
-              : length;
+              : timeframe === "last_year"
+                ? 12
+                : length;
   const dayStart = startOfDay(anchor);
   return { length, sliceCount, dayStart };
 };
@@ -93,7 +98,7 @@ export const buildAnchoredTimestamps = (
     return Array.from({ length }, (_, index) => addDays(start, index * 7));
   }
   if (timeframe === "last_year") {
-    const endMonthStart = addMonths(startOfMonth(anchor), -1);
+    const endMonthStart = startOfMonth(anchor);
     const start = addMonths(endMonthStart, -(length - 1));
     return Array.from({ length }, (_, index) => addMonths(start, index));
   }

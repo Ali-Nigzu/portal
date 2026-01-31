@@ -139,6 +139,7 @@ export const ChartRenderer = ({
     showBrush: !isSiteFlowActivity,
     tooltipVariant: isSiteFlowActivity ? "site_flow_activity" : undefined,
     siteFlowTimeframe,
+    hideInactiveLegend: isSiteFlowActivity,
   };
   const chartStyle =
     summary?.chartStyle ||

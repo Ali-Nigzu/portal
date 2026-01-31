@@ -61,6 +61,9 @@ type OccupancyPoint = {
   value?: number | null;
 };
 const applySiteFlow = (result: ChartResult): ChartResult => {
+  const entranceColor = "var(--vrm-color-accent-entrances, #47c96f)";
+  const exitColor = "var(--vrm-color-accent-exits, #ff5964)";
+  const occupancyColor = "var(--vrm-color-accent-occupancy, #2685ff)";
   const occupancySeries =
     result.series.find((series) => series.id === "occupancy") ??
     result.series.find((series) =>
@@ -71,8 +74,6 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
           "occupancy_avg" in (point ?? {}),
       ),
     );
-  const occupancyColor =
-    occupancySeries?.color ?? "var(--vrm-color-accent-occupancy, #2d6cdf)";
   const occupancyAxis = occupancySeries?.axis;
   // Site Flow occupancy points may carry occupancy_avg/min/max fields (snapshot rollups).
   const occupancyData = (occupancySeries?.data ?? []).map((point) => {
@@ -108,7 +109,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     occupancySeries && occupancyData.length > 0
       ? {
           id: "occupancy",
-          label: "Avg Occupancy",
+          label: "Occupancy",
           geometry: "line",
           axis: occupancyAxis,
           unit: "people",
@@ -129,8 +130,23 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
       return !series.id.startsWith("occupancy_");
     })
     .map((series) => {
-      if (series.id === "entrances" || series.id === "exits") {
-        return { ...series, geometry: "bar" as const, unit: "events" };
+      if (series.id === "entrances") {
+        return {
+          ...series,
+          geometry: "bar" as const,
+          unit: "events",
+          label: "Entrance",
+          color: entranceColor,
+        };
+      }
+      if (series.id === "exits") {
+        return {
+          ...series,
+          geometry: "bar" as const,
+          unit: "events",
+          label: "Exit",
+          color: exitColor,
+        };
       }
       return series;
     });

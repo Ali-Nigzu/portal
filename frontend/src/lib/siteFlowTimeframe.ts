@@ -131,7 +131,7 @@ export const resolveSiteFlowTimeRange = (
   switch (timeframe) {
     case "today": {
       const from = startOfDay(anchor, timezone).toISOString();
-      const to = endOfDay(anchor, timezone).toISOString();
+      const to = anchor.toISOString();
       return { from, to };
     }
     case "yesterday": {
@@ -160,7 +160,7 @@ export const resolveSiteFlowTimeRange = (
       return { from, to };
     }
     case "last_year": {
-      const endMonthStart = addMonths(startOfMonth(anchor, timezone), -1, timezone);
+      const endMonthStart = startOfMonth(anchor, timezone);
       const from = addMonths(endMonthStart, -11, timezone).toISOString();
       const to = endOfMonth(endMonthStart, timezone).toISOString();
       return { from, to };

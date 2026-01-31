@@ -37,37 +37,49 @@ export const ChartTooltip = ({
       {};
     const occupancyMin = occupancyPayload.occupancy_min ?? null;
     const occupancyMax = occupancyPayload.occupancy_max ?? null;
+    const rows: Array<JSX.Element> = [];
+    if (exitsEntry) {
+      rows.push(
+        <li key="exits">
+          <span className="series-label">Exit</span>
+          <span className="series-value">
+            {formatNumeric(exitsEntry.value as number | null | undefined)}
+          </span>
+        </li>,
+      );
+    }
+    if (entrancesEntry) {
+      rows.push(
+        <li key="entrances">
+          <span className="series-label">Entrance</span>
+          <span className="series-value">
+            {formatNumeric(entrancesEntry.value as number | null | undefined)}
+          </span>
+        </li>,
+      );
+    }
+    if (occupancyEntry) {
+      rows.push(
+        <li key="occupancy">
+          <span className="series-label">Occupancy</span>
+          <span className="series-value">
+            {formatNumeric(occupancyEntry.value as number | null | undefined)}
+          </span>
+          <span className="series-meta">
+            min: {formatNumeric(occupancyMin)}{" "}
+            <span aria-hidden="true"> </span>
+            max: {formatNumeric(occupancyMax)}
+          </span>
+        </li>,
+      );
+    }
+    if (rows.length === 0) {
+      return null;
+    }
     return (
       <div className="analytics-chart-tooltip">
         <ul>
-          <li>
-            <span className="series-label">Exit</span>
-            <span className="series-value">
-              {formatNumeric(exitsEntry?.value as number | null | undefined)}
-            </span>
-          </li>
-          <li>
-            <span className="series-label">Entrance</span>
-            <span className="series-value">
-              {formatNumeric(entrancesEntry?.value as number | null | undefined)}
-            </span>
-          </li>
-          <li>
-            <span className="series-label">Occupancy</span>
-            <span className="series-value">
-              {formatNumeric(
-                occupancyEntry?.value as number | null | undefined,
-              )}
-            </span>
-          </li>
-          <li>
-            <span className="series-label">min</span>
-            <span className="series-value">{formatNumeric(occupancyMin)}</span>
-          </li>
-          <li>
-            <span className="series-label">max</span>
-            <span className="series-value">{formatNumeric(occupancyMax)}</span>
-          </li>
+          {rows}
         </ul>
       </div>
     );
