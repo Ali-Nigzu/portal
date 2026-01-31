@@ -290,7 +290,13 @@ export const KpiTile = ({
         </div>{" "}
         {!isTraffic && sparklineData.length > 1 ? (
           <div
-            className={`kpi-sparkline-region${isVrm ? " kpi-sparkline-region--vrm" : ""}`}
+            className={[
+              "kpi-sparkline",
+              "kpi-sparkline-region",
+              isVrm ? "kpi-sparkline--vrm kpi-sparkline-region--vrm" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             onMouseLeave={isVrm ? handleSparklineLeave : undefined}
             data-testid={isVrm ? "vrm-sparkline-region" : undefined}
           >
