@@ -117,7 +117,6 @@ const ChartGrid: React.FC<ChartGridProps> = ({
           >
             {isSiteFlowWidget(state.widget) ? (
               <SiteFlowCard
-                subtitle={state.widget.subtitle}
                 locked={state.widget.locked}
                 widgetId={state.widget.id}
                 onRemove={

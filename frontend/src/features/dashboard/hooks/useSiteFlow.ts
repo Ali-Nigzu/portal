@@ -157,6 +157,11 @@ export const useSiteFlow = ({
           return;
         }
         const decorated = decorateResult(widget.id, result, clientContextId);
+        decorated.meta = decorated.meta ?? { timezone: "UTC" };
+        decorated.meta.summary = {
+          ...(decorated.meta.summary ?? {}),
+          siteFlowTimeframe,
+        };
         setSiteFlowActivity({ status: "ready", result: decorated });
       })
       .catch((err) => {

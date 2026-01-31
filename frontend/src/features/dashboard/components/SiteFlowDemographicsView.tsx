@@ -79,20 +79,17 @@ export const SiteFlowDemographicsView = ({
         const { series, result, axisConfig, visibility } =
           toTrafficDistributionProps(title, slices, data.timezone);
         return (
-          <div className="site-flow-demographics__chart" key={title}>
-            <div className="site-flow-demographics__heading">{title}</div>
-            <TrafficDistribution
-              result={result}
-              series={series}
-              axisConfig={axisConfig}
-              visibility={visibility}
-              height={220}
-              className="site-flow-demographics__pie"
-              widgetId={`site-flow-${title.toLowerCase()}`}
-              useRawLabels
-              labelKey="label"
-            />
-          </div>
+          <TrafficDistribution
+            key={title}
+            result={result}
+            series={series}
+            axisConfig={axisConfig}
+            visibility={visibility}
+            height={220}
+            widgetId={`site-flow-${title.toLowerCase()}`}
+            useRawLabels
+            labelKey="label"
+          />
         );
       })}
     </div>
