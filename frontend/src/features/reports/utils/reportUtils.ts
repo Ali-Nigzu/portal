@@ -1,4 +1,4 @@
-import { resolveSiteFlowWindow, startOfWeek } from "../../lib/timeWindows";
+import { resolveSiteFlowWindow, startOfWeek } from "../../../lib/timeWindows";
 export type ReportTimeframe =
   | "today"
   | "yesterday"

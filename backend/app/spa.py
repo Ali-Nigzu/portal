@@ -17,7 +17,7 @@ def configure_spa(app: FastAPI) -> None:
     if os.path.isdir(static_dir):
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
     else:
-        logger.info("Static assets directory not found: %s", static_dir)
+        logger.warning("Static assets directory not found: %s", static_dir)
 
     @app.get("/")
     async def serve_index():
