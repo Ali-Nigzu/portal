@@ -1,1 +1,69 @@
-import React from 'react'; import { useGlobalControls, SystemStatus } from '../context/GlobalControlsContext'; const statusCopy: Record<SystemStatus, string> = { ok: 'System status: OK', warning: 'System status: Warning', critical: 'System status: Attention required', }; interface HeaderStatusStripProps { className?: string; } const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => { const { systemStatus, localTime } = useGlobalControls(); const RealtimeWaveIcon = () => ( <svg className="vrm-realtime-wave" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false" ><path d="M4 12c1.5-2 3.5-2 5 0s3.5 2 5 0 3.5-2 5 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> ); return ( <div className={`vrm-header-meta ${className ?? ''}`.trim()} role="status" aria-live="polite"><div className="vrm-header-meta-group"><span className="vrm-header-chip" title="Last updated timestamp"> Last updated:{' '} <span className="vrm-header-chip-highlight"><RealtimeWaveIcon /> Realtime </span></span></div><span className="vrm-header-meta-divider" aria-hidden="true" /><div className="vrm-header-meta-group"><span className="vrm-header-chip" title={statusCopy[systemStatus]}><span className={`vrm-status-indicator ${systemStatus}`} aria-hidden /> {statusCopy[systemStatus]} </span></div><span className="vrm-header-meta-divider" aria-hidden="true" /><div className="vrm-header-meta-group"><span className="vrm-header-chip" title="Local site time"> Local time: {localTime} </span></div></div> ); }; export default HeaderStatusStrip;
+import React from "react";
+import {
+  useGlobalControls,
+  SystemStatus,
+} from "../context/GlobalControlsContext";
+const statusCopy: Record<SystemStatus, string> = {
+  ok: "System status: OK",
+  warning: "System status: Warning",
+  critical: "System status: Attention required",
+};
+interface HeaderStatusStripProps {
+  className?: string;
+}
+const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
+  const { systemStatus, localTime } = useGlobalControls();
+  const RealtimeWaveIcon = () => (
+    <svg
+      className="vrm-realtime-wave"
+      viewBox="0 0 24 24"
+      role="presentation"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M4 12c1.5-2 3.5-2 5 0s3.5 2 5 0 3.5-2 5 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+  return (
+    <div
+      className={`vrm-header-meta ${className ?? ""}`.trim()}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="vrm-header-meta-group">
+        <span className="vrm-header-chip" title="Last updated timestamp">
+          {" "}
+          Last updated:{" "}
+          <span className="vrm-header-chip-highlight">
+            <RealtimeWaveIcon /> Realtime{" "}
+          </span>
+        </span>
+      </div>
+      <span className="vrm-header-meta-divider" aria-hidden="true" />
+      <div className="vrm-header-meta-group">
+        <span className="vrm-header-chip" title={statusCopy[systemStatus]}>
+          <span
+            className={`vrm-status-indicator ${systemStatus}`}
+            aria-hidden
+          />{" "}
+          {statusCopy[systemStatus]}{" "}
+        </span>
+      </div>
+      <span className="vrm-header-meta-divider" aria-hidden="true" />
+      <div className="vrm-header-meta-group">
+        <span className="vrm-header-chip" title="Local site time">
+          {" "}
+          Local time: {localTime}{" "}
+        </span>
+      </div>
+    </div>
+  );
+};
+export default HeaderStatusStrip;

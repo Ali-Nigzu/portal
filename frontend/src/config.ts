@@ -6,7 +6,10 @@ const getApiBaseUrl = (): string => {
   if (import.meta.env.VITE_ENVIRONMENT === "production") {
     return window.location.origin;
   }
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
     return "http://localhost:8000";
   }
   return "";

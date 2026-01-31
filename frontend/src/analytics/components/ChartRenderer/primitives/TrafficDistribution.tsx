@@ -26,12 +26,10 @@ export const TrafficDistribution = ({
     typeof summary.title === "string"
       ? (summary.title as string)
       : "Traffic Split";
-  const topLevelChartStyle = (
-    result as unknown as { chartStyle?: string }
-  ).chartStyle;
-  const topLevelChartSubType = (
-    result as unknown as { chartSubType?: string }
-  ).chartSubType;
+  const topLevelChartStyle = (result as unknown as { chartStyle?: string })
+    .chartStyle;
+  const topLevelChartSubType = (result as unknown as { chartSubType?: string })
+    .chartSubType;
   const summaryChartStyle = summary.chartStyle as string | undefined;
   const summaryChartSubType = summary.chartSubType as string | undefined;
   const hasTrafficStyle =
@@ -79,7 +77,9 @@ export const TrafficDistribution = ({
   }
   const legend = data.map((point, index) => {
     const rawCamera = point.x ?? `Cam ${index + 1}`;
-    const normalizedCameraId = String(rawCamera).replace(/^Cam\s*/i, "").trim();
+    const normalizedCameraId = String(rawCamera)
+      .replace(/^Cam\s*/i, "")
+      .trim();
     const cameraId =
       normalizedCameraId !== "" ? normalizedCameraId : String(index + 1);
     const baseLabel =
@@ -106,7 +106,10 @@ export const TrafficDistribution = ({
     };
   });
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
-  const nonFiniteValues = legend.map((entry) => entry.value).filter((value) => !Number.isFinite(value)).slice(0, 5);
+  const nonFiniteValues = legend
+    .map((entry) => entry.value)
+    .filter((value) => !Number.isFinite(value))
+    .slice(0, 5);
   if (!import.meta.env.PROD) {
     console.log("[VRM traffic] TrafficDistribution totals", {
       totalValue,

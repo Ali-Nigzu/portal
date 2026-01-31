@@ -67,9 +67,9 @@ export class AxisManager {
       const remaining = Array.from(units.entries()).filter(
         ([unit]) => !preferredOrder.includes(unit),
       );
-      const prioritized: Array<[string, string[]]> = preferredOrder.filter(
-        (unit) => units.has(unit),
-      ).map((unit) => [unit, units.get(unit)!]);
+      const prioritized: Array<[string, string[]]> = preferredOrder
+        .filter((unit) => units.has(unit))
+        .map((unit) => [unit, units.get(unit)!]);
       return [...prioritized, ...remaining];
     }
     return Array.from(units.entries());

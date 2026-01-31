@@ -2,8 +2,9 @@
 Pydantic Data Models for camOS Analytics API
 """
 
-from typing import Optional, Dict, List, Any, Literal
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoginRequest(BaseModel):
@@ -23,8 +24,7 @@ class CreateUserRequest(BaseModel):
     role: str
     org_id: Optional[str] = Field(default=None, alias="orgId")
 
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class UpdateUserRequest(BaseModel):
@@ -33,8 +33,7 @@ class UpdateUserRequest(BaseModel):
     role: Optional[str] = None
     org_id: Optional[str] = Field(default=None, alias="orgId")
 
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class CreateViewTokenRequest(BaseModel):

@@ -14,29 +14,48 @@ const extractNumeric = (value: unknown): number => {
   return 0;
 };
 
-export const CapacityDonut = ({ result, series, height, className, }: ChartPrimitiveProps) => {
+export const CapacityDonut = ({
+  result,
+  series,
+  height,
+  className,
+}: ChartPrimitiveProps) => {
   const primary = series[0];
   const data = primary?.data ?? [];
-  const summary = (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
-  const title = typeof summary.title === "string" ? (summary.title as string) : "Capacity";
+  const summary =
+    (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
+  const title =
+    typeof summary.title === "string" ? (summary.title as string) : "Capacity";
   const headline = summary.headlineValue as number | null | undefined;
-  const centerValue = typeof headline === "number" && Number.isFinite(headline) ? headline : 0;
+  const centerValue =
+    typeof headline === "number" && Number.isFinite(headline) ? headline : 0;
   const segments = ["Usage", "Peak extra", "Remaining"] as const;
   const mappedData = segments.map((segment, index) => {
-    const point = data.find((entry) => String(entry.x) === segment) ?? data[index];
+    const point =
+      data.find((entry) => String(entry.x) === segment) ?? data[index];
     const value = extractNumeric(point?.value ?? point?.y ?? 0);
-    return { label: segment, value, color: capacityColors[index % capacityColors.length] };
+    return {
+      label: segment,
+      value,
+      color: capacityColors[index % capacityColors.length],
+    };
   });
-  const usageValue = mappedData.find((entry) => entry.label === "Usage")?.value ?? 0;
-  const peakExtraValue = mappedData.find((entry) => entry.label === "Peak extra")?.value ?? 0;
+  const usageValue =
+    mappedData.find((entry) => entry.label === "Usage")?.value ?? 0;
+  const peakExtraValue =
+    mappedData.find((entry) => entry.label === "Peak extra")?.value ?? 0;
   const peakTotalValue = usageValue + peakExtraValue;
   const total = mappedData.reduce((sum, entry) => sum + entry.value, 0);
-  const renderData = total > 0 ? mappedData : [
-    { label: "Usage", value: 0, color: capacityColors[0] },
-    { label: "Peak extra", value: 0, color: capacityColors[1] },
-    { label: "Remaining", value: 100, color: capacityColors[2] },
-  ];
-  const renderTotal = renderData.reduce((sum, entry) => sum + entry.value, 0) || 1;
+  const renderData =
+    total > 0
+      ? mappedData
+      : [
+          { label: "Usage", value: 0, color: capacityColors[0] },
+          { label: "Peak extra", value: 0, color: capacityColors[1] },
+          { label: "Remaining", value: 100, color: capacityColors[2] },
+        ];
+  const renderTotal =
+    renderData.reduce((sum, entry) => sum + entry.value, 0) || 1;
   const normalizedData = renderData.map((entry) => ({
     ...entry,
     share: (entry.value / renderTotal) * 100,
@@ -56,12 +75,19 @@ export const CapacityDonut = ({ result, series, height, className, }: ChartPrimi
     return null;
   };
   return (
-    <div className={`capacity-usage kpi-tile ${className ?? ""}`} style={{ minHeight: height }}>
+    <div
+      className={`capacity-usage kpi-tile ${className ?? ""}`}
+      style={{ minHeight: height }}
+    >
       <div className="capacity-usage__title">{title}</div>
       <div className="capacity-usage__content">
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
-            <Tooltip formatter={tooltipFormatter} labelFormatter={() => ""} filterNull />
+            <Tooltip
+              formatter={tooltipFormatter}
+              labelFormatter={() => ""}
+              filterNull
+            />
             <Pie
               dataKey="value"
               data={normalizedData}
@@ -79,7 +105,11 @@ export const CapacityDonut = ({ result, series, height, className, }: ChartPrimi
                   key={entry.label}
                   fill={entry.color}
                   stroke="none"
-                  style={entry.label === "Remaining" ? { pointerEvents: "none" } : undefined}
+                  style={
+                    entry.label === "Remaining"
+                      ? { pointerEvents: "none" }
+                      : undefined
+                  }
                 />
               ))}
             </Pie>

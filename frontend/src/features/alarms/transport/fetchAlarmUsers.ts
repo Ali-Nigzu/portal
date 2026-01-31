@@ -1,0 +1,24 @@
+import { API_BASE_URL } from "../../../config";
+import type { Credentials } from "../../../types/credentials";
+import type { AlarmUser } from "../types";
+
+type AlarmUsersResponse = Record<string, AlarmUser>;
+
+export const fetchAlarmUsers = async (
+  credentials: Credentials,
+): Promise<AlarmUsersResponse> => {
+  const auth = btoa(`${credentials.username}:${credentials.password}`);
+  const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load users");
+  }
+
+  const data = (await response.json()) as AlarmUsersResponse;
+  return data;
+};

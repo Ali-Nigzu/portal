@@ -39,9 +39,9 @@ export const ChartRenderer = ({
   const validationIssues = useMemo(() => validateChartResult(result), [result]);
   const resolvedClassName = useMemo(
     () =>
-      ["analytics-chart-surface", className].filter(
-        (token) => token && token.trim().length > 0,
-      ).join(" "),
+      ["analytics-chart-surface", className]
+        .filter((token) => token && token.trim().length > 0)
+        .join(" "),
     [className],
   );
   const isEmpty = useMemo(() => {

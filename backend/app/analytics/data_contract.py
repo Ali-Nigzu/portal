@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 UTC = timezone.utc
 
@@ -72,8 +72,7 @@ class QueryContext(BaseModel):
     limit: Optional[int] = Field(default=None, ge=0)
     offset: Optional[int] = Field(default=None, ge=0)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("site_ids", "camera_ids", "sexes", "age_buckets", "races", mode="before")
     @classmethod
