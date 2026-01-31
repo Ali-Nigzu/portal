@@ -239,18 +239,13 @@ export const KpiTile = ({
   }
   return (
     <div
-      className={[
-        "kpi-tile",
-        className ?? "",
-        isVrm ? "kpi-tile--vrm" : "",
-        showHoverFooter ? "kpi-tile--hover-footer" : "",
-      ]
+      className={["kpi-tile", className ?? "", isVrm ? "kpi-tile--vrm" : ""]
         .filter(Boolean)
         .join(" ")}
       style={
         isVrm
-          ? { minHeight: height, height: showHoverFooter ? "auto" : height, paddingBottom: 0 }
-          : { minHeight: height, height: showHoverFooter ? "auto" : height }
+          ? { minHeight: height, height, paddingBottom: 0 }
+          : { minHeight: height, height }
       }
     >
       <div
