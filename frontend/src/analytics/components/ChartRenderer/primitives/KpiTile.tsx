@@ -242,18 +242,16 @@ export const KpiTile = ({
       className={["kpi-tile", className ?? "", isVrm ? "kpi-tile--vrm" : ""]
         .filter(Boolean)
         .join(" ")}
-      style={
-        isVrm
-          ? { minHeight: height, height, paddingBottom: 0 }
-          : { minHeight: height, height }
-      }
     >
       <div
-        className={["kpi-content", isVrm ? "kpi-content--vrm" : ""]
-          .filter(Boolean)
-          .join(" ")}
+        className={`kpi-body${isVrm ? " kpi-body--vrm" : ""}`}
         style={{ minHeight: height, height }}
       >
+        <div
+          className={["kpi-content", isVrm ? "kpi-content--vrm" : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
         <div className="kpi-main-block">
           <div className="kpi-header">
             {" "}
@@ -362,6 +360,7 @@ export const KpiTile = ({
             </div>{" "}
           </div>
         ) : null}{" "}
+        </div>
       </div>
       {showHoverFooter ? (
         <div
