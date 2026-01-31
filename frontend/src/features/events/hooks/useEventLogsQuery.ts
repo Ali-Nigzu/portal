@@ -281,6 +281,7 @@ export const useEventLogsQuery = (credentials: Credentials) => {
     totalPages,
     totalEvents,
     eventsPerPage,
+    searchToken,
     handleSearch,
     fetchEvents,
     fetchExportEvents,

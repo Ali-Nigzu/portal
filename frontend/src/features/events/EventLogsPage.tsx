@@ -25,6 +25,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     totalPages,
     totalEvents,
     eventsPerPage,
+    searchToken,
     handleSearch,
     fetchExportEvents,
     fetchEvents,
