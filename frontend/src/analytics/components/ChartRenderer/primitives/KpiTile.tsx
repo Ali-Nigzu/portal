@@ -6,6 +6,7 @@ import {
   Area,
   YAxis,
   ReferenceDot,
+  Tooltip,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import {
@@ -43,6 +44,30 @@ export const KpiTile = ({
       })) ?? []
     );
   }, [primarySeries]);
+  const sparklineRenderData = useMemo(() => {
+    if (sparklineData.length !== 1) {
+      return sparklineData;
+    }
+    const [onlyPoint] = sparklineData;
+    if (!onlyPoint) {
+      return sparklineData;
+    }
+    const parsed =
+      typeof onlyPoint.x === "string" || typeof onlyPoint.x === "number"
+        ? new Date(onlyPoint.x)
+        : null;
+    const fallbackX = parsed && !Number.isNaN(parsed.valueOf())
+      ? new Date(parsed.valueOf() + 60_000).toISOString()
+      : `${onlyPoint.x ?? ""}-fallback`;
+    return [
+      onlyPoint,
+      {
+        ...onlyPoint,
+        x: fallbackX,
+        index: onlyPoint.index + 1,
+      },
+    ];
+  }, [sparklineData]);
   const [vrmHover, setVrmHover] = useState<{
     value: number | null;
     label: string;
@@ -143,9 +168,12 @@ export const KpiTile = ({
     return `${datePart} · ${timePart}`;
   };
   const applyHoverIndex = (index: number) => {
-    if (!isVrm || !sparklineData.length) return;
-    const clampedIndex = Math.max(0, Math.min(sparklineData.length - 1, index));
-    const chosen = sparklineData[clampedIndex];
+    if (!isVrm || !sparklineRenderData.length) return;
+    const clampedIndex = Math.max(
+      0,
+      Math.min(sparklineRenderData.length - 1, index),
+    );
+    const chosen = sparklineRenderData[clampedIndex];
     if (!chosen) return;
     const numeric = typeof chosen.value === "number" ? chosen.value : null;
     setVrmHover({
@@ -188,7 +216,7 @@ export const KpiTile = ({
     const label = formatLabel(chartState.activeLabel ?? "", payload);
     setSparklineHover({ value, label });
   };
-  const hoveredPoint = vrmHover ? sparklineData[vrmHover.index] : null;
+  const hoveredPoint = vrmHover ? sparklineRenderData[vrmHover.index] : null;
   const hoveredNumericValue =
     hoveredPoint && typeof hoveredPoint.value === "number"
       ? hoveredPoint.value
@@ -288,7 +316,7 @@ export const KpiTile = ({
             </div>
           ) : null}{" "}
         </div>{" "}
-        {!isTraffic && sparklineData.length > 1 ? (
+        {!isTraffic && sparklineRenderData.length > 0 ? (
           <div
             className={[
               "kpi-sparkline",
@@ -311,7 +339,7 @@ export const KpiTile = ({
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={sparklineData}
+                    data={sparklineRenderData}
                     margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                     onMouseLeave={isVrm ? undefined : handleSparklineLeave}
                     onMouseMove={isVrm ? undefined : handleSparklineMove}
@@ -329,6 +357,14 @@ export const KpiTile = ({
                       axisLine={false}
                       tickLine={false}
                     />{" "}
+                    {!isVrm ? (
+                      <Tooltip
+                        content={() => null}
+                        wrapperStyle={{ display: "none" }}
+                        cursor={false}
+                        isAnimationActive={false}
+                      />
+                    ) : null}{" "}
                     <Area
                       type="monotone"
                       dataKey="value"
