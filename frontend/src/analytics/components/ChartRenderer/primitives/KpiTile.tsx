@@ -245,7 +245,7 @@ export const KpiTile = ({
     >
       <div
         className={`kpi-body${isVrm ? " kpi-body--vrm" : ""}`}
-        style={{ minHeight: height, height }}
+        style={{ minHeight: height }}
       >
         <div
           className={["kpi-content", isVrm ? "kpi-content--vrm" : ""]
