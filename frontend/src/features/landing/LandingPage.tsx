@@ -1,68 +1,24 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LandingPage.css";
 import { companyLogoDataUri } from "../../assets/companyLogo";
+import { useRegisterInterestForm } from "./hooks/useRegisterInterestForm";
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    company: "",
-    phone: "",
-    business_type: "",
-    message: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const {
+    formData,
+    isSubmitting,
+    submitSuccess,
+    submitError,
+    setFormData,
+    handleSubmit,
+  } = useRegisterInterestForm();
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError("");
-    if (
-      !formData.name.trim() ||
-      !formData.email.trim() ||
-      !formData.company.trim()
-    ) {
-      setSubmitError("Please fill in all required fields.");
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setSubmitError("Please enter a valid email address.");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/register-interest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      if (response.ok) {
-        setSubmitSuccess(true);
-        setFormData({
-          name: "",
-          email: "",
-          company: "",
-          phone: "",
-          business_type: "",
-          message: "",
-        });
-      } else {
-        setSubmitError("Unable to submit form. Please try again.");
-      }
-    } catch (err) {
-      setSubmitError("Connection error. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
   const scrollToForm = () => {
     const formSection = document.getElementById("register-form");

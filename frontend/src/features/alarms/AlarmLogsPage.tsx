@@ -1,131 +1,25 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { API_BASE_URL } from "../../config";
+import React from "react";
 import { Credentials } from "../../types/credentials";
-import { getViewTokenFromLocation } from "../../lib/viewToken";
-interface AlarmEvent {
-  id: string;
-  instance: string;
-  device: string;
-  description: string;
-  alarmStartedAt: string;
-  alarmClearedAfter: string | null;
-  severity: "high" | "medium" | "low";
-}
-interface User {
-  role: "admin" | "client";
-  name: string;
-  csv_url?: string;
-}
+import { useAlarmLogs } from "./hooks/useAlarmLogs";
+import { getSeverityClass, getSeverityText } from "./utils/severityFormatters";
 interface AlarmLogsPageProps {
   credentials: Credentials;
 }
 const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
-  const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [users, setUsers] = useState<{ [key: string]: User }>({});
-  const [selectedClient, setSelectedClient] = useState<string>("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const fetchUsers = useCallback(async () => {
-    try {
-      const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-        setIsAdmin(
-          credentials.username === "admin" ||
-            data[credentials.username]?.role === "admin",
-        );
-        const clientUsers = Object.entries(data).filter(
-          ([_, user]) => (user as User).role === "client",
-        );
-        if (clientUsers.length > 0) {
-          setSelectedClient(clientUsers[0][0]);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-    }
-  }, [credentials.username, credentials.password]);
-  const fetchAlarmLogs = useCallback(
-    async (clientId?: string) => {
-      try {
-        setLoading(true);
-        const viewToken = getViewTokenFromLocation();
-        let apiUrl = `${API_BASE_URL}/api/alarm-logs`;
-        const headers: HeadersInit = { "Content-Type": "application/json" };
-        if (viewToken) {
-          apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
-        } else {
-          const auth = btoa(`${credentials.username}:${credentials.password}`);
-          headers["Authorization"] = `Basic ${auth}`;
-          if (isAdmin && clientId) {
-            apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
-          }
-        }
-        const response = await fetch(apiUrl, { headers });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        setAlarms(result.alarms || []);
-        setError(null);
-      } catch (err) {
-        setError(
-          `Failed to load alarm logs: ${err instanceof Error ? err.message : "Unknown error"}`,
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [credentials.username, credentials.password, isAdmin],
-  );
-  useEffect(() => {
-    const initialize = async () => {
-      const viewToken = getViewTokenFromLocation();
-      if (!viewToken) {
-        await fetchUsers();
-      }
-    };
-    initialize();
-  }, [fetchUsers]);
-  useEffect(() => {
-    if (isAdmin && selectedClient) {
-      fetchAlarmLogs(selectedClient);
-    } else if (!isAdmin) {
-      fetchAlarmLogs();
-    }
-  }, [selectedClient, isAdmin, fetchAlarmLogs]);
-  const getSeverityClass = (severity: string) => {
-    switch (severity) {
-      case "high":
-        return "vrm-status-offline";
-      case "medium":
-        return "vrm-status-warning";
-      case "low":
-        return "vrm-status-online";
-      default:
-        return "vrm-status-offline";
-    }
-  };
-  const getSeverityText = (severity: string) => {
-    switch (severity) {
-      case "high":
-        return "High";
-      case "medium":
-        return "Medium";
-      case "low":
-        return "Low";
-      default:
-        return "Unknown";
-    }
-  };
+  const {
+    alarms,
+    loading,
+    error,
+    isAdmin,
+    selectedClient,
+    setSelectedClient,
+    clientUsers,
+    activeAlarms,
+    clearedAlarms,
+    highSeverityAlarms,
+    mediumSeverityAlarms,
+    refreshAlarms,
+  } = useAlarmLogs(credentials);
   if (loading) {
     return (
       <div
@@ -164,7 +58,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
           </p>
           <button
             className="vrm-btn"
-            onClick={() => fetchAlarmLogs(isAdmin ? selectedClient : undefined)}
+            onClick={refreshAlarms}
           >
             Retry Connection
           </button>
@@ -172,15 +66,6 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
       </div>
     );
   }
-  const activeAlarms = alarms.filter((a) => !a.alarmClearedAfter);
-  const clearedAlarms = alarms.filter((a) => a.alarmClearedAfter);
-  const highSeverityAlarms = alarms.filter((a) => a.severity === "high").length;
-  const mediumSeverityAlarms = alarms.filter(
-    (a) => a.severity === "medium",
-  ).length;
-  const clientUsers = Object.entries(users).filter(
-    ([_, user]) => user.role === "client",
-  );
   return (
     <div>
       {" "}

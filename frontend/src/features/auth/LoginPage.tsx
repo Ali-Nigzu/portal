@@ -1,55 +1,23 @@
-import React, { useState } from "react";
+import React from "react";
 
 import { companyLogoDataUri } from "../../assets/companyLogo";
 import { Credentials } from "../../types/credentials";
-import { deriveOrgIdFromTableName, determineOrgId } from "../../lib/org";
+import { useLoginForm } from "./hooks/useLoginForm";
 
 interface LoginPageProps {
   onLogin: (credentials: Credentials) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const orgFromResponse =
-          data?.user?.orgId ??
-          data?.user?.org_id ??
-          deriveOrgIdFromTableName(data?.user?.table_name);
-        onLogin({
-          username,
-          password,
-          orgId: orgFromResponse ?? determineOrgId({ username }),
-        });
-      } else if (response.status === 401) {
-        setError("Invalid username or password");
-      } else {
-        setError("Connection error. Please try again.");
-      }
-    } catch (err) {
-      setError("Unable to connect to server");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    username,
+    password,
+    error,
+    loading,
+    setUsername,
+    setPassword,
+    handleSubmit,
+  } = useLoginForm(onLogin);
 
   return (
     <div className="vrm-auth-shell">

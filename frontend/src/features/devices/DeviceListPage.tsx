@@ -1,233 +1,25 @@
-import React, { useCallback, useEffect, useState } from "react";
-
-import { API_BASE_URL } from "../../config";
+import React from "react";
 import { Credentials } from "../../types/credentials";
-import { getViewTokenFromLocation } from "../../lib/viewToken";
-
-interface DeviceInfo {
-  id: string;
-  name: string;
-  type: "Camera" | "Sensor" | "Gateway";
-  status: "online" | "offline" | "maintenance";
-  lastSeen: string;
-  dataSource?: string;
-  location?: string;
-  recordCount?: number;
-}
-
-interface DataSource {
-  id: string;
-  title: string;
-  url: string;
-  type: string;
-  active?: boolean;
-}
-
-interface User {
-  role: "admin" | "client";
-  name: string;
-  csv_url?: string;
-  data_sources?: DataSource[];
-}
+import { useDeviceList } from "./hooks/useDeviceList";
+import { getStatusClass, getStatusText } from "./utils/statusFormatters";
 
 interface DeviceListPageProps {
   credentials: Credentials;
 }
 
 const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
-  const [devices, setDevices] = useState<DeviceInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [users, setUsers] = useState<{ [key: string]: User }>({});
-  const [selectedClient, setSelectedClient] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [dataSources, setDataSources] = useState<DataSource[]>([]);
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      const auth = btoa(`${credentials.username}:${credentials.password}`);
-      const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const usersData = data.users || data;
-        setUsers(usersData);
-        setIsAdmin(
-          credentials.username === "admin" ||
-            usersData[credentials.username]?.role === "admin",
-        );
-        const clientUsers = Object.entries(usersData).filter(
-          ([_, user]) => (user as User).role === "client",
-        );
-        if (clientUsers.length > 0) {
-          setSelectedClient(clientUsers[0][0]);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-    }
-  }, [credentials.username, credentials.password]);
-
-  const fetchDeviceList = useCallback(
-    async (clientId?: string) => {
-      try {
-        setLoading(true);
-        const viewToken = getViewTokenFromLocation();
-        let apiUrl = `${API_BASE_URL}/api/device-list`;
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-        };
-        if (viewToken) {
-          apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
-        } else {
-          const auth = btoa(`${credentials.username}:${credentials.password}`);
-          headers.Authorization = `Basic ${auth}`;
-          if (isAdmin && clientId) {
-            apiUrl += `?client_id=${encodeURIComponent(clientId)}`;
-          }
-        }
-        const response = await fetch(apiUrl, { headers });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        setDevices(result.devices || []);
-        setDataSources(result.data_sources || []);
-        setError(null);
-      } catch (err) {
-        setError(
-          `Failed to load device information: ${
-            err instanceof Error ? err.message : "Unknown error"
-          }`,
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [credentials.username, credentials.password, isAdmin],
-  );
-
-  const fetchDataSources = useCallback(async () => {
-    try {
-      const viewToken = getViewTokenFromLocation();
-      let clientToLoad = isAdmin ? selectedClient : credentials.username;
-      if (viewToken && Object.keys(users).length > 0) {
-        const clientUsers = Object.entries(users).filter(
-          ([_, user]) => user.role === "client",
-        );
-        if (clientUsers.length > 0) {
-          clientToLoad = clientUsers[0][0];
-        }
-      }
-      if (!clientToLoad) return;
-      if (users[clientToLoad]?.data_sources) {
-        setDataSources(users[clientToLoad].data_sources || []);
-        return;
-      }
-      if (isAdmin && !viewToken) {
-        const auth = btoa(`${credentials.username}:${credentials.password}`);
-        const response = await fetch(
-          `${API_BASE_URL}/api/admin/data-sources/${clientToLoad}`,
-          {
-            headers: {
-              Authorization: `Basic ${auth}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setDataSources(data.data_sources || []);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch data sources:", err);
-      setDataSources([]);
-    }
-  }, [
-    credentials.username,
-    credentials.password,
+  const {
+    devices,
+    dataSources,
+    loading,
+    error,
     isAdmin,
     selectedClient,
-    users,
-  ]);
-
-  useEffect(() => {
-    const initialize = async () => {
-      const viewToken = getViewTokenFromLocation();
-      if (!viewToken) {
-        await fetchUsers();
-      }
-    };
-    initialize();
-  }, [fetchUsers]);
-
-  useEffect(() => {
-    if (isAdmin && selectedClient) {
-      fetchDeviceList(selectedClient);
-    } else if (!isAdmin) {
-      fetchDeviceList();
-    }
-  }, [selectedClient, isAdmin, fetchDeviceList]);
-
-  useEffect(() => {
-    fetchDataSources();
-  }, [fetchDataSources, users, selectedClient]);
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case "online":
-        return "vrm-status-online";
-      case "offline":
-        return "vrm-status-offline";
-      case "maintenance":
-        return "vrm-status-warning";
-      default:
-        return "vrm-status-offline";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "online":
-        return "Online";
-      case "offline":
-        return "Offline";
-      case "maintenance":
-        return "Maintenance";
-      default:
-        return "Unknown";
-    }
-  };
-
-  const handleDownloadDataSource = async (
-    sourceUrl: string,
-    sourceName: string,
-  ) => {
-    try {
-      const response = await fetch(sourceUrl);
-      if (!response.ok) {
-        throw new Error("Failed to download data");
-      }
-      const csvData = await response.text();
-      const blob = new Blob([csvData], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${sourceName.replace(/[^a-z0-9]/gi, "_")}_data.csv`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Download failed:", err);
-      alert("Failed to download data source");
-    }
-  };
+    setSelectedClient,
+    clientUsers,
+    refreshDevices,
+    downloadDataSource,
+  } = useDeviceList(credentials);
 
   if (loading) {
     return (
@@ -262,9 +54,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const offlineDevices = devices.filter(
     (device) => device.status === "offline",
   ).length;
-  const clientUsers = Object.entries(users).filter(
-    ([_, user]) => user.role === "client",
-  );
 
   return (
     <div>
@@ -390,9 +179,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
           <div className="vrm-card-actions">
             <button
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={() =>
-                fetchDeviceList(isAdmin ? selectedClient : undefined)
-              }
+              onClick={refreshDevices}
             >
               Refresh
             </button>
@@ -582,7 +369,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         <button
                           className="vrm-btn vrm-btn-primary vrm-btn-sm"
                           onClick={() =>
-                            handleDownloadDataSource(source.url, source.title)
+                            downloadDataSource(source.url, source.title)
                           }
                         >
                           Download CSV
