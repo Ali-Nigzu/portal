@@ -294,7 +294,7 @@ export const KpiTile = ({
                     <YAxis
                       type="number"
                       domain={[
-                        (dataMin: number) => Math.min(0, dataMin),
+                        0,
                         (dataMax: number) => Math.max(0, dataMax),
                       ]}
                       padding={{ bottom: 0, top: 0 }}

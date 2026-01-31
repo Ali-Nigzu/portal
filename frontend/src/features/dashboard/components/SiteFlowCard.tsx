@@ -10,7 +10,6 @@ import {
 import { renderError } from "./dashboardRenderers";
 
 type SiteFlowCardProps = {
-  subtitle?: string;
   locked?: boolean;
   onRemove?: () => void;
   widgetId: string;
@@ -31,7 +30,6 @@ type SiteFlowCardProps = {
 };
 
 const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
-  subtitle,
   locked,
   onRemove,
   widgetId,
@@ -85,7 +83,6 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
   return (
     <Card
       title="Site Flow"
-      subtitle={subtitle}
       className="dashboard-v2__chart-card vrm-card vrm-card--chart-panel"
       footer={footer}
       dateSelector={

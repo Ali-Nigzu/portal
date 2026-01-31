@@ -4,16 +4,26 @@ interface SeriesLegendProps {
   series: ChartSeries[];
   visibility: SeriesVisibilityMap;
   onToggleSeries?: (seriesId: string) => void;
+  hideInactive?: boolean;
 }
 export const SeriesLegend = ({
   series,
   visibility,
   onToggleSeries,
+  hideInactive = false,
 }: SeriesLegendProps) => {
   if (!onToggleSeries) {
     return null;
   }
-  const visibleSeries = series.filter((item) => !item.hideInLegend);
+  const visibleSeries = series.filter((item) => {
+    if (item.hideInLegend) {
+      return false;
+    }
+    if (hideInactive) {
+      return visibility[item.id] !== false;
+    }
+    return true;
+  });
   return (
     <div className="analytics-series-legend">
       {" "}

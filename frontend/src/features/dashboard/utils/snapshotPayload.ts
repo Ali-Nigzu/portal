@@ -8,6 +8,7 @@ import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const NAIVE_TIMESTAMP_REGEX =
   /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/;
 const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
@@ -44,35 +45,61 @@ const buildTimeSeriesPoints = (
     y: value,
     value,
   }));
+const floorToQuarterHour = (value: Date): Date => {
+  const timestamp = value.getTime();
+  const floored =
+    Math.floor(timestamp / FIFTEEN_MINUTES_MS) * FIFTEEN_MINUTES_MS;
+  return new Date(floored);
+};
+const normalizeSeriesLength = (values: number[], count: number): number[] => {
+  const sliced = values.slice(0, count);
+  if (sliced.length >= count) {
+    return sliced;
+  }
+  return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
+};
 const buildKpiResult = (
   values: number[],
   snapshotTs: Date,
   widgetId: string,
-): ChartResult => ({
-  chartType: "single_value",
-  xDimension: {
-    id: "timestamp",
-    type: "time",
-    bucket: "15_MIN",
-    timezone: "UTC",
-  },
-  series: [
-    {
-      id: widgetId,
-      label: VRM_KPI_TITLES[widgetId] ?? widgetId,
-      geometry: "line",
-      data: buildTimeSeriesPoints(values, snapshotTs, FIFTEEN_MINUTES_MS),
+): ChartResult => {
+  const end = floorToQuarterHour(snapshotTs);
+  const start = new Date(end.getTime() - DAY_MS);
+  const bucketCount =
+    Math.floor(
+      (end.getTime() - start.getTime()) / FIFTEEN_MINUTES_MS,
+    ) + 1;
+  const normalizedValues = normalizeSeriesLength(values, bucketCount);
+  return {
+    chartType: "single_value",
+    xDimension: {
+      id: "timestamp",
+      type: "time",
+      bucket: "15_MIN",
+      timezone: "UTC",
     },
-  ],
-  meta: {
-    timezone: "UTC",
-    summary: {
-      widgetId,
-      title: VRM_KPI_TITLES[widgetId] ?? widgetId,
-      presentation: "vrm",
+    series: [
+      {
+        id: widgetId,
+        label: VRM_KPI_TITLES[widgetId] ?? widgetId,
+        geometry: "line",
+        data: buildTimeSeriesPoints(
+          normalizedValues,
+          end,
+          FIFTEEN_MINUTES_MS,
+        ),
+      },
+    ],
+    meta: {
+      timezone: "UTC",
+      summary: {
+        widgetId,
+        title: VRM_KPI_TITLES[widgetId] ?? widgetId,
+        presentation: "vrm",
+      },
     },
-  },
-});
+  };
+};
 const buildTrafficResult = (values: number[]): ChartResult => {
   const labels = ["Camera 0", "Camera 1", "Camera 2"];
   const normalized = Array.from({ length: 3 }, (_, index) =>
@@ -139,13 +166,6 @@ const buildCapacityResult = (values: number[]): ChartResult => {
       },
     },
   };
-};
-const normalizeSeriesLength = (values: number[], count: number): number[] => {
-  const sliced = values.slice(0, count);
-  if (sliced.length >= count) {
-    return sliced;
-  }
-  return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
 };
 const buildSiteFlowResult = (
   rollup: unknown[],

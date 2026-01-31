@@ -3,12 +3,14 @@ import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesMetaEntry } from "../primitives/utils";
 import {
   formatCoverage,
+  formatNumeric,
   formatValue,
   shouldShowRawCount,
 } from "../utils/format";
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;
+  variant?: "site_flow_activity";
 };
 export const ChartTooltip = ({
   active,
@@ -16,17 +18,86 @@ export const ChartTooltip = ({
   label,
   meta,
   seriesMap,
+  variant,
 }: ChartTooltipProps) => {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
   const xKey = String(payload[0]?.payload?.x ?? label ?? "");
   const xMeta = meta[xKey] ?? {};
+  if (variant === "site_flow_activity") {
+    const entryById = new Map(
+      payload.map((entry) => [String(entry.dataKey), entry]),
+    );
+    const exitsEntry = entryById.get("exits");
+    const entrancesEntry = entryById.get("entrances");
+    const occupancyEntry = entryById.get("occupancy");
+    const occupancyPayload =
+      (occupancyEntry?.payload as Record<string, number | null | undefined>) ??
+      {};
+    const occupancyMin = occupancyPayload.occupancy_min ?? null;
+    const occupancyMax = occupancyPayload.occupancy_max ?? null;
+    const entranceColor = "var(--vrm-color-accent-entrances, #47c96f)";
+    const exitColor = "var(--vrm-color-accent-exits, #ff5964)";
+    const occupancyColor = "var(--vrm-color-accent-occupancy, #2685ff)";
+    const rows: Array<JSX.Element> = [];
+    if (entrancesEntry) {
+      rows.push(
+        <li key="entrances" className="tooltip-row">
+          <span className="series-label" style={{ color: entranceColor }}>
+            Entrance
+          </span>
+          <span className="series-value" style={{ color: entranceColor }}>
+            {formatNumeric(entrancesEntry.value as number | null | undefined)}
+          </span>
+        </li>,
+      );
+    }
+    if (exitsEntry) {
+      rows.push(
+        <li key="exits" className="tooltip-row">
+          <span className="series-label" style={{ color: exitColor }}>
+            Exit
+          </span>
+          <span className="series-value" style={{ color: exitColor }}>
+            {formatNumeric(exitsEntry.value as number | null | undefined)}
+          </span>
+        </li>,
+      );
+    }
+    if (occupancyEntry) {
+      rows.push(
+        <li key="occupancy" className="tooltip-row">
+          <span className="series-label" style={{ color: occupancyColor }}>
+            Occupancy
+          </span>
+          <span className="series-value" style={{ color: occupancyColor }}>
+            <span className="tooltip-occupancy-value">
+              {formatNumeric(occupancyEntry.value as number | null | undefined)}
+              <sup className="tooltip-occupancy-max">
+                Max: {formatNumeric(occupancyMax)}
+              </sup>
+              <sub className="tooltip-occupancy-min">
+                Min: {formatNumeric(occupancyMin)}
+              </sub>
+            </span>
+          </span>
+        </li>,
+      );
+    }
+    if (rows.length === 0) {
+      return null;
+    }
+    return (
+      <div className="analytics-chart-tooltip">
+        <ul>{rows}</ul>
+      </div>
+    );
+  }
   return (
     <div className="analytics-chart-tooltip">
       <div className="tooltip-header">{label}</div>
       <ul>
-        {" "}
         {payload
           .map((entry) => {
             const seriesId = String(entry.dataKey);
@@ -55,11 +126,10 @@ export const ChartTooltip = ({
                       backgroundColor:
                         entry.color ?? series?.color ?? "#2d6cdf",
                     }}
-                  />{" "}
-                  {series?.label ?? seriesId}{" "}
+                  />
+                  {series?.label ?? seriesId}
                 </span>
                 <span className="series-value">
-                  {" "}
                   {formatValue(
                     (series?.tooltipValueKey
                       ? ((entry.payload as
@@ -67,19 +137,18 @@ export const ChartTooltip = ({
                           | undefined) ?? {})[series.tooltipValueKey]
                       : entry.value) as number | null | undefined,
                     series?.unit,
-                  )}{" "}
-                </span>{" "}
+                  )}
+                </span>
                 {showRaw ? (
                   <span className="series-meta">raw: {rawCount}</span>
-                ) : null}{" "}
+                ) : null}
                 <span className={`series-coverage ${coverageClass ?? ""}`}>
-                  {" "}
-                  coverage: {coverageInfo.label}{" "}
+                  coverage: {coverageInfo.label}
                 </span>
               </li>
             );
           })
-          .filter(Boolean)}{" "}
+          .filter(Boolean)}
       </ul>
     </div>
   );

@@ -5,7 +5,6 @@ import {
   ComposedChart,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   Line,
   Area,
@@ -19,6 +18,7 @@ import { buildCartesianDataset } from "./utils";
 import { ChartTooltip } from "../ui/ChartTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
 import { formatBrushTimestamp } from "../utils/formatBrushTimestamp";
+import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
 export const TimeSeriesChart = ({
   series,
   axisConfig,
@@ -26,6 +26,11 @@ export const TimeSeriesChart = ({
   onToggleSeries,
   height,
   className,
+  showBrush = true,
+  tooltipVariant,
+  siteFlowTimeframe,
+  result,
+  hideInactiveLegend,
 }: ChartPrimitiveProps) => {
   const dataset = useMemo(() => buildCartesianDataset(series), [series]);
   const [brushRange, setBrushRange] = useState({ startIndex: 0, endIndex: 0 });
@@ -54,6 +59,11 @@ export const TimeSeriesChart = ({
   const endLabelCompact = endTimestamp
     ? formatBrushTimestamp(endTimestamp, { compact: true })
     : "—";
+  const isSiteFlowActivity = tooltipVariant === "site_flow_activity";
+  const bucket = result.xDimension?.bucket;
+  const tickFormatter = siteFlowTimeframe
+    ? (value: string) => formatSiteFlowTick(siteFlowTimeframe, bucket, value)
+    : undefined;
   return (
     <div className={className} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -61,28 +71,40 @@ export const TimeSeriesChart = ({
           data={dataset.data}
           margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
         >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--border-strong, #d0d5dd)"
-          />
-          <XAxis dataKey="x" tick={{ fill: "var(--text-muted, #475467)" }} />{" "}
+          <XAxis
+            dataKey="x"
+            tick={{ fill: "var(--text-muted, #475467)" }}
+            tickFormatter={tickFormatter}
+          />{" "}
           {axisConfig.axes.map((axis) => (
             <YAxis
               key={axis.id}
               yAxisId={axis.id}
               hide={!axis.visible}
               tick={{ fill: "var(--text-muted, #475467)" }}
+              orientation={
+                isSiteFlowActivity && axis.id !== "Y1" ? "right" : "left"
+              }
               label={{
                 value: axis.label ?? axis.unit,
-                angle: -90,
-                position: "insideLeft",
+                angle: isSiteFlowActivity && axis.id !== "Y1" ? 90 : -90,
+                position:
+                  isSiteFlowActivity && axis.id !== "Y1"
+                    ? "insideRight"
+                    : "insideLeft",
                 style: { fill: "var(--text-muted, #475467)" },
               }}
             />
           ))}{" "}
           <Tooltip
-            content={<ChartTooltip meta={dataset.meta} seriesMap={seriesMap} />}
-            cursor={{ stroke: "var(--border-strong, #d0d5dd)" }}
+            content={
+              <ChartTooltip
+                meta={dataset.meta}
+                seriesMap={seriesMap}
+                variant={tooltipVariant}
+              />
+            }
+            cursor={isSiteFlowActivity ? false : { stroke: "var(--border-strong, #d0d5dd)" }}
           />{" "}
           {series.map((seriesItem) => {
             const yAxisId = axisConfig.bindings[seriesItem.id] ?? "Y1";
@@ -139,6 +161,7 @@ export const TimeSeriesChart = ({
               );
             }
             if (seriesItem.geometry === "line") {
+              const showDots = seriesItem.id !== "occupancy";
               return (
                 <Line
                   key={seriesItem.id}
@@ -146,11 +169,12 @@ export const TimeSeriesChart = ({
                   dataKey={seriesItem.id}
                   stroke={seriesItem.color}
                   strokeWidth={2}
-                  dot={dotRenderer}
+                  dot={showDots ? dotRenderer : false}
                   yAxisId={yAxisId}
                   hide={hidden}
                   isAnimationActive={false}
                   strokeDasharray={hasLowCoverage ? "6 4" : undefined}
+                  activeDot={showDots ? undefined : false}
                 />
               );
             }
@@ -172,20 +196,22 @@ export const TimeSeriesChart = ({
             }
             return null;
           })}{" "}
-          <Brush
-            dataKey="x"
-            height={24}
-            travellerWidth={12}
-            stroke="var(--border-strong, rgba(130, 144, 166, 0.35))"
-            fill="var(--surface-muted, rgba(15, 19, 26, 0.35))"
-            tickFormatter={() => ""}
-            onChange={(nextRange) => setBrushRange(nextRange)}
-            startIndex={brushRange.startIndex}
-            endIndex={brushRange.endIndex}
-          />
+          {showBrush ? (
+            <Brush
+              dataKey="x"
+              height={24}
+              travellerWidth={12}
+              stroke="var(--border-strong, rgba(130, 144, 166, 0.35))"
+              fill="var(--surface-muted, rgba(15, 19, 26, 0.35))"
+              tickFormatter={() => ""}
+              onChange={(nextRange) => setBrushRange(nextRange)}
+              startIndex={brushRange.startIndex}
+              endIndex={brushRange.endIndex}
+            />
+          ) : null}
         </ComposedChart>
       </ResponsiveContainer>{" "}
-      {dataset.data.length > 0 ? (
+      {showBrush && dataset.data.length > 0 ? (
         <div className="analytics-brush-labels">
           <div className="analytics-brush-label">
             <span className="analytics-brush-caption">Start</span>
@@ -215,6 +241,7 @@ export const TimeSeriesChart = ({
         series={series}
         visibility={visibility}
         onToggleSeries={onToggleSeries}
+        hideInactive={hideInactiveLegend}
       />
     </div>
   );
