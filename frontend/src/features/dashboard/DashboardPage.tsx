@@ -82,7 +82,7 @@ const DashboardPage = ({
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
       <div className="dashboard-v2__content vrm-dashboard-shell">
-        <DashboardHeader />
+        <DashboardHeader clientId={resolvedUiClient} />
         {status === "error" && error ? (
           <div className="dashboard-v2__error-banner" role="alert">
             {error}
