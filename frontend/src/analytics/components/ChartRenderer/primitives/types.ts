@@ -11,4 +11,7 @@ export interface ChartPrimitiveProps {
   widgetId?: string;
   useRawLabels?: boolean;
   labelKey?: string;
+  showBrush?: boolean;
+  tooltipVariant?: "site_flow_activity";
+  siteFlowTimeframe?: string;
 }

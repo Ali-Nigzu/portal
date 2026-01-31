@@ -28,13 +28,11 @@ export const formatSiteFlowTick = (
   switch (timeframe) {
     case "today":
     case "yesterday":
-      return formatHour(parsed, false);
+      return formatHour(parsed, true);
     case "last_week":
       return formatWeekday(parsed);
     case "last_month":
-      return bucket === "WEEK"
-        ? formatWeekLabel(parsed)
-        : String(parsed.getDate());
+      return formatWeekLabel(parsed);
     case "last_quarter":
       return formatWeekLabel(parsed);
     case "last_year":

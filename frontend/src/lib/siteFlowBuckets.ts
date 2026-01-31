@@ -1,18 +1,25 @@
 import { formatSiteFlowTick } from "../analytics/components/ChartRenderer/utils/formatSiteFlowTick";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
-import { startOfDay, startOfMonth, startOfWeek } from "./timeWindows";
+import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "./timeWindows";
 const DAY_MS = 24 * 60 * 60 * 1000;
+const addHours = (date: Date, hours: number): Date => {
+  const next = new Date(date);
+  next.setHours(next.getHours() + hours);
+  return next;
+};
 const addDays = (date: Date, days: number): Date => {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
 };
+const addYears = (date: Date, years: number): Date =>
+  new Date(date.getFullYear() + years, 0, 1, 0, 0, 0, 0);
 const addMonths = (date: Date, months: number): Date =>
   new Date(date.getFullYear(), date.getMonth() + months, 1, 0, 0, 0, 0);
 export const inferSiteFlowBucket = (
   timeframe: SiteFlowTimeframe,
-  length: number,
-): "RAW" | "HOUR" | "DAY" | "WEEK" | "MONTH" => {
+  _length: number,
+): "RAW" | "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR" => {
   if (timeframe === "today" || timeframe === "yesterday") {
     return "HOUR";
   }
@@ -20,7 +27,7 @@ export const inferSiteFlowBucket = (
     return "DAY";
   }
   if (timeframe === "last_month") {
-    return length <= 7 ? "WEEK" : "DAY";
+    return "WEEK";
   }
   if (timeframe === "last_quarter") {
     return "WEEK";
@@ -28,22 +35,7 @@ export const inferSiteFlowBucket = (
   if (timeframe === "last_year") {
     return "MONTH";
   }
-  return length <= 12 ? "MONTH" : "WEEK";
-};
-const lastNonZeroIndex = (values: number[]): number => {
-  for (let index = values.length - 1; index >= 0; index -= 1) {
-    if (values[index] !== 0) {
-      return index;
-    }
-  }
-  return -1;
-};
-const normalizeSeriesLength = (values: number[], count: number): number[] => {
-  const sliced = values.slice(0, count);
-  if (sliced.length >= count) {
-    return sliced;
-  }
-  return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
+  return "YEAR";
 };
 export const resolveSiteFlowSliceCount = (
   timeframe: SiteFlowTimeframe,
@@ -52,38 +44,23 @@ export const resolveSiteFlowSliceCount = (
 ): {
   length: number;
   sliceCount: number;
-  bucketMsToday: number | null;
   dayStart: Date;
 } => {
   const length = Math.max(...seriesList.map((series) => series.length), 0);
-  const desiredLength =
-    timeframe === "last_week"
-      ? 7
-      : timeframe === "last_quarter"
-        ? 12
-        : timeframe === "last_year"
-          ? 12
-          : length;
-  let sliceCount =
-    timeframe === "last_week" ||
-    timeframe === "last_quarter" ||
-    timeframe === "last_year"
-      ? desiredLength
-      : length;
+  const sliceCount =
+    timeframe === "today" || timeframe === "yesterday"
+      ? 24
+      : timeframe === "last_week"
+        ? 7
+        : timeframe === "last_month"
+          ? 4
+          : timeframe === "last_quarter"
+            ? 12
+            : timeframe === "last_year"
+              ? 12
+              : length;
   const dayStart = startOfDay(anchor);
-  const bucketMsToday = length > 0 ? DAY_MS / length : null;
-  if (timeframe === "today" && length > 0) {
-    const normalizedSeries = seriesList.map((values) =>
-      normalizeSeriesLength(values, length),
-    );
-    const idxNonZero = Math.max(...normalizedSeries.map(lastNonZeroIndex));
-    const elapsedMs = anchor.getTime() - dayStart.getTime();
-    const idxNow = Math.floor(elapsedMs / (bucketMsToday ?? DAY_MS));
-    const sliceLenTime = Math.min(Math.max(idxNow + 1, 0), length);
-    const sliceLenNonZero = idxNonZero >= 0 ? idxNonZero + 1 : sliceLenTime;
-    sliceCount = Math.min(sliceLenTime, sliceLenNonZero);
-  }
-  return { length, sliceCount, bucketMsToday, dayStart };
+  return { length, sliceCount, dayStart };
 };
 export const buildAnchoredTimestamps = (
   timeframe: SiteFlowTimeframe,
@@ -98,27 +75,17 @@ export const buildAnchoredTimestamps = (
       timeframe === "today"
         ? startOfDay(anchor)
         : startOfDay(new Date(anchor.getTime() - DAY_MS));
-    const stepMs = DAY_MS / length;
-    return Array.from(
-      { length },
-      (_, index) => new Date(start.getTime() + index * stepMs),
-    );
+    return Array.from({ length }, (_, index) => addHours(start, index));
   }
   if (timeframe === "last_week") {
-    const endDayStart = startOfDay(anchor);
-    const start = addDays(endDayStart, -(length - 1));
+    const currentWeekStart = startOfWeek(anchor);
+    const start = addDays(currentWeekStart, -7);
     return Array.from({ length }, (_, index) => addDays(start, index));
   }
   if (timeframe === "last_month") {
-    if (length <= 5) {
-      const monthStart = startOfMonth(anchor);
-      const firstWeekStart = startOfWeek(monthStart);
-      return Array.from({ length }, (_, index) =>
-        addDays(firstWeekStart, index * 7),
-      );
-    }
-    const start = startOfMonth(anchor);
-    return Array.from({ length }, (_, index) => addDays(start, index));
+    const mostRecentMonday = startOfWeek(anchor);
+    const start = addDays(mostRecentMonday, -7 * (length - 1));
+    return Array.from({ length }, (_, index) => addDays(start, index * 7));
   }
   if (timeframe === "last_quarter") {
     const endWeekStart = startOfWeek(anchor);
@@ -126,29 +93,13 @@ export const buildAnchoredTimestamps = (
     return Array.from({ length }, (_, index) => addDays(start, index * 7));
   }
   if (timeframe === "last_year") {
-    const endMonthStart = new Date(
-      anchor.getFullYear(),
-      anchor.getMonth(),
-      1,
-      0,
-      0,
-      0,
-      0,
-    );
+    const endMonthStart = addMonths(startOfMonth(anchor), -1);
     const start = addMonths(endMonthStart, -(length - 1));
     return Array.from({ length }, (_, index) => addMonths(start, index));
   }
-  const endMonthStart = new Date(
-    anchor.getFullYear(),
-    anchor.getMonth(),
-    1,
-    0,
-    0,
-    0,
-    0,
-  );
-  const start = addMonths(endMonthStart, -(length - 1));
-  return Array.from({ length }, (_, index) => addMonths(start, index));
+  const endYearStart = startOfYear(anchor);
+  const start = addYears(endYearStart, -(length - 1));
+  return Array.from({ length }, (_, index) => addYears(start, index));
 };
 export const buildSiteFlowBucketLabels = (
   timeframe: SiteFlowTimeframe,
@@ -160,15 +111,16 @@ export const buildSiteFlowBucketLabels = (
   timestamps: Date[];
   sliceCount: number;
 } => {
-  const { length, sliceCount, bucketMsToday, dayStart } =
-    resolveSiteFlowSliceCount(timeframe, anchor, seriesList);
+  const { length, sliceCount, dayStart } = resolveSiteFlowSliceCount(
+    timeframe,
+    anchor,
+    seriesList,
+  );
   const timestamps =
     timeframe === "today"
-      ? Array.from(
-          { length },
-          (_, index) =>
-            new Date(dayStart.getTime() + index * (bucketMsToday ?? DAY_MS)),
-        ).slice(0, sliceCount)
+      ? Array.from({ length: sliceCount }, (_, index) =>
+          addHours(dayStart, index),
+        )
       : buildAnchoredTimestamps(timeframe, anchor, sliceCount);
   const bucket = inferSiteFlowBucket(timeframe, sliceCount);
   const labels = timestamps.map((timestamp) =>

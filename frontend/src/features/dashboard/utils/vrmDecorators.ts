@@ -74,7 +74,8 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
   const occupancyColor =
     occupancySeries?.color ?? "var(--vrm-color-accent-occupancy, #2d6cdf)";
   const occupancyAxis = occupancySeries?.axis;
-  const occupancyBand = (occupancySeries?.data ?? []).map((point) => {
+  // Site Flow occupancy points may carry occupancy_avg/min/max fields (snapshot rollups).
+  const occupancyData = (occupancySeries?.data ?? []).map((point) => {
     const occupancyPoint = point as unknown as OccupancyPoint;
     const min = numberOrNull(
       occupancyPoint.occupancy_min ?? occupancyPoint.min,
@@ -87,93 +88,46 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
         occupancyPoint.avg ??
         occupancyPoint.value,
     );
-    const span = min !== null && max !== null ? max - min : null;
     return {
       x: point.x,
-      y: min,
+      y: avg,
+      value: avg,
       coverage: point.coverage ?? null,
       rawCount:
         (point as unknown as { rawCount?: number | null }).rawCount ?? null,
       occupancy_min: min,
       occupancy_max: max,
       occupancy_avg: avg,
-      occupancy_span: span,
     } satisfies DataPoint & {
       occupancy_min: number | null;
       occupancy_max: number | null;
       occupancy_avg: number | null;
-      occupancy_span: number | null;
     };
   });
-  const occupancyMinLine: ChartSeries = {
-    id: "occupancy_min",
-    label: "Occupancy (min)",
-    geometry: "line",
-    axis: occupancyAxis,
-    unit: "people",
-    seriesGroup: "occupancy",
-    noDots: true,
-    hideInLegend: true,
-    color: occupancyColor,
-    strokeOpacity: 0.45,
-    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_min })),
-  };
-  const occupancyMaxLine: ChartSeries = {
-    id: "occupancy_max",
-    label: "Occupancy (max)",
-    geometry: "line",
-    axis: occupancyAxis,
-    unit: "people",
-    seriesGroup: "occupancy",
-    noDots: true,
-    hideInLegend: true,
-    color: occupancyColor,
-    strokeOpacity: 0.6,
-    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_max })),
-  };
-  const occupancyAvgLine: ChartSeries = {
-    id: "occupancy_avg",
-    label: "Occupancy (avg)",
-    geometry: "line",
-    axis: occupancyAxis,
-    unit: "people",
-    seriesGroup: "occupancy",
-    noDots: true,
-    color: occupancyColor,
-    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_avg })),
-  };
-  const occupancyBandBase: ChartSeries = {
-    id: "occupancy_band_base",
-    label: "Occupancy band base",
-    geometry: "area",
-    stack: "occupancy-band",
-    color: occupancyColor,
-    fillOpacity: 0,
-    strokeOpacity: 0,
-    hideInLegend: true,
-    hideInTooltip: true,
-    axis: occupancyAxis,
-    unit: "people",
-    seriesGroup: "occupancy",
-    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_min })),
-  };
-  const occupancyBandSpan: ChartSeries = {
-    id: "occupancy_band_span",
-    label: "Occupancy (min–max)",
-    geometry: "area",
-    stack: "occupancy-band",
-    color: occupancyColor,
-    fillOpacity: 0.22,
-    strokeOpacity: 0.9,
-    hideInLegend: true,
-    hideInTooltip: true,
-    axis: occupancyAxis,
-    unit: "people",
-    seriesGroup: "occupancy",
-    data: occupancyBand.map((point) => ({ ...point, y: point.occupancy_span })),
-  };
+  const occupancyAvgLine: ChartSeries | null =
+    occupancySeries && occupancyData.length > 0
+      ? {
+          id: "occupancy",
+          label: "Avg Occupancy",
+          geometry: "line",
+          axis: occupancyAxis,
+          unit: "people",
+          seriesGroup: "occupancy",
+          noDots: true,
+          color: occupancyColor,
+          data: occupancyData,
+        }
+      : null;
   const bars = result.series
-    .filter((series) => series.id !== "occupancy" && series.id !== "throughput")
+    .filter((series) => {
+      if (series.id === "throughput") {
+        return false;
+      }
+      if (occupancySeries && series.id === occupancySeries.id) {
+        return false;
+      }
+      return !series.id.startsWith("occupancy_");
+    })
     .map((series) => {
       if (series.id === "entrances" || series.id === "exits") {
         return { ...series, geometry: "bar" as const, unit: "events" };
@@ -188,11 +142,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
     },
     series: [
       ...bars,
-      occupancyBandBase,
-      occupancyBandSpan,
-      occupancyMinLine,
-      occupancyMaxLine,
-      occupancyAvgLine,
+      ...(occupancyAvgLine ? [occupancyAvgLine] : []),
     ],
   };
 };

@@ -113,6 +113,20 @@ export const ChartRenderer = ({
       return next;
     });
   };
+  const summary = result.meta?.summary as
+    | { presentation?: string; chartStyle?: string; chartSubType?: string }
+    | undefined;
+  const summaryRecord = summary as Record<string, unknown> | undefined;
+  const summaryTitle =
+    typeof summaryRecord?.title === "string"
+      ? (summaryRecord.title as string)
+      : undefined;
+  const siteFlowTimeframe =
+    typeof summaryRecord?.siteFlowTimeframe === "string"
+      ? (summaryRecord.siteFlowTimeframe as string)
+      : undefined;
+  const isSiteFlowActivity =
+    widgetId === "live-flow" || widgetId === "site-flow";
   const chartProps = {
     result,
     series: decoratedSeries,
@@ -122,15 +136,10 @@ export const ChartRenderer = ({
     height,
     className: resolvedClassName,
     widgetId,
+    showBrush: !isSiteFlowActivity,
+    tooltipVariant: isSiteFlowActivity ? "site_flow_activity" : undefined,
+    siteFlowTimeframe,
   };
-  const summary = result.meta?.summary as
-    | { presentation?: string; chartStyle?: string; chartSubType?: string }
-    | undefined;
-  const summaryRecord = summary as Record<string, unknown> | undefined;
-  const summaryTitle =
-    typeof summaryRecord?.title === "string"
-      ? (summaryRecord.title as string)
-      : undefined;
   const chartStyle =
     summary?.chartStyle ||
     (result as unknown as { chartStyle?: string }).chartStyle;

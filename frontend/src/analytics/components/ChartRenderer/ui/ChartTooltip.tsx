@@ -3,12 +3,14 @@ import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesMetaEntry } from "../primitives/utils";
 import {
   formatCoverage,
+  formatNumeric,
   formatValue,
   shouldShowRawCount,
 } from "../utils/format";
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;
+  variant?: "site_flow_activity";
 };
 export const ChartTooltip = ({
   active,
@@ -16,12 +18,60 @@ export const ChartTooltip = ({
   label,
   meta,
   seriesMap,
+  variant,
 }: ChartTooltipProps) => {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
   const xKey = String(payload[0]?.payload?.x ?? label ?? "");
   const xMeta = meta[xKey] ?? {};
+  if (variant === "site_flow_activity") {
+    const entryById = new Map(
+      payload.map((entry) => [String(entry.dataKey), entry]),
+    );
+    const exitsEntry = entryById.get("exits");
+    const entrancesEntry = entryById.get("entrances");
+    const occupancyEntry = entryById.get("occupancy");
+    const occupancyPayload =
+      (occupancyEntry?.payload as Record<string, number | null | undefined>) ??
+      {};
+    const occupancyMin = occupancyPayload.occupancy_min ?? null;
+    const occupancyMax = occupancyPayload.occupancy_max ?? null;
+    return (
+      <div className="analytics-chart-tooltip">
+        <ul>
+          <li>
+            <span className="series-label">Exit</span>
+            <span className="series-value">
+              {formatNumeric(exitsEntry?.value as number | null | undefined)}
+            </span>
+          </li>
+          <li>
+            <span className="series-label">Entrance</span>
+            <span className="series-value">
+              {formatNumeric(entrancesEntry?.value as number | null | undefined)}
+            </span>
+          </li>
+          <li>
+            <span className="series-label">Occupancy</span>
+            <span className="series-value">
+              {formatNumeric(
+                occupancyEntry?.value as number | null | undefined,
+              )}
+            </span>
+          </li>
+          <li>
+            <span className="series-label">min</span>
+            <span className="series-value">{formatNumeric(occupancyMin)}</span>
+          </li>
+          <li>
+            <span className="series-label">max</span>
+            <span className="series-value">{formatNumeric(occupancyMax)}</span>
+          </li>
+        </ul>
+      </div>
+    );
+  }
   return (
     <div className="analytics-chart-tooltip">
       <div className="tooltip-header">{label}</div>

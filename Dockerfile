@@ -23,9 +23,6 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Install system deps (gcc needed for psycopg2)
-RUN apt-get update && apt-get install -y gcc && rm -rf /var/lib/apt/lists/*
-
 # Copy backend requirements
 COPY backend/requirements.txt ./backend/requirements.txt
 
