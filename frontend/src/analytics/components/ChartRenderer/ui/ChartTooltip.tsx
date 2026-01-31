@@ -74,12 +74,14 @@ export const ChartTooltip = ({
           <span className="series-value" style={{ color: occupancyColor }}>
             <span className="tooltip-occupancy-value">
               {formatNumeric(occupancyEntry.value as number | null | undefined)}
-              <sup className="tooltip-occupancy-max">
+            </span>
+            <span className="tooltip-occupancy-meta">
+              <span className="tooltip-occupancy-max">
                 Max: {formatNumeric(occupancyMax)}
-              </sup>
-              <sub className="tooltip-occupancy-min">
+              </span>
+              <span className="tooltip-occupancy-min">
                 Min: {formatNumeric(occupancyMin)}
-              </sub>
+              </span>
             </span>
           </span>
         </li>,

@@ -24,8 +24,55 @@ const asNumberArray = (value: unknown): number[] =>
   Array.isArray(value)
     ? value.map((item) => (typeof item === "number" ? item : 0))
     : [];
-const getKpiSeries = (payload: unknown[], index: number): number[] =>
-  asNumberArray(Array.isArray(payload) ? payload[index] : []);
+const toNumber = (value: unknown): number | null =>
+  typeof value === "number" && !Number.isNaN(value) ? value : null;
+const getNumericFromRecord = (
+  value: Record<string, unknown>,
+  keys: string[],
+): number | null => {
+  for (const key of keys) {
+    const candidate = toNumber(value[key]);
+    if (candidate !== null) {
+      return candidate;
+    }
+  }
+  return null;
+};
+const resolveKpiFallbackValue = (value: unknown): number | null => {
+  const numeric = toNumber(value);
+  if (numeric !== null) {
+    return numeric;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const fromSeries = Array.isArray(record.series)
+      ? asNumberArray(record.series).slice(-1)[0]
+      : null;
+    if (typeof fromSeries === "number") {
+      return fromSeries;
+    }
+    return getNumericFromRecord(record, [
+      "value",
+      "current",
+      "latest",
+      "headlineValue",
+      "count",
+      "total",
+    ]);
+  }
+  return null;
+};
+const getKpiSeries = (payload: unknown[], index: number): number[] => {
+  const item = Array.isArray(payload) ? payload[index] : undefined;
+  if (Array.isArray(item)) {
+    const values = asNumberArray(item);
+    if (values.length > 0) {
+      return values;
+    }
+  }
+  const fallback = resolveKpiFallbackValue(item);
+  return [fallback ?? 0];
+};
 const toIso = (value: Date): string => value.toISOString();
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -80,6 +127,10 @@ const buildKpiResult = (
       (end.getTime() - start.getTime()) / FIFTEEN_MINUTES_MS,
     ) + 1;
   const normalizedValues = normalizeKpiSeriesLength(values, bucketCount);
+  const headlineValue =
+    normalizedValues.length > 0
+      ? normalizedValues[normalizedValues.length - 1]
+      : 0;
   return {
     chartType: "single_value",
     xDimension: {
@@ -106,6 +157,7 @@ const buildKpiResult = (
         widgetId,
         title: VRM_KPI_TITLES[widgetId] ?? widgetId,
         presentation: "vrm",
+        headlineValue,
       },
     },
   };

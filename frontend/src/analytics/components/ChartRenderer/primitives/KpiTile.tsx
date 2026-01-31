@@ -4,9 +4,9 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  Tooltip,
   YAxis,
   ReferenceDot,
+  Tooltip,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import {
@@ -32,31 +32,6 @@ export const KpiTile = ({
   result,
 }: ChartPrimitiveProps) => {
   const primarySeries = series[0];
-  const sparklineData = useMemo(() => {
-    if (!primarySeries) {
-      return [];
-    }
-    return (
-      primarySeries.data?.map((point, index) => ({
-        x: point.x,
-        value: point.value ?? point.y ?? null,
-        index,
-      })) ?? []
-    );
-  }, [primarySeries]);
-  const [vrmHover, setVrmHover] = useState<{
-    value: number | null;
-    label: string;
-    index: number;
-  } | null>(null);
-  const sparklineRef = useRef<HTMLDivElement | null>(null);
-  if (!primarySeries) {
-    if (!import.meta.env.PROD) {
-      console.log("[VRM traffic] KpiTile early return: no primary series");
-    }
-    return null;
-  }
-  const latestPoint = primarySeries.data[primarySeries.data.length - 1];
   const summary =
     (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
   const presentation =
@@ -66,6 +41,67 @@ export const KpiTile = ({
     typeof summary.chartStyle === "string" ? summary.chartStyle : null;
   const isTraffic = chartStyle === "traffic_distribution";
   const headlineOverride = summary?.headlineValue as number | undefined;
+  const sparklineData = useMemo(() => {
+    if (!primarySeries) {
+      return [];
+    }
+    const points =
+      primarySeries.data?.map((point, index) => ({
+        x: point.x,
+        value: point.value ?? point.y ?? null,
+        index,
+      })) ?? [];
+    if (points.length > 0) {
+      return points;
+    }
+    if (typeof headlineOverride !== "number") {
+      return points;
+    }
+    const bucket = result.xDimension?.bucket ?? null;
+    const bucketMinutes =
+      bucket === "5_MIN"
+        ? 5
+        : bucket === "15_MIN"
+          ? 15
+          : bucket === "30_MIN"
+            ? 30
+            : bucket === "HOUR"
+              ? 60
+              : bucket === "6_HOUR"
+                ? 360
+                : bucket === "DAY"
+                  ? 1440
+                  : bucket === "WEEK"
+                    ? 10080
+                    : bucket === "MONTH"
+                      ? 43200
+                      : bucket === "YEAR"
+                        ? 525600
+                        : 1;
+    const end = new Date();
+    const start = new Date(end.getTime() - bucketMinutes * 60_000);
+    return [
+      { x: start.toISOString(), value: headlineOverride, index: 0 },
+      { x: end.toISOString(), value: headlineOverride, index: 1 },
+    ];
+  }, [headlineOverride, primarySeries, result.xDimension?.bucket]);
+  const [vrmHover, setVrmHover] = useState<{
+    value: number | null;
+    label: string;
+    index: number;
+  } | null>(null);
+  const [sparklineHover, setSparklineHover] = useState<{
+    value: number | null;
+    label: string;
+  } | null>(null);
+  const sparklineRef = useRef<HTMLDivElement | null>(null);
+  if (!primarySeries) {
+    if (!import.meta.env.PROD) {
+      console.log("[VRM traffic] KpiTile early return: no primary series");
+    }
+    return null;
+  }
+  const latestPoint = primarySeries.data[primarySeries.data.length - 1];
   const value =
     typeof headlineOverride === "number"
       ? headlineOverride
@@ -141,7 +177,10 @@ export const KpiTile = ({
   };
   const applyHoverIndex = (index: number) => {
     if (!isVrm || !sparklineData.length) return;
-    const clampedIndex = Math.max(0, Math.min(sparklineData.length - 1, index));
+    const clampedIndex = Math.max(
+      0,
+      Math.min(sparklineData.length - 1, index),
+    );
     const chosen = sparklineData[clampedIndex];
     if (!chosen) return;
     const numeric = typeof chosen.value === "number" ? chosen.value : null;
@@ -168,12 +207,29 @@ export const KpiTile = ({
     if (isVrm) {
       setVrmHover(null);
     }
+    setSparklineHover(null);
+  };
+  const handleSparklineMove = (chartState: {
+    activePayload?: Array<{ payload?: { value?: number | null; y?: number | null } }>;
+    activeLabel?: string | number;
+  }) => {
+    if (isVrm) return;
+    const payload = chartState.activePayload ?? [];
+    const value =
+      typeof payload[0]?.payload?.value === "number"
+        ? payload[0]?.payload?.value
+        : typeof payload[0]?.payload?.y === "number"
+          ? payload[0]?.payload?.y
+          : null;
+    const label = formatLabel(chartState.activeLabel ?? "", payload);
+    setSparklineHover({ value, label });
   };
   const hoveredPoint = vrmHover ? sparklineData[vrmHover.index] : null;
   const hoveredNumericValue =
     hoveredPoint && typeof hoveredPoint.value === "number"
       ? hoveredPoint.value
       : null;
+  const showHoverFooter = Boolean(isVrm ? vrmHover : sparklineHover);
   const formatHeadline = () => {
     if (value === null || value === undefined) {
       return formatKpiValue(value, primarySeries?.unit);
@@ -222,17 +278,16 @@ export const KpiTile = ({
       className={["kpi-tile", className ?? "", isVrm ? "kpi-tile--vrm" : ""]
         .filter(Boolean)
         .join(" ")}
-      style={
-        isVrm
-          ? { minHeight: height, height, paddingBottom: 0 }
-          : { minHeight: height, height }
-      }
     >
       <div
-        className={["kpi-content", isVrm ? "kpi-content--vrm" : ""]
-          .filter(Boolean)
-          .join(" ")}
+        className={`kpi-body${isVrm ? " kpi-body--vrm" : ""}`}
+        style={{ minHeight: height }}
       >
+        <div
+          className={["kpi-content", isVrm ? "kpi-content--vrm" : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
         <div className="kpi-main-block">
           <div className="kpi-header">
             {" "}
@@ -269,9 +324,15 @@ export const KpiTile = ({
             </div>
           ) : null}{" "}
         </div>{" "}
-        {!isTraffic && sparklineData.length > 1 ? (
+        {!isTraffic && sparklineData.length > 0 ? (
           <div
-            className={`kpi-sparkline-region${isVrm ? " kpi-sparkline-region--vrm" : ""}`}
+            className={[
+              "kpi-sparkline",
+              "kpi-sparkline-region",
+              isVrm ? "kpi-sparkline--vrm kpi-sparkline-region--vrm" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             onMouseLeave={isVrm ? handleSparklineLeave : undefined}
             data-testid={isVrm ? "vrm-sparkline-region" : undefined}
           >
@@ -289,6 +350,7 @@ export const KpiTile = ({
                     data={sparklineData}
                     margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                     onMouseLeave={isVrm ? undefined : handleSparklineLeave}
+                    onMouseMove={isVrm ? undefined : handleSparklineMove}
                   >
                     <YAxis
                       type="number"
@@ -305,13 +367,10 @@ export const KpiTile = ({
                     />{" "}
                     {!isVrm ? (
                       <Tooltip
-                        formatter={(tooltipValue: number) => [
-                          formatValue(tooltipValue, primarySeries.unit),
-                          primarySeries.label ?? primarySeries.id ?? "",
-                        ]}
-                        labelFormatter={(label, payload) =>
-                          formatLabel(label as string | number, payload)
-                        }
+                        content={() => null}
+                        wrapperStyle={{ display: "none" }}
+                        cursor={false}
+                        isAnimationActive={false}
                       />
                     ) : null}{" "}
                     <Area
@@ -349,24 +408,26 @@ export const KpiTile = ({
                 ) : null}{" "}
               </div>
             </div>{" "}
-            {isVrm && vrmHover ? (
-              <div
-                className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
-                aria-label="VRM sparkline hover strip"
-                data-testid="vrm-sparkline-footer"
-              >
-                <div className="kpi-sparkline-strip__time">
-                  {vrmHover.label}
-                </div>
-                <div className="kpi-sparkline-strip__value">
-                  {" "}
-                  {formatKpiValue(vrmHover.value, primarySeries?.unit)}{" "}
-                </div>
-              </div>
-            ) : null}{" "}
           </div>
         ) : null}{" "}
+        </div>
       </div>
+      {showHoverFooter ? (
+        <div
+          className={`kpi-sparkline-strip${isVrm ? " kpi-sparkline-strip--vrm" : ""}`}
+          aria-label="KPI sparkline hover footer"
+          data-testid={isVrm ? "vrm-sparkline-footer" : undefined}
+        >
+          <div className="kpi-sparkline-strip__time">
+            {isVrm ? vrmHover?.label : sparklineHover?.label}
+          </div>
+          <div className="kpi-sparkline-strip__value">
+            {isVrm
+              ? formatKpiValue(vrmHover?.value ?? null, primarySeries?.unit)
+              : formatValue(sparklineHover?.value ?? null, primarySeries?.unit)}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
