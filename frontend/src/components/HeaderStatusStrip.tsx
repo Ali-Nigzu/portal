@@ -16,13 +16,13 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className }) => {
   const RealtimeWaveIcon = () => (
     <svg
       className="vrm-realtime-wave"
-      viewBox="0 0 24 24"
+      viewBox="0 0 48 16"
       role="presentation"
       aria-hidden="true"
       focusable="false"
     >
       <path
-        d="M4 12c1.5-2 3.5-2 5 0s3.5 2 5 0 3.5-2 5 0"
+        d="M2 8c4-6 10-6 14 0s10 6 14 0 10-6 14 0"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
