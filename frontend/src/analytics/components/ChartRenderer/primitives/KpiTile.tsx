@@ -7,7 +7,6 @@ import {
   Tooltip,
   YAxis,
   ReferenceDot,
-  XAxis,
 } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import {
@@ -77,7 +76,6 @@ export const KpiTile = ({
     ? null
     : ((latestPoint as unknown as { rawCount?: number | null })?.rawCount ??
       null);
-  const sparklineHeight = isVrm ? 64 : 48;
   const coverageInfo = formatCoverage(coverage);
   const showRaw = !compact && shouldShowRawCount(rawCount);
   const secondaryText =
@@ -225,7 +223,9 @@ export const KpiTile = ({
         .filter(Boolean)
         .join(" ")}
       style={
-        isVrm ? { minHeight: height, paddingBottom: 0 } : { minHeight: height }
+        isVrm
+          ? { minHeight: height, height, paddingBottom: 0 }
+          : { minHeight: height, height }
       }
     >
       <div
@@ -284,22 +284,24 @@ export const KpiTile = ({
                 style={isVrm ? { paddingBottom: 0 } : undefined}
                 ref={sparklineRef}
               >
-                <ResponsiveContainer width="100%" height={sparklineHeight}>
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={sparklineData}
                     margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                     onMouseLeave={isVrm ? undefined : handleSparklineLeave}
                   >
-                    <XAxis dataKey="index" hide />
                     <YAxis
                       type="number"
                       domain={[
-                        (dataMin: number) => Math.min(0, dataMin),
+                        0,
                         (dataMax: number) => Math.max(0, dataMax),
                       ]}
                       padding={{ bottom: 0, top: 0 }}
                       allowDataOverflow={false}
-                      hide
+                      width={0}
+                      tick={false}
+                      axisLine={false}
+                      tickLine={false}
                     />{" "}
                     {!isVrm ? (
                       <Tooltip
