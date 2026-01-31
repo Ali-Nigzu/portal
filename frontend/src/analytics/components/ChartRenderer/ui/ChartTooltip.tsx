@@ -43,7 +43,7 @@ export const ChartTooltip = ({
     const rows: Array<JSX.Element> = [];
     if (entrancesEntry) {
       rows.push(
-        <li key="entrances">
+        <li key="entrances" className="tooltip-row">
           <span className="series-label" style={{ color: entranceColor }}>
             Entrance
           </span>
@@ -55,7 +55,7 @@ export const ChartTooltip = ({
     }
     if (exitsEntry) {
       rows.push(
-        <li key="exits">
+        <li key="exits" className="tooltip-row">
           <span className="series-label" style={{ color: exitColor }}>
             Exit
           </span>
@@ -67,7 +67,7 @@ export const ChartTooltip = ({
     }
     if (occupancyEntry) {
       rows.push(
-        <li key="occupancy">
+        <li key="occupancy" className="tooltip-row">
           <span className="series-label" style={{ color: occupancyColor }}>
             Occupancy
           </span>
@@ -75,9 +75,8 @@ export const ChartTooltip = ({
             {formatNumeric(occupancyEntry.value as number | null | undefined)}
           </span>
           <span className="series-meta">
-            min: {formatNumeric(occupancyMin)}{" "}
-            <span aria-hidden="true"> </span>
-            max: {formatNumeric(occupancyMax)}
+            min: {formatNumeric(occupancyMin)}, max:{" "}
+            {formatNumeric(occupancyMax)}
           </span>
         </li>,
       );
@@ -87,9 +86,7 @@ export const ChartTooltip = ({
     }
     return (
       <div className="analytics-chart-tooltip">
-        <ul>
-          {rows}
-        </ul>
+        <ul>{rows}</ul>
       </div>
     );
   }
@@ -97,7 +94,6 @@ export const ChartTooltip = ({
     <div className="analytics-chart-tooltip">
       <div className="tooltip-header">{label}</div>
       <ul>
-        {" "}
         {payload
           .map((entry) => {
             const seriesId = String(entry.dataKey);
@@ -126,11 +122,10 @@ export const ChartTooltip = ({
                       backgroundColor:
                         entry.color ?? series?.color ?? "#2d6cdf",
                     }}
-                  />{" "}
-                  {series?.label ?? seriesId}{" "}
+                  />
+                  {series?.label ?? seriesId}
                 </span>
                 <span className="series-value">
-                  {" "}
                   {formatValue(
                     (series?.tooltipValueKey
                       ? ((entry.payload as
@@ -138,19 +133,18 @@ export const ChartTooltip = ({
                           | undefined) ?? {})[series.tooltipValueKey]
                       : entry.value) as number | null | undefined,
                     series?.unit,
-                  )}{" "}
-                </span>{" "}
+                  )}
+                </span>
                 {showRaw ? (
                   <span className="series-meta">raw: {rawCount}</span>
-                ) : null}{" "}
+                ) : null}
                 <span className={`series-coverage ${coverageClass ?? ""}`}>
-                  {" "}
-                  coverage: {coverageInfo.label}{" "}
+                  coverage: {coverageInfo.label}
                 </span>
               </li>
             );
           })
-          .filter(Boolean)}{" "}
+          .filter(Boolean)}
       </ul>
     </div>
   );

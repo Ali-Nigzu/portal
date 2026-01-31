@@ -1,13 +1,11 @@
 import { useMemo } from "react";
 import ErrorBoundary from "../../common/components/ErrorBoundary";
-import { resolveUiClient } from "./utils/vrmDecorators";
 import type { DashboardManifest, DashboardWidget } from "./types";
 import { Credentials } from "../../types/credentials";
 import "./styles/DashboardPage.css";
 import DashboardHeader from "./components/DashboardHeader";
 import KpiBand from "./components/KpiBand";
 import ChartGrid from "./components/ChartGrid";
-import { formatTitleCase, deriveSiteDisplayId } from "./utils/siteDisplay";
 import { useDashboardManifest } from "./hooks/useDashboardManifest";
 import { useDashboardWidgets } from "./hooks/useDashboardWidgets";
 import { useSiteFlow } from "./hooks/useSiteFlow";
@@ -81,30 +79,10 @@ const DashboardPage = ({
   const error = manifestStatus === "error" ? manifestError : widgetError;
 
   const gridColumns = manifest?.layout.grid.columns ?? 12;
-  const siteOrgId = manifest?.orgId ?? orgId;
-  const siteIdFromQuery = useMemo(() => {
-    if (typeof window === "undefined") {
-      return undefined;
-    }
-    const params = new URLSearchParams(window.location.search);
-    return params.get("client_id") ?? params.get("site_id") ?? undefined;
-  }, []);
-  const siteUiOrgId =
-    resolvedUiClient ?? resolveUiClient(siteOrgId) ?? siteOrgId;
-  const clientDisplayName = useMemo(
-    () => formatTitleCase(siteUiOrgId),
-    [siteUiOrgId],
-  );
-  const siteId = siteIdFromQuery ?? siteOrgId ?? "—";
-  const siteDisplayId = useMemo(() => deriveSiteDisplayId(siteId), [siteId]);
-
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
       <div className="dashboard-v2__content vrm-dashboard-shell">
-        <DashboardHeader
-          clientDisplayName={clientDisplayName}
-          siteDisplayId={siteDisplayId}
-        />
+        <DashboardHeader />
         {status === "error" && error ? (
           <div className="dashboard-v2__error-banner" role="alert">
             {error}

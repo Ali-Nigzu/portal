@@ -5,7 +5,6 @@ import {
   ComposedChart,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   Line,
   Area,
@@ -72,10 +71,6 @@ export const TimeSeriesChart = ({
           data={dataset.data}
           margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
         >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--border-strong, #d0d5dd)"
-          />
           <XAxis
             dataKey="x"
             tick={{ fill: "var(--text-muted, #475467)" }}
