@@ -32,42 +32,59 @@ export const KpiTile = ({
   result,
 }: ChartPrimitiveProps) => {
   const primarySeries = series[0];
+  const summary =
+    (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
+  const presentation =
+    typeof summary.presentation === "string" ? summary.presentation : null;
+  const isVrm = presentation === "vrm";
+  const chartStyle =
+    typeof summary.chartStyle === "string" ? summary.chartStyle : null;
+  const isTraffic = chartStyle === "traffic_distribution";
+  const headlineOverride = summary?.headlineValue as number | undefined;
   const sparklineData = useMemo(() => {
     if (!primarySeries) {
       return [];
     }
-    return (
+    const points =
       primarySeries.data?.map((point, index) => ({
         x: point.x,
         value: point.value ?? point.y ?? null,
         index,
-      })) ?? []
-    );
-  }, [primarySeries]);
-  const sparklineRenderData = useMemo(() => {
-    if (sparklineData.length !== 1) {
-      return sparklineData;
+      })) ?? [];
+    if (points.length > 0) {
+      return points;
     }
-    const [onlyPoint] = sparklineData;
-    if (!onlyPoint) {
-      return sparklineData;
+    if (typeof headlineOverride !== "number") {
+      return points;
     }
-    const parsed =
-      typeof onlyPoint.x === "string" || typeof onlyPoint.x === "number"
-        ? new Date(onlyPoint.x)
-        : null;
-    const fallbackX = parsed && !Number.isNaN(parsed.valueOf())
-      ? new Date(parsed.valueOf() + 60_000).toISOString()
-      : `${onlyPoint.x ?? ""}-fallback`;
+    const bucket = result.xDimension?.bucket ?? null;
+    const bucketMinutes =
+      bucket === "5_MIN"
+        ? 5
+        : bucket === "15_MIN"
+          ? 15
+          : bucket === "30_MIN"
+            ? 30
+            : bucket === "HOUR"
+              ? 60
+              : bucket === "6_HOUR"
+                ? 360
+                : bucket === "DAY"
+                  ? 1440
+                  : bucket === "WEEK"
+                    ? 10080
+                    : bucket === "MONTH"
+                      ? 43200
+                      : bucket === "YEAR"
+                        ? 525600
+                        : 1;
+    const end = new Date();
+    const start = new Date(end.getTime() - bucketMinutes * 60_000);
     return [
-      onlyPoint,
-      {
-        ...onlyPoint,
-        x: fallbackX,
-        index: onlyPoint.index + 1,
-      },
+      { x: start.toISOString(), value: headlineOverride, index: 0 },
+      { x: end.toISOString(), value: headlineOverride, index: 1 },
     ];
-  }, [sparklineData]);
+  }, [headlineOverride, primarySeries, result.xDimension?.bucket]);
   const [vrmHover, setVrmHover] = useState<{
     value: number | null;
     label: string;
@@ -85,15 +102,6 @@ export const KpiTile = ({
     return null;
   }
   const latestPoint = primarySeries.data[primarySeries.data.length - 1];
-  const summary =
-    (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
-  const presentation =
-    typeof summary.presentation === "string" ? summary.presentation : null;
-  const isVrm = presentation === "vrm";
-  const chartStyle =
-    typeof summary.chartStyle === "string" ? summary.chartStyle : null;
-  const isTraffic = chartStyle === "traffic_distribution";
-  const headlineOverride = summary?.headlineValue as number | undefined;
   const value =
     typeof headlineOverride === "number"
       ? headlineOverride
@@ -168,12 +176,12 @@ export const KpiTile = ({
     return `${datePart} · ${timePart}`;
   };
   const applyHoverIndex = (index: number) => {
-    if (!isVrm || !sparklineRenderData.length) return;
+    if (!isVrm || !sparklineData.length) return;
     const clampedIndex = Math.max(
       0,
-      Math.min(sparklineRenderData.length - 1, index),
+      Math.min(sparklineData.length - 1, index),
     );
-    const chosen = sparklineRenderData[clampedIndex];
+    const chosen = sparklineData[clampedIndex];
     if (!chosen) return;
     const numeric = typeof chosen.value === "number" ? chosen.value : null;
     setVrmHover({
@@ -216,7 +224,7 @@ export const KpiTile = ({
     const label = formatLabel(chartState.activeLabel ?? "", payload);
     setSparklineHover({ value, label });
   };
-  const hoveredPoint = vrmHover ? sparklineRenderData[vrmHover.index] : null;
+  const hoveredPoint = vrmHover ? sparklineData[vrmHover.index] : null;
   const hoveredNumericValue =
     hoveredPoint && typeof hoveredPoint.value === "number"
       ? hoveredPoint.value
@@ -316,7 +324,7 @@ export const KpiTile = ({
             </div>
           ) : null}{" "}
         </div>{" "}
-        {!isTraffic && sparklineRenderData.length > 0 ? (
+        {!isTraffic && sparklineData.length > 0 ? (
           <div
             className={[
               "kpi-sparkline",
@@ -339,7 +347,7 @@ export const KpiTile = ({
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={sparklineRenderData}
+                    data={sparklineData}
                     margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                     onMouseLeave={isVrm ? undefined : handleSparklineLeave}
                     onMouseMove={isVrm ? undefined : handleSparklineMove}
