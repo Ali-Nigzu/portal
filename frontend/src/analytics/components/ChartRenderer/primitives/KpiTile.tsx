@@ -381,7 +381,7 @@ export const KpiTile = ({
             </div>
           ) : null}{" "}
         </div>{" "}
-        {isVrm ? (
+        {isVrm && vrmHover ? (
           <div className="kpi-footer-reserve">
             <div
               className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
