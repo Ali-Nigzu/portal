@@ -5,6 +5,7 @@ import {
   AreaChart,
   Area,
   Tooltip,
+  XAxis,
   YAxis,
   ReferenceDot,
 } from "recharts";
@@ -295,6 +296,16 @@ export const KpiTile = ({
                     margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                     onMouseLeave={isVrm ? undefined : handleSparklineLeave}
                   >
+                    <XAxis
+                      type="number"
+                      dataKey="index"
+                      domain={[0, Math.max(0, sparklineData.length - 1)]}
+                      padding={{ left: 0, right: 0 }}
+                      tick={false}
+                      axisLine={false}
+                      tickLine={false}
+                      height={0}
+                    />
                     <YAxis
                       type="number"
                       domain={[
