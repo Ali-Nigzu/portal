@@ -1,5 +1,5 @@
 import type React from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -50,7 +50,76 @@ export const KpiTile = ({
     label: string;
     index: number;
   } | null>(null);
+  const [footerPhase, setFooterPhase] = useState<
+    "hidden" | "enter" | "visible" | "exit"
+  >("hidden");
+  const [isFooterMounted, setIsFooterMounted] = useState(false);
   const sparklineRef = useRef<HTMLDivElement | null>(null);
+  const footerTimeoutRef = useRef<number | null>(null);
+  const footerAnimationRef = useRef<number | null>(null);
+  const footerTransitionMs = 200;
+  const summary =
+    (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
+  const presentation =
+    typeof summary.presentation === "string" ? summary.presentation : null;
+  const isVrm = presentation === "vrm";
+  useEffect(() => {
+    return () => {
+      if (footerTimeoutRef.current !== null) {
+        window.clearTimeout(footerTimeoutRef.current);
+        footerTimeoutRef.current = null;
+      }
+      if (footerAnimationRef.current !== null) {
+        window.cancelAnimationFrame(footerAnimationRef.current);
+        footerAnimationRef.current = null;
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (!isVrm) {
+      if (footerTimeoutRef.current !== null) {
+        window.clearTimeout(footerTimeoutRef.current);
+        footerTimeoutRef.current = null;
+      }
+      if (footerAnimationRef.current !== null) {
+        window.cancelAnimationFrame(footerAnimationRef.current);
+        footerAnimationRef.current = null;
+      }
+      setIsFooterMounted(false);
+      setFooterPhase("hidden");
+      return;
+    }
+    if (vrmHover) {
+      if (footerTimeoutRef.current !== null) {
+        window.clearTimeout(footerTimeoutRef.current);
+        footerTimeoutRef.current = null;
+      }
+      if (footerAnimationRef.current !== null) {
+        window.cancelAnimationFrame(footerAnimationRef.current);
+        footerAnimationRef.current = null;
+      }
+      setIsFooterMounted(true);
+      setFooterPhase("enter");
+      footerAnimationRef.current = window.requestAnimationFrame(() => {
+        setFooterPhase("visible");
+      });
+    } else if (isFooterMounted) {
+      if (footerTimeoutRef.current !== null) {
+        window.clearTimeout(footerTimeoutRef.current);
+        footerTimeoutRef.current = null;
+      }
+      if (footerAnimationRef.current !== null) {
+        window.cancelAnimationFrame(footerAnimationRef.current);
+        footerAnimationRef.current = null;
+      }
+      setFooterPhase("exit");
+      footerTimeoutRef.current = window.setTimeout(() => {
+        setIsFooterMounted(false);
+        setFooterPhase("hidden");
+        footerTimeoutRef.current = null;
+      }, footerTransitionMs);
+    }
+  }, [isVrm, isFooterMounted, vrmHover]);
   if (!primarySeries) {
     if (!import.meta.env.PROD) {
       console.log("[VRM traffic] KpiTile early return: no primary series");
@@ -58,11 +127,6 @@ export const KpiTile = ({
     return null;
   }
   const latestPoint = primarySeries.data[primarySeries.data.length - 1];
-  const summary =
-    (result.meta?.summary as Record<string, unknown> | undefined) ?? {};
-  const presentation =
-    typeof summary.presentation === "string" ? summary.presentation : null;
-  const isVrm = presentation === "vrm";
   const chartStyle =
     typeof summary.chartStyle === "string" ? summary.chartStyle : null;
   const isTraffic = chartStyle === "traffic_distribution";
@@ -218,6 +282,7 @@ export const KpiTile = ({
       hasTrafficRows: trafficRows.length > 0,
     });
   }
+  const isFooterVisible = footerPhase === "enter" || footerPhase === "visible";
   return (
     <div
       className={[
@@ -235,11 +300,22 @@ export const KpiTile = ({
       }
     >
       <div
-        className={["kpi-content", isVrm ? "kpi-content--vrm" : ""]
+        className={[
+          "kpi-content",
+          isVrm ? "kpi-content--vrm" : "",
+          isFooterMounted ? "kpi-content--footer-open" : "",
+        ]
           .filter(Boolean)
           .join(" ")}
       >
-        <div className="kpi-panel">
+        <div
+          className={[
+            "kpi-panel",
+            isFooterMounted ? "kpi-panel--footer-open" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <div className="kpi-panel-header">
             <div className="kpi-main-block">
               <div className="kpi-header">
@@ -381,8 +457,16 @@ export const KpiTile = ({
             </div>
           ) : null}{" "}
         </div>{" "}
-        {isVrm && vrmHover ? (
-          <div className="kpi-footer-reserve">
+        {isFooterMounted ? (
+          <div
+            className={[
+              "kpi-footer",
+              isFooterVisible ? "kpi-footer--visible" : "",
+              footerPhase === "exit" ? "kpi-footer--exit" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <div
               className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
               aria-label="VRM sparkline hover strip"
