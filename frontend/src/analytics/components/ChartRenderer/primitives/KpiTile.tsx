@@ -290,7 +290,7 @@ export const KpiTile = ({
                 style={isVrm ? { paddingBottom: 0 } : undefined}
                 ref={sparklineRef}
               >
-                <div className="kpi-sparkline-plot-area">
+                <div className="kpi-sparkline-plot">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={sparklineData}
@@ -368,23 +368,23 @@ export const KpiTile = ({
                     />
                   ) : null}{" "}
                 </div>
-                {isVrm && vrmHover ? (
-                  <div
-                    className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
-                    aria-label="VRM sparkline hover strip"
-                    data-testid="vrm-sparkline-footer"
-                  >
-                    <div className="kpi-sparkline-strip__time">
-                      {vrmHover.label}
-                    </div>
-                    <div className="kpi-sparkline-strip__value">
-                      {" "}
-                      {formatKpiValue(vrmHover.value, primarySeries?.unit)}{" "}
-                    </div>
-                  </div>
-                ) : null}{" "}
               </div>
             </div>{" "}
+            {isVrm && vrmHover ? (
+              <div
+                className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
+                aria-label="VRM sparkline hover strip"
+                data-testid="vrm-sparkline-footer"
+              >
+                <div className="kpi-sparkline-strip__time">
+                  {vrmHover.label}
+                </div>
+                <div className="kpi-sparkline-strip__value">
+                  {" "}
+                  {formatKpiValue(vrmHover.value, primarySeries?.unit)}{" "}
+                </div>
+              </div>
+            ) : null}{" "}
           </div>
         ) : null}{" "}
       </div>
