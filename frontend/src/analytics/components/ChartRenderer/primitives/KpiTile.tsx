@@ -298,9 +298,11 @@ export const KpiTile = ({
                   >
                     <XAxis
                       type="number"
+                      scale="linear"
                       dataKey="index"
                       domain={[0, Math.max(0, sparklineData.length - 1)]}
                       padding={{ left: 0, right: 0 }}
+                      allowDataOverflow={true}
                       tick={false}
                       axisLine={false}
                       tickLine={false}
