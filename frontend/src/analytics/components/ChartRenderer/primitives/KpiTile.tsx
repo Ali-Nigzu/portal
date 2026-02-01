@@ -293,22 +293,23 @@ export const KpiTile = ({
                 <div className="kpi-sparkline-plot">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={sparklineData}
-                      margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-                      onMouseLeave={isVrm ? undefined : handleSparklineLeave}
-                    >
-                      <XAxis
-                        type="number"
-                        scale="linear"
-                        dataKey="index"
-                        domain={[0, Math.max(0, sparklineData.length - 1)]}
-                        padding={{ left: 0, right: 0 }}
-                        allowDataOverflow={true}
-                        tick={false}
-                        axisLine={false}
-                        tickLine={false}
-                        height={0}
-                      />
+                    data={sparklineData}
+                    margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                    onMouseLeave={isVrm ? undefined : handleSparklineLeave}
+                  >
+                    <XAxis
+                      type="number"
+                      scale="linear"
+                      dataKey="index"
+                      domain={[0, Math.max(0, sparklineData.length - 1)]}
+                      padding={{ left: 0, right: 0 }}
+                      allowDataOverflow={true}
+                      interval={0}
+                      tick={false}
+                      axisLine={false}
+                      tickLine={false}
+                      height={0}
+                    />
                       <YAxis
                         type="number"
                         domain={[
@@ -368,23 +369,27 @@ export const KpiTile = ({
                     />
                   ) : null}{" "}
                 </div>
+                {isVrm ? (
+                  <div className="kpi-sparkline-footer-reserve">
+                    <div
+                      className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
+                      aria-label="VRM sparkline hover strip"
+                      data-testid="vrm-sparkline-footer"
+                    >
+                      <div className="kpi-sparkline-strip__time">
+                        {vrmHover?.label ?? ""}
+                      </div>
+                      <div className="kpi-sparkline-strip__value">
+                        {" "}
+                        {vrmHover
+                          ? formatKpiValue(vrmHover.value, primarySeries?.unit)
+                          : ""}{" "}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>{" "}
-            {isVrm && vrmHover ? (
-              <div
-                className="kpi-sparkline-strip kpi-sparkline-strip--vrm"
-                aria-label="VRM sparkline hover strip"
-                data-testid="vrm-sparkline-footer"
-              >
-                <div className="kpi-sparkline-strip__time">
-                  {vrmHover.label}
-                </div>
-                <div className="kpi-sparkline-strip__value">
-                  {" "}
-                  {formatKpiValue(vrmHover.value, primarySeries?.unit)}{" "}
-                </div>
-              </div>
-            ) : null}{" "}
           </div>
         ) : null}{" "}
       </div>
