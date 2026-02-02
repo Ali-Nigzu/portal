@@ -318,21 +318,19 @@ export const KpiTile = ({
         >
           <div className="kpi-panel-header">
             <div className="kpi-main-block">
+              {/* KPI header layout: label/unit left, value right; label lift is intentional.
+                  Avoid adjusting header padding/sparkline/footer without verifying baseline anchoring. */}
               <div className="kpi-header">
-                {" "}
-                {headerLabel ? (
-                  <div className="kpi-label">{headerLabel}</div>
-                ) : (
-                  <div className="kpi-label" />
-                )}{" "}
                 <div className="kpi-header-right">
-                  {" "}
-                  {showUnit ? (
-                    <div className="kpi-unit">{unitLabel}</div>
-                  ) : null}{" "}
+                  {headerLabel ? (
+                    <div className="kpi-label">{headerLabel}</div>
+                  ) : (
+                    <div className="kpi-label" />
+                  )}
+                  {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
                 </div>
+                <div className="kpi-value">{formatHeadline()}</div>
               </div>
-              <div className="kpi-value">{formatHeadline()}</div>{" "}
               {showRaw ? <div className="kpi-meta">raw: {rawCount}</div> : null}{" "}
               {secondaryText ? (
                 <div className="kpi-meta">{secondaryText}</div>

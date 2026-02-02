@@ -135,7 +135,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
           ...series,
           geometry: "bar" as const,
           unit: "events",
-          label: "Entrance",
+          label: "Entrances",
           color: entranceColor,
         };
       }
@@ -144,7 +144,7 @@ const applySiteFlow = (result: ChartResult): ChartResult => {
           ...series,
           geometry: "bar" as const,
           unit: "events",
-          label: "Exit",
+          label: "Exits",
           color: exitColor,
         };
       }

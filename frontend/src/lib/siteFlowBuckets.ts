@@ -83,8 +83,7 @@ export const buildAnchoredTimestamps = (
     return Array.from({ length }, (_, index) => addHours(start, index));
   }
   if (timeframe === "last_week") {
-    const currentWeekStart = startOfWeek(anchor);
-    const start = addDays(currentWeekStart, -7);
+    const start = addDays(startOfDay(anchor), -6);
     return Array.from({ length }, (_, index) => addDays(start, index));
   }
   if (timeframe === "last_month") {

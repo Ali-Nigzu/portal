@@ -8,12 +8,13 @@ export const VRM_KPI_IDS = {
   traffic: "kpi-vrm-traffic",
   capacity: "kpi-vrm-capacity",
 } as const;
+// VRM_KPI_TITLES is the canonical source of KPI card titles (e.g., Dwell Minutes).
 export const VRM_KPI_TITLES: Record<string, string> = {
   [VRM_KPI_IDS.entrances]: "Entrances",
   [VRM_KPI_IDS.occupancy]: "Occupancy",
   [VRM_KPI_IDS.exits]: "Exits",
   [VRM_KPI_IDS.footfall]: "Footfall",
-  [VRM_KPI_IDS.dwell]: "Dwell Time",
+  [VRM_KPI_IDS.dwell]: "Dwell Minutes",
   [VRM_KPI_IDS.traffic]: "Traffic Split",
   [VRM_KPI_IDS.capacity]: "Capacity",
 };
