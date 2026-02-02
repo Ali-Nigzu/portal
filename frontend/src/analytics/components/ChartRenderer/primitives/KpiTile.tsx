@@ -318,6 +318,8 @@ export const KpiTile = ({
         >
           <div className="kpi-panel-header">
             <div className="kpi-main-block">
+              {/* KPI header layout: label/unit left, value right; label lift is intentional.
+                  Avoid adjusting header padding/sparkline/footer without verifying baseline anchoring. */}
               <div className="kpi-header">
                 <div className="kpi-header-right">
                   {headerLabel ? (

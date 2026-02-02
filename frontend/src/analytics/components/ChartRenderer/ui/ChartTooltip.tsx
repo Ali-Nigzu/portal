@@ -31,6 +31,8 @@ export const ChartTooltip = ({
   const xKey = String(payload[0]?.payload?.x ?? label ?? "");
   const xMeta = meta[xKey] ?? {};
   if (variant === "site_flow_activity") {
+    // Site Flow Activity tooltip: top timeframe label + minimal rows.
+    // Occupancy min/max block and pluralized Entrances/Exits labels are specific to this variant.
     const entryById = new Map(
       payload.map((entry) => [String(entry.dataKey), entry]),
     );
