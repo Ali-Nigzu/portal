@@ -10,9 +10,6 @@ const DashboardPage = React.lazy(() => import("../pages/DashboardPage"));
 const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
 const AlarmLogsPage = React.lazy(() => import("../pages/AlarmLogsPage"));
 const DeviceListPage = React.lazy(() => import("../pages/DeviceListPage"));
-const AnalyticsComingSoonPage = React.lazy(
-  () => import("../pages/AnalyticsComingSoonPage"),
-);
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
@@ -93,14 +90,6 @@ const AppRoutes: React.FC = () => {
     </VRMLayout>
   );
 
-  const analyticsElement = (
-    <VRMLayout userRole={resolvedRole} onLogout={handleLogout}>
-      <Suspense fallback={null}>
-        <AnalyticsComingSoonPage />
-      </Suspense>
-    </VRMLayout>
-  );
-
   const lazyRoute = (element: React.ReactNode) => (
     <Suspense fallback={null}>{element}</Suspense>
   );
@@ -165,7 +154,6 @@ const AppRoutes: React.FC = () => {
               lazyRoute(<ReportsPage credentials={credentials} />),
             )}
           />
-          <Route path="/analytics" element={analyticsElement} />
           {userRole === "admin" && (
             <Route
               path="/admin"
