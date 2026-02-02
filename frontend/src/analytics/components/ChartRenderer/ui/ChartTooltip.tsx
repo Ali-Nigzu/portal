@@ -50,7 +50,7 @@ export const ChartTooltip = ({
       rows.push(
         <li key="entrances" className="tooltip-row">
           <span className="series-label" style={{ color: entranceColor }}>
-            Entrance
+            Entrances
           </span>
           <span className="series-value" style={{ color: entranceColor }}>
             {formatNumeric(entrancesEntry.value as number | null | undefined)}
@@ -62,7 +62,7 @@ export const ChartTooltip = ({
       rows.push(
         <li key="exits" className="tooltip-row">
           <span className="series-label" style={{ color: exitColor }}>
-            Exit
+            Exits
           </span>
           <span className="series-value" style={{ color: exitColor }}>
             {formatNumeric(exitsEntry.value as number | null | undefined)}

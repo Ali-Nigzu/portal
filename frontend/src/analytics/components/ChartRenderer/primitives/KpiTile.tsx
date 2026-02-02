@@ -319,7 +319,6 @@ export const KpiTile = ({
           <div className="kpi-panel-header">
             <div className="kpi-main-block">
               <div className="kpi-header">
-                <div className="kpi-value">{formatHeadline()}</div>
                 <div className="kpi-header-right">
                   {headerLabel ? (
                     <div className="kpi-label">{headerLabel}</div>
@@ -328,6 +327,7 @@ export const KpiTile = ({
                   )}
                   {showUnit ? <div className="kpi-unit">{unitLabel}</div> : null}
                 </div>
+                <div className="kpi-value">{formatHeadline()}</div>
               </div>
               {showRaw ? <div className="kpi-meta">raw: {rawCount}</div> : null}{" "}
               {secondaryText ? (
