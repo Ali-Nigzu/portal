@@ -102,6 +102,8 @@ export const TimeSeriesChart = ({
                 meta={dataset.meta}
                 seriesMap={seriesMap}
                 variant={tooltipVariant}
+                siteFlowTimeframe={siteFlowTimeframe}
+                bucket={bucket}
               />
             }
             cursor={isSiteFlowActivity ? false : { stroke: "var(--border-strong, #d0d5dd)" }}

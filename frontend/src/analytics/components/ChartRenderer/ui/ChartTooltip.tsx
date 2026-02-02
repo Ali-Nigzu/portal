@@ -7,10 +7,13 @@ import {
   formatValue,
   shouldShowRawCount,
 } from "../utils/format";
+import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;
   variant?: "site_flow_activity";
+  siteFlowTimeframe?: string;
+  bucket?: string;
 };
 export const ChartTooltip = ({
   active,
@@ -19,6 +22,8 @@ export const ChartTooltip = ({
   meta,
   seriesMap,
   variant,
+  siteFlowTimeframe,
+  bucket,
 }: ChartTooltipProps) => {
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -66,6 +71,9 @@ export const ChartTooltip = ({
       );
     }
     if (occupancyEntry) {
+      const occupancyLabel = formatNumeric(
+        occupancyEntry.value as number | null | undefined,
+      );
       rows.push(
         <li key="occupancy" className="tooltip-row">
           <span className="series-label" style={{ color: occupancyColor }}>
@@ -73,13 +81,15 @@ export const ChartTooltip = ({
           </span>
           <span className="series-value" style={{ color: occupancyColor }}>
             <span className="tooltip-occupancy-value">
-              {formatNumeric(occupancyEntry.value as number | null | undefined)}
-              <sup className="tooltip-occupancy-max">
-                Max: {formatNumeric(occupancyMax)}
-              </sup>
-              <sub className="tooltip-occupancy-min">
-                Min: {formatNumeric(occupancyMin)}
-              </sub>
+              <span className="tooltip-occupancy-number">{occupancyLabel}</span>
+              <span className="tooltip-occupancy-range">
+                <span className="tooltip-occupancy-max">
+                  Max: {formatNumeric(occupancyMax)}
+                </span>
+                <span className="tooltip-occupancy-min">
+                  Min: {formatNumeric(occupancyMin)}
+                </span>
+              </span>
             </span>
           </span>
         </li>,
@@ -88,8 +98,12 @@ export const ChartTooltip = ({
     if (rows.length === 0) {
       return null;
     }
+    const headerLabel = siteFlowTimeframe
+      ? formatSiteFlowTick(siteFlowTimeframe, bucket, xKey)
+      : xKey;
     return (
       <div className="analytics-chart-tooltip">
+        <div className="tooltip-header">{headerLabel}</div>
         <ul>{rows}</ul>
       </div>
     );
