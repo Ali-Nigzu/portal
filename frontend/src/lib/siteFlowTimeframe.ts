@@ -141,10 +141,8 @@ export const resolveSiteFlowTimeRange = (
       return { from, to };
     }
     case "last_week": {
-      const currentWeekStart = startOfWeek(anchor, timezone);
-      const previousWeekStart = addDays(currentWeekStart, -7, timezone);
-      const from = previousWeekStart.toISOString();
-      const to = endOfWeek(previousWeekStart, timezone).toISOString();
+      const from = addDays(startOfDay(anchor, timezone), -6, timezone).toISOString();
+      const to = endOfDay(anchor, timezone).toISOString();
       return { from, to };
     }
     case "last_month": {
