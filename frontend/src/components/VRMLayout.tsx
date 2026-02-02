@@ -126,10 +126,20 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         description: "System overview",
       },
       {
-        path: "/analytics",
+        id: "analytics",
         label: "Analytics",
         icon: <IconAnalytics />,
         description: "Advanced analytics",
+        disabled: true,
+        statusLabel: "Coming Soon",
+      },
+      {
+        id: "forecasts",
+        label: "Forecasts",
+        icon: <IconAnalytics />,
+        description: "Predictive insights",
+        disabled: true,
+        statusLabel: "Coming Soon",
       },
       {
         path: "/event-logs",
@@ -230,17 +240,51 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         {}{" "}
         <div className="vrm-nav">
           {" "}
-          {navigationItems.map((item) => (
-            <Link
-              key={item.path}
-              to={getNavigationPath(item.path)}
-              className={`vrm-nav-item ${isActiveRoute(item.path) ? "active" : ""}`}
-              title={sidebarCollapsed ? item.description : ""}
-            >
-              {" "}
-              {item.icon} <div className="vrm-nav-text">{item.label}</div>
-            </Link>
-          ))}{" "}
+          {navigationItems.map((item) => {
+            const isDisabled = Boolean(item.disabled);
+            const isActive =
+              item.path && !isDisabled ? isActiveRoute(item.path) : false;
+            const navText = (
+              <div className="vrm-nav-text">
+                {item.label}
+                {item.statusLabel && (
+                  <span className="vrm-nav-badge">{item.statusLabel}</span>
+                )}
+              </div>
+            );
+            const sharedProps = {
+              key: item.path ?? item.id ?? item.label,
+              title: sidebarCollapsed ? item.description : "",
+            };
+
+            if (isDisabled) {
+              return (
+                <div
+                  {...sharedProps}
+                  className="vrm-nav-item vrm-nav-item--disabled"
+                  aria-disabled="true"
+                >
+                  {item.icon}
+                  {navText}
+                </div>
+              );
+            }
+
+            if (!item.path) {
+              return null;
+            }
+
+            return (
+              <Link
+                {...sharedProps}
+                to={getNavigationPath(item.path)}
+                className={`vrm-nav-item ${isActive ? "active" : ""}`}
+              >
+                {item.icon}
+                {navText}
+              </Link>
+            );
+          })}{" "}
         </div>
       </nav>{" "}
       {}{" "}
