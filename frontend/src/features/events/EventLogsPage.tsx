@@ -221,23 +221,28 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         const camId = normalizeNumeric(event.cam_id ?? event.camera_id, 0);
         const trackId = normalizeTrackId(event.track_id, event.track_number);
         const eventCode = normalizeEventCode(event.event);
+        const eventLabel = eventCode === 1 ? "Entrance" : "Exit";
         const timestamp = event.timestamp?.toString().trim()
           ? event.timestamp
           : new Date().toISOString();
-        const sex = normalizeSex(event.sex);
-        const ageBucket = normalizeAgeBucket(
+        const sexCode = normalizeSex(event.sex);
+        const sexLabel = sexCode === 1 ? "Female" : "Male";
+        const ageBucketCode = normalizeAgeBucket(
           event.age_bucket ?? event.age_estimate,
         );
-        const race = normalizeRace(event.race);
+        const ageLabel =
+          ageBuckets[ageBucketCode]?.label ?? ageBuckets[0].label;
+        const raceCode = normalizeRace(event.race);
+        const raceLabel = raceOptions[raceCode]?.label ?? raceOptions[0].label;
         return [
           siteId,
           camId,
           trackId,
-          eventCode,
+          eventLabel,
           timestamp,
-          sex,
-          ageBucket,
-          race,
+          sexLabel,
+          ageLabel,
+          raceLabel,
         ];
       };
       const csvRows = [
@@ -516,7 +521,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                       </td>
                       <td>
                         <code className="vrm-code-badge">
-                          #{event.track_number}
+                          {event.track_number}
                         </code>
                       </td>
                       <td>
