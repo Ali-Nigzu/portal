@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useParams } from "react-router-dom";
 import "../styles/VRMTheme.css";
 import { companyLogoDataUri } from "../assets/companyLogo";
@@ -154,11 +154,54 @@ const IconSettings = () => (
     />
   </svg>
 );
+const IconUpload = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M12 3 7 8h3v6h4V8h3l-5-5Zm-7 14h14v4H5v-4Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
+const IconLogout = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M10 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-9v-2h9V5h-9V3Zm-4.59 6 1.42 1.41L4.66 12H14v2H4.66l2.17 1.59-1.42 1.41L1 12l4.41-5Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
+const IconCollapse = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M8 5h8v2H8V5Zm0 12h8v2H8v-2Zm-4-6h12l-3-3 1.41-1.41L20.83 12l-6.42 6.41L13 17l3-3H4v-2Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
   onLogout,
   children,
 }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const { siteId } = useParams();
   const viewToken = getViewTokenFromLocation(location.search);
@@ -274,35 +317,74 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       <div
         className={`vrm-sidebar-shell ${
           shouldShowSitesPanel ? "vrm-sidebar-shell--sites" : ""
-        }`}
+        } ${isCollapsed ? "vrm-sidebar-shell--collapsed" : ""}`}
         aria-label="Primary"
       >
         <nav className="vrm-primary-rail">
-          <div className="vrm-sidebar-header vrm-sidebar-header--compact">
-            <div className="vrm-logo">
-              <img
-                src={companyLogoDataUri}
-                alt="Company Logo"
-                className="vrm-logo-img"
-              />
+          <div className="vrm-primary-rail-content">
+            <div className="vrm-sidebar-header vrm-sidebar-header--compact">
+              <div className="vrm-logo">
+                <img
+                  src={companyLogoDataUri}
+                  alt="Company Logo"
+                  className="vrm-logo-img"
+                />
+              </div>
+            </div>
+            <div className="vrm-nav vrm-nav--rail">
+              {primaryNavigationItems.map((item) => {
+                const isActive = primaryActivePath === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={getNavigationPath(item.path)}
+                    className={`vrm-nav-item vrm-nav-row ${
+                      isActive ? "active" : ""
+                    }`}
+                    aria-label={isCollapsed ? item.label : undefined}
+                  >
+                    {item.icon}
+                    <span className="vrm-nav-text">{item.label}</span>
+                    {item.path === "/sites" && (
+                      <span className="vrm-nav-row-chevron" aria-hidden="true">
+                        ›
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
-          <div className="vrm-nav vrm-nav--rail">
-            {primaryNavigationItems.map((item) => {
-              const isActive = primaryActivePath === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={getNavigationPath(item.path)}
-                  className={`vrm-nav-item vrm-nav-row ${
-                    isActive ? "active" : ""
-                  }`}
-                >
-                  {item.icon}
-                  <span className="vrm-nav-text">{item.label}</span>
-                </Link>
-              );
-            })}
+          <div className="vrm-primary-rail-footer">
+            <div
+              className="vrm-nav-item vrm-nav-row vrm-nav-item--placeholder"
+              role="button"
+              tabIndex={0}
+              aria-label={isCollapsed ? "Upload" : undefined}
+            >
+              <IconUpload />
+              <span className="vrm-nav-text">Upload</span>
+            </div>
+            <button
+              type="button"
+              className="vrm-nav-item vrm-nav-row vrm-nav-item--control"
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <IconCollapse />
+              <span className="vrm-nav-text">
+                {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              </span>
+            </button>
+            <div
+              className="vrm-nav-item vrm-nav-row vrm-nav-item--placeholder"
+              role="button"
+              tabIndex={0}
+              aria-label={isCollapsed ? "Logout" : undefined}
+            >
+              <IconLogout />
+              <span className="vrm-nav-text">Logout</span>
+            </div>
           </div>
         </nav>
         {shouldShowSitesPanel && (
@@ -334,6 +416,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       className={`vrm-nav-item vrm-nav-row ${
                         isActive ? "active" : ""
                       }`}
+                      aria-label={isCollapsed ? site.label : undefined}
                     >
                       <IconSites />
                       <div className="vrm-nav-text">{site.label}</div>
@@ -380,6 +463,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       className={`vrm-nav-item vrm-nav-row ${
                         isActive ? "active" : ""
                       }`}
+                      aria-label={isCollapsed ? item.label : undefined}
                     >
                       {item.icon}
                       {navText}
@@ -397,6 +481,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     className={`vrm-nav-item vrm-nav-row ${
                       item.path && isActiveRoute(item.path) ? "active" : ""
                     }`}
+                    aria-label={isCollapsed ? item.label : undefined}
                   >
                     {item.icon}
                     <div className="vrm-nav-text">{item.label}</div>
