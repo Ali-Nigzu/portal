@@ -294,7 +294,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 <Link
                   key={item.path}
                   to={getNavigationPath(item.path)}
-                  className={`vrm-nav-item vrm-nav-item--rail ${
+                  className={`vrm-nav-item vrm-nav-row ${
                     isActive ? "active" : ""
                   }`}
                 >
@@ -307,116 +307,103 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         </nav>
         {shouldShowSitesPanel && (
           <nav className="vrm-extended-panel" aria-label="Secondary">
-            <div className="vrm-extended-stack">
-              <div className="vrm-extended-panel-content vrm-extended-panel-content--list">
-                <div className="vrm-extended-header">
-                  <div className="vrm-extended-title">Sites</div>
-                </div>
-                <div className="vrm-nav">
-                  {SITE_OPTIONS.map((site) => {
-                    const isActive =
-                      isSiteSelection && site.id === selectedSiteForList;
-                    return (
-                      <Link
-                        key={site.id}
-                        to={getNavigationPath(
-                          `/sites/${site.id}/dashboard`,
-                        )}
-                        className={`vrm-nav-item vrm-nav-item--panel ${
-                          isActive ? "active" : ""
-                        }`}
-                      >
-                        <span
-                          className="vrm-nav-icon vrm-nav-icon--spacer"
-                          aria-hidden="true"
-                        />
-                        <div className="vrm-nav-text">{site.label}</div>
-                      </Link>
-                    );
-                  })}
-                </div>
+            <div className="vrm-extended-header">
+              {showSiteMenu ? (
+                <Link
+                  to={getNavigationPath("/sites")}
+                  className="vrm-extended-back"
+                >
+                  ← Back to Sites
+                </Link>
+              ) : null}
+              <div className="vrm-extended-title">
+                {showSiteMenu ? activeSite?.label ?? "Site" : "Sites"}
               </div>
-              {showSiteMenu && (
-                <>
-                  <Link
-                    to={getNavigationPath("/sites")}
-                    className="vrm-extended-sliver"
-                  >
-                    <span className="vrm-extended-sliver-icon">←</span>
-                    <span className="vrm-extended-sliver-text">Sites</span>
-                  </Link>
-                  <div className="vrm-extended-panel-content vrm-extended-panel-content--menu">
-                    <div className="vrm-extended-header">
-                      <div className="vrm-extended-title">
-                        {activeSite?.label ?? "Site"}
+            </div>
+            {!showSiteMenu && (
+              <div className="vrm-nav">
+                {SITE_OPTIONS.map((site) => {
+                  const isActive =
+                    isSiteSelection && site.id === selectedSiteForList;
+                  return (
+                    <Link
+                      key={site.id}
+                      to={getNavigationPath(
+                        `/sites/${site.id}/dashboard`,
+                      )}
+                      className={`vrm-nav-item vrm-nav-row ${
+                        isActive ? "active" : ""
+                      }`}
+                    >
+                      <IconSites />
+                      <div className="vrm-nav-text">{site.label}</div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+            {showSiteMenu && !shouldShowAdminMenu && (
+              <div className="vrm-nav">
+                {clientNavigationItems.map((item) => {
+                  const isDisabled = Boolean(item.disabled);
+                  const isActive =
+                    item.path && !isDisabled ? isActiveRoute(item.path) : false;
+                  const navText = (
+                    <div className="vrm-nav-text">
+                      {item.label}
+                      {item.statusLabel && (
+                        <span className="vrm-nav-badge">
+                          {item.statusLabel}
+                        </span>
+                      )}
+                    </div>
+                  );
+                  if (isDisabled) {
+                    return (
+                      <div
+                        key={item.id ?? item.label}
+                        className="vrm-nav-item vrm-nav-row vrm-nav-item--disabled"
+                        aria-disabled="true"
+                      >
+                        {item.icon}
+                        {navText}
                       </div>
-                    </div>
-                    <div className="vrm-nav">
-                      {clientNavigationItems.map((item) => {
-                        const isDisabled = Boolean(item.disabled);
-                        const isActive =
-                          item.path && !isDisabled
-                            ? isActiveRoute(item.path)
-                            : false;
-                        const navText = (
-                          <div className="vrm-nav-text">
-                            {item.label}
-                            {item.statusLabel && (
-                              <span className="vrm-nav-badge">
-                                {item.statusLabel}
-                              </span>
-                            )}
-                          </div>
-                        );
-                        if (isDisabled) {
-                          return (
-                            <div
-                              key={item.id ?? item.label}
-                              className="vrm-nav-item vrm-nav-item--panel vrm-nav-item--disabled"
-                              aria-disabled="true"
-                            >
-                              {item.icon}
-                              {navText}
-                            </div>
-                          );
-                        }
-                        if (!item.path) {
-                          return null;
-                        }
-                        return (
-                          <Link
-                            key={item.path}
-                            to={getNavigationPath(item.path)}
-                            className={`vrm-nav-item vrm-nav-item--panel ${
-                              isActive ? "active" : ""
-                            }`}
-                          >
-                            {item.icon}
-                            {navText}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
-              {shouldShowAdminMenu && (
-                <div className="vrm-nav">
-                  {adminNavigationItems.map((item) => (
+                    );
+                  }
+                  if (!item.path) {
+                    return null;
+                  }
+                  return (
                     <Link
                       key={item.path}
                       to={getNavigationPath(item.path)}
-                      className={`vrm-nav-item ${
-                        item.path && isActiveRoute(item.path) ? "active" : ""
+                      className={`vrm-nav-item vrm-nav-row ${
+                        isActive ? "active" : ""
                       }`}
                     >
                       {item.icon}
-                      <div className="vrm-nav-text">{item.label}</div>
+                      {navText}
                     </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+            {shouldShowAdminMenu && (
+              <div className="vrm-nav">
+                {adminNavigationItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={getNavigationPath(item.path)}
+                    className={`vrm-nav-item vrm-nav-row ${
+                      item.path && isActiveRoute(item.path) ? "active" : ""
+                    }`}
+                  >
+                    {item.icon}
+                    <div className="vrm-nav-text">{item.label}</div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </nav>
         )}
       </div>
