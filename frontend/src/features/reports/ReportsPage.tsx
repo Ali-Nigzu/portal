@@ -47,7 +47,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
       id: "site-activity",
       name: "Site Activity",
       description:
-        "Entrances, exits, occupancy, and dwell trends for the selected period.",
+        "Entrances, exits, occupancy, and dwell trends",
       type: "Operational Report",
     },
     {
@@ -650,7 +650,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                 }}
               >
                 {" "}
-                Report Type{" "}
+                Type{" "}
               </label>
               <select
                 value={reportType}
@@ -682,7 +682,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
                 }}
               >
                 {" "}
-                Time Period{" "}
+                Period{" "}
               </label>
               <select
                 value={timePeriod}
@@ -716,9 +716,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
               disabled={isGenerating || loading}
             >
               {" "}
-              {isGenerating
-                ? "Generating..."
-                : "Generate & Download Report"}{" "}
+              {isGenerating ? "Generating..." : "Download Report"}{" "}
             </button>
           </div>{" "}
           {snapshotError && (

@@ -80,7 +80,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
           }}
         >
           {" "}
-          Alarm logs{" "}
+          Alarm Logs{" "}
         </h1>
       </div>{" "}
       {}{" "}

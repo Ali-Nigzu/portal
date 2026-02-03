@@ -143,19 +143,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       },
       {
         path: "/event-logs",
-        label: "Event logs",
+        label: "Event Logs",
         icon: <IconEventLogs />,
         description: "Activity events",
       },
       {
         path: "/alarm-logs",
-        label: "Alarm logs",
+        label: "Alarm Logs",
         icon: <IconAlarm />,
         description: "System alerts",
       },
       {
         path: "/device-list",
-        label: "Device list",
+        label: "Device List",
         icon: <IconDevice />,
         description: "Data sources",
       },

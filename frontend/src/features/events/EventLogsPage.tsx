@@ -303,7 +303,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     <div className="event-logs-page">
       {/* Page Header */}
       <div className="vrm-page-header">
-        <h1 className="vrm-page-title">Event logs</h1>
+        <h1 className="vrm-page-title">Event Logs</h1>
       </div>
       {/* Filters */}
       <div className="vrm-card vrm-card--spaced event-logs-filters-card">
@@ -374,7 +374,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                   }))
                 }
                 onKeyDown={handleTrackIdKeyDown}
-                placeholder="Search by track ID"
+                placeholder="Filter by Track ID"
                 className="vrm-input event-logs-filter-control"
               />
             </div>
@@ -491,7 +491,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
               onClick={handleExport}
             >
-              Export CSV
+              Export Logs
             </button>
           </div>
         </div>
