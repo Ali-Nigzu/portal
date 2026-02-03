@@ -1,7 +1,13 @@
-import React, { useMemo, useState } from "react";
-import { Link, useLocation, Outlet } from "react-router-dom";
+import React, { useEffect, useMemo } from "react";
+import { Link, Outlet, useLocation, useParams } from "react-router-dom";
 import "../styles/VRMTheme.css";
 import { companyLogoDataUri } from "../assets/companyLogo";
+import {
+  SITE_OPTIONS,
+  findSiteById,
+  getStoredSiteId,
+  setStoredSiteId,
+} from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
@@ -106,21 +112,89 @@ const IconAdmin = () => (
     />
   </svg>
 );
+const IconHome = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M12 3 3 10h2v9a1 1 0 0 0 1 1h5v-6h2v6h5a1 1 0 0 0 1-1v-9h2L12 3Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
+const IconSites = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
+const IconSettings = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M19.14 12.94a7.97 7.97 0 0 0 .06-.94 7.97 7.97 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.52 7.52 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.13.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94L2.82 14.5a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.58-.23 1.13-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
   onLogout,
   children,
 }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
+  const { siteId } = useParams();
   const viewToken = getViewTokenFromLocation(location.search);
+  const activeSite = findSiteById(siteId);
   const getNavigationPath = (path: string) => {
     return viewToken ? `${path}?view_token=${viewToken}` : path;
   };
+  useEffect(() => {
+    if (siteId) {
+      setStoredSiteId(siteId);
+    }
+  }, [siteId]);
+  const primaryNavigationItems = useMemo(
+    () => [
+      {
+        path: "/home",
+        label: "Home",
+        icon: <IconHome />,
+      },
+      {
+        path: "/sites",
+        label: "Sites",
+        icon: <IconSites />,
+      },
+      {
+        path: "/settings",
+        label: "Settings",
+        icon: <IconSettings />,
+      },
+    ],
+    [],
+  );
   const clientNavigationItems = useMemo(
     () => [
       {
-        path: "/dashboard",
+        path: siteId ? `/sites/${siteId}/dashboard` : undefined,
         label: "Dashboard",
         icon: <IconDashboard />,
         description: "System overview",
@@ -142,31 +216,31 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         statusLabel: "Coming Soon",
       },
       {
-        path: "/event-logs",
+        path: siteId ? `/sites/${siteId}/event-logs` : undefined,
         label: "Event Logs",
         icon: <IconEventLogs />,
         description: "Activity events",
       },
       {
-        path: "/alarm-logs",
+        path: siteId ? `/sites/${siteId}/alarm-logs` : undefined,
         label: "Alarm Logs",
         icon: <IconAlarm />,
         description: "System alerts",
       },
       {
-        path: "/device-list",
+        path: siteId ? `/sites/${siteId}/device-list` : undefined,
         label: "Device List",
         icon: <IconDevice />,
         description: "Data sources",
       },
       {
-        path: "/reports",
+        path: siteId ? `/sites/${siteId}/reports` : undefined,
         label: "Reports",
         icon: <IconReports />,
         description: "Analytics reports",
       },
     ],
-    [],
+    [siteId],
   );
   const adminNavigationItems = useMemo(
     () => [
@@ -179,114 +253,150 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     ],
     [],
   );
-  const navigationItems =
-    userRole === "admin" ? adminNavigationItems : clientNavigationItems;
   const isActiveRoute = (path: string) => {
     return (
       location.pathname === path || location.pathname.startsWith(path + "/")
     );
   };
+  const primaryActivePath = primaryNavigationItems.find((item) =>
+    isActiveRoute(item.path),
+  )?.path;
+  const isSiteSelection = location.pathname === "/sites";
+  const selectedSiteForList = getStoredSiteId() ?? "all";
+  const showSiteMenu = Boolean(siteId);
+  const shouldShowAdminMenu =
+    userRole === "admin" && location.pathname.startsWith("/admin");
   return (
     <div className="vrm-layout">
       {" "}
       {}{" "}
-      <nav
-        className={`vrm-sidebar ${sidebarCollapsed ? "collapsed" : ""}`}
-        aria-label="Primary"
-      >
-        {" "}
-        {}{" "}
-        <div className="vrm-sidebar-header">
-          <div className="vrm-logo">
-            <img
-              src={companyLogoDataUri}
-              alt="Company Logo"
-              className="vrm-logo-img"
-            />
+      <div className="vrm-sidebar-shell" aria-label="Primary">
+        <nav className="vrm-primary-rail">
+          <div className="vrm-sidebar-header vrm-sidebar-header--compact">
+            <div className="vrm-logo">
+              <img
+                src={companyLogoDataUri}
+                alt="Company Logo"
+                className="vrm-logo-img"
+              />
+            </div>
           </div>
-          <div className="vrm-logo-text">camOS</div>
-        </div>{" "}
-        {}{" "}
-        <button
-          className="vrm-collapse-btn"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {" "}
-            {sidebarCollapsed ? (
-              <path
-                d="M3 10h14M3 5h14M3 15h14"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            ) : (
-              <path
-                d="M6 10h8M6 5h8M6 15h8"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            )}{" "}
-          </svg>
-        </button>{" "}
-        {}{" "}
-        <div className="vrm-nav">
-          {" "}
-          {navigationItems.map((item) => {
-            const isDisabled = Boolean(item.disabled);
-            const isActive =
-              item.path && !isDisabled ? isActiveRoute(item.path) : false;
-            const navText = (
-              <div className="vrm-nav-text">
-                {item.label}
-                {item.statusLabel && (
-                  <span className="vrm-nav-badge">{item.statusLabel}</span>
-                )}
-              </div>
-            );
-            const sharedProps = {
-              key: item.path ?? item.id ?? item.label,
-              title: sidebarCollapsed ? item.description : "",
-            };
-
-            if (isDisabled) {
+          <div className="vrm-nav vrm-nav--rail">
+            {primaryNavigationItems.map((item) => {
+              const isActive = primaryActivePath === item.path;
               return (
-                <div
-                  {...sharedProps}
-                  className="vrm-nav-item vrm-nav-item--disabled"
-                  aria-disabled="true"
+                <Link
+                  key={item.path}
+                  to={getNavigationPath(item.path)}
+                  className={`vrm-nav-item vrm-nav-item--rail ${
+                    isActive ? "active" : ""
+                  }`}
                 >
                   {item.icon}
-                  {navText}
-                </div>
+                  <span className="vrm-nav-text">{item.label}</span>
+                </Link>
               );
-            }
-
-            if (!item.path) {
-              return null;
-            }
-
-            return (
+            })}
+          </div>
+        </nav>
+        <nav className="vrm-extended-panel" aria-label="Secondary">
+          {showSiteMenu && (
+            <div className="vrm-extended-header">
               <Link
-                {...sharedProps}
-                to={getNavigationPath(item.path)}
-                className={`vrm-nav-item ${isActive ? "active" : ""}`}
+                to={getNavigationPath("/sites")}
+                className="vrm-extended-back"
               >
-                {item.icon}
-                {navText}
+                ← Back to Sites
               </Link>
-            );
-          })}{" "}
-        </div>
-      </nav>{" "}
+              <div className="vrm-extended-title">
+                {activeSite?.label ?? "Site"}
+              </div>
+            </div>
+          )}
+          {!showSiteMenu && !shouldShowAdminMenu && (
+            <>
+              <div className="vrm-extended-header">
+                <div className="vrm-extended-title">Sites</div>
+              </div>
+              <div className="vrm-nav">
+                {SITE_OPTIONS.map((site) => {
+                  const isActive =
+                    isSiteSelection && site.id === selectedSiteForList;
+                  return (
+                    <Link
+                      key={site.id}
+                      to={getNavigationPath(
+                        `/sites/${site.id}/dashboard`,
+                      )}
+                      className={`vrm-nav-item ${isActive ? "active" : ""}`}
+                    >
+                      <div className="vrm-nav-text">{site.label}</div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          {shouldShowAdminMenu && (
+            <div className="vrm-nav">
+              {adminNavigationItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={getNavigationPath(item.path)}
+                  className={`vrm-nav-item ${
+                    item.path && isActiveRoute(item.path) ? "active" : ""
+                  }`}
+                >
+                  {item.icon}
+                  <div className="vrm-nav-text">{item.label}</div>
+                </Link>
+              ))}
+            </div>
+          )}
+          {showSiteMenu && !shouldShowAdminMenu && (
+            <div className="vrm-nav">
+              {clientNavigationItems.map((item) => {
+                const isDisabled = Boolean(item.disabled);
+                const isActive =
+                  item.path && !isDisabled ? isActiveRoute(item.path) : false;
+                const navText = (
+                  <div className="vrm-nav-text">
+                    {item.label}
+                    {item.statusLabel && (
+                      <span className="vrm-nav-badge">{item.statusLabel}</span>
+                    )}
+                  </div>
+                );
+                if (isDisabled) {
+                  return (
+                    <div
+                      key={item.id ?? item.label}
+                      className="vrm-nav-item vrm-nav-item--disabled"
+                      aria-disabled="true"
+                    >
+                      {item.icon}
+                      {navText}
+                    </div>
+                  );
+                }
+                if (!item.path) {
+                  return null;
+                }
+                return (
+                  <Link
+                    key={item.path}
+                    to={getNavigationPath(item.path)}
+                    className={`vrm-nav-item ${isActive ? "active" : ""}`}
+                  >
+                    {item.icon}
+                    {navText}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </nav>
+      </div>
       {}{" "}
       <main className="vrm-main">
         <div className="vrm-header-stack">
