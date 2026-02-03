@@ -134,14 +134,45 @@ export const TrafficDistribution = ({
         reason: !legend.length ? "no-legend" : "non-positive-total",
       });
     }
+    const emptySlice = [
+      {
+        label: "No data",
+        value: 1,
+        color: "var(--vrm-border)",
+      },
+    ];
     return (
       <div
         className={`traffic-distribution kpi-tile ${className ?? ""}`}
         style={{ minHeight: height }}
       >
         <div className="traffic-distribution__title">{title}</div>
-        <div className="traffic-distribution__content">
-          <div className="traffic-distribution__center">—</div>
+        <div className={contentClassName}>
+          <ResponsiveContainer width="100%" height={140}>
+            <PieChart>
+              <Pie
+                dataKey="value"
+                data={emptySlice}
+                cx="50%"
+                cy="50%"
+                innerRadius={48}
+                outerRadius={68}
+                paddingAngle={0}
+                startAngle={90}
+                endAngle={450}
+                label={undefined}
+                labelLine={false}
+                stroke="none"
+                isAnimationActive={false}
+              >
+                <Cell
+                  key="empty"
+                  fill={emptySlice[0].color}
+                  stroke="none"
+                />
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     );

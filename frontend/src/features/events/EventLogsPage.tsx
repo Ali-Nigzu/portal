@@ -31,12 +31,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     fetchEvents,
   } = useEventLogsQuery(credentials);
   const ageBuckets = [
-    { value: "0-4", label: "0-4" },
-    { value: "5-13", label: "5-13" },
-    { value: "14-25", label: "14-25" },
-    { value: "26-45", label: "26-45" },
-    { value: "46-65", label: "46-65" },
-    { value: "66+", label: "66+" },
+    { value: "0", label: "0-4" },
+    { value: "1", label: "5-13" },
+    { value: "2", label: "14-25" },
+    { value: "3", label: "26-45" },
+    { value: "4", label: "46-65" },
+    { value: "5", label: "66+" },
   ];
   const raceOptions = [
     { value: "0", label: "Light" },
@@ -44,8 +44,8 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     { value: "2", label: "Dark" },
   ];
   const sexOptions = [
-    { value: "M", label: "Male" },
-    { value: "F", label: "Female" },
+    { value: "0", label: "Male" },
+    { value: "1", label: "Female" },
   ];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -78,7 +78,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     }
     return "Unknown";
   };
-  const formatAgeBucket = (value: EventData["age_estimate"]) => {
+  const formatAgeBucket = (
+    value: EventData["age_bucket"] | EventData["age_estimate"],
+  ) => {
     if (value === null || value === undefined) {
       return "Unknown";
     }
@@ -92,6 +94,17 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       return ageBuckets[numeric].label;
     }
     return raw;
+  };
+  const formatRace = (value: EventData["race"]) => {
+    if (value === null || value === undefined) {
+      return "Unknown";
+    }
+    const raw = value.toString();
+    const mapped = raceOptions.find((option) => option.value === raw);
+    if (mapped) {
+      return mapped.label;
+    }
+    return "Unknown";
   };
   const formatTimestamp = (timestamp: string) => {
     try {
@@ -114,15 +127,53 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         return "";
     }
   };
-  const getEventStatus = (event: string) => {
-    switch (event.toLowerCase()) {
-      case "entry":
-        return "vrm-status-online";
-      case "exit":
-        return "vrm-status-warning";
-      default:
-        return "vrm-status-offline";
+  const normalizeEventCode = (value: EventData["event"]) => {
+    const normalized = value?.toString().toLowerCase() ?? "";
+    if (normalized === "entry" || normalized === "entrance") {
+      return 1;
     }
+    return 0;
+  };
+  const normalizeNumeric = (
+    value: string | number | null | undefined,
+    fallback = 0,
+  ) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  };
+  const normalizeTrackId = (value: EventData["track_id"], fallback: string) => {
+    const raw = value ?? fallback;
+    const text = raw === null || raw === undefined ? "" : String(raw).trim();
+    if (!text) {
+      return "00";
+    }
+    return text.length >= 2 ? text : text.padStart(2, "0");
+  };
+  const normalizeAgeBucket = (
+    value: EventData["age_bucket"] | EventData["age_estimate"],
+  ) => {
+    const numeric = normalizeNumeric(value, 0);
+    if (numeric < 0 || numeric > 5) {
+      return 0;
+    }
+    return Math.trunc(numeric);
+  };
+  const normalizeSex = (value: EventData["sex"]) => {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    const normalized = value.toString().toLowerCase();
+    if (normalized === "1" || normalized === "f" || normalized === "female") {
+      return 1;
+    }
+    return 0;
+  };
+  const normalizeRace = (value: EventData["race"]) => {
+    const numeric = normalizeNumeric(value, 0);
+    if (numeric < 0 || numeric > 2) {
+      return 0;
+    }
+    return Math.trunc(numeric);
   };
   const clearAllFilters = () => {
     setDraftFilters({
@@ -145,16 +196,15 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
       if (!Array.isArray(exportEvents) || exportEvents.length === 0) {
         throw new Error("No events available for export.");
       }
-      const columns: Array<keyof EventData> = [
-        "index",
-        "track_number",
+      const columns = [
+        "site_id",
+        "cam_id",
+        "track_id",
         "event",
         "timestamp",
         "sex",
-        "age_estimate",
-        "hour",
-        "day_of_week",
-        "date",
+        "age_bucket",
+        "race",
       ];
       const escapeCsv = (value: unknown) => {
         if (value === null || value === undefined) {
@@ -166,10 +216,39 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
         }
         return text;
       };
+      const toExportRow = (event: EventData) => {
+        const siteId = normalizeNumeric(event.site_id, 0);
+        const camId = normalizeNumeric(event.cam_id ?? event.camera_id, 0);
+        const trackId = normalizeTrackId(event.track_id, event.track_number);
+        const eventCode = normalizeEventCode(event.event);
+        const eventLabel = eventCode === 1 ? "Entrance" : "Exit";
+        const timestamp = event.timestamp?.toString().trim()
+          ? event.timestamp
+          : new Date().toISOString();
+        const sexCode = normalizeSex(event.sex);
+        const sexLabel = sexCode === 1 ? "Female" : "Male";
+        const ageBucketCode = normalizeAgeBucket(
+          event.age_bucket ?? event.age_estimate,
+        );
+        const ageLabel =
+          ageBuckets[ageBucketCode]?.label ?? ageBuckets[0].label;
+        const raceCode = normalizeRace(event.race);
+        const raceLabel = raceOptions[raceCode]?.label ?? raceOptions[0].label;
+        return [
+          siteId,
+          camId,
+          trackId,
+          eventLabel,
+          timestamp,
+          sexLabel,
+          ageLabel,
+          raceLabel,
+        ];
+      };
       const csvRows = [
         columns.join(","),
         ...exportEvents.map((event: EventData) =>
-          columns.map((column) => escapeCsv(event[column])).join(","),
+          toExportRow(event).map((value) => escapeCsv(value)).join(","),
         ),
       ];
       const csvBlob = new Blob([csvRows.join("\n")], {
@@ -224,7 +303,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     <div className="event-logs-page">
       {/* Page Header */}
       <div className="vrm-page-header">
-        <h1 className="vrm-page-title">Event logs</h1>
+        <h1 className="vrm-page-title">Event Logs</h1>
       </div>
       {/* Filters */}
       <div className="vrm-card vrm-card--spaced event-logs-filters-card">
@@ -295,7 +374,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                   }))
                 }
                 onKeyDown={handleTrackIdKeyDown}
-                placeholder="Search by track ID"
+                placeholder="Filter by Track ID"
                 className="vrm-input event-logs-filter-control"
               />
             </div>
@@ -381,7 +460,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
             </div>
             <div className="event-logs-filter-field">
               <label className="vrm-label" htmlFor="event-camera-id">
-                Camera ID
+                Camera
               </label>
               <input
                 id="event-camera-id"
@@ -393,7 +472,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                     cameraId: e.target.value,
                   }))
                 }
-                placeholder="Filter by camera ID"
+                placeholder="Filter by camera"
                 className="vrm-input event-logs-filter-control"
                 min="0"
               />
@@ -412,7 +491,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
               onClick={handleExport}
             >
-              Export CSV
+              Export Logs
             </button>
           </div>
         </div>
@@ -424,9 +503,9 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                   <tr>
                     <th>Event</th>
                     <th>Track ID</th>
+                    <th>Camera</th>
                     <th>Timestamp</th>
                     <th>Demographics</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -442,37 +521,25 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
                       </td>
                       <td>
                         <code className="vrm-code-badge">
-                          #{event.track_number}
+                          {event.track_number}
                         </code>
+                      </td>
+                      <td>
+                        {event.cam_id ?? event.camera_id ?? "—"}
                       </td>
                       <td>{formatTimestamp(event.timestamp)}</td>
                       <td>
                         <div
                           style={{
                             fontSize: "var(--vrm-typography-font-size-body)",
+                            color: "var(--vrm-text-secondary)",
                           }}
                         >
-                          <div>{formatSex(event.sex)}</div>
-                          <div
-                            style={{
-                              color: "var(--vrm-text-muted)",
-                              marginTop: "var(--vrm-spacing-1)",
-                            }}
-                          >
-                            Age: {formatAgeBucket(event.age_estimate)}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div
-                          className={`vrm-status ${getEventStatus(event.event)}`}
-                        >
-                          <div className="vrm-status-dot"></div>
-                          {event.event === "entry"
-                            ? "Entered"
-                            : event.event === "exit"
-                              ? "Exited"
-                              : "Unknown"}
+                          {formatSex(event.sex)} •{" "}
+                          {formatAgeBucket(
+                            event.age_bucket ?? event.age_estimate,
+                          )}{" "}
+                          • {formatRace(event.race)}
                         </div>
                       </td>
                     </tr>
