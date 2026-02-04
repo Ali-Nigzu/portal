@@ -276,6 +276,22 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
   useEffect(() => {
+    if (
+      keepMenuExpanded ||
+      secondaryHoverRef.current ||
+      secondaryFocusRef.current
+    ) {
+      return;
+    }
+    setIsSecondaryHovered(false);
+    setIsSecondaryFocused(false);
+    setIsSitesRowHovered(false);
+    if (sitesHoverTimeout.current !== null) {
+      window.clearTimeout(sitesHoverTimeout.current);
+      sitesHoverTimeout.current = null;
+    }
+  }, [keepMenuExpanded, location.pathname, siteId, isSelectorOpen]);
+  useEffect(() => {
     return () => {
       if (sitesHoverTimeout.current !== null) {
         window.clearTimeout(sitesHoverTimeout.current);

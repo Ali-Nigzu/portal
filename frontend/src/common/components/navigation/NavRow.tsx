@@ -7,6 +7,8 @@ export type NavRowProps = {
   rightSlot?: React.ReactNode;
   to?: string;
   onClick?: () => void;
+  onMouseEnter?: React.MouseEventHandler<HTMLElement>;
+  onMouseLeave?: React.MouseEventHandler<HTMLElement>;
   active?: boolean;
   disabled?: boolean;
   className?: string;
@@ -20,6 +22,8 @@ const NavRow: React.FC<NavRowProps> = ({
   rightSlot,
   to,
   onClick,
+  onMouseEnter,
+  onMouseLeave,
   active,
   disabled,
   className,
@@ -50,6 +54,8 @@ const NavRow: React.FC<NavRowProps> = ({
         aria-label={ariaLabel}
         aria-disabled="true"
         role={role ?? "listitem"}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
       >
         {content}
       </div>
@@ -58,7 +64,13 @@ const NavRow: React.FC<NavRowProps> = ({
 
   if (to) {
     return (
-      <Link className={baseClass} to={to} aria-label={ariaLabel}>
+      <Link
+        className={baseClass}
+        to={to}
+        aria-label={ariaLabel}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
         {content}
       </Link>
     );
@@ -71,6 +83,8 @@ const NavRow: React.FC<NavRowProps> = ({
         className={baseClass}
         onClick={onClick}
         aria-label={ariaLabel}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
       >
         {content}
       </button>
@@ -78,7 +92,13 @@ const NavRow: React.FC<NavRowProps> = ({
   }
 
   return (
-    <div className={baseClass} aria-label={ariaLabel} role={role ?? "listitem"}>
+    <div
+      className={baseClass}
+      aria-label={ariaLabel}
+      role={role ?? "listitem"}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {content}
     </div>
   );

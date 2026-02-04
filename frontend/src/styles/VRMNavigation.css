@@ -15,7 +15,6 @@
 
 .vrm-sidebar-header--brand {
   padding: 20px 18px 16px;
-  border-bottom: 1px solid var(--vrm-border);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -312,10 +311,6 @@ button.vrm-nav-row {
 .vrm-sidebar-shell--secondary-collapsed .vrm-secondary-search__icon {
   position: static;
   transform: none;
-}
-
-.vrm-sidebar-shell--secondary-collapsed .vrm-secondary-divider {
-  display: none;
 }
 
 .vrm-sidebar-shell--secondary-collapsed .vrm-extended-panel .vrm-nav-row {
