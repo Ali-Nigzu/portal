@@ -321,41 +321,37 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         aria-label="Primary"
       >
         <nav className="vrm-primary-rail">
-          <div className="vrm-primary-rail-content">
-            <div className="vrm-sidebar-header vrm-sidebar-header--compact">
-              <div className="vrm-logo">
-                <img
-                  src={companyLogoDataUri}
-                  alt="Company Logo"
-                  className="vrm-logo-img"
-                />
-              </div>
-            </div>
-            <div className="vrm-nav vrm-nav--rail">
-              {primaryNavigationItems.map((item) => {
-                const isActive = primaryActivePath === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={getNavigationPath(item.path)}
-                    className={`vrm-nav-item vrm-nav-row ${
-                      isActive ? "active" : ""
-                    }`}
-                    aria-label={isCollapsed ? item.label : undefined}
-                  >
-                    {item.icon}
-                    <span className="vrm-nav-text">{item.label}</span>
-                    {item.path === "/sites" && (
-                      <span className="vrm-nav-row-chevron" aria-hidden="true">
-                        ›
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
+          <div className="vrm-sidebar-header vrm-sidebar-header--compact">
+            <div className="vrm-logo">
+              <img
+                src={companyLogoDataUri}
+                alt="Company Logo"
+                className="vrm-logo-img"
+              />
             </div>
           </div>
-          <div className="vrm-primary-rail-footer">
+          <div className="vrm-nav vrm-nav--rail">
+            {primaryNavigationItems.map((item) => {
+              const isActive = primaryActivePath === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={getNavigationPath(item.path)}
+                  className={`vrm-nav-item vrm-nav-row ${
+                    isActive ? "active" : ""
+                  }`}
+                  aria-label={isCollapsed ? item.label : undefined}
+                >
+                  {item.icon}
+                  <span className="vrm-nav-text">{item.label}</span>
+                  {item.path === "/sites" && (
+                    <span className="vrm-nav-row-chevron" aria-hidden="true">
+                      ›
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
             <div
               className="vrm-nav-item vrm-nav-row vrm-nav-item--placeholder"
               role="button"
