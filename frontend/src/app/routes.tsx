@@ -18,7 +18,6 @@ const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
 const AlarmLogsPage = React.lazy(() => import("../pages/AlarmLogsPage"));
 const DeviceListPage = React.lazy(() => import("../pages/DeviceListPage"));
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
-const SitesPage = React.lazy(() => import("../pages/SitesPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
@@ -70,8 +69,25 @@ const AppRoutes: React.FC = () => {
 
   const resolvedRole = hasViewToken ? "client" : userRole;
   const shouldAllowAppRoutes = isLoggedIn || hasViewToken;
+  const appendParams = (
+    path: string,
+    params?: Record<string, string | undefined>,
+  ) => {
+    const searchParams = new URLSearchParams(location.search);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined) {
+          searchParams.delete(key);
+        } else {
+          searchParams.set(key, value);
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return query ? `${path}?${query}` : path;
+  };
   const appendViewToken = (path: string) =>
-    viewToken ? `${path}?view_token=${viewToken}` : path;
+    viewToken ? appendParams(path, { view_token: viewToken }) : path;
   const resolveLegacySiteId = () => {
     const stored = getStoredSiteId();
     if (!stored || stored === "all") {
@@ -84,7 +100,18 @@ const AppRoutes: React.FC = () => {
     const resolvedSiteId = siteId ?? resolveLegacySiteId();
     return (
       <Navigate
-        to={appendViewToken(`/sites/${resolvedSiteId}/dashboard`)}
+        to={appendParams(`/sites/${resolvedSiteId}/dashboard`)}
+        replace
+      />
+    );
+  };
+  const SitesSelectorRedirect: React.FC = () => {
+    const resolvedSiteId = resolveLegacySiteId();
+    return (
+      <Navigate
+        to={appendParams(`/sites/${resolvedSiteId}/dashboard`, {
+          panel: "sites",
+        })}
         replace
       />
     );
@@ -154,9 +181,7 @@ const AppRoutes: React.FC = () => {
         <>
           <Route
             path="/sites"
-            element={renderClientRoute(
-              lazyRoute(<SitesPage />),
-            )}
+            element={<SitesSelectorRedirect />}
           />
           <Route
             path="/home"

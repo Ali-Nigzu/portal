@@ -1,5 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Outlet, useLocation, useParams } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  BarChart3,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Cpu,
+  FileBarChart2,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Plus,
+  Settings,
+  Shield,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
 import { companyLogoDataUri } from "../assets/companyLogo";
@@ -9,7 +28,6 @@ import {
   getStoredSiteId,
   setStoredSiteId,
 } from "../lib/sites";
-import { getViewTokenFromLocation } from "../lib/viewToken";
 import {
   NavList,
   NavRow,
@@ -17,234 +35,11 @@ import {
   SecondaryPinnedRow,
   SecondarySearch,
 } from "../common/components/navigation";
+import { NavIcon } from "../common/components/icons";
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
   children?: React.ReactNode;
 }
-const IconDashboard = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M4 13h7V4H4v9Zm9 7h7V4h-7v16ZM4 20h7v-5H4v5Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconAnalytics = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 19h2v-6H5v6Zm6 0h2V5h-2v14Zm6 0h2v-9h-2v9ZM4 21h16a1 1 0 0 0 0-2H4a1 1 0 0 0 0 2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconEventLogs = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 4h4l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm0 5v10h14V9H5Zm9 3h3v2h-3v-2Zm-8 0h6v2H6v-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconAlarm = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M12 3a7 7 0 0 0-7 7v3.764l-1.447 2.894A1 1 0 0 0 4.447 18H19.55a1 1 0 0 0 .894-1.447L19 13.764V10a7 7 0 0 0-7-7Zm0 18a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconDevice = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Zm2 0v12h10V6H7Zm2 13h6v2H9v-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconReports = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M6 4h9l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm8 0v4h4l-4-4ZM8 12h8v2H8v-2Zm0 4h5v2H8v-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconAdmin = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M12 2a5 5 0 0 1 5 5v1.268a3 3 0 0 1 2 2.829V14a3 3 0 0 1-2 2.829V18a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-1.171A3 3 0 0 1 5 14v-2.903a3 3 0 0 1 2-2.83V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3Zm-1 15h2a1 1 0 0 0 1-1v-1h-4v1a1 1 0 0 0 1 1Zm-4-5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2.903a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1V14Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconHome = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M12 3 3 10h2v9a1 1 0 0 0 1 1h5v-6h2v6h5a1 1 0 0 0 1-1v-9h2L12 3Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconSites = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconChevronRight = () => (
-  <svg
-    className="vrm-nav-chevron"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M9 6.5 14.5 12 9 17.5l1.4 1.4L17.3 12 10.4 5.1 9 6.5Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconChevronLeft = () => (
-  <svg
-    className="vrm-nav-chevron"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M15 6.5 9.5 12 15 17.5l-1.4 1.4L6.7 12l6.9-6.9L15 6.5Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconBackArrow = () => (
-  <svg
-    className="vrm-nav-back"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M14.5 6.5 9 12l5.5 5.5 1.4-1.4L11.8 12l4.1-4.1-1.4-1.4Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconSettings = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M19.14 12.94a7.97 7.97 0 0 0 .06-.94 7.97 7.97 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.52 7.52 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.13.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94L2.82 14.5a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.58-.23 1.13-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconUpload = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M12 3 7 8h3v6h4V8h3l-5-5Zm-7 14h14v4H5v-4Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconLogout = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M10 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-9v-2h9V5h-9V3Zm-4.59 6 1.42 1.41L4.66 12H14v2H4.66l2.17 1.59-1.42 1.41L1 12l4.41-5Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconPlus = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
   children,
@@ -265,13 +60,45 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     return stored === "true";
   });
   const location = useLocation();
+  const navigate = useNavigate();
   const { siteId } = useParams();
-  const viewToken = getViewTokenFromLocation(location.search);
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
+  );
+  const isSelectorOpen = searchParams.get("panel") === "sites";
   const activeSite = findSiteById(siteId);
   const allSitesOption =
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
-  const getNavigationPath = (path: string) => {
-    return viewToken ? `${path}?view_token=${viewToken}` : path;
+  const buildSearch = (overrides?: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(location.search);
+    if (!overrides || !Object.prototype.hasOwnProperty.call(overrides, "panel")) {
+      params.delete("panel");
+    }
+    if (overrides) {
+      Object.entries(overrides).forEach(([key, value]) => {
+        if (value === undefined) {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+    }
+    const query = params.toString();
+    return query ? `?${query}` : "";
+  };
+  const getNavigationPath = (
+    path: string,
+    overrides?: Record<string, string | undefined>,
+  ) => `${path}${buildSearch(overrides)}`;
+  const openSitesSelector = () => {
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ panel: "sites" }),
+      },
+      { replace: false },
+    );
   };
   useEffect(() => {
     if (siteId) {
@@ -313,17 +140,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     () => [
       {
         label: "Home",
-        icon: <IconHome />,
+        icon: <NavIcon icon={Home} />,
         placeholder: true,
       },
       {
         path: "/sites",
         label: "Sites",
-        icon: <IconSites />,
+        icon: <NavIcon icon={MapPin} />,
       },
       {
         label: "Settings",
-        icon: <IconSettings />,
+        icon: <NavIcon icon={Settings} />,
         placeholder: true,
       },
     ],
@@ -334,13 +161,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       {
         path: siteId ? `/sites/${siteId}/dashboard` : undefined,
         label: "Dashboard",
-        icon: <IconDashboard />,
+        icon: <NavIcon icon={LayoutDashboard} />,
         description: "System overview",
       },
       {
         id: "analytics",
         label: "Analytics",
-        icon: <IconAnalytics />,
+        icon: <NavIcon icon={BarChart3} />,
         description: "Advanced analytics",
         disabled: true,
         statusLabel: "Coming Soon",
@@ -348,7 +175,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       {
         id: "forecasts",
         label: "Forecasts",
-        icon: <IconAnalytics />,
+        icon: <NavIcon icon={TrendingUp} />,
         description: "Predictive insights",
         disabled: true,
         statusLabel: "Coming Soon",
@@ -356,25 +183,25 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       {
         path: siteId ? `/sites/${siteId}/event-logs` : undefined,
         label: "Event Logs",
-        icon: <IconEventLogs />,
+        icon: <NavIcon icon={ClipboardList} />,
         description: "Activity events",
       },
       {
         path: siteId ? `/sites/${siteId}/alarm-logs` : undefined,
         label: "Alarm Logs",
-        icon: <IconAlarm />,
+        icon: <NavIcon icon={Bell} />,
         description: "System alerts",
       },
       {
         path: siteId ? `/sites/${siteId}/device-list` : undefined,
         label: "Device List",
-        icon: <IconDevice />,
+        icon: <NavIcon icon={Cpu} />,
         description: "Data sources",
       },
       {
         path: siteId ? `/sites/${siteId}/reports` : undefined,
         label: "Reports",
-        icon: <IconReports />,
+        icon: <NavIcon icon={FileBarChart2} />,
         description: "Analytics reports",
       },
     ],
@@ -385,7 +212,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       {
         path: "/admin",
         label: "Admin",
-        icon: <IconAdmin />,
+        icon: <NavIcon icon={Shield} />,
         description: "Admin panel",
       },
     ],
@@ -399,9 +226,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const primaryActivePath = primaryNavigationItems.find(
     (item) => item.path && isActiveRoute(item.path),
   )?.path;
-  const isSiteSelection = location.pathname === "/sites";
+  const isSiteSelection = isSelectorOpen;
   const selectedSiteForList = getStoredSiteId() ?? "all";
-  const showSiteMenu = Boolean(siteId);
+  const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const shouldShowSitesPanel = primaryActivePath === "/sites";
@@ -411,9 +238,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     keepMenuExpanded || isSecondaryHovered || isSecondaryFocused;
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
-    <IconChevronLeft />
+    <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
   ) : (
-    <IconChevronRight />
+    <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
   );
   const handleKeepExpandedToggle = () => {
     if (isTouchMode) {
@@ -495,7 +322,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               return (
                 <NavRow
                   key={item.path ?? item.label}
-                  to={item.path ? getNavigationPath(item.path) : undefined}
+                  to={
+                    item.path && item.path !== "/sites"
+                      ? getNavigationPath(item.path)
+                      : undefined
+                  }
+                  onClick={item.path === "/sites" ? openSitesSelector : undefined}
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
@@ -504,13 +336,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   }
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
-                    item.path === "/sites" ? <IconChevronRight /> : undefined
+                    item.path === "/sites" ? (
+                      <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
+                    ) : undefined
                   }
                 />
               );
             })}
             <NavRow
-              leftIcon={<IconUpload />}
+              leftIcon={<NavIcon icon={Upload} />}
               label="Upload"
               className="vrm-nav-row--placeholder"
               ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
@@ -524,7 +358,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
             />
             <NavRow
-              leftIcon={<IconLogout />}
+              leftIcon={<NavIcon icon={LogOut} />}
               label="Logout"
               className="vrm-nav-row--placeholder"
               ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
@@ -544,8 +378,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <SecondarySearch />
               {!showSiteMenu && (
                 <SecondaryPinnedRow
-                  to={getNavigationPath(`/sites/${allSitesOption.id}/dashboard`)}
-                  leftIcon={<IconSites />}
+                  to={getNavigationPath(
+                    `/sites/${allSitesOption.id}/dashboard`,
+                    { panel: undefined },
+                  )}
+                  leftIcon={<NavIcon icon={MapPin} />}
                   label={allSitesOption.label}
                   active={
                     isSiteSelection &&
@@ -555,11 +392,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               )}
               {showSiteMenu && (
                 <SecondaryPinnedRow
-                  to={getNavigationPath("/sites")}
+                  onClick={openSitesSelector}
                   leftIcon={
                     <span className="vrm-nav-row__icon-stack">
-                      <IconBackArrow />
-                      <IconSites />
+                      <NavIcon
+                        icon={ArrowLeft}
+                        className="vrm-nav-back"
+                        size={18}
+                      />
+                      <NavIcon icon={MapPin} />
                     </span>
                   }
                   label={activeSite?.label ?? "Site"}
@@ -587,8 +428,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   return (
                     <NavRow
                       key={site.id}
-                      to={getNavigationPath(siteTargetPath)}
-                      leftIcon={<IconSites />}
+                      to={getNavigationPath(siteTargetPath, {
+                        panel: undefined,
+                      })}
+                      leftIcon={<NavIcon icon={MapPin} />}
                       label={site.label}
                       active={isActive}
                       ariaLabel={!isSecondaryExpanded ? site.label : undefined}
@@ -597,7 +440,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 },
                 )}
                 <NavRow
-                  leftIcon={<IconPlus />}
+                  leftIcon={<NavIcon icon={Plus} />}
                   label="Add site"
                   className="vrm-nav-row--inert"
                   ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}

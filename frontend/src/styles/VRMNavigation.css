@@ -210,6 +210,7 @@ button.vrm-nav-row {
 
 .vrm-secondary-search {
   position: relative;
+  color: var(--vrm-nav-row-text);
 }
 
 .vrm-secondary-search input {
@@ -233,6 +234,11 @@ button.vrm-nav-row {
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
 }
 
+.vrm-secondary-search:hover,
+.vrm-secondary-search:focus-within {
+  color: var(--vrm-nav-row-active-text);
+}
+
 .vrm-secondary-search__icon {
   position: absolute;
   left: 12px;
@@ -240,7 +246,6 @@ button.vrm-nav-row {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: var(--vrm-accent-blue);
   display: inline-flex;
   align-items: center;
   justify-content: center;
