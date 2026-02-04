@@ -18,6 +18,7 @@ const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
 const AlarmLogsPage = React.lazy(() => import("../pages/AlarmLogsPage"));
 const DeviceListPage = React.lazy(() => import("../pages/DeviceListPage"));
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
+const SitesPage = React.lazy(() => import("../pages/SitesPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
@@ -154,12 +155,7 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/sites"
             element={renderClientRoute(
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/dashboard`,
-                )}
-                replace
-              />,
+              lazyRoute(<SitesPage />),
             )}
           />
           <Route
