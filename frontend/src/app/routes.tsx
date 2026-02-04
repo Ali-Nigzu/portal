@@ -70,21 +70,6 @@ const AppRoutes: React.FC = () => {
     );
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("camOS_credentials");
-    const nextHasViewToken = Boolean(getViewTokenFromLocation());
-    if (nextHasViewToken) {
-      window.close();
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 100);
-    } else {
-      setIsLoggedIn(false);
-      setCredentials({ username: "", password: "", orgId: undefined });
-      setUserRole("client");
-    }
-  };
-
   const resolvedRole = hasViewToken ? "client" : userRole;
   const shouldAllowAppRoutes = isLoggedIn || hasViewToken;
   const appendViewToken = (path: string) =>
@@ -106,7 +91,7 @@ const AppRoutes: React.FC = () => {
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
-    <VRMLayout userRole={resolvedRole} onLogout={handleLogout}>
+    <VRMLayout userRole={resolvedRole}>
       {userRole === "admin" && !hasViewToken ? (
         <Navigate to="/admin" replace />
       ) : (
@@ -276,7 +261,7 @@ const AppRoutes: React.FC = () => {
             <Route
               path="/admin"
               element={
-                <VRMLayout userRole={resolvedRole} onLogout={handleLogout}>
+                <VRMLayout userRole={resolvedRole}>
                   {lazyRoute(<AdminPage credentials={credentials} />)}
                 </VRMLayout>
               }

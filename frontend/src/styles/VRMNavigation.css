@@ -184,6 +184,17 @@ button.vrm-nav-row {
   color: var(--vrm-text-secondary);
 }
 
+.vrm-nav-row--inert {
+  cursor: default;
+  pointer-events: none;
+  color: var(--vrm-text-muted);
+}
+
+.vrm-nav-row--inert:hover {
+  background-color: transparent;
+  color: var(--vrm-text-muted);
+}
+
 .vrm-secondary-header {
   padding: 16px 14px 12px;
   display: flex;
@@ -251,17 +262,58 @@ button.vrm-nav-row {
   padding-right: 14px;
 }
 
-.vrm-sidebar-shell--collapsed .vrm-nav-row__label,
-.vrm-sidebar-shell--collapsed .vrm-nav-row__right,
-.vrm-sidebar-shell--collapsed .vrm-brand-text {
+.vrm-sidebar-shell--primary-collapsed .vrm-primary-rail .vrm-nav-row__label,
+.vrm-sidebar-shell--primary-collapsed .vrm-primary-rail .vrm-nav-row__right,
+.vrm-sidebar-shell--primary-collapsed .vrm-brand-text {
   display: none;
 }
 
-.vrm-sidebar-shell--collapsed .vrm-nav-row {
+.vrm-sidebar-shell--primary-collapsed .vrm-primary-rail .vrm-nav-row {
   justify-content: center;
   padding: 0 10px;
 }
 
-.vrm-sidebar-shell--collapsed .vrm-secondary-header {
+.vrm-sidebar-shell--secondary-collapsed .vrm-secondary-header {
   display: none;
+}
+
+.vrm-sidebar-shell--secondary-collapsed .vrm-extended-panel .vrm-nav-row__label,
+.vrm-sidebar-shell--secondary-collapsed .vrm-extended-panel .vrm-nav-row__right {
+  display: none;
+}
+
+.vrm-sidebar-shell--secondary-collapsed .vrm-extended-panel .vrm-nav-row {
+  justify-content: center;
+  padding: 0 10px;
+}
+
+.vrm-primary-rail,
+.vrm-extended-panel {
+  transition: width 180ms ease;
+}
+
+.vrm-sidebar-shell--primary-collapsed .vrm-primary-rail {
+  width: var(--vrm-primary-rail-width-collapsed);
+}
+
+.vrm-sidebar-shell--primary-expanded .vrm-primary-rail {
+  width: var(--vrm-primary-rail-width);
+}
+
+.vrm-sidebar-shell--secondary-collapsed .vrm-extended-panel {
+  width: var(--vrm-extended-panel-width-collapsed);
+}
+
+.vrm-sidebar-shell--secondary-expanded .vrm-extended-panel {
+  width: var(--vrm-extended-panel-width);
+}
+
+.vrm-primary-rail:focus-within .vrm-nav-row__label,
+.vrm-primary-rail:focus-within .vrm-nav-row__right {
+  display: inline-flex;
+}
+
+.vrm-extended-panel:focus-within .vrm-nav-row__label,
+.vrm-extended-panel:focus-within .vrm-nav-row__right {
+  display: inline-flex;
 }

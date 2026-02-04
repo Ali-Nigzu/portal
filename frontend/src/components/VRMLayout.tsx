@@ -19,7 +19,6 @@ import {
 } from "../common/components/navigation";
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
-  onLogout?: () => void;
   children?: React.ReactNode;
 }
 const IconDashboard = () => (
@@ -232,12 +231,53 @@ const IconCollapse = () => (
     />
   </svg>
 );
+const IconPin = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M14 3c-1.1 0-2 .9-2 2v3.1l-4.7 4.7c-.6.6-.2 1.7.7 1.7H11v5l1 1 1-1v-5h3c.9 0 1.3-1.1.7-1.7L14 8.1V5c0-1.1-.9-2-2-2Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
+const IconPlus = () => (
+  <svg
+    className="vrm-nav-icon"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
-  onLogout,
   children,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isPrimaryHovered, setIsPrimaryHovered] = useState(false);
+  const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
+  const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
+  const [isSecondaryFocused, setIsSecondaryFocused] = useState(false);
+  const [isTouchMode, setIsTouchMode] = useState(false);
+  const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    const stored = window.localStorage.getItem("vrm_keep_menu_expanded");
+    if (stored === null) {
+      return true;
+    }
+    return stored === "true";
+  });
   const location = useLocation();
   const { siteId } = useParams();
   const viewToken = getViewTokenFromLocation(location.search);
@@ -252,6 +292,37 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       setStoredSiteId(siteId);
     }
   }, [siteId]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const mediaQuery = window.matchMedia(
+      "(hover: none), (pointer: coarse)",
+    );
+    const syncTouchMode = () => {
+      const isTouch = mediaQuery.matches;
+      setIsTouchMode(isTouch);
+      if (isTouch) {
+        setKeepMenuExpanded(true);
+      }
+    };
+    syncTouchMode();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", syncTouchMode);
+      return () => mediaQuery.removeEventListener("change", syncTouchMode);
+    }
+    mediaQuery.addListener(syncTouchMode);
+    return () => mediaQuery.removeListener(syncTouchMode);
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      "vrm_keep_menu_expanded",
+      String(keepMenuExpanded),
+    );
+  }, [keepMenuExpanded]);
   const primaryNavigationItems = useMemo(
     () => [
       {
@@ -348,7 +419,32 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const shouldShowSitesPanel = primaryActivePath === "/sites";
-  const collapseLabel = isCollapsed ? "Expand sidebar" : "Collapse sidebar";
+  const isPrimaryExpanded =
+    keepMenuExpanded || isPrimaryHovered || isPrimaryFocused;
+  const isSecondaryExpanded =
+    keepMenuExpanded || isSecondaryHovered || isSecondaryFocused;
+  const collapseLabel = "Collapse sidebar";
+  const handleKeepExpandedToggle = () => {
+    if (isTouchMode) {
+      return;
+    }
+    setKeepMenuExpanded((prev) => !prev);
+  };
+  const handleCollapseSidebar = () => {
+    if (isTouchMode) {
+      return;
+    }
+    setKeepMenuExpanded(false);
+  };
+  const handleFocusChange =
+    (setter: React.Dispatch<React.SetStateAction<boolean>>) =>
+    (event: React.FocusEvent<HTMLElement>) => {
+      const nextTarget = event.relatedTarget as Node | null;
+      if (event.currentTarget.contains(nextTarget)) {
+        return;
+      }
+      setter(false);
+    };
   return (
     <div className="vrm-layout">
       {" "}
@@ -356,10 +452,35 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       <div
         className={`vrm-sidebar-shell ${
           shouldShowSitesPanel ? "vrm-sidebar-shell--sites" : ""
-        } ${isCollapsed ? "vrm-sidebar-shell--collapsed" : ""}`}
+        } ${
+          keepMenuExpanded ? "vrm-sidebar-shell--expanded" : ""
+        } ${
+          !keepMenuExpanded && !isPrimaryExpanded
+            ? "vrm-sidebar-shell--primary-collapsed"
+            : ""
+        } ${
+          !keepMenuExpanded && isPrimaryExpanded
+            ? "vrm-sidebar-shell--primary-expanded"
+            : ""
+        } ${
+          !keepMenuExpanded && shouldShowSitesPanel && !isSecondaryExpanded
+            ? "vrm-sidebar-shell--secondary-collapsed"
+            : ""
+        } ${
+          !keepMenuExpanded && shouldShowSitesPanel && isSecondaryExpanded
+            ? "vrm-sidebar-shell--secondary-expanded"
+            : ""
+        }`}
         aria-label="Primary"
       >
-        <nav className="vrm-primary-rail" aria-label="Primary">
+        <nav
+          className="vrm-primary-rail"
+          aria-label="Primary"
+          onMouseEnter={() => setIsPrimaryHovered(true)}
+          onMouseLeave={() => setIsPrimaryHovered(false)}
+          onFocusCapture={() => setIsPrimaryFocused(true)}
+          onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
+        >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-logo">
               <img
@@ -383,7 +504,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
-                  ariaLabel={isCollapsed ? item.label : undefined}
+                  ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
                     item.path === "/sites" ? <IconChevronRight /> : undefined
                   }
@@ -394,24 +515,32 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               leftIcon={<IconUpload />}
               label="Upload"
               className="vrm-nav-row--placeholder"
-              ariaLabel={isCollapsed ? "Upload" : undefined}
+              ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
+            />
+            <NavRow
+              leftIcon={<IconPin />}
+              label="Keep menu expanded"
+              onClick={handleKeepExpandedToggle}
+              active={keepMenuExpanded}
+              ariaLabel={!isPrimaryExpanded ? "Keep menu expanded" : undefined}
             />
             <NavRow
               leftIcon={<IconCollapse />}
               label={collapseLabel}
-              onClick={() => setIsCollapsed((prev) => !prev)}
-              ariaLabel={isCollapsed ? collapseLabel : undefined}
-            />
-            <NavRow
-              leftIcon={<IconLogout />}
-              label="Logout"
-              className="vrm-nav-row--placeholder"
-              ariaLabel={isCollapsed ? "Logout" : undefined}
+              onClick={handleCollapseSidebar}
+              ariaLabel={!isPrimaryExpanded ? collapseLabel : undefined}
             />
           </NavList>
         </nav>
         {shouldShowSitesPanel && (
-          <nav className="vrm-extended-panel" aria-label="Secondary">
+          <nav
+            className="vrm-extended-panel"
+            aria-label="Secondary"
+            onMouseEnter={() => setIsSecondaryHovered(true)}
+            onMouseLeave={() => setIsSecondaryHovered(false)}
+            onFocusCapture={() => setIsSecondaryFocused(true)}
+            onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
+          >
             <div className="vrm-secondary-header">
               <SecondarySearch />
               {!showSiteMenu && (
@@ -441,7 +570,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             </div>
             {!showSiteMenu && (
               <NavList className="vrm-secondary-list">
-                {SITE_OPTIONS.map((site) => {
+                {SITE_OPTIONS.filter((site) => site.id !== "all").map(
+                  (site) => {
                   const isActive =
                     isSiteSelection && site.id === selectedSiteForList;
                   return (
@@ -453,10 +583,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       leftIcon={<IconSites />}
                       label={site.label}
                       active={isActive}
-                      ariaLabel={isCollapsed ? site.label : undefined}
+                      ariaLabel={!isSecondaryExpanded ? site.label : undefined}
                     />
                   );
-                })}
+                },
+                )}
+                <NavRow
+                  leftIcon={<IconPlus />}
+                  label="Add site"
+                  className="vrm-nav-row--inert"
+                  ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+                />
               </NavList>
             )}
             {showSiteMenu && !shouldShowAdminMenu && (
@@ -482,7 +619,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                         leftIcon={item.icon}
                         label={navLabel}
                         disabled
-                        ariaLabel={isCollapsed ? item.label : undefined}
+                        ariaLabel={
+                          !isSecondaryExpanded ? item.label : undefined
+                        }
                       />
                     );
                   }
@@ -496,7 +635,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       leftIcon={item.icon}
                       label={navLabel}
                       active={isActive}
-                      ariaLabel={isCollapsed ? item.label : undefined}
+                      ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     />
                   );
                 })}
@@ -511,7 +650,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     leftIcon={item.icon}
                     label={item.label}
                     active={item.path ? isActiveRoute(item.path) : false}
-                    ariaLabel={isCollapsed ? item.label : undefined}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                   />
                 ))}
               </NavList>
@@ -521,30 +660,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       </div>
       {}{" "}
       <main className="vrm-main">
-        <div className="vrm-header-stack">
-          <header className="vrm-header vrm-header--userbar">
-            <div className="vrm-header-right">
-              {" "}
-              {}{" "}
-              <div className="vrm-user-meta">
-                <span className="vrm-status vrm-status-online">
-                  <div className="vrm-status-dot"></div>{" "}
-                  {userRole === "admin" ? "Administrator" : "Client"}{" "}
-                </span>{" "}
-                {onLogout && (
-                  <button
-                    className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                    onClick={onLogout}
-                    title="Logout"
-                  >
-                    {" "}
-                    Logout{" "}
-                  </button>
-                )}{" "}
-              </div>
-            </div>
-          </header>
-        </div>{" "}
         {} <div className="vrm-content"> {children || <Outlet />} </div>
       </main>
     </div>
