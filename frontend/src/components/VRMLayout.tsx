@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, Outlet, useLocation, useParams } from "react-router-dom";
+import { Outlet, useLocation, useParams } from "react-router-dom";
 import "../styles/VRMTheme.css";
+import "../styles/VRMNavigation.css";
 import { companyLogoDataUri } from "../assets/companyLogo";
 import {
   SITE_OPTIONS,
@@ -9,6 +10,13 @@ import {
   setStoredSiteId,
 } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
+import {
+  NavList,
+  NavRow,
+  SecondaryDivider,
+  SecondaryPinnedRow,
+  SecondarySearch,
+} from "../common/components/navigation";
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
   onLogout?: () => void;
@@ -140,6 +148,34 @@ const IconSites = () => (
     />
   </svg>
 );
+const IconChevronRight = () => (
+  <svg
+    className="vrm-nav-chevron"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M9 6.5 14.5 12 9 17.5l1.4 1.4L17.3 12 10.4 5.1 9 6.5Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
+const IconBackArrow = () => (
+  <svg
+    className="vrm-nav-back"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M14.5 6.5 9 12l5.5 5.5 1.4-1.4L11.8 12l4.1-4.1-1.4-1.4Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
 const IconSettings = () => (
   <svg
     className="vrm-nav-icon"
@@ -206,6 +242,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const { siteId } = useParams();
   const viewToken = getViewTokenFromLocation(location.search);
   const activeSite = findSiteById(siteId);
+  const allSitesOption =
+    SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
   const getNavigationPath = (path: string) => {
     return viewToken ? `${path}?view_token=${viewToken}` : path;
   };
@@ -310,6 +348,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const shouldShowSitesPanel = primaryActivePath === "/sites";
+  const collapseLabel = isCollapsed ? "Expand sidebar" : "Collapse sidebar";
   return (
     <div className="vrm-layout">
       {" "}
@@ -320,8 +359,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         } ${isCollapsed ? "vrm-sidebar-shell--collapsed" : ""}`}
         aria-label="Primary"
       >
-        <nav className="vrm-primary-rail">
-          <div className="vrm-sidebar-header vrm-sidebar-header--compact">
+        <nav className="vrm-primary-rail" aria-label="Primary">
+          <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-logo">
               <img
                 src={companyLogoDataUri}
@@ -329,161 +368,153 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 className="vrm-logo-img"
               />
             </div>
+            <div className="vrm-brand-text">
+              <div className="vrm-brand-title">VRM Portal</div>
+              <div className="vrm-brand-subtitle">Energy insights</div>
+            </div>
           </div>
-          <div className="vrm-nav vrm-nav--rail">
+          <NavList className="vrm-primary-nav">
             {primaryNavigationItems.map((item) => {
               const isActive = primaryActivePath === item.path;
               return (
-                <Link
+                <NavRow
                   key={item.path}
                   to={getNavigationPath(item.path)}
-                  className={`vrm-nav-item vrm-nav-row ${
-                    isActive ? "active" : ""
-                  }`}
-                  aria-label={isCollapsed ? item.label : undefined}
-                >
-                  {item.icon}
-                  <span className="vrm-nav-text">{item.label}</span>
-                  {item.path === "/sites" && (
-                    <span className="vrm-nav-row-chevron" aria-hidden="true">
-                      ›
-                    </span>
-                  )}
-                </Link>
+                  leftIcon={item.icon}
+                  label={item.label}
+                  active={isActive}
+                  ariaLabel={isCollapsed ? item.label : undefined}
+                  rightSlot={
+                    item.path === "/sites" ? <IconChevronRight /> : undefined
+                  }
+                />
               );
             })}
-            <div
-              className="vrm-nav-item vrm-nav-row vrm-nav-item--placeholder"
-              role="button"
-              tabIndex={0}
-              aria-label={isCollapsed ? "Upload" : undefined}
-            >
-              <IconUpload />
-              <span className="vrm-nav-text">Upload</span>
-            </div>
-            <button
-              type="button"
-              className="vrm-nav-item vrm-nav-row vrm-nav-item--control"
+            <NavRow
+              leftIcon={<IconUpload />}
+              label="Upload"
+              className="vrm-nav-row--placeholder"
+              ariaLabel={isCollapsed ? "Upload" : undefined}
+            />
+            <NavRow
+              leftIcon={<IconCollapse />}
+              label={collapseLabel}
               onClick={() => setIsCollapsed((prev) => !prev)}
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <IconCollapse />
-              <span className="vrm-nav-text">
-                {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              </span>
-            </button>
-            <div
-              className="vrm-nav-item vrm-nav-row vrm-nav-item--placeholder"
-              role="button"
-              tabIndex={0}
-              aria-label={isCollapsed ? "Logout" : undefined}
-            >
-              <IconLogout />
-              <span className="vrm-nav-text">Logout</span>
-            </div>
-          </div>
+              ariaLabel={isCollapsed ? collapseLabel : undefined}
+            />
+            <NavRow
+              leftIcon={<IconLogout />}
+              label="Logout"
+              className="vrm-nav-row--placeholder"
+              ariaLabel={isCollapsed ? "Logout" : undefined}
+            />
+          </NavList>
         </nav>
         {shouldShowSitesPanel && (
           <nav className="vrm-extended-panel" aria-label="Secondary">
-            <div className="vrm-extended-header">
-              {showSiteMenu ? (
-                <Link
+            <div className="vrm-secondary-header">
+              <SecondarySearch />
+              {!showSiteMenu && (
+                <SecondaryPinnedRow
+                  to={getNavigationPath(`/sites/${allSitesOption.id}/dashboard`)}
+                  leftIcon={<IconSites />}
+                  label={allSitesOption.label}
+                  active={
+                    isSiteSelection &&
+                    allSitesOption.id === selectedSiteForList
+                  }
+                />
+              )}
+              {showSiteMenu && (
+                <SecondaryPinnedRow
                   to={getNavigationPath("/sites")}
-                  className="vrm-extended-back"
-                >
-                  ← Back to Sites
-                </Link>
-              ) : null}
-              <div className="vrm-extended-title">
-                {showSiteMenu ? activeSite?.label ?? "Site" : "Sites"}
-              </div>
+                  leftIcon={
+                    <span className="vrm-nav-row__icon-stack">
+                      <IconBackArrow />
+                      <IconSites />
+                    </span>
+                  }
+                  label={activeSite?.label ?? "Site"}
+                />
+              )}
+              <SecondaryDivider />
             </div>
             {!showSiteMenu && (
-              <div className="vrm-nav">
+              <NavList className="vrm-secondary-list">
                 {SITE_OPTIONS.map((site) => {
                   const isActive =
                     isSiteSelection && site.id === selectedSiteForList;
                   return (
-                    <Link
+                    <NavRow
                       key={site.id}
                       to={getNavigationPath(
                         `/sites/${site.id}/dashboard`,
                       )}
-                      className={`vrm-nav-item vrm-nav-row ${
-                        isActive ? "active" : ""
-                      }`}
-                      aria-label={isCollapsed ? site.label : undefined}
-                    >
-                      <IconSites />
-                      <div className="vrm-nav-text">{site.label}</div>
-                    </Link>
+                      leftIcon={<IconSites />}
+                      label={site.label}
+                      active={isActive}
+                      ariaLabel={isCollapsed ? site.label : undefined}
+                    />
                   );
                 })}
-              </div>
+              </NavList>
             )}
             {showSiteMenu && !shouldShowAdminMenu && (
-              <div className="vrm-nav">
+              <NavList className="vrm-secondary-list">
                 {clientNavigationItems.map((item) => {
                   const isDisabled = Boolean(item.disabled);
                   const isActive =
                     item.path && !isDisabled ? isActiveRoute(item.path) : false;
-                  const navText = (
-                    <div className="vrm-nav-text">
+                  const navLabel = (
+                    <span className="vrm-nav-row__label-text">
                       {item.label}
                       {item.statusLabel && (
-                        <span className="vrm-nav-badge">
+                        <span className="vrm-nav-row__chip">
                           {item.statusLabel}
                         </span>
                       )}
-                    </div>
+                    </span>
                   );
                   if (isDisabled) {
                     return (
-                      <div
+                      <NavRow
                         key={item.id ?? item.label}
-                        className="vrm-nav-item vrm-nav-row vrm-nav-item--disabled"
-                        aria-disabled="true"
-                      >
-                        {item.icon}
-                        {navText}
-                      </div>
+                        leftIcon={item.icon}
+                        label={navLabel}
+                        disabled
+                        ariaLabel={isCollapsed ? item.label : undefined}
+                      />
                     );
                   }
                   if (!item.path) {
                     return null;
                   }
                   return (
-                    <Link
+                    <NavRow
                       key={item.path}
                       to={getNavigationPath(item.path)}
-                      className={`vrm-nav-item vrm-nav-row ${
-                        isActive ? "active" : ""
-                      }`}
-                      aria-label={isCollapsed ? item.label : undefined}
-                    >
-                      {item.icon}
-                      {navText}
-                    </Link>
+                      leftIcon={item.icon}
+                      label={navLabel}
+                      active={isActive}
+                      ariaLabel={isCollapsed ? item.label : undefined}
+                    />
                   );
                 })}
-              </div>
+              </NavList>
             )}
             {shouldShowAdminMenu && (
-              <div className="vrm-nav">
+              <NavList className="vrm-secondary-list">
                 {adminNavigationItems.map((item) => (
-                  <Link
+                  <NavRow
                     key={item.path}
                     to={getNavigationPath(item.path)}
-                    className={`vrm-nav-item vrm-nav-row ${
-                      item.path && isActiveRoute(item.path) ? "active" : ""
-                    }`}
-                    aria-label={isCollapsed ? item.label : undefined}
-                  >
-                    {item.icon}
-                    <div className="vrm-nav-text">{item.label}</div>
-                  </Link>
+                    leftIcon={item.icon}
+                    label={item.label}
+                    active={item.path ? isActiveRoute(item.path) : false}
+                    ariaLabel={isCollapsed ? item.label : undefined}
+                  />
                 ))}
-              </div>
+              </NavList>
             )}
           </nav>
         )}
