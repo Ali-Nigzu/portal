@@ -217,20 +217,6 @@ const IconLogout = () => (
     />
   </svg>
 );
-const IconCollapse = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M8 5h8v2H8V5Zm0 12h8v2H8v-2Zm-4-6h12l-3-3 1.41-1.41L20.83 12l-6.42 6.41L13 17l3-3H4v-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
 const IconPin = () => (
   <svg
     className="vrm-nav-icon"
@@ -423,18 +409,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     keepMenuExpanded || isPrimaryHovered || isPrimaryFocused;
   const isSecondaryExpanded =
     keepMenuExpanded || isSecondaryHovered || isSecondaryFocused;
-  const collapseLabel = "Collapse sidebar";
+  const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const handleKeepExpandedToggle = () => {
     if (isTouchMode) {
       return;
     }
     setKeepMenuExpanded((prev) => !prev);
-  };
-  const handleCollapseSidebar = () => {
-    if (isTouchMode) {
-      return;
-    }
-    setKeepMenuExpanded(false);
   };
   const handleFocusChange =
     (setter: React.Dispatch<React.SetStateAction<boolean>>) =>
@@ -445,6 +425,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
       setter(false);
     };
+  useEffect(() => {
+    if (keepMenuExpanded || typeof window === "undefined") {
+      return;
+    }
+    const secondaryPanel = document.querySelector(".vrm-extended-panel");
+    const isHovered = secondaryPanel?.matches(":hover") ?? false;
+    const isFocused = secondaryPanel?.matches(":focus-within") ?? false;
+    setIsSecondaryHovered(isHovered);
+    setIsSecondaryFocused(isFocused);
+  }, [keepMenuExpanded, location.pathname, siteId]);
   return (
     <div className="vrm-layout">
       {" "}
@@ -519,16 +509,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             />
             <NavRow
               leftIcon={<IconPin />}
-              label="Keep menu expanded"
+              label={toggleLabel}
               onClick={handleKeepExpandedToggle}
               active={keepMenuExpanded}
-              ariaLabel={!isPrimaryExpanded ? "Keep menu expanded" : undefined}
+              className="vrm-nav-row--toggle"
+              ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
             />
             <NavRow
-              leftIcon={<IconCollapse />}
-              label={collapseLabel}
-              onClick={handleCollapseSidebar}
-              ariaLabel={!isPrimaryExpanded ? collapseLabel : undefined}
+              leftIcon={<IconLogout />}
+              label="Logout"
+              className="vrm-nav-row--placeholder"
+              ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
             />
           </NavList>
         </nav>

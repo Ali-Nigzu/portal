@@ -184,6 +184,12 @@ button.vrm-nav-row {
   color: var(--vrm-text-secondary);
 }
 
+.vrm-nav-row--toggle .vrm-nav-row__label {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .vrm-nav-row--inert {
   cursor: default;
   pointer-events: none;
