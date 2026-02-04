@@ -9,7 +9,7 @@ import {
 
 import VRMLayout from "../components/VRMLayout";
 import { determineOrgId } from "../lib/org";
-import { getStoredSiteId } from "../lib/sites";
+import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
 import { Credentials } from "../types/credentials";
 
@@ -18,9 +18,6 @@ const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
 const AlarmLogsPage = React.lazy(() => import("../pages/AlarmLogsPage"));
 const DeviceListPage = React.lazy(() => import("../pages/DeviceListPage"));
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
-const HomePage = React.lazy(() => import("../pages/HomePage"));
-const SitesPage = React.lazy(() => import("../pages/SitesPage"));
-const SettingsPage = React.lazy(() => import("../pages/SettingsPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
@@ -74,7 +71,13 @@ const AppRoutes: React.FC = () => {
   const shouldAllowAppRoutes = isLoggedIn || hasViewToken;
   const appendViewToken = (path: string) =>
     viewToken ? `${path}?view_token=${viewToken}` : path;
-  const resolveLegacySiteId = () => getStoredSiteId() ?? "all";
+  const resolveLegacySiteId = () => {
+    const stored = getStoredSiteId();
+    if (!stored || stored === "all") {
+      return getDefaultSiteId();
+    }
+    return stored;
+  };
   const SiteIndexRedirect: React.FC = () => {
     const { siteId } = useParams();
     const resolvedSiteId = siteId ?? resolveLegacySiteId();
@@ -117,9 +120,9 @@ const AppRoutes: React.FC = () => {
                 if (hasViewToken) {
                   return appendViewToken("/sites/all/dashboard");
                 }
-                return userRole === "admin"
-                  ? appendViewToken("/admin")
-                  : appendViewToken("/home");
+                return appendViewToken(
+                  `/sites/${getDefaultSiteId()}/dashboard`,
+                );
               })()}
               replace
             />
@@ -137,9 +140,9 @@ const AppRoutes: React.FC = () => {
                 if (hasViewToken) {
                   return appendViewToken("/sites/all/dashboard");
                 }
-                return userRole === "admin"
-                  ? appendViewToken("/admin")
-                  : appendViewToken("/home");
+                return appendViewToken(
+                  `/sites/${getDefaultSiteId()}/dashboard`,
+                );
               })()}
               replace
             />
@@ -149,22 +152,37 @@ const AppRoutes: React.FC = () => {
       {shouldAllowAppRoutes && (
         <>
           <Route
-            path="/home"
+            path="/sites"
             element={renderClientRoute(
-              lazyRoute(<HomePage />),
+              <Navigate
+                to={appendViewToken(
+                  `/sites/${resolveLegacySiteId()}/dashboard`,
+                )}
+                replace
+              />,
             )}
           />
           <Route
-            path="/sites"
-            element={renderClientRoute(
-              lazyRoute(<SitesPage />),
-            )}
+            path="/home"
+            element={
+              <Navigate
+                to={appendViewToken(
+                  `/sites/${resolveLegacySiteId()}/dashboard`,
+                )}
+                replace
+              />
+            }
           />
           <Route
             path="/settings"
-            element={renderClientRoute(
-              lazyRoute(<SettingsPage />),
-            )}
+            element={
+              <Navigate
+                to={appendViewToken(
+                  `/sites/${resolveLegacySiteId()}/dashboard`,
+                )}
+                replace
+              />
+            }
           />
           <Route
             path="/sites/:siteId"
@@ -280,9 +298,9 @@ const AppRoutes: React.FC = () => {
                 if (hasViewToken) {
                   return appendViewToken("/sites/all/dashboard");
                 }
-                return userRole === "admin"
-                  ? appendViewToken("/admin")
-                  : appendViewToken("/home");
+                return appendViewToken(
+                  `/sites/${getDefaultSiteId()}/dashboard`,
+                );
               })()}
               replace
             />

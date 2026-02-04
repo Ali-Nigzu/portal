@@ -161,6 +161,20 @@ const IconChevronRight = () => (
     />
   </svg>
 );
+const IconChevronLeft = () => (
+  <svg
+    className="vrm-nav-chevron"
+    viewBox="0 0 24 24"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path
+      d="M15 6.5 9.5 12 15 17.5l-1.4 1.4L6.7 12l6.9-6.9L15 6.5Z"
+      fill="currentColor"
+      opacity="0.9"
+    />
+  </svg>
+);
 const IconBackArrow = () => (
   <svg
     className="vrm-nav-back"
@@ -217,20 +231,6 @@ const IconLogout = () => (
     />
   </svg>
 );
-const IconPin = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M14 3c-1.1 0-2 .9-2 2v3.1l-4.7 4.7c-.6.6-.2 1.7.7 1.7H11v5l1 1 1-1v-5h3c.9 0 1.3-1.1.7-1.7L14 8.1V5c0-1.1-.9-2-2-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
 const IconPlus = () => (
   <svg
     className="vrm-nav-icon"
@@ -260,7 +260,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
     const stored = window.localStorage.getItem("vrm_keep_menu_expanded");
     if (stored === null) {
-      return true;
+      return false;
     }
     return stored === "true";
   });
@@ -312,9 +312,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const primaryNavigationItems = useMemo(
     () => [
       {
-        path: "/home",
         label: "Home",
         icon: <IconHome />,
+        placeholder: true,
       },
       {
         path: "/sites",
@@ -322,9 +322,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         icon: <IconSites />,
       },
       {
-        path: "/settings",
         label: "Settings",
         icon: <IconSettings />,
+        placeholder: true,
       },
     ],
     [],
@@ -396,8 +396,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       location.pathname === path || location.pathname.startsWith(path + "/")
     );
   };
-  const primaryActivePath = primaryNavigationItems.find((item) =>
-    isActiveRoute(item.path),
+  const primaryActivePath = primaryNavigationItems.find(
+    (item) => item.path && isActiveRoute(item.path),
   )?.path;
   const isSiteSelection = location.pathname === "/sites";
   const selectedSiteForList = getStoredSiteId() ?? "all";
@@ -410,6 +410,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isSecondaryExpanded =
     keepMenuExpanded || isSecondaryHovered || isSecondaryFocused;
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
+  const toggleIcon = keepMenuExpanded ? (
+    <IconChevronLeft />
+  ) : (
+    <IconChevronRight />
+  );
   const handleKeepExpandedToggle = () => {
     if (isTouchMode) {
       return;
@@ -489,11 +494,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               const isActive = primaryActivePath === item.path;
               return (
                 <NavRow
-                  key={item.path}
-                  to={getNavigationPath(item.path)}
+                  key={item.path ?? item.label}
+                  to={item.path ? getNavigationPath(item.path) : undefined}
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
+                  className={
+                    item.placeholder ? "vrm-nav-row--placeholder" : undefined
+                  }
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
                     item.path === "/sites" ? <IconChevronRight /> : undefined
@@ -508,7 +516,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
             />
             <NavRow
-              leftIcon={<IconPin />}
+              leftIcon={toggleIcon}
               label={toggleLabel}
               onClick={handleKeepExpandedToggle}
               active={keepMenuExpanded}
@@ -563,14 +571,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <NavList className="vrm-secondary-list">
                 {SITE_OPTIONS.filter((site) => site.id !== "all").map(
                   (site) => {
+                  const siteSubPath = (() => {
+                    const match = location.pathname.match(
+                      /^\/sites\/[^/]+(\/.*)?$/,
+                    );
+                    const trailing = match?.[1];
+                    if (!trailing || trailing === "/") {
+                      return "/dashboard";
+                    }
+                    return trailing;
+                  })();
+                  const siteTargetPath = `/sites/${site.id}${siteSubPath}`;
                   const isActive =
                     isSiteSelection && site.id === selectedSiteForList;
                   return (
                     <NavRow
                       key={site.id}
-                      to={getNavigationPath(
-                        `/sites/${site.id}/dashboard`,
-                      )}
+                      to={getNavigationPath(siteTargetPath)}
                       leftIcon={<IconSites />}
                       label={site.label}
                       active={isActive}

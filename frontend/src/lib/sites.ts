@@ -11,7 +11,7 @@ export const SITE_OPTIONS: SiteOption[] = [
 
 const STORAGE_KEY = "camOS_selected_site";
 
-export const getDefaultSiteId = (): string => "all";
+export const getDefaultSiteId = (): string => "site-a";
 
 export const findSiteById = (siteId?: string | null): SiteOption | undefined =>
   SITE_OPTIONS.find((site) => site.id === siteId);

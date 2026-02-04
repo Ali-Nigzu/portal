@@ -240,7 +240,7 @@ button.vrm-nav-row {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: var(--vrm-text-muted);
+  color: var(--vrm-accent-blue);
   display: inline-flex;
   align-items: center;
   justify-content: center;
