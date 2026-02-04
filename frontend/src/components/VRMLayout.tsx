@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,7 +11,6 @@ import {
   FileBarChart2,
   Home,
   LayoutDashboard,
-  LogOut,
   MapPin,
   Plus,
   Settings,
@@ -48,6 +47,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
   const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
   const [isSecondaryFocused, setIsSecondaryFocused] = useState(false);
+  const [isSitesRowHovered, setIsSitesRowHovered] = useState(false);
+  const sitesHoverTimeout = useRef<number | null>(null);
+  const secondaryHoverRef = useRef(false);
+  const secondaryFocusRef = useRef(false);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
@@ -106,6 +109,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
   }, [siteId]);
   useEffect(() => {
+    secondaryHoverRef.current = isSecondaryHovered;
+  }, [isSecondaryHovered]);
+  useEffect(() => {
+    secondaryFocusRef.current = isSecondaryFocused;
+  }, [isSecondaryFocused]);
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -147,11 +156,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         path: "/sites",
         label: "Sites",
         icon: <NavIcon icon={MapPin} />,
-      },
-      {
-        label: "Settings",
-        icon: <NavIcon icon={Settings} />,
-        placeholder: true,
       },
     ],
     [],
@@ -231,7 +235,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
-  const shouldShowSitesPanel = primaryActivePath === "/sites";
+  const shouldShowSitesPanel =
+    primaryActivePath === "/sites" ||
+    isSitesRowHovered ||
+    isSecondaryHovered ||
+    isSecondaryFocused;
   const isPrimaryExpanded =
     keepMenuExpanded || isPrimaryHovered || isPrimaryFocused;
   const isSecondaryExpanded =
@@ -267,6 +275,31 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setIsSecondaryHovered(isHovered);
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
+  useEffect(() => {
+    return () => {
+      if (sitesHoverTimeout.current !== null) {
+        window.clearTimeout(sitesHoverTimeout.current);
+      }
+    };
+  }, []);
+  const handleSitesRowEnter = () => {
+    if (sitesHoverTimeout.current !== null) {
+      window.clearTimeout(sitesHoverTimeout.current);
+      sitesHoverTimeout.current = null;
+    }
+    setIsSitesRowHovered(true);
+  };
+  const handleSitesRowLeave = () => {
+    if (sitesHoverTimeout.current !== null) {
+      window.clearTimeout(sitesHoverTimeout.current);
+    }
+    sitesHoverTimeout.current = window.setTimeout(() => {
+      if (secondaryHoverRef.current || secondaryFocusRef.current) {
+        return;
+      }
+      setIsSitesRowHovered(false);
+    }, 180);
+  };
   return (
     <div className="vrm-layout">
       {" "}
@@ -340,6 +373,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
                   }
+                  onMouseEnter={
+                    item.path === "/sites" ? handleSitesRowEnter : undefined
+                  }
+                  onMouseLeave={
+                    item.path === "/sites" ? handleSitesRowLeave : undefined
+                  }
                 />
               );
             })}
@@ -358,10 +397,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
             />
             <NavRow
-              leftIcon={<NavIcon icon={LogOut} />}
-              label="Logout"
+              leftIcon={<NavIcon icon={Settings} />}
+              label="Settings"
               className="vrm-nav-row--placeholder"
-              ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+              ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
             />
           </NavList>
         </nav>

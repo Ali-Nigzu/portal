@@ -285,11 +285,36 @@ button.vrm-nav-row {
 }
 
 .vrm-sidebar-shell--secondary-collapsed .vrm-secondary-header {
-  display: none;
+  padding: 10px 8px;
+  gap: 8px;
 }
 
 .vrm-sidebar-shell--secondary-collapsed .vrm-extended-panel .vrm-nav-row__label,
 .vrm-sidebar-shell--secondary-collapsed .vrm-extended-panel .vrm-nav-row__right {
+  display: none;
+}
+
+.vrm-sidebar-shell--secondary-collapsed .vrm-secondary-search {
+  height: var(--vrm-nav-row-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vrm-sidebar-shell--secondary-collapsed .vrm-secondary-search input {
+  width: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vrm-sidebar-shell--secondary-collapsed .vrm-secondary-search__icon {
+  position: static;
+  transform: none;
+}
+
+.vrm-sidebar-shell--secondary-collapsed .vrm-secondary-divider {
   display: none;
 }
 
