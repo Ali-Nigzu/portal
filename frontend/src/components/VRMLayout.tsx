@@ -51,6 +51,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const sitesHoverTimeout = useRef<number | null>(null);
   const secondaryHoverRef = useRef(false);
   const secondaryFocusRef = useRef(false);
+  const secondaryPanelRef = useRef<HTMLDivElement | null>(null);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
@@ -290,6 +291,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       window.clearTimeout(sitesHoverTimeout.current);
       sitesHoverTimeout.current = null;
     }
+    if (
+      secondaryPanelRef.current &&
+      document.activeElement instanceof HTMLElement &&
+      secondaryPanelRef.current.contains(document.activeElement)
+    ) {
+      document.activeElement.blur();
+    }
   }, [keepMenuExpanded, location.pathname, siteId, isSelectorOpen]);
   useEffect(() => {
     return () => {
@@ -298,17 +306,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
     };
   }, []);
-  const handleSitesRowEnter = () => {
+  const cancelSitesLeaveTimer = () => {
     if (sitesHoverTimeout.current !== null) {
       window.clearTimeout(sitesHoverTimeout.current);
       sitesHoverTimeout.current = null;
     }
+  };
+  const handleSitesRowEnter = () => {
+    cancelSitesLeaveTimer();
     setIsSitesRowHovered(true);
   };
   const handleSitesRowLeave = () => {
-    if (sitesHoverTimeout.current !== null) {
-      window.clearTimeout(sitesHoverTimeout.current);
-    }
+    cancelSitesLeaveTimer();
     sitesHoverTimeout.current = window.setTimeout(() => {
       if (secondaryHoverRef.current || secondaryFocusRef.current) {
         return;
@@ -368,7 +377,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           <NavList className="vrm-primary-nav">
             {primaryNavigationItems.map((item) => {
               const isActive = primaryActivePath === item.path;
-              return (
+              const navRow = (
                 <NavRow
                   key={item.path ?? item.label}
                   to={
@@ -389,13 +398,20 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
                   }
-                  onMouseEnter={
-                    item.path === "/sites" ? handleSitesRowEnter : undefined
-                  }
-                  onMouseLeave={
-                    item.path === "/sites" ? handleSitesRowLeave : undefined
-                  }
                 />
+              );
+              if (item.path !== "/sites") {
+                return navRow;
+              }
+              return (
+                <div
+                  key="sites-row-wrapper"
+                  className="vrm-sites-row-wrapper"
+                  onPointerEnter={handleSitesRowEnter}
+                  onPointerLeave={handleSitesRowLeave}
+                >
+                  {navRow}
+                </div>
               );
             })}
             <NavRow
@@ -424,10 +440,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           <nav
             className="vrm-extended-panel"
             aria-label="Secondary"
+            ref={secondaryPanelRef}
             onMouseEnter={() => setIsSecondaryHovered(true)}
             onMouseLeave={() => setIsSecondaryHovered(false)}
             onFocusCapture={() => setIsSecondaryFocused(true)}
             onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
+            onPointerEnter={cancelSitesLeaveTimer}
+            onPointerLeave={handleSitesRowLeave}
           >
             <div className="vrm-secondary-header">
               <SecondarySearch />

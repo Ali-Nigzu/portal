@@ -56,6 +56,10 @@
   gap: 6px;
 }
 
+.vrm-sites-row-wrapper {
+  display: contents;
+}
+
 .vrm-nav-row {
   display: flex;
   align-items: center;
