@@ -35,6 +35,12 @@ import {
   SecondarySearch,
 } from "../common/components/navigation";
 import { NavIcon } from "../common/components/icons";
+
+declare global {
+  interface Window {
+    __NAV_TRACE?: string[];
+  }
+}
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
   children?: React.ReactNode;
@@ -43,7 +49,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
   children,
 }) => {
-  const DEBUG_NAV = false;
+  const DEBUG_NAV =
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    window.localStorage.getItem("DEBUG_NAV") === "1";
   const [isPrimaryHovered, setIsPrimaryHovered] = useState(false);
   const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
   const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
@@ -57,6 +66,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const sitesRowRef = useRef<HTMLDivElement | null>(null);
   const [pointerInsideSidebar, setPointerInsideSidebar] = useState(false);
   const pointerInsideSidebarRef = useRef(false);
+  const [pointerInsideSecondary, setPointerInsideSecondary] = useState(false);
+  const [pointerInsideSites, setPointerInsideSites] = useState(false);
+  const [pointerCoords, setPointerCoords] = useState({ x: 0, y: 0 });
+  const [lastDebugEvent, setLastDebugEvent] = useState("none");
+  const startTimeRef = useRef(performance.now());
+  const lastTraceAtRef = useRef(0);
+  const collapseCheckTimerRef = useRef<number | null>(null);
+  const sitesMountCheckTimerRef = useRef<number | null>(null);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
@@ -125,6 +142,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       return;
     }
     console.debug("[VRM nav]", ...parts);
+  };
+  const getActiveElementSummary = () => {
+    if (!(document.activeElement instanceof HTMLElement)) {
+      return "none";
+    }
+    const cls = document.activeElement.className;
+    return `${document.activeElement.tagName.toLowerCase()}.${String(cls).replace(/\s+/g, ".")}`;
   };
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -257,6 +281,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     keepMenuExpanded || isPrimaryHovered || isPrimaryFocused;
   const isSecondaryExpanded =
     keepMenuExpanded || isSecondaryHovered || isSecondaryFocused;
+  const focusOutside = !isPrimaryFocused && !isSecondaryFocused;
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -278,6 +303,109 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
       setter(false);
     };
+  const traceNav = (
+    evt: string,
+    event?: Pick<PointerEvent, "clientX" | "clientY">,
+  ) => {
+    if (!DEBUG_NAV) {
+      return;
+    }
+    const now = performance.now();
+    const coords = event
+      ? { x: Math.round(event.clientX), y: Math.round(event.clientY) }
+      : pointerCoords;
+    const elementAtPoint =
+      typeof document !== "undefined"
+        ? document.elementFromPoint(coords.x, coords.y)
+        : null;
+    const elSummary = elementAtPoint
+      ? `${elementAtPoint.tagName.toLowerCase()}.${String(elementAtPoint.className).replace(/\s+/g, ".")}`
+      : "none";
+    const line =
+      `t=${Math.round(now - startTimeRef.current)} evt=${evt} ` +
+      `x=${coords.x} y=${coords.y} insideShell=${pointerInsideSidebarRef.current ? 1 : 0} ` +
+      `insideSecondary=${pointerInsideSecondary ? 1 : 0} insideSites=${pointerInsideSites ? 1 : 0} ` +
+      `activeEl=${getActiveElementSummary()} ` +
+      `keep=${keepMenuExpanded ? 1 : 0} selector=${isSelectorOpen ? 1 : 0} ` +
+      `mountSec=${shouldShowSitesPanel ? 1 : 0} expSec=${isSecondaryExpanded ? 1 : 0} expPrim=${isPrimaryExpanded ? 1 : 0} ` +
+      `sitesHover=${isSitesRowHovered ? 1 : 0} secHover=${isSecondaryHovered ? 1 : 0} secFocus=${isSecondaryFocused ? 1 : 0} ` +
+      `path=${location.pathname} search=${location.search} elem=${elSummary}`;
+    window.__NAV_TRACE = window.__NAV_TRACE ?? [];
+    window.__NAV_TRACE.push(line);
+    if (window.__NAV_TRACE.length > 500) {
+      window.__NAV_TRACE.shift();
+    }
+    console.debug(line);
+    setLastDebugEvent(line);
+    lastTraceAtRef.current = now;
+  };
+  const dumpRects = (reason: string) => {
+    if (!DEBUG_NAV || typeof document === "undefined") {
+      return;
+    }
+    const shell = sidebarShellRef.current?.getBoundingClientRect() ?? null;
+    const primary = document
+      .querySelector(".vrm-primary-rail")
+      ?.getBoundingClientRect();
+    const sites = sitesRowRef.current?.getBoundingClientRect() ?? null;
+    const secondary = secondaryPanelRef.current?.getBoundingClientRect() ?? null;
+    const main = document.querySelector(".vrm-main")?.getBoundingClientRect();
+    const content = document
+      .querySelector(".vrm-content")
+      ?.getBoundingClientRect();
+    console.debug("[VRM nav rect dump]", reason, {
+      shell,
+      primary,
+      sites,
+      secondary,
+      main,
+      content,
+      overlaps: {
+        shellMain:
+          !!shell &&
+          !!main &&
+          !(shell.right <= main.left || shell.left >= main.right),
+        secondaryMain:
+          !!secondary &&
+          !!main &&
+          !(secondary.right <= main.left || secondary.left >= main.right),
+      },
+    });
+  };
+  const dumpNavStyles = (reason: string) => {
+    if (!DEBUG_NAV || typeof window === "undefined") {
+      return;
+    }
+    const selectors = [
+      ".vrm-sidebar-shell",
+      ".vrm-primary-rail",
+      ".vrm-sites-row-wrapper",
+      ".vrm-extended-panel",
+      ".vrm-main",
+      ".vrm-content",
+    ];
+    const styles = selectors.map((selector) => {
+      const node = document.querySelector(selector);
+      if (!(node instanceof HTMLElement)) {
+        return { selector, missing: true };
+      }
+      const computed = window.getComputedStyle(node);
+      return {
+        selector,
+        position: computed.position,
+        zIndex: computed.zIndex,
+        pointerEvents: computed.pointerEvents,
+        overflow: computed.overflow,
+        width: computed.width,
+        height: computed.height,
+        left: computed.left,
+        right: computed.right,
+        top: computed.top,
+        bottom: computed.bottom,
+      };
+    });
+    console.debug("[VRM nav style dump]", reason, styles);
+  };
   useEffect(() => {
     if (keepMenuExpanded || typeof window === "undefined") {
       return;
@@ -303,16 +431,22 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         event.clientX <= shellRect.right &&
         event.clientY >= shellRect.top &&
         event.clientY <= shellRect.bottom;
+      setPointerCoords({ x: Math.round(event.clientX), y: Math.round(event.clientY) });
       if (pointerInsideSidebarRef.current !== insideSidebar) {
         pointerInsideSidebarRef.current = insideSidebar;
         setPointerInsideSidebar(insideSidebar);
-        debugLog("pointerInsideSidebar", {
-          insideSidebar,
-          x: event.clientX,
-          y: event.clientY,
-          shellRect,
-        });
+        traceNav("pointerInsideSidebar", event);
       }
+
+      const secondaryRect = secondaryPanelRef.current?.getBoundingClientRect();
+      const insideSecondary =
+        Boolean(secondaryRect) &&
+        event.clientX >= secondaryRect.left &&
+        event.clientX <= secondaryRect.right &&
+        event.clientY >= secondaryRect.top &&
+        event.clientY <= secondaryRect.bottom;
+      setPointerInsideSecondary(insideSecondary);
+      setIsSecondaryHovered(insideSecondary);
 
       const siteRect = sitesRowRef.current?.getBoundingClientRect();
       const insideSitesRow =
@@ -321,18 +455,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         event.clientX <= siteRect.right &&
         event.clientY >= siteRect.top &&
         event.clientY <= siteRect.bottom;
+      setPointerInsideSites(insideSitesRow);
       if (insideSitesRow) {
         cancelSitesLeaveTimer();
       }
-      setIsSitesRowHovered((prev) =>
-        insideSitesRow ? true : prev && insideSidebar ? prev : false,
-      );
+      setIsSitesRowHovered(insideSitesRow);
+      setIsPrimaryHovered(insideSidebar);
 
       if (!insideSidebar) {
         cancelSitesLeaveTimer();
-        setIsPrimaryHovered(false);
-        setIsSecondaryHovered(false);
-        setIsSitesRowHovered(false);
         if (
           secondaryPanelRef.current &&
           document.activeElement instanceof HTMLElement &&
@@ -342,11 +473,38 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           setIsSecondaryFocused(false);
         }
       }
+      if (DEBUG_NAV && performance.now() - lastTraceAtRef.current >= 100) {
+        traceNav("pointermove", event);
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      traceNav("pointerdown", event);
+      if (
+        !keepMenuExpanded &&
+        !pointerInsideSidebarRef.current &&
+        secondaryPanelRef.current &&
+        document.activeElement instanceof HTMLElement &&
+        secondaryPanelRef.current.contains(document.activeElement)
+      ) {
+        document.activeElement.blur();
+        setIsSecondaryFocused(false);
+      }
+    };
+
+    const handleScroll = () => {
+      traceNav("scroll");
     };
 
     window.addEventListener("pointermove", handlePointerMove);
-    return () => window.removeEventListener("pointermove", handlePointerMove);
-  }, [keepMenuExpanded, isTouchMode]);
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [keepMenuExpanded, isTouchMode, DEBUG_NAV]);
   useEffect(() => {
     if (
       keepMenuExpanded ||
@@ -378,6 +536,123 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     });
   }, [keepMenuExpanded, location.pathname, siteId, isSelectorOpen]);
   useEffect(() => {
+    if (!DEBUG_NAV || typeof window === "undefined") {
+      return;
+    }
+    traceNav("route-change");
+  }, [DEBUG_NAV, location.pathname, location.search, siteId, isSelectorOpen]);
+  useEffect(() => {
+    if (!DEBUG_NAV || typeof document === "undefined") {
+      return;
+    }
+    const shell = sidebarShellRef.current;
+    const primary = document.querySelector(".vrm-primary-rail");
+    const sites = sitesRowRef.current;
+    const secondary = secondaryPanelRef.current;
+    const targets: Array<[string, EventTarget | null]> = [
+      ["document", document],
+      ["shell", shell],
+      ["primary", primary],
+      ["sites", sites],
+      ["secondary", secondary],
+    ];
+    const events = [
+      "pointerenter",
+      "pointerleave",
+      "pointerover",
+      "pointerout",
+      "mouseenter",
+      "mouseleave",
+      "focusin",
+      "focusout",
+    ];
+    const handlers: Array<() => void> = [];
+    for (const [name, target] of targets) {
+      if (!target) {
+        continue;
+      }
+      for (const evt of events) {
+        const handler = (e: Event) => {
+          const pe = e as PointerEvent;
+          traceNav(`${name}:${evt}`, pe.clientX ? pe : undefined);
+        };
+        target.addEventListener(evt, handler, true);
+        handlers.push(() => target.removeEventListener(evt, handler, true));
+      }
+    }
+    const hotkeyHandler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.code === "KeyB") {
+        dumpRects("hotkey");
+        dumpNavStyles("hotkey");
+      }
+    };
+    window.addEventListener("keydown", hotkeyHandler);
+    return () => {
+      handlers.forEach((dispose) => dispose());
+      window.removeEventListener("keydown", hotkeyHandler);
+    };
+  }, [DEBUG_NAV, shouldShowSitesPanel]);
+  useEffect(() => {
+    if (keepMenuExpanded || pointerInsideSidebar || !focusOutside) {
+      return;
+    }
+    if (collapseCheckTimerRef.current !== null) {
+      window.clearTimeout(collapseCheckTimerRef.current);
+    }
+    collapseCheckTimerRef.current = window.setTimeout(() => {
+      if (isSecondaryExpanded) {
+        console.error("NAV_INVARIANT_FAIL", {
+          rule: "outside-sidebar-collapse",
+          keepMenuExpanded,
+          pointerInsideSidebar,
+          focusOutside,
+          isSecondaryExpanded,
+          isSelectorOpen,
+          pathname: location.pathname,
+          search: location.search,
+        });
+      }
+    }, 250);
+    return () => {
+      if (collapseCheckTimerRef.current !== null) {
+        window.clearTimeout(collapseCheckTimerRef.current);
+        collapseCheckTimerRef.current = null;
+      }
+    };
+  }, [
+    keepMenuExpanded,
+    pointerInsideSidebar,
+    focusOutside,
+    isSecondaryExpanded,
+    isSelectorOpen,
+    location.pathname,
+    location.search,
+  ]);
+  useEffect(() => {
+    if (!isSitesRowHovered) {
+      return;
+    }
+    if (sitesMountCheckTimerRef.current !== null) {
+      window.clearTimeout(sitesMountCheckTimerRef.current);
+    }
+    sitesMountCheckTimerRef.current = window.setTimeout(() => {
+      if (!shouldShowSitesPanel) {
+        console.error("NAV_INVARIANT_FAIL", {
+          rule: "sites-enter-mount",
+          shouldShowSitesPanel,
+          isSitesRowHovered,
+          pathname: location.pathname,
+        });
+      }
+    }, 16);
+    return () => {
+      if (sitesMountCheckTimerRef.current !== null) {
+        window.clearTimeout(sitesMountCheckTimerRef.current);
+        sitesMountCheckTimerRef.current = null;
+      }
+    };
+  }, [isSitesRowHovered, shouldShowSitesPanel, location.pathname]);
+  useEffect(() => {
     return () => {
       if (sitesHoverTimeout.current !== null) {
         window.clearTimeout(sitesHoverTimeout.current);
@@ -393,7 +668,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const handleSitesRowEnter = () => {
     cancelSitesLeaveTimer();
     setIsSitesRowHovered(true);
-    debugLog("sites-row-enter");
+    traceNav("sites-row-pointerenter");
   };
   const handleSitesRowLeave = () => {
     cancelSitesLeaveTimer();
@@ -407,7 +682,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
       setIsSitesRowHovered(false);
     }, 180);
-    debugLog("sites-row-leave");
+    traceNav("sites-row-pointerleave");
   };
   return (
     <div className="vrm-layout">
@@ -673,6 +948,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       <main className="vrm-main">
         {} <div className="vrm-content"> {children || <Outlet />} </div>
       </main>
+      {DEBUG_NAV && (
+        <div className="vrm-debug-overlay" aria-live="polite">
+          <div><strong>DEBUG NAV</strong></div>
+          <div>keep={keepMenuExpanded ? 1 : 0} selector={isSelectorOpen ? 1 : 0} siteId={siteId ?? "none"}</div>
+          <div>mountSec={shouldShowSitesPanel ? 1 : 0} expSec={isSecondaryExpanded ? 1 : 0} expPrim={isPrimaryExpanded ? 1 : 0}</div>
+          <div>sitesHover={isSitesRowHovered ? 1 : 0} secHover={isSecondaryHovered ? 1 : 0} secFocus={isSecondaryFocused ? 1 : 0}</div>
+          <div>insideShell={pointerInsideSidebar ? 1 : 0} insideSecondary={pointerInsideSecondary ? 1 : 0} insideSites={pointerInsideSites ? 1 : 0}</div>
+          <div>x={pointerCoords.x} y={pointerCoords.y}</div>
+          <div>active={typeof document !== "undefined" ? getActiveElementSummary() : "none"}</div>
+          <div className="vrm-debug-overlay__last">{lastDebugEvent}</div>
+        </div>
+      )}
     </div>
   );
 };
