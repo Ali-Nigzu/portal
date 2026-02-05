@@ -43,6 +43,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
   children,
 }) => {
+  const DEBUG_NAV = false;
   const [isPrimaryHovered, setIsPrimaryHovered] = useState(false);
   const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
   const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
@@ -52,6 +53,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const secondaryHoverRef = useRef(false);
   const secondaryFocusRef = useRef(false);
   const secondaryPanelRef = useRef<HTMLDivElement | null>(null);
+  const sidebarShellRef = useRef<HTMLDivElement | null>(null);
+  const sitesRowRef = useRef<HTMLDivElement | null>(null);
+  const [pointerInsideSidebar, setPointerInsideSidebar] = useState(false);
+  const pointerInsideSidebarRef = useRef(false);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
@@ -115,6 +120,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   useEffect(() => {
     secondaryFocusRef.current = isSecondaryFocused;
   }, [isSecondaryFocused]);
+  const debugLog = (...parts: unknown[]) => {
+    if (!DEBUG_NAV || !import.meta.env.DEV) {
+      return;
+    }
+    console.debug("[VRM nav]", ...parts);
+  };
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -236,8 +247,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
+  const isSitesActive = primaryActivePath === "/sites";
   const shouldShowSitesPanel =
-    primaryActivePath === "/sites" ||
+    isSitesActive ||
     isSitesRowHovered ||
     isSecondaryHovered ||
     isSecondaryFocused;
@@ -277,8 +289,68 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
   useEffect(() => {
+    if (keepMenuExpanded || isTouchMode || typeof window === "undefined") {
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const shellRect = sidebarShellRef.current?.getBoundingClientRect();
+      if (!shellRect) {
+        return;
+      }
+      const insideSidebar =
+        event.clientX >= shellRect.left &&
+        event.clientX <= shellRect.right &&
+        event.clientY >= shellRect.top &&
+        event.clientY <= shellRect.bottom;
+      if (pointerInsideSidebarRef.current !== insideSidebar) {
+        pointerInsideSidebarRef.current = insideSidebar;
+        setPointerInsideSidebar(insideSidebar);
+        debugLog("pointerInsideSidebar", {
+          insideSidebar,
+          x: event.clientX,
+          y: event.clientY,
+          shellRect,
+        });
+      }
+
+      const siteRect = sitesRowRef.current?.getBoundingClientRect();
+      const insideSitesRow =
+        Boolean(siteRect) &&
+        event.clientX >= siteRect.left &&
+        event.clientX <= siteRect.right &&
+        event.clientY >= siteRect.top &&
+        event.clientY <= siteRect.bottom;
+      if (insideSitesRow) {
+        cancelSitesLeaveTimer();
+      }
+      setIsSitesRowHovered((prev) =>
+        insideSitesRow ? true : prev && insideSidebar ? prev : false,
+      );
+
+      if (!insideSidebar) {
+        cancelSitesLeaveTimer();
+        setIsPrimaryHovered(false);
+        setIsSecondaryHovered(false);
+        setIsSitesRowHovered(false);
+        if (
+          secondaryPanelRef.current &&
+          document.activeElement instanceof HTMLElement &&
+          secondaryPanelRef.current.contains(document.activeElement)
+        ) {
+          document.activeElement.blur();
+          setIsSecondaryFocused(false);
+        }
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
+  }, [keepMenuExpanded, isTouchMode]);
+  useEffect(() => {
     if (
       keepMenuExpanded ||
+      pointerInsideSidebarRef.current ||
       secondaryHoverRef.current ||
       secondaryFocusRef.current
     ) {
@@ -298,6 +370,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     ) {
       document.activeElement.blur();
     }
+    debugLog("selector/route reset", {
+      keepMenuExpanded,
+      siteId,
+      isSelectorOpen,
+      pathname: location.pathname,
+    });
   }, [keepMenuExpanded, location.pathname, siteId, isSelectorOpen]);
   useEffect(() => {
     return () => {
@@ -315,21 +393,28 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const handleSitesRowEnter = () => {
     cancelSitesLeaveTimer();
     setIsSitesRowHovered(true);
+    debugLog("sites-row-enter");
   };
   const handleSitesRowLeave = () => {
     cancelSitesLeaveTimer();
     sitesHoverTimeout.current = window.setTimeout(() => {
-      if (secondaryHoverRef.current || secondaryFocusRef.current) {
+      if (
+        pointerInsideSidebarRef.current ||
+        secondaryHoverRef.current ||
+        secondaryFocusRef.current
+      ) {
         return;
       }
       setIsSitesRowHovered(false);
     }, 180);
+    debugLog("sites-row-leave");
   };
   return (
     <div className="vrm-layout">
       {" "}
       {}{" "}
       <div
+        ref={sidebarShellRef}
         className={`vrm-sidebar-shell ${
           shouldShowSitesPanel ? "vrm-sidebar-shell--sites" : ""
         } ${
@@ -406,6 +491,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               return (
                 <div
                   key="sites-row-wrapper"
+                  ref={sitesRowRef}
                   className="vrm-sites-row-wrapper"
                   onPointerEnter={handleSitesRowEnter}
                   onPointerLeave={handleSitesRowLeave}

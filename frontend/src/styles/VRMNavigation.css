@@ -57,7 +57,8 @@
 }
 
 .vrm-sites-row-wrapper {
-  display: contents;
+  width: 100%;
+  min-height: var(--vrm-nav-row-height);
 }
 
 .vrm-nav-row {
