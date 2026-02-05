@@ -56,7 +56,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const secondaryPanelRef = useRef<HTMLDivElement | null>(null);
   const sidebarShellRef = useRef<HTMLDivElement | null>(null);
   const sitesRowRef = useRef<HTMLDivElement | null>(null);
-  const [pointerInsideSidebar, setPointerInsideSidebar] = useState(false);
   const pointerInsideSidebarRef = useRef(false);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
@@ -174,13 +173,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         path: siteId ? `/sites/${siteId}/dashboard` : undefined,
         label: "Dashboard",
         icon: <NavIcon icon={LayoutDashboard} />,
-        description: "System overview",
       },
       {
         id: "analytics",
         label: "Analytics",
         icon: <NavIcon icon={BarChart3} />,
-        description: "Advanced analytics",
         disabled: true,
         statusLabel: "Coming Soon",
       },
@@ -188,7 +185,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         id: "forecasts",
         label: "Forecasts",
         icon: <NavIcon icon={TrendingUp} />,
-        description: "Predictive insights",
         disabled: true,
         statusLabel: "Coming Soon",
       },
@@ -196,25 +192,21 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         path: siteId ? `/sites/${siteId}/event-logs` : undefined,
         label: "Event Logs",
         icon: <NavIcon icon={ClipboardList} />,
-        description: "Activity events",
       },
       {
         path: siteId ? `/sites/${siteId}/alarm-logs` : undefined,
         label: "Alarm Logs",
         icon: <NavIcon icon={Bell} />,
-        description: "System alerts",
       },
       {
         path: siteId ? `/sites/${siteId}/device-list` : undefined,
         label: "Device List",
         icon: <NavIcon icon={Cpu} />,
-        description: "Data sources",
       },
       {
         path: siteId ? `/sites/${siteId}/reports` : undefined,
         label: "Reports",
         icon: <NavIcon icon={FileBarChart2} />,
-        description: "Analytics reports",
       },
     ],
     [siteId],
@@ -225,7 +217,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         path: "/admin",
         label: "Admin",
         icon: <NavIcon icon={Shield} />,
-        description: "Admin panel",
       },
     ],
     [],
@@ -305,7 +296,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         event.clientY <= shellRect.bottom;
       if (pointerInsideSidebarRef.current !== insideSidebar) {
         pointerInsideSidebarRef.current = insideSidebar;
-        setPointerInsideSidebar(insideSidebar);
       }
 
       const secondaryRect = secondaryPanelRef.current?.getBoundingClientRect();
@@ -421,8 +411,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   };
   return (
     <div className="vrm-layout">
-      {" "}
-      {}{" "}
       <div
         ref={sidebarShellRef}
         className={`vrm-sidebar-shell ${
@@ -679,9 +667,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           </nav>
         )}
       </div>
-      {}{" "}
       <main className="vrm-main">
-        {} <div className="vrm-content"> {children || <Outlet />} </div>
+        <div className="vrm-content">{children || <Outlet />}</div>
       </main>
     </div>
   );
