@@ -1,319 +1,674 @@
-import React, { useMemo, useState } from "react";
-import { Link, useLocation, Outlet } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  BarChart3,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Cpu,
+  FileBarChart2,
+  Home,
+  LayoutDashboard,
+  MapPin,
+  Plus,
+  Settings,
+  Shield,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
 import "../styles/VRMTheme.css";
+import "../styles/VRMNavigation.css";
 import { companyLogoDataUri } from "../assets/companyLogo";
-import { getViewTokenFromLocation } from "../lib/viewToken";
+import {
+  SITE_OPTIONS,
+  findSiteById,
+  getStoredSiteId,
+  setStoredSiteId,
+} from "../lib/sites";
+import {
+  NavList,
+  NavRow,
+  SecondaryDivider,
+  SecondaryPinnedRow,
+  SecondarySearch,
+} from "../common/components/navigation";
+import { NavIcon } from "../common/components/icons";
+
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
-  onLogout?: () => void;
   children?: React.ReactNode;
 }
-const IconDashboard = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M4 13h7V4H4v9Zm9 7h7V4h-7v16ZM4 20h7v-5H4v5Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconAnalytics = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 19h2v-6H5v6Zm6 0h2V5h-2v14Zm6 0h2v-9h-2v9ZM4 21h16a1 1 0 0 0 0-2H4a1 1 0 0 0 0 2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconEventLogs = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 4h4l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm0 5v10h14V9H5Zm9 3h3v2h-3v-2Zm-8 0h6v2H6v-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconAlarm = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M12 3a7 7 0 0 0-7 7v3.764l-1.447 2.894A1 1 0 0 0 4.447 18H19.55a1 1 0 0 0 .894-1.447L19 13.764V10a7 7 0 0 0-7-7Zm0 18a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconDevice = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Zm2 0v12h10V6H7Zm2 13h6v2H9v-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconReports = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M6 4h9l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm8 0v4h4l-4-4ZM8 12h8v2H8v-2Zm0 4h5v2H8v-2Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
-const IconAdmin = () => (
-  <svg
-    className="vrm-nav-icon"
-    viewBox="0 0 24 24"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <path
-      d="M12 2a5 5 0 0 1 5 5v1.268a3 3 0 0 1 2 2.829V14a3 3 0 0 1-2 2.829V18a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3v-1.171A3 3 0 0 1 5 14v-2.903a3 3 0 0 1 2-2.83V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v1h6V7a3 3 0 0 0-3-3Zm-1 15h2a1 1 0 0 0 1-1v-1h-4v1a1 1 0 0 0 1 1Zm-4-5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2.903a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1V14Z"
-      fill="currentColor"
-      opacity="0.9"
-    />
-  </svg>
-);
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
-  onLogout,
   children,
 }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Sidebar state and refs
+  const [isPrimaryHovered, setIsPrimaryHovered] = useState(false);
+  const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
+  const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
+  const [isSecondaryFocused, setIsSecondaryFocused] = useState(false);
+  const [isSitesRowHovered, setIsSitesRowHovered] = useState(false);
+  const sitesHoverTimeout = useRef<number | null>(null);
+  const secondaryHoverRef = useRef(false);
+  const secondaryFocusRef = useRef(false);
+  const secondaryPanelRef = useRef<HTMLDivElement | null>(null);
+  const sidebarShellRef = useRef<HTMLDivElement | null>(null);
+  const sitesRowRef = useRef<HTMLDivElement | null>(null);
+  const pointerInsideSidebarRef = useRef(false);
+  const [isTouchMode, setIsTouchMode] = useState(false);
+  const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    const stored = window.localStorage.getItem("vrm_keep_menu_expanded");
+    if (stored === null) {
+      return false;
+    }
+    return stored === "true";
+  });
   const location = useLocation();
-  const viewToken = getViewTokenFromLocation(location.search);
-  const getNavigationPath = (path: string) => {
-    return viewToken ? `${path}?view_token=${viewToken}` : path;
+  const navigate = useNavigate();
+  const { siteId } = useParams();
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
+  );
+  const isSelectorOpen = searchParams.get("panel") === "sites";
+  const activeSite = findSiteById(siteId);
+  const allSitesOption =
+    SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
+  const buildSearch = (overrides?: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(location.search);
+    if (!overrides || !Object.prototype.hasOwnProperty.call(overrides, "panel")) {
+      params.delete("panel");
+    }
+    if (overrides) {
+      Object.entries(overrides).forEach(([key, value]) => {
+        if (value === undefined) {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+    }
+    const query = params.toString();
+    return query ? `?${query}` : "";
   };
+  const getNavigationPath = (
+    path: string,
+    overrides?: Record<string, string | undefined>,
+  ) => `${path}${buildSearch(overrides)}`;
+  const openSitesSelector = () => {
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ panel: "sites" }),
+      },
+      { replace: false },
+    );
+  };
+  useEffect(() => {
+    if (siteId) {
+      setStoredSiteId(siteId);
+    }
+  }, [siteId]);
+  useEffect(() => {
+    secondaryHoverRef.current = isSecondaryHovered;
+  }, [isSecondaryHovered]);
+  useEffect(() => {
+    secondaryFocusRef.current = isSecondaryFocused;
+  }, [isSecondaryFocused]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const mediaQuery = window.matchMedia(
+      "(hover: none), (pointer: coarse)",
+    );
+    const syncTouchMode = () => {
+      const isTouch = mediaQuery.matches;
+      setIsTouchMode(isTouch);
+      if (isTouch) {
+        setKeepMenuExpanded(true);
+      }
+    };
+    syncTouchMode();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", syncTouchMode);
+      return () => mediaQuery.removeEventListener("change", syncTouchMode);
+    }
+    mediaQuery.addListener(syncTouchMode);
+    return () => mediaQuery.removeListener(syncTouchMode);
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      "vrm_keep_menu_expanded",
+      String(keepMenuExpanded),
+    );
+  }, [keepMenuExpanded]);
+  // Navigation config
+  const primaryNavigationItems = useMemo(
+    () => [
+      {
+        label: "Home",
+        icon: <NavIcon icon={Home} />,
+        placeholder: true,
+      },
+      {
+        path: "/sites",
+        label: "Sites",
+        icon: <NavIcon icon={MapPin} />,
+      },
+    ],
+    [],
+  );
   const clientNavigationItems = useMemo(
     () => [
       {
-        path: "/dashboard",
+        path: siteId ? `/sites/${siteId}/dashboard` : undefined,
         label: "Dashboard",
-        icon: <IconDashboard />,
-        description: "System overview",
+        icon: <NavIcon icon={LayoutDashboard} />,
       },
       {
         id: "analytics",
         label: "Analytics",
-        icon: <IconAnalytics />,
-        description: "Advanced analytics",
+        icon: <NavIcon icon={BarChart3} />,
         disabled: true,
         statusLabel: "Coming Soon",
       },
       {
         id: "forecasts",
         label: "Forecasts",
-        icon: <IconAnalytics />,
-        description: "Predictive insights",
+        icon: <NavIcon icon={TrendingUp} />,
         disabled: true,
         statusLabel: "Coming Soon",
       },
       {
-        path: "/event-logs",
+        path: siteId ? `/sites/${siteId}/event-logs` : undefined,
         label: "Event Logs",
-        icon: <IconEventLogs />,
-        description: "Activity events",
+        icon: <NavIcon icon={ClipboardList} />,
       },
       {
-        path: "/alarm-logs",
+        path: siteId ? `/sites/${siteId}/alarm-logs` : undefined,
         label: "Alarm Logs",
-        icon: <IconAlarm />,
-        description: "System alerts",
+        icon: <NavIcon icon={Bell} />,
       },
       {
-        path: "/device-list",
+        path: siteId ? `/sites/${siteId}/device-list` : undefined,
         label: "Device List",
-        icon: <IconDevice />,
-        description: "Data sources",
+        icon: <NavIcon icon={Cpu} />,
       },
       {
-        path: "/reports",
+        path: siteId ? `/sites/${siteId}/reports` : undefined,
         label: "Reports",
-        icon: <IconReports />,
-        description: "Analytics reports",
+        icon: <NavIcon icon={FileBarChart2} />,
       },
     ],
-    [],
+    [siteId],
   );
   const adminNavigationItems = useMemo(
     () => [
       {
         path: "/admin",
         label: "Admin",
-        icon: <IconAdmin />,
-        description: "Admin panel",
+        icon: <NavIcon icon={Shield} />,
       },
     ],
     [],
   );
-  const navigationItems =
-    userRole === "admin" ? adminNavigationItems : clientNavigationItems;
+  // Derived state
   const isActiveRoute = (path: string) => {
     return (
       location.pathname === path || location.pathname.startsWith(path + "/")
     );
   };
+  const primaryActivePath = primaryNavigationItems.find(
+    (item) => item.path && isActiveRoute(item.path),
+  )?.path;
+  const isSiteSelection = isSelectorOpen;
+  const selectedSiteForList = getStoredSiteId() ?? "all";
+  const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
+  const shouldShowAdminMenu =
+    userRole === "admin" && location.pathname.startsWith("/admin");
+  const isSitesActive = primaryActivePath === "/sites";
+  const shouldShowSitesPanel =
+    isSitesActive ||
+    isSitesRowHovered ||
+    isSecondaryHovered ||
+    isSecondaryFocused;
+  const isPrimaryExpanded =
+    keepMenuExpanded || isPrimaryHovered || isPrimaryFocused;
+  const isSecondaryExpanded =
+    keepMenuExpanded || isSecondaryHovered || isSecondaryFocused;
+  const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
+  const toggleIcon = keepMenuExpanded ? (
+    <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
+  ) : (
+    <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
+  );
+  // Interaction handlers
+  const handleKeepExpandedToggle = () => {
+    if (isTouchMode) {
+      return;
+    }
+    setKeepMenuExpanded((prev) => !prev);
+  };
+  const handleFocusChange =
+    (setter: React.Dispatch<React.SetStateAction<boolean>>) =>
+    (event: React.FocusEvent<HTMLElement>) => {
+      const nextTarget = event.relatedTarget as Node | null;
+      if (event.currentTarget.contains(nextTarget)) {
+        return;
+      }
+      setter(false);
+    };
+
+  // Effects
+  useEffect(() => {
+    if (keepMenuExpanded || typeof window === "undefined") {
+      return;
+    }
+    const secondaryPanel = document.querySelector(".vrm-extended-panel");
+    const isHovered = secondaryPanel?.matches(":hover") ?? false;
+    const isFocused = secondaryPanel?.matches(":focus-within") ?? false;
+    setIsSecondaryHovered(isHovered);
+    setIsSecondaryFocused(isFocused);
+  }, [keepMenuExpanded, location.pathname, siteId]);
+  useEffect(() => {
+    if (keepMenuExpanded || isTouchMode || typeof window === "undefined") {
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const shellRect = sidebarShellRef.current?.getBoundingClientRect();
+      if (!shellRect) {
+        return;
+      }
+      const insideSidebar =
+        event.clientX >= shellRect.left &&
+        event.clientX <= shellRect.right &&
+        event.clientY >= shellRect.top &&
+        event.clientY <= shellRect.bottom;
+      if (pointerInsideSidebarRef.current !== insideSidebar) {
+        pointerInsideSidebarRef.current = insideSidebar;
+      }
+
+      const secondaryRect = secondaryPanelRef.current?.getBoundingClientRect();
+      const insideSecondary =
+        Boolean(secondaryRect) &&
+        event.clientX >= secondaryRect.left &&
+        event.clientX <= secondaryRect.right &&
+        event.clientY >= secondaryRect.top &&
+        event.clientY <= secondaryRect.bottom;
+      setIsSecondaryHovered(insideSecondary);
+
+      const siteRect = sitesRowRef.current?.getBoundingClientRect();
+      const insideSitesRow =
+        Boolean(siteRect) &&
+        event.clientX >= siteRect.left &&
+        event.clientX <= siteRect.right &&
+        event.clientY >= siteRect.top &&
+        event.clientY <= siteRect.bottom;
+      if (insideSitesRow) {
+        cancelSitesLeaveTimer();
+      }
+      setIsSitesRowHovered(insideSitesRow);
+      setIsPrimaryHovered(insideSidebar);
+
+      if (!insideSidebar) {
+        cancelSitesLeaveTimer();
+        if (
+          secondaryPanelRef.current &&
+          document.activeElement instanceof HTMLElement &&
+          secondaryPanelRef.current.contains(document.activeElement)
+        ) {
+          document.activeElement.blur();
+          setIsSecondaryFocused(false);
+        }
+      }
+    };
+
+    const handlePointerDown = () => {
+      if (
+        !keepMenuExpanded &&
+        !pointerInsideSidebarRef.current &&
+        secondaryPanelRef.current &&
+        document.activeElement instanceof HTMLElement &&
+        secondaryPanelRef.current.contains(document.activeElement)
+      ) {
+        document.activeElement.blur();
+        setIsSecondaryFocused(false);
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [keepMenuExpanded, isTouchMode]);
+  useEffect(() => {
+    if (
+      keepMenuExpanded ||
+      pointerInsideSidebarRef.current ||
+      secondaryHoverRef.current ||
+      secondaryFocusRef.current
+    ) {
+      return;
+    }
+    setIsSecondaryHovered(false);
+    setIsSecondaryFocused(false);
+    setIsSitesRowHovered(false);
+    if (sitesHoverTimeout.current !== null) {
+      window.clearTimeout(sitesHoverTimeout.current);
+      sitesHoverTimeout.current = null;
+    }
+    if (
+      secondaryPanelRef.current &&
+      document.activeElement instanceof HTMLElement &&
+      secondaryPanelRef.current.contains(document.activeElement)
+    ) {
+      document.activeElement.blur();
+    }
+  }, [keepMenuExpanded, location.pathname, siteId, isSelectorOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (sitesHoverTimeout.current !== null) {
+        window.clearTimeout(sitesHoverTimeout.current);
+      }
+    };
+  }, []);
+  const cancelSitesLeaveTimer = () => {
+    if (sitesHoverTimeout.current !== null) {
+      window.clearTimeout(sitesHoverTimeout.current);
+      sitesHoverTimeout.current = null;
+    }
+  };
+  const handleSitesRowEnter = () => {
+    cancelSitesLeaveTimer();
+    setIsSitesRowHovered(true);
+  };
+  const handleSitesRowLeave = () => {
+    // Grace period prevents accidental collapse while moving between rails.
+    cancelSitesLeaveTimer();
+    sitesHoverTimeout.current = window.setTimeout(() => {
+      if (
+        pointerInsideSidebarRef.current ||
+        secondaryHoverRef.current ||
+        secondaryFocusRef.current
+      ) {
+        return;
+      }
+      setIsSitesRowHovered(false);
+    }, 180);
+  };
   return (
     <div className="vrm-layout">
-      {" "}
-      {}{" "}
-      <nav
-        className={`vrm-sidebar ${sidebarCollapsed ? "collapsed" : ""}`}
+      <div
+        ref={sidebarShellRef}
+        className={`vrm-sidebar-shell ${
+          shouldShowSitesPanel ? "vrm-sidebar-shell--sites" : ""
+        } ${
+          keepMenuExpanded ? "vrm-sidebar-shell--expanded" : ""
+        } ${
+          !keepMenuExpanded && !isPrimaryExpanded
+            ? "vrm-sidebar-shell--primary-collapsed"
+            : ""
+        } ${
+          !keepMenuExpanded && isPrimaryExpanded
+            ? "vrm-sidebar-shell--primary-expanded"
+            : ""
+        } ${
+          !keepMenuExpanded && shouldShowSitesPanel && !isSecondaryExpanded
+            ? "vrm-sidebar-shell--secondary-collapsed"
+            : ""
+        } ${
+          !keepMenuExpanded && shouldShowSitesPanel && isSecondaryExpanded
+            ? "vrm-sidebar-shell--secondary-expanded"
+            : ""
+        }`}
         aria-label="Primary"
       >
-        {" "}
-        {}{" "}
-        <div className="vrm-sidebar-header">
-          <div className="vrm-logo">
-            <img
-              src={companyLogoDataUri}
-              alt="Company Logo"
-              className="vrm-logo-img"
-            />
-          </div>
-          <div className="vrm-logo-text">camOS</div>
-        </div>{" "}
-        {}{" "}
-        <button
-          className="vrm-collapse-btn"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        <nav
+          className="vrm-primary-rail"
+          aria-label="Primary"
+          onMouseEnter={() => setIsPrimaryHovered(true)}
+          onMouseLeave={() => setIsPrimaryHovered(false)}
+          onFocusCapture={() => setIsPrimaryFocused(true)}
+          onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {" "}
-            {sidebarCollapsed ? (
-              <path
-                d="M3 10h14M3 5h14M3 15h14"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
+          <div className="vrm-sidebar-header vrm-sidebar-header--brand">
+            <div className="vrm-logo">
+              <img
+                src={companyLogoDataUri}
+                alt="Company Logo"
+                className="vrm-logo-img"
               />
-            ) : (
-              <path
-                d="M6 10h8M6 5h8M6 15h8"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            )}{" "}
-          </svg>
-        </button>{" "}
-        {}{" "}
-        <div className="vrm-nav">
-          {" "}
-          {navigationItems.map((item) => {
-            const isDisabled = Boolean(item.disabled);
-            const isActive =
-              item.path && !isDisabled ? isActiveRoute(item.path) : false;
-            const navText = (
-              <div className="vrm-nav-text">
-                {item.label}
-                {item.statusLabel && (
-                  <span className="vrm-nav-badge">{item.statusLabel}</span>
-                )}
-              </div>
-            );
-            const sharedProps = {
-              key: item.path ?? item.id ?? item.label,
-              title: sidebarCollapsed ? item.description : "",
-            };
-
-            if (isDisabled) {
+            </div>
+            <div className="vrm-brand-text">
+              <div className="vrm-brand-title">VRM Portal</div>
+              <div className="vrm-brand-subtitle">Energy insights</div>
+            </div>
+          </div>
+          <NavList className="vrm-primary-nav">
+            {primaryNavigationItems.map((item) => {
+              const isActive = primaryActivePath === item.path;
+              const navRow = (
+                <NavRow
+                  key={item.path ?? item.label}
+                  to={
+                    item.path && item.path !== "/sites"
+                      ? getNavigationPath(item.path)
+                      : undefined
+                  }
+                  onClick={item.path === "/sites" ? openSitesSelector : undefined}
+                  leftIcon={item.icon}
+                  label={item.label}
+                  active={isActive}
+                  className={
+                    item.placeholder ? "vrm-nav-row--placeholder" : undefined
+                  }
+                  ariaLabel={!isPrimaryExpanded ? item.label : undefined}
+                  rightSlot={
+                    item.path === "/sites" ? (
+                      <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
+                    ) : undefined
+                  }
+                />
+              );
+              if (item.path !== "/sites") {
+                return navRow;
+              }
               return (
                 <div
-                  {...sharedProps}
-                  className="vrm-nav-item vrm-nav-item--disabled"
-                  aria-disabled="true"
+                  key="sites-row-wrapper"
+                  ref={sitesRowRef}
+                  className="vrm-sites-row-wrapper"
+                  onPointerEnter={handleSitesRowEnter}
+                  onPointerLeave={handleSitesRowLeave}
                 >
-                  {item.icon}
-                  {navText}
+                  {navRow}
                 </div>
               );
-            }
-
-            if (!item.path) {
-              return null;
-            }
-
-            return (
-              <Link
-                {...sharedProps}
-                to={getNavigationPath(item.path)}
-                className={`vrm-nav-item ${isActive ? "active" : ""}`}
-              >
-                {item.icon}
-                {navText}
-              </Link>
-            );
-          })}{" "}
-        </div>
-      </nav>{" "}
-      {}{" "}
-      <main className="vrm-main">
-        <div className="vrm-header-stack">
-          <header className="vrm-header vrm-header--userbar">
-            <div className="vrm-header-right">
-              {" "}
-              {}{" "}
-              <div className="vrm-user-meta">
-                <span className="vrm-status vrm-status-online">
-                  <div className="vrm-status-dot"></div>{" "}
-                  {userRole === "admin" ? "Administrator" : "Client"}{" "}
-                </span>{" "}
-                {onLogout && (
-                  <button
-                    className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                    onClick={onLogout}
-                    title="Logout"
-                  >
-                    {" "}
-                    Logout{" "}
-                  </button>
-                )}{" "}
-              </div>
+            })}
+            <NavRow
+              leftIcon={<NavIcon icon={Upload} />}
+              label="Upload"
+              className="vrm-nav-row--placeholder"
+              ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
+            />
+            <NavRow
+              leftIcon={toggleIcon}
+              label={toggleLabel}
+              onClick={handleKeepExpandedToggle}
+              active={keepMenuExpanded}
+              className="vrm-nav-row--toggle"
+              ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
+            />
+            <NavRow
+              leftIcon={<NavIcon icon={Settings} />}
+              label="Settings"
+              className="vrm-nav-row--placeholder"
+              ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
+            />
+          </NavList>
+        </nav>
+        {shouldShowSitesPanel && (
+          <nav
+            className="vrm-extended-panel"
+            aria-label="Secondary"
+            ref={secondaryPanelRef}
+            onMouseEnter={() => setIsSecondaryHovered(true)}
+            onMouseLeave={() => setIsSecondaryHovered(false)}
+            onFocusCapture={() => setIsSecondaryFocused(true)}
+            onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
+            onPointerEnter={cancelSitesLeaveTimer}
+            onPointerLeave={handleSitesRowLeave}
+          >
+            <div className="vrm-secondary-header">
+              <SecondarySearch />
+              {!showSiteMenu && (
+                <SecondaryPinnedRow
+                  to={getNavigationPath(
+                    `/sites/${allSitesOption.id}/dashboard`,
+                    { panel: undefined },
+                  )}
+                  leftIcon={<NavIcon icon={MapPin} />}
+                  label={allSitesOption.label}
+                  active={
+                    isSiteSelection &&
+                    allSitesOption.id === selectedSiteForList
+                  }
+                />
+              )}
+              {showSiteMenu && (
+                <SecondaryPinnedRow
+                  onClick={openSitesSelector}
+                  leftIcon={
+                    <span className="vrm-nav-row__icon-stack">
+                      <NavIcon
+                        icon={ArrowLeft}
+                        className="vrm-nav-back"
+                        size={18}
+                      />
+                      <NavIcon icon={MapPin} />
+                    </span>
+                  }
+                  label={activeSite?.label ?? "Site"}
+                />
+              )}
+              <SecondaryDivider />
             </div>
-          </header>
-        </div>{" "}
-        {} <div className="vrm-content"> {children || <Outlet />} </div>
+            {!showSiteMenu && (
+              <NavList className="vrm-secondary-list">
+                {SITE_OPTIONS.filter((site) => site.id !== "all").map(
+                  (site) => {
+                  const siteSubPath = (() => {
+                    const match = location.pathname.match(
+                      /^\/sites\/[^/]+(\/.*)?$/,
+                    );
+                    const trailing = match?.[1];
+                    if (!trailing || trailing === "/") {
+                      return "/dashboard";
+                    }
+                    return trailing;
+                  })();
+                  const siteTargetPath = `/sites/${site.id}${siteSubPath}`;
+                  const isActive =
+                    isSiteSelection && site.id === selectedSiteForList;
+                  return (
+                    <NavRow
+                      key={site.id}
+                      to={getNavigationPath(siteTargetPath, {
+                        panel: undefined,
+                      })}
+                      leftIcon={<NavIcon icon={MapPin} />}
+                      label={site.label}
+                      active={isActive}
+                      ariaLabel={!isSecondaryExpanded ? site.label : undefined}
+                    />
+                  );
+                },
+                )}
+                <NavRow
+                  leftIcon={<NavIcon icon={Plus} />}
+                  label="Add site"
+                  className="vrm-nav-row--inert"
+                  ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+                />
+              </NavList>
+            )}
+            {showSiteMenu && !shouldShowAdminMenu && (
+              <NavList className="vrm-secondary-list">
+                {clientNavigationItems.map((item) => {
+                  const isDisabled = Boolean(item.disabled);
+                  const isActive =
+                    item.path && !isDisabled ? isActiveRoute(item.path) : false;
+                  const navLabel = (
+                    <span className="vrm-nav-row__label-text">
+                      {item.label}
+                      {item.statusLabel && (
+                        <span className="vrm-nav-row__chip">
+                          {item.statusLabel}
+                        </span>
+                      )}
+                    </span>
+                  );
+                  if (isDisabled) {
+                    return (
+                      <NavRow
+                        key={item.id ?? item.label}
+                        leftIcon={item.icon}
+                        label={navLabel}
+                        disabled
+                        ariaLabel={
+                          !isSecondaryExpanded ? item.label : undefined
+                        }
+                      />
+                    );
+                  }
+                  if (!item.path) {
+                    return null;
+                  }
+                  return (
+                    <NavRow
+                      key={item.path}
+                      to={getNavigationPath(item.path)}
+                      leftIcon={item.icon}
+                      label={navLabel}
+                      active={isActive}
+                      ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    />
+                  );
+                })}
+              </NavList>
+            )}
+            {shouldShowAdminMenu && (
+              <NavList className="vrm-secondary-list">
+                {adminNavigationItems.map((item) => (
+                  <NavRow
+                    key={item.path}
+                    to={getNavigationPath(item.path)}
+                    leftIcon={item.icon}
+                    label={item.label}
+                    active={item.path ? isActiveRoute(item.path) : false}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                  />
+                ))}
+              </NavList>
+            )}
+          </nav>
+        )}
+      </div>
+      <main className="vrm-main">
+        <div className="vrm-content">{children || <Outlet />}</div>
       </main>
     </div>
   );
