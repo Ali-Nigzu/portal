@@ -9,24 +9,7 @@
 
 
 .vrm-primary-rail { width: var(--vrm-primary-rail-width); background-color: var(--vrm-bg-secondary); border-right: 1px solid var(--vrm-border); display: flex; flex-direction: column; align-items: stretch; height: 100%; overflow: hidden; }
-.vrm-primary-rail-content { flex: 1; display: flex; flex-direction: column; }
-.vrm-primary-rail-footer { margin-top: auto; padding: var(--vrm-spacing-2) 0; display: flex; flex-direction: column; gap: var(--vrm-spacing-1); }
 .vrm-extended-panel { width: var(--vrm-extended-panel-width); background-color: var(--vrm-bg-secondary); display: flex; flex-direction: column; position: relative; height: 100%; overflow: hidden; }
-.vrm-sidebar-header--compact { justify-content: center; }
-.vrm-nav--rail { padding: var(--vrm-spacing-2) 0; }
-.vrm-nav-item--rail { border-left: none; border-right: none; }
-.vrm-nav-item--rail.active { background-color: var(--vrm-hover); border-left: none; }
-.vrm-extended-header { padding: var(--vrm-spacing-4) var(--vrm-spacing-5); border-bottom: 1px solid var(--vrm-border); display: flex; flex-direction: column; gap: var(--vrm-spacing-2); }
-.vrm-extended-title { font-size: var(--vrm-typography-font-size-subtitle); font-weight: 600; color: var(--vrm-text-primary); }
-.vrm-extended-back { color: var(--vrm-text-secondary); text-decoration: none; font-size: var(--vrm-typography-font-size-caption); display: inline-flex; align-items: center; gap: var(--vrm-spacing-1); }
-.vrm-extended-back:hover { color: var(--vrm-text-primary); }
 .vrm-nav-row { min-height: 44px; padding: var(--vrm-spacing-3) var(--vrm-spacing-5); align-items: center; gap: var(--vrm-spacing-3); border-radius: var(--vrm-radii-button); }
-.vrm-nav-row .vrm-nav-text { line-height: 1.3; align-items: center; font-size: var(--vrm-typography-font-size-body); }
-.vrm-nav-row .vrm-nav-badge { line-height: 1; }
-.vrm-nav-row-chevron { margin-left: auto; color: var(--vrm-text-muted); font-size: var(--vrm-typography-font-size-caption); }
-.vrm-nav-item--control { border: none; background: transparent; text-align: left; width: 100%; }
-.vrm-nav-item--placeholder { cursor: default; }
-.vrm-nav-item--placeholder:hover { background-color: transparent; color: var(--vrm-text-secondary); }
-.vrm-nav--rail .vrm-nav-row { padding: var(--vrm-spacing-3) var(--vrm-spacing-4); }
 
 :root { --vrm-extended-panel-width: 264px; --vrm-extended-panel-width-collapsed: 64px; --vrm-primary-rail-width: 200px; --vrm-primary-rail-width-collapsed: 64px; }

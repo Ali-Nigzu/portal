@@ -1,6 +1,6 @@
 import React from "react";
 
-export type NavListProps = {
+type NavListProps = {
   children: React.ReactNode;
   className?: string;
 };
