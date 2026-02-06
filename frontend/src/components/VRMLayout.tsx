@@ -447,17 +447,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
               <div className="vrm-logo">
-                <img
-                  src={camOSLogo}
-                  alt="Camera Analytics"
-                  className="vrm-logo-img"
-                />
+                <img src={camOSLogo} alt="camOS" className="vrm-logo-img" />
               </div>
               <div className="vrm-brand-text">
-                <span className="vrm-brand-title">Camera Analytics</span>
-                <span className="vrm-brand-badge" aria-label="Demo">
-                  DEMO
-                </span>
+                <div className="vrm-brand-title">camOS</div>
+                <div className="vrm-brand-subrow">
+                  <div className="vrm-brand-subtitle">Camera Analytics</div>
+                  <span className="vrm-brand-badge" aria-label="Demo">
+                    DEMO
+                  </span>
+                </div>
               </div>
             </div>
           </div>
