@@ -16,18 +16,21 @@
 .vrm-sidebar-header--brand {
   padding: 20px 18px 16px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: 8px;
-  border-bottom: none !important;
+}
+
+.vrm-sidebar-header--brand .vrm-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
 .vrm-sidebar-header--brand .vrm-brand-text {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -49,6 +52,21 @@
   font-weight: 600;
   color: var(--vrm-text-primary);
   letter-spacing: 0.01em;
+}
+
+.vrm-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vrm-text-secondary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  white-space: nowrap;
 }
 
 .vrm-brand-subtitle {
