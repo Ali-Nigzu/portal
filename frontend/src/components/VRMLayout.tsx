@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
-import { companyLogoDataUri } from "../assets/companyLogo";
+import camOSLogo from "../assets/brand/camOS-logo.png";
 import {
   SITE_OPTIONS,
   findSiteById,
@@ -445,16 +445,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
-            <div className="vrm-logo">
-              <img
-                src={companyLogoDataUri}
-                alt="Company Logo"
-                className="vrm-logo-img"
-              />
-            </div>
-            <div className="vrm-brand-text">
-              <div className="vrm-brand-title">VRM Portal</div>
-              <div className="vrm-brand-subtitle">Energy insights</div>
+            <div className="vrm-brand-header">
+              <div className="vrm-logo">
+                <img src={camOSLogo} alt="camOS" className="vrm-logo-img" />
+              </div>
+              <div className="vrm-brand-text">
+                <div className="vrm-brand-title">camOS</div>
+                <div className="vrm-brand-subrow">
+                  <span className="vrm-brand-badge" aria-label="Demo">
+                    DEMO
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
           <NavList className="vrm-primary-nav">
