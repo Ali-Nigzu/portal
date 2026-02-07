@@ -453,8 +453,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               />
             </div>
             <div className="vrm-brand-text">
-              <div className="vrm-brand-title">VRM Portal</div>
-              <div className="vrm-brand-subtitle">Energy insights</div>
+              <div className="vrm-brand-title">kamOS</div>
+              <div className="vrm-brand-subtitle">Demo</div>
             </div>
           </div>
           <NavList className="vrm-primary-nav">
