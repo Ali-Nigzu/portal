@@ -452,7 +452,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <div className="vrm-brand-text">
                 <div className="vrm-brand-title">camOS</div>
                 <div className="vrm-brand-subrow">
-                  <div className="vrm-brand-subtitle">Camera Analytics</div>
                   <span className="vrm-brand-badge" aria-label="Demo">
                     DEMO
                   </span>
