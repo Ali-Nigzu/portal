@@ -45,18 +45,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   children,
 }) => {
   // Sidebar state and refs
-  const [isPrimaryHovered, setIsPrimaryHovered] = useState(false);
-  const [isSecondaryHovered, setIsSecondaryHovered] = useState(false);
   const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
   const [isSecondaryFocused, setIsSecondaryFocused] = useState(false);
-  const [isSitesRowHovered, setIsSitesRowHovered] = useState(false);
   const sitesHoverTimeout = useRef<number | null>(null);
-  const secondaryHoverRef = useRef(false);
   const secondaryFocusRef = useRef(false);
+  const primaryRailRef = useRef<HTMLDivElement | null>(null);
   const secondaryPanelRef = useRef<HTMLDivElement | null>(null);
   const sidebarShellRef = useRef<HTMLDivElement | null>(null);
   const sitesRowRef = useRef<HTMLDivElement | null>(null);
   const pointerInsideSidebarRef = useRef(false);
+  const [pointerZone, setPointerZone] = useState<
+    "OUTSIDE" | "PRIMARY" | "SITES_ROW" | "SECONDARY"
+  >("OUTSIDE");
+  const pointerZoneRef = useRef(pointerZone);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
@@ -115,8 +116,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
   }, [siteId]);
   useEffect(() => {
-    secondaryHoverRef.current = isSecondaryHovered;
-  }, [isSecondaryHovered]);
+    pointerZoneRef.current = pointerZone;
+  }, [pointerZone]);
   useEffect(() => {
     secondaryFocusRef.current = isSecondaryFocused;
   }, [isSecondaryFocused]);
@@ -236,15 +237,20 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const isSitesActive = primaryActivePath === "/sites";
+  const focusZone = isSecondaryFocused
+    ? "SECONDARY"
+    : isPrimaryFocused
+      ? "PRIMARY"
+      : "OUTSIDE";
   const shouldShowSitesPanel =
     isSitesActive ||
-    isSitesRowHovered ||
-    isSecondaryHovered ||
-    isSecondaryFocused;
+    pointerZone === "SITES_ROW" ||
+    pointerZone === "SECONDARY" ||
+    focusZone === "SECONDARY";
   const isPrimaryExpanded =
-    keepMenuExpanded || isPrimaryHovered || isPrimaryFocused;
+    keepMenuExpanded || pointerZone === "PRIMARY" || focusZone === "PRIMARY";
   const isSecondaryExpanded =
-    keepMenuExpanded || isSecondaryHovered || isSecondaryFocused;
+    keepMenuExpanded || pointerZone === "SECONDARY" || focusZone === "SECONDARY";
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -269,14 +275,43 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     };
 
   // Effects
+  const debugNavEnabled = useMemo(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return window.localStorage.getItem("DEBUG_NAV") === "1";
+  }, []);
+  const debugNavSnapshotRef = useRef("");
+  useEffect(() => {
+    if (!debugNavEnabled) {
+      return;
+    }
+    const snapshot = JSON.stringify({
+      pointerZone,
+      mountSecondary: shouldShowSitesPanel,
+      expandPrimary: isPrimaryExpanded,
+      expandSecondary: isSecondaryExpanded,
+    });
+    if (snapshot === debugNavSnapshotRef.current) {
+      return;
+    }
+    debugNavSnapshotRef.current = snapshot;
+    // eslint-disable-next-line no-console
+    console.info("[nav]", snapshot);
+  }, [
+    debugNavEnabled,
+    isPrimaryExpanded,
+    isSecondaryExpanded,
+    pointerZone,
+    shouldShowSitesPanel,
+  ]);
+
   useEffect(() => {
     if (keepMenuExpanded || typeof window === "undefined") {
       return;
     }
     const secondaryPanel = document.querySelector(".vrm-extended-panel");
-    const isHovered = secondaryPanel?.matches(":hover") ?? false;
     const isFocused = secondaryPanel?.matches(":focus-within") ?? false;
-    setIsSecondaryHovered(isHovered);
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
   useEffect(() => {
@@ -285,6 +320,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
 
     const handlePointerMove = (event: PointerEvent) => {
+      const primaryRect = primaryRailRef.current?.getBoundingClientRect();
+      const insidePrimary =
+        Boolean(primaryRect) &&
+        event.clientX >= primaryRect.left &&
+        event.clientX <= primaryRect.right &&
+        event.clientY >= primaryRect.top &&
+        event.clientY <= primaryRect.bottom;
+
       const shellRect = sidebarShellRef.current?.getBoundingClientRect();
       if (!shellRect) {
         return;
@@ -305,7 +348,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         event.clientX <= secondaryRect.right &&
         event.clientY >= secondaryRect.top &&
         event.clientY <= secondaryRect.bottom;
-      setIsSecondaryHovered(insideSecondary);
 
       const siteRect = sitesRowRef.current?.getBoundingClientRect();
       const insideSitesRow =
@@ -314,11 +356,35 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         event.clientX <= siteRect.right &&
         event.clientY >= siteRect.top &&
         event.clientY <= siteRect.bottom;
-      if (insideSitesRow) {
+
+      const rawZone = insideSecondary
+        ? "SECONDARY"
+        : insideSitesRow
+          ? "SITES_ROW"
+          : insidePrimary
+            ? "PRIMARY"
+            : "OUTSIDE";
+      if (rawZone === "SITES_ROW" || rawZone === "SECONDARY") {
         cancelSitesLeaveTimer();
       }
-      setIsSitesRowHovered(insideSitesRow);
-      setIsPrimaryHovered(insideSidebar);
+      if (rawZone === "OUTSIDE" && pointerZoneRef.current === "SITES_ROW") {
+        if (sitesHoverTimeout.current === null) {
+          sitesHoverTimeout.current = window.setTimeout(() => {
+            sitesHoverTimeout.current = null;
+            if (pointerZoneRef.current === "SITES_ROW") {
+              setPointerZone("OUTSIDE");
+            }
+          }, 180);
+        }
+      } else {
+        if (sitesHoverTimeout.current !== null) {
+          window.clearTimeout(sitesHoverTimeout.current);
+          sitesHoverTimeout.current = null;
+        }
+        if (pointerZoneRef.current !== rawZone) {
+          setPointerZone(rawZone);
+        }
+      }
 
       if (!insideSidebar) {
         cancelSitesLeaveTimer();
@@ -357,17 +423,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (
       keepMenuExpanded ||
       pointerInsideSidebarRef.current ||
-      secondaryHoverRef.current ||
+      pointerZoneRef.current === "SECONDARY" ||
       secondaryFocusRef.current
     ) {
       return;
     }
-    setIsSecondaryHovered(false);
     setIsSecondaryFocused(false);
-    setIsSitesRowHovered(false);
     if (sitesHoverTimeout.current !== null) {
       window.clearTimeout(sitesHoverTimeout.current);
       sitesHoverTimeout.current = null;
+    }
+    if (pointerZoneRef.current !== "OUTSIDE") {
+      setPointerZone("OUTSIDE");
     }
     if (
       secondaryPanelRef.current &&
@@ -393,7 +460,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   };
   const handleSitesRowEnter = () => {
     cancelSitesLeaveTimer();
-    setIsSitesRowHovered(true);
+    setPointerZone("SITES_ROW");
   };
   const handleSitesRowLeave = () => {
     // Grace period prevents accidental collapse while moving between rails.
@@ -401,12 +468,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     sitesHoverTimeout.current = window.setTimeout(() => {
       if (
         pointerInsideSidebarRef.current ||
-        secondaryHoverRef.current ||
+        pointerZoneRef.current === "SECONDARY" ||
         secondaryFocusRef.current
       ) {
         return;
       }
-      setIsSitesRowHovered(false);
+      if (pointerZoneRef.current === "SITES_ROW") {
+        setPointerZone("OUTSIDE");
+      }
     }, 180);
   };
   return (
@@ -439,8 +508,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         <nav
           className="vrm-primary-rail"
           aria-label="Primary"
-          onMouseEnter={() => setIsPrimaryHovered(true)}
-          onMouseLeave={() => setIsPrimaryHovered(false)}
+          ref={primaryRailRef}
           onFocusCapture={() => setIsPrimaryFocused(true)}
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
         >
@@ -527,8 +595,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             className="vrm-extended-panel"
             aria-label="Secondary"
             ref={secondaryPanelRef}
-            onMouseEnter={() => setIsSecondaryHovered(true)}
-            onMouseLeave={() => setIsSecondaryHovered(false)}
             onFocusCapture={() => setIsSecondaryFocused(true)}
             onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
             onPointerEnter={cancelSitesLeaveTimer}
