@@ -138,24 +138,6 @@ export const useDashboardWidgets = ({
             if (controller.signal.aborted) {
               return;
             }
-            if (!import.meta.env.PROD && widget.id === VRM_KPI_IDS.traffic) {
-              const summary = result.meta?.summary as
-                | Record<string, unknown>
-                | undefined;
-              console.log("[VRM] raw widget result", {
-                widgetId: widget.id,
-                chartType: result.chartType,
-                chartStyle: summary?.chartStyle,
-                chartSubType: summary?.chartSubType,
-                seriesLength: result.series.length,
-                firstPoints: result.series[0]?.data
-                  ?.slice(0, 5)
-                  ?.map((point) => ({
-                    x: point.x,
-                    value: point.value ?? point.y,
-                  })),
-              });
-            }
             const decorated = decorateResult(
               widget.id,
               result,

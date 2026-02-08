@@ -121,9 +121,6 @@ export const KpiTile = ({
     }
   }, [isVrm, isFooterMounted, vrmHover]);
   if (!primarySeries) {
-    if (!import.meta.env.PROD) {
-      console.log("[VRM traffic] KpiTile early return: no primary series");
-    }
     return null;
   }
   const latestPoint = primarySeries.data[primarySeries.data.length - 1];
@@ -273,15 +270,6 @@ export const KpiTile = ({
           );
         })
       : [];
-  if (!import.meta.env.PROD && isTraffic) {
-    console.log("[VRM traffic] KpiTile input", {
-      chartStyle,
-      presentation,
-      primarySeriesLength: primarySeries?.data?.length,
-      headlineValue: summary?.headlineValue,
-      hasTrafficRows: trafficRows.length > 0,
-    });
-  }
   const isFooterVisible = footerPhase === "enter" || footerPhase === "visible";
   return (
     <div

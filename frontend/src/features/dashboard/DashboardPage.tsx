@@ -79,6 +79,7 @@ const DashboardPage = ({
   const error = manifestStatus === "error" ? manifestError : widgetError;
 
   const gridColumns = manifest?.layout.grid.columns ?? 12;
+
   return (
     <div className="dashboard-v2" aria-busy={status === "loading"}>
       <div className="dashboard-v2__content vrm-dashboard-shell">

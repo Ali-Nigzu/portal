@@ -96,10 +96,7 @@ export const useEventLogsQuery = (credentials: Credentials) => {
           skipNextFetch.current = true;
         }
       }
-    } catch (storedError) {
-      if (!import.meta.env.PROD) {
-        console.info("Failed to restore event logs state", storedError);
-      }
+    } catch {
     }
   }, [storageKey]);
 
