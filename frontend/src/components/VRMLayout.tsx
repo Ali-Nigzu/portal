@@ -59,36 +59,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   >("OUTSIDE");
   const pointerZoneRef = useRef(pointerZone);
   const [isTouchMode, setIsTouchMode] = useState(false);
-  const [openSecondaryIntent, setOpenSecondaryIntent] = useState(false);
-  const DEBUG_NAV =
-    import.meta.env.DEV &&
-    typeof window !== "undefined" &&
-    window.localStorage.getItem("DEBUG_NAV") === "1";
-  const [debugState, setDebugState] = useState<{
-    pointerZone: "OUTSIDE" | "PRIMARY" | "SITES_ROW" | "SECONDARY";
-    expandPrimary: boolean;
-    mountSecondary: boolean;
-    expandSecondary: boolean;
-    keepMenuExpanded: boolean;
-    isSelectorOpen: boolean;
-    isSitesRouteActive: boolean;
-    isPrimaryHovered: boolean;
-    isSitesRowHovered: boolean;
-    isSecondaryHovered: boolean;
-    activeElementSummary: string;
-    activeElementLocation: "PRIMARY" | "SECONDARY" | "OUTSIDE";
-    rects: {
-      primary: DOMRect | null;
-      secondary: DOMRect | null;
-      shell: DOMRect | null;
-    };
-    lastEvent: {
-      type: string;
-      targetClassName: string;
-      currentTargetClassName: string;
-      clickSites: boolean;
-    };
-  } | null>(null);
+  const [sitesIntentOpen, setSitesIntentOpen] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -141,69 +112,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     );
   };
   const handleSitesClick = () => {
-    setOpenSecondaryIntent(true);
-    if (DEBUG_NAV) {
-      const activeElement = document.activeElement as HTMLElement | null;
-      const activeElementLocation = activeElement
-        ? secondaryPanelRef.current?.contains(activeElement)
-          ? "SECONDARY"
-          : primaryRailRef.current?.contains(activeElement)
-            ? "PRIMARY"
-            : "OUTSIDE"
-        : "OUTSIDE";
-      const activeElementSummary = activeElement
-        ? `${activeElement.tagName.toLowerCase()}${
-            activeElement.className ? `.${activeElement.className}` : ""
-          }`
-        : "none";
-      const nextMountSecondary =
-        isSitesActive ||
-        pointerZone === "SECONDARY" ||
-        pointerZone === "SITES_ROW" ||
-        focusZone === "SECONDARY" ||
-        true;
-      const nextExpandSecondary =
-        keepMenuExpanded ||
-        pointerZone === "SECONDARY" ||
-        focusZone === "SECONDARY" ||
-        true;
-      setDebugState((prev) => ({
-        pointerZone,
-        expandPrimary: isPrimaryExpanded,
-        mountSecondary: nextMountSecondary,
-        expandSecondary: nextExpandSecondary,
-        keepMenuExpanded,
-        isSelectorOpen,
-        isSitesRouteActive: isSitesActive,
-        isPrimaryHovered,
-        isSitesRowHovered,
-        isSecondaryHovered,
-        activeElementSummary,
-        activeElementLocation,
-        rects: prev?.rects ?? {
-          primary: null,
-          secondary: null,
-          shell: null,
-        },
-        lastEvent: {
-          type: "click",
-          targetClassName: "vrm-nav-row",
-          currentTargetClassName: "vrm-primary-rail",
-          clickSites: true,
-        },
-      }));
-      const time = Math.round(performance.now());
-      // eslint-disable-next-line no-console
-      console.info(
-        `t=${time} evt=click zone=${pointerZone} clickSites=1 selector=${
-          isSelectorOpen ? 1 : 0
-        } active=${activeElementSummary} mountS=${
-          nextMountSecondary ? 1 : 0
-        } expS=${nextExpandSecondary ? 1 : 0} expP=${
-          isPrimaryExpanded ? 1 : 0
-        }`,
-      );
-    }
+    setSitesIntentOpen(true);
     openSitesSelector();
   };
   useEffect(() => {
@@ -332,11 +241,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
-  const isSitesActive = primaryActivePath === "/sites";
-  const isPrimaryHovered =
-    pointerZone === "PRIMARY" || pointerZone === "SITES_ROW";
-  const isSitesRowHovered = pointerZone === "SITES_ROW";
-  const isSecondaryHovered = pointerZone === "SECONDARY";
   const focusZone = isSecondaryFocused
     ? "SECONDARY"
     : isPrimaryFocused
@@ -346,25 +250,20 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     !keepMenuExpanded &&
     pointerZone === "OUTSIDE" &&
     focusZone === "OUTSIDE" &&
-    !openSecondaryIntent;
-  const mountSecondaryBase =
-    isSitesActive ||
-    pointerZone === "SITES_ROW" ||
-    pointerZone === "SECONDARY" ||
-    focusZone === "SECONDARY" ||
-    openSecondaryIntent;
-  const shouldShowSitesPanel = !shouldForceCollapse && mountSecondaryBase;
+    !sitesIntentOpen;
   const isPrimaryExpanded =
     keepMenuExpanded ||
     pointerZone === "PRIMARY" ||
     pointerZone === "SITES_ROW" ||
-    focusZone === "PRIMARY";
+    focusZone === "PRIMARY" ||
+    sitesIntentOpen;
   const isSecondaryExpanded =
     !shouldForceCollapse &&
     (keepMenuExpanded ||
+      pointerZone === "SITES_ROW" ||
       pointerZone === "SECONDARY" ||
       focusZone === "SECONDARY" ||
-      openSecondaryIntent);
+      sitesIntentOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -389,38 +288,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     };
 
   // Effects
-  const logDebugEvent = useMemo(
-    () =>
-      (
-        eventType: string,
-        zone: "OUTSIDE" | "PRIMARY" | "SITES_ROW" | "SECONDARY",
-        expPrimary: boolean,
-        mountSecondary: boolean,
-        expSecondary: boolean,
-        clickSites: boolean,
-      ) => {
-        if (!DEBUG_NAV) {
-          return;
-        }
-        const activeElement = document.activeElement as HTMLElement | null;
-        const activeLabel = activeElement
-          ? `${activeElement.tagName.toLowerCase()}${
-              activeElement.className ? `.${activeElement.className}` : ""
-            }`
-          : "none";
-        const time = Math.round(performance.now());
-        // eslint-disable-next-line no-console
-        console.info(
-          `t=${time} evt=${eventType} zone=${zone} clickSites=${
-            clickSites ? 1 : 0
-          } selector=${isSelectorOpen ? 1 : 0} active=${activeLabel} mountS=${
-            mountSecondary ? 1 : 0
-          } expS=${expSecondary ? 1 : 0} expP=${expPrimary ? 1 : 0}`,
-        );
-      },
-    [DEBUG_NAV, isSelectorOpen],
-  );
-
   useEffect(() => {
     if (keepMenuExpanded || typeof window === "undefined") {
       return;
@@ -509,85 +376,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         }
       }
 
-      if (DEBUG_NAV) {
-        const target = event.target as HTMLElement | null;
-        const currentTarget = event.currentTarget as HTMLElement | null;
-        const activeElement = document.activeElement as HTMLElement | null;
-        const activeElementLocation = activeElement
-          ? secondaryPanelRef.current?.contains(activeElement)
-            ? "SECONDARY"
-            : primaryRailRef.current?.contains(activeElement)
-              ? "PRIMARY"
-              : "OUTSIDE"
-          : "OUTSIDE";
-        const activeElementSummary = activeElement
-          ? `${activeElement.tagName.toLowerCase()}${
-              activeElement.className ? `.${activeElement.className}` : ""
-            }`
-          : "none";
-        setDebugState({
-          pointerZone: zoneForState,
-          expandPrimary:
-            keepMenuExpanded ||
-            zoneForState === "PRIMARY" ||
-            zoneForState === "SITES_ROW" ||
-            focusZone === "PRIMARY",
-          mountSecondary:
-            !shouldForceCollapse &&
-            (isSitesActive ||
-              zoneForState === "SECONDARY" ||
-              zoneForState === "SITES_ROW" ||
-              focusZone === "SECONDARY" ||
-              openSecondaryIntent),
-          expandSecondary:
-            !shouldForceCollapse &&
-            (keepMenuExpanded ||
-              zoneForState === "SECONDARY" ||
-              focusZone === "SECONDARY" ||
-              openSecondaryIntent),
-          keepMenuExpanded,
-          isSelectorOpen,
-          isSitesRouteActive: isSitesActive,
-          isPrimaryHovered:
-            zoneForState === "PRIMARY" || zoneForState === "SITES_ROW",
-          isSitesRowHovered: zoneForState === "SITES_ROW",
-          isSecondaryHovered: zoneForState === "SECONDARY",
-          activeElementSummary,
-          activeElementLocation,
-          rects: {
-            primary: primaryRect ?? null,
-            secondary: secondaryRect ?? null,
-            shell: shellRect ?? null,
-          },
-          lastEvent: {
-            type: event.type,
-            targetClassName: target?.className ?? "",
-            currentTargetClassName: currentTarget?.className ?? "",
-            clickSites: false,
-          },
-        });
-        logDebugEvent(
-          event.type,
-          zoneForState,
-          keepMenuExpanded ||
-            zoneForState === "PRIMARY" ||
-            zoneForState === "SITES_ROW" ||
-            focusZone === "PRIMARY",
-          !shouldForceCollapse &&
-            (isSitesActive ||
-              zoneForState === "SECONDARY" ||
-              zoneForState === "SITES_ROW" ||
-              focusZone === "SECONDARY" ||
-              openSecondaryIntent),
-          !shouldForceCollapse &&
-            (keepMenuExpanded ||
-              zoneForState === "SECONDARY" ||
-              focusZone === "SECONDARY" ||
-              openSecondaryIntent),
-          false,
-        );
-      }
-
       if (!insideSidebar) {
         cancelSitesLeaveTimer();
         if (
@@ -621,31 +409,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
       if (!keepMenuExpanded && outsideShell) {
         cancelSitesLeaveTimer();
-        setOpenSecondaryIntent(false);
+        setSitesIntentOpen(false);
         setPointerZone("OUTSIDE");
         setIsSecondaryFocused(false);
-      }
-      if (DEBUG_NAV) {
-        logDebugEvent(
-          event.type,
-          pointerZoneRef.current,
-          isPrimaryExpanded,
-          shouldShowSitesPanel,
-          isSecondaryExpanded,
-          false,
-        );
-        setDebugState((prev) =>
-          prev
-            ? {
-                ...prev,
-                lastEvent: {
-                  ...prev.lastEvent,
-                  type: event.type,
-                  clickSites: false,
-                },
-              }
-            : prev,
-        );
       }
     };
 
@@ -655,19 +421,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerdown", handlePointerDown);
     };
-  }, [
-    DEBUG_NAV,
-    focusZone,
-    isPrimaryExpanded,
-    isSecondaryExpanded,
-    isSitesActive,
-    isTouchMode,
-    keepMenuExpanded,
-    logDebugEvent,
-    openSecondaryIntent,
-    shouldForceCollapse,
-    shouldShowSitesPanel,
-  ]);
+  }, [isTouchMode, keepMenuExpanded]);
   useEffect(() => {
     if (
       keepMenuExpanded ||
@@ -697,13 +451,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   useEffect(() => {
     if (
       keepMenuExpanded ||
-      pointerZoneRef.current !== "OUTSIDE" ||
+      pointerZone !== "OUTSIDE" ||
       focusZone !== "OUTSIDE"
     ) {
       return;
     }
     cancelSitesLeaveTimer();
-    setOpenSecondaryIntent(false);
+    setSitesIntentOpen(false);
     setIsSecondaryFocused(false);
     setIsPrimaryFocused(false);
     if (
@@ -719,6 +473,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     keepMenuExpanded,
     location.pathname,
     location.search,
+    pointerZone,
     siteId,
   ]);
 
@@ -759,9 +514,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     <div className="vrm-layout">
       <div
         ref={sidebarShellRef}
-        className={`vrm-sidebar-shell ${
-          shouldShowSitesPanel ? "vrm-sidebar-shell--sites" : ""
-        } ${
+        className={`vrm-sidebar-shell vrm-sidebar-shell--sites ${
           keepMenuExpanded ? "vrm-sidebar-shell--expanded" : ""
         } ${
           !keepMenuExpanded && !isPrimaryExpanded
@@ -772,11 +525,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             ? "vrm-sidebar-shell--primary-expanded"
             : ""
         } ${
-          !keepMenuExpanded && shouldShowSitesPanel && !isSecondaryExpanded
+          !keepMenuExpanded && !isSecondaryExpanded
             ? "vrm-sidebar-shell--secondary-collapsed"
             : ""
         } ${
-          !keepMenuExpanded && shouldShowSitesPanel && isSecondaryExpanded
+          !keepMenuExpanded && isSecondaryExpanded
             ? "vrm-sidebar-shell--secondary-expanded"
             : ""
         }`}
@@ -867,223 +620,136 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             />
           </NavList>
         </nav>
-        {shouldShowSitesPanel && (
-          <nav
-            className="vrm-extended-panel"
-            aria-label="Secondary"
-            ref={secondaryPanelRef}
-            onFocusCapture={() => setIsSecondaryFocused(true)}
-            onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
-            onPointerEnter={cancelSitesLeaveTimer}
-            onPointerLeave={handleSitesRowLeave}
-          >
-            <div className="vrm-secondary-header">
-              <SecondarySearch />
-              {!showSiteMenu && (
-                <SecondaryPinnedRow
-                  to={getNavigationPath(
-                    `/sites/${allSitesOption.id}/dashboard`,
-                    { panel: undefined },
-                  )}
-                  leftIcon={<NavIcon icon={MapPin} />}
-                  label={allSitesOption.label}
-                  active={
-                    isSiteSelection &&
-                    allSitesOption.id === selectedSiteForList
-                  }
-                />
-              )}
-              {showSiteMenu && (
-                <SecondaryPinnedRow
-                  onClick={openSitesSelector}
-                  leftIcon={
-                    <span className="vrm-nav-row__icon-stack">
-                      <NavIcon
-                        icon={ArrowLeft}
-                        className="vrm-nav-back"
-                        size={18}
-                      />
-                      <NavIcon icon={MapPin} />
-                    </span>
-                  }
-                  label={activeSite?.label ?? "Site"}
-                />
-              )}
-              <SecondaryDivider />
-            </div>
+        <nav
+          className="vrm-extended-panel"
+          aria-label="Secondary"
+          ref={secondaryPanelRef}
+          onFocusCapture={() => setIsSecondaryFocused(true)}
+          onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
+          onPointerEnter={cancelSitesLeaveTimer}
+          onPointerLeave={handleSitesRowLeave}
+        >
+          <div className="vrm-secondary-header">
+            <SecondarySearch />
             {!showSiteMenu && (
-              <NavList className="vrm-secondary-list">
-                {SITE_OPTIONS.filter((site) => site.id !== "all").map(
-                  (site) => {
-                  const siteSubPath = (() => {
-                    const match = location.pathname.match(
-                      /^\/sites\/[^/]+(\/.*)?$/,
-                    );
-                    const trailing = match?.[1];
-                    if (!trailing || trailing === "/") {
-                      return "/dashboard";
-                    }
-                    return trailing;
-                  })();
-                  const siteTargetPath = `/sites/${site.id}${siteSubPath}`;
-                  const isActive =
-                    isSiteSelection && site.id === selectedSiteForList;
-                  return (
-                    <NavRow
-                      key={site.id}
-                      to={getNavigationPath(siteTargetPath, {
-                        panel: undefined,
-                      })}
-                      leftIcon={<NavIcon icon={MapPin} />}
-                      label={site.label}
-                      active={isActive}
-                      ariaLabel={!isSecondaryExpanded ? site.label : undefined}
-                    />
-                  );
-                },
+              <SecondaryPinnedRow
+                to={getNavigationPath(
+                  `/sites/${allSitesOption.id}/dashboard`,
+                  { panel: undefined },
                 )}
-                <NavRow
-                  leftIcon={<NavIcon icon={Plus} />}
-                  label="Add site"
-                  className="vrm-nav-row--inert"
-                  ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
-                />
-              </NavList>
+                leftIcon={<NavIcon icon={MapPin} />}
+                label={allSitesOption.label}
+                active={
+                  isSiteSelection && allSitesOption.id === selectedSiteForList
+                }
+              />
             )}
-            {showSiteMenu && !shouldShowAdminMenu && (
-              <NavList className="vrm-secondary-list">
-                {clientNavigationItems.map((item) => {
-                  const isDisabled = Boolean(item.disabled);
-                  const isActive =
-                    item.path && !isDisabled ? isActiveRoute(item.path) : false;
-                  const navLabel = (
-                    <span className="vrm-nav-row__label-text">
-                      {item.label}
-                      {item.statusLabel && (
-                        <span className="vrm-nav-row__chip">
-                          {item.statusLabel}
-                        </span>
-                      )}
-                    </span>
-                  );
-                  if (isDisabled) {
-                    return (
-                      <NavRow
-                        key={item.id ?? item.label}
-                        leftIcon={item.icon}
-                        label={navLabel}
-                        disabled
-                        ariaLabel={
-                          !isSecondaryExpanded ? item.label : undefined
-                        }
-                      />
-                    );
+            {showSiteMenu && (
+              <SecondaryPinnedRow
+                onClick={openSitesSelector}
+                leftIcon={
+                  <span className="vrm-nav-row__icon-stack">
+                    <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
+                    <NavIcon icon={MapPin} />
+                  </span>
+                }
+                label={activeSite?.label ?? "Site"}
+              />
+            )}
+            <SecondaryDivider />
+          </div>
+          {!showSiteMenu && (
+            <NavList className="vrm-secondary-list">
+              {SITE_OPTIONS.filter((site) => site.id !== "all").map((site) => {
+                const siteSubPath = (() => {
+                  const match = location.pathname.match(/^\/sites\/[^/]+(\/.*)?$/);
+                  const trailing = match?.[1];
+                  if (!trailing || trailing === "/") {
+                    return "/dashboard";
                   }
-                  if (!item.path) {
-                    return null;
-                  }
+                  return trailing;
+                })();
+                const siteTargetPath = `/sites/${site.id}${siteSubPath}`;
+                const isActive =
+                  isSiteSelection && site.id === selectedSiteForList;
+                return (
+                  <NavRow
+                    key={site.id}
+                    to={getNavigationPath(siteTargetPath, { panel: undefined })}
+                    leftIcon={<NavIcon icon={MapPin} />}
+                    label={site.label}
+                    active={isActive}
+                    ariaLabel={!isSecondaryExpanded ? site.label : undefined}
+                  />
+                );
+              })}
+              <NavRow
+                leftIcon={<NavIcon icon={Plus} />}
+                label="Add site"
+                className="vrm-nav-row--inert"
+                ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+              />
+            </NavList>
+          )}
+          {showSiteMenu && !shouldShowAdminMenu && (
+            <NavList className="vrm-secondary-list">
+              {clientNavigationItems.map((item) => {
+                const isDisabled = Boolean(item.disabled);
+                const isActive =
+                  item.path && !isDisabled ? isActiveRoute(item.path) : false;
+                const navLabel = (
+                  <span className="vrm-nav-row__label-text">
+                    {item.label}
+                    {item.statusLabel && (
+                      <span className="vrm-nav-row__chip">
+                        {item.statusLabel}
+                      </span>
+                    )}
+                  </span>
+                );
+                if (isDisabled) {
                   return (
                     <NavRow
-                      key={item.path}
-                      to={getNavigationPath(item.path)}
+                      key={item.id ?? item.label}
                       leftIcon={item.icon}
                       label={navLabel}
-                      active={isActive}
+                      disabled
                       ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     />
                   );
-                })}
-              </NavList>
-            )}
-            {shouldShowAdminMenu && (
-              <NavList className="vrm-secondary-list">
-                {adminNavigationItems.map((item) => (
+                }
+                if (!item.path) {
+                  return null;
+                }
+                return (
                   <NavRow
                     key={item.path}
                     to={getNavigationPath(item.path)}
                     leftIcon={item.icon}
-                    label={item.label}
-                    active={item.path ? isActiveRoute(item.path) : false}
+                    label={navLabel}
+                    active={isActive}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                   />
-                ))}
-              </NavList>
-            )}
-          </nav>
-        )}
+                );
+              })}
+            </NavList>
+          )}
+          {shouldShowAdminMenu && (
+            <NavList className="vrm-secondary-list">
+              {adminNavigationItems.map((item) => (
+                <NavRow
+                  key={item.path}
+                  to={getNavigationPath(item.path)}
+                  leftIcon={item.icon}
+                  label={item.label}
+                  active={item.path ? isActiveRoute(item.path) : false}
+                  ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                />
+              ))}
+            </NavList>
+          )}
+        </nav>
       </div>
-      {DEBUG_NAV && debugState && (
-        <div
-          style={{
-            position: "fixed",
-            top: 12,
-            right: 12,
-            zIndex: 9999,
-            background: "rgba(0, 0, 0, 0.75)",
-            color: "#fff",
-            padding: "10px 12px",
-            borderRadius: 8,
-            fontSize: 12,
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-            lineHeight: 1.4,
-            maxWidth: 360,
-            pointerEvents: "none",
-          }}
-        >
-          <div>zone: {debugState.pointerZone}</div>
-          <div>keepExpanded: {debugState.keepMenuExpanded ? "1" : "0"}</div>
-          <div>selectorOpen: {debugState.isSelectorOpen ? "1" : "0"}</div>
-          <div>sitesRoute: {debugState.isSitesRouteActive ? "1" : "0"}</div>
-          <div>
-            expP: {debugState.expandPrimary ? "1" : "0"} / mountS:{" "}
-            {debugState.mountSecondary ? "1" : "0"} / expS:{" "}
-            {debugState.expandSecondary ? "1" : "0"}
-          </div>
-          <div>
-            hoverP: {debugState.isPrimaryHovered ? "1" : "0"} / hoverSites:{" "}
-            {debugState.isSitesRowHovered ? "1" : "0"} / hoverS:{" "}
-            {debugState.isSecondaryHovered ? "1" : "0"}
-          </div>
-          <div>
-            active: {debugState.activeElementSummary} (
-            {debugState.activeElementLocation})
-          </div>
-          <div>lastEvent: {debugState.lastEvent.type}</div>
-          <div>
-            rects P/S/SH:{" "}
-            {debugState.rects.primary
-              ? `${Math.round(debugState.rects.primary.x)},${Math.round(
-                  debugState.rects.primary.y,
-                )} ${Math.round(debugState.rects.primary.width)}x${Math.round(
-                  debugState.rects.primary.height,
-                )}`
-              : "null"}{" "}
-            |{" "}
-            {debugState.rects.secondary
-              ? `${Math.round(debugState.rects.secondary.x)},${Math.round(
-                  debugState.rects.secondary.y,
-                )} ${Math.round(
-                  debugState.rects.secondary.width,
-                )}x${Math.round(debugState.rects.secondary.height)}`
-              : "null"}{" "}
-            |{" "}
-            {debugState.rects.shell
-              ? `${Math.round(debugState.rects.shell.x)},${Math.round(
-                  debugState.rects.shell.y,
-                )} ${Math.round(debugState.rects.shell.width)}x${Math.round(
-                  debugState.rects.shell.height,
-                )}`
-              : "null"}
-          </div>
-          <div>
-            last evt target: {debugState.lastEvent.targetClassName || "none"}
-          </div>
-          <div>
-            last evt current:{" "}
-            {debugState.lastEvent.currentTargetClassName || "none"}
-          </div>
-        </div>
-      )}
       <main className="vrm-main">
         <div className="vrm-content">{children || <Outlet />}</div>
       </main>

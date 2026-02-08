@@ -376,6 +376,11 @@ button.vrm-nav-row {
   transition: width 180ms ease;
 }
 
+.vrm-extended-panel {
+  min-width: var(--vrm-extended-panel-width-collapsed);
+  flex-shrink: 0;
+}
+
 .vrm-sidebar-shell--primary-collapsed .vrm-primary-rail {
   width: var(--vrm-primary-rail-width-collapsed);
 }
