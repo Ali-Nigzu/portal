@@ -59,6 +59,25 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   >("OUTSIDE");
   const pointerZoneRef = useRef(pointerZone);
   const [isTouchMode, setIsTouchMode] = useState(false);
+  const [debugState, setDebugState] = useState<{
+    pointerZone: "OUTSIDE" | "PRIMARY" | "SITES_ROW" | "SECONDARY";
+    expandPrimary: boolean;
+    mountSecondary: boolean;
+    expandSecondary: boolean;
+    isPrimaryHovered: boolean;
+    isSitesRowHovered: boolean;
+    isSecondaryHovered: boolean;
+    activeElementLocation: "PRIMARY" | "SECONDARY" | "OUTSIDE";
+    rects: {
+      primary: DOMRect | null;
+      secondary: DOMRect | null;
+      shell: DOMRect | null;
+    };
+    lastEvent: {
+      targetClassName: string;
+      currentTargetClassName: string;
+    };
+  } | null>(null);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -237,6 +256,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const isSitesActive = primaryActivePath === "/sites";
+  const isPrimaryHovered =
+    pointerZone === "PRIMARY" || pointerZone === "SITES_ROW";
+  const isSitesRowHovered = pointerZone === "SITES_ROW";
+  const isSecondaryHovered = pointerZone === "SECONDARY";
   const focusZone = isSecondaryFocused
     ? "SECONDARY"
     : isPrimaryFocused
@@ -248,7 +271,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     pointerZone === "SECONDARY" ||
     focusZone === "SECONDARY";
   const isPrimaryExpanded =
-    keepMenuExpanded || pointerZone === "PRIMARY" || focusZone === "PRIMARY";
+    keepMenuExpanded ||
+    pointerZone === "PRIMARY" ||
+    pointerZone === "SITES_ROW" ||
+    focusZone === "PRIMARY";
   const isSecondaryExpanded =
     keepMenuExpanded || pointerZone === "SECONDARY" || focusZone === "SECONDARY";
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
@@ -279,32 +305,51 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (typeof window === "undefined") {
       return false;
     }
-    return window.localStorage.getItem("DEBUG_NAV") === "1";
+    return (
+      import.meta.env.DEV && window.localStorage.getItem("DEBUG_NAV") === "1"
+    );
   }, []);
-  const debugNavSnapshotRef = useRef("");
-  useEffect(() => {
-    if (!debugNavEnabled) {
-      return;
-    }
-    const snapshot = JSON.stringify({
-      pointerZone,
-      mountSecondary: shouldShowSitesPanel,
-      expandPrimary: isPrimaryExpanded,
-      expandSecondary: isSecondaryExpanded,
-    });
-    if (snapshot === debugNavSnapshotRef.current) {
-      return;
-    }
-    debugNavSnapshotRef.current = snapshot;
-    // eslint-disable-next-line no-console
-    console.info("[nav]", snapshot);
-  }, [
-    debugNavEnabled,
-    isPrimaryExpanded,
-    isSecondaryExpanded,
-    pointerZone,
-    shouldShowSitesPanel,
-  ]);
+  const lastPointerEventRef = useRef<{
+    type: string;
+    x: number;
+    y: number;
+    targetClassName: string;
+    currentTargetClassName: string;
+  } | null>(null);
+  const logDebugEvent = useMemo(
+    () =>
+      (
+        eventType: string,
+        zone: "OUTSIDE" | "PRIMARY" | "SITES_ROW" | "SECONDARY",
+        x: number,
+        y: number,
+        expPrimary: boolean,
+        mountSecondary: boolean,
+        expSecondary: boolean,
+      ) => {
+        if (!debugNavEnabled) {
+          return;
+        }
+        const activeElement = document.activeElement as HTMLElement | null;
+        const activeLabel = activeElement
+          ? `${activeElement.tagName.toLowerCase()}${
+              activeElement.className ? `.${activeElement.className}` : ""
+            }`
+          : "none";
+        const time = Math.round(performance.now());
+        // eslint-disable-next-line no-console
+        console.info(
+          `t=${time} evt=${eventType} zone=${zone} x=${Math.round(
+            x,
+          )} y=${Math.round(y)} expP=${expPrimary ? 1 : 0} mountS=${
+            mountSecondary ? 1 : 0
+          } expS=${expSecondary ? 1 : 0} focusP=${
+            isPrimaryFocused ? 1 : 0
+          } focusS=${isSecondaryFocused ? 1 : 0} active=${activeLabel}`,
+        );
+      },
+    [debugNavEnabled, isPrimaryFocused, isSecondaryFocused],
+  );
 
   useEffect(() => {
     if (keepMenuExpanded || typeof window === "undefined") {
@@ -364,7 +409,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           : insidePrimary
             ? "PRIMARY"
             : "OUTSIDE";
-      if (rawZone === "SITES_ROW" || rawZone === "SECONDARY") {
+      const zoneForState =
+        rawZone === "OUTSIDE" && pointerZoneRef.current === "SITES_ROW"
+          ? "SITES_ROW"
+          : rawZone;
+      if (
+        rawZone === "SITES_ROW" ||
+        rawZone === "SECONDARY" ||
+        rawZone === "PRIMARY"
+      ) {
         cancelSitesLeaveTimer();
       }
       if (rawZone === "OUTSIDE" && pointerZoneRef.current === "SITES_ROW") {
@@ -386,6 +439,74 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         }
       }
 
+      if (debugNavEnabled) {
+        const target = event.target as HTMLElement | null;
+        const currentTarget = event.currentTarget as HTMLElement | null;
+        lastPointerEventRef.current = {
+          type: event.type,
+          x: event.clientX,
+          y: event.clientY,
+          targetClassName: target?.className ?? "",
+          currentTargetClassName: currentTarget?.className ?? "",
+        };
+        const activeElement = document.activeElement as HTMLElement | null;
+        const activeElementLocation = activeElement
+          ? secondaryPanelRef.current?.contains(activeElement)
+            ? "SECONDARY"
+            : primaryRailRef.current?.contains(activeElement)
+              ? "PRIMARY"
+              : "OUTSIDE"
+          : "OUTSIDE";
+        setDebugState({
+          pointerZone: zoneForState,
+          expandPrimary:
+            keepMenuExpanded ||
+            zoneForState === "PRIMARY" ||
+            zoneForState === "SITES_ROW" ||
+            focusZone === "PRIMARY",
+          mountSecondary:
+            isSitesActive ||
+            zoneForState === "SECONDARY" ||
+            zoneForState === "SITES_ROW" ||
+            focusZone === "SECONDARY",
+          expandSecondary:
+            keepMenuExpanded ||
+            zoneForState === "SECONDARY" ||
+            focusZone === "SECONDARY",
+          isPrimaryHovered:
+            zoneForState === "PRIMARY" || zoneForState === "SITES_ROW",
+          isSitesRowHovered: zoneForState === "SITES_ROW",
+          isSecondaryHovered: zoneForState === "SECONDARY",
+          activeElementLocation,
+          rects: {
+            primary: primaryRect ?? null,
+            secondary: secondaryRect ?? null,
+            shell: shellRect ?? null,
+          },
+          lastEvent: {
+            targetClassName: target?.className ?? "",
+            currentTargetClassName: currentTarget?.className ?? "",
+          },
+        });
+        logDebugEvent(
+          event.type,
+          zoneForState,
+          event.clientX,
+          event.clientY,
+          keepMenuExpanded ||
+            zoneForState === "PRIMARY" ||
+            zoneForState === "SITES_ROW" ||
+            focusZone === "PRIMARY",
+          isSitesActive ||
+            zoneForState === "SECONDARY" ||
+            zoneForState === "SITES_ROW" ||
+            focusZone === "SECONDARY",
+          keepMenuExpanded ||
+            zoneForState === "SECONDARY" ||
+            focusZone === "SECONDARY",
+        );
+      }
+
       if (!insideSidebar) {
         cancelSitesLeaveTimer();
         if (
@@ -399,7 +520,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
     };
 
-    const handlePointerDown = () => {
+    const handlePointerDown = (event: PointerEvent) => {
       if (
         !keepMenuExpanded &&
         !pointerInsideSidebarRef.current &&
@@ -410,6 +531,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         document.activeElement.blur();
         setIsSecondaryFocused(false);
       }
+      if (debugNavEnabled) {
+        logDebugEvent(
+          event.type,
+          pointerZoneRef.current,
+          event.clientX,
+          event.clientY,
+          isPrimaryExpanded,
+          shouldShowSitesPanel,
+          isSecondaryExpanded,
+        );
+      }
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -418,7 +550,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerdown", handlePointerDown);
     };
-  }, [keepMenuExpanded, isTouchMode]);
+  }, [
+    debugNavEnabled,
+    focusZone,
+    isPrimaryExpanded,
+    isSecondaryExpanded,
+    isSitesActive,
+    isTouchMode,
+    keepMenuExpanded,
+    logDebugEvent,
+    shouldShowSitesPanel,
+  ]);
   useEffect(() => {
     if (
       keepMenuExpanded ||
@@ -735,6 +877,71 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           </nav>
         )}
       </div>
+      {debugNavEnabled && debugState && (
+        <div
+          style={{
+            position: "fixed",
+            top: 12,
+            right: 12,
+            zIndex: 9999,
+            background: "rgba(0, 0, 0, 0.75)",
+            color: "#fff",
+            padding: "10px 12px",
+            borderRadius: 8,
+            fontSize: 12,
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            lineHeight: 1.4,
+            maxWidth: 360,
+            pointerEvents: "none",
+          }}
+        >
+          <div>zone: {debugState.pointerZone}</div>
+          <div>
+            expP: {debugState.expandPrimary ? "1" : "0"} / mountS:{" "}
+            {debugState.mountSecondary ? "1" : "0"} / expS:{" "}
+            {debugState.expandSecondary ? "1" : "0"}
+          </div>
+          <div>
+            hoverP: {debugState.isPrimaryHovered ? "1" : "0"} / hoverSites:{" "}
+            {debugState.isSitesRowHovered ? "1" : "0"} / hoverS:{" "}
+            {debugState.isSecondaryHovered ? "1" : "0"}
+          </div>
+          <div>active: {debugState.activeElementLocation}</div>
+          <div>
+            rects P/S/SH:{" "}
+            {debugState.rects.primary
+              ? `${Math.round(debugState.rects.primary.x)},${Math.round(
+                  debugState.rects.primary.y,
+                )} ${Math.round(debugState.rects.primary.width)}x${Math.round(
+                  debugState.rects.primary.height,
+                )}`
+              : "null"}{" "}
+            |{" "}
+            {debugState.rects.secondary
+              ? `${Math.round(debugState.rects.secondary.x)},${Math.round(
+                  debugState.rects.secondary.y,
+                )} ${Math.round(
+                  debugState.rects.secondary.width,
+                )}x${Math.round(debugState.rects.secondary.height)}`
+              : "null"}{" "}
+            |{" "}
+            {debugState.rects.shell
+              ? `${Math.round(debugState.rects.shell.x)},${Math.round(
+                  debugState.rects.shell.y,
+                )} ${Math.round(debugState.rects.shell.width)}x${Math.round(
+                  debugState.rects.shell.height,
+                )}`
+              : "null"}
+          </div>
+          <div>
+            last evt target: {debugState.lastEvent.targetClassName || "none"}
+          </div>
+          <div>
+            last evt current:{" "}
+            {debugState.lastEvent.currentTargetClassName || "none"}
+          </div>
+        </div>
+      )}
       <main className="vrm-main">
         <div className="vrm-content">{children || <Outlet />}</div>
       </main>
