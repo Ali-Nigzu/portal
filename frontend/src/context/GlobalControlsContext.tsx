@@ -114,9 +114,6 @@ const getInitialState = (): PersistedState => {
       systemStatus: parsed.systemStatus ?? defaultState.systemStatus,
     };
   } catch (error) {
-    if (!import.meta.env.PROD) {
-      console.info("Using default global controls state");
-    }
     return defaultState;
   }
 };

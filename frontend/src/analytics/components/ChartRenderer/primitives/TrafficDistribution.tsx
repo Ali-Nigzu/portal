@@ -44,26 +44,7 @@ export const TrafficDistribution = ({
   const contentClassName = `traffic-distribution__content${
     isVrmTraffic ? " traffic-distribution__content--vrm" : ""
   }`;
-  if (!import.meta.env.PROD) {
-    console.log("[VRM] TrafficDistribution: entry", {
-      isVrmTraffic,
-      seriesLength: series.length,
-      dataLength: data.length,
-      summary,
-      firstPoints: data.slice(0, 5).map((point) => ({
-        x: point.x,
-        value: point.value ?? point.y,
-      })),
-    });
-  }
   if (!primary || data.length === 0) {
-    if (!import.meta.env.PROD) {
-      console.log("[VRM traffic] TrafficDistribution early-exit", {
-        reason: !primary ? "no-primary" : "no-data",
-        seriesLength: series.length,
-        dataLength: data.length,
-      });
-    }
     return (
       <div
         className={`traffic-distribution kpi-tile ${className ?? ""}`}
@@ -110,30 +91,7 @@ export const TrafficDistribution = ({
     .map((entry) => entry.value)
     .filter((value) => !Number.isFinite(value))
     .slice(0, 5);
-  if (!import.meta.env.PROD) {
-    console.log("[VRM traffic] TrafficDistribution totals", {
-      totalValue,
-      legendCount: legend.length,
-      dataCount: data.length,
-      nonFiniteValues,
-    });
-  }
-  if (!import.meta.env.PROD) {
-    console.log("[VRM] TrafficDistribution: legend", {
-      legend,
-      totalValue,
-      isVrmTraffic,
-    });
-  }
   if (!legend.length || totalValue <= 0) {
-    if (!import.meta.env.PROD) {
-      console.log("[VRM] TrafficDistribution: empty view", {
-        totalValue,
-        dataLength: data.length,
-        isVrmTraffic,
-        reason: !legend.length ? "no-legend" : "non-positive-total",
-      });
-    }
     const emptySlice = [
       {
         label: "No data",
