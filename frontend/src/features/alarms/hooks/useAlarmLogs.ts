@@ -22,7 +22,17 @@ type AlarmLogsState = {
   refreshAlarms: () => void;
 };
 
-export const useAlarmLogs = (credentials: Credentials): AlarmLogsState => {
+type AlarmLogsOverrides = {
+  isDemo?: boolean;
+  fetchAlarmLogsFn?: typeof fetchAlarmLogs;
+  fetchAlarmUsersFn?: typeof fetchAlarmUsers;
+  viewToken?: string | null;
+};
+
+export const useAlarmLogs = (
+  credentials: Credentials,
+  overrides: AlarmLogsOverrides = {},
+): AlarmLogsState => {
   const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,11 +40,16 @@ export const useAlarmLogs = (credentials: Credentials): AlarmLogsState => {
   const [selectedClient, setSelectedClient] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const viewToken = getViewTokenFromLocation();
+  const viewToken =
+    overrides.viewToken !== undefined
+      ? overrides.viewToken
+      : getViewTokenFromLocation();
+  const isDemo = Boolean(overrides.isDemo);
 
   const loadUsers = useCallback(async () => {
     try {
-      const data = await fetchAlarmUsers(credentials);
+      const fetchUsers = overrides.fetchAlarmUsersFn ?? fetchAlarmUsers;
+      const data = await fetchUsers(credentials);
       setUsers(data);
       setIsAdmin(
         credentials.username === "admin" ||
@@ -55,7 +70,8 @@ export const useAlarmLogs = (credentials: Credentials): AlarmLogsState => {
     async (clientId?: string) => {
       try {
         setLoading(true);
-        const result = await fetchAlarmLogs({
+        const fetchLogs = overrides.fetchAlarmLogsFn ?? fetchAlarmLogs;
+        const result = await fetchLogs({
           credentials,
           viewToken,
           clientId,
@@ -77,18 +93,23 @@ export const useAlarmLogs = (credentials: Credentials): AlarmLogsState => {
   );
 
   useEffect(() => {
-    if (!viewToken) {
+    if (!viewToken && !isDemo) {
       loadUsers();
     }
-  }, [loadUsers, viewToken]);
+  }, [isDemo, loadUsers, viewToken]);
 
   useEffect(() => {
+    if (isDemo) {
+      setIsAdmin(false);
+      loadAlarms();
+      return;
+    }
     if (isAdmin && selectedClient) {
       loadAlarms(selectedClient);
     } else if (!isAdmin) {
       loadAlarms();
     }
-  }, [isAdmin, loadAlarms, selectedClient]);
+  }, [isAdmin, isDemo, loadAlarms, selectedClient]);
 
   const clientUsers = useMemo(
     () => Object.entries(users).filter(([_, user]) => user.role === "client"),

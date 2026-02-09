@@ -38,10 +38,12 @@ import { NavIcon } from "../common/components/icons";
 
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
+  isDemo?: boolean;
   children?: React.ReactNode;
 }
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
+  isDemo = false,
   children,
 }) => {
   // Sidebar state and refs
@@ -77,7 +79,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     () => new URLSearchParams(location.search),
     [location.search],
   );
-  const isSelectorOpen = searchParams.get("panel") === "sites";
+  const isSelectorOpen = !isDemo && searchParams.get("panel") === "sites";
   const activeSite = findSiteById(siteId);
   const allSitesOption =
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
@@ -112,6 +114,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     );
   };
   const handleSitesClick = () => {
+    if (isDemo) {
+      return;
+    }
     setSitesIntentOpen(true);
     openSitesSelector();
   };
@@ -166,17 +171,21 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         placeholder: true,
       },
       {
-        path: "/sites",
+        path: isDemo ? "/demo" : "/sites",
         label: "Sites",
         icon: <NavIcon icon={MapPin} />,
       },
     ],
-    [],
+    [isDemo],
   );
   const clientNavigationItems = useMemo(
     () => [
       {
-        path: siteId ? `/sites/${siteId}/dashboard` : undefined,
+        path: isDemo
+          ? "/demo/dashboard"
+          : siteId
+            ? `/sites/${siteId}/dashboard`
+            : undefined,
         label: "Dashboard",
         icon: <NavIcon icon={LayoutDashboard} />,
       },
@@ -195,27 +204,43 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         statusLabel: "Coming Soon",
       },
       {
-        path: siteId ? `/sites/${siteId}/event-logs` : undefined,
+        path: isDemo
+          ? "/demo/event-logs"
+          : siteId
+            ? `/sites/${siteId}/event-logs`
+            : undefined,
         label: "Event Logs",
         icon: <NavIcon icon={ClipboardList} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/alarm-logs` : undefined,
+        path: isDemo
+          ? "/demo/alarm-logs"
+          : siteId
+            ? `/sites/${siteId}/alarm-logs`
+            : undefined,
         label: "Alarm Logs",
         icon: <NavIcon icon={Bell} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/device-list` : undefined,
+        path: isDemo
+          ? "/demo/device-list"
+          : siteId
+            ? `/sites/${siteId}/device-list`
+            : undefined,
         label: "Device List",
         icon: <NavIcon icon={Cpu} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/reports` : undefined,
+        path: isDemo
+          ? "/demo/reports"
+          : siteId
+            ? `/sites/${siteId}/reports`
+            : undefined,
         label: "Reports",
         icon: <NavIcon icon={FileBarChart2} />,
       },
     ],
-    [siteId],
+    [isDemo, siteId],
   );
   const adminNavigationItems = useMemo(
     () => [
@@ -238,9 +263,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   )?.path;
   const isSiteSelection = isSelectorOpen;
   const selectedSiteForList = getStoredSiteId() ?? "all";
-  const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
+  const showSiteMenu = isDemo || (Boolean(siteId) && !isSelectorOpen);
   const shouldShowAdminMenu =
-    userRole === "admin" && location.pathname.startsWith("/admin");
+    !isDemo && userRole === "admin" && location.pathname.startsWith("/admin");
   const focusZone = isSecondaryFocused
     ? "SECONDARY"
     : isPrimaryFocused
@@ -646,19 +671,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             )}
             {showSiteMenu && (
               <SecondaryPinnedRow
-                onClick={openSitesSelector}
+                onClick={isDemo ? undefined : openSitesSelector}
                 leftIcon={
                   <span className="vrm-nav-row__icon-stack">
                     <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
                     <NavIcon icon={MapPin} />
                   </span>
                 }
-                label={activeSite?.label ?? "Site"}
+                label={isDemo ? "Demo Site" : activeSite?.label ?? "Site"}
               />
             )}
             <SecondaryDivider />
           </div>
-          {!showSiteMenu && (
+          {!showSiteMenu && !isDemo && (
             <NavList className="vrm-secondary-list">
               {SITE_OPTIONS.filter((site) => site.id !== "all").map((site) => {
                 const siteSubPath = (() => {

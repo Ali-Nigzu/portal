@@ -4,7 +4,16 @@ import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import { searchEvents } from "../transport/searchEvents";
 import type { EventData } from "../utils/eventTypes";
 
-export const useEventLogsQuery = (credentials: Credentials) => {
+type EventLogsQueryOverrides = {
+  searchEventsFn?: typeof searchEvents;
+  viewToken?: string | null;
+  clientId?: string | null;
+};
+
+export const useEventLogsQuery = (
+  credentials: Credentials,
+  overrides: EventLogsQueryOverrides = {},
+) => {
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -204,11 +213,18 @@ export const useEventLogsQuery = (credentials: Credentials) => {
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-      const viewToken = getViewTokenFromLocation();
+      const viewToken =
+        overrides.viewToken !== undefined
+          ? overrides.viewToken
+          : getViewTokenFromLocation();
       const urlParams = new URLSearchParams(window.location.search);
-      const clientId = urlParams.get("client_id");
+      const clientId =
+        overrides.clientId !== undefined
+          ? overrides.clientId
+          : urlParams.get("client_id");
       const searchParams = buildSearchParams(true);
-      const result = await searchEvents({
+      const searchEventsFn = overrides.searchEventsFn ?? searchEvents;
+      const result = await searchEventsFn({
         searchParams,
         viewToken,
         credentials,
@@ -225,7 +241,7 @@ export const useEventLogsQuery = (credentials: Credentials) => {
     } finally {
       setLoading(false);
     }
-  }, [buildSearchParams, credentials]);
+  }, [buildSearchParams, credentials, overrides.clientId, overrides.searchEventsFn, overrides.viewToken]);
 
   useEffect(() => {
     if (searchToken === 0) {
@@ -247,18 +263,25 @@ export const useEventLogsQuery = (credentials: Credentials) => {
   };
 
   const fetchExportEvents = useCallback(async () => {
-    const viewToken = getViewTokenFromLocation();
+    const viewToken =
+      overrides.viewToken !== undefined
+        ? overrides.viewToken
+        : getViewTokenFromLocation();
     const urlParams = new URLSearchParams(window.location.search);
-    const clientId = urlParams.get("client_id");
+    const clientId =
+      overrides.clientId !== undefined
+        ? overrides.clientId
+        : urlParams.get("client_id");
     const searchParams = buildSearchParams(false);
-    const result = await searchEvents({
+    const searchEventsFn = overrides.searchEventsFn ?? searchEvents;
+    const result = await searchEventsFn({
       searchParams,
       viewToken,
       credentials,
       clientId,
     });
     return (result.events as EventData[]) || [];
-  }, [buildSearchParams, credentials]);
+  }, [buildSearchParams, credentials, overrides.clientId, overrides.searchEventsFn, overrides.viewToken]);
 
   return {
     events,

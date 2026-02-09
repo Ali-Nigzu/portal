@@ -22,6 +22,18 @@ const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
+const DemoEventLogsPage = React.lazy(
+  () => import("../pages/DemoEventLogsPage"),
+);
+const DemoAlarmLogsPage = React.lazy(
+  () => import("../pages/DemoAlarmLogsPage"),
+);
+const DemoDeviceListPage = React.lazy(
+  () => import("../pages/DemoDeviceListPage"),
+);
+const DemoReportsPage = React.lazy(
+  () => import("../pages/DemoReportsPage"),
+);
 
 const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -136,6 +148,12 @@ const AppRoutes: React.FC = () => {
     <Suspense fallback={null}>{element}</Suspense>
   );
 
+  const renderDemoRoute = (element: React.ReactNode) => (
+    <VRMLayout userRole="client" isDemo>
+      {element}
+    </VRMLayout>
+  );
+
   return (
     <Routes>
       <Route
@@ -160,7 +178,27 @@ const AppRoutes: React.FC = () => {
       />
       <Route
         path="/demo"
-        element={lazyRoute(<DemoPage />)}
+        element={<Navigate to="/demo/dashboard" replace />}
+      />
+      <Route
+        path="/demo/dashboard"
+        element={renderDemoRoute(lazyRoute(<DemoPage />))}
+      />
+      <Route
+        path="/demo/event-logs"
+        element={renderDemoRoute(lazyRoute(<DemoEventLogsPage />))}
+      />
+      <Route
+        path="/demo/alarm-logs"
+        element={renderDemoRoute(lazyRoute(<DemoAlarmLogsPage />))}
+      />
+      <Route
+        path="/demo/device-list"
+        element={renderDemoRoute(lazyRoute(<DemoDeviceListPage />))}
+      />
+      <Route
+        path="/demo/reports"
+        element={renderDemoRoute(lazyRoute(<DemoReportsPage />))}
       />
       <Route
         path="/login"

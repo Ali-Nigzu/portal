@@ -22,7 +22,18 @@ type DeviceListState = {
   downloadDataSource: (sourceUrl: string, sourceName: string) => void;
 };
 
-export const useDeviceList = (credentials: Credentials): DeviceListState => {
+type DeviceListOverrides = {
+  isDemo?: boolean;
+  fetchDeviceListFn?: typeof fetchDeviceList;
+  fetchDeviceUsersFn?: typeof fetchDeviceUsers;
+  fetchDeviceDataSourcesFn?: typeof fetchDeviceDataSources;
+  viewToken?: string | null;
+};
+
+export const useDeviceList = (
+  credentials: Credentials,
+  overrides: DeviceListOverrides = {},
+): DeviceListState => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +42,16 @@ export const useDeviceList = (credentials: Credentials): DeviceListState => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
-  const viewToken = getViewTokenFromLocation();
+  const viewToken =
+    overrides.viewToken !== undefined
+      ? overrides.viewToken
+      : getViewTokenFromLocation();
+  const isDemo = Boolean(overrides.isDemo);
 
   const loadUsers = useCallback(async () => {
     try {
-      const usersData = await fetchDeviceUsers(credentials);
+      const fetchUsers = overrides.fetchDeviceUsersFn ?? fetchDeviceUsers;
+      const usersData = await fetchUsers(credentials);
       setUsers(usersData);
       setIsAdmin(
         credentials.username === "admin" ||
@@ -56,7 +72,8 @@ export const useDeviceList = (credentials: Credentials): DeviceListState => {
     async (clientId?: string) => {
       try {
         setLoading(true);
-        const result = await fetchDeviceList({
+        const fetchList = overrides.fetchDeviceListFn ?? fetchDeviceList;
+        const result = await fetchList({
           credentials,
           viewToken,
           clientId,
@@ -97,32 +114,49 @@ export const useDeviceList = (credentials: Credentials): DeviceListState => {
         return;
       }
       if (isAdmin && !viewToken) {
-        const sources = await fetchDeviceDataSources(credentials, clientToLoad);
+        const fetchSources =
+          overrides.fetchDeviceDataSourcesFn ?? fetchDeviceDataSources;
+        const sources = await fetchSources(credentials, clientToLoad);
         setDataSources(sources);
       }
     } catch (err) {
       console.error("Failed to fetch data sources:", err);
       setDataSources([]);
     }
-  }, [credentials, isAdmin, selectedClient, users, viewToken]);
+  }, [
+    credentials,
+    isAdmin,
+    overrides.fetchDeviceDataSourcesFn,
+    selectedClient,
+    users,
+    viewToken,
+  ]);
 
   useEffect(() => {
-    if (!viewToken) {
+    if (!viewToken && !isDemo) {
       loadUsers();
     }
-  }, [loadUsers, viewToken]);
+  }, [isDemo, loadUsers, viewToken]);
 
   useEffect(() => {
+    if (isDemo) {
+      setIsAdmin(false);
+      loadDeviceList();
+      return;
+    }
     if (isAdmin && selectedClient) {
       loadDeviceList(selectedClient);
     } else if (!isAdmin) {
       loadDeviceList();
     }
-  }, [isAdmin, loadDeviceList, selectedClient]);
+  }, [isAdmin, isDemo, loadDeviceList, selectedClient]);
 
   useEffect(() => {
+    if (isDemo) {
+      return;
+    }
     loadDataSources();
-  }, [loadDataSources]);
+  }, [isDemo, loadDataSources]);
 
   const clientUsers = useMemo(
     () => Object.entries(users).filter(([_, user]) => user.role === "client"),

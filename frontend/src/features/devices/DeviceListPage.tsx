@@ -1,13 +1,28 @@
 import React from "react";
 import { Credentials } from "../../types/credentials";
 import { useDeviceList } from "./hooks/useDeviceList";
+import type { fetchDeviceList } from "./transport/fetchDeviceList";
+import type { fetchDeviceUsers } from "./transport/fetchDeviceUsers";
+import type { fetchDeviceDataSources } from "./transport/fetchDeviceDataSources";
 import { getStatusClass, getStatusText } from "./utils/statusFormatters";
 
 interface DeviceListPageProps {
   credentials: Credentials;
+  isDemo?: boolean;
+  fetchDeviceListFn?: typeof fetchDeviceList;
+  fetchDeviceUsersFn?: typeof fetchDeviceUsers;
+  fetchDeviceDataSourcesFn?: typeof fetchDeviceDataSources;
+  viewTokenOverride?: string | null;
 }
 
-const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
+const DeviceListPage: React.FC<DeviceListPageProps> = ({
+  credentials,
+  isDemo,
+  fetchDeviceListFn,
+  fetchDeviceUsersFn,
+  fetchDeviceDataSourcesFn,
+  viewTokenOverride,
+}) => {
   const {
     devices,
     dataSources,
@@ -19,7 +34,13 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
     clientUsers,
     refreshDevices,
     downloadDataSource,
-  } = useDeviceList(credentials);
+  } = useDeviceList(credentials, {
+    isDemo,
+    fetchDeviceListFn,
+    fetchDeviceUsersFn,
+    fetchDeviceDataSourcesFn,
+    viewToken: viewTokenOverride,
+  });
 
   if (loading) {
     return (
