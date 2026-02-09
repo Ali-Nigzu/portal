@@ -14,7 +14,7 @@
 .demo-overlay__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(5, 10, 20, 0.65);
+  background: rgba(10, 10, 10, 0.5);
   backdrop-filter: blur(2px);
 }
 
@@ -24,9 +24,9 @@
   width: min(96vw, 1700px);
   height: min(94vh, 980px);
   border-radius: 20px;
-  background: rgba(8, 12, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 50px 120px rgba(0, 0, 0, 0.55);
+  background: rgba(15, 18, 28, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -34,7 +34,7 @@
 
 .demo-overlay__content {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   border-radius: 20px;
 }
 

@@ -27,6 +27,7 @@ import {
   getStoredSiteId,
   setStoredSiteId,
 } from "../lib/sites";
+import { isDemoSessionActive } from "../lib/demoSession";
 import {
   NavList,
   NavRow,
@@ -79,6 +80,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   );
   const isSelectorOpen = searchParams.get("panel") === "sites";
   const activeSite = findSiteById(siteId);
+  const isDemoSession = isDemoSessionActive();
   const allSitesOption =
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
   const buildSearch = (overrides?: Record<string, string | undefined>) => {
@@ -568,6 +570,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       ? getNavigationPath(item.path)
                       : undefined
                   }
+                  replace={Boolean(item.path) && isDemoSession}
                   onClick={item.path === "/sites" ? handleSitesClick : undefined}
                   leftIcon={item.icon}
                   label={item.label}
@@ -637,6 +640,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   `/sites/${allSitesOption.id}/dashboard`,
                   { panel: undefined },
                 )}
+                replace={isDemoSession}
                 leftIcon={<NavIcon icon={MapPin} />}
                 label={allSitesOption.label}
                 active={
@@ -676,6 +680,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   <NavRow
                     key={site.id}
                     to={getNavigationPath(siteTargetPath, { panel: undefined })}
+                    replace={isDemoSession}
                     leftIcon={<NavIcon icon={MapPin} />}
                     label={site.label}
                     active={isActive}
@@ -725,6 +730,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   <NavRow
                     key={item.path}
                     to={getNavigationPath(item.path)}
+                    replace={isDemoSession}
                     leftIcon={item.icon}
                     label={navLabel}
                     active={isActive}
@@ -740,6 +746,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 <NavRow
                   key={item.path}
                   to={getNavigationPath(item.path)}
+                  replace={isDemoSession}
                   leftIcon={item.icon}
                   label={item.label}
                   active={item.path ? isActiveRoute(item.path) : false}
