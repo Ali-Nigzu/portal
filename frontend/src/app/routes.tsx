@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 
 import VRMLayout from "../components/VRMLayout";
+import { isDemoSessionActive } from "../lib/demoSession";
 import { determineOrgId } from "../lib/org";
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
@@ -22,18 +23,6 @@ const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
-const DemoEventLogsPage = React.lazy(
-  () => import("../pages/DemoEventLogsPage"),
-);
-const DemoAlarmLogsPage = React.lazy(
-  () => import("../pages/DemoAlarmLogsPage"),
-);
-const DemoDeviceListPage = React.lazy(
-  () => import("../pages/DemoDeviceListPage"),
-);
-const DemoReportsPage = React.lazy(
-  () => import("../pages/DemoReportsPage"),
-);
 
 const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -81,7 +70,8 @@ const AppRoutes: React.FC = () => {
   };
 
   const resolvedRole = hasViewToken ? "client" : userRole;
-  const shouldAllowAppRoutes = isLoggedIn || hasViewToken;
+  const isDemoSession = isDemoSessionActive();
+  const shouldAllowAppRoutes = isLoggedIn || hasViewToken || isDemoSession;
   const appendParams = (
     path: string,
     params?: Record<string, string | undefined>,
@@ -148,24 +138,21 @@ const AppRoutes: React.FC = () => {
     <Suspense fallback={null}>{element}</Suspense>
   );
 
-  const renderDemoRoute = (element: React.ReactNode) => (
-    <VRMLayout userRole="client" isDemo>
-      {element}
-    </VRMLayout>
-  );
-
   return (
     <Routes>
       <Route
         path="/"
         element={
-          !isLoggedIn && !hasViewToken ? (
+          !isLoggedIn && !hasViewToken && !isDemoSession ? (
             lazyRoute(<LandingPage />)
           ) : (
             <Navigate
               to={(() => {
                 if (hasViewToken) {
                   return appendViewToken("/sites/all/dashboard");
+                }
+                if (isDemoSession) {
+                  return "/sites/all/dashboard";
                 }
                 return appendViewToken(
                   `/sites/${getDefaultSiteId()}/dashboard`,
@@ -176,40 +163,20 @@ const AppRoutes: React.FC = () => {
           )
         }
       />
-      <Route
-        path="/demo"
-        element={<Navigate to="/demo/dashboard" replace />}
-      />
-      <Route
-        path="/demo/dashboard"
-        element={renderDemoRoute(lazyRoute(<DemoPage />))}
-      />
-      <Route
-        path="/demo/event-logs"
-        element={renderDemoRoute(lazyRoute(<DemoEventLogsPage />))}
-      />
-      <Route
-        path="/demo/alarm-logs"
-        element={renderDemoRoute(lazyRoute(<DemoAlarmLogsPage />))}
-      />
-      <Route
-        path="/demo/device-list"
-        element={renderDemoRoute(lazyRoute(<DemoDeviceListPage />))}
-      />
-      <Route
-        path="/demo/reports"
-        element={renderDemoRoute(lazyRoute(<DemoReportsPage />))}
-      />
+      <Route path="/demo" element={lazyRoute(<DemoPage />)} />
       <Route
         path="/login"
         element={
-          !isLoggedIn && !hasViewToken ? (
+          !isLoggedIn && !hasViewToken && !isDemoSession ? (
             lazyRoute(<LoginPage onLogin={handleLogin} />)
           ) : (
             <Navigate
               to={(() => {
                 if (hasViewToken) {
                   return appendViewToken("/sites/all/dashboard");
+                }
+                if (isDemoSession) {
+                  return "/sites/all/dashboard";
                 }
                 return appendViewToken(
                   `/sites/${getDefaultSiteId()}/dashboard`,
@@ -354,13 +321,16 @@ const AppRoutes: React.FC = () => {
       <Route
         path="*"
         element={
-          !isLoggedIn && !hasViewToken ? (
+          !isLoggedIn && !hasViewToken && !isDemoSession ? (
             <Navigate to="/" replace />
           ) : (
             <Navigate
               to={(() => {
                 if (hasViewToken) {
                   return appendViewToken("/sites/all/dashboard");
+                }
+                if (isDemoSession) {
+                  return "/sites/all/dashboard";
                 }
                 return appendViewToken(
                   `/sites/${getDefaultSiteId()}/dashboard`,

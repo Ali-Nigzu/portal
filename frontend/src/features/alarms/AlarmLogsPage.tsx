@@ -1,22 +1,12 @@
 import React from "react";
 import { Credentials } from "../../types/credentials";
 import { useAlarmLogs } from "./hooks/useAlarmLogs";
-import type { fetchAlarmLogs } from "./transport/fetchAlarmLogs";
-import type { fetchAlarmUsers } from "./transport/fetchAlarmUsers";
 import { getSeverityClass, getSeverityText } from "./utils/severityFormatters";
 interface AlarmLogsPageProps {
   credentials: Credentials;
-  isDemo?: boolean;
-  fetchAlarmLogsFn?: typeof fetchAlarmLogs;
-  fetchAlarmUsersFn?: typeof fetchAlarmUsers;
-  viewTokenOverride?: string | null;
 }
 const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
   credentials,
-  isDemo,
-  fetchAlarmLogsFn,
-  fetchAlarmUsersFn,
-  viewTokenOverride,
 }) => {
   const {
     alarms,
@@ -31,12 +21,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
     highSeverityAlarms,
     mediumSeverityAlarms,
     refreshAlarms,
-  } = useAlarmLogs(credentials, {
-    isDemo,
-    fetchAlarmLogsFn,
-    fetchAlarmUsersFn,
-    viewToken: viewTokenOverride,
-  });
+  } = useAlarmLogs(credentials);
   if (loading) {
     return (
       <div

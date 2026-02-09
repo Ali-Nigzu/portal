@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Credentials } from "../../../types/credentials";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import { fetchAlarmLogs } from "../transport/fetchAlarmLogs";
 import { fetchAlarmUsers } from "../transport/fetchAlarmUsers";
@@ -22,16 +23,8 @@ type AlarmLogsState = {
   refreshAlarms: () => void;
 };
 
-type AlarmLogsOverrides = {
-  isDemo?: boolean;
-  fetchAlarmLogsFn?: typeof fetchAlarmLogs;
-  fetchAlarmUsersFn?: typeof fetchAlarmUsers;
-  viewToken?: string | null;
-};
-
 export const useAlarmLogs = (
   credentials: Credentials,
-  overrides: AlarmLogsOverrides = {},
 ): AlarmLogsState => {
   const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,16 +33,12 @@ export const useAlarmLogs = (
   const [selectedClient, setSelectedClient] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const viewToken =
-    overrides.viewToken !== undefined
-      ? overrides.viewToken
-      : getViewTokenFromLocation();
-  const isDemo = Boolean(overrides.isDemo);
+  const viewToken = getViewTokenFromLocation();
+  const isDemoSession = isDemoSessionActive();
 
   const loadUsers = useCallback(async () => {
     try {
-      const fetchUsers = overrides.fetchAlarmUsersFn ?? fetchAlarmUsers;
-      const data = await fetchUsers(credentials);
+      const data = await fetchAlarmUsers(credentials);
       setUsers(data);
       setIsAdmin(
         credentials.username === "admin" ||
@@ -70,8 +59,7 @@ export const useAlarmLogs = (
     async (clientId?: string) => {
       try {
         setLoading(true);
-        const fetchLogs = overrides.fetchAlarmLogsFn ?? fetchAlarmLogs;
-        const result = await fetchLogs({
+        const result = await fetchAlarmLogs({
           credentials,
           viewToken,
           clientId,
@@ -93,13 +81,13 @@ export const useAlarmLogs = (
   );
 
   useEffect(() => {
-    if (!viewToken && !isDemo) {
+    if (!viewToken && !isDemoSession) {
       loadUsers();
     }
-  }, [isDemo, loadUsers, viewToken]);
+  }, [isDemoSession, loadUsers, viewToken]);
 
   useEffect(() => {
-    if (isDemo) {
+    if (isDemoSession) {
       setIsAdmin(false);
       loadAlarms();
       return;
@@ -109,7 +97,7 @@ export const useAlarmLogs = (
     } else if (!isAdmin) {
       loadAlarms();
     }
-  }, [isAdmin, isDemo, loadAlarms, selectedClient]);
+  }, [isAdmin, isDemoSession, loadAlarms, selectedClient]);
 
   const clientUsers = useMemo(
     () => Object.entries(users).filter(([_, user]) => user.role === "client"),

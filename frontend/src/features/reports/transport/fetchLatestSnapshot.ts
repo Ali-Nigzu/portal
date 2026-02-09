@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../../config";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { determineOrgId } from "../../../lib/org";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import type { Credentials } from "../../../types/credentials";
@@ -12,22 +13,27 @@ export const fetchLatestSnapshot = async (
   const clientId = urlParams.get("client_id");
   const resolvedClientId =
     clientId ?? (credentials ? determineOrgId(credentials) : null);
+  const isDemoSession = isDemoSessionActive();
   const params = new URLSearchParams();
   const headers: HeadersInit = { "Content-Type": "application/json" };
   if (viewToken) {
     params.append("viewToken", viewToken);
-  } else if (resolvedClientId) {
+  } else if (!isDemoSession && resolvedClientId) {
     params.append("org", resolvedClientId);
-  } else {
+  } else if (!isDemoSession) {
     throw new Error("Missing view_token or client_id for snapshot lookup.");
   }
-  if (!viewToken && credentials) {
+  if (!viewToken && credentials && !isDemoSession) {
     const auth = btoa(`${credentials.username}:${credentials.password}`);
     headers["Authorization"] = `Basic ${auth}`;
   }
+  const query = params.toString();
   const response = await fetch(
-    `${API_BASE_URL}/api/snapshots/latest?${params.toString()}`,
-    { headers },
+    `${API_BASE_URL}/api/snapshots/latest${query ? `?${query}` : ""}`,
+    {
+      headers,
+      credentials: isDemoSession ? "include" : "same-origin",
+    },
   );
   if (!response.ok) {
     const text = await response.text();

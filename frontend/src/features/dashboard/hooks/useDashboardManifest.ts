@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Credentials } from "../../../types/credentials";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { determineOrgId } from "../../../lib/org";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import { logError, logInfo } from "../../../common/utils/logger";
@@ -46,7 +47,9 @@ export const useDashboardManifest = ({
   dashboardId,
 }: UseDashboardManifestParams): UseDashboardManifestResult => {
   const viewToken = useMemo(() => getViewTokenFromLocation(), []);
-  const orgId = viewToken ? undefined : determineOrgId(credentials);
+  const isDemoSession = useMemo(() => isDemoSessionActive(), []);
+  const orgId =
+    viewToken || isDemoSession ? undefined : determineOrgId(credentials);
   const resolvedDashboardId = dashboardId ?? "dashboard-default";
   const manifestLoaderImpl = manifestLoader ?? fetchDashboardManifest;
   const [manifest, setManifest] = useState<DashboardManifest | null>(null);

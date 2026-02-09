@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "../../../config";
 import { createAbortSignal } from "../../../common/utils/abort";
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import type { DashboardManifest } from "../types";
 export interface FetchDashboardManifestOptions {
   signal?: AbortSignal;
@@ -52,22 +53,25 @@ export async function fetchDashboardManifest(
     parent: options.signal,
     timeoutMs: options.timeoutMs ?? 15000,
   });
+  const isDemoSession = isDemoSessionActive();
   const params = new URLSearchParams();
   if (options.viewToken) {
     params.append("viewToken", options.viewToken);
-  } else if (orgId) {
+  } else if (!isDemoSession && orgId) {
     params.append("orgId", orgId);
-  } else {
+  } else if (!isDemoSession) {
     throw new Error(
       "orgId or viewToken is required to load dashboard manifest",
     );
   }
-  const url = `${API_BASE_URL}/api/dashboards/${dashboardId}?${params.toString()}`;
+  const query = params.toString();
+  const url = `${API_BASE_URL}/api/dashboards/${dashboardId}${query ? `?${query}` : ""}`;
   logInfo("dashboard.manifest", "fetch_start", { orgId, dashboardId });
   try {
     const response = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
+      credentials: isDemoSession ? "include" : "same-origin",
       signal,
     });
     if (!response.ok) {

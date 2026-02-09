@@ -1,1 +1,78 @@
-export { default } from "../features/demo/DemoPage";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { establishDemoSession } from "../lib/demoSession";
+
+const DemoPage = () => {
+  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const startDemo = async () => {
+      try {
+        await establishDemoSession();
+        if (!isMounted) {
+          return;
+        }
+        navigate("/sites/all/dashboard", { replace: true });
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        const message =
+          err instanceof Error ? err.message : "Unable to start demo session.";
+        setError(message);
+      }
+    };
+    startDemo();
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
+
+  if (error) {
+    return (
+      <div className="vrm-card" style={{ margin: "32px" }}>
+        <div className="vrm-card-header">
+          <h3 className="vrm-card-title">Demo Unavailable</h3>
+        </div>
+        <div className="vrm-card-body">
+          <p style={{ color: "var(--vrm-accent-red)", marginBottom: "16px" }}>
+            {error}
+          </p>
+          <button className="vrm-btn" onClick={() => navigate(0)}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "60vh",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            border: "4px solid #333",
+            borderTop: "4px solid #1976d2",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+            margin: "0 auto 16px",
+          }}
+        />
+        <div>Loading live demo…</div>
+      </div>
+    </div>
+  );
+};
+
+export default DemoPage;

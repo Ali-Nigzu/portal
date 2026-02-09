@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Credentials } from "../../../types/credentials";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import type { DataSource, DeviceInfo, DeviceUser } from "../types";
 import { fetchDeviceList } from "../transport/fetchDeviceList";
@@ -22,17 +23,8 @@ type DeviceListState = {
   downloadDataSource: (sourceUrl: string, sourceName: string) => void;
 };
 
-type DeviceListOverrides = {
-  isDemo?: boolean;
-  fetchDeviceListFn?: typeof fetchDeviceList;
-  fetchDeviceUsersFn?: typeof fetchDeviceUsers;
-  fetchDeviceDataSourcesFn?: typeof fetchDeviceDataSources;
-  viewToken?: string | null;
-};
-
 export const useDeviceList = (
   credentials: Credentials,
-  overrides: DeviceListOverrides = {},
 ): DeviceListState => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,16 +34,12 @@ export const useDeviceList = (
   const [isAdmin, setIsAdmin] = useState(false);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
-  const viewToken =
-    overrides.viewToken !== undefined
-      ? overrides.viewToken
-      : getViewTokenFromLocation();
-  const isDemo = Boolean(overrides.isDemo);
+  const viewToken = getViewTokenFromLocation();
+  const isDemoSession = isDemoSessionActive();
 
   const loadUsers = useCallback(async () => {
     try {
-      const fetchUsers = overrides.fetchDeviceUsersFn ?? fetchDeviceUsers;
-      const usersData = await fetchUsers(credentials);
+      const usersData = await fetchDeviceUsers(credentials);
       setUsers(usersData);
       setIsAdmin(
         credentials.username === "admin" ||
@@ -72,8 +60,7 @@ export const useDeviceList = (
     async (clientId?: string) => {
       try {
         setLoading(true);
-        const fetchList = overrides.fetchDeviceListFn ?? fetchDeviceList;
-        const result = await fetchList({
+        const result = await fetchDeviceList({
           credentials,
           viewToken,
           clientId,
@@ -114,32 +101,23 @@ export const useDeviceList = (
         return;
       }
       if (isAdmin && !viewToken) {
-        const fetchSources =
-          overrides.fetchDeviceDataSourcesFn ?? fetchDeviceDataSources;
-        const sources = await fetchSources(credentials, clientToLoad);
+        const sources = await fetchDeviceDataSources(credentials, clientToLoad);
         setDataSources(sources);
       }
     } catch (err) {
       console.error("Failed to fetch data sources:", err);
       setDataSources([]);
     }
-  }, [
-    credentials,
-    isAdmin,
-    overrides.fetchDeviceDataSourcesFn,
-    selectedClient,
-    users,
-    viewToken,
-  ]);
+  }, [credentials, isAdmin, selectedClient, users, viewToken]);
 
   useEffect(() => {
-    if (!viewToken && !isDemo) {
+    if (!viewToken && !isDemoSession) {
       loadUsers();
     }
-  }, [isDemo, loadUsers, viewToken]);
+  }, [isDemoSession, loadUsers, viewToken]);
 
   useEffect(() => {
-    if (isDemo) {
+    if (isDemoSession) {
       setIsAdmin(false);
       loadDeviceList();
       return;
@@ -149,14 +127,14 @@ export const useDeviceList = (
     } else if (!isAdmin) {
       loadDeviceList();
     }
-  }, [isAdmin, isDemo, loadDeviceList, selectedClient]);
+  }, [isAdmin, isDemoSession, loadDeviceList, selectedClient]);
 
   useEffect(() => {
-    if (isDemo) {
+    if (isDemoSession) {
       return;
     }
     loadDataSources();
-  }, [isDemo, loadDataSources]);
+  }, [isDemoSession, loadDataSources]);
 
   const clientUsers = useMemo(
     () => Object.entries(users).filter(([_, user]) => user.role === "client"),
