@@ -110,7 +110,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         pathname: location.pathname,
         search: buildSearch({ panel: "sites" }),
       },
-      { replace: false },
+      { replace: isDemoSession },
     );
   };
   const handleSitesClick = () => {

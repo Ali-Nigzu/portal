@@ -9,6 +9,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
 }
 
 .demo-overlay__backdrop {
@@ -16,6 +19,8 @@
   inset: 0;
   background: rgba(10, 10, 10, 0.5);
   backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 180ms ease;
 }
 
 .demo-overlay__shell {
@@ -30,12 +35,45 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transform: scale(0.98);
+  opacity: 0;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease;
 }
 
 .demo-overlay__content {
   flex: 1;
   overflow: hidden;
   border-radius: 20px;
+}
+
+.demo-overlay--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.demo-overlay--open .demo-overlay__backdrop {
+  opacity: 1;
+}
+
+.demo-overlay--open .demo-overlay__shell {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.demo-overlay--closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.demo-overlay--closing .demo-overlay__backdrop {
+  opacity: 0;
+}
+
+.demo-overlay--closing .demo-overlay__shell {
+  opacity: 0;
+  transform: scale(0.98);
 }
 
 .demo-overlay__close {

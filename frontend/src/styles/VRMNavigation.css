@@ -93,7 +93,8 @@
   flex-direction: column;
   gap: 6px;
   flex: 1;
-  overflow-y: visible;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .vrm-nav-list {
@@ -317,7 +318,8 @@ button.vrm-nav-row {
 .vrm-secondary-list {
   padding: 4px 10px 16px;
   flex: 1;
-  overflow-y: visible;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .vrm-secondary-pinned {

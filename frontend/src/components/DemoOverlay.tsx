@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  clearDemoSession,
+  clearDemoSessionLocal,
+  clearDemoSessionServer,
   isDemoSessionActive,
 } from "../lib/demoSession";
 import "../styles/DemoOverlay.css";
@@ -12,7 +13,22 @@ interface DemoOverlayProps {
 
 const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const [isActive, setIsActive] = useState(isDemoSessionActive());
+  const [isClosing, setIsClosing] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
+  const closeTimeoutRef = useRef<number | null>(null);
+  const closingRef = useRef(false);
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const shouldRender = isActive || isClosing;
+  const overlayClassName = useMemo(() => {
+    if (isClosing) {
+      return "demo-overlay demo-overlay--closing";
+    }
+    if (isVisible) {
+      return "demo-overlay demo-overlay--open";
+    }
+    return "demo-overlay";
+  }, [isClosing, isVisible]);
 
   useEffect(() => {
     const handleChange = () => setIsActive(isDemoSessionActive());
@@ -26,30 +42,91 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     if (typeof document === "undefined") {
       return;
     }
-    if (isActive) {
+    if (shouldRender) {
       document.body.classList.add("demo-overlay-active");
     } else {
       document.body.classList.remove("demo-overlay-active");
     }
+  }, [shouldRender]);
+
+  useEffect(() => {
+    if (!shouldRender || isClosing) {
+      setIsVisible(false);
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => setIsVisible(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [shouldRender, isClosing]);
+
+  useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+    const handlePopState = () => {
+      startClose();
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, [isActive]);
 
-  const handleExit = async () => {
-    await clearDemoSession();
-    navigate("/", { replace: true });
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const finishClose = () => {
+    if (!closingRef.current) {
+      return;
+    }
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsClosing(false);
+    closingRef.current = false;
+    clearDemoSessionServer();
   };
 
-  if (!isActive) {
+  const startClose = () => {
+    if (closingRef.current || !shouldRender) {
+      return;
+    }
+    closingRef.current = true;
+    setIsClosing(true);
+    setIsVisible(false);
+    clearDemoSessionLocal();
+    navigate("/", { replace: true, state: { fromDemo: true } });
+    closeTimeoutRef.current = window.setTimeout(finishClose, 240);
+  };
+
+  if (!shouldRender) {
     return <>{children}</>;
   }
 
   return (
-    <div className="demo-overlay" role="dialog" aria-modal="true">
+    <div className={overlayClassName} role="dialog" aria-modal="true">
       <div className="demo-overlay__backdrop" />
-      <div className="demo-overlay__shell">
+      <div
+        className="demo-overlay__shell"
+        ref={shellRef}
+        onTransitionEnd={(event) => {
+          if (event.target !== shellRef.current) {
+            return;
+          }
+          if (isClosing) {
+            finishClose();
+          }
+        }}
+      >
         <button
           type="button"
           className="demo-overlay__close"
-          onClick={handleExit}
+          onClick={startClose}
           aria-label="Exit demo"
         >
           ×
