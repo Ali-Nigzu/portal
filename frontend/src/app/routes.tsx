@@ -21,6 +21,7 @@ const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
+const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 
 const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -156,6 +157,10 @@ const AppRoutes: React.FC = () => {
             />
           )
         }
+      />
+      <Route
+        path="/demo"
+        element={lazyRoute(<DemoPage />)}
       />
       <Route
         path="/login"

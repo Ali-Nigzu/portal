@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import admin, analytics, auth, client_data, dashboards, snapshots
+from backend.app.api import demo
 from backend.app.config import get_allowed_origins
 from backend.app.services.bigquery_client import bigquery_client
 from backend.app.spa import configure_spa
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
             return
 
     app.include_router(auth.router)
+    app.include_router(demo.router)
     app.include_router(admin.router)
     app.include_router(client_data.router)
     app.include_router(analytics.router)
