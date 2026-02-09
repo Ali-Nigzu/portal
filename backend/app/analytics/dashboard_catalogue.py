@@ -13,7 +13,7 @@ Widget = Dict[str, Any]
 
 _DEFAULT_TIMEZONE = "UTC"
 _DEFAULT_GRID_COLUMNS = 12
-_DEFAULT_GRID_HEIGHT = 8
+_DEFAULT_GRID_HEIGHT = 4
 
 
 def _single_value_spec(
