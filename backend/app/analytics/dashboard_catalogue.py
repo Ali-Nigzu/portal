@@ -322,6 +322,12 @@ DEFAULT_TIME_CONTROLS: Dict[str, Any] = {
             "allTime": True,
         },
         {
+            "id": "today",
+            "label": "Today",
+            "durationMinutes": 24 * 60,
+            "bucket": "HOUR",
+        },
+        {
             "id": "last_60_minutes",
             "label": "Last 60 minutes",
             "durationMinutes": 60,

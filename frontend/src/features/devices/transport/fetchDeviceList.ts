@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../../config";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import type { Credentials } from "../../../types/credentials";
 import type { DataSource, DeviceInfo } from "../types";
 
@@ -20,6 +21,7 @@ export const fetchDeviceList = async ({
   clientId,
   isAdmin,
 }: FetchDeviceListParams): Promise<DeviceListResponse> => {
+  const isDemoSession = isDemoSessionActive();
   let apiUrl = `${API_BASE_URL}/api/device-list`;
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -27,7 +29,7 @@ export const fetchDeviceList = async ({
 
   if (viewToken) {
     apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
-  } else {
+  } else if (!isDemoSession) {
     const auth = btoa(`${credentials.username}:${credentials.password}`);
     headers.Authorization = `Basic ${auth}`;
     if (isAdmin && clientId) {
@@ -35,7 +37,10 @@ export const fetchDeviceList = async ({
     }
   }
 
-  const response = await fetch(apiUrl, { headers });
+  const response = await fetch(apiUrl, {
+    headers,
+    credentials: isDemoSession ? "include" : "same-origin",
+  });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }

@@ -13,6 +13,7 @@ from backend.app.analytics.dashboard_catalogue import (
 )
 from backend.app.models import DashboardManifest
 from backend.app.services.auth_context import resolve_view_token_context
+from backend.app.services.demo_session import resolve_demo_org_id
 
 router = APIRouter(prefix="/api")
 
@@ -28,6 +29,11 @@ async def fetch_dashboard_manifest(
     resolved_view_token = view_token or request.query_params.get("view_token")
     if resolved_view_token:
         org_id = resolve_view_token_context(resolved_view_token)
+
+    if not org_id:
+        demo_org = resolve_demo_org_id(request)
+        if demo_org:
+            org_id = demo_org
 
     if not org_id:
         raise HTTPException(

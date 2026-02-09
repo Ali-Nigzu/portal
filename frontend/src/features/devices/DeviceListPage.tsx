@@ -7,7 +7,9 @@ interface DeviceListPageProps {
   credentials: Credentials;
 }
 
-const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
+const DeviceListPage: React.FC<DeviceListPageProps> = ({
+  credentials,
+}) => {
   const {
     devices,
     dataSources,

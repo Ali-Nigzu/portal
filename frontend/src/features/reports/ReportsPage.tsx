@@ -18,8 +18,12 @@ import { buildSiteFlowBucketLabels } from "../../lib/siteFlowBuckets";
 import { startOfYear } from "../../lib/timeWindows";
 interface ReportsPageProps {
   credentials?: Credentials;
+  fetchSnapshotFn?: typeof fetchLatestSnapshot;
 }
-const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
+const ReportsPage: React.FC<ReportsPageProps> = ({
+  credentials,
+  fetchSnapshotFn,
+}) => {
   const [reportType, setReportType] = useState("site-activity");
   const [timePeriod, setTimePeriod] = useState<ReportTimeframe>("today");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -30,7 +34,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ credentials }) => {
     try {
       setLoading(true);
       setSnapshotError(null);
-      const result = await fetchLatestSnapshot(credentials);
+      const snapshotLoader = fetchSnapshotFn ?? fetchLatestSnapshot;
+      const result = await snapshotLoader(credentials);
       setSnapshot(result as SnapshotResponse);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";

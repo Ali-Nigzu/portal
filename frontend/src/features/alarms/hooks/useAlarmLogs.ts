@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Credentials } from "../../../types/credentials";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import { fetchAlarmLogs } from "../transport/fetchAlarmLogs";
 import { fetchAlarmUsers } from "../transport/fetchAlarmUsers";
@@ -22,7 +23,9 @@ type AlarmLogsState = {
   refreshAlarms: () => void;
 };
 
-export const useAlarmLogs = (credentials: Credentials): AlarmLogsState => {
+export const useAlarmLogs = (
+  credentials: Credentials,
+): AlarmLogsState => {
   const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +34,7 @@ export const useAlarmLogs = (credentials: Credentials): AlarmLogsState => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const viewToken = getViewTokenFromLocation();
+  const isDemoSession = isDemoSessionActive();
 
   const loadUsers = useCallback(async () => {
     try {
@@ -77,18 +81,23 @@ export const useAlarmLogs = (credentials: Credentials): AlarmLogsState => {
   );
 
   useEffect(() => {
-    if (!viewToken) {
+    if (!viewToken && !isDemoSession) {
       loadUsers();
     }
-  }, [loadUsers, viewToken]);
+  }, [isDemoSession, loadUsers, viewToken]);
 
   useEffect(() => {
+    if (isDemoSession) {
+      setIsAdmin(false);
+      loadAlarms();
+      return;
+    }
     if (isAdmin && selectedClient) {
       loadAlarms(selectedClient);
     } else if (!isAdmin) {
       loadAlarms();
     }
-  }, [isAdmin, loadAlarms, selectedClient]);
+  }, [isAdmin, isDemoSession, loadAlarms, selectedClient]);
 
   const clientUsers = useMemo(
     () => Object.entries(users).filter(([_, user]) => user.role === "client"),

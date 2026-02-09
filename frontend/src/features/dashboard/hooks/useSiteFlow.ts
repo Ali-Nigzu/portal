@@ -21,6 +21,10 @@ import {
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
 import { loadWidgetResult } from "../transport/loadWidgetResult";
 import { isSnapshotOrg } from "../utils/snapshotMode";
+import {
+  consumeDemoSiteFlowModeOverride,
+  consumeDemoSiteFlowTimeframeOverride,
+} from "../../../lib/demoSession";
 
 const TIMESTAMP_DIMENSION_ID = "timestamp";
 
@@ -62,20 +66,30 @@ export const useSiteFlow = ({
   widgetResultLoader,
 }: UseSiteFlowParams): UseSiteFlowResult => {
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
+  const demoSiteFlowModeRef = useRef(consumeDemoSiteFlowModeOverride());
+  const demoSiteFlowTimeframeRef = useRef(
+    consumeDemoSiteFlowTimeframeOverride(),
+  );
   const siteFlowWidget = useMemo(
     () => manifest?.widgets.find((widget) => isSiteFlowWidget(widget)) ?? null,
     [manifest],
   );
   const [siteFlowMode, setSiteFlowMode] = useState<
     "activity" | "demographics"
-  >("activity");
+  >(demoSiteFlowModeRef.current === "demographics" ? "demographics" : "activity");
   const isSnapshotMode = useMemo(
     () => Boolean(viewToken) || isSnapshotOrg(orgId),
     [orgId, viewToken],
   );
   const hasUserSetSiteFlowTimeframe = useRef(false);
   const [siteFlowTimeframe, setSiteFlowTimeframe] = useState<SiteFlowTimeframe>(
-    () => (isSnapshotMode ? "today" : "all_time"),
+    () => {
+      const demoOverride = demoSiteFlowTimeframeRef.current;
+      if (demoOverride === "today" || demoOverride === "all_time") {
+        return demoOverride;
+      }
+      return isSnapshotMode ? "today" : "all_time";
+    },
   );
   const [siteFlowActivity, setSiteFlowActivity] = useState<{
     status: "idle" | "loading" | "ready" | "error";
@@ -95,6 +109,13 @@ export const useSiteFlow = ({
     },
     [],
   );
+
+  useEffect(() => {
+    if (demoSiteFlowTimeframeRef.current) {
+      hasUserSetSiteFlowTimeframe.current = true;
+      demoSiteFlowTimeframeRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (isSnapshotMode && !hasUserSetSiteFlowTimeframe.current) {

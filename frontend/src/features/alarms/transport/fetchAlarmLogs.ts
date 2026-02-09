@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../../config";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import type { Credentials } from "../../../types/credentials";
 import type { AlarmEvent } from "../types";
 
@@ -19,12 +20,13 @@ export const fetchAlarmLogs = async ({
   clientId,
   isAdmin,
 }: FetchAlarmLogsParams): Promise<AlarmEvent[]> => {
+  const isDemoSession = isDemoSessionActive();
   let apiUrl = `${API_BASE_URL}/api/alarm-logs`;
   const headers: HeadersInit = { "Content-Type": "application/json" };
 
   if (viewToken) {
     apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
-  } else {
+  } else if (!isDemoSession) {
     const auth = btoa(`${credentials.username}:${credentials.password}`);
     headers.Authorization = `Basic ${auth}`;
     if (isAdmin && clientId) {
@@ -32,7 +34,10 @@ export const fetchAlarmLogs = async ({
     }
   }
 
-  const response = await fetch(apiUrl, { headers });
+  const response = await fetch(apiUrl, {
+    headers,
+    credentials: isDemoSession ? "include" : "same-origin",
+  });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }

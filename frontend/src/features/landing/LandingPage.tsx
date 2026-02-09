@@ -26,6 +26,9 @@ const LandingPage: React.FC = () => {
       formSection.scrollIntoView({ behavior: "smooth" });
     }
   };
+  const goToDemo = () => {
+    navigate("/demo");
+  };
   return (
     <div className="landing-page">
       <nav className="landing-nav">
@@ -41,6 +44,10 @@ const LandingPage: React.FC = () => {
           <div className="nav-links">
             <a href="#features">Features</a>
             <a href="#solution">Solution</a>
+            <button onClick={goToDemo} className="nav-cta-btn">
+              {" "}
+              Try Live Demo{" "}
+            </button>
             <button
               onClick={() => navigate("/login")}
               className="nav-login-btn"
@@ -69,10 +76,20 @@ const LandingPage: React.FC = () => {
             <br /> Frictionless visual intelligence — hassle free, instant, and
             effortless.{" "}
           </p>
-          <button onClick={scrollToForm} className="hero-cta-btn">
-            {" "}
-            Get Started <span className="btn-arrow">→</span>
-          </button>
+          <div>
+            <button onClick={goToDemo} className="hero-cta-btn">
+              {" "}
+              Try Live Demo <span className="btn-arrow">→</span>
+            </button>
+            <button
+              onClick={scrollToForm}
+              className="hero-cta-btn"
+              style={{ marginLeft: "12px" }}
+            >
+              {" "}
+              Get Started <span className="btn-arrow">→</span>
+            </button>
+          </div>
         </div>
         <div className="hero-visual">
           <div className="visual-grid">

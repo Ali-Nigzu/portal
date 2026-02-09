@@ -10,6 +10,7 @@ from fastapi import HTTPException, Request, status
 from backend.app.auth import verify_password
 from backend.app.data.json_store import load_users
 from backend.app.view_tokens import validate_view_token
+from backend.app.services.demo_session import resolve_demo_org_id
 
 
 def org_id_for_user_record(username: str, user_record: Dict[str, Any]) -> str:
@@ -78,6 +79,9 @@ def authenticate_chart_data_request(
 
     auth_header = request.headers.get("Authorization")
     if not auth_header:
+        demo_org = resolve_demo_org_id(request)
+        if demo_org:
+            return demo_org
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
@@ -116,6 +120,10 @@ def resolve_snapshot_org(
     if resolved_view_token:
         return resolve_view_token_context(resolved_view_token)
 
+    demo_org = resolve_demo_org_id(request)
+    if demo_org:
+        return demo_org
+
     raise HTTPException(
         status_code=422,
         detail={"error": "missing_org", "message": "org or viewToken is required"},
@@ -137,6 +145,9 @@ def resolve_client_from_request(
 
     auth_header = request.headers.get("Authorization")
     if not auth_header:
+        demo_org = resolve_demo_org_id(request)
+        if demo_org:
+            return demo_org
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",

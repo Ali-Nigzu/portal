@@ -6,6 +6,7 @@ import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildSnapshotWidgetResult } from "../utils/snapshotPayload";
 import type { SnapshotResponse } from "../../../lib/snapshots";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 export interface LoadWidgetOptions {
   signal?: AbortSignal;
   timeRange?: DashboardTimeRangeOption;
@@ -30,19 +31,22 @@ async function loadSnapshotPayload(options: {
   orgId?: string;
   viewToken?: string;
 }): Promise<SnapshotResponse> {
+  const isDemoSession = isDemoSessionActive();
   const params = new URLSearchParams();
   if (options.viewToken) {
     params.append("viewToken", options.viewToken);
-  } else if (options.orgId) {
+  } else if (!isDemoSession && options.orgId) {
     params.append("org", options.orgId);
-  } else {
+  } else if (!isDemoSession) {
     throw new Error("orgId or viewToken is required to load snapshots");
   }
+  const query = params.toString();
   const response = await fetch(
-    `${API_BASE_URL}${SNAPSHOT_ENDPOINT}?${params.toString()}`,
+    `${API_BASE_URL}${SNAPSHOT_ENDPOINT}${query ? `?${query}` : ""}`,
     {
       method: "GET",
       headers: { "Content-Type": "application/json" },
+      credentials: isDemoSession ? "include" : "same-origin",
       signal: options.signal,
     },
   );

@@ -3,11 +3,20 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Credentials } from "../../types/credentials";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
+import type { searchEvents } from "./transport/searchEvents";
 import type { EventData } from "./utils/eventTypes";
 interface EventLogsPageProps {
   credentials: Credentials;
+  searchEventsFn?: typeof searchEvents;
+  viewTokenOverride?: string | null;
+  clientIdOverride?: string | null;
 }
-const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
+const EventLogsPage: React.FC<EventLogsPageProps> = ({
+  credentials,
+  searchEventsFn,
+  viewTokenOverride,
+  clientIdOverride,
+}) => {
   const {
     events,
     loading,
@@ -29,7 +38,11 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({ credentials }) => {
     handleSearch,
     fetchExportEvents,
     fetchEvents,
-  } = useEventLogsQuery(credentials);
+  } = useEventLogsQuery(credentials, {
+    searchEventsFn,
+    viewToken: viewTokenOverride,
+    clientId: clientIdOverride,
+  });
   const ageBuckets = [
     { value: "0", label: "0-4" },
     { value: "1", label: "5-13" },

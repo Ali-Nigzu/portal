@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Credentials } from "../../../types/credentials";
+import {
+  consumeDemoTimeRangeOverride,
+  isDemoSessionActive,
+} from "../../../lib/demoSession";
 import { determineOrgId } from "../../../lib/org";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import { logError, logInfo } from "../../../common/utils/logger";
@@ -46,7 +50,10 @@ export const useDashboardManifest = ({
   dashboardId,
 }: UseDashboardManifestParams): UseDashboardManifestResult => {
   const viewToken = useMemo(() => getViewTokenFromLocation(), []);
-  const orgId = viewToken ? undefined : determineOrgId(credentials);
+  const isDemoSession = useMemo(() => isDemoSessionActive(), []);
+  const demoTimeRangeOverrideRef = useRef(consumeDemoTimeRangeOverride());
+  const orgId =
+    viewToken || isDemoSession ? undefined : determineOrgId(credentials);
   const resolvedDashboardId = dashboardId ?? "dashboard-default";
   const manifestLoaderImpl = manifestLoader ?? fetchDashboardManifest;
   const [manifest, setManifest] = useState<DashboardManifest | null>(null);
@@ -141,6 +148,12 @@ export const useDashboardManifest = ({
     const options = manifest.timeControls?.options ?? [];
     const fallback =
       manifest.timeControls?.defaultTimeRangeId ?? options[0]?.id ?? null;
+    const demoOverride = demoTimeRangeOverrideRef.current;
+    if (demoOverride && options.some((option) => option.id === demoOverride)) {
+      demoTimeRangeOverrideRef.current = null;
+      setSelectedTimeRangeId(demoOverride);
+      return;
+    }
     setSelectedTimeRangeId((current) => {
       if (current && options.some((option) => option.id === current)) {
         return current;

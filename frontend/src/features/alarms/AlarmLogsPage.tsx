@@ -5,7 +5,9 @@ import { getSeverityClass, getSeverityText } from "./utils/severityFormatters";
 interface AlarmLogsPageProps {
   credentials: Credentials;
 }
-const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({ credentials }) => {
+const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
+  credentials,
+}) => {
   const {
     alarms,
     loading,

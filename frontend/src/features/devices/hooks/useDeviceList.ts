@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Credentials } from "../../../types/credentials";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import type { DataSource, DeviceInfo, DeviceUser } from "../types";
 import { fetchDeviceList } from "../transport/fetchDeviceList";
@@ -22,7 +23,9 @@ type DeviceListState = {
   downloadDataSource: (sourceUrl: string, sourceName: string) => void;
 };
 
-export const useDeviceList = (credentials: Credentials): DeviceListState => {
+export const useDeviceList = (
+  credentials: Credentials,
+): DeviceListState => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +35,7 @@ export const useDeviceList = (credentials: Credentials): DeviceListState => {
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
   const viewToken = getViewTokenFromLocation();
+  const isDemoSession = isDemoSessionActive();
 
   const loadUsers = useCallback(async () => {
     try {
@@ -107,22 +111,30 @@ export const useDeviceList = (credentials: Credentials): DeviceListState => {
   }, [credentials, isAdmin, selectedClient, users, viewToken]);
 
   useEffect(() => {
-    if (!viewToken) {
+    if (!viewToken && !isDemoSession) {
       loadUsers();
     }
-  }, [loadUsers, viewToken]);
+  }, [isDemoSession, loadUsers, viewToken]);
 
   useEffect(() => {
+    if (isDemoSession) {
+      setIsAdmin(false);
+      loadDeviceList();
+      return;
+    }
     if (isAdmin && selectedClient) {
       loadDeviceList(selectedClient);
     } else if (!isAdmin) {
       loadDeviceList();
     }
-  }, [isAdmin, loadDeviceList, selectedClient]);
+  }, [isAdmin, isDemoSession, loadDeviceList, selectedClient]);
 
   useEffect(() => {
+    if (isDemoSession) {
+      return;
+    }
     loadDataSources();
-  }, [loadDataSources]);
+  }, [isDemoSession, loadDataSources]);
 
   const clientUsers = useMemo(
     () => Object.entries(users).filter(([_, user]) => user.role === "client"),
