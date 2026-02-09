@@ -1,7 +1,10 @@
 import type { DashboardManifest } from "../../dashboard/types";
+import type { FetchDashboardManifestOptions } from "../../dashboard/transport/fetchDashboardManifest";
 
 export const fetchDemoDashboardManifest = async (
+  _orgId?: string,
   dashboardId = "dashboard-default",
+  _options?: FetchDashboardManifestOptions,
 ): Promise<DashboardManifest> => {
   const response = await fetch(`/api/demo/dashboards/${dashboardId}`, {
     method: "GET",

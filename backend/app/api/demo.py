@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException
 
-from backend.app.analytics.dashboard_catalogue import get_dashboard_manifest
+from backend.app.analytics.dashboard_catalogue import (
+    ManifestValidationError,
+    get_dashboard_manifest,
+)
 from backend.app.snapshots import SnapshotLookupError, fetch_latest_snapshot
 
 router = APIRouter(prefix="/api/demo")
+logger = logging.getLogger(__name__)
 
 DEMO_ORG_ID = "client1"
 _CACHE_TTL_SECONDS = 60
@@ -42,11 +47,35 @@ def _ensure_snapshot_env() -> None:
 
 @router.get("/dashboards/{dashboard_id}")
 async def fetch_demo_dashboard_manifest(dashboard_id: str):
-    cache_key = f"manifest:{dashboard_id}"
+    cleaned_dashboard_id = dashboard_id.strip() if dashboard_id else ""
+    if not cleaned_dashboard_id or cleaned_dashboard_id.lower() in {"undefined", "null"}:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_dashboard_id", "message": "dashboard_id is required"},
+        )
+    logger.info(
+        "demo.dashboard_manifest.request",
+        extra={"org_id": DEMO_ORG_ID, "dashboard_id": cleaned_dashboard_id},
+    )
+    cache_key = f"manifest:{cleaned_dashboard_id}"
     cached = _get_cache(cache_key)
     if cached is not None:
         return cached
-    payload = get_dashboard_manifest(org_id=DEMO_ORG_ID, dashboard_id=dashboard_id)
+    try:
+        payload = get_dashboard_manifest(
+            org_id=DEMO_ORG_ID,
+            dashboard_id=cleaned_dashboard_id,
+        )
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "manifest_not_found", "message": str(exc)},
+        ) from exc
+    except ManifestValidationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "manifest_validation", "message": str(exc)},
+        ) from exc
     _set_cache(cache_key, payload)
     return payload
 
