@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { establishDemoSession } from "../lib/demoSession";
+import {
+  applyDemoDefaultsOnce,
+  enableDemoSession,
+} from "../lib/demoSession";
 
 const DemoPage = () => {
   const navigate = useNavigate();
@@ -10,11 +13,12 @@ const DemoPage = () => {
     let isMounted = true;
     const startDemo = async () => {
       try {
-        await establishDemoSession();
+        await enableDemoSession();
+        applyDemoDefaultsOnce();
         if (!isMounted) {
           return;
         }
-        navigate("/sites/all/dashboard", { replace: true });
+        navigate("/sites/site-a/dashboard", { replace: true });
       } catch (err) {
         if (!isMounted) {
           return;

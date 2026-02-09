@@ -26,3 +26,10 @@ async def start_demo_session(response: Response) -> dict:
     )
     logger.info("demo.session.started")
     return {"status": "ok"}
+
+
+@router.post("/session/clear")
+async def clear_demo_session(response: Response) -> dict:
+    response.delete_cookie(key=DEMO_COOKIE_NAME, path="/")
+    logger.info("demo.session.cleared")
+    return {"status": "ok"}
