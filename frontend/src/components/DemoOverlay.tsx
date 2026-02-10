@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   clearDemoSessionLocal,
   clearDemoSessionServer,
@@ -16,6 +16,8 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationType = useNavigationType();
   const closeTimeoutRef = useRef<number | null>(null);
   const closingRef = useRef(false);
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -58,18 +60,15 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     return () => window.cancelAnimationFrame(frame);
   }, [shouldRender, isClosing]);
 
+
   useEffect(() => {
-    if (!isActive) {
+    if (!isActive || isClosing) {
       return;
     }
-    const handlePopState = () => {
+    if (navigationType === "POP" && location.pathname.startsWith("/sites")) {
       startClose();
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [isActive]);
+    }
+  }, [isActive, isClosing, navigationType, location.pathname]);
 
   useEffect(() => {
     return () => {
