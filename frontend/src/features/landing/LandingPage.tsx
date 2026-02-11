@@ -25,9 +25,7 @@ const LandingPage: React.FC = () => {
     }
   };
 
-  const handleInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [event.target.name]: event.target.value });
   };
 
@@ -67,57 +65,49 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        <section id="what-you-get" className="landing-section" aria-labelledby="what-you-get-title">
-          <div className="landing-container">
-            <h2 id="what-you-get-title">{landingCopy.whatYouGet.heading}</h2>
-            <ul className="landing-list-grid">
-              {landingCopy.whatYouGet.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </ul>
+        <section className="landing-info-band" aria-label="camOS information">
+          <div className="landing-container landing-info-grid">
+            <article id="what-you-get" className="landing-info-block" aria-labelledby="what-you-get-title">
+              <h2 id="what-you-get-title">{landingCopy.whatYouGet.heading}</h2>
+              <ul className="landing-bullet-list">
+                {landingCopy.whatYouGet.bullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article id="how-it-works" className="landing-info-block" aria-labelledby="how-it-works-title">
+              <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
+              <ol className="landing-step-list">
+                {landingCopy.howItWorks.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </article>
+
+            <article id="system" className="landing-info-block" aria-labelledby="system-title">
+              <h2 id="system-title">{landingCopy.system.heading}</h2>
+              <ul className="landing-bullet-list landing-bullet-list--compact">
+                {landingCopy.system.bullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+              <p className="landing-system-note">{landingCopy.system.note}</p>
+            </article>
           </div>
         </section>
 
-        <section id="how-it-works" className="landing-section" aria-labelledby="how-it-works-title">
-          <div className="landing-container">
-            <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
-            <ol className="landing-steps">
-              {landingCopy.howItWorks.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section id="system" className="landing-section" aria-labelledby="system-title">
-          <div className="landing-container">
-            <h2 id="system-title">{landingCopy.system.heading}</h2>
-            <ul className="landing-list-grid">
-              {landingCopy.system.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </ul>
-            <p className="landing-system-note">{landingCopy.system.note}</p>
-          </div>
-        </section>
-
-        <section id="demo" className="landing-section" aria-labelledby="demo-title">
-          <div className="landing-container">
-            <h2 id="demo-title">{landingCopy.demo.heading}</h2>
-            <button type="button" className="landing-demo-link" onClick={goToDemo}>
-              {landingCopy.demo.line}
-            </button>
-            <p className="landing-demo-note">{landingCopy.demo.note}</p>
-          </div>
-        </section>
-
-        <section id="sign-up" className="landing-section" aria-labelledby="sign-up-title">
+        <section id="sign-up" className="landing-signup" aria-labelledby="sign-up-title">
           <div className="landing-container landing-signup-wrap">
             <h2 id="sign-up-title">{landingCopy.signUp.heading}</h2>
             <p>{landingCopy.signUp.line}</p>
 
             {submitSuccess ? (
-              <div className="landing-status landing-status-success" role="status" aria-live="polite">
+              <div
+                className="landing-status landing-status-success"
+                role="status"
+                aria-live="polite"
+              >
                 <p>Sign-up submitted.</p>
                 <button
                   type="button"
@@ -182,7 +172,11 @@ const LandingPage: React.FC = () => {
                 </div>
 
                 {submitError ? (
-                  <div className="landing-status landing-status-error" role="alert" aria-live="assertive">
+                  <div
+                    className="landing-status landing-status-error"
+                    role="alert"
+                    aria-live="assertive"
+                  >
                     <p>{submitError}</p>
                   </div>
                 ) : null}

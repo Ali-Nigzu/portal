@@ -8,7 +8,6 @@ export const landingCopy = {
       { href: "#what-you-get", label: "What you get" },
       { href: "#how-it-works", label: "How it works" },
       { href: "#system", label: "System" },
-      { href: "#demo", label: "Demo" },
     ],
     actions: {
       demo: "Try Live Demo",
@@ -45,11 +44,6 @@ export const landingCopy = {
       "Consistent reporting",
     ],
     note: "Sign up at no cost.",
-  },
-  demo: {
-    heading: "Demo",
-    line: "Try Live Demo",
-    note: "Exit any time.",
   },
   signUp: {
     heading: "Sign Up",
