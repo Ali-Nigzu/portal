@@ -39,11 +39,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="landing-page">
-      <LandingHeader
-        onTryDemo={goToDemo}
-        onSignUp={scrollToSignUp}
-        onLogin={goToLogin}
-      />
+      <LandingHeader onSignUp={scrollToSignUp} onLogin={goToLogin} />
 
       <main>
         <section className="landing-hero" aria-labelledby="landing-hero-title">
@@ -67,22 +63,40 @@ const LandingPage: React.FC = () => {
 
         <section className="landing-info-band" aria-label="camOS information">
           <div className="landing-container landing-info-grid">
-            <article id="what-you-get" className="landing-info-block" aria-labelledby="what-you-get-title">
+            <article
+              id="what-you-get"
+              className="landing-info-block"
+              aria-labelledby="what-you-get-title"
+            >
               <h2 id="what-you-get-title">{landingCopy.whatYouGet.heading}</h2>
               <ul className="landing-bullet-list">
                 {landingCopy.whatYouGet.bullets.map((bullet) => (
                   <li key={bullet}>{bullet}</li>
                 ))}
               </ul>
+              <button
+                type="button"
+                className="btn btn-check-demo"
+                onClick={goToDemo}
+              >
+                {landingCopy.nav.actions.checkDemo}
+              </button>
             </article>
 
-            <article id="how-it-works" className="landing-info-block" aria-labelledby="how-it-works-title">
+            <article
+              id="how-it-works"
+              className="landing-info-block"
+              aria-labelledby="how-it-works-title"
+            >
               <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
-              <ol className="landing-step-list">
-                {landingCopy.howItWorks.steps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
+              <div className="landing-how-it-works">
+                <p className="landing-how-title">{landingCopy.howItWorks.steps[0]}</p>
+                <div className="landing-how-survey-block">
+                  <p className="landing-how-title">{landingCopy.howItWorks.steps[1]}</p>
+                  <p className="landing-how-subtext">{landingCopy.howItWorks.surveySubtext}</p>
+                </div>
+                <p className="landing-how-title">{landingCopy.howItWorks.steps[2]}</p>
+              </div>
             </article>
 
             <article id="system" className="landing-info-block" aria-labelledby="system-title">
@@ -92,7 +106,9 @@ const LandingPage: React.FC = () => {
                   <li key={bullet}>{bullet}</li>
                 ))}
               </ul>
-              <p className="landing-system-note">{landingCopy.system.note}</p>
+              <div className="landing-system-pill" role="note" aria-label={landingCopy.system.note}>
+                {landingCopy.system.note}
+              </div>
             </article>
           </div>
         </section>

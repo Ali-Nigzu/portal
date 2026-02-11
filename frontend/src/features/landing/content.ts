@@ -10,14 +10,15 @@ export const landingCopy = {
       { href: "#system", label: "System" },
     ],
     actions: {
-      demo: "Try Live Demo",
+      demo: "Try demo",
+      checkDemo: "Check out a Demo",
       signUp: "Sign Up",
       login: "Login",
     },
   },
   hero: {
-    headline: "Real-time reporting from your existing CCTV.",
-    supportLine: "See what’s happening across your locations—when you are away.",
+    headline: "Real time reporting from your CCTV",
+    supportLine: "See whats happening across your locations only",
   },
   whatYouGet: {
     heading: "What you get",
@@ -30,19 +31,12 @@ export const landingCopy = {
   },
   howItWorks: {
     heading: "How it works",
-    steps: [
-      "Sign Up — Add your location details.",
-      "Survey — We match reporting to your camera setup.",
-      "Live — Your system goes live. Real-time reporting.",
-    ],
+    steps: ["Sign Up Now", "Survey", "System Live"],
+    surveySubtext: "Align system with logic with your setup",
   },
   system: {
     heading: "System",
-    bullets: [
-      "Uses existing CCTV",
-      "No additional hardware",
-      "Consistent reporting",
-    ],
+    bullets: ["Uses existing CCTV", "No additional hardware", "Live reporting"],
     note: "Sign up at no cost.",
   },
   signUp: {
@@ -55,5 +49,10 @@ export const landingCopy = {
       "Camera Operating Systems Limited is registered in England and Wales. Registered number: 16937639",
     legalLine2: "Registered address: 71-75 Shelton St, London WC2H 9JQ, UK",
     links: ["Privacy", "Terms", "Contact", "Login"],
+    socials: {
+      youtube: "YouTube",
+      linkedin: "LinkedIn",
+      x: "X",
+    },
   },
 } as const;
