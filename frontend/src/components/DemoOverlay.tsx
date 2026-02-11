@@ -1,5 +1,5 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   clearDemoSessionLocal,
   clearDemoSessionServer,
@@ -18,64 +18,21 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationType = useNavigationType();
   const closeTimeoutRef = useRef<number | null>(null);
-  const exitInProgressRef = useRef(false);
-  const hasNavigatedRef = useRef(false);
+  const closingRef = useRef(false);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const shouldRender = isActive || isClosing;
-
-  const overlayClassName = isClosing
-    ? "demo-overlay demo-overlay--closing"
-    : isVisible
-      ? "demo-overlay demo-overlay--open"
-      : "demo-overlay";
-
-  const resetCloseGuards = () => {
-    exitInProgressRef.current = false;
-    hasNavigatedRef.current = false;
-  };
-
-  const finalizeExit = () => {
-    if (!exitInProgressRef.current || hasNavigatedRef.current) {
-      return;
+  const overlayClassName = useMemo(() => {
+    if (isClosing) {
+      return "demo-overlay demo-overlay--closing";
     }
-    hasNavigatedRef.current = true;
-    if (closeTimeoutRef.current !== null) {
-      window.clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
+    if (isVisible) {
+      return "demo-overlay demo-overlay--open";
     }
-    clearDemoSessionLocal();
-    setIsClosing(false);
-    resetCloseGuards();
-    navigate("/", { replace: true, state: { fromDemo: true } });
-    void clearDemoSessionServer();
-  };
-
-  const startExit = () => {
-    if (exitInProgressRef.current || !shouldRender) {
-      return;
-    }
-    exitInProgressRef.current = true;
-    setIsClosing(true);
-    setIsVisible(false);
-    closeTimeoutRef.current = window.setTimeout(finalizeExit, CLOSE_ANIMATION_MS + 50);
-  };
-
-  useLayoutEffect(() => {
-    const handleChange = () => {
-      const nextActive = isDemoSessionActive();
-      setIsActive(nextActive);
-      if (!nextActive) {
-        resetCloseGuards();
-      }
-    };
-
-    const handlePopState = () => {
-      if (!isDemoSessionActive()) {
-        return;
-      }
-      startExit();
-    };
+    return "demo-overlay";
+  }, [isClosing, isVisible]);
 
     window.addEventListener("demo-session-changed", handleChange);
     window.addEventListener("popstate", handlePopState);
@@ -96,7 +53,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     }
   }, [shouldRender]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!shouldRender || isClosing) {
       setIsVisible(false);
       return;
@@ -106,13 +63,47 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   }, [shouldRender, isClosing]);
 
 
-  useLayoutEffect(() => {
+  useEffect(() => {
+    if (!isActive || isClosing) {
+      return;
+    }
+    if (navigationType === "POP" && location.pathname.startsWith("/sites")) {
+      startClose();
+    }
+  }, [isActive, isClosing, navigationType, location.pathname]);
+
+  useEffect(() => {
     return () => {
       if (closeTimeoutRef.current !== null) {
         window.clearTimeout(closeTimeoutRef.current);
       }
     };
   }, []);
+
+  const finishClose = () => {
+    if (!closingRef.current) {
+      return;
+    }
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsClosing(false);
+    closingRef.current = false;
+    clearDemoSessionServer();
+  };
+
+  const startClose = () => {
+    if (closingRef.current || !shouldRender) {
+      return;
+    }
+    closingRef.current = true;
+    setIsClosing(true);
+    setIsVisible(false);
+    clearDemoSessionLocal();
+    navigate("/", { replace: true, state: { fromDemo: true } });
+    closeTimeoutRef.current = window.setTimeout(finishClose, 240);
+  };
 
   if (!shouldRender) {
     return <>{children}</>;
@@ -125,16 +116,18 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
         className="demo-overlay__shell"
         ref={shellRef}
         onTransitionEnd={(event) => {
-          if (event.target !== shellRef.current || !isClosing) {
+          if (event.target !== shellRef.current) {
             return;
           }
-          finalizeExit();
+          if (isClosing) {
+            finishClose();
+          }
         }}
       >
         <button
           type="button"
           className="demo-overlay__close"
-          onClick={startExit}
+          onClick={startClose}
           aria-label="Exit demo"
           disabled={isClosing}
         >
