@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   clearDemoSessionLocal,
@@ -33,6 +39,23 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     }
     return "demo-overlay";
   }, [isClosing, isVisible]);
+
+  useEffect(() => {
+    const handleChange = () => {
+      const nextActive = isDemoSessionActive();
+      setIsActive(nextActive);
+      if (!nextActive) {
+        setIsClosing(false);
+        closingRef.current = false;
+      }
+    };
+
+    const handlePopState = () => {
+      if (!isDemoSessionActive()) {
+        return;
+      }
+      startClose();
+    };
 
     window.addEventListener("demo-session-changed", handleChange);
     window.addEventListener("popstate", handlePopState);
