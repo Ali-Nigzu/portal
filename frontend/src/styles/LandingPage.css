@@ -41,10 +41,6 @@
   gap: 20px;
 }
 
-.landing-header-bottom {
-  padding: 10px 0 14px;
-}
-
 .landing-brand {
   display: flex;
   align-items: center;
@@ -64,27 +60,12 @@
   font-weight: 600;
 }
 
-.landing-brand-tagline {
-  margin: 0;
-  color: var(--landing-text-muted);
-  font-size: 0.875rem;
-  line-height: 1.45;
-  font-weight: 500;
-}
-
 .landing-header-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.landing-nav-links {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.landing-nav-links a,
 .landing-footer-links a {
   color: var(--landing-text-secondary);
   text-decoration: none;
@@ -93,14 +74,12 @@
   font-weight: 500;
 }
 
-.landing-nav-links a:hover,
 .landing-footer-links a:hover,
 .landing-footer-login-btn:hover,
 .landing-footer-social-link:hover {
   color: var(--landing-brand-700);
 }
 
-.landing-nav-links a:focus-visible,
 .landing-footer-links a:focus-visible,
 .landing-footer-login-btn:focus-visible,
 .landing-footer-social-link:focus-visible,
@@ -155,6 +134,28 @@
 .btn-check-demo {
   margin-top: 20px;
   align-self: flex-start;
+  min-height: 48px;
+  padding: 8px 16px;
+}
+
+.btn-stacked {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.05;
+}
+
+.btn-static-disabled,
+.btn-static-disabled:disabled {
+  opacity: 1;
+  cursor: default;
+  pointer-events: none;
+}
+
+.btn-static-disabled:focus-visible {
+  outline: none;
 }
 
 .landing-hero,
@@ -162,7 +163,7 @@
 #what-you-get,
 #how-it-works,
 #system {
-  scroll-margin-top: 120px;
+  scroll-margin-top: 104px;
 }
 
 .landing-hero {
@@ -258,47 +259,29 @@
   margin-top: 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+}
+
+.landing-how-signup-btn {
+  align-self: flex-start;
 }
 
 .landing-how-title {
   margin: 0;
+  padding: 8px 0;
   font-size: 1.03rem;
   line-height: 1.5;
   font-weight: 600;
   color: var(--landing-text-primary);
-}
-
-.landing-how-survey-block {
-  padding: 16px 0;
   border-top: 1px solid var(--landing-border-muted);
-  border-bottom: 1px solid var(--landing-border-muted);
 }
 
-.landing-how-subtext {
-  margin: 8px 0 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: var(--landing-text-secondary);
+.landing-how-title:last-child {
+  border-bottom: 1px solid var(--landing-border-muted);
 }
 
 .landing-bullet-list--compact {
   gap: 10px;
-}
-
-.landing-system-pill {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 20px;
-  border: 1px solid #bfcce0;
-  background: #edf3f9;
-  color: #253a55;
-  border-radius: 999px;
-  min-height: 34px;
-  padding: 6px 12px;
-  font-size: 0.875rem;
-  line-height: 1;
-  font-weight: 600;
 }
 
 .landing-signup-wrap > p {
@@ -382,22 +365,29 @@
 .landing-footer {
   border-top: 1px solid var(--landing-border-default);
   background: var(--landing-bg-surface);
-  padding: 40px 0;
+  padding: 22px 0;
 }
 
-.landing-footer-inner p {
+.landing-footer-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 16px 20px;
+}
+
+.landing-footer-main p {
   margin: 0;
   color: var(--landing-text-secondary);
-  font-size: 0.875rem;
-  line-height: 1.68;
+  font-size: 0.82rem;
+  line-height: 1.55;
 }
 
-.landing-footer-inner p + p {
-  margin-top: 4px;
+.landing-footer-main p + p {
+  margin-top: 2px;
 }
 
 .landing-footer-links {
-  margin-top: 14px !important;
+  margin-top: 8px !important;
 }
 
 .landing-footer-login-btn {
@@ -410,15 +400,14 @@
 }
 
 .landing-footer-social {
-  margin-top: 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .landing-footer-social-link {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -430,8 +419,8 @@
 }
 
 .landing-footer-social-link svg {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
 @media (max-width: 1023px) {
@@ -449,15 +438,6 @@
   .landing-header-actions {
     margin-left: auto;
     justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .landing-header-bottom {
-    padding: 0 0 12px;
-  }
-
-  .landing-nav-links {
-    gap: 18px;
     flex-wrap: wrap;
   }
 
@@ -482,10 +462,6 @@
 @media (max-width: 767px) {
   .landing-container {
     width: min(1120px, calc(100% - 32px));
-  }
-
-  .landing-brand-tagline {
-    font-size: 0.8125rem;
   }
 
   .landing-header-actions {
@@ -516,7 +492,8 @@
 
   .landing-hero-actions .btn,
   .landing-signup-form .btn,
-  .btn-check-demo {
+  .btn-check-demo,
+  .landing-how-signup-btn {
     width: 100%;
   }
 
@@ -536,6 +513,19 @@
   .landing-status-success {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .landing-footer-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .landing-footer-social {
+    order: 1;
+  }
+
+  .landing-footer-main {
+    order: 2;
   }
 }
 

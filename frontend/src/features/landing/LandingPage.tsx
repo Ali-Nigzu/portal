@@ -47,8 +47,13 @@ const LandingPage: React.FC = () => {
             <h1 id="landing-hero-title">{landingCopy.hero.headline}</h1>
             <p>{landingCopy.hero.supportLine}</p>
             <div className="landing-hero-actions">
-              <button type="button" className="btn btn-primary" onClick={goToDemo}>
-                {landingCopy.nav.actions.demo}
+              <button
+                type="button"
+                className="btn btn-primary btn-stacked"
+                onClick={goToDemo}
+              >
+                <span>Checkout</span>
+                <span>Demo</span>
               </button>
               <button
                 type="button"
@@ -76,10 +81,11 @@ const LandingPage: React.FC = () => {
               </ul>
               <button
                 type="button"
-                className="btn btn-check-demo"
+                className="btn btn-check-demo btn-stacked"
                 onClick={goToDemo}
               >
-                {landingCopy.nav.actions.checkDemo}
+                <span>Checkout</span>
+                <span>Demo</span>
               </button>
             </article>
 
@@ -90,12 +96,15 @@ const LandingPage: React.FC = () => {
             >
               <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
               <div className="landing-how-it-works">
-                <p className="landing-how-title">{landingCopy.howItWorks.steps[0]}</p>
-                <div className="landing-how-survey-block">
-                  <p className="landing-how-title">{landingCopy.howItWorks.steps[1]}</p>
-                  <p className="landing-how-subtext">{landingCopy.howItWorks.surveySubtext}</p>
-                </div>
-                <p className="landing-how-title">{landingCopy.howItWorks.steps[2]}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary landing-how-signup-btn"
+                  onClick={scrollToSignUp}
+                >
+                  {landingCopy.signUp.button}
+                </button>
+                <p className="landing-how-title">{landingCopy.howItWorks.survey}</p>
+                <p className="landing-how-title">{landingCopy.howItWorks.systemLive}</p>
               </div>
             </article>
 
@@ -106,9 +115,16 @@ const LandingPage: React.FC = () => {
                   <li key={bullet}>{bullet}</li>
                 ))}
               </ul>
-              <div className="landing-system-pill" role="note" aria-label={landingCopy.system.note}>
-                {landingCopy.system.note}
-              </div>
+              <button
+                type="button"
+                className="btn btn-check-demo btn-stacked btn-static-disabled"
+                disabled
+                tabIndex={-1}
+                aria-disabled="true"
+              >
+                <span>Sign up at</span>
+                <span>no cost.</span>
+              </button>
             </article>
           </div>
         </section>

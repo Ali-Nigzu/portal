@@ -1,24 +1,17 @@
 export const landingCopy = {
   brand: {
     logoText: "camOS",
-    tagline: "Intelligence for Everyone",
   },
   nav: {
-    anchors: [
-      { href: "#what-you-get", label: "What you get" },
-      { href: "#how-it-works", label: "How it works" },
-      { href: "#system", label: "System" },
-    ],
     actions: {
-      demo: "Try demo",
-      checkDemo: "Check out a Demo",
+      demo: "Checkout Demo",
       signUp: "Sign Up",
       login: "Login",
     },
   },
   hero: {
     headline: "Real time reporting from your CCTV",
-    supportLine: "See whats happening across your locations only",
+    supportLine: "See whats happening across your locations",
   },
   whatYouGet: {
     heading: "What you get",
@@ -31,8 +24,8 @@ export const landingCopy = {
   },
   howItWorks: {
     heading: "How it works",
-    steps: ["Sign Up Now", "Survey", "System Live"],
-    surveySubtext: "Align system with logic with your setup",
+    survey: "Survey",
+    systemLive: "System Live",
   },
   system: {
     heading: "System",

@@ -16,10 +16,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({ onSignUp, onLogin }) => (
           alt="camOS Logo"
           className="landing-brand-logo"
         />
-        <div>
-          <div className="landing-brand-name">{landingCopy.brand.logoText}</div>
-          <p className="landing-brand-tagline">{landingCopy.brand.tagline}</p>
-        </div>
+        <div className="landing-brand-name">{landingCopy.brand.logoText}</div>
       </div>
 
       <div className="landing-header-actions">
@@ -30,16 +27,6 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({ onSignUp, onLogin }) => (
           {landingCopy.nav.actions.login}
         </button>
       </div>
-    </div>
-
-    <div className="landing-container landing-header-bottom">
-      <nav aria-label="Primary" className="landing-nav-links">
-        {landingCopy.nav.anchors.map((anchor) => (
-          <a key={anchor.href} href={anchor.href}>
-            {anchor.label}
-          </a>
-        ))}
-      </nav>
     </div>
   </header>
 );
