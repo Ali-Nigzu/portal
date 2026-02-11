@@ -70,9 +70,9 @@ const LandingPage: React.FC = () => {
           <div className="landing-container landing-content-grid">
             <article className="landing-what-you-get" aria-labelledby="what-you-get-title">
               <h2 id="what-you-get-title">{landingCopy.whatYouGet.heading}</h2>
-              <div className="landing-spec-list">
+              <div className="landing-spec-list" role="list" aria-label="What you get list">
                 {landingCopy.whatYouGet.items.map((item) => (
-                  <div key={item} className="landing-spec-row">
+                  <div key={item} className="landing-spec-row" role="listitem">
                     <span>{item}</span>
                   </div>
                 ))}
@@ -89,27 +89,34 @@ const LandingPage: React.FC = () => {
 
             <article className="landing-how-it-works" aria-labelledby="how-it-works-title">
               <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
-              <ol className="landing-flow-rail">
-                <li className="landing-flow-step landing-flow-step--highlight">
-                  <span className="landing-flow-node" aria-hidden="true" />
+              <ol className="landing-flow-rail" aria-label="How it works flow">
+                <li className="landing-flow-step landing-flow-step--primary">
+                  <span className="landing-flow-index" aria-hidden="true">
+                    1
+                  </span>
                   <span className="landing-flow-text">{landingCopy.howItWorks.firstStep}</span>
                 </li>
-                <li className="landing-flow-arrow" aria-hidden="true">→</li>
+                <li className="landing-flow-connector" aria-hidden="true" />
                 <li className="landing-flow-step">
-                  <span className="landing-flow-node" aria-hidden="true" />
+                  <span className="landing-flow-index" aria-hidden="true">
+                    2
+                  </span>
                   <span className="landing-flow-text">{landingCopy.howItWorks.secondStep}</span>
                 </li>
-                <li className="landing-flow-arrow" aria-hidden="true">→</li>
+                <li className="landing-flow-connector" aria-hidden="true" />
                 <li className="landing-flow-step">
-                  <span className="landing-flow-node" aria-hidden="true" />
+                  <span className="landing-flow-index" aria-hidden="true">
+                    3
+                  </span>
                   <span className="landing-flow-text">{landingCopy.howItWorks.thirdStep}</span>
                 </li>
               </ol>
+
               <div className="landing-support-facts" role="list" aria-label="Supporting facts">
                 {landingCopy.howItWorks.facts.map((fact) => (
-                  <div key={fact} role="listitem" className="landing-support-fact">
+                  <span key={fact} role="listitem" className="landing-support-fact">
                     {fact}
-                  </div>
+                  </span>
                 ))}
               </div>
             </article>
@@ -202,7 +209,7 @@ const LandingPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-secondary"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Submitting..." : landingCopy.signUp.button}

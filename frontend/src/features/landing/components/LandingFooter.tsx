@@ -12,6 +12,7 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
         <p>{landingCopy.footer.legalLine1}</p>
         <p>{landingCopy.footer.legalLine2}</p>
         <p className="landing-footer-links">
+          <span>Links: </span>
           <a href="#" onClick={(event) => event.preventDefault()}>
             {landingCopy.footer.links[0]}
           </a>

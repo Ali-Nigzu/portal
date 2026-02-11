@@ -24,7 +24,7 @@ export const landingCopy = {
   },
   howItWorks: {
     heading: "How it works",
-    firstStep: "Sign Up at No Cost",
+    firstStep: "Sign up at no cost.",
     secondStep: "Survey",
     thirdStep: "System Live",
     facts: ["Uses existing CCTV", "No additional hardware", "Live reporting"],
