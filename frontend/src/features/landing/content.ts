@@ -1,6 +1,6 @@
 export const landingCopy = {
   brand: {
-    logoText: "camOS",
+    logoText: "Camera Intelligence",
   },
   nav: {
     actions: {
@@ -10,12 +10,12 @@ export const landingCopy = {
     },
   },
   hero: {
-    headline: "Real time reporting from your CCTV",
+    headline: "CCTV Intelligence",
     supportLine: "See whats happening across your locations",
   },
   whatYouGet: {
     heading: "What you get",
-    bullets: [
+    items: [
       "Footfall and occupancy",
       "Site flow and peak times",
       "Dwell time",
@@ -24,13 +24,10 @@ export const landingCopy = {
   },
   howItWorks: {
     heading: "How it works",
-    survey: "Survey",
-    systemLive: "System Live",
-  },
-  system: {
-    heading: "System",
-    bullets: ["Uses existing CCTV", "No additional hardware", "Live reporting"],
-    note: "Sign up at no cost.",
+    firstStep: "Sign Up at No Cost",
+    secondStep: "Survey",
+    thirdStep: "System Live",
+    facts: ["Uses existing CCTV", "No additional hardware", "Live reporting"],
   },
   signUp: {
     heading: "Sign Up",

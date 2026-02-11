@@ -66,19 +66,17 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="landing-info-band" aria-label="camOS information">
-          <div className="landing-container landing-info-grid">
-            <article
-              id="what-you-get"
-              className="landing-info-block landing-info-block--what"
-              aria-labelledby="what-you-get-title"
-            >
+        <section className="landing-content-band" aria-label="Landing information">
+          <div className="landing-container landing-content-grid">
+            <article className="landing-what-you-get" aria-labelledby="what-you-get-title">
               <h2 id="what-you-get-title">{landingCopy.whatYouGet.heading}</h2>
-              <ul className="landing-bullet-list">
-                {landingCopy.whatYouGet.bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
+              <div className="landing-spec-list">
+                {landingCopy.whatYouGet.items.map((item) => (
+                  <div key={item} className="landing-spec-row">
+                    <span>{item}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
               <button
                 type="button"
                 className="btn btn-check-demo btn-stacked"
@@ -89,46 +87,31 @@ const LandingPage: React.FC = () => {
               </button>
             </article>
 
-            <article
-              id="how-it-works"
-              className="landing-info-block landing-info-block--how"
-              aria-labelledby="how-it-works-title"
-            >
+            <article className="landing-how-it-works" aria-labelledby="how-it-works-title">
               <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
-              <div className="landing-how-it-works">
-                <button
-                  type="button"
-                  className="btn btn-secondary landing-how-signup-btn"
-                  onClick={scrollToSignUp}
-                >
-                  {landingCopy.signUp.button}
-                </button>
-                <p className="landing-how-title">{landingCopy.howItWorks.survey}</p>
-                <p className="landing-how-title">{landingCopy.howItWorks.systemLive}</p>
-              </div>
-            </article>
-
-            <article
-              id="system"
-              className="landing-info-block landing-info-block--system"
-              aria-labelledby="system-title"
-            >
-              <h2 id="system-title">{landingCopy.system.heading}</h2>
-              <ul className="landing-bullet-list landing-bullet-list--compact">
-                {landingCopy.system.bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
+              <ol className="landing-flow-rail">
+                <li className="landing-flow-step landing-flow-step--highlight">
+                  <span className="landing-flow-node" aria-hidden="true" />
+                  <span className="landing-flow-text">{landingCopy.howItWorks.firstStep}</span>
+                </li>
+                <li className="landing-flow-arrow" aria-hidden="true">→</li>
+                <li className="landing-flow-step">
+                  <span className="landing-flow-node" aria-hidden="true" />
+                  <span className="landing-flow-text">{landingCopy.howItWorks.secondStep}</span>
+                </li>
+                <li className="landing-flow-arrow" aria-hidden="true">→</li>
+                <li className="landing-flow-step">
+                  <span className="landing-flow-node" aria-hidden="true" />
+                  <span className="landing-flow-text">{landingCopy.howItWorks.thirdStep}</span>
+                </li>
+              </ol>
+              <div className="landing-support-facts" role="list" aria-label="Supporting facts">
+                {landingCopy.howItWorks.facts.map((fact) => (
+                  <div key={fact} role="listitem" className="landing-support-fact">
+                    {fact}
+                  </div>
                 ))}
-              </ul>
-              <button
-                type="button"
-                className="btn btn-check-demo btn-stacked btn-static-disabled"
-                disabled
-                tabIndex={-1}
-                aria-disabled="true"
-              >
-                <span>Sign up at</span>
-                <span>no cost.</span>
-              </button>
+              </div>
             </article>
           </div>
         </section>
