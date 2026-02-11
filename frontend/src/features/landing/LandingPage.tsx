@@ -70,7 +70,7 @@ const LandingPage: React.FC = () => {
           <div className="landing-container landing-info-grid">
             <article
               id="what-you-get"
-              className="landing-info-block"
+              className="landing-info-block landing-info-block--what"
               aria-labelledby="what-you-get-title"
             >
               <h2 id="what-you-get-title">{landingCopy.whatYouGet.heading}</h2>
@@ -91,7 +91,7 @@ const LandingPage: React.FC = () => {
 
             <article
               id="how-it-works"
-              className="landing-info-block"
+              className="landing-info-block landing-info-block--how"
               aria-labelledby="how-it-works-title"
             >
               <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
@@ -108,7 +108,11 @@ const LandingPage: React.FC = () => {
               </div>
             </article>
 
-            <article id="system" className="landing-info-block" aria-labelledby="system-title">
+            <article
+              id="system"
+              className="landing-info-block landing-info-block--system"
+              aria-labelledby="system-title"
+            >
               <h2 id="system-title">{landingCopy.system.heading}</h2>
               <ul className="landing-bullet-list landing-bullet-list--compact">
                 {landingCopy.system.bullets.map((bullet) => (
