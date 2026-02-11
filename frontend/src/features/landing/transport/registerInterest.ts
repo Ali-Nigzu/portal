@@ -2,9 +2,7 @@ export type RegisterInterestPayload = {
   name: string;
   email: string;
   company: string;
-  phone: string;
-  business_type: string;
-  message: string;
+  phone?: string;
 };
 
 type RegisterInterestResult =
