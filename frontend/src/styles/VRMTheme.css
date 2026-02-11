@@ -8,8 +8,16 @@
 
 
 
-.vrm-primary-rail { width: var(--vrm-primary-rail-width); background-color: var(--vrm-bg-secondary); border-right: 1px solid var(--vrm-border); display: flex; flex-direction: column; align-items: stretch; height: 100%; overflow: hidden; }
-.vrm-extended-panel { width: var(--vrm-extended-panel-width); background-color: var(--vrm-bg-secondary); display: flex; flex-direction: column; position: relative; height: 100%; overflow: hidden; }
+.vrm-primary-rail { width: var(--vrm-primary-rail-width); background-color: var(--vrm-bg-secondary); border-right: 1px solid var(--vrm-border); display: flex; flex-direction: column; align-items: stretch; height: 100%; min-height: 0; overflow: hidden; }
+.vrm-extended-panel { width: var(--vrm-extended-panel-width); background-color: var(--vrm-bg-secondary); display: flex; flex-direction: column; position: relative; height: 100%; min-height: 0; overflow: hidden; }
 .vrm-nav-row { min-height: 44px; padding: var(--vrm-spacing-3) var(--vrm-spacing-5); align-items: center; gap: var(--vrm-spacing-3); border-radius: var(--vrm-radii-button); }
 
 :root { --vrm-extended-panel-width: 264px; --vrm-extended-panel-width-collapsed: 64px; --vrm-primary-rail-width: 200px; --vrm-primary-rail-width-collapsed: 64px; }
+
+.demo-overlay-active .demo-overlay__content .vrm-layout {
+  height: 100%;
+}
+
+.demo-overlay-active .demo-overlay__content .vrm-main {
+  min-height: 0;
+}
