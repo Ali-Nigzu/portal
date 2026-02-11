@@ -6,6 +6,7 @@ export type NavRowProps = {
   leftIcon?: React.ReactNode;
   rightSlot?: React.ReactNode;
   to?: string;
+  replace?: boolean;
   onClick?: () => void;
   onMouseEnter?: React.MouseEventHandler<HTMLElement>;
   onMouseLeave?: React.MouseEventHandler<HTMLElement>;
@@ -21,6 +22,7 @@ const NavRow: React.FC<NavRowProps> = ({
   leftIcon,
   rightSlot,
   to,
+  replace,
   onClick,
   onMouseEnter,
   onMouseLeave,
@@ -67,6 +69,7 @@ const NavRow: React.FC<NavRowProps> = ({
       <Link
         className={baseClass}
         to={to}
+        replace={replace}
         aria-label={ariaLabel}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}

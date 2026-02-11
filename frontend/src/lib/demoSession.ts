@@ -43,16 +43,7 @@ export const enableDemoSession = async (): Promise<void> => {
   notifyDemoSessionChanged();
 };
 
-export const clearDemoSession = async (): Promise<void> => {
-  try {
-    await fetch(`${API_BASE_URL}/api/demo/session/clear`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
-  } catch {
-    // best-effort cleanup
-  }
+export const clearDemoSessionLocal = (): void => {
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(DEMO_SESSION_KEY);
     window.sessionStorage.removeItem(DEMO_DEFAULTS_APPLIED_KEY);
@@ -63,6 +54,23 @@ export const clearDemoSession = async (): Promise<void> => {
     window.localStorage.removeItem(KEEP_MENU_EXPANDED_KEY);
   }
   notifyDemoSessionChanged();
+};
+
+export const clearDemoSessionServer = async (): Promise<void> => {
+  try {
+    await fetch(`${API_BASE_URL}/api/demo/session/clear`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+  } catch {
+    // best-effort cleanup
+  }
+};
+
+export const clearDemoSession = async (): Promise<void> => {
+  await clearDemoSessionServer();
+  clearDemoSessionLocal();
 };
 
 export const applyDemoDefaultsOnce = (): void => {

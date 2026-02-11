@@ -93,6 +93,7 @@
   flex-direction: column;
   gap: 6px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -317,6 +318,7 @@ button.vrm-nav-row {
 .vrm-secondary-list {
   padding: 4px 10px 16px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
