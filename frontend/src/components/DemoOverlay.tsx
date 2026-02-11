@@ -11,6 +11,8 @@ interface DemoOverlayProps {
   children: React.ReactNode;
 }
 
+const CLOSE_ANIMATION_MS = 220;
+
 const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const [isActive, setIsActive] = useState(isDemoSessionActive());
   const [isClosing, setIsClosing] = useState(false);
@@ -32,15 +34,15 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     return "demo-overlay";
   }, [isClosing, isVisible]);
 
-  useEffect(() => {
-    const handleChange = () => setIsActive(isDemoSessionActive());
     window.addEventListener("demo-session-changed", handleChange);
+    window.addEventListener("popstate", handlePopState);
     return () => {
       window.removeEventListener("demo-session-changed", handleChange);
+      window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [shouldRender]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") {
       return;
     }
@@ -127,6 +129,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
           className="demo-overlay__close"
           onClick={startClose}
           aria-label="Exit demo"
+          disabled={isClosing}
         >
           ×
         </button>
