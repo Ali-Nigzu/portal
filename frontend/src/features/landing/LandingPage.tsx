@@ -39,7 +39,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="landing-page">
-      <LandingHeader onSignUp={scrollToSignUp} onLogin={goToLogin} />
+      <LandingHeader onLogin={goToLogin} />
 
       <main>
         <section className="landing-hero" aria-labelledby="landing-hero-title">
@@ -69,17 +69,23 @@ const LandingPage: React.FC = () => {
         <section className="landing-content-band" aria-label="Landing information">
           <div className="landing-container landing-content-grid">
             <article className="landing-what-you-get" aria-labelledby="what-you-get-title">
-              <h2 id="what-you-get-title">{landingCopy.whatYouGet.heading}</h2>
+              <h2 id="what-you-get-title" className="core-row-heading">
+                {landingCopy.whatYouGet.heading}
+              </h2>
               <div className="landing-spec-list" role="list" aria-label="What you get list">
-                {landingCopy.whatYouGet.items.map((item) => (
-                  <div key={item} className="landing-spec-row" role="listitem">
+                {landingCopy.whatYouGet.items.map((item, index) => (
+                  <div
+                    key={item}
+                    className={`landing-spec-row core-row-${index + 1}`}
+                    role="listitem"
+                  >
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
               <button
                 type="button"
-                className="btn btn-check-demo btn-stacked"
+                className="btn btn-check-demo btn-stacked core-row-action"
                 onClick={goToDemo}
               >
                 <span>Checkout</span>
@@ -88,23 +94,26 @@ const LandingPage: React.FC = () => {
             </article>
 
             <article className="landing-how-it-works" aria-labelledby="how-it-works-title">
-              <h2 id="how-it-works-title">{landingCopy.howItWorks.heading}</h2>
+              <h2 id="how-it-works-title" className="core-row-heading">
+                {landingCopy.howItWorks.heading}
+              </h2>
+
               <ol className="landing-flow-rail" aria-label="How it works flow">
-                <li className="landing-flow-step landing-flow-step--primary">
+                <li className="landing-flow-step core-row-1 landing-flow-step--primary">
                   <span className="landing-flow-index" aria-hidden="true">
                     1
                   </span>
                   <span className="landing-flow-text">{landingCopy.howItWorks.firstStep}</span>
                 </li>
-                <li className="landing-flow-connector" aria-hidden="true" />
-                <li className="landing-flow-step">
+
+                <li className="landing-flow-step core-row-2">
                   <span className="landing-flow-index" aria-hidden="true">
                     2
                   </span>
                   <span className="landing-flow-text">{landingCopy.howItWorks.secondStep}</span>
                 </li>
-                <li className="landing-flow-connector" aria-hidden="true" />
-                <li className="landing-flow-step">
+
+                <li className="landing-flow-step core-row-3">
                   <span className="landing-flow-index" aria-hidden="true">
                     3
                   </span>
@@ -112,7 +121,19 @@ const LandingPage: React.FC = () => {
                 </li>
               </ol>
 
-              <div className="landing-support-facts" role="list" aria-label="Supporting facts">
+              <div className="landing-trust-points core-row-4" role="list" aria-label="Trust points">
+                {landingCopy.howItWorks.trustPoints.map((point) => (
+                  <div key={point} role="listitem" className="landing-trust-point">
+                    {point}
+                  </div>
+                ))}
+              </div>
+
+              <div
+                className="landing-support-facts core-row-action"
+                role="list"
+                aria-label="Supporting facts"
+              >
                 {landingCopy.howItWorks.facts.map((fact) => (
                   <span key={fact} role="listitem" className="landing-support-fact">
                     {fact}

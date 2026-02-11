@@ -11,6 +11,7 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
       <div className="landing-footer-main">
         <p>{landingCopy.footer.legalLine1}</p>
         <p>{landingCopy.footer.legalLine2}</p>
+        <p className="landing-footer-contact">{landingCopy.footer.contactEmail}</p>
         <p className="landing-footer-links">
           <span>Links: </span>
           <a href="#" onClick={(event) => event.preventDefault()}>
