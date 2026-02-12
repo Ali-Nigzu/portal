@@ -32,7 +32,12 @@ export const landingCopy = {
       "Built for continuous operation",
       "Reporting is anonymised and aggregated",
     ],
-    facts: ["Uses existing CCTV", "No additional hardware", "Live reporting"],
+    facts: [
+      "Uses existing CCTV",
+      "No additional hardware",
+      "Live reporting",
+      "<1% of Tracks are Low Confidence",
+    ],
   },
   signUp: {
     heading: "Sign Up",
