@@ -67,79 +67,51 @@ const LandingPage: React.FC = () => {
         </section>
 
         <section className="landing-content-band" aria-label="Landing information">
-          <div className="landing-container landing-content-grid">
-            <article className="landing-what-you-get" aria-labelledby="what-you-get-title">
-              <h2 id="what-you-get-title" className="core-row-heading">
-                {landingCopy.whatYouGet.heading}
-              </h2>
-              <div className="landing-spec-list" role="list" aria-label="What you get list">
-                {landingCopy.whatYouGet.items.map((item, index) => (
-                  <div
-                    key={item}
-                    className={`landing-spec-row core-row-${index + 1}`}
-                    role="listitem"
-                  >
+          <div className="landing-container">
+            <article className="landing-narrative-panel" aria-labelledby="how-it-works-title">
+              <p className="landing-narrative-label" id="how-it-works-title">
+                {landingCopy.howItWorks.heading}
+              </p>
+
+              <ol className="landing-spine-list" aria-label="How it works flow">
+                <li className="landing-spine-step">
+                  <span className="landing-spine-index" aria-hidden="true">01</span>
+                  <span className="landing-spine-text">{landingCopy.howItWorks.firstStep}</span>
+                </li>
+                <li className="landing-spine-step">
+                  <span className="landing-spine-index" aria-hidden="true">02</span>
+                  <span className="landing-spine-text">{landingCopy.howItWorks.secondStep}</span>
+                </li>
+                <li className="landing-spine-step">
+                  <span className="landing-spine-index" aria-hidden="true">03</span>
+                  <span className="landing-spine-text">{landingCopy.howItWorks.thirdStep}</span>
+                </li>
+              </ol>
+
+              <div className="landing-spec-block" role="list" aria-label="What you get list">
+                <h2 className="landing-spec-title">{landingCopy.whatYouGet.heading}</h2>
+                {landingCopy.whatYouGet.items.map((item) => (
+                  <div key={item} className="landing-spec-row" role="listitem">
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
+
               <button
                 type="button"
-                className="btn btn-check-demo btn-stacked core-row-action"
+                className="btn btn-check-demo btn-stacked landing-inline-demo"
                 onClick={goToDemo}
               >
                 <span>Checkout</span>
                 <span>Demo</span>
               </button>
-            </article>
 
-            <article className="landing-how-it-works" aria-labelledby="how-it-works-title">
-              <h2 id="how-it-works-title" className="core-row-heading">
-                {landingCopy.howItWorks.heading}
-              </h2>
-
-              <ol className="landing-flow-rail" aria-label="How it works flow">
-                <li className="landing-flow-step core-row-1 landing-flow-step--primary">
-                  <span className="landing-flow-index" aria-hidden="true">
-                    1
-                  </span>
-                  <span className="landing-flow-text">{landingCopy.howItWorks.firstStep}</span>
-                </li>
-
-                <li className="landing-flow-step core-row-2">
-                  <span className="landing-flow-index" aria-hidden="true">
-                    2
-                  </span>
-                  <span className="landing-flow-text">{landingCopy.howItWorks.secondStep}</span>
-                </li>
-
-                <li className="landing-flow-step core-row-3">
-                  <span className="landing-flow-index" aria-hidden="true">
-                    3
-                  </span>
-                  <span className="landing-flow-text">{landingCopy.howItWorks.thirdStep}</span>
-                </li>
-              </ol>
-
-              <div className="landing-trust-points core-row-4" role="list" aria-label="Trust points">
-                {landingCopy.howItWorks.trustPoints.map((point) => (
-                  <div key={point} role="listitem" className="landing-trust-point">
-                    {point}
-                  </div>
-                ))}
-              </div>
-
-              <div
-                className="landing-support-facts core-row-action"
-                role="list"
-                aria-label="Supporting facts"
-              >
-                {landingCopy.howItWorks.facts.map((fact) => (
-                  <span key={fact} role="listitem" className="landing-support-fact">
-                    {fact}
-                  </span>
-                ))}
-              </div>
+              <p className="landing-assurance-strip" aria-label="Assurance points">
+                {[
+                  ...landingCopy.howItWorks.trustPoints,
+                  ...landingCopy.howItWorks.facts,
+                ].join(" · ")}
+              </p>
             </article>
           </div>
         </section>
