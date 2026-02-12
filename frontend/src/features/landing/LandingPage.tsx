@@ -114,15 +114,15 @@ const LandingPage: React.FC = () => {
                       <span className="landing-step-text">{landingCopy.howItWorks.thirdStep}</span>
                     </li>
                   </ol>
-                </section>
-              </div>
 
-              <div className="landing-assurance-grid" role="list" aria-label="Assurance points">
-                {[...landingCopy.howItWorks.trustPoints, ...landingCopy.howItWorks.facts].map((item) => (
-                  <p key={item} role="listitem" className="landing-assurance-item">
-                    {item}
-                  </p>
-                ))}
+                  <div className="landing-assurance-grid" role="list" aria-label="Assurance points">
+                    {[...landingCopy.howItWorks.trustPoints, ...landingCopy.howItWorks.facts].map((item) => (
+                      <p key={item} role="listitem" className="landing-assurance-item">
+                        {item}
+                      </p>
+                    ))}
+                  </div>
+                </section>
               </div>
             </article>
           </div>
