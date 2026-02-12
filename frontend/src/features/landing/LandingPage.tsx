@@ -77,7 +77,7 @@ const LandingPage: React.FC = () => {
 
                   <div className="landing-spec-list" role="list" aria-label="What you get list">
                     {landingCopy.whatYouGet.items.map((item) => (
-                      <div key={item} className="landing-spec-row" role="listitem">
+                      <div key={item} className="landing-spec-row landing-pill" role="listitem">
                         <span>{item}</span>
                       </div>
                     ))}
@@ -99,17 +99,17 @@ const LandingPage: React.FC = () => {
                   </h2>
 
                   <ol className="landing-stepper" aria-label="How it works flow">
-                    <li className="landing-step landing-step--highlight">
+                    <li className="landing-step landing-pill landing-step--highlight">
                       <span className="landing-step-index" aria-hidden="true">01</span>
                       <span className="landing-step-text">{landingCopy.howItWorks.firstStep}</span>
                     </li>
                     <li className="landing-step-connector" aria-hidden="true">→</li>
-                    <li className="landing-step">
+                    <li className="landing-step landing-pill">
                       <span className="landing-step-index" aria-hidden="true">02</span>
                       <span className="landing-step-text">{landingCopy.howItWorks.secondStep}</span>
                     </li>
                     <li className="landing-step-connector" aria-hidden="true">→</li>
-                    <li className="landing-step">
+                    <li className="landing-step landing-pill">
                       <span className="landing-step-index" aria-hidden="true">03</span>
                       <span className="landing-step-text">{landingCopy.howItWorks.thirdStep}</span>
                     </li>
@@ -117,7 +117,7 @@ const LandingPage: React.FC = () => {
 
                   <div className="landing-assurance-grid" role="list" aria-label="Assurance points">
                     {[...landingCopy.howItWorks.trustPoints, ...landingCopy.howItWorks.facts].map((item) => (
-                      <p key={item} role="listitem" className="landing-assurance-item">
+                      <p key={item} role="listitem" className="landing-assurance-item landing-pill">
                         {item}
                       </p>
                     ))}

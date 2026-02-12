@@ -225,8 +225,8 @@ body {
     linear-gradient(140deg, rgba(19, 52, 89, 0.84), rgba(14, 39, 69, 0.84)),
     var(--landing-bg-surface);
   border: 1px solid var(--landing-hairline-soft);
-  padding: clamp(30px, 3.7vw, 44px) clamp(20px, 3.4vw, 38px) 24px;
-  min-height: clamp(380px, 30vw, 480px);
+  padding: clamp(28px, 3.4vw, 40px) clamp(20px, 3.4vw, 38px) 24px;
+  min-height: clamp(390px, 30vw, 490px);
 }
 
 .landing-middle-lanes {
@@ -238,10 +238,10 @@ body {
 
 .landing-lane {
   min-width: 0;
-  min-height: clamp(340px, 27vw, 430px);
+  min-height: clamp(344px, 27vw, 438px);
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 14px;
+  gap: 12px;
 }
 
 .landing-lane-title,
@@ -253,7 +253,8 @@ body {
   font-weight: 580;
 }
 
-.landing-pill-box {
+.landing-pill-box,
+.landing-pill {
   border-radius: 8px;
   border: 1px solid rgba(106, 139, 176, 0.22);
   background: rgba(14, 38, 66, 0.46);
@@ -262,25 +263,20 @@ body {
 .landing-spec-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: repeat(4, minmax(52px, 1fr));
+  grid-template-rows: repeat(4, minmax(56px, 1fr));
   gap: 10px;
 }
 
 .landing-spec-row {
-  min-height: 52px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   color: var(--landing-text-primary);
-  font-size: 0.96rem;
+  font-size: 0.94rem;
   line-height: 1.4;
   position: relative;
   padding: 0 12px 0 14px;
-}
-
-.landing-spec-row {
-  border-radius: 8px;
-  border: 1px solid rgba(106, 139, 176, 0.22);
-  background: rgba(14, 38, 66, 0.46);
+  font-weight: 520;
 }
 
 .landing-spec-row::before {
@@ -300,7 +296,7 @@ body {
 }
 
 .landing-lane-right {
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(116px, auto) minmax(186px, 1fr);
 }
 
 .landing-stepper {
@@ -308,25 +304,19 @@ body {
   padding: 0;
   list-style: none;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr) 22px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr) 18px minmax(0, 1fr);
   align-items: center;
   min-height: 100%;
-  gap: 4px;
+  gap: 6px;
 }
 
 .landing-step {
-  min-height: 84px;
+  min-height: 90px;
   display: grid;
   grid-template-rows: auto auto;
   align-content: center;
-  gap: 8px;
+  gap: 7px;
   padding: 10px 10px;
-}
-
-.landing-step {
-  border-radius: 8px;
-  border: 1px solid rgba(106, 139, 176, 0.22);
-  background: rgba(14, 38, 66, 0.46);
 }
 
 .landing-step--highlight {
@@ -337,16 +327,16 @@ body {
 
 .landing-step-index {
   color: var(--landing-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   line-height: 1;
   font-weight: 640;
 }
 
 .landing-step-text {
   color: var(--landing-text-primary);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.32;
-  font-weight: 560;
+  font-weight: 550;
 }
 
 .landing-step--highlight .landing-step-text {
@@ -356,7 +346,7 @@ body {
 .landing-step-connector {
   align-self: center;
   justify-self: center;
-  font-size: 0.96rem;
+  font-size: 0.86rem;
   color: rgba(143, 175, 212, 0.64);
   font-weight: 600;
   line-height: 1;
@@ -365,8 +355,8 @@ body {
 .landing-assurance-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(3, minmax(40px, auto));
-  gap: 10px 12px;
+  grid-template-rows: repeat(3, minmax(46px, auto));
+  gap: 10px;
   align-self: end;
 }
 
@@ -374,15 +364,12 @@ body {
   margin: 0;
   color: var(--landing-text-secondary);
   font-size: 0.82rem;
-  line-height: 1.35;
+  line-height: 1.33;
   padding: 9px 10px;
   display: flex;
   align-items: center;
-}
-
-.landing-assurance-item {
-  border-radius: 8px;
-  border: 1px solid rgba(106, 139, 176, 0.2);
+  font-weight: 490;
+  border-color: rgba(106, 139, 176, 0.2);
   background: rgba(14, 38, 66, 0.4);
 }
 
@@ -558,6 +545,10 @@ body {
     gap: 24px;
   }
 
+  .landing-lane {
+    min-height: clamp(320px, 42vw, 398px);
+  }
+
   .landing-step {
     min-height: 78px;
   }
@@ -580,6 +571,10 @@ body {
 
   .landing-lane {
     min-height: 0;
+  }
+
+  .landing-lane-right {
+    grid-template-rows: auto auto auto;
   }
 
   .landing-inline-demo {
@@ -622,7 +617,7 @@ body {
   }
 
   .landing-step {
-    min-height: 74px;
+    min-height: 72px;
     padding: 8px;
   }
 
@@ -671,6 +666,10 @@ body {
   .landing-stepper {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .landing-step {
+    min-height: 64px;
   }
 
   .landing-step-connector {
