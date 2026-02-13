@@ -14,17 +14,11 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
         <p className="landing-footer-contact">{landingCopy.footer.contactEmail}</p>
         <p className="landing-footer-links">
           <span>Links: </span>
-          <a href="#" onClick={(event) => event.preventDefault()}>
-            {landingCopy.footer.links[0]}
-          </a>
+          <span className="landing-footer-static-link">{landingCopy.footer.links[0]}</span>
           <span aria-hidden="true"> · </span>
-          <a href="#" onClick={(event) => event.preventDefault()}>
-            {landingCopy.footer.links[1]}
-          </a>
+          <span className="landing-footer-static-link">{landingCopy.footer.links[1]}</span>
           <span aria-hidden="true"> · </span>
-          <a href="#" onClick={(event) => event.preventDefault()}>
-            {landingCopy.footer.links[2]}
-          </a>
+          <span className="landing-footer-static-link">{landingCopy.footer.links[2]}</span>
           <span aria-hidden="true"> · </span>
           <button
             type="button"
@@ -38,9 +32,10 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
 
       <div className="landing-footer-social" aria-label="Social links">
         <a
-          href="#"
+          href="https://www.youtube.com"
+          target="_blank"
+          rel="noreferrer"
           aria-label={landingCopy.footer.socials.youtube}
-          onClick={(event) => event.preventDefault()}
           className="landing-footer-social-link"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -51,9 +46,10 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
           </svg>
         </a>
         <a
-          href="#"
+          href="https://www.linkedin.com"
+          target="_blank"
+          rel="noreferrer"
           aria-label={landingCopy.footer.socials.linkedin}
-          onClick={(event) => event.preventDefault()}
           className="landing-footer-social-link"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -64,9 +60,10 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
           </svg>
         </a>
         <a
-          href="#"
+          href="https://x.com"
+          target="_blank"
+          rel="noreferrer"
           aria-label={landingCopy.footer.socials.x}
-          onClick={(event) => event.preventDefault()}
           className="landing-footer-social-link"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">

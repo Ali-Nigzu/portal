@@ -78,6 +78,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     () => new URLSearchParams(location.search),
     [location.search],
   );
+  const isEmbedMode = searchParams.get("embed") === "1";
   const isSelectorOpen = searchParams.get("panel") === "sites";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
@@ -512,6 +513,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
     }, 180);
   };
+
+  if (isEmbedMode) {
+    return (
+      <div className="vrm-layout vrm-layout--embed">
+        <main className="vrm-main vrm-main--embed">
+          <div className="vrm-content vrm-content--embed">{children || <Outlet />}</div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="vrm-layout">
       <div

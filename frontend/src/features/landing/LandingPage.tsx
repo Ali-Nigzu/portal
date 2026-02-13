@@ -19,7 +19,7 @@ const LandingPage: React.FC = () => {
   } = useRegisterInterestForm();
 
   const scrollToSignUp = () => {
-    const section = document.getElementById("sign-up");
+    const section = document.getElementById("create-account");
     if (section) {
       section.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -49,99 +49,96 @@ const LandingPage: React.FC = () => {
             <div className="landing-hero-actions">
               <button
                 type="button"
-                className="btn btn-primary btn-stacked"
+                className="btn btn-primary"
                 onClick={goToDemo}
               >
-                <span>Checkout</span>
-                <span>Demo</span>
+                {landingCopy.nav.actions.demo}
               </button>
               <button
                 type="button"
                 className="btn btn-secondary"
                 onClick={scrollToSignUp}
               >
-                {landingCopy.nav.actions.signUp}
+                {landingCopy.nav.actions.createAccount}
               </button>
             </div>
           </div>
         </section>
 
-        <section className="landing-content-band" aria-label="Landing information">
+        <section className="landing-preview" aria-labelledby="live-preview-title">
           <div className="landing-container">
-            <article className="landing-middle-panel" aria-label="What you get and how it works">
-              <div className="landing-middle-lanes">
-                <section className="landing-lane landing-lane-left" aria-labelledby="what-you-get-title">
-                  <h2 id="what-you-get-title" className="landing-lane-title">
-                    {landingCopy.whatYouGet.heading}
-                  </h2>
-
-                  <div className="landing-spec-list" role="list" aria-label="What you get list">
-                    {landingCopy.whatYouGet.items.map((item) => (
-                      <div
-                        key={item}
-                        className="landing-spec-row landing-pill landing-pill--capability"
-                        role="listitem"
-                      >
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-check-demo btn-stacked landing-inline-demo"
-                    onClick={goToDemo}
-                  >
-                    <span>Checkout</span>
-                    <span>Demo</span>
-                  </button>
-                </section>
-
-                <section className="landing-lane landing-lane-right" aria-labelledby="how-it-works-title">
-                  <h2 id="how-it-works-title" className="landing-lane-title">
-                    {landingCopy.howItWorks.heading}
-                  </h2>
-
-                  <ol className="landing-stepper" aria-label="How it works flow">
-                    <li className="landing-step landing-pill landing-pill--step landing-pill--stepHighlight landing-step--highlight">
-                      <span className="landing-step-index" aria-hidden="true">01</span>
-                      <span className="landing-step-text">{landingCopy.howItWorks.firstStep}</span>
-                    </li>
-                    <li className="landing-step-connector" aria-hidden="true">→</li>
-                    <li className="landing-step landing-pill landing-pill--step">
-                      <span className="landing-step-index" aria-hidden="true">02</span>
-                      <span className="landing-step-text">{landingCopy.howItWorks.secondStep}</span>
-                    </li>
-                    <li className="landing-step-connector" aria-hidden="true">→</li>
-                    <li className="landing-step landing-pill landing-pill--step">
-                      <span className="landing-step-index" aria-hidden="true">03</span>
-                      <span className="landing-step-text">{landingCopy.howItWorks.thirdStep}</span>
-                    </li>
-                  </ol>
-
-                  <div className="landing-assurance-grid" role="list" aria-label="Assurance points">
-                    {[...landingCopy.howItWorks.trustPoints, ...landingCopy.howItWorks.facts].map((item, index) => (
-                      <p
-                        key={item}
-                        role="listitem"
-                        className={`landing-assurance-item landing-pill landing-pill--trust ${
-                          index >= 4 ? "landing-assurance-item--second-row" : ""
-                        }`}
-                      >
-                        {item}
-                      </p>
-                    ))}
-                  </div>
-                </section>
-              </div>
-            </article>
+            <div className="landing-section-head">
+              <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
+              <p>{landingCopy.livePreview.description}</p>
+            </div>
+            <div className="landing-preview-frame" role="region" aria-label="Live Platform Preview">
+              <iframe
+                title="camOS Live Platform Preview"
+                src="/demo?embed=1"
+                loading="lazy"
+                className="landing-preview-iframe"
+              />
+            </div>
           </div>
         </section>
 
-        <section id="sign-up" className="landing-signup" aria-labelledby="sign-up-title">
+        <section className="landing-content-band" aria-label="Landing information">
+          <div className="landing-container landing-operational-grid">
+            <section className="landing-capabilities" aria-labelledby="capabilities-title">
+              <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
+              <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
+                {landingCopy.capabilities.items.map((item, index) => (
+                  <div key={item} className="landing-capability-row" role="listitem">
+                    <span className="landing-capability-index" aria-hidden="true">
+                      {(index + 1).toString().padStart(2, "0")}
+                    </span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn btn-tertiary landing-inline-demo"
+                onClick={goToDemo}
+              >
+                {landingCopy.nav.actions.demo}
+              </button>
+            </section>
+
+            <section className="landing-deployment" aria-labelledby="deployment-title">
+              <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
+              <ol className="landing-deployment-rail" aria-label="System deployment flow">
+                <li className="landing-deployment-step landing-deployment-step--active">
+                  <span className="landing-deployment-step-index">01</span>
+                  <span className="landing-deployment-step-label">{landingCopy.deployment.firstStep}</span>
+                </li>
+                <li className="landing-deployment-arrow" aria-hidden="true">→</li>
+                <li className="landing-deployment-step">
+                  <span className="landing-deployment-step-index">02</span>
+                  <span className="landing-deployment-step-label">{landingCopy.deployment.secondStep}</span>
+                </li>
+                <li className="landing-deployment-arrow" aria-hidden="true">→</li>
+                <li className="landing-deployment-step">
+                  <span className="landing-deployment-step-index">03</span>
+                  <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
+                </li>
+              </ol>
+
+              <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
+                {landingCopy.deployment.assurances.map((assurance) => (
+                  <p key={assurance} role="listitem" className="landing-assurance-row">
+                    {assurance}
+                  </p>
+                ))}
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="create-account" className="landing-signup" aria-labelledby="create-account-title">
           <div className="landing-container landing-signup-wrap">
-            <h2 id="sign-up-title">{landingCopy.signUp.heading}</h2>
-            <p>{landingCopy.signUp.line}</p>
+            <h2 id="create-account-title">{landingCopy.createAccount.heading}</h2>
+            <p>{landingCopy.createAccount.line}</p>
 
             {submitSuccess ? (
               <div
@@ -155,7 +152,7 @@ const LandingPage: React.FC = () => {
                   className="btn btn-secondary"
                   onClick={resetSubmissionState}
                 >
-                  {landingCopy.signUp.button}
+                  {landingCopy.createAccount.button}
                 </button>
               </div>
             ) : (
@@ -173,7 +170,6 @@ const LandingPage: React.FC = () => {
                       required
                     />
                   </div>
-
                   <div className="landing-form-field">
                     <label htmlFor="email">Work email</label>
                     <input
@@ -186,19 +182,18 @@ const LandingPage: React.FC = () => {
                       required
                     />
                   </div>
-
                   <div className="landing-form-field">
                     <label htmlFor="company">Location name</label>
                     <input
                       id="company"
                       name="company"
                       type="text"
+                      autoComplete="organization"
                       value={formData.company}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
-
                   <div className="landing-form-field">
                     <label htmlFor="phone">Phone (optional)</label>
                     <input
@@ -222,12 +217,8 @@ const LandingPage: React.FC = () => {
                   </div>
                 ) : null}
 
-                <button
-                  type="submit"
-                  className="btn btn-secondary"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Submitting..." : landingCopy.signUp.button}
+                <button type="submit" className="btn btn-secondary" disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : landingCopy.createAccount.button}
                 </button>
               </form>
             )}

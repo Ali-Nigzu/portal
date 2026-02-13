@@ -9,13 +9,16 @@ type LandingHeaderProps = {
 const LandingHeader: React.FC<LandingHeaderProps> = ({ onLogin }) => (
   <header className="landing-header">
     <div className="landing-container landing-header-top">
-      <div className="landing-brand" aria-label="camOS">
+      <div className="landing-brand" aria-label={landingCopy.brand.shortName}>
         <img
           src={companyLogoDataUri}
           alt="camOS Logo"
           className="landing-brand-logo"
         />
-        <div className="landing-brand-name">{landingCopy.brand.logoText}</div>
+        <div className="landing-brand-name-wrap">
+          <div className="landing-brand-name">{landingCopy.brand.fullName}</div>
+          <div className="landing-brand-short">{landingCopy.brand.shortName}</div>
+        </div>
       </div>
 
       <div className="landing-header-actions">

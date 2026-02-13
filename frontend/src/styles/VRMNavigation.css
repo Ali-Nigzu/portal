@@ -408,3 +408,18 @@ button.vrm-nav-row {
 .vrm-extended-panel:focus-within .vrm-nav-row__right {
   display: inline-flex;
 }
+
+.vrm-layout--embed {
+  height: 100%;
+  min-height: 100%;
+}
+
+.vrm-main--embed {
+  width: 100%;
+  min-height: 100%;
+}
+
+.vrm-content--embed {
+  padding: 0;
+  min-height: 100%;
+}

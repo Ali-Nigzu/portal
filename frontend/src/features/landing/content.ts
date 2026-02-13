@@ -1,11 +1,12 @@
 export const landingCopy = {
   brand: {
-    logoText: "camOS",
+    fullName: "Camera Operating Systems",
+    shortName: "camOS",
   },
   nav: {
     actions: {
-      demo: "Checkout Demo",
-      signUp: "Sign Up",
+      demo: "Access Demo",
+      createAccount: "Create Account",
       login: "Login",
     },
   },
@@ -13,8 +14,12 @@ export const landingCopy = {
     headline: "Camera Intelligence",
     supportLine: "See whats happening across your locations",
   },
-  whatYouGet: {
-    heading: "What you get",
+  livePreview: {
+    heading: "Live Platform Preview",
+    description: "Interactive view of the operational dashboard using demo data.",
+  },
+  capabilities: {
+    heading: "Platform Capabilities",
     items: [
       "Footfall and occupancy",
       "Site flow and peak times",
@@ -22,27 +27,25 @@ export const landingCopy = {
       "Customer profile",
     ],
   },
-  howItWorks: {
-    heading: "How it works",
+  deployment: {
+    heading: "System Deployment",
     firstStep: "Sign Up at No Cost",
-    secondStep: "Survey",
+    secondStep: "System Mapping",
     thirdStep: "System Live",
-    trustPoints: [
+    assurances: [
       "No personal data is stored",
       "Built for continuous operation",
       "Reporting is anonymised and aggregated",
-    ],
-    facts: [
       "Uses existing CCTV",
       "No additional hardware",
       "Live reporting",
       "<1% of Tracks are Low Confidence",
     ],
   },
-  signUp: {
-    heading: "Sign Up",
+  createAccount: {
+    heading: "Create Account",
     line: "Create an account to start setup.",
-    button: "Sign Up",
+    button: "Create Account",
   },
   footer: {
     legalLine1:
