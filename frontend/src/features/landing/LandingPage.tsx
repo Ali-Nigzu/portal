@@ -5,7 +5,7 @@ import { useRegisterInterestForm } from "./hooks/useRegisterInterestForm";
 import { landingCopy } from "./content";
 import LandingHeader from "./components/LandingHeader";
 import LandingFooter from "./components/LandingFooter";
-import DashboardPreview from "./components/DashboardPreview";
+import SystemOverviewPreview from "./components/SystemOverviewPreview";
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -113,7 +113,7 @@ const LandingPage: React.FC = () => {
                 <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                 <p>{landingCopy.livePreview.description}</p>
               </div>
-              <DashboardPreview />
+              <SystemOverviewPreview />
             </section>
 
             <section className="landing-assurances" aria-labelledby="assurances-title">

@@ -1,0 +1,237 @@
+.preview {
+  position: relative;
+  border: 1px solid var(--sys-line-soft);
+  border-radius: var(--sys-radius-md);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sys-bg-2) 45%, transparent),
+    color-mix(in srgb, var(--sys-bg-1) 60%, transparent)
+  );
+  padding: 20px;
+  overflow: hidden;
+}
+
+.canvas {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(78px, 1fr) auto;
+  gap: 24px;
+  min-height: 640px;
+}
+
+.topZone {
+  display: grid;
+  gap: 14px;
+}
+
+.metricsRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.capacitySlot {
+  width: 100%;
+  grid-column: 4;
+  max-width: 100%;
+}
+
+.topZoneInner {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricTile,
+.pieTile,
+.capacityTile {
+  border-radius: var(--sys-radius-sm);
+  background: color-mix(in srgb, var(--sys-bg-2) 62%, transparent);
+  border: 1px solid var(--sys-line-soft);
+  padding: 14px;
+}
+
+.metricLabel,
+.tileLabel {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sys-text-3);
+  margin: 0;
+}
+
+.metricValue {
+  margin: 8px 0 0;
+  color: var(--sys-text-1);
+  font-size: 1.4rem;
+  line-height: 1.1;
+  font-weight: 640;
+}
+
+.sparkline {
+  margin-top: 10px;
+  width: 100%;
+  height: 36px;
+}
+
+.sparklinePath {
+  fill: none;
+  stroke: color-mix(in srgb, var(--sys-accent) 65%, var(--sys-text-3) 35%);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+
+.capacityTrack {
+  margin-top: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sys-line-soft) 90%, transparent);
+  overflow: hidden;
+}
+
+.capacityFill {
+  height: 100%;
+  background: color-mix(in srgb, var(--sys-accent) 50%, var(--sys-text-2) 50%);
+  border-radius: 999px;
+}
+
+.capacityMeta {
+  margin: 8px 0 0;
+  color: var(--sys-text-2);
+  font-size: 0.82rem;
+}
+
+.midZone {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 78px;
+}
+
+.node {
+  position: relative;
+  z-index: 2;
+  color: var(--sys-text-1);
+  text-align: center;
+  font-weight: 620;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--sys-bg-1) 70%, transparent);
+}
+
+.nodeSub {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: var(--sys-text-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bottomZone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.pieWrap {
+  margin-top: 8px;
+  display: grid;
+  place-items: center;
+}
+
+.pieSvg {
+  width: 140px;
+  height: 140px;
+}
+
+.legend {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--sys-text-2);
+  font-size: 0.8rem;
+}
+
+.legendSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  display: inline-block;
+}
+
+.legendLabel {
+  display: inline-flex;
+  align-items: center;
+  color: var(--sys-text-3);
+}
+
+.wireSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wireLine {
+  stroke: color-mix(in srgb, var(--sys-line) 70%, transparent);
+  stroke-width: 1;
+  fill: none;
+}
+
+@media (max-width: 1024px) {
+  .canvas {
+    min-height: 560px;
+    gap: 18px;
+  }
+
+  .metricsRow {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 767px) {
+  .canvas {
+    grid-template-rows: auto auto auto;
+    min-height: 0;
+    gap: 14px;
+  }
+
+  .metricsRow,
+  .topZoneInner,
+  .bottomZone {
+    grid-template-columns: 1fr;
+  }
+
+  .capacitySlot {
+    grid-column: 1;
+  }
+
+  .wireSvg {
+    display: none;
+  }
+
+  .midZone {
+    border-top: 1px solid var(--sys-line-soft);
+    border-bottom: 1px solid var(--sys-line-soft);
+    padding: 12px 0;
+    min-height: 0;
+  }
+
+  .pieSvg {
+    width: 124px;
+    height: 124px;
+  }
+}
