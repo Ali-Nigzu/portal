@@ -42,9 +42,25 @@
   min-height: 120px;
   display: grid;
   place-items: center;
+  gap: 8px;
   border: 1px dashed var(--sys-line-soft);
   color: var(--sys-text-3);
   font-size: 0.82rem;
+}
+
+
+.retryButton {
+  border: 1px solid var(--sys-line-soft);
+  background: color-mix(in srgb, var(--sys-bg-2) 75%, transparent);
+  color: var(--sys-text-1);
+  font-size: 0.74rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.retryButton:hover {
+  background: color-mix(in srgb, var(--sys-accent) 18%, var(--sys-bg-2) 82%);
 }
 
 .capacityTile,
@@ -150,6 +166,7 @@
 .pieWrap {
   display: grid;
   place-items: center;
+  gap: 8px;
 }
 
 .pieSvg {

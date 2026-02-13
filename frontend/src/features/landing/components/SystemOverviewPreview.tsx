@@ -41,6 +41,7 @@ const TRAFFIC_PIE: Segment[] = [
 const CAPACITY_PERCENT = 68;
 const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
+const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 
 const initialWireLayout: WireLayout = {
   width: 0,
@@ -283,34 +284,71 @@ const SystemOverviewPreview: React.FC = () => {
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
   const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
   const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const bootstrapStartedRef = useRef(false);
+
+  const runBootstrap = async () => {
+    if (isLoggedIn || hasViewToken || isDemoSessionActive()) {
+      setBootstrapState("ready");
+      return;
+    }
+    if (typeof window !== "undefined" && window.sessionStorage.getItem(LANDING_BOOTSTRAP_KEY) === "1") {
+      setBootstrapState("ready");
+      return;
+    }
+
+    setBootstrapState("loading");
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(LANDING_BOOTSTRAP_KEY, "1");
+    }
+
+    try {
+      await enableDemoSession();
+      applyDemoDefaultsOnce();
+      setBootstrapState("ready");
+    } catch {
+      setBootstrapState("error");
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    const bootstrap = async () => {
-      if (isLoggedIn || hasViewToken || isDemoSessionActive()) {
-        if (mounted) setBootstrapState("ready");
-        return;
-      }
-      if (mounted) setBootstrapState("loading");
-      try {
-        await enableDemoSession();
-        applyDemoDefaultsOnce();
-        if (mounted) setBootstrapState("ready");
-      } catch {
-        if (mounted) setBootstrapState("error");
-      }
-    };
-    bootstrap();
-    return () => {
-      mounted = false;
-    };
+    if (bootstrapStartedRef.current) {
+      return;
+    }
+    bootstrapStartedRef.current = true;
+    void runBootstrap();
   }, [hasViewToken, isLoggedIn]);
+
+  const handleRetry = () => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem(LANDING_BOOTSTRAP_KEY);
+    }
+    bootstrapStartedRef.current = false;
+    setBootstrapState("idle");
+  };
+
+  useEffect(() => {
+    if (bootstrapState !== "idle") {
+      return;
+    }
+    if (bootstrapStartedRef.current) {
+      return;
+    }
+    bootstrapStartedRef.current = true;
+    void runBootstrap();
+  }, [bootstrapState]);
 
   if (bootstrapState === "loading") {
     return <section className={styles.preview}><div className={styles.inlineNotice}>Loading live KPI preview…</div></section>;
   }
   if (bootstrapState === "error") {
-    return <section className={styles.preview}><div className={styles.inlineNotice}>Preview unavailable.</div></section>;
+    return (
+      <section className={styles.preview}>
+        <div className={styles.inlineNotice}>
+          <span>Preview unavailable.</span>
+          <button type="button" className={styles.retryButton} onClick={handleRetry}>Retry</button>
+        </div>
+      </section>
+    );
   }
 
   return <SystemOverviewLiveKpis />;
