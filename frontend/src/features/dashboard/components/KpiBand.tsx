@@ -5,11 +5,13 @@ import type { DashboardWidgetState } from "../types";
 import { renderError, renderLoading } from "./dashboardRenderers";
 
 type KpiBandProps = {
+  mode?: "full" | "preview";
   kpiWidgets: DashboardWidgetState[];
   onRemoveWidget: (widgetId: string) => void;
 };
 
 type KpiTileProps = {
+  mode: "full" | "preview";
   title: string;
   result?: Parameters<typeof ChartRenderer>[0]["result"];
   state: DashboardWidgetState;
@@ -19,6 +21,7 @@ type KpiTileProps = {
 };
 
 const KpiTile: React.FC<KpiTileProps> = ({
+  mode,
   title,
   result,
   state,
@@ -53,7 +56,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
       />
     );
   }
-  const showRemove = Boolean(onRemove) && !locked;
+  const showRemove = mode === "full" && Boolean(onRemove) && !locked;
   return (
     <div
       className="dashboard-v2__kpi-tile vrm-kpi-tile vrm-kpi-tile--panel"
@@ -82,7 +85,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
   );
 };
 
-const KpiBand: React.FC<KpiBandProps> = ({ kpiWidgets, onRemoveWidget }) => {
+const KpiBand: React.FC<KpiBandProps> = ({ mode = "full", kpiWidgets, onRemoveWidget }) => {
   if (kpiWidgets.length === 0) {
     return null;
   }
@@ -90,6 +93,7 @@ const KpiBand: React.FC<KpiBandProps> = ({ kpiWidgets, onRemoveWidget }) => {
     <section className="dashboard-v2__kpi-band vrm-section vrm-section--kpis">
       {kpiWidgets.map((state) => (
         <KpiTile
+          mode={mode}
           key={state.widget.id}
           title={state.widget.title}
           result={state.result}
