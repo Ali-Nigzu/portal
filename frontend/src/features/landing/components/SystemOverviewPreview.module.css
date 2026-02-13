@@ -1,8 +1,8 @@
 .preview {
-  --topo-gap-col: 14px;
+  --topo-gap-col: 18px;
   --topo-gap-row: 10px;
-  --kpi-min: 182px;
-  --kpi-max: 206px;
+  --kpi-min: 136px;
+  --kpi-max: 154px;
   --top-to-bus: 56px;
   --bus-to-bottom: 44px;
   --mid-span: 80px;
@@ -40,6 +40,7 @@
 
 .kpiSlot {
   min-width: 0;
+  margin-inline: 2px;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -66,15 +67,6 @@
   gap: 0 !important;
 }
 
-.kpiSlot :global(.dashboard-v2__kpi-tile) {
-  min-height: 102px !important;
-  max-height: 102px !important;
-  overflow: hidden !important;
-}
-
-.kpiSlot :global(.dashboard-v2__kpi-content) {
-  min-height: 102px !important;
-}
 
 
 
@@ -294,9 +286,9 @@
 @media (max-width: 1279px) {
   .preview {
     width: min(920px, 100%);
-    --kpi-min: 162px;
-    --kpi-max: 186px;
-    --topo-gap-col: 10px;
+    --kpi-min: 122px;
+    --kpi-max: 140px;
+    --topo-gap-col: 12px;
     --topo-gap-row: 8px;
     --top-to-bus: 48px;
     --bus-to-bottom: 38px;

@@ -41,6 +41,8 @@ const KpiTile: React.FC<KpiTileProps> = ({
         },
       } as Parameters<typeof ChartRenderer>[0]["result"])
     : result;
+  const isPreview = mode === "preview";
+  const kpiHeight = isPreview ? 100 : 168;
   let content: ReactNode = null;
   if (state.status === "loading") {
     content = renderLoading(title, "kpi");
@@ -50,7 +52,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
     content = (
       <ChartRenderer
         result={renderedResult!}
-        height={168}
+        height={kpiHeight}
         className="dashboard-v2__kpi-renderer"
         widgetId={widgetId}
       />
@@ -78,6 +80,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
         className="dashboard-v2__kpi-content"
         aria-label={title}
         data-headline={headline ?? undefined}
+        style={isPreview ? { minHeight: `${kpiHeight}px` } : undefined}
       >
         {content}
       </div>
