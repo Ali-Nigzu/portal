@@ -2,11 +2,6 @@
   --tile-w: 218px;
   --tile-h: 178px;
   --tile-gap: 10px;
-  --tile-radius: var(--sys-radius-sm);
-  --tile-pad: 12px;
-  --tile-kpi-size: 2.1rem;
-  --tile-label-size: 0.72rem;
-  --tile-spark-h: 62%;
   --capacity-h: 92px;
 
   position: relative;
@@ -41,58 +36,40 @@
 .tileT3 { grid-column: 3; grid-row: 1; }
 .tileT4 { grid-column: 4; grid-row: 1; }
 
-.tile {
-  border-radius: var(--tile-radius);
+.uniformTile {
+  width: 100%;
+  min-height: var(--tile-h);
+  max-height: var(--tile-h);
+}
+
+.cardSurface {
+  border-radius: var(--sys-radius-sm);
   border: 1px solid var(--sys-line-soft);
   background: color-mix(in srgb, var(--sys-bg-2) 68%, transparent);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--sys-bg-0) 22%, transparent);
 }
 
-.metricTile,
-.pieTile {
-  width: 100%;
-  min-height: var(--tile-h);
+.preview :global(.kpi-tile.kpi-tile--vrm) {
+  min-height: var(--tile-h) !important;
   max-height: var(--tile-h);
-  padding: var(--tile-pad);
+  padding: 0 !important;
+  gap: 0;
 }
 
-.metricTile {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 8px;
+.preview :global(.kpi-content.kpi-content--vrm) {
+  gap: 0;
 }
 
-.metricHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+.preview :global(.kpi-panel) {
+  min-height: var(--tile-h);
 }
 
-.tileLabel {
-  margin: 0;
-  font-size: var(--tile-label-size);
-  line-height: 1;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--sys-text-3);
-  font-weight: 530;
+.preview :global(.kpi-panel-header) {
+  padding: 16px 20px 12px;
 }
 
-.metricValue {
-  margin: 0;
-  font-size: var(--tile-kpi-size);
-  line-height: 0.95;
-  color: var(--sys-text-1);
-  font-weight: 650;
-  letter-spacing: 0.01em;
-}
-
-.sparklineWrap {
-  position: relative;
-  align-self: end;
-  height: var(--tile-spark-h);
-  min-height: 88px;
+.preview :global(.kpi-label) {
+  white-space: nowrap;
 }
 
 .sparkline {
@@ -124,6 +101,16 @@
   display: grid;
   grid-template-rows: auto auto auto;
   gap: 6px;
+}
+
+.tileLabel {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sys-text-3);
+  font-weight: 530;
 }
 
 .capacityTrack {
@@ -182,13 +169,14 @@
 
 .pieTile {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   gap: 6px;
 }
 
 .pieWrap {
   display: grid;
   place-items: center;
+  padding: 0 14px 6px;
 }
 
 .pieSvg {
@@ -200,6 +188,7 @@
   margin-top: auto;
   display: grid;
   gap: 4px;
+  padding: 0 12px 12px;
 }
 
 .legendRow {
@@ -252,7 +241,6 @@
     --tile-h: 166px;
     --tile-gap: 9px;
     --capacity-h: 86px;
-    --tile-kpi-size: 1.95rem;
   }
 
   .canvas {
@@ -263,7 +251,6 @@
 @media (max-width: 900px) {
   .preview {
     --tile-h: 154px;
-    --tile-kpi-size: 1.8rem;
   }
 }
 
@@ -289,8 +276,7 @@
     grid-row: auto;
   }
 
-  .metricTile,
-  .pieTile {
+  .uniformTile {
     max-height: none;
     min-height: 148px;
   }

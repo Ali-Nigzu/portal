@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import "../../../analytics/components/ChartRenderer/styles.css";
 import styles from "./SystemOverviewPreview.module.css";
 
 type Metric = {
@@ -109,16 +110,32 @@ const pieArcs = (segments: Segment[]) => {
 const MetricTile = ({ metric }: { metric: Metric }) => {
   const spark = buildSpark(metric.spark);
   return (
-    <article className={`${styles.tile} ${styles.metricTile}`}>
-      <div className={styles.metricHeader}>
-        <p className={styles.tileLabel}>{metric.label}</p>
-        <p className={styles.metricValue}>{metric.value}</p>
-      </div>
-      <div className={styles.sparklineWrap}>
-        <svg className={styles.sparkline} viewBox="0 0 220 100" aria-hidden="true">
-          <path d={spark.area} className={styles.sparklineArea} />
-          <path d={spark.line} className={styles.sparklinePath} />
-        </svg>
+    <article className={`${styles.uniformTile} kpi-tile kpi-tile--vrm`}>
+      <div className="kpi-content kpi-content--vrm">
+        <div className="kpi-panel">
+          <div className="kpi-panel-header">
+            <div className="kpi-main-block">
+              <div className="kpi-header">
+                <div className="kpi-header-right">
+                  <div className="kpi-label">{metric.label}</div>
+                </div>
+                <div className="kpi-value">{metric.value}</div>
+              </div>
+            </div>
+          </div>
+          <div className="kpi-sparkline-region kpi-sparkline-region--vrm">
+            <div className="kpi-sparkline-shell kpi-sparkline-shell--vrm">
+              <div className="kpi-sparkline-anchor kpi-sparkline-anchor--vrm">
+                <div className="kpi-sparkline-plot">
+                  <svg className={styles.sparkline} viewBox="0 0 220 100" aria-hidden="true">
+                    <path d={spark.area} className={styles.sparklineArea} />
+                    <path d={spark.line} className={styles.sparklinePath} />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </article>
   );
@@ -142,8 +159,8 @@ const initialWireLayout: WireLayout = {
   busY: 0,
   busX1: 0,
   busX2: 0,
-  taps: [0, 0, 0, 0, 0],
-  topBottomY: [0, 0, 0],
+  taps: [0, 0, 0, 0, 0, 0],
+  topBottomY: [0, 0, 0, 0],
   leftTopY: 0,
   rightTopY: 0,
 };
@@ -244,8 +261,10 @@ const SystemOverviewPreview: React.FC = () => {
             <line className={styles.wireLine} x1={wire.taps[1]} y1={wire.topBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
             <line className={styles.wireLine} x1={wire.taps[2]} y1={wire.topBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
 
-            <line className={styles.wireLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
+            <line className={styles.wireLine} x1={wire.taps[3]} y1={wire.topBottomY[3]} x2={wire.taps[3]} y2={wire.busY} />
+
+            <line className={styles.wireLine} x1={wire.taps[4]} y1={wire.leftTopY} x2={wire.taps[4]} y2={wire.busY} />
+            <line className={styles.wireLine} x1={wire.taps[5]} y1={wire.busY} x2={wire.taps[5]} y2={wire.rightTopY} />
 
             {wire.taps.map((tap, index) => (
               <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="2.2" />
@@ -259,7 +278,7 @@ const SystemOverviewPreview: React.FC = () => {
               key={metric.label}
               className={topTileClasses[index]}
               ref={(node) => {
-                if (index < 3) {
+                if (index < 4) {
                   topWireRefs.current[index] = node;
                 }
               }}
@@ -268,7 +287,7 @@ const SystemOverviewPreview: React.FC = () => {
             </div>
           ))}
 
-          <article className={`${styles.tile} ${styles.capacityTile}`}>
+          <article className={`${styles.cardSurface} ${styles.capacityTile}`}>
             <p className={styles.tileLabel}>Capacity</p>
             <div className={styles.capacityTrack}>
               <div className={styles.capacityFill} style={{ width: `${CAPACITY_PERCENT}%` }} />
@@ -285,15 +304,32 @@ const SystemOverviewPreview: React.FC = () => {
         </div>
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
-          <article className={`${styles.tile} ${styles.pieTile}`} ref={leftRef}>
-            <p className={styles.tileLabel}>Traffic Distribution</p>
-            <div className={styles.pieWrap}>
-              <svg className={styles.pieSvg} viewBox="0 0 124 124" aria-hidden="true">
-                {arcs.map((arc) => (
-                  <path key={arc.label} d={arc.d} fill={arc.color} />
-                ))}
-                <circle cx="62" cy="62" r="17" fill="color-mix(in srgb, var(--sys-bg-1) 88%, transparent)" />
-              </svg>
+          <article className={`${styles.uniformTile} ${styles.pieTile} kpi-tile kpi-tile--vrm`} ref={leftRef}>
+            <div className="kpi-content kpi-content--vrm">
+              <div className="kpi-panel">
+                <div className="kpi-panel-header">
+                  <div className="kpi-main-block">
+                    <div className="kpi-header">
+                      <div className="kpi-header-right">
+                        <div className="kpi-label">Traffic Distribution</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.pieWrap}>
+                  <svg className={styles.pieSvg} viewBox="0 0 124 124" aria-hidden="true">
+                    {arcs.map((arc) => (
+                      <path key={arc.label} d={arc.d} fill={arc.color} />
+                    ))}
+                    <circle
+                      cx="62"
+                      cy="62"
+                      r="17"
+                      fill="color-mix(in srgb, var(--sys-bg-1) 88%, transparent)"
+                    />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div className={styles.legend}>
               {arcs.map((arc) => (
