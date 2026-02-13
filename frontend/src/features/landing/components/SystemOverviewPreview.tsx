@@ -16,30 +16,30 @@ type Segment = {
 const METRICS_TOP: Metric[] = [
   {
     label: "Entrances",
-    value: "12,480",
-    spark: [12, 14, 15, 16, 14, 17, 19, 18, 20, 21, 20, 22],
+    value: "3",
+    spark: [14, 18, 24, 21, 26, 23, 19, 17, 16, 19, 22, 24],
   },
   {
     label: "Occupancy",
-    value: "318",
-    spark: [260, 268, 274, 280, 286, 295, 301, 309, 315, 320, 316, 318],
+    value: "2",
+    spark: [8, 11, 16, 18, 17, 19, 15, 13, 11, 10, 12, 14],
   },
   {
     label: "Exits",
-    value: "11,906",
-    spark: [11, 12, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+    value: "1",
+    spark: [6, 7, 11, 9, 12, 10, 8, 7, 5, 6, 8, 9],
   },
   {
     label: "Footfall",
-    value: "24,386",
-    spark: [18, 20, 22, 23, 25, 26, 27, 29, 30, 31, 32, 33],
+    value: "4",
+    spark: [10, 12, 15, 14, 16, 15, 13, 12, 11, 13, 15, 16],
   },
 ];
 
 const DWELL_TILE: Metric = {
-  label: "Dwell",
-  value: "8m 42s",
-  spark: [6.1, 6.2, 6.5, 6.8, 7.1, 7.5, 7.9, 8.1, 8.4, 8.6, 8.5, 8.7],
+  label: "Dwell Minutes",
+  value: "4",
+  spark: [5.2, 6.0, 7.1, 6.4, 7.8, 7.2, 6.8, 6.1, 5.8, 6.5, 7.4, 8.2],
 };
 
 const TRAFFIC_PIE: Segment[] = [
@@ -62,17 +62,22 @@ const TRAFFIC_PIE: Segment[] = [
 
 const CAPACITY_PERCENT = 68;
 
-const sparkPath = (points: number[], width = 220, height = 46) => {
+const buildSpark = (points: number[], width = 220, height = 100) => {
   const max = Math.max(...points);
   const min = Math.min(...points);
   const span = Math.max(max - min, 1);
-  return points
-    .map((point, index) => {
-      const x = (index / (points.length - 1)) * width;
-      const y = height - ((point - min) / span) * height;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-    })
+  const coords = points.map((point, index) => {
+    const x = (index / (points.length - 1)) * width;
+    const y = height - ((point - min) / span) * height;
+    return { x, y };
+  });
+
+  const line = coords
+    .map((pt, index) => `${index === 0 ? "M" : "L"}${pt.x.toFixed(2)},${pt.y.toFixed(2)}`)
     .join(" ");
+
+  const area = `${line} L ${width},${height} L 0,${height} Z`;
+  return { line, area };
 };
 
 const pieArcs = (segments: Segment[]) => {
@@ -101,21 +106,23 @@ const pieArcs = (segments: Segment[]) => {
   });
 };
 
-const MetricTile = ({
-  metric,
-  className,
-}: {
-  metric: Metric;
-  className?: string;
-}) => (
-  <article className={`${styles.tile} ${styles.metricTile} ${className ?? ""}`}>
-    <p className={styles.tileLabel}>{metric.label}</p>
-    <p className={styles.metricValue}>{metric.value}</p>
-    <svg className={styles.sparkline} viewBox="0 0 220 46" aria-hidden="true">
-      <path d={sparkPath(metric.spark)} className={styles.sparklinePath} />
-    </svg>
-  </article>
-);
+const MetricTile = ({ metric }: { metric: Metric }) => {
+  const spark = buildSpark(metric.spark);
+  return (
+    <article className={`${styles.tile} ${styles.metricTile}`}>
+      <div className={styles.metricHeader}>
+        <p className={styles.tileLabel}>{metric.label}</p>
+        <p className={styles.metricValue}>{metric.value}</p>
+      </div>
+      <div className={styles.sparklineWrap}>
+        <svg className={styles.sparkline} viewBox="0 0 220 100" aria-hidden="true">
+          <path d={spark.area} className={styles.sparklineArea} />
+          <path d={spark.line} className={styles.sparklinePath} />
+        </svg>
+      </div>
+    </article>
+  );
+};
 
 type WireLayout = {
   width: number;
