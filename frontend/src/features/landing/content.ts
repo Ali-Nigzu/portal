@@ -12,9 +12,8 @@ export const landingCopy = {
   },
   hero: {
     headline: "Camera Operating Systems",
-    subheading: "Operational analytics for existing CCTV infrastructure.",
     supportLine:
-      "Access real-time footfall, dwell time and site movement — without new hardware.",
+      "Operational analytics for existing CCTV infrastructure. Access real-time footfall, dwell time and site movement.",
   },
   livePreview: {
     heading: "Live Platform Preview",

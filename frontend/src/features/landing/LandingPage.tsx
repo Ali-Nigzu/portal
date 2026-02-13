@@ -49,7 +49,6 @@ const LandingPage: React.FC = () => {
         <section className="landing-hero" aria-labelledby="landing-hero-title">
           <div className="landing-container landing-hero-inner">
             <h1 id="landing-hero-title">{landingCopy.hero.headline}</h1>
-            <p className="landing-hero-subheading">{landingCopy.hero.subheading}</p>
             <p>{landingCopy.hero.supportLine}</p>
             <div className="landing-hero-actions">
               <button
@@ -66,23 +65,6 @@ const LandingPage: React.FC = () => {
               >
                 {landingCopy.nav.actions.createAccount}
               </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="landing-preview" aria-labelledby="live-preview-title">
-          <div className="landing-container">
-            <div className="landing-section-head">
-              <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
-              <p>{landingCopy.livePreview.description}</p>
-            </div>
-            <div className="landing-preview-frame" role="region" aria-label="Live Platform Preview">
-              <iframe
-                title="camOS Live Platform Preview"
-                src="/demo?embed=1"
-                loading="lazy"
-                className="landing-preview-iframe"
-              />
             </div>
           </div>
         </section>
@@ -134,6 +116,23 @@ const LandingPage: React.FC = () => {
                   {assurance}
                 </p>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="landing-preview" aria-labelledby="live-preview-title">
+          <div className="landing-container">
+            <div className="landing-section-head">
+              <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
+              <p>{landingCopy.livePreview.description}</p>
+            </div>
+            <div className="landing-preview-frame" role="region" aria-label="Live Platform Preview">
+              <iframe
+                title="camOS Live Platform Preview"
+                src="/demo?embed=1"
+                loading="lazy"
+                className="landing-preview-iframe"
+              />
             </div>
           </div>
         </section>
