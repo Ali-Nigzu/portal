@@ -4,8 +4,8 @@
   border-radius: var(--sys-radius-md);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--sys-bg-2) 45%, transparent),
-    color-mix(in srgb, var(--sys-bg-1) 60%, transparent)
+    color-mix(in srgb, var(--sys-bg-2) 44%, transparent),
+    color-mix(in srgb, var(--sys-bg-1) 64%, transparent)
   );
   padding: 20px;
   overflow: hidden;
@@ -14,142 +14,164 @@
 .canvas {
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(78px, 1fr) auto;
-  gap: 24px;
-  min-height: 640px;
+  grid-template-rows: auto minmax(64px, 1fr) auto;
+  row-gap: 18px;
+  min-height: 560px;
 }
 
-.topZone {
-  display: grid;
-  gap: 14px;
-}
-
-.metricsRow {
+.topCluster {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: minmax(220px, auto) minmax(116px, auto);
   gap: 12px;
 }
 
-.capacitySlot {
-  width: 100%;
+.tileT1 {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.tileT2 {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.tileT3 {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.tileT4 {
   grid-column: 4;
-  max-width: 100%;
+  grid-row: 1;
 }
 
-.topZoneInner {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+.tile {
+  border-radius: var(--sys-radius-sm);
+  border: 1px solid var(--sys-line-soft);
+  background: color-mix(in srgb, var(--sys-bg-2) 64%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--sys-bg-0) 26%, transparent);
 }
 
 .metricTile,
-.pieTile,
-.capacityTile {
-  border-radius: var(--sys-radius-sm);
-  background: color-mix(in srgb, var(--sys-bg-2) 62%, transparent);
-  border: 1px solid var(--sys-line-soft);
-  padding: 14px;
+.pieTile {
+  min-height: 220px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
 }
 
-.metricLabel,
 .tileLabel {
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--sys-text-3);
-  margin: 0;
+  font-weight: 530;
 }
 
 .metricValue {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
+  font-size: clamp(1.6rem, 2.2vw, 2.1rem);
+  line-height: 1.05;
   color: var(--sys-text-1);
-  font-size: 1.4rem;
-  line-height: 1.1;
   font-weight: 640;
 }
 
 .sparkline {
-  margin-top: 10px;
+  margin-top: auto;
   width: 100%;
-  height: 36px;
+  height: 52px;
 }
 
 .sparklinePath {
   fill: none;
-  stroke: color-mix(in srgb, var(--sys-accent) 65%, var(--sys-text-3) 35%);
-  stroke-width: 1.5;
+  stroke: color-mix(in srgb, var(--sys-accent) 58%, var(--sys-text-3) 42%);
+  stroke-width: 1.2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.75;
+  opacity: 0.84;
+}
+
+.capacityTile {
+  grid-column: 4;
+  grid-row: 2;
+  min-height: 116px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .capacityTrack {
   margin-top: 10px;
-  height: 10px;
+  height: 11px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--sys-line-soft) 90%, transparent);
+  background: color-mix(in srgb, var(--sys-line-soft) 92%, transparent);
   overflow: hidden;
 }
 
 .capacityFill {
   height: 100%;
-  background: color-mix(in srgb, var(--sys-accent) 50%, var(--sys-text-2) 50%);
+  background: color-mix(in srgb, var(--sys-accent) 48%, var(--sys-text-2) 52%);
   border-radius: 999px;
 }
 
 .capacityMeta {
   margin: 8px 0 0;
   color: var(--sys-text-2);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  line-height: 1.2;
 }
 
 .midZone {
-  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 78px;
+  min-height: 64px;
 }
 
 .node {
-  position: relative;
   z-index: 2;
-  color: var(--sys-text-1);
   text-align: center;
+  font-size: 0.98rem;
   font-weight: 620;
   letter-spacing: 0.02em;
-  padding: 4px 10px;
-  background: color-mix(in srgb, var(--sys-bg-1) 70%, transparent);
+  color: var(--sys-text-1);
+  background: color-mix(in srgb, var(--sys-bg-1) 88%, transparent);
+  padding: 5px 12px;
 }
 
 .nodeSub {
   display: block;
-  margin-top: 3px;
-  font-size: 0.72rem;
+  margin-top: 2px;
+  font-size: 0.66rem;
+  line-height: 1;
   color: var(--sys-text-3);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.bottomZone {
+.bottomCluster {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .pieWrap {
-  margin-top: 8px;
+  margin-top: 10px;
   display: grid;
   place-items: center;
 }
 
 .pieSvg {
-  width: 140px;
-  height: 140px;
+  width: 124px;
+  height: 124px;
 }
 
 .legend {
-  margin-top: 10px;
+  margin-top: auto;
   display: grid;
   gap: 6px;
 }
@@ -159,7 +181,13 @@
   align-items: center;
   justify-content: space-between;
   color: var(--sys-text-2);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+}
+
+.legendLabel {
+  display: inline-flex;
+  align-items: center;
+  color: var(--sys-text-3);
 }
 
 .legendSwatch {
@@ -168,12 +196,6 @@
   border-radius: 50%;
   margin-right: 8px;
   display: inline-block;
-}
-
-.legendLabel {
-  display: inline-flex;
-  align-items: center;
-  color: var(--sys-text-3);
 }
 
 .wireSvg {
@@ -186,37 +208,48 @@
 }
 
 .wireLine {
-  stroke: color-mix(in srgb, var(--sys-line) 70%, transparent);
+  stroke: color-mix(in srgb, var(--sys-line) 68%, transparent);
   stroke-width: 1;
   fill: none;
+  shape-rendering: crispEdges;
 }
 
-@media (max-width: 1024px) {
-  .canvas {
-    min-height: 560px;
-    gap: 18px;
+.tapMark {
+  fill: color-mix(in srgb, var(--sys-line) 74%, transparent);
+  stroke: none;
+}
+
+@media (max-width: 1200px) {
+  .metricTile,
+  .pieTile {
+    min-height: 208px;
   }
 
-  .metricsRow {
-    gap: 10px;
+  .topCluster {
+    grid-template-rows: minmax(208px, auto) minmax(108px, auto);
   }
 }
 
 @media (max-width: 767px) {
   .canvas {
-    grid-template-rows: auto auto auto;
     min-height: 0;
-    gap: 14px;
+    row-gap: 14px;
+    grid-template-rows: auto auto auto;
   }
 
-  .metricsRow,
-  .topZoneInner,
-  .bottomZone {
+  .topCluster,
+  .bottomCluster {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
   }
 
-  .capacitySlot {
+  .tileT1,
+  .tileT2,
+  .tileT3,
+  .tileT4,
+  .capacityTile {
     grid-column: 1;
+    grid-row: auto;
   }
 
   .wireSvg {
@@ -228,10 +261,5 @@
     border-bottom: 1px solid var(--sys-line-soft);
     padding: 12px 0;
     min-height: 0;
-  }
-
-  .pieSvg {
-    width: 124px;
-    height: 124px;
   }
 }
