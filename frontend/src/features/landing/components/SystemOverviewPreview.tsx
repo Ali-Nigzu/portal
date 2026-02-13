@@ -1,12 +1,35 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-import SystemOverviewKpiTile from "./SystemOverviewKpiTile";
-import { KPI_RESULTS } from "./systemOverviewKpiData";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import type { Credentials } from "../../../types/credentials";
+import { getViewTokenFromLocation } from "../../../lib/viewToken";
+import {
+  applyDemoDefaultsOnce,
+  enableDemoSession,
+  isDemoSessionActive,
+} from "../../../lib/demoSession";
+import { useDashboardManifest } from "../../dashboard/hooks/useDashboardManifest";
+import { useDashboardWidgets } from "../../dashboard/hooks/useDashboardWidgets";
+import { VRM_KPI_IDS } from "../../dashboard/utils/applyVRMOverrides";
+import DashboardKpiSection from "../../dashboard/components/DashboardKpiSection";
+import "../../dashboard/styles/DashboardPage.css";
 import styles from "./SystemOverviewPreview.module.css";
 
 type Segment = {
   label: string;
   value: number;
   color: string;
+};
+
+type WireLayout = {
+  width: number;
+  height: number;
+  busY: number;
+  busX1: number;
+  busX2: number;
+  taps: number[];
+  topBottomY: number[];
+  leftTopY: number;
+  rightTopY: number;
 };
 
 const TRAFFIC_PIE: Segment[] = [
@@ -16,6 +39,20 @@ const TRAFFIC_PIE: Segment[] = [
 ];
 
 const CAPACITY_PERCENT = 68;
+const NOOP_REMOVE = () => undefined;
+const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
+
+const initialWireLayout: WireLayout = {
+  width: 0,
+  height: 0,
+  busY: 0,
+  busX1: 0,
+  busX2: 0,
+  taps: [0, 0, 0, 0, 0, 0],
+  topBottomY: [0, 0, 0, 0],
+  leftTopY: 0,
+  rightTopY: 0,
+};
 
 const pieArcs = (segments: Segment[]) => {
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
@@ -43,45 +80,67 @@ const pieArcs = (segments: Segment[]) => {
   });
 };
 
-type WireLayout = {
-  width: number;
-  height: number;
-  busY: number;
-  busX1: number;
-  busX2: number;
-  taps: number[];
-  topBottomY: number[];
-  leftTopY: number;
-  rightTopY: number;
-};
-
-const initialWireLayout: WireLayout = {
-  width: 0,
-  height: 0,
-  busY: 0,
-  busX1: 0,
-  busX2: 0,
-  taps: [0, 0, 0, 0, 0, 0],
-  topBottomY: [0, 0, 0, 0],
-  leftTopY: 0,
-  rightTopY: 0,
-};
-
-const topTileClasses = [styles.tileT1, styles.tileT2, styles.tileT3, styles.tileT4];
-const topResults = [KPI_RESULTS.entrances, KPI_RESULTS.occupancy, KPI_RESULTS.exits, KPI_RESULTS.footfall];
-
-const SystemOverviewPreview: React.FC = () => {
+const SystemOverviewLiveKpis: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
-  const topWireRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const topKpiMountRef = useRef<HTMLDivElement | null>(null);
+  const dwellKpiMountRef = useRef<HTMLDivElement | null>(null);
   const leftRef = useRef<HTMLDivElement | null>(null);
-  const rightRef = useRef<HTMLDivElement | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
+
+  const {
+    manifest,
+    status: manifestStatus,
+    error: manifestError,
+    selectedTimeRange,
+    orgId,
+    viewToken,
+    resolvedDashboardId,
+    resolvedUiClient,
+    setManifest,
+  } = useDashboardManifest({ credentials: PREVIEW_CREDENTIALS });
+
+  const {
+    status: widgetStatus,
+    error: widgetError,
+    kpiWidgets,
+  } = useDashboardWidgets({
+    manifest,
+    selectedTimeRange,
+    orgId,
+    viewToken,
+    clientContextId: resolvedUiClient,
+    resolvedDashboardId,
+    setManifest,
+  });
+
+  const kpiLookup = useMemo(
+    () => new Map(kpiWidgets.map((item) => [item.widget.id, item])),
+    [kpiWidgets],
+  );
+
+  const topWidgets = [
+    VRM_KPI_IDS.entrances,
+    VRM_KPI_IDS.occupancy,
+    VRM_KPI_IDS.exits,
+    VRM_KPI_IDS.footfall,
+  ]
+    .map((id) => kpiLookup.get(id))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
 
   useLayoutEffect(() => {
     const update = () => {
-      if (!containerRef.current || !topClusterRef.current || !bottomClusterRef.current || !leftRef.current || !rightRef.current || topWireRefs.current.some((ref) => !ref)) {
+      if (!containerRef.current || !topClusterRef.current || !bottomClusterRef.current || !leftRef.current || !topKpiMountRef.current || !dwellKpiMountRef.current) {
+        return;
+      }
+
+      const topTiles = Array.from(topKpiMountRef.current.querySelectorAll<HTMLDivElement>(".dashboard-v2__kpi-tile"));
+      const dwellTile = dwellKpiMountRef.current.querySelector<HTMLDivElement>(".dashboard-v2__kpi-tile");
+
+      if (topTiles.length < 4 || !dwellTile) {
         return;
       }
 
@@ -89,20 +148,20 @@ const SystemOverviewPreview: React.FC = () => {
       const topCluster = topClusterRef.current.getBoundingClientRect();
       const bottomCluster = bottomClusterRef.current.getBoundingClientRect();
       const left = leftRef.current.getBoundingClientRect();
-      const right = rightRef.current.getBoundingClientRect();
+      const right = dwellTile.getBoundingClientRect();
 
       const busY = ((topCluster.bottom - container.top) + (bottomCluster.top - container.top)) / 2;
       const busX1 = 16;
       const busX2 = container.width - 16;
 
-      const topBottomY = topWireRefs.current.map((tile) => {
-        const rect = (tile as HTMLDivElement).getBoundingClientRect();
+      const topBottomY = topTiles.slice(0, 4).map((tile) => {
+        const rect = tile.getBoundingClientRect();
         return rect.bottom - container.top;
       });
 
       const taps = [
-        ...topWireRefs.current.map((tile) => {
-          const rect = (tile as HTMLDivElement).getBoundingClientRect();
+        ...topTiles.slice(0, 4).map((tile) => {
+          const rect = tile.getBoundingClientRect();
           return rect.left - container.left + rect.width / 2;
         }),
         left.left - container.left + left.width / 2,
@@ -127,18 +186,20 @@ const SystemOverviewPreview: React.FC = () => {
     if (containerRef.current) observer.observe(containerRef.current);
     if (topClusterRef.current) observer.observe(topClusterRef.current);
     if (bottomClusterRef.current) observer.observe(bottomClusterRef.current);
-    topWireRefs.current.forEach((ref) => ref && observer.observe(ref));
+    if (topKpiMountRef.current) observer.observe(topKpiMountRef.current);
+    if (dwellKpiMountRef.current) observer.observe(dwellKpiMountRef.current);
     if (leftRef.current) observer.observe(leftRef.current);
-    if (rightRef.current) observer.observe(rightRef.current);
     window.addEventListener("resize", update);
 
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, []);
+  }, [topWidgets.length, dwellWidget]);
 
   const arcs = useMemo(() => pieArcs(TRAFFIC_PIE), []);
+  const hasKpis = topWidgets.length === 4 && Boolean(dwellWidget);
+  const hasError = manifestStatus === "error" || widgetStatus === "error";
 
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
@@ -159,16 +220,15 @@ const SystemOverviewPreview: React.FC = () => {
         ) : null}
 
         <div className={styles.topCluster} ref={topClusterRef}>
-          {topResults.map((result, index) => (
-            <div key={result.series[0]?.id} className={topTileClasses[index]}>
-              <SystemOverviewKpiTile
-                result={result}
-                ref={(node) => {
-                  if (index < 4) topWireRefs.current[index] = node;
-                }}
-              />
-            </div>
-          ))}
+          <div className={styles.topKpiMount} ref={topKpiMountRef}>
+            {hasKpis ? (
+              <DashboardKpiSection mode="preview" kpiWidgets={topWidgets} onRemoveWidget={NOOP_REMOVE} />
+            ) : hasError ? (
+              <div className={styles.inlineNotice}>Preview unavailable.</div>
+            ) : (
+              <div className={styles.inlineNotice}>Loading live KPI preview…</div>
+            )}
+          </div>
 
           <article className={styles.capacityTile}>
             <p className={styles.capacityLabel}>Capacity</p>
@@ -200,11 +260,60 @@ const SystemOverviewPreview: React.FC = () => {
             </div>
           </article>
 
-          <SystemOverviewKpiTile result={KPI_RESULTS.dwell} ref={rightRef} />
+          <div className={styles.bottomDwellMount} ref={dwellKpiMountRef}>
+            {dwellWidget ? (
+              <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget]} onRemoveWidget={NOOP_REMOVE} />
+            ) : hasError ? (
+              <div className={styles.inlineNotice}>Preview unavailable.</div>
+            ) : (
+              <div className={styles.inlineNotice}>Loading dwell KPI…</div>
+            )}
+          </div>
         </div>
       </div>
+      {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
+        <p className={styles.errorNote}>Preview unavailable.</p>
+      ) : null}
     </section>
   );
+};
+
+const SystemOverviewPreview: React.FC = () => {
+  const location = useLocation();
+  const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
+  const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
+  const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+
+  useEffect(() => {
+    let mounted = true;
+    const bootstrap = async () => {
+      if (isLoggedIn || hasViewToken || isDemoSessionActive()) {
+        if (mounted) setBootstrapState("ready");
+        return;
+      }
+      if (mounted) setBootstrapState("loading");
+      try {
+        await enableDemoSession();
+        applyDemoDefaultsOnce();
+        if (mounted) setBootstrapState("ready");
+      } catch {
+        if (mounted) setBootstrapState("error");
+      }
+    };
+    bootstrap();
+    return () => {
+      mounted = false;
+    };
+  }, [hasViewToken, isLoggedIn]);
+
+  if (bootstrapState === "loading") {
+    return <section className={styles.preview}><div className={styles.inlineNotice}>Loading live KPI preview…</div></section>;
+  }
+  if (bootstrapState === "error") {
+    return <section className={styles.preview}><div className={styles.inlineNotice}>Preview unavailable.</div></section>;
+  }
+
+  return <SystemOverviewLiveKpis />;
 };
 
 export default SystemOverviewPreview;

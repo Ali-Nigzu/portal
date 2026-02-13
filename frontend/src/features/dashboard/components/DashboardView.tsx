@@ -3,7 +3,7 @@ import type { DashboardGridPlacement, DashboardWidgetState } from "../types";
 import type { SiteFlowDemographicsData } from "../utils/siteFlowDemographics";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import DashboardHeader from "./DashboardHeader";
-import KpiBand from "./KpiBand";
+import DashboardKpiSection from "./DashboardKpiSection";
 import ChartGrid from "./ChartGrid";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 
@@ -74,7 +74,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             {isPreview ? "Preview temporarily unavailable." : error}
           </div>
         ) : null}
-        <KpiBand
+        <DashboardKpiSection
           mode={mode}
           kpiWidgets={kpiWidgets}
           onRemoveWidget={onRemoveWidget}
