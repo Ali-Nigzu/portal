@@ -432,4 +432,7 @@ button.vrm-nav-row {
 .vrm-layout--embed .dashboard-content,
 .vrm-layout--embed .vrm-card {
   border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
