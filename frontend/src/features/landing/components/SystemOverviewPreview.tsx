@@ -94,6 +94,11 @@ const pieArcs = (segments: Segment[]) => {
 const getKpiTileFromSlot = (slot: HTMLDivElement | null) =>
   slot?.querySelector<HTMLDivElement>(".dashboard-v2__kpi-tile") ?? null;
 
+const parseCssPx = (value: string, fallback: number) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const SystemOverviewLiveKpis: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
@@ -174,9 +179,12 @@ const SystemOverviewLiveKpis: React.FC = () => {
       const left = leftRef.current.getBoundingClientRect();
       const right = dwellTile.getBoundingClientRect();
 
-      const busY = ((topCluster.bottom - container.top) + (bottomCluster.top - container.top)) / 2;
-      const busX1 = 14;
-      const busX2 = container.width - 14;
+      const computed = window.getComputedStyle(containerRef.current);
+      const topToBus = parseCssPx(computed.getPropertyValue("--top-to-bus"), 56);
+
+      const busY = topCluster.bottom - container.top + topToBus;
+      const busX1 = 12;
+      const busX2 = container.width - 12;
 
       const connectedBottomY = connectedTopTiles.map((tile) => (tile as HTMLDivElement).getBoundingClientRect().bottom - container.top);
       const taps = [
@@ -229,14 +237,14 @@ const SystemOverviewLiveKpis: React.FC = () => {
       <div className={styles.canvas} ref={containerRef}>
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
-            <line className={styles.wireLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
+            <line className={styles.busLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
+            <line className={styles.connectorLine} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
+            <line className={styles.connectorLine} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
+            <line className={styles.connectorLine} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
+            <line className={styles.connectorLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
+            <line className={styles.connectorLine} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
             {wire.taps.map((tap, index) => (
-              <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="2" />
+              <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="2.5" />
             ))}
           </svg>
         ) : null}

@@ -1,29 +1,36 @@
 .preview {
-  --topo-gap-col: 6px;
-  --topo-gap-row: 6px;
-  --kpi-min: 212px;
-  --kpi-max: 240px;
-
+  --topo-gap-col: 8px;
+  --topo-gap-row: 10px;
+  --kpi-min: 196px;
+  --kpi-max: 224px;
+  --top-to-bus: 56px;
+  --bus-to-bottom: 44px;
+  --mid-span: 80px;
+  
   position: relative;
+  width: min(1040px, 100%);
+  margin: 0 auto;
   border: none;
   border-radius: 0;
-  background: color-mix(in srgb, var(--sys-bg-2) 20%, transparent);
-  padding: 8px;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--sys-bg-2) 14%, transparent);
+  padding: 0;
   overflow: hidden;
 }
 
 .canvas {
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(36px, auto) auto;
+  grid-template-rows: auto var(--mid-span) auto;
   row-gap: var(--topo-gap-row);
-  min-height: 360px;
+  min-height: 320px;
+  padding: 6px 8px;
 }
 
 .topCluster {
   display: grid;
   grid-template-columns: repeat(4, minmax(var(--kpi-min), var(--kpi-max)));
-  grid-template-rows: auto 70px;
+  grid-template-rows: auto 68px;
   column-gap: var(--topo-gap-col);
   row-gap: var(--topo-gap-row);
   justify-content: center;
@@ -40,19 +47,6 @@
   border-radius: 0;
 }
 
-.kpiSlot :global(.kpi-tile),
-.kpiSlot :global(.kpi-tile--vrm) {
-  padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-
-.kpiSlot :global(.kpi-content),
-.kpiSlot :global(.kpi-content--vrm) {
-  gap: 0 !important;
-}
 
 .tileT1 { grid-column: 1; grid-row: 1; }
 .tileT2 { grid-column: 2; grid-row: 1; }
@@ -71,6 +65,7 @@
   column-gap: var(--topo-gap-col);
   row-gap: var(--topo-gap-row);
   justify-content: center;
+  align-items: start;
 }
 
 .inlineNotice {
@@ -101,16 +96,16 @@
 .capacityTile,
 .trafficTile {
   border-radius: var(--sys-radius-sm);
-  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 65%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 64%, transparent);
-  box-shadow: 0 4px 10px color-mix(in srgb, var(--sys-bg-0) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 52%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 56%, transparent);
+  box-shadow: none;
 }
 
 .capacityTile {
   grid-column: 4;
   grid-row: 2;
-  min-height: 70px;
-  max-height: 70px;
+  min-height: 68px;
+  max-height: 68px;
   padding: 7px 9px;
   display: grid;
   grid-template-rows: auto auto auto;
@@ -157,28 +152,29 @@
 .node {
   z-index: 2;
   text-align: center;
-  font-size: 0.84rem;
-  font-weight: 620;
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--sys-text-1);
-  background: color-mix(in srgb, var(--sys-bg-1) 92%, transparent);
-  padding: 3px 9px;
+  background: color-mix(in srgb, var(--sys-bg-1) 88%, transparent);
+  padding: 2px 8px;
 }
 
 .nodeSub {
   display: block;
   margin-top: 2px;
-  font-size: 0.56rem;
+  font-size: 10px;
   line-height: 1;
   color: var(--sys-text-3);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
+  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
   text-transform: uppercase;
 }
 
 .trafficTile {
   grid-column: 1;
-  min-height: 156px;
-  max-height: 156px;
+  min-height: 146px;
+  max-height: 146px;
   padding: 8px;
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -240,15 +236,22 @@
   z-index: 1;
 }
 
-.wireLine {
-  stroke: color-mix(in srgb, var(--sys-line) 70%, transparent);
+.busLine {
+  stroke: color-mix(in srgb, var(--sys-line) 82%, transparent);
+  stroke-width: 1.5;
+  fill: none;
+  shape-rendering: geometricPrecision;
+}
+
+.connectorLine {
+  stroke: color-mix(in srgb, var(--sys-line) 74%, transparent);
   stroke-width: 1;
   fill: none;
   shape-rendering: crispEdges;
 }
 
 .tapMark {
-  fill: color-mix(in srgb, var(--sys-line) 78%, transparent);
+  fill: color-mix(in srgb, var(--sys-line) 90%, transparent);
   stroke: none;
 }
 
@@ -258,25 +261,33 @@
   color: var(--sys-text-3);
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1279px) {
   .preview {
-    --kpi-min: 196px;
-    --kpi-max: 220px;
+    width: min(920px, 100%);
+    --kpi-min: 172px;
+    --kpi-max: 198px;
+    --topo-gap-col: 6px;
+    --topo-gap-row: 8px;
+    --top-to-bus: 48px;
+    --bus-to-bottom: 38px;
+    --mid-span: 70px;
   }
-}
 
-@media (max-width: 900px) {
-  .preview {
-    --kpi-min: 182px;
-    --kpi-max: 206px;
+  .canvas {
+    min-height: 292px;
   }
 }
 
 @media (max-width: 767px) {
+  .preview {
+    padding: 14px 14px;
+  }
+
   .canvas {
     min-height: 0;
-    row-gap: 8px;
+    row-gap: 10px;
     grid-template-rows: auto auto auto;
+    padding: 0;
   }
 
   .topCluster,
@@ -284,6 +295,7 @@
     grid-template-columns: 1fr;
     grid-template-rows: auto;
     justify-content: stretch;
+    row-gap: 10px;
   }
 
   .tileT1,

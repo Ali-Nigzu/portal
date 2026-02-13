@@ -40,7 +40,7 @@ body {
   top: 0;
   z-index: 30;
   background: color-mix(in srgb, var(--sys-bg-0) 92%, transparent);
-  border-bottom: 1px solid var(--sys-line-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 52%, transparent);
   backdrop-filter: blur(8px);
 }
 
@@ -140,7 +140,7 @@ body {
   gap: clamp(24px, 3vw, 36px);
   align-items: start;
   padding: 22px;
-  border-bottom: 1px solid var(--sys-line-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 52%, transparent);
 }
 
 .landing-section-head h2,
@@ -155,11 +155,11 @@ body {
   font-weight: 600;
 }
 .landing-section-head p {
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   color: var(--sys-text-3);
-  font-size: 0.85rem;
-  line-height: 1.45;
-  letter-spacing: 0.01em;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -179,16 +179,16 @@ body {
 .landing-capability-row,
 .landing-assurance-row {
   margin: 0;
-  min-height: 48px;
+  min-height: 40px;
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 12px;
   color: var(--sys-text-2);
-  border-bottom: 1px solid var(--sys-line-soft);
-  padding: 0 4px;
-  font-size: 0.9rem;
-  line-height: 1.35;
+  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 52%, transparent);
+  padding: 0 2px;
+  font-size: 0.84rem;
+  line-height: 1.3;
 }
 
 .landing-capability-index {
@@ -233,22 +233,13 @@ body {
 .landing-deployment-arrow { text-align: center; color: var(--sys-text-3); font-size: 0.82rem; }
 
 .landing-preview {
-  padding: 24px 22px;
-  border-bottom: 1px solid var(--sys-line-soft);
+  padding: 18px 18px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 55%, transparent);
 }
 
 .landing-dashboard-preview {
-  margin-top: 18px;
+  margin-top: 14px;
   background: transparent;
-}
-
-.landing-dashboard-preview .dashboard-v2 {
-  padding: 0;
-  background: transparent;
-}
-
-.landing-dashboard-preview .dashboard-v2__content {
-  max-width: 100%;
 }
 
 .landing-preview-status-line {
@@ -258,7 +249,7 @@ body {
 }
 
 .landing-assurances {
-  padding: 24px 22px;
+  padding: 14px 18px 18px;
 }
 
 .landing-assurance-matrix {
@@ -340,6 +331,9 @@ body {
 }
 
 @media (max-width: 767px) {
+  .landing-preview { padding: 14px 14px; }
+  .landing-assurances { padding: 14px 14px 16px; }
+
   .landing-container { width: min(1180px, calc(100% - 30px)); }
   .landing-header-top { min-height: auto; padding: 10px 0; }
   .landing-brand-name-wrap { flex-direction: column; align-items: flex-start; gap: 2px; }
