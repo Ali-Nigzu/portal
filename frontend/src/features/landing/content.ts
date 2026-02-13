@@ -11,8 +11,10 @@ export const landingCopy = {
     },
   },
   hero: {
-    headline: "Camera Intelligence",
-    supportLine: "See whats happening across your locations",
+    headline: "Camera Operating Systems",
+    subheading: "Operational analytics for existing CCTV infrastructure.",
+    supportLine:
+      "Access real-time footfall, dwell time and site movement — without new hardware.",
   },
   livePreview: {
     heading: "Live Platform Preview",
@@ -32,11 +34,14 @@ export const landingCopy = {
     firstStep: "Sign Up at No Cost",
     secondStep: "System Mapping",
     thirdStep: "System Live",
-    assurances: [
-      "No personal data is stored",
-      "Built for continuous operation",
-      "Reporting is anonymised and aggregated",
+  },
+  assurances: {
+    heading: "Operational Assurances",
+    items: [
       "Uses existing CCTV",
+      "No personal data is stored",
+      "Reporting is anonymised and aggregated",
+      "Built for continuous operation",
       "No additional hardware",
       "Live reporting",
       "<1% of Tracks are Low Confidence",

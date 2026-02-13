@@ -39,12 +39,17 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="landing-page">
-      <LandingHeader onLogin={goToLogin} />
+      <LandingHeader
+        onDemo={goToDemo}
+        onCreateAccount={scrollToSignUp}
+        onLogin={goToLogin}
+      />
 
       <main>
         <section className="landing-hero" aria-labelledby="landing-hero-title">
           <div className="landing-container landing-hero-inner">
             <h1 id="landing-hero-title">{landingCopy.hero.headline}</h1>
+            <p className="landing-hero-subheading">{landingCopy.hero.subheading}</p>
             <p>{landingCopy.hero.supportLine}</p>
             <div className="landing-hero-actions">
               <button
@@ -96,13 +101,6 @@ const LandingPage: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                className="btn btn-tertiary landing-inline-demo"
-                onClick={goToDemo}
-              >
-                {landingCopy.nav.actions.demo}
-              </button>
             </section>
 
             <section className="landing-deployment" aria-labelledby="deployment-title">
@@ -123,15 +121,20 @@ const LandingPage: React.FC = () => {
                   <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
                 </li>
               </ol>
-
-              <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
-                {landingCopy.deployment.assurances.map((assurance) => (
-                  <p key={assurance} role="listitem" className="landing-assurance-row">
-                    {assurance}
-                  </p>
-                ))}
-              </div>
             </section>
+          </div>
+        </section>
+
+        <section className="landing-assurances" aria-labelledby="assurances-title">
+          <div className="landing-container">
+            <h2 id="assurances-title">{landingCopy.assurances.heading}</h2>
+            <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
+              {landingCopy.assurances.items.map((assurance) => (
+                <p key={assurance} role="listitem" className="landing-assurance-row">
+                  {assurance}
+                </p>
+              ))}
+            </div>
           </div>
         </section>
 

@@ -63,6 +63,7 @@ body {
 .landing-brand-short { font-size: 1rem; font-weight: 650; letter-spacing: 0.02em; color: var(--landing-text-primary); }
 
 .landing-header-actions { display: flex; align-items: center; }
+.landing-header-actions { gap: 8px; }
 
 .btn {
   border-radius: 6px;
@@ -74,6 +75,12 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.82rem;
 }
 
 .btn-primary {
@@ -130,6 +137,14 @@ body {
   font-size: clamp(1.02rem, 1.75vw, 1.2rem);
   line-height: 1.55;
 }
+
+.landing-hero-subheading {
+  margin: 22px 0 0 !important;
+  font-size: clamp(1.08rem, 1.95vw, 1.3rem) !important;
+  line-height: 1.5 !important;
+  color: var(--landing-text-primary) !important;
+  font-weight: 560;
+}
 .landing-hero-actions { margin-top: 30px; display: flex; gap: 12px; }
 
 .landing-preview { padding: 0 0 52px; }
@@ -152,7 +167,7 @@ body {
 
 .landing-preview-frame {
   margin-top: 18px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--landing-line);
   background: var(--landing-bg-surface);
   overflow: hidden;
@@ -180,7 +195,7 @@ body {
 .landing-deployment {
   border: 1px solid var(--landing-line-soft);
   background: linear-gradient(160deg, rgba(21, 48, 79, 0.72), rgba(13, 35, 58, 0.7));
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 22px;
 }
 
@@ -209,11 +224,6 @@ body {
   font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
   font-size: 0.75rem;
   color: var(--landing-text-muted);
-}
-
-.landing-inline-demo {
-  margin-top: 14px;
-  width: fit-content;
 }
 
 .landing-deployment-rail {
@@ -254,6 +264,14 @@ body {
 .landing-assurance-matrix {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.landing-assurances {
+  padding: 0 0 30px;
+}
+
+.landing-assurances h2 {
+  margin: 0;
 }
 
 .landing-signup { padding: 56px 0 48px; }
