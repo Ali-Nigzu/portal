@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   applyDemoDefaultsOnce,
   enableDemoSession,
@@ -7,10 +7,14 @@ import {
 
 const DemoPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    const params = new URLSearchParams(location.search);
+    const isEmbedMode = params.get("embed") === "1";
+
     const startDemo = async () => {
       try {
         await enableDemoSession();
@@ -18,7 +22,12 @@ const DemoPage = () => {
         if (!isMounted) {
           return;
         }
-        navigate("/sites/site-a/dashboard", { replace: true });
+        navigate(
+          isEmbedMode
+            ? "/sites/site-a/dashboard?embed=1"
+            : "/sites/site-a/dashboard",
+          { replace: true },
+        );
       } catch (err) {
         if (!isMounted) {
           return;
@@ -32,7 +41,7 @@ const DemoPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [navigate]);
+  }, [location.search, navigate]);
 
   if (error) {
     return (
