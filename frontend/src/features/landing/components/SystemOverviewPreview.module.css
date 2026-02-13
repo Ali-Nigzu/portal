@@ -1,6 +1,6 @@
 .preview {
-  --topo-gap-col: 20px;
-  --kpi-col: 142px;
+  --topo-gap-col: 18px;
+  --kpi-col: 176px;
   --topo-gap-row: 10px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
@@ -37,6 +37,8 @@
   justify-content: center;
   align-items: end;
   padding-inline: 2px;
+  width: max-content;
+  margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
 }
 
@@ -44,6 +46,7 @@
   min-width: 0;
   width: 100%;
   margin-inline: 0;
+  box-sizing: border-box;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -91,6 +94,8 @@
   row-gap: var(--topo-gap-row);
   justify-content: center;
   align-items: start;
+  width: max-content;
+  margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
 }
 
@@ -290,10 +295,10 @@
 @media (max-width: 1279px) {
   .preview {
     width: min(920px, 100%);
-    --kpi-col: 120px;
+    --kpi-col: 148px;
     --kpi-min: var(--kpi-col);
     --kpi-max: var(--kpi-col);
-    --topo-gap-col: 12px;
+    --topo-gap-col: 14px;
     --topo-gap-row: 8px;
     --top-to-bus: 48px;
     --bus-to-bottom: 38px;
