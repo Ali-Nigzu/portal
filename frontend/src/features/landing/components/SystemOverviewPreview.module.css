@@ -1,8 +1,9 @@
 .preview {
-  --topo-gap-col: 18px;
+  --topo-gap-col: 16px;
+  --kpi-col: 150px;
   --topo-gap-row: 10px;
-  --kpi-min: 136px;
-  --kpi-max: 154px;
+  --kpi-min: var(--kpi-col);
+  --kpi-max: var(--kpi-col);
   --top-to-bus: 56px;
   --bus-to-bottom: 44px;
   --mid-span: 80px;
@@ -29,7 +30,7 @@
 
 .topCluster {
   display: grid;
-  grid-template-columns: repeat(4, minmax(var(--kpi-min), var(--kpi-max)));
+  grid-template-columns: repeat(4, var(--kpi-col));
   grid-template-rows: auto 68px;
   column-gap: var(--topo-gap-col);
   row-gap: var(--topo-gap-row);
@@ -40,7 +41,8 @@
 
 .kpiSlot {
   min-width: 0;
-  margin-inline: 2px;
+  width: 100%;
+  margin-inline: 0;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -50,6 +52,7 @@
 }
 
 .kpiSlot :global(.dashboard-v2__kpi-tile),
+.kpiSlot :global(.dashboard-v2__kpi-content),
 .kpiSlot :global(.vrm-kpi-tile),
 .kpiSlot :global(.vrm-kpi-tile--panel),
 .kpiSlot :global(.kpi-tile),
@@ -83,7 +86,7 @@
 
 .bottomCluster {
   display: grid;
-  grid-template-columns: repeat(4, minmax(var(--kpi-min), var(--kpi-max)));
+  grid-template-columns: repeat(4, var(--kpi-col));
   column-gap: var(--topo-gap-col);
   row-gap: var(--topo-gap-row);
   justify-content: center;
@@ -286,8 +289,9 @@
 @media (max-width: 1279px) {
   .preview {
     width: min(920px, 100%);
-    --kpi-min: 122px;
-    --kpi-max: 140px;
+    --kpi-col: 128px;
+    --kpi-min: var(--kpi-col);
+    --kpi-max: var(--kpi-col);
     --topo-gap-col: 12px;
     --topo-gap-row: 8px;
     --top-to-bus: 48px;
@@ -341,4 +345,9 @@
     padding: 8px 0;
     min-height: 0;
   }
+}
+
+
+.kpiSlot :global(.kpi-panel) {
+  overflow: hidden !important;
 }

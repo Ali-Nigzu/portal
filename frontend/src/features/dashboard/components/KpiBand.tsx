@@ -42,7 +42,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
       } as Parameters<typeof ChartRenderer>[0]["result"])
     : result;
   const isPreview = mode === "preview";
-  const kpiHeight = isPreview ? 100 : 168;
+  const kpiHeight = isPreview ? 88 : 168;
   let content: ReactNode = null;
   if (state.status === "loading") {
     content = renderLoading(title, "kpi");
