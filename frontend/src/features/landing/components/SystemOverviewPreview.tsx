@@ -20,6 +20,8 @@ type Segment = {
   color: string;
 };
 
+type TopTileId = "entrances" | "occupancy" | "exits" | "footfall";
+
 type WireLayout = {
   width: number;
   height: number;
@@ -27,7 +29,7 @@ type WireLayout = {
   busX1: number;
   busX2: number;
   taps: number[];
-  topBottomY: number[];
+  connectedBottomY: number[];
   leftTopY: number;
   rightTopY: number;
 };
@@ -38,6 +40,14 @@ const TRAFFIC_PIE: Segment[] = [
   { label: "East", value: 25, color: "color-mix(in srgb, var(--sys-accent) 26%, var(--sys-text-3) 74%)" },
 ];
 
+const TOP_TILES: Array<{ key: TopTileId; widgetId: string; slotClass: string }> = [
+  { key: "entrances", widgetId: VRM_KPI_IDS.entrances, slotClass: styles.tileT1 },
+  { key: "occupancy", widgetId: VRM_KPI_IDS.occupancy, slotClass: styles.tileT2 },
+  { key: "exits", widgetId: VRM_KPI_IDS.exits, slotClass: styles.tileT3 },
+  { key: "footfall", widgetId: VRM_KPI_IDS.footfall, slotClass: styles.tileT4 },
+];
+
+const CONNECTED_TOP_IDS: TopTileId[] = ["entrances", "occupancy", "exits"];
 const CAPACITY_PERCENT = 68;
 const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
@@ -49,15 +59,15 @@ const initialWireLayout: WireLayout = {
   busY: 0,
   busX1: 0,
   busX2: 0,
-  taps: [0, 0, 0, 0, 0, 0],
-  topBottomY: [0, 0, 0, 0],
+  taps: [0, 0, 0, 0, 0],
+  connectedBottomY: [0, 0, 0],
   leftTopY: 0,
   rightTopY: 0,
 };
 
 const pieArcs = (segments: Segment[]) => {
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
-  const radius = 34;
+  const radius = 33;
   const cx = 50;
   const cy = 50;
   let acc = -Math.PI / 2;
@@ -88,7 +98,12 @@ const SystemOverviewLiveKpis: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
-  const topSlotRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const topSlotRefs = useRef<Record<TopTileId, HTMLDivElement | null>>({
+    entrances: null,
+    occupancy: null,
+    exits: null,
+    footfall: null,
+  });
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const leftRef = useRef<HTMLDivElement | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
@@ -124,15 +139,11 @@ const SystemOverviewLiveKpis: React.FC = () => {
     [kpiWidgets],
   );
 
-  const topWidgets = [
-    VRM_KPI_IDS.entrances,
-    VRM_KPI_IDS.occupancy,
-    VRM_KPI_IDS.exits,
-    VRM_KPI_IDS.footfall,
-  ]
-    .map((id) => kpiLookup.get(id))
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
-
+  const topWidgets = TOP_TILES.map((tile) => ({
+    ...tile,
+    widget: kpiLookup.get(tile.widgetId) ?? null,
+  }));
+  const hasTopWidgets = topWidgets.every((item) => Boolean(item.widget));
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
 
   useLayoutEffect(() => {
@@ -142,16 +153,18 @@ const SystemOverviewLiveKpis: React.FC = () => {
         !topClusterRef.current ||
         !bottomClusterRef.current ||
         !leftRef.current ||
-        !dwellSlotRef.current ||
-        topSlotRefs.current.some((slot) => !slot)
+        !dwellSlotRef.current
       ) {
         return;
       }
 
-      const topTiles = topSlotRefs.current.map((slot) => getKpiTileFromSlot(slot));
+      const topTilesById = Object.fromEntries(
+        TOP_TILES.map(({ key }) => [key, getKpiTileFromSlot(topSlotRefs.current[key])]),
+      ) as Record<TopTileId, HTMLDivElement | null>;
       const dwellTile = getKpiTileFromSlot(dwellSlotRef.current);
 
-      if (topTiles.some((tile) => !tile) || !dwellTile) {
+      const connectedTopTiles = CONNECTED_TOP_IDS.map((id) => topTilesById[id]);
+      if (connectedTopTiles.some((tile) => !tile) || !dwellTile) {
         return;
       }
 
@@ -162,12 +175,12 @@ const SystemOverviewLiveKpis: React.FC = () => {
       const right = dwellTile.getBoundingClientRect();
 
       const busY = ((topCluster.bottom - container.top) + (bottomCluster.top - container.top)) / 2;
-      const busX1 = 16;
-      const busX2 = container.width - 16;
+      const busX1 = 14;
+      const busX2 = container.width - 14;
 
-      const topBottomY = topTiles.map((tile) => (tile as HTMLDivElement).getBoundingClientRect().bottom - container.top);
+      const connectedBottomY = connectedTopTiles.map((tile) => (tile as HTMLDivElement).getBoundingClientRect().bottom - container.top);
       const taps = [
-        ...topTiles.map((tile) => {
+        ...connectedTopTiles.map((tile) => {
           const rect = (tile as HTMLDivElement).getBoundingClientRect();
           return rect.left - container.left + rect.width / 2;
         }),
@@ -182,7 +195,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
         busX1,
         busX2,
         taps,
-        topBottomY,
+        connectedBottomY,
         leftTopY: left.top - container.top,
         rightTopY: right.top - container.top,
       });
@@ -193,7 +206,10 @@ const SystemOverviewLiveKpis: React.FC = () => {
     if (containerRef.current) observer.observe(containerRef.current);
     if (topClusterRef.current) observer.observe(topClusterRef.current);
     if (bottomClusterRef.current) observer.observe(bottomClusterRef.current);
-    topSlotRefs.current.forEach((slot) => slot && observer.observe(slot));
+    TOP_TILES.forEach(({ key }) => {
+      const slot = topSlotRefs.current[key];
+      if (slot) observer.observe(slot);
+    });
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (leftRef.current) observer.observe(leftRef.current);
     window.addEventListener("resize", update);
@@ -202,10 +218,10 @@ const SystemOverviewLiveKpis: React.FC = () => {
       observer.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, [topWidgets.length, dwellWidget]);
+  }, [hasTopWidgets, dwellWidget]);
 
   const arcs = useMemo(() => pieArcs(TRAFFIC_PIE), []);
-  const hasKpis = topWidgets.length === 4 && Boolean(dwellWidget);
+  const hasKpis = hasTopWidgets && Boolean(dwellWidget);
   const hasError = manifestStatus === "error" || widgetStatus === "error";
 
   return (
@@ -214,12 +230,11 @@ const SystemOverviewLiveKpis: React.FC = () => {
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
             <line className={styles.wireLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[0]} y1={wire.topBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[1]} y1={wire.topBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[2]} y1={wire.topBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[3]} y1={wire.topBottomY[3]} x2={wire.taps[3]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[4]} y1={wire.leftTopY} x2={wire.taps[4]} y2={wire.busY} />
-            <line className={styles.wireLine} x1={wire.taps[5]} y1={wire.busY} x2={wire.taps[5]} y2={wire.rightTopY} />
+            <line className={styles.wireLine} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
+            <line className={styles.wireLine} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
+            <line className={styles.wireLine} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
+            <line className={styles.wireLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
+            <line className={styles.wireLine} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
             {wire.taps.map((tap, index) => (
               <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="2" />
             ))}
@@ -228,15 +243,15 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
         <div className={styles.topCluster} ref={topClusterRef}>
           {hasKpis ? (
-            topWidgets.map((widget, index) => (
+            topWidgets.map((item) => (
               <div
-                key={widget.widget.id}
-                className={`${styles.kpiSlot} ${styles[`tileT${index + 1}` as keyof typeof styles]}`}
+                key={item.widgetId}
+                className={`${styles.kpiSlot} ${item.slotClass}`}
                 ref={(node) => {
-                  topSlotRefs.current[index] = node;
+                  topSlotRefs.current[item.key] = node;
                 }}
               >
-                <DashboardKpiSection mode="preview" kpiWidgets={[widget]} onRemoveWidget={NOOP_REMOVE} />
+                <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />
               </div>
             ))
           ) : hasError ? (
