@@ -1,12 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-import "../../../analytics/components/ChartRenderer/styles.css";
+import SystemOverviewKpiTile from "./SystemOverviewKpiTile";
+import { KPI_RESULTS } from "./systemOverviewKpiData";
 import styles from "./SystemOverviewPreview.module.css";
-
-type Metric = {
-  label: string;
-  value: string;
-  spark: number[];
-};
 
 type Segment = {
   label: string;
@@ -14,78 +9,19 @@ type Segment = {
   color: string;
 };
 
-const METRICS_TOP: Metric[] = [
-  {
-    label: "Entrances",
-    value: "3",
-    spark: [14, 18, 24, 21, 26, 23, 19, 17, 16, 19, 22, 24],
-  },
-  {
-    label: "Occupancy",
-    value: "2",
-    spark: [8, 11, 16, 18, 17, 19, 15, 13, 11, 10, 12, 14],
-  },
-  {
-    label: "Exits",
-    value: "1",
-    spark: [6, 7, 11, 9, 12, 10, 8, 7, 5, 6, 8, 9],
-  },
-  {
-    label: "Footfall",
-    value: "4",
-    spark: [10, 12, 15, 14, 16, 15, 13, 12, 11, 13, 15, 16],
-  },
-];
-
-const DWELL_TILE: Metric = {
-  label: "Dwell Minutes",
-  value: "4",
-  spark: [5.2, 6.0, 7.1, 6.4, 7.8, 7.2, 6.8, 6.1, 5.8, 6.5, 7.4, 8.2],
-};
-
 const TRAFFIC_PIE: Segment[] = [
-  {
-    label: "North",
-    value: 42,
-    color: "color-mix(in srgb, var(--sys-accent) 60%, white 8%)",
-  },
-  {
-    label: "South",
-    value: 33,
-    color: "color-mix(in srgb, var(--sys-accent) 44%, var(--sys-text-2) 56%)",
-  },
-  {
-    label: "East",
-    value: 25,
-    color: "color-mix(in srgb, var(--sys-accent) 26%, var(--sys-text-3) 74%)",
-  },
+  { label: "North", value: 42, color: "color-mix(in srgb, var(--sys-accent) 60%, white 8%)" },
+  { label: "South", value: 33, color: "color-mix(in srgb, var(--sys-accent) 44%, var(--sys-text-2) 56%)" },
+  { label: "East", value: 25, color: "color-mix(in srgb, var(--sys-accent) 26%, var(--sys-text-3) 74%)" },
 ];
 
 const CAPACITY_PERCENT = 68;
 
-const buildSpark = (points: number[], width = 220, height = 100) => {
-  const max = Math.max(...points);
-  const min = Math.min(...points);
-  const span = Math.max(max - min, 1);
-  const coords = points.map((point, index) => {
-    const x = (index / (points.length - 1)) * width;
-    const y = height - ((point - min) / span) * height;
-    return { x, y };
-  });
-
-  const line = coords
-    .map((pt, index) => `${index === 0 ? "M" : "L"}${pt.x.toFixed(2)},${pt.y.toFixed(2)}`)
-    .join(" ");
-
-  const area = `${line} L ${width},${height} L 0,${height} Z`;
-  return { line, area };
-};
-
 const pieArcs = (segments: Segment[]) => {
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
-  const radius = 44;
-  const cx = 62;
-  const cy = 62;
+  const radius = 34;
+  const cx = 50;
+  const cy = 50;
   let acc = -Math.PI / 2;
 
   return segments.map((segment) => {
@@ -105,40 +41,6 @@ const pieArcs = (segments: Segment[]) => {
       color: segment.color,
     };
   });
-};
-
-const MetricTile = ({ metric }: { metric: Metric }) => {
-  const spark = buildSpark(metric.spark);
-  return (
-    <article className={`${styles.uniformTile} kpi-tile kpi-tile--vrm`}>
-      <div className="kpi-content kpi-content--vrm">
-        <div className="kpi-panel">
-          <div className="kpi-panel-header">
-            <div className="kpi-main-block">
-              <div className="kpi-header">
-                <div className="kpi-header-right">
-                  <div className="kpi-label">{metric.label}</div>
-                </div>
-                <div className="kpi-value">{metric.value}</div>
-              </div>
-            </div>
-          </div>
-          <div className="kpi-sparkline-region kpi-sparkline-region--vrm">
-            <div className="kpi-sparkline-shell kpi-sparkline-shell--vrm">
-              <div className="kpi-sparkline-anchor kpi-sparkline-anchor--vrm">
-                <div className="kpi-sparkline-plot">
-                  <svg className={styles.sparkline} viewBox="0 0 220 100" aria-hidden="true">
-                    <path d={spark.area} className={styles.sparklineArea} />
-                    <path d={spark.line} className={styles.sparklinePath} />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </article>
-  );
 };
 
 type WireLayout = {
@@ -166,6 +68,7 @@ const initialWireLayout: WireLayout = {
 };
 
 const topTileClasses = [styles.tileT1, styles.tileT2, styles.tileT3, styles.tileT4];
+const topResults = [KPI_RESULTS.entrances, KPI_RESULTS.occupancy, KPI_RESULTS.exits, KPI_RESULTS.footfall];
 
 const SystemOverviewPreview: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -178,14 +81,7 @@ const SystemOverviewPreview: React.FC = () => {
 
   useLayoutEffect(() => {
     const update = () => {
-      if (
-        !containerRef.current ||
-        !topClusterRef.current ||
-        !bottomClusterRef.current ||
-        !leftRef.current ||
-        !rightRef.current ||
-        topWireRefs.current.some((ref) => !ref)
-      ) {
+      if (!containerRef.current || !topClusterRef.current || !bottomClusterRef.current || !leftRef.current || !rightRef.current || topWireRefs.current.some((ref) => !ref)) {
         return;
       }
 
@@ -196,8 +92,8 @@ const SystemOverviewPreview: React.FC = () => {
       const right = rightRef.current.getBoundingClientRect();
 
       const busY = ((topCluster.bottom - container.top) + (bottomCluster.top - container.top)) / 2;
-      const busX1 = 18;
-      const busX2 = container.width - 18;
+      const busX1 = 16;
+      const busX2 = container.width - 16;
 
       const topBottomY = topWireRefs.current.map((tile) => {
         const rect = (tile as HTMLDivElement).getBoundingClientRect();
@@ -248,105 +144,63 @@ const SystemOverviewPreview: React.FC = () => {
     <section className={styles.preview} aria-label="System overview topology preview">
       <div className={styles.canvas} ref={containerRef}>
         {wire.width > 0 && wire.height > 0 ? (
-          <svg
-            className={styles.wireSvg}
-            width={wire.width}
-            height={wire.height}
-            viewBox={`0 0 ${wire.width} ${wire.height}`}
-            aria-hidden="true"
-          >
+          <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
             <line className={styles.wireLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-
             <line className={styles.wireLine} x1={wire.taps[0]} y1={wire.topBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
             <line className={styles.wireLine} x1={wire.taps[1]} y1={wire.topBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
             <line className={styles.wireLine} x1={wire.taps[2]} y1={wire.topBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
-
             <line className={styles.wireLine} x1={wire.taps[3]} y1={wire.topBottomY[3]} x2={wire.taps[3]} y2={wire.busY} />
-
             <line className={styles.wireLine} x1={wire.taps[4]} y1={wire.leftTopY} x2={wire.taps[4]} y2={wire.busY} />
             <line className={styles.wireLine} x1={wire.taps[5]} y1={wire.busY} x2={wire.taps[5]} y2={wire.rightTopY} />
-
             {wire.taps.map((tap, index) => (
-              <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="2.2" />
+              <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="2" />
             ))}
           </svg>
         ) : null}
 
         <div className={styles.topCluster} ref={topClusterRef}>
-          {METRICS_TOP.map((metric, index) => (
-            <div
-              key={metric.label}
-              className={topTileClasses[index]}
-              ref={(node) => {
-                if (index < 4) {
-                  topWireRefs.current[index] = node;
-                }
-              }}
-            >
-              <MetricTile metric={metric} />
+          {topResults.map((result, index) => (
+            <div key={result.series[0]?.id} className={topTileClasses[index]}>
+              <SystemOverviewKpiTile
+                result={result}
+                ref={(node) => {
+                  if (index < 4) topWireRefs.current[index] = node;
+                }}
+              />
             </div>
           ))}
 
-          <article className={`${styles.cardSurface} ${styles.capacityTile}`}>
-            <p className={styles.tileLabel}>Capacity</p>
-            <div className={styles.capacityTrack}>
-              <div className={styles.capacityFill} style={{ width: `${CAPACITY_PERCENT}%` }} />
-            </div>
+          <article className={styles.capacityTile}>
+            <p className={styles.capacityLabel}>Capacity</p>
+            <div className={styles.capacityTrack}><div className={styles.capacityFill} style={{ width: `${CAPACITY_PERCENT}%` }} /></div>
             <p className={styles.capacityMeta}>{CAPACITY_PERCENT}% active capacity</p>
           </article>
         </div>
 
         <div className={styles.midZone}>
-          <div className={styles.node}>
-            camOS
-            <span className={styles.nodeSub}>System Sheet</span>
-          </div>
+          <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span></div>
         </div>
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
-          <article className={`${styles.uniformTile} ${styles.pieTile} kpi-tile kpi-tile--vrm`} ref={leftRef}>
-            <div className="kpi-content kpi-content--vrm">
-              <div className="kpi-panel">
-                <div className="kpi-panel-header">
-                  <div className="kpi-main-block">
-                    <div className="kpi-header">
-                      <div className="kpi-header-right">
-                        <div className="kpi-label">Traffic Distribution</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.pieWrap}>
-                  <svg className={styles.pieSvg} viewBox="0 0 124 124" aria-hidden="true">
-                    {arcs.map((arc) => (
-                      <path key={arc.label} d={arc.d} fill={arc.color} />
-                    ))}
-                    <circle
-                      cx="62"
-                      cy="62"
-                      r="17"
-                      fill="color-mix(in srgb, var(--sys-bg-1) 88%, transparent)"
-                    />
-                  </svg>
-                </div>
-              </div>
+          <article className={styles.trafficTile} ref={leftRef}>
+            <div className={styles.trafficTitle}>Traffic Distribution</div>
+            <div className={styles.pieWrap}>
+              <svg className={styles.pieSvg} viewBox="0 0 100 100" aria-hidden="true">
+                {arcs.map((arc) => <path key={arc.label} d={arc.d} fill={arc.color} />)}
+                <circle cx="50" cy="50" r="14" fill="color-mix(in srgb, var(--sys-bg-1) 90%, transparent)" />
+              </svg>
             </div>
             <div className={styles.legend}>
               {arcs.map((arc) => (
                 <div key={arc.label} className={styles.legendRow}>
-                  <span className={styles.legendLabel}>
-                    <span className={styles.legendSwatch} style={{ background: arc.color }} />
-                    {arc.label}
-                  </span>
+                  <span className={styles.legendLabel}><span className={styles.legendSwatch} style={{ background: arc.color }} />{arc.label}</span>
                   <span>{arc.value}%</span>
                 </div>
               ))}
             </div>
           </article>
 
-          <div ref={rightRef}>
-            <MetricTile metric={DWELL_TILE} />
-          </div>
+          <SystemOverviewKpiTile result={KPI_RESULTS.dwell} ref={rightRef} />
         </div>
       </div>
     </section>

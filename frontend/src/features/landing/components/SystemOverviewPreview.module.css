@@ -1,8 +1,8 @@
 .preview {
-  --tile-w: 218px;
-  --tile-h: 178px;
-  --tile-gap: 10px;
-  --capacity-h: 92px;
+  --topo-tile-w: clamp(170px, 14vw, 210px);
+  --topo-tile-h: clamp(132px, 11vw, 168px);
+  --topo-gap: 8px;
+  --topo-radius: var(--sys-radius-sm);
 
   position: relative;
   border: 1px solid var(--sys-line-soft);
@@ -12,23 +12,24 @@
     color-mix(in srgb, var(--sys-bg-2) 42%, transparent),
     color-mix(in srgb, var(--sys-bg-1) 66%, transparent)
   );
-  padding: 16px;
+  padding: 14px;
   overflow: hidden;
 }
 
 .canvas {
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(56px, 1fr) auto;
-  row-gap: 12px;
-  min-height: 470px;
+  grid-template-rows: auto minmax(52px, 1fr) auto;
+  row-gap: 10px;
+  min-height: 414px;
 }
 
 .topCluster {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: var(--tile-h) var(--capacity-h);
-  gap: var(--tile-gap);
+  grid-template-columns: repeat(4, minmax(0, var(--topo-tile-w)));
+  grid-template-rows: var(--topo-tile-h) 78px;
+  justify-content: space-between;
+  gap: var(--topo-gap);
 }
 
 .tileT1 { grid-column: 1; grid-row: 1; }
@@ -36,76 +37,58 @@
 .tileT3 { grid-column: 3; grid-row: 1; }
 .tileT4 { grid-column: 4; grid-row: 1; }
 
-.uniformTile {
+.preview :global(.dashboard-v2__kpi-tile) {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
   width: 100%;
-  min-height: var(--tile-h);
-  max-height: var(--tile-h);
+  min-height: var(--topo-tile-h);
+  max-height: var(--topo-tile-h);
 }
 
-.cardSurface {
-  border-radius: var(--sys-radius-sm);
+.preview :global(.dashboard-v2__kpi-tile.vrm-kpi-tile--panel),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-tile),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-content) {
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.preview :global(.dashboard-v2__kpi-content) {
+  min-height: var(--topo-tile-h);
+  max-height: var(--topo-tile-h);
+  display: flex;
+  flex-direction: column;
+}
+
+.preview :global(.dashboard-v2__kpi-renderer) {
+  height: 100%;
+}
+
+.capacityTile,
+.trafficTile {
+  border-radius: var(--topo-radius);
   border: 1px solid var(--sys-line-soft);
   background: color-mix(in srgb, var(--sys-bg-2) 68%, transparent);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--sys-bg-0) 22%, transparent);
 }
 
-.preview :global(.kpi-tile.kpi-tile--vrm) {
-  min-height: var(--tile-h) !important;
-  max-height: var(--tile-h);
-  padding: 0 !important;
-  gap: 0;
-}
-
-.preview :global(.kpi-content.kpi-content--vrm) {
-  gap: 0;
-}
-
-.preview :global(.kpi-panel) {
-  min-height: var(--tile-h);
-}
-
-.preview :global(.kpi-panel-header) {
-  padding: 16px 20px 12px;
-}
-
-.preview :global(.kpi-label) {
-  white-space: nowrap;
-}
-
-.sparkline {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.sparklineArea {
-  fill: color-mix(in srgb, var(--sys-accent) 22%, transparent);
-  opacity: 0.75;
-}
-
-.sparklinePath {
-  fill: none;
-  stroke: color-mix(in srgb, var(--sys-accent) 76%, var(--sys-text-2) 24%);
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.96;
-}
-
 .capacityTile {
   grid-column: 4;
   grid-row: 2;
-  min-height: var(--capacity-h);
-  max-height: var(--capacity-h);
-  padding: 10px 12px;
+  min-height: 78px;
+  max-height: 78px;
+  padding: 8px 10px;
   display: grid;
   grid-template-rows: auto auto auto;
-  gap: 6px;
+  gap: 4px;
 }
 
-.tileLabel {
+.capacityLabel {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   line-height: 1;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -114,9 +97,9 @@
 }
 
 .capacityTrack {
-  height: 9px;
+  height: 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--sys-line-soft) 92%, transparent);
+  background: color-mix(in srgb, var(--sys-line-soft) 90%, transparent);
   overflow: hidden;
 }
 
@@ -129,21 +112,21 @@
 .capacityMeta {
   margin: 0;
   color: var(--sys-text-2);
-  font-size: 0.74rem;
-  line-height: 1.2;
+  font-size: 0.69rem;
+  line-height: 1.15;
 }
 
 .midZone {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 56px;
+  min-height: 52px;
 }
 
 .node {
   z-index: 2;
   text-align: center;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 620;
   letter-spacing: 0.02em;
   color: var(--sys-text-1);
@@ -154,7 +137,7 @@
 .nodeSub {
   display: block;
   margin-top: 2px;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   line-height: 1;
   color: var(--sys-text-3);
   letter-spacing: 0.08em;
@@ -163,32 +146,41 @@
 
 .bottomCluster {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--tile-gap);
+  grid-template-columns: repeat(2, minmax(0, var(--topo-tile-w)));
+  justify-content: space-between;
+  gap: var(--topo-gap);
 }
 
-.pieTile {
+.trafficTile {
+  min-height: var(--topo-tile-h);
+  max-height: var(--topo-tile-h);
+  padding: 10px;
   display: grid;
-  grid-template-rows: 1fr auto;
-  gap: 6px;
+  grid-template-rows: auto 1fr auto;
+  gap: 4px;
+}
+
+.trafficTitle {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sys-text-3);
 }
 
 .pieWrap {
   display: grid;
   place-items: center;
-  padding: 0 14px 6px;
 }
 
 .pieSvg {
-  width: 96px;
-  height: 96px;
+  width: 76px;
+  height: 76px;
 }
 
 .legend {
-  margin-top: auto;
   display: grid;
-  gap: 4px;
-  padding: 0 12px 12px;
+  gap: 3px;
 }
 
 .legendRow {
@@ -196,7 +188,7 @@
   align-items: center;
   justify-content: space-between;
   color: var(--sys-text-2);
-  font-size: 0.72rem;
+  font-size: 0.67rem;
   line-height: 1.1;
 }
 
@@ -207,10 +199,10 @@
 }
 
 .legendSwatch {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  margin-right: 6px;
+  margin-right: 5px;
   display: inline-block;
 }
 
@@ -235,29 +227,17 @@
   stroke: none;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1100px) {
   .preview {
-    --tile-w: 198px;
-    --tile-h: 166px;
-    --tile-gap: 9px;
-    --capacity-h: 86px;
-  }
-
-  .canvas {
-    min-height: 438px;
-  }
-}
-
-@media (max-width: 900px) {
-  .preview {
-    --tile-h: 154px;
+    --topo-tile-w: clamp(158px, 20vw, 190px);
+    --topo-tile-h: clamp(124px, 14vw, 152px);
   }
 }
 
 @media (max-width: 767px) {
   .canvas {
     min-height: 0;
-    row-gap: 12px;
+    row-gap: 10px;
     grid-template-rows: auto auto auto;
   }
 
@@ -276,7 +256,8 @@
     grid-row: auto;
   }
 
-  .uniformTile {
+  .preview :global(.dashboard-v2__kpi-tile),
+  .trafficTile {
     max-height: none;
     min-height: 148px;
   }
@@ -288,7 +269,7 @@
   .midZone {
     border-top: 1px solid var(--sys-line-soft);
     border-bottom: 1px solid var(--sys-line-soft);
-    padding: 10px 0;
+    padding: 8px 0;
     min-height: 0;
   }
 }
