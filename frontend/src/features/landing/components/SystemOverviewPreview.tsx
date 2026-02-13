@@ -81,12 +81,15 @@ const pieArcs = (segments: Segment[]) => {
   });
 };
 
+const getKpiTileFromSlot = (slot: HTMLDivElement | null) =>
+  slot?.querySelector<HTMLDivElement>(".dashboard-v2__kpi-tile") ?? null;
+
 const SystemOverviewLiveKpis: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
-  const topKpiMountRef = useRef<HTMLDivElement | null>(null);
-  const dwellKpiMountRef = useRef<HTMLDivElement | null>(null);
+  const topSlotRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const leftRef = useRef<HTMLDivElement | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
@@ -134,14 +137,21 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
   useLayoutEffect(() => {
     const update = () => {
-      if (!containerRef.current || !topClusterRef.current || !bottomClusterRef.current || !leftRef.current || !topKpiMountRef.current || !dwellKpiMountRef.current) {
+      if (
+        !containerRef.current ||
+        !topClusterRef.current ||
+        !bottomClusterRef.current ||
+        !leftRef.current ||
+        !dwellSlotRef.current ||
+        topSlotRefs.current.some((slot) => !slot)
+      ) {
         return;
       }
 
-      const topTiles = Array.from(topKpiMountRef.current.querySelectorAll<HTMLDivElement>(".dashboard-v2__kpi-tile"));
-      const dwellTile = dwellKpiMountRef.current.querySelector<HTMLDivElement>(".dashboard-v2__kpi-tile");
+      const topTiles = topSlotRefs.current.map((slot) => getKpiTileFromSlot(slot));
+      const dwellTile = getKpiTileFromSlot(dwellSlotRef.current);
 
-      if (topTiles.length < 4 || !dwellTile) {
+      if (topTiles.some((tile) => !tile) || !dwellTile) {
         return;
       }
 
@@ -155,14 +165,10 @@ const SystemOverviewLiveKpis: React.FC = () => {
       const busX1 = 16;
       const busX2 = container.width - 16;
 
-      const topBottomY = topTiles.slice(0, 4).map((tile) => {
-        const rect = tile.getBoundingClientRect();
-        return rect.bottom - container.top;
-      });
-
+      const topBottomY = topTiles.map((tile) => (tile as HTMLDivElement).getBoundingClientRect().bottom - container.top);
       const taps = [
-        ...topTiles.slice(0, 4).map((tile) => {
-          const rect = tile.getBoundingClientRect();
+        ...topTiles.map((tile) => {
+          const rect = (tile as HTMLDivElement).getBoundingClientRect();
           return rect.left - container.left + rect.width / 2;
         }),
         left.left - container.left + left.width / 2,
@@ -187,8 +193,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
     if (containerRef.current) observer.observe(containerRef.current);
     if (topClusterRef.current) observer.observe(topClusterRef.current);
     if (bottomClusterRef.current) observer.observe(bottomClusterRef.current);
-    if (topKpiMountRef.current) observer.observe(topKpiMountRef.current);
-    if (dwellKpiMountRef.current) observer.observe(dwellKpiMountRef.current);
+    topSlotRefs.current.forEach((slot) => slot && observer.observe(slot));
+    if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (leftRef.current) observer.observe(leftRef.current);
     window.addEventListener("resize", update);
 
@@ -221,15 +227,23 @@ const SystemOverviewLiveKpis: React.FC = () => {
         ) : null}
 
         <div className={styles.topCluster} ref={topClusterRef}>
-          <div className={styles.topKpiMount} ref={topKpiMountRef}>
-            {hasKpis ? (
-              <DashboardKpiSection mode="preview" kpiWidgets={topWidgets} onRemoveWidget={NOOP_REMOVE} />
-            ) : hasError ? (
-              <div className={styles.inlineNotice}>Preview unavailable.</div>
-            ) : (
-              <div className={styles.inlineNotice}>Loading live KPI preview…</div>
-            )}
-          </div>
+          {hasKpis ? (
+            topWidgets.map((widget, index) => (
+              <div
+                key={widget.widget.id}
+                className={`${styles.kpiSlot} ${styles[`tileT${index + 1}` as keyof typeof styles]}`}
+                ref={(node) => {
+                  topSlotRefs.current[index] = node;
+                }}
+              >
+                <DashboardKpiSection mode="preview" kpiWidgets={[widget]} onRemoveWidget={NOOP_REMOVE} />
+              </div>
+            ))
+          ) : hasError ? (
+            <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Preview unavailable.</div>
+          ) : (
+            <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Loading live KPI preview…</div>
+          )}
 
           <article className={styles.capacityTile}>
             <p className={styles.capacityLabel}>Capacity</p>
@@ -261,7 +275,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
             </div>
           </article>
 
-          <div className={styles.bottomDwellMount} ref={dwellKpiMountRef}>
+          <div className={`${styles.kpiSlot} ${styles.tileT5}`} ref={dwellSlotRef}>
             {dwellWidget ? (
               <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget]} onRemoveWidget={NOOP_REMOVE} />
             ) : hasError ? (

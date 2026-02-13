@@ -1,5 +1,5 @@
 .preview {
-  --topo-gap: 10px;
+  --topo-gap: 8px;
 
   position: relative;
   border: 1px solid var(--sys-line-soft);
@@ -9,32 +9,58 @@
     color-mix(in srgb, var(--sys-bg-2) 42%, transparent),
     color-mix(in srgb, var(--sys-bg-1) 66%, transparent)
   );
-  padding: 14px;
+  padding: 12px;
   overflow: hidden;
 }
 
 .canvas {
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(52px, 1fr) auto;
-  row-gap: 10px;
-  min-height: 460px;
+  grid-template-rows: auto minmax(44px, 1fr) auto;
+  row-gap: 8px;
+  min-height: 430px;
 }
 
 .topCluster {
   display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto 74px;
   gap: var(--topo-gap);
   align-items: end;
 }
 
-.topKpiMount {
+.kpiSlot {
   min-width: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
 }
 
-.bottomDwellMount {
-  min-width: 220px;
+.kpiSlot :global(.dashboard-v2__kpi-tile) {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.tileT1 { grid-column: 1; grid-row: 1; }
+.tileT2 { grid-column: 2; grid-row: 1; }
+.tileT3 { grid-column: 3; grid-row: 1; }
+.tileT4 { grid-column: 4; grid-row: 1; }
+.tileT5 { grid-column: 4; grid-row: 1; }
+
+.topNotice {
+  grid-column: 1 / -1;
+  min-height: 120px;
+}
+
+.bottomCluster {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--topo-gap);
 }
 
 .inlineNotice {
@@ -47,7 +73,6 @@
   color: var(--sys-text-3);
   font-size: 0.82rem;
 }
-
 
 .retryButton {
   border: 1px solid var(--sys-line-soft);
@@ -72,13 +97,14 @@
 }
 
 .capacityTile {
-  min-height: 78px;
-  max-height: 78px;
+  grid-column: 4;
+  grid-row: 2;
+  min-height: 74px;
+  max-height: 74px;
   padding: 8px 10px;
   display: grid;
   grid-template-rows: auto auto auto;
   gap: 4px;
-  width: 220px;
 }
 
 .capacityLabel {
@@ -115,7 +141,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 52px;
+  min-height: 44px;
 }
 
 .node {
@@ -139,14 +165,8 @@
   text-transform: uppercase;
 }
 
-.bottomCluster {
-  display: grid;
-  grid-template-columns: 220px minmax(220px, 1fr);
-  justify-content: space-between;
-  gap: var(--topo-gap);
-}
-
 .trafficTile {
+  grid-column: 1;
   min-height: 168px;
   max-height: 168px;
   padding: 10px;
@@ -166,12 +186,11 @@
 .pieWrap {
   display: grid;
   place-items: center;
-  gap: 8px;
 }
 
 .pieSvg {
-  width: 76px;
-  height: 76px;
+  width: 74px;
+  height: 74px;
 }
 
 .legend {
@@ -229,18 +248,6 @@
   color: var(--sys-text-3);
 }
 
-@media (max-width: 1100px) {
-  .capacityTile,
-  .bottomDwellMount,
-  .bottomCluster {
-    min-width: 200px;
-  }
-
-  .bottomCluster {
-    grid-template-columns: 200px minmax(200px, 1fr);
-  }
-}
-
 @media (max-width: 767px) {
   .canvas {
     min-height: 0;
@@ -254,11 +261,15 @@
     grid-template-rows: auto;
   }
 
-  .bottomDwellMount,
-  .capacityTile,
-  .trafficTile {
-    width: 100%;
-    min-width: 0;
+  .tileT1,
+  .tileT2,
+  .tileT3,
+  .tileT4,
+  .tileT5,
+  .trafficTile,
+  .capacityTile {
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .wireSvg {
