@@ -71,6 +71,21 @@
 }
 
 .dashboard-v2__kpi-content { min-height: 168px; display: flex; flex-direction: column; }
+
+.dashboard-v2__kpi-band--preview {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-tile {
+  min-width: 0;
+  width: 100%;
+}
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-content {
+  min-height: 84px;
+}
+
 .dashboard-v2__kpi-controls,
 .dashboard-v2__widget-footer { display: flex; justify-content: flex-end; }
 

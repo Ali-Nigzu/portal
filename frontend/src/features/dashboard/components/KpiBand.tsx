@@ -42,7 +42,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
       } as Parameters<typeof ChartRenderer>[0]["result"])
     : result;
   const isPreview = mode === "preview";
-  const kpiHeight = isPreview ? 88 : 168;
+  const kpiHeight = isPreview ? 84 : 168;
   let content: ReactNode = null;
   if (state.status === "loading") {
     content = renderLoading(title, "kpi");
@@ -92,8 +92,9 @@ const KpiBand: React.FC<KpiBandProps> = ({ mode = "full", kpiWidgets, onRemoveWi
   if (kpiWidgets.length === 0) {
     return null;
   }
+  const bandClassName = `dashboard-v2__kpi-band vrm-section vrm-section--kpis ${mode === "preview" ? "dashboard-v2__kpi-band--preview" : ""}`.trim();
   return (
-    <section className="dashboard-v2__kpi-band vrm-section vrm-section--kpis">
+    <section className={bandClassName}>
       {kpiWidgets.map((state) => (
         <KpiTile
           mode={mode}
