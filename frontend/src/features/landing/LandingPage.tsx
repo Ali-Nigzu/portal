@@ -113,7 +113,9 @@ const LandingPage: React.FC = () => {
                 <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                 <p>{landingCopy.livePreview.description}</p>
               </div>
-              <SystemOverviewPreview />
+              <div className="landing-dashboard-preview">
+                <SystemOverviewPreview />
+              </div>
             </section>
 
             <section className="landing-assurances" aria-labelledby="assurances-title">

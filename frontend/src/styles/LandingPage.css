@@ -127,11 +127,11 @@ body {
 
 .landing-spec-sheet { padding: 0 0 34px; }
 .landing-spec-sheet-inner {
-  border: 1px solid var(--sys-line-soft);
-  border-radius: var(--sys-radius-md);
-  background: linear-gradient(165deg, color-mix(in srgb, var(--sys-bg-2) 64%, transparent), color-mix(in srgb, var(--sys-bg-1) 72%, transparent));
-  box-shadow: var(--sys-shadow-soft);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .landing-operational-grid {
@@ -234,12 +234,22 @@ body {
 
 .landing-preview {
   padding: 18px 18px 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 55%, transparent);
+  border: 0;
 }
 
 .landing-dashboard-preview {
   margin-top: 14px;
+  border: none;
+  outline: none;
+  box-shadow: none;
   background: transparent;
+  backdrop-filter: none;
+  filter: none;
+}
+
+.landing-dashboard-preview::before,
+.landing-dashboard-preview::after {
+  content: none;
 }
 
 .landing-preview-status-line {

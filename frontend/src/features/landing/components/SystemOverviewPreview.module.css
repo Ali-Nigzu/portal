@@ -19,6 +19,32 @@
   overflow: visible;
 }
 
+.preview,
+.canvas,
+.topCluster,
+.bottomCluster,
+.kpiSlot {
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+  filter: none;
+}
+
+.preview::before,
+.preview::after,
+.canvas::before,
+.canvas::after,
+.topCluster::before,
+.topCluster::after,
+.bottomCluster::before,
+.bottomCluster::after,
+.kpiSlot::before,
+.kpiSlot::after {
+  content: none;
+}
+
 .canvas {
   position: relative;
   display: grid;
