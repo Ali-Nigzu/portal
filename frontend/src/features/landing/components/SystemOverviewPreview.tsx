@@ -133,17 +133,18 @@ const SystemOverviewLiveKpis: React.FC = () => {
       const topTilesById = Object.fromEntries(
         TOP_TILES.map(({ key }) => [key, getKpiTileFromSlot(topSlotRefs.current[key])]),
       ) as Record<TopTileId, HTMLDivElement | null>;
+      const trafficTile = getKpiTileFromSlot(leftRef.current);
       const dwellTile = getKpiTileFromSlot(dwellSlotRef.current);
 
       const connectedTopTiles = CONNECTED_TOP_IDS.map((id) => topTilesById[id]);
-      if (connectedTopTiles.some((tile) => !tile) || !dwellTile) {
+      if (connectedTopTiles.some((tile) => !tile) || !trafficTile || !dwellTile) {
         return;
       }
 
       const container = containerRef.current.getBoundingClientRect();
       const topCluster = topClusterRef.current.getBoundingClientRect();
       const bottomCluster = bottomClusterRef.current.getBoundingClientRect();
-      const left = leftRef.current.getBoundingClientRect();
+      const left = trafficTile.getBoundingClientRect();
       const right = dwellTile.getBoundingClientRect();
       const node = nodeRef.current.getBoundingClientRect();
 
@@ -207,8 +208,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
   const flowRoutes = useMemo(() => ([
     {
       id: "entrances",
-      d: `M ${wire.taps[0]} ${wire.connectedBottomY[0]} L ${wire.taps[0]} ${wire.busY} L ${nodeX} ${wire.busY}`,
-      direction: "toNode" as const,
+      d: `M ${nodeX} ${wire.busY} L ${wire.taps[0]} ${wire.busY} L ${wire.taps[0]} ${wire.connectedBottomY[0]}`,
+      direction: "fromNode" as const,
     },
     {
       id: "occupancy",
@@ -217,8 +218,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
     },
     {
       id: "exits",
-      d: `M ${wire.taps[2]} ${wire.connectedBottomY[2]} L ${wire.taps[2]} ${wire.busY} L ${nodeX} ${wire.busY}`,
-      direction: "toNode" as const,
+      d: `M ${nodeX} ${wire.busY} L ${wire.taps[2]} ${wire.busY} L ${wire.taps[2]} ${wire.connectedBottomY[2]}`,
+      direction: "fromNode" as const,
     },
     {
       id: "traffic",
