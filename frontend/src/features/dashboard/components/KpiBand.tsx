@@ -20,7 +20,7 @@ type KpiTileProps = {
   widgetId: string;
 };
 
-const PREVIEW_KPI_HEIGHT = 84;
+const PREVIEW_KPI_HEIGHT = 76;
 
 const KpiTile: React.FC<KpiTileProps> = ({
   mode,
