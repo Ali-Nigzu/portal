@@ -68,6 +68,17 @@
   width: 100%;
 }
 
+.preview :global(.dashboard-v2__kpi-tile),
+.preview :global(.dashboard-v2__kpi-content),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-tile),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-content),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-content--vrm),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-panel-header) {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .wireEdgeAnchor {
   position: absolute;
   left: 50%;
@@ -137,8 +148,8 @@
   background: color-mix(in srgb, var(--sys-bg-2) 70%, transparent);
   grid-column: 4;
   grid-row: 2;
-  width: calc(100% - 10px);
-  justify-self: center;
+  width: 100%;
+  justify-self: stretch;
   min-height: 62px;
   max-height: 62px;
   padding: 6px 9px;
