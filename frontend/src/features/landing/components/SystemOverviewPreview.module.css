@@ -137,9 +137,12 @@
   background: color-mix(in srgb, var(--sys-bg-2) 70%, transparent);
   grid-column: 4;
   grid-row: 2;
-  min-height: 72px;
-  max-height: 72px;
-  padding: 8px 10px;
+  width: calc(100% - 10px);
+  justify-self: center;
+  min-height: 62px;
+  max-height: 62px;
+  padding: 6px 9px;
+  box-sizing: border-box;
   display: grid;
   grid-template-rows: auto auto auto;
   gap: 3px;
@@ -159,7 +162,7 @@
 }
 
 .capacityTrack {
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--sys-line-soft) 92%, transparent), color-mix(in srgb, var(--sys-line-soft) 76%, transparent));
   overflow: hidden;
