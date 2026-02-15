@@ -150,6 +150,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
       const computed = window.getComputedStyle(containerRef.current);
       const topToBus = parseCssPx(computed.getPropertyValue("--top-to-bus"), 56);
+      const lowerConnectorInset = parseCssPx(computed.getPropertyValue("--lower-connector-inset"), 8);
 
       const busY = topCluster.bottom - container.top + topToBus;
 
@@ -173,8 +174,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
         busX2,
         taps,
         connectedBottomY,
-        leftTopY: left.top - container.top,
-        rightTopY: right.top - container.top,
+        leftTopY: left.top - container.top + lowerConnectorInset,
+        rightTopY: right.top - container.top + lowerConnectorInset,
         nodeX: node.left - container.left + node.width / 2,
       });
     };
@@ -204,12 +205,12 @@ const SystemOverviewLiveKpis: React.FC = () => {
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
 
   // Keep the topology animation dash-only (no moving dot/arrow heads),
-  // while preserving route-level source/target direction.
+  // while preserving explicit per-route direction semantics.
   const flowRoutes = useMemo(() => ([
     {
       id: "entrances",
-      d: `M ${nodeX} ${wire.busY} L ${wire.taps[0]} ${wire.busY} L ${wire.taps[0]} ${wire.connectedBottomY[0]}`,
-      direction: "fromNode" as const,
+      d: `M ${wire.taps[0]} ${wire.connectedBottomY[0]} L ${wire.taps[0]} ${wire.busY} L ${nodeX} ${wire.busY}`,
+      direction: "toNode" as const,
     },
     {
       id: "occupancy",
@@ -218,8 +219,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
     },
     {
       id: "exits",
-      d: `M ${nodeX} ${wire.busY} L ${wire.taps[2]} ${wire.busY} L ${wire.taps[2]} ${wire.connectedBottomY[2]}`,
-      direction: "fromNode" as const,
+      d: `M ${wire.taps[2]} ${wire.connectedBottomY[2]} L ${wire.taps[2]} ${wire.busY} L ${nodeX} ${wire.busY}`,
+      direction: "toNode" as const,
     },
     {
       id: "traffic",

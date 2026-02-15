@@ -5,6 +5,7 @@
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
   --top-to-bus: 42px;
+  --lower-connector-inset: 8px;
   --bus-to-bottom: 30px;
   --mid-span: 56px;
   
@@ -362,6 +363,7 @@
     --topo-gap-col: 14px;
     --topo-gap-row: 7px;
     --top-to-bus: 38px;
+    --lower-connector-inset: 8px;
     --bus-to-bottom: 28px;
     --mid-span: 50px;
   }
