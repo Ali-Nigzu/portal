@@ -1,6 +1,6 @@
 .preview {
   --topo-gap-col: 16px;
-  --kpi-col: 188px;
+  --kpi-col: 204px;
   --topo-gap-row: 10px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
@@ -14,9 +14,9 @@
   border: none;
   border-radius: 0;
   box-shadow: none;
-  background: color-mix(in srgb, var(--sys-bg-2) 14%, transparent);
+  background: transparent;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .canvas {
@@ -31,7 +31,7 @@
 .topCluster {
   display: grid;
   grid-template-columns: repeat(4, var(--kpi-col));
-  grid-template-rows: auto 68px;
+  grid-template-rows: auto 76px;
   column-gap: var(--topo-gap-col);
   row-gap: var(--topo-gap-row);
   justify-content: center;
@@ -118,8 +118,8 @@
 .capacityTile {
   grid-column: 4;
   grid-row: 2;
-  min-height: 68px;
-  max-height: 68px;
+  min-height: 76px;
+  max-height: 76px;
   padding: 7px 9px;
   display: grid;
   grid-template-rows: auto auto auto;
@@ -278,7 +278,7 @@
 @media (max-width: 1279px) {
   .preview {
     width: min(920px, 100%);
-    --kpi-col: 160px;
+    --kpi-col: 176px;
     --kpi-min: var(--kpi-col);
     --kpi-max: var(--kpi-col);
     --topo-gap-col: 12px;

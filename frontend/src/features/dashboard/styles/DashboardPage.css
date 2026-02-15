@@ -83,7 +83,7 @@
 }
 
 .dashboard-v2__kpi-band--preview .dashboard-v2__kpi-content {
-  min-height: 68px;
+  min-height: var(--dashboard-kpi-preview-height, 76px);
 }
 
 .dashboard-v2__kpi-controls,
