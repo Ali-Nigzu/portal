@@ -276,7 +276,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 key={route.id}
                 data-route-id={route.id}
                 data-direction={route.direction}
-                className={`${styles.beamRoute} ${route.direction === "toNode" ? styles.beamToNode : styles.beamFromNode}`}
+                className={styles.beamRoute}
                 style={{ stroke: `url(#${route.gradientId})` }}
                 d={route.d}
               />

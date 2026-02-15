@@ -4,7 +4,8 @@
   --topo-gap-row: 8px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
-  --anchor-inset: 14px;
+  --top-anchor-inset: 2px;
+  --bottom-anchor-inset: 14px;
   --mid-span: 56px;
 
   position: relative;
@@ -77,11 +78,11 @@
 }
 
 .wireEdgeAnchorBottom {
-  bottom: var(--anchor-inset);
+  bottom: var(--top-anchor-inset);
 }
 
 .wireEdgeAnchorTop {
-  top: var(--anchor-inset);
+  top: var(--bottom-anchor-inset);
 }
 
 .tileT1 { grid-column: 1; grid-row: 1; }
@@ -266,22 +267,13 @@
   opacity: 0.52;
 }
 
-.beamFromNode {
-  animation: beam-reverse 4.8s linear infinite;
+.beamRoute {
+  animation: beam-flow 4.8s linear infinite;
 }
 
-.beamToNode {
-  animation: beam-forward 4.8s linear infinite;
-}
-
-@keyframes beam-forward {
+@keyframes beam-flow {
   from { stroke-dashoffset: 0; }
   to { stroke-dashoffset: -208; }
-}
-
-@keyframes beam-reverse {
-  from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: 208; }
 }
 
 .errorNote {
@@ -348,8 +340,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .beamFromNode,
-  .beamToNode {
+  .beamRoute {
     animation: none;
   }
 }
