@@ -200,14 +200,6 @@ const SystemOverviewLiveKpis: React.FC = () => {
       <div className={styles.canvas} ref={containerRef}>
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
-            <defs>
-              <linearGradient id="beam-gradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="rgba(120, 190, 255, 0)" />
-                <stop offset="45%" stopColor="rgba(120, 190, 255, 0.22)" />
-                <stop offset="55%" stopColor="rgba(120, 190, 255, 0.98)" />
-                <stop offset="100%" stopColor="rgba(120, 190, 255, 0)" />
-              </linearGradient>
-            </defs>
             <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={nodeX} y1={wire.busY} x2={wire.busX1} y2={wire.busY} />
             <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={nodeX} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
             <line className={styles.busLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
