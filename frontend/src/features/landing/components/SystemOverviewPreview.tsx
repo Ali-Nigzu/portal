@@ -316,7 +316,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
           )}
 
           <article className={styles.capacityTile}>
-            <p className={styles.capacityLabel}>Capacity</p>
             <div className={styles.capacityTrack}><div className={styles.capacityFill} style={{ width: `${CAPACITY_PERCENT}%` }} /></div>
             <p className={styles.capacityMeta}>{CAPACITY_PERCENT}% active capacity</p>
           </article>
