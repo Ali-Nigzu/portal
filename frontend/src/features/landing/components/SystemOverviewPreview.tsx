@@ -202,27 +202,53 @@ const SystemOverviewLiveKpis: React.FC = () => {
   const hasError = manifestStatus === "error" || widgetStatus === "error";
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
 
+  const flowRoutes = useMemo(() => ([
+    {
+      id: "entrances",
+      d: `M ${wire.taps[0]} ${wire.connectedBottomY[0]} L ${wire.taps[0]} ${wire.busY} L ${nodeX} ${wire.busY}`,
+      direction: "toNode" as const,
+    },
+    {
+      id: "occupancy",
+      d: `M ${nodeX} ${wire.busY} L ${wire.taps[1]} ${wire.busY} L ${wire.taps[1]} ${wire.connectedBottomY[1]}`,
+      direction: "fromNode" as const,
+    },
+    {
+      id: "exits",
+      d: `M ${wire.taps[2]} ${wire.connectedBottomY[2]} L ${wire.taps[2]} ${wire.busY} L ${nodeX} ${wire.busY}`,
+      direction: "toNode" as const,
+    },
+    {
+      id: "traffic",
+      d: `M ${nodeX} ${wire.busY} L ${wire.taps[3]} ${wire.busY} L ${wire.taps[3]} ${wire.leftTopY}`,
+      direction: "fromNode" as const,
+    },
+    {
+      id: "dwell",
+      d: `M ${nodeX} ${wire.busY} L ${wire.taps[4]} ${wire.busY} L ${wire.taps[4]} ${wire.rightTopY}`,
+      direction: "fromNode" as const,
+    },
+  ]), [nodeX, wire]);
+
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
       <div className={styles.canvas} ref={containerRef}>
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
             <line className={styles.busLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[0]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[1]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[2]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[3]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[4]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
-            <line className={styles.connectorLine} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
+            <line className={styles.connectorLine} x1={wire.taps[4]} y1={wire.rightTopY} x2={wire.taps[4]} y2={wire.busY} />
+            {flowRoutes.map((route) => (
+              <g key={route.id}>
+                <path className={`${styles.beamRoute} ${route.direction === "toNode" ? styles.beamToNode : styles.beamFromNode}`} d={route.d} />
+                <circle className={`${styles.flowHead} ${route.direction === "toNode" ? styles.flowHeadToNode : styles.flowHeadFromNode}`} r="3.4">
+                  <animateMotion dur="3.6s" repeatCount="indefinite" path={route.d} rotate="auto" />
+                </circle>
+              </g>
+            ))}
             {wire.taps.map((tap, index) => (
               <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="3" />
             ))}

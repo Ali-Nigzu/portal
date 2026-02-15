@@ -305,39 +305,52 @@
   shape-rendering: crispEdges;
 }
 
-.beamLine {
-  stroke: rgba(122, 188, 246, 0.78);
-  stroke-width: 2;
+.beamRoute {
+  stroke: rgba(95, 162, 230, 0.58);
+  stroke-width: 1.8;
   fill: none;
   stroke-linecap: round;
-  stroke-dasharray: 10 74;
-  filter: drop-shadow(0 0 4px rgba(110, 176, 236, 0.44));
-  opacity: 0.76;
-  will-change: stroke-dashoffset, opacity;
+  stroke-linejoin: round;
+  stroke-dasharray: 8 72;
+  filter: drop-shadow(0 0 4px rgba(92, 164, 236, 0.34));
+  opacity: 0.72;
 }
 
 .beamFromNode {
-  animation: beam-forward 2.8s linear infinite, beam-flicker 3.2s ease-in-out infinite;
+  animation: beam-forward 3.2s linear infinite, beam-flicker 4.2s ease-in-out infinite;
 }
 
 .beamToNode {
-  animation: beam-reverse 2.8s linear infinite, beam-flicker 3.2s ease-in-out infinite;
+  animation: beam-reverse 3.2s linear infinite, beam-flicker 4.2s ease-in-out infinite;
+}
+
+.flowHead {
+  fill: rgba(140, 205, 255, 0.96);
+  filter: drop-shadow(0 0 8px rgba(105, 180, 250, 0.8));
+}
+
+.flowHeadFromNode {
+  opacity: 0.9;
+}
+
+.flowHeadToNode {
+  opacity: 0.9;
 }
 
 @keyframes beam-forward {
   from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -168; }
+  to { stroke-dashoffset: -160; }
 }
 
 @keyframes beam-reverse {
   from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: 168; }
+  to { stroke-dashoffset: 160; }
 }
 
 @keyframes beam-flicker {
-  0%, 100% { opacity: 0.62; }
-  45% { opacity: 0.82; }
-  65% { opacity: 0.72; }
+  0%, 100% { opacity: 0.56; }
+  45% { opacity: 0.76; }
+  65% { opacity: 0.66; }
 }
 
 
@@ -419,5 +432,9 @@
   .beamFromNode,
   .beamToNode {
     animation: none;
+  }
+
+  .flowHead {
+    display: none;
   }
 }
