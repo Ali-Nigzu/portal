@@ -133,15 +133,11 @@
   background: color-mix(in srgb, var(--sys-accent) 18%, var(--sys-bg-2) 82%);
 }
 
-.capacityTile,
-.trafficTile {
+.capacityTile {
   border-radius: var(--sys-radius-sm);
   border: 1px solid color-mix(in srgb, var(--sys-line-soft) 64%, transparent);
   background: color-mix(in srgb, var(--sys-bg-2) 70%, transparent);
   box-shadow: none;
-}
-
-.capacityTile {
   grid-column: 4;
   grid-row: 2;
   min-height: 72px;
@@ -214,12 +210,11 @@
 
 .trafficTile {
   grid-column: 1;
-  min-height: 130px;
-  max-height: 130px;
-  padding: 10px 10px 8px;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 4px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .trafficTitle {
@@ -310,6 +305,35 @@
   shape-rendering: crispEdges;
 }
 
+.beamLine {
+  stroke: url(#beam-gradient);
+  stroke-width: 2.2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 20 220;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--sys-accent) 40%, transparent));
+  opacity: 0.95;
+}
+
+.beamFromNode {
+  animation: beam-forward 2.6s linear infinite;
+}
+
+.beamToNode {
+  animation: beam-reverse 2.6s linear infinite;
+}
+
+@keyframes beam-forward {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -240; }
+}
+
+@keyframes beam-reverse {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 240; }
+}
+
+
 .tapMark {
   fill: color-mix(in srgb, var(--sys-line) 96%, transparent);
   stroke: none;
@@ -383,3 +407,10 @@
   }
 }
 
+
+@media (prefers-reduced-motion: reduce) {
+  .beamFromNode,
+  .beamToNode {
+    animation: none;
+  }
+}

@@ -14,12 +14,6 @@ import DashboardKpiSection from "../../dashboard/components/DashboardKpiSection"
 import "../../dashboard/styles/DashboardPage.css";
 import styles from "./SystemOverviewPreview.module.css";
 
-type Segment = {
-  label: string;
-  value: number;
-  color: string;
-};
-
 type TopTileId = "entrances" | "occupancy" | "exits" | "footfall";
 
 type WireLayout = {
@@ -33,12 +27,6 @@ type WireLayout = {
   leftTopY: number;
   rightTopY: number;
 };
-
-const TRAFFIC_PIE: Segment[] = [
-  { label: "North", value: 42, color: "color-mix(in srgb, var(--sys-accent) 60%, white 8%)" },
-  { label: "South", value: 33, color: "color-mix(in srgb, var(--sys-accent) 44%, var(--sys-text-2) 56%)" },
-  { label: "East", value: 25, color: "color-mix(in srgb, var(--sys-accent) 26%, var(--sys-text-3) 74%)" },
-];
 
 const TOP_TILES: Array<{ key: TopTileId; widgetId: string; slotClass: string }> = [
   { key: "entrances", widgetId: VRM_KPI_IDS.entrances, slotClass: styles.tileT1 },
@@ -63,32 +51,6 @@ const initialWireLayout: WireLayout = {
   connectedBottomY: [0, 0, 0],
   leftTopY: 0,
   rightTopY: 0,
-};
-
-const pieArcs = (segments: Segment[]) => {
-  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
-  const radius = 33;
-  const cx = 50;
-  const cy = 50;
-  let acc = -Math.PI / 2;
-
-  return segments.map((segment) => {
-    const angle = (segment.value / total) * Math.PI * 2;
-    const start = acc;
-    const end = acc + angle;
-    const x1 = cx + radius * Math.cos(start);
-    const y1 = cy + radius * Math.sin(start);
-    const x2 = cx + radius * Math.cos(end);
-    const y2 = cy + radius * Math.sin(end);
-    const large = angle > Math.PI ? 1 : 0;
-    acc = end;
-    return {
-      d: `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`,
-      label: segment.label,
-      value: segment.value,
-      color: segment.color,
-    };
-  });
 };
 
 const getKpiTileFromSlot = (slot: HTMLDivElement | null) =>
@@ -150,6 +112,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
   }));
   const hasTopWidgets = topWidgets.every((item) => Boolean(item.widget));
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
+  const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
 
   useLayoutEffect(() => {
     const update = () => {
@@ -228,20 +191,35 @@ const SystemOverviewLiveKpis: React.FC = () => {
     };
   }, [hasTopWidgets, dwellWidget]);
 
-  const arcs = useMemo(() => pieArcs(TRAFFIC_PIE), []);
   const hasKpis = hasTopWidgets && Boolean(dwellWidget);
   const hasError = manifestStatus === "error" || widgetStatus === "error";
+  const nodeX = wire.busX1 + (wire.busX2 - wire.busX1) / 2;
 
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
       <div className={styles.canvas} ref={containerRef}>
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
+            <defs>
+              <linearGradient id="beam-gradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="rgba(120, 190, 255, 0)" />
+                <stop offset="45%" stopColor="rgba(120, 190, 255, 0.22)" />
+                <stop offset="55%" stopColor="rgba(120, 190, 255, 0.98)" />
+                <stop offset="100%" stopColor="rgba(120, 190, 255, 0)" />
+              </linearGradient>
+            </defs>
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={nodeX} y1={wire.busY} x2={wire.busX1} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={nodeX} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
             <line className={styles.busLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
             <line className={styles.connectorLine} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
             {wire.taps.map((tap, index) => (
               <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="3" />
@@ -281,23 +259,13 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
           <article className={styles.trafficTile} ref={leftRef}>
-            <div className={styles.trafficTitle}>Traffic Distribution</div>
-            <div className={styles.pieWrap}>
-              <svg className={styles.pieSvg} viewBox="0 0 100 100" aria-hidden="true">
-                {arcs.map((arc) => <path key={arc.label} d={arc.d} fill={arc.color} />)}
-                <circle cx="50" cy="50" r="13" fill="color-mix(in srgb, var(--sys-bg-1) 90%, transparent)" />
-                <text x="50" y="45" className={styles.pieCenterLabel}>Traffic</text>
-                <text x="50" y="56" className={styles.pieCenterValue}>100%</text>
-              </svg>
-            </div>
-            <div className={styles.legend}>
-              {arcs.map((arc) => (
-                <div key={arc.label} className={styles.legendRow}>
-                  <span className={styles.legendLabel}><span className={styles.legendSwatch} style={{ background: arc.color }} />{arc.label}</span>
-                  <span>{arc.value}%</span>
-                </div>
-              ))}
-            </div>
+            {trafficWidget ? (
+              <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+            ) : hasError ? (
+              <div className={styles.inlineNotice}>Preview unavailable.</div>
+            ) : (
+              <div className={styles.inlineNotice}>Loading traffic KPI…</div>
+            )}
           </article>
 
           <div className={`${styles.kpiSlot} ${styles.tileT5}`} ref={dwellSlotRef}>
