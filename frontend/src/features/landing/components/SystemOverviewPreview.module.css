@@ -1,6 +1,6 @@
 .preview {
-  --topo-gap-col: 18px;
-  --kpi-col: 176px;
+  --topo-gap-col: 16px;
+  --kpi-col: 188px;
   --topo-gap-row: 10px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
@@ -55,23 +55,6 @@
   border-radius: 0;
 }
 
-.kpiSlot :global(.dashboard-v2__kpi-tile),
-.kpiSlot :global(.vrm-kpi-tile),
-.kpiSlot :global(.vrm-kpi-tile--panel),
-.kpiSlot :global(.kpi-tile),
-.kpiSlot :global(.kpi-tile--vrm) {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-}
-
-.kpiSlot :global(.kpi-content),
-.kpiSlot :global(.kpi-content--vrm) {
-  gap: 0 !important;
-}
 
 
 
@@ -295,10 +278,10 @@
 @media (max-width: 1279px) {
   .preview {
     width: min(920px, 100%);
-    --kpi-col: 148px;
+    --kpi-col: 160px;
     --kpi-min: var(--kpi-col);
     --kpi-max: var(--kpi-col);
-    --topo-gap-col: 14px;
+    --topo-gap-col: 12px;
     --topo-gap-row: 8px;
     --top-to-bus: 48px;
     --bus-to-bottom: 38px;
@@ -354,7 +337,3 @@
   }
 }
 
-
-.kpiSlot :global(.kpi-panel) {
-  overflow: hidden !important;
-}
