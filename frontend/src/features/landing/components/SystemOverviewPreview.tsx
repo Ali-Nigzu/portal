@@ -209,8 +209,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
   const flowRoutes = useMemo(() => ([
     {
       id: "entrances",
-      d: `M ${wire.taps[0]} ${wire.connectedBottomY[0]} L ${wire.taps[0]} ${wire.busY} L ${nodeX} ${wire.busY}`,
-      direction: "toNode" as const,
+      d: `M ${nodeX} ${wire.busY} L ${wire.taps[0]} ${wire.busY} L ${wire.taps[0]} ${wire.connectedBottomY[0]}`,
+      direction: "fromNode" as const,
     },
     {
       id: "occupancy",
@@ -219,8 +219,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
     },
     {
       id: "exits",
-      d: `M ${wire.taps[2]} ${wire.connectedBottomY[2]} L ${wire.taps[2]} ${wire.busY} L ${nodeX} ${wire.busY}`,
-      direction: "toNode" as const,
+      d: `M ${nodeX} ${wire.busY} L ${wire.taps[2]} ${wire.busY} L ${wire.taps[2]} ${wire.connectedBottomY[2]}`,
+      direction: "fromNode" as const,
     },
     {
       id: "traffic",

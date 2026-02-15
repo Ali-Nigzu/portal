@@ -5,7 +5,7 @@
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
   --top-to-bus: 42px;
-  --lower-connector-inset: 8px;
+  --lower-connector-inset: 6px;
   --bus-to-bottom: 30px;
   --mid-span: 56px;
   
@@ -56,6 +56,8 @@
 }
 
 .topCluster {
+  position: relative;
+  z-index: 2;
   display: grid;
   grid-template-columns: repeat(4, var(--kpi-col));
   grid-template-rows: auto 72px;
@@ -98,6 +100,8 @@
 }
 
 .bottomCluster {
+  position: relative;
+  z-index: 2;
   display: grid;
   grid-template-columns: repeat(4, var(--kpi-col));
   column-gap: var(--topo-gap-col);
@@ -188,7 +192,7 @@
 }
 
 .node {
-  z-index: 2;
+  z-index: 4;
   text-align: center;
   font-size: 14px;
   font-weight: 600;
@@ -289,7 +293,7 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1;
+  z-index: 3;
 }
 
 .busLine {
@@ -363,7 +367,7 @@
     --topo-gap-col: 14px;
     --topo-gap-row: 7px;
     --top-to-bus: 38px;
-    --lower-connector-inset: 8px;
+    --lower-connector-inset: 6px;
     --bus-to-bottom: 28px;
     --mid-span: 50px;
   }
