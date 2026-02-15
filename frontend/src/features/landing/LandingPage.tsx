@@ -5,6 +5,7 @@ import { useRegisterInterestForm } from "./hooks/useRegisterInterestForm";
 import { landingCopy } from "./content";
 import LandingHeader from "./components/LandingHeader";
 import LandingFooter from "./components/LandingFooter";
+import SystemOverviewPreview from "./components/SystemOverviewPreview";
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -69,71 +70,64 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="landing-content-band" aria-label="Landing information">
-          <div className="landing-container landing-operational-grid">
-            <section className="landing-capabilities" aria-labelledby="capabilities-title">
-              <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
-              <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
-                {landingCopy.capabilities.items.map((item, index) => (
-                  <div key={item} className="landing-capability-row" role="listitem">
-                    <span className="landing-capability-index" aria-hidden="true">
-                      {(index + 1).toString().padStart(2, "0")}
-                    </span>
-                    <span>{item}</span>
-                  </div>
-                ))}
+        <section className="landing-spec-sheet" aria-label="Operational spec sheet">
+          <div className="landing-container landing-spec-sheet-inner">
+            <div className="landing-operational-grid">
+              <section className="landing-capabilities" aria-labelledby="capabilities-title">
+                <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
+                <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
+                  {landingCopy.capabilities.items.map((item, index) => (
+                    <div key={item} className="landing-capability-row" role="listitem">
+                      <span className="landing-capability-index" aria-hidden="true">
+                        {(index + 1).toString().padStart(2, "0")}
+                      </span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="landing-deployment" aria-labelledby="deployment-title">
+                <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
+                <ol className="landing-deployment-rail" aria-label="System deployment flow">
+                  <li className="landing-deployment-step landing-deployment-step--active">
+                    <span className="landing-deployment-step-index">01</span>
+                    <span className="landing-deployment-step-label">{landingCopy.deployment.firstStep}</span>
+                  </li>
+                  <li className="landing-deployment-arrow" aria-hidden="true">→</li>
+                  <li className="landing-deployment-step">
+                    <span className="landing-deployment-step-index">02</span>
+                    <span className="landing-deployment-step-label">{landingCopy.deployment.secondStep}</span>
+                  </li>
+                  <li className="landing-deployment-arrow" aria-hidden="true">→</li>
+                  <li className="landing-deployment-step">
+                    <span className="landing-deployment-step-index">03</span>
+                    <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
+                  </li>
+                </ol>
+              </section>
+            </div>
+
+            <section className="landing-preview" aria-labelledby="live-preview-title">
+              <div className="landing-section-head">
+                <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
+                <p>{landingCopy.livePreview.description}</p>
+              </div>
+              <div className="landing-dashboard-preview">
+                <SystemOverviewPreview />
               </div>
             </section>
 
-            <section className="landing-deployment" aria-labelledby="deployment-title">
-              <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
-              <ol className="landing-deployment-rail" aria-label="System deployment flow">
-                <li className="landing-deployment-step landing-deployment-step--active">
-                  <span className="landing-deployment-step-index">01</span>
-                  <span className="landing-deployment-step-label">{landingCopy.deployment.firstStep}</span>
-                </li>
-                <li className="landing-deployment-arrow" aria-hidden="true">→</li>
-                <li className="landing-deployment-step">
-                  <span className="landing-deployment-step-index">02</span>
-                  <span className="landing-deployment-step-label">{landingCopy.deployment.secondStep}</span>
-                </li>
-                <li className="landing-deployment-arrow" aria-hidden="true">→</li>
-                <li className="landing-deployment-step">
-                  <span className="landing-deployment-step-index">03</span>
-                  <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
-                </li>
-              </ol>
+            <section className="landing-assurances" aria-labelledby="assurances-title">
+              <h2 id="assurances-title">{landingCopy.assurances.heading}</h2>
+              <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
+                {landingCopy.assurances.items.map((assurance) => (
+                  <p key={assurance} role="listitem" className="landing-assurance-row">
+                    {assurance}
+                  </p>
+                ))}
+              </div>
             </section>
-          </div>
-        </section>
-
-        <section className="landing-assurances" aria-labelledby="assurances-title">
-          <div className="landing-container">
-            <h2 id="assurances-title">{landingCopy.assurances.heading}</h2>
-            <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
-              {landingCopy.assurances.items.map((assurance) => (
-                <p key={assurance} role="listitem" className="landing-assurance-row">
-                  {assurance}
-                </p>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="landing-preview" aria-labelledby="live-preview-title">
-          <div className="landing-container">
-            <div className="landing-section-head">
-              <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
-              <p>{landingCopy.livePreview.description}</p>
-            </div>
-            <div className="landing-preview-frame" role="region" aria-label="Live Platform Preview">
-              <iframe
-                title="camOS Live Platform Preview"
-                src="/demo?embed=1"
-                loading="lazy"
-                className="landing-preview-iframe"
-              />
-            </div>
           </div>
         </section>
 

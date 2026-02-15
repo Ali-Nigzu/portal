@@ -10,10 +10,11 @@ import {
 import { renderError } from "./dashboardRenderers";
 
 type SiteFlowCardProps = {
+  mode?: "full" | "preview";
   locked?: boolean;
   onRemove?: () => void;
   widgetId: string;
-  mode: "activity" | "demographics";
+  modeState: "activity" | "demographics";
   onModeChange: (mode: "activity" | "demographics") => void;
   timeframe: SiteFlowTimeframe;
   onTimeframeChange: (timeframe: SiteFlowTimeframe) => void;
@@ -30,10 +31,11 @@ type SiteFlowCardProps = {
 };
 
 const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
+  mode = "full",
   locked,
   onRemove,
   widgetId,
-  mode,
+  modeState,
   onModeChange,
   timeframe,
   onTimeframeChange,
@@ -41,7 +43,7 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
   activity,
 }) => {
   const renderSiteFlowBody = () => {
-    if (mode === "demographics") {
+    if (modeState === "demographics") {
       if (demographics.status === "loading") {
         return null;
       }
@@ -68,7 +70,7 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
   };
 
   const footer =
-    !locked && onRemove ? (
+    mode === "full" && !locked && onRemove ? (
       <div className="dashboard-v2__widget-footer">
         <button
           type="button"
@@ -90,7 +92,7 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
           <select
             className="vrm-select"
             aria-label="Select Site Flow view"
-            value={mode}
+            value={modeState}
             onChange={(event) =>
               onModeChange(event.target.value as "activity" | "demographics")
             }
