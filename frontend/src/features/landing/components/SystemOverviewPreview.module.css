@@ -86,6 +86,21 @@
   background: transparent !important;
 }
 
+.preview :global(.dashboard-v2__kpi-renderer.kpi-tile),
+.preview :global(.dashboard-v2__kpi-renderer.kpi-tile--vrm),
+.preview :global(.dashboard-v2__kpi-renderer.kpi-content),
+.preview :global(.dashboard-v2__kpi-renderer.kpi-content--vrm) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.preview :global(.dashboard-v2__kpi-renderer.kpi-content--vrm),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-content--vrm) {
+  gap: 0 !important;
+}
+
 .preview :global(.dashboard-v2__kpi-renderer .kpi-footer),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-footer-reserve) {
   display: none !important;
