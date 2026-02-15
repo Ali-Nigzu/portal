@@ -202,6 +202,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
   const hasError = manifestStatus === "error" || widgetStatus === "error";
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
 
+  // Keep the topology animation dash-only (no moving dot/arrow heads),
+  // while preserving route-level source/target direction.
   const flowRoutes = useMemo(() => ([
     {
       id: "entrances",
@@ -242,12 +244,11 @@ const SystemOverviewLiveKpis: React.FC = () => {
             <line className={styles.connectorLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[4]} y1={wire.rightTopY} x2={wire.taps[4]} y2={wire.busY} />
             {flowRoutes.map((route) => (
-              <g key={route.id}>
-                <path className={`${styles.beamRoute} ${route.direction === "toNode" ? styles.beamToNode : styles.beamFromNode}`} d={route.d} />
-                <circle className={`${styles.flowHead} ${route.direction === "toNode" ? styles.flowHeadToNode : styles.flowHeadFromNode}`} r="3.4">
-                  <animateMotion dur="3.6s" repeatCount="indefinite" path={route.d} rotate="auto" />
-                </circle>
-              </g>
+              <path
+                key={route.id}
+                className={`${styles.beamRoute} ${route.direction === "toNode" ? styles.beamToNode : styles.beamFromNode}`}
+                d={route.d}
+              />
             ))}
             {wire.taps.map((tap, index) => (
               <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="3" />

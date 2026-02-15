@@ -324,18 +324,6 @@
   animation: beam-reverse 3.2s linear infinite, beam-flicker 4.2s ease-in-out infinite;
 }
 
-.flowHead {
-  fill: rgba(140, 205, 255, 0.96);
-  filter: drop-shadow(0 0 8px rgba(105, 180, 250, 0.8));
-}
-
-.flowHeadFromNode {
-  opacity: 0.9;
-}
-
-.flowHeadToNode {
-  opacity: 0.9;
-}
 
 @keyframes beam-forward {
   from { stroke-dashoffset: 0; }
@@ -434,7 +422,5 @@
     animation: none;
   }
 
-  .flowHead {
-    display: none;
-  }
+
 }
