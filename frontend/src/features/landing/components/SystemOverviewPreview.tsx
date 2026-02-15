@@ -15,6 +15,8 @@ import "../../dashboard/styles/DashboardPage.css";
 import styles from "./SystemOverviewPreview.module.css";
 
 type TopTileId = "entrances" | "occupancy" | "exits" | "footfall";
+type RouteId = "entrances" | "occupancy" | "exits" | "traffic" | "dwell";
+type FlowDirection = "toNode" | "fromNode";
 
 type WireLayout = {
   width: number;
@@ -22,11 +24,14 @@ type WireLayout = {
   busY: number;
   busX1: number;
   busX2: number;
-  taps: number[];
-  connectedBottomY: number[];
-  leftTopY: number;
-  rightTopY: number;
   nodeX: number;
+  taps: Record<RouteId, number>;
+  endpointsY: Record<RouteId, number>;
+};
+
+type RouteDefinition = {
+  id: RouteId;
+  direction: FlowDirection;
 };
 
 const TOP_TILES: Array<{ key: TopTileId; widgetId: string; slotClass: string }> = [
@@ -37,10 +42,19 @@ const TOP_TILES: Array<{ key: TopTileId; widgetId: string; slotClass: string }> 
 ];
 
 const CONNECTED_TOP_IDS: TopTileId[] = ["entrances", "occupancy", "exits"];
+const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
+  { id: "entrances", direction: "toNode" },
+  { id: "occupancy", direction: "fromNode" },
+  { id: "exits", direction: "toNode" },
+  { id: "traffic", direction: "fromNode" },
+  { id: "dwell", direction: "fromNode" },
+];
+
 const CAPACITY_PERCENT = 68;
 const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
+const TOPOLOGY_MOCK_PARAM = "topologyMock";
 
 const initialWireLayout: WireLayout = {
   width: 0,
@@ -48,20 +62,12 @@ const initialWireLayout: WireLayout = {
   busY: 0,
   busX1: 0,
   busX2: 0,
-  taps: [0, 0, 0, 0, 0],
-  connectedBottomY: [0, 0, 0],
-  leftTopY: 0,
-  rightTopY: 0,
   nodeX: 0,
+  taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
+  endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
 };
 
-
-const parseCssPx = (value: string, fallback: number) => {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const SystemOverviewLiveKpis: React.FC = () => {
+const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forceMockTopology }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -71,17 +77,18 @@ const SystemOverviewLiveKpis: React.FC = () => {
     exits: null,
     footfall: null,
   });
-  const topAnchorRefs = useRef<Record<TopTileId, HTMLDivElement | null>>({
+  const topEdgeRefs = useRef<Record<TopTileId, HTMLSpanElement | null>>({
     entrances: null,
     occupancy: null,
     exits: null,
     footfall: null,
   });
+  const leftSlotRef = useRef<HTMLDivElement | null>(null);
+  const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
-  const dwellAnchorRef = useRef<HTMLDivElement | null>(null);
-  const leftRef = useRef<HTMLDivElement | null>(null);
-  const leftAnchorRef = useRef<HTMLDivElement | null>(null);
-  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
+  const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const rafRef = useRef<number | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
   const {
@@ -110,10 +117,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
     setManifest,
   });
 
-  const kpiLookup = useMemo(
-    () => new Map(kpiWidgets.map((item) => [item.widget.id, item])),
-    [kpiWidgets],
-  );
+  const kpiLookup = useMemo(() => new Map(kpiWidgets.map((item) => [item.widget.id, item])), [kpiWidgets]);
 
   const topWidgets = TOP_TILES.map((tile) => ({
     ...tile,
@@ -122,146 +126,160 @@ const SystemOverviewLiveKpis: React.FC = () => {
   const hasTopWidgets = topWidgets.every((item) => Boolean(item.widget));
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
   const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
+  const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget) && Boolean(trafficWidget));
+  const hasError = manifestStatus === "error" || widgetStatus === "error";
 
   useLayoutEffect(() => {
-    const update = () => {
-      if (
-        !containerRef.current ||
-        !topClusterRef.current ||
-        !bottomClusterRef.current ||
-        !leftRef.current ||
-        !dwellSlotRef.current ||
-        !nodeRef.current
-      ) {
-        return;
+    const scheduleMeasure = () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
       }
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        if (
+          !containerRef.current ||
+          !topClusterRef.current ||
+          !bottomClusterRef.current ||
+          !leftSlotRef.current ||
+          !dwellSlotRef.current ||
+          !nodeAnchorRef.current
+        ) {
+          return;
+        }
 
-      const topAnchorsById = Object.fromEntries(
-        TOP_TILES.map(({ key }) => [key, topAnchorRefs.current[key]]),
-      ) as Record<TopTileId, HTMLDivElement | null>;
+        const connectedTopEdges = CONNECTED_TOP_IDS.map((id) => topEdgeRefs.current[id]);
+        if (connectedTopEdges.some((edge) => !edge) || !leftEdgeRef.current || !dwellEdgeRef.current) {
+          return;
+        }
 
-      const connectedTopAnchors = CONNECTED_TOP_IDS.map((id) => topAnchorsById[id]);
-      if (connectedTopAnchors.some((anchor) => !anchor) || !leftAnchorRef.current || !dwellAnchorRef.current) {
-        return;
-      }
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
+        const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
+        const trafficRect = leftEdgeRef.current.getBoundingClientRect();
+        const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
-      const container = containerRef.current.getBoundingClientRect();
-      const topCluster = topClusterRef.current.getBoundingClientRect();
-      const leftAnchor = leftAnchorRef.current.getBoundingClientRect();
-      const rightAnchor = dwellAnchorRef.current.getBoundingClientRect();
-      const node = nodeRef.current.getBoundingClientRect();
+        const taps: Record<RouteId, number> = {
+          entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
+          occupancy: topRects[1].left - containerRect.left + topRects[1].width / 2,
+          exits: topRects[2].left - containerRect.left + topRects[2].width / 2,
+          traffic: trafficRect.left - containerRect.left + trafficRect.width / 2,
+          dwell: dwellRect.left - containerRect.left + dwellRect.width / 2,
+        };
 
-      const computed = window.getComputedStyle(containerRef.current);
-      const topToBus = parseCssPx(computed.getPropertyValue("--top-to-bus"), 56);
-      const lowerConnectorInset = parseCssPx(computed.getPropertyValue("--lower-connector-inset"), 8);
-
-      const busY = topCluster.bottom - container.top + topToBus;
-
-      const connectedBottomY = connectedTopAnchors.map((anchor) => (anchor as HTMLDivElement).getBoundingClientRect().bottom - container.top);
-      const taps = [
-        ...connectedTopAnchors.map((anchor) => {
-          const rect = (anchor as HTMLDivElement).getBoundingClientRect();
-          return rect.left - container.left + rect.width / 2;
-        }),
-        leftAnchor.left - container.left + leftAnchor.width / 2,
-        rightAnchor.left - container.left + rightAnchor.width / 2,
-      ];
-      const busX1 = Math.min(...taps);
-      const busX2 = Math.max(...taps);
-
-      const lowerLeftAnchorY = leftAnchor.top - container.top + lowerConnectorInset;
-      const lowerRightAnchorY = rightAnchor.top - container.top + lowerConnectorInset;
-
-      setWire({
-        width: container.width,
-        height: container.height,
-        busY,
-        busX1,
-        busX2,
-        taps,
-        connectedBottomY,
-        leftTopY: lowerLeftAnchorY,
-        rightTopY: lowerRightAnchorY,
-        nodeX: node.left - container.left + node.width / 2,
+        setWire({
+          width: containerRect.width,
+          height: containerRect.height,
+          busY: nodeRect.top - containerRect.top + nodeRect.height / 2,
+          busX1: Math.min(...Object.values(taps)),
+          busX2: Math.max(...Object.values(taps)),
+          nodeX: nodeRect.left - containerRect.left + nodeRect.width / 2,
+          taps,
+          endpointsY: {
+            entrances: topRects[0].top - containerRect.top + topRects[0].height / 2,
+            occupancy: topRects[1].top - containerRect.top + topRects[1].height / 2,
+            exits: topRects[2].top - containerRect.top + topRects[2].height / 2,
+            traffic: trafficRect.top - containerRect.top + trafficRect.height / 2,
+            dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
+          },
+        });
       });
     };
 
-    update();
-    const observer = new ResizeObserver(update);
+    scheduleMeasure();
+
+    const observer = new ResizeObserver(() => scheduleMeasure());
     if (containerRef.current) observer.observe(containerRef.current);
     if (topClusterRef.current) observer.observe(topClusterRef.current);
     if (bottomClusterRef.current) observer.observe(bottomClusterRef.current);
+    if (nodeAnchorRef.current) observer.observe(nodeAnchorRef.current);
     TOP_TILES.forEach(({ key }) => {
       const slot = topSlotRefs.current[key];
+      const edge = topEdgeRefs.current[key];
       if (slot) observer.observe(slot);
+      if (edge) observer.observe(edge);
     });
+    if (leftSlotRef.current) observer.observe(leftSlotRef.current);
+    if (leftEdgeRef.current) observer.observe(leftEdgeRef.current);
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
-    if (dwellAnchorRef.current) observer.observe(dwellAnchorRef.current);
-    if (leftRef.current) observer.observe(leftRef.current);
-    if (leftAnchorRef.current) observer.observe(leftAnchorRef.current);
-    if (nodeRef.current) observer.observe(nodeRef.current);
-    window.addEventListener("resize", update);
+    if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
+    window.addEventListener("resize", scheduleMeasure);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener("resize", update);
+      window.removeEventListener("resize", scheduleMeasure);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-  }, [hasTopWidgets, dwellWidget, trafficWidget]);
+  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget]);
 
-  const hasKpis = hasTopWidgets && Boolean(dwellWidget);
-  const hasError = manifestStatus === "error" || widgetStatus === "error";
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
+  const flowRoutes = useMemo(
+    () =>
+      FLOW_ROUTE_DEFINITIONS.map((route) => {
+        const tapX = wire.taps[route.id];
+        const endpointY = wire.endpointsY[route.id];
+        const isToNode = route.direction === "toNode";
+        const sourceX = isToNode ? tapX : nodeX;
+        const sourceY = isToNode ? endpointY : wire.busY;
+        const targetX = isToNode ? nodeX : tapX;
+        const targetY = isToNode ? wire.busY : endpointY;
+        return {
+          ...route,
+          d: `M ${sourceX} ${sourceY} L ${tapX} ${wire.busY} L ${targetX} ${targetY}`,
+          gradientId: `topology-gradient-${route.id}`,
+        };
+      }),
+    [nodeX, wire],
+  );
 
-  // Keep the topology animation dash-only (no moving dot/arrow heads),
-  // while preserving explicit per-route direction semantics.
-  const flowRoutes = useMemo(() => ([
-    {
-      id: "entrances",
-      d: `M ${nodeX} ${wire.busY} L ${wire.taps[0]} ${wire.busY} L ${wire.taps[0]} ${wire.connectedBottomY[0]}`,
-      direction: "fromNode" as const,
-    },
-    {
-      id: "occupancy",
-      d: `M ${nodeX} ${wire.busY} L ${wire.taps[1]} ${wire.busY} L ${wire.taps[1]} ${wire.connectedBottomY[1]}`,
-      direction: "fromNode" as const,
-    },
-    {
-      id: "exits",
-      d: `M ${nodeX} ${wire.busY} L ${wire.taps[2]} ${wire.busY} L ${wire.taps[2]} ${wire.connectedBottomY[2]}`,
-      direction: "fromNode" as const,
-    },
-    {
-      id: "traffic",
-      d: `M ${nodeX} ${wire.busY} L ${wire.taps[3]} ${wire.busY} L ${wire.taps[3]} ${wire.leftTopY}`,
-      direction: "fromNode" as const,
-    },
-    {
-      id: "dwell",
-      d: `M ${nodeX} ${wire.busY} L ${wire.taps[4]} ${wire.busY} L ${wire.taps[4]} ${wire.rightTopY}`,
-      direction: "fromNode" as const,
-    },
-  ]), [nodeX, wire]);
+  const renderMockTile = (label: string, value: string) => (
+    <article className={styles.mockTile}>
+      <p>{label}</p>
+      <strong>{value}</strong>
+    </article>
+  );
 
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
-      <div className={styles.canvas} ref={containerRef}>
+      <div className={styles.canvas} ref={containerRef} data-topology-mock={forceMockTopology ? "true" : "false"}>
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
-            <line className={styles.busLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-            <line className={styles.connectorLine} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
-            <line className={styles.connectorLine} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
-            <line className={styles.connectorLine} x1={wire.taps[2]} y1={wire.connectedBottomY[2]} x2={wire.taps[2]} y2={wire.busY} />
-            <line className={styles.connectorLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
-            <line className={styles.connectorLine} x1={wire.taps[4]} y1={wire.rightTopY} x2={wire.taps[4]} y2={wire.busY} />
+            <line className={styles.busLine} data-testid="topology-bus" x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
+            {FLOW_ROUTE_DEFINITIONS.map((route) => (
+              <line
+                key={`connector-${route.id}`}
+                className={styles.connectorLine}
+                data-route-id={route.id}
+                x1={wire.taps[route.id]}
+                y1={wire.endpointsY[route.id]}
+                x2={wire.taps[route.id]}
+                y2={wire.busY}
+              />
+            ))}
+            <defs>
+              {flowRoutes.map((route) => {
+                const isToNode = route.direction === "toNode";
+                const x1 = isToNode ? wire.taps[route.id] : nodeX;
+                const x2 = isToNode ? nodeX : wire.taps[route.id];
+                return (
+                  <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={wire.busY} x2={x2} y2={wire.busY}>
+                    <stop offset="0%" stopColor="rgba(138, 188, 248, 0.68)" />
+                    <stop offset="100%" stopColor="rgba(42, 86, 148, 0.24)" />
+                  </linearGradient>
+                );
+              })}
+            </defs>
             {flowRoutes.map((route) => (
               <path
                 key={route.id}
+                data-route-id={route.id}
+                data-direction={route.direction}
                 className={`${styles.beamRoute} ${route.direction === "toNode" ? styles.beamToNode : styles.beamFromNode}`}
+                style={{ stroke: `url(#${route.gradientId})` }}
                 d={route.d}
               />
-            ))}
-            {wire.taps.map((tap, index) => (
-              <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="3" />
             ))}
           </svg>
         ) : null}
@@ -276,13 +294,17 @@ const SystemOverviewLiveKpis: React.FC = () => {
                   topSlotRefs.current[item.key] = node;
                 }}
               >
-                <div
-                  className={styles.wireAnchor}
-                  ref={(node) => {
-                    topAnchorRefs.current[item.key] = node;
-                  }}
-                >
-                  <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />
+                <div className={styles.wireAnchorSlot}>
+                  {forceMockTopology
+                    ? renderMockTile(item.key, item.key === "occupancy" ? "67%" : "2,481")
+                    : <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
+                  <span
+                    className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorBottom}`}
+                    data-anchor-id={`top-${item.key}`}
+                    ref={(node) => {
+                      topEdgeRefs.current[item.key] = node;
+                    }}
+                  />
                 </div>
               </div>
             ))
@@ -300,14 +322,17 @@ const SystemOverviewLiveKpis: React.FC = () => {
         </div>
 
         <div className={styles.midZone}>
-          <div className={styles.node} ref={nodeRef}>camOS<span className={styles.nodeSub}>System Sheet</span></div>
+          <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
         </div>
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
-          <article className={styles.trafficTile} ref={leftRef}>
-            {trafficWidget ? (
-              <div className={styles.wireAnchor} ref={leftAnchorRef}>
-                <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+          <article className={styles.trafficTile}>
+            {trafficWidget || forceMockTopology ? (
+              <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
+                {forceMockTopology
+                  ? renderMockTile("Traffic Split", "41/34/25")
+                  : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
               </div>
             ) : hasError ? (
               <div className={styles.inlineNotice}>Preview unavailable.</div>
@@ -316,10 +341,13 @@ const SystemOverviewLiveKpis: React.FC = () => {
             )}
           </article>
 
-          <div className={`${styles.kpiSlot} ${styles.tileT5}`} ref={dwellSlotRef}>
-            {dwellWidget ? (
-              <div className={styles.wireAnchor} ref={dwellAnchorRef}>
-                <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget]} onRemoveWidget={NOOP_REMOVE} />
+          <div className={`${styles.kpiSlot} ${styles.tileT5}`}>
+            {dwellWidget || forceMockTopology ? (
+              <div className={styles.wireAnchorSlot} ref={dwellSlotRef}>
+                {forceMockTopology
+                  ? renderMockTile("Dwell Minutes", "18.2")
+                  : <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-dwell" ref={dwellEdgeRef} />
               </div>
             ) : hasError ? (
               <div className={styles.inlineNotice}>Preview unavailable.</div>
@@ -338,13 +366,19 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
 const SystemOverviewPreview: React.FC = () => {
   const location = useLocation();
+  const forceMockTopology = useMemo(() => {
+    if (!import.meta.env.DEV && !import.meta.env.MODE.includes("test")) {
+      return false;
+    }
+    return new URLSearchParams(location.search).get(TOPOLOGY_MOCK_PARAM) === "1";
+  }, [location.search]);
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
   const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
   const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const bootstrapStartedRef = useRef(false);
 
   const runBootstrap = async () => {
-    if (isLoggedIn || hasViewToken || isDemoSessionActive()) {
+    if (forceMockTopology || isLoggedIn || hasViewToken || isDemoSessionActive()) {
       setBootstrapState("ready");
       return;
     }
@@ -373,7 +407,7 @@ const SystemOverviewPreview: React.FC = () => {
     }
     bootstrapStartedRef.current = true;
     void runBootstrap();
-  }, [hasViewToken, isLoggedIn]);
+  }, [hasViewToken, isLoggedIn, forceMockTopology]);
 
   const handleRetry = () => {
     if (typeof window !== "undefined") {
@@ -384,10 +418,7 @@ const SystemOverviewPreview: React.FC = () => {
   };
 
   useEffect(() => {
-    if (bootstrapState !== "idle") {
-      return;
-    }
-    if (bootstrapStartedRef.current) {
+    if (bootstrapState !== "idle" || bootstrapStartedRef.current) {
       return;
     }
     bootstrapStartedRef.current = true;
@@ -408,7 +439,7 @@ const SystemOverviewPreview: React.FC = () => {
     );
   }
 
-  return <SystemOverviewLiveKpis />;
+  return <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} />;
 };
 
 export default SystemOverviewPreview;

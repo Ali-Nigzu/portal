@@ -4,11 +4,9 @@
   --topo-gap-row: 8px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
-  --top-to-bus: 42px;
-  --lower-connector-inset: 6px;
-  --bus-to-bottom: 30px;
+  --anchor-inset: 4px;
   --mid-span: 56px;
-  
+
   position: relative;
   width: min(1040px, 100%);
   margin: 0 auto;
@@ -33,19 +31,6 @@
   filter: none;
 }
 
-.preview::before,
-.preview::after,
-.canvas::before,
-.canvas::after,
-.topCluster::before,
-.topCluster::after,
-.bottomCluster::before,
-.bottomCluster::after,
-.kpiSlot::before,
-.kpiSlot::after {
-  content: none;
-}
-
 .canvas {
   position: relative;
   display: grid;
@@ -57,7 +42,7 @@
 
 .topCluster {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   display: grid;
   grid-template-columns: repeat(4, var(--kpi-col));
   grid-template-rows: auto 72px;
@@ -74,22 +59,30 @@
 .kpiSlot {
   min-width: 0;
   width: 100%;
-  margin-inline: 0;
-  box-sizing: border-box;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  outline: none;
   padding: 0;
-  border-radius: 0;
 }
 
-
-.wireAnchor {
-  display: flow-root;
+.wireAnchorSlot {
+  position: relative;
   width: 100%;
 }
 
+.wireEdgeAnchor {
+  position: absolute;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.wireEdgeAnchorBottom {
+  bottom: var(--anchor-inset);
+}
+
+.wireEdgeAnchorTop {
+  top: var(--anchor-inset);
+}
 
 .tileT1 { grid-column: 1; grid-row: 1; }
 .tileT2 { grid-column: 2; grid-row: 1; }
@@ -104,7 +97,7 @@
 
 .bottomCluster {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   display: grid;
   grid-template-columns: repeat(4, var(--kpi-col));
   column-gap: var(--topo-gap-col);
@@ -137,15 +130,10 @@
   cursor: pointer;
 }
 
-.retryButton:hover {
-  background: color-mix(in srgb, var(--sys-accent) 18%, var(--sys-bg-2) 82%);
-}
-
 .capacityTile {
   border-radius: var(--sys-radius-sm);
   border: 1px solid color-mix(in srgb, var(--sys-line-soft) 64%, transparent);
   background: color-mix(in srgb, var(--sys-bg-2) 70%, transparent);
-  box-shadow: none;
   grid-column: 4;
   grid-row: 2;
   min-height: 72px;
@@ -156,21 +144,23 @@
   gap: 3px;
 }
 
-.capacityLabel {
+.capacityLabel,
+.capacityMeta {
   margin: 0;
+}
+
+.capacityLabel {
   font-size: 0.66rem;
   line-height: 1;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--sys-text-3);
-  font-weight: 530;
 }
 
 .capacityTrack {
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--sys-line-soft) 92%, transparent), color-mix(in srgb, var(--sys-line-soft) 76%, transparent));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
   overflow: hidden;
 }
 
@@ -181,21 +171,19 @@
 }
 
 .capacityMeta {
-  margin: 0;
   color: var(--sys-text-2);
   font-size: 0.67rem;
-  line-height: 1.15;
 }
 
 .midZone {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 36px;
 }
 
 .node {
-  z-index: 4;
+  z-index: 5;
+  position: relative;
   text-align: center;
   font-size: 14px;
   font-weight: 600;
@@ -203,6 +191,11 @@
   color: var(--sys-text-1);
   background: color-mix(in srgb, var(--sys-bg-1) 88%, transparent);
   padding: 2px 8px;
+}
+
+.nodeAnchor {
+  position: absolute;
+  inset: 0;
 }
 
 .nodeSub {
@@ -218,76 +211,28 @@
 
 .trafficTile {
   grid-column: 1;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
 }
 
-.trafficTitle {
+.mockTile {
+  min-height: 112px;
+  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 55%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 70%, transparent);
+  padding: 14px 12px;
+}
+
+.mockTile p {
   margin: 0;
-  font-size: 0.66rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: var(--sys-text-3);
-}
-
-.pieWrap {
-  display: grid;
-  place-items: center;
-}
-
-.pieSvg {
-  width: 66px;
-  height: 66px;
-}
-
-.legend {
-  display: grid;
-  gap: 3px;
-}
-
-.pieCenterLabel {
-  fill: var(--sys-text-2);
-  font-size: 6px;
-  letter-spacing: 0.12em;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
 }
 
-.pieCenterValue {
-  fill: var(--sys-text-1);
-  font-size: 10px;
-  font-weight: 620;
-  text-anchor: middle;
-  dominant-baseline: middle;
-}
-
-.legendRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  color: var(--sys-text-2);
-  font-size: 0.64rem;
-  line-height: 1.1;
-  column-gap: 8px;
-}
-
-.legendLabel {
-  display: inline-flex;
-  align-items: center;
-  color: var(--sys-text-3);
-}
-
-.legendSwatch {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-right: 5px;
-  display: inline-block;
+.mockTile strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--sys-text-1);
+  font-size: 1.25rem;
 }
 
 .wireSvg {
@@ -300,59 +245,43 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, var(--sys-line) 82%, transparent);
-  stroke-width: 2;
+  stroke: color-mix(in srgb, #2e4b77 72%, transparent);
+  stroke-width: 1.8;
   fill: none;
-  shape-rendering: geometricPrecision;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, var(--sys-line) 74%, transparent);
-  stroke-width: 1.4;
+  stroke: color-mix(in srgb, #3c608f 68%, transparent);
+  stroke-width: 1.3;
   fill: none;
-  shape-rendering: crispEdges;
 }
 
 .beamRoute {
-  stroke: rgba(95, 162, 230, 0.58);
-  stroke-width: 1.8;
+  stroke-width: 1.6;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 8 72;
-  filter: drop-shadow(0 0 4px rgba(92, 164, 236, 0.34));
-  opacity: 0.72;
+  stroke-dasharray: 12 92;
+  filter: drop-shadow(0 0 3px rgba(64, 122, 192, 0.25));
+  opacity: 0.52;
 }
 
 .beamFromNode {
-  animation: beam-forward 3.2s linear infinite, beam-flicker 4.2s ease-in-out infinite;
+  animation: beam-forward 4.8s linear infinite;
 }
 
 .beamToNode {
-  animation: beam-reverse 3.2s linear infinite, beam-flicker 4.2s ease-in-out infinite;
+  animation: beam-reverse 4.8s linear infinite;
 }
-
 
 @keyframes beam-forward {
   from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -160; }
+  to { stroke-dashoffset: -208; }
 }
 
 @keyframes beam-reverse {
   from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: 160; }
-}
-
-@keyframes beam-flicker {
-  0%, 100% { opacity: 0.56; }
-  45% { opacity: 0.76; }
-  65% { opacity: 0.66; }
-}
-
-
-.tapMark {
-  fill: color-mix(in srgb, var(--sys-line) 96%, transparent);
-  stroke: none;
+  to { stroke-dashoffset: 208; }
 }
 
 .errorNote {
@@ -365,13 +294,8 @@
   .preview {
     width: min(920px, 100%);
     --kpi-col: 214px;
-    --kpi-min: var(--kpi-col);
-    --kpi-max: var(--kpi-col);
     --topo-gap-col: 14px;
     --topo-gap-row: 7px;
-    --top-to-bus: 38px;
-    --lower-connector-inset: 6px;
-    --bus-to-bottom: 28px;
     --mid-span: 50px;
   }
 
@@ -420,16 +344,12 @@
     border-top: 1px solid var(--sys-line-soft);
     border-bottom: 1px solid var(--sys-line-soft);
     padding: 8px 0;
-    min-height: 0;
   }
 }
-
 
 @media (prefers-reduced-motion: reduce) {
   .beamFromNode,
   .beamToNode {
     animation: none;
   }
-
-
 }
