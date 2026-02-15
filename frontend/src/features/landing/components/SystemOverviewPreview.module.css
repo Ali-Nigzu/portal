@@ -306,38 +306,38 @@
 }
 
 .beamLine {
-  stroke: rgba(122, 196, 255, 0.98);
-  stroke-width: 2.4;
+  stroke: rgba(122, 188, 246, 0.78);
+  stroke-width: 2;
   fill: none;
   stroke-linecap: round;
-  stroke-dasharray: 16 24;
-  filter: drop-shadow(0 0 6px rgba(110, 185, 255, 0.7));
-  opacity: 0.96;
+  stroke-dasharray: 10 74;
+  filter: drop-shadow(0 0 4px rgba(110, 176, 236, 0.44));
+  opacity: 0.76;
   will-change: stroke-dashoffset, opacity;
 }
 
 .beamFromNode {
-  animation: beam-forward 1.45s linear infinite, beam-flicker 2.4s ease-in-out infinite;
+  animation: beam-forward 2.8s linear infinite, beam-flicker 3.2s ease-in-out infinite;
 }
 
 .beamToNode {
-  animation: beam-reverse 1.45s linear infinite, beam-flicker 2.4s ease-in-out infinite;
+  animation: beam-reverse 2.8s linear infinite, beam-flicker 3.2s ease-in-out infinite;
 }
 
 @keyframes beam-forward {
   from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -80; }
+  to { stroke-dashoffset: -168; }
 }
 
 @keyframes beam-reverse {
   from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: 80; }
+  to { stroke-dashoffset: 168; }
 }
 
 @keyframes beam-flicker {
-  0%, 100% { opacity: 0.82; }
-  45% { opacity: 1; }
-  65% { opacity: 0.9; }
+  0%, 100% { opacity: 0.62; }
+  45% { opacity: 0.82; }
+  65% { opacity: 0.72; }
 }
 
 

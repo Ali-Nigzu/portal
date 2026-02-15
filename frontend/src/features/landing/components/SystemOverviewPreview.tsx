@@ -26,6 +26,7 @@ type WireLayout = {
   connectedBottomY: number[];
   leftTopY: number;
   rightTopY: number;
+  nodeX: number;
 };
 
 const TOP_TILES: Array<{ key: TopTileId; widgetId: string; slotClass: string }> = [
@@ -51,6 +52,7 @@ const initialWireLayout: WireLayout = {
   connectedBottomY: [0, 0, 0],
   leftTopY: 0,
   rightTopY: 0,
+  nodeX: 0,
 };
 
 const getKpiTileFromSlot = (slot: HTMLDivElement | null) =>
@@ -73,6 +75,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
   });
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const leftRef = useRef<HTMLDivElement | null>(null);
+  const nodeRef = useRef<HTMLDivElement | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
   const {
@@ -121,7 +124,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
         !topClusterRef.current ||
         !bottomClusterRef.current ||
         !leftRef.current ||
-        !dwellSlotRef.current
+        !dwellSlotRef.current ||
+        !nodeRef.current
       ) {
         return;
       }
@@ -141,13 +145,12 @@ const SystemOverviewLiveKpis: React.FC = () => {
       const bottomCluster = bottomClusterRef.current.getBoundingClientRect();
       const left = leftRef.current.getBoundingClientRect();
       const right = dwellTile.getBoundingClientRect();
+      const node = nodeRef.current.getBoundingClientRect();
 
       const computed = window.getComputedStyle(containerRef.current);
       const topToBus = parseCssPx(computed.getPropertyValue("--top-to-bus"), 56);
 
       const busY = topCluster.bottom - container.top + topToBus;
-      const busX1 = 12;
-      const busX2 = container.width - 12;
 
       const connectedBottomY = connectedTopTiles.map((tile) => (tile as HTMLDivElement).getBoundingClientRect().bottom - container.top);
       const taps = [
@@ -158,6 +161,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
         left.left - container.left + left.width / 2,
         right.left - container.left + right.width / 2,
       ];
+      const busX1 = Math.min(...taps);
+      const busX2 = Math.max(...taps);
 
       setWire({
         width: container.width,
@@ -169,6 +174,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
         connectedBottomY,
         leftTopY: left.top - container.top,
         rightTopY: right.top - container.top,
+        nodeX: node.left - container.left + node.width / 2,
       });
     };
 
@@ -183,6 +189,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
     });
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (leftRef.current) observer.observe(leftRef.current);
+    if (nodeRef.current) observer.observe(nodeRef.current);
     window.addEventListener("resize", update);
 
     return () => {
@@ -193,16 +200,19 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
   const hasKpis = hasTopWidgets && Boolean(dwellWidget);
   const hasError = manifestStatus === "error" || widgetStatus === "error";
-  const nodeX = wire.busX1 + (wire.busX2 - wire.busX1) / 2;
+  const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
 
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
       <div className={styles.canvas} ref={containerRef}>
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={nodeX} y1={wire.busY} x2={wire.busX1} y2={wire.busY} />
-            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={nodeX} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
             <line className={styles.busLine} x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[0]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[1]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[2]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[3]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
+            <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[4]} y1={wire.busY} x2={nodeX} y2={wire.busY} />
             <line className={`${styles.beamLine} ${styles.beamToNode}`} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[0]} y1={wire.connectedBottomY[0]} x2={wire.taps[0]} y2={wire.busY} />
             <line className={`${styles.beamLine} ${styles.beamFromNode}`} x1={wire.taps[1]} y1={wire.connectedBottomY[1]} x2={wire.taps[1]} y2={wire.busY} />
@@ -246,7 +256,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
         </div>
 
         <div className={styles.midZone}>
-          <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span></div>
+          <div className={styles.node} ref={nodeRef}>camOS<span className={styles.nodeSub}>System Sheet</span></div>
         </div>
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
