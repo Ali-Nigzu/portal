@@ -85,7 +85,10 @@
 }
 
 
-
+.wireAnchor {
+  display: flow-root;
+  width: 100%;
+}
 
 
 .tileT1 { grid-column: 1; grid-row: 1; }

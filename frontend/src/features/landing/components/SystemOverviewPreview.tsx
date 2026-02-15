@@ -71,8 +71,16 @@ const SystemOverviewLiveKpis: React.FC = () => {
     exits: null,
     footfall: null,
   });
+  const topAnchorRefs = useRef<Record<TopTileId, HTMLDivElement | null>>({
+    entrances: null,
+    occupancy: null,
+    exits: null,
+    footfall: null,
+  });
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
+  const dwellAnchorRef = useRef<HTMLDivElement | null>(null);
   const leftRef = useRef<HTMLDivElement | null>(null);
+  const leftAnchorRef = useRef<HTMLDivElement | null>(null);
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
@@ -128,19 +136,19 @@ const SystemOverviewLiveKpis: React.FC = () => {
         return;
       }
 
-      const topSlotsById = Object.fromEntries(
-        TOP_TILES.map(({ key }) => [key, topSlotRefs.current[key]]),
+      const topAnchorsById = Object.fromEntries(
+        TOP_TILES.map(({ key }) => [key, topAnchorRefs.current[key]]),
       ) as Record<TopTileId, HTMLDivElement | null>;
 
-      const connectedTopSlots = CONNECTED_TOP_IDS.map((id) => topSlotsById[id]);
-      if (connectedTopSlots.some((slot) => !slot)) {
+      const connectedTopAnchors = CONNECTED_TOP_IDS.map((id) => topAnchorsById[id]);
+      if (connectedTopAnchors.some((anchor) => !anchor) || !leftAnchorRef.current || !dwellAnchorRef.current) {
         return;
       }
 
       const container = containerRef.current.getBoundingClientRect();
       const topCluster = topClusterRef.current.getBoundingClientRect();
-      const leftSlot = leftRef.current.getBoundingClientRect();
-      const rightSlot = dwellSlotRef.current.getBoundingClientRect();
+      const leftAnchor = leftAnchorRef.current.getBoundingClientRect();
+      const rightAnchor = dwellAnchorRef.current.getBoundingClientRect();
       const node = nodeRef.current.getBoundingClientRect();
 
       const computed = window.getComputedStyle(containerRef.current);
@@ -149,20 +157,20 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
       const busY = topCluster.bottom - container.top + topToBus;
 
-      const connectedBottomY = connectedTopSlots.map((slot) => (slot as HTMLDivElement).getBoundingClientRect().bottom - container.top);
+      const connectedBottomY = connectedTopAnchors.map((anchor) => (anchor as HTMLDivElement).getBoundingClientRect().bottom - container.top);
       const taps = [
-        ...connectedTopSlots.map((slot) => {
-          const rect = (slot as HTMLDivElement).getBoundingClientRect();
+        ...connectedTopAnchors.map((anchor) => {
+          const rect = (anchor as HTMLDivElement).getBoundingClientRect();
           return rect.left - container.left + rect.width / 2;
         }),
-        leftSlot.left - container.left + leftSlot.width / 2,
-        rightSlot.left - container.left + rightSlot.width / 2,
+        leftAnchor.left - container.left + leftAnchor.width / 2,
+        rightAnchor.left - container.left + rightAnchor.width / 2,
       ];
       const busX1 = Math.min(...taps);
       const busX2 = Math.max(...taps);
 
-      const lowerLeftAnchorY = leftSlot.top - container.top + lowerConnectorInset;
-      const lowerRightAnchorY = rightSlot.top - container.top + lowerConnectorInset;
+      const lowerLeftAnchorY = leftAnchor.top - container.top + lowerConnectorInset;
+      const lowerRightAnchorY = rightAnchor.top - container.top + lowerConnectorInset;
 
       setWire({
         width: container.width,
@@ -188,7 +196,9 @@ const SystemOverviewLiveKpis: React.FC = () => {
       if (slot) observer.observe(slot);
     });
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
+    if (dwellAnchorRef.current) observer.observe(dwellAnchorRef.current);
     if (leftRef.current) observer.observe(leftRef.current);
+    if (leftAnchorRef.current) observer.observe(leftAnchorRef.current);
     if (nodeRef.current) observer.observe(nodeRef.current);
     window.addEventListener("resize", update);
 
@@ -196,7 +206,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
       observer.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, [hasTopWidgets, dwellWidget]);
+  }, [hasTopWidgets, dwellWidget, trafficWidget]);
 
   const hasKpis = hasTopWidgets && Boolean(dwellWidget);
   const hasError = manifestStatus === "error" || widgetStatus === "error";
@@ -266,7 +276,14 @@ const SystemOverviewLiveKpis: React.FC = () => {
                   topSlotRefs.current[item.key] = node;
                 }}
               >
-                <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />
+                <div
+                  className={styles.wireAnchor}
+                  ref={(node) => {
+                    topAnchorRefs.current[item.key] = node;
+                  }}
+                >
+                  <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />
+                </div>
               </div>
             ))
           ) : hasError ? (
@@ -289,7 +306,9 @@ const SystemOverviewLiveKpis: React.FC = () => {
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
           <article className={styles.trafficTile} ref={leftRef}>
             {trafficWidget ? (
-              <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+              <div className={styles.wireAnchor} ref={leftAnchorRef}>
+                <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+              </div>
             ) : hasError ? (
               <div className={styles.inlineNotice}>Preview unavailable.</div>
             ) : (
@@ -299,7 +318,9 @@ const SystemOverviewLiveKpis: React.FC = () => {
 
           <div className={`${styles.kpiSlot} ${styles.tileT5}`} ref={dwellSlotRef}>
             {dwellWidget ? (
-              <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget]} onRemoveWidget={NOOP_REMOVE} />
+              <div className={styles.wireAnchor} ref={dwellAnchorRef}>
+                <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget]} onRemoveWidget={NOOP_REMOVE} />
+              </div>
             ) : hasError ? (
               <div className={styles.inlineNotice}>Preview unavailable.</div>
             ) : (
