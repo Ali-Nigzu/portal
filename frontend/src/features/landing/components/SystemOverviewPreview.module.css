@@ -73,10 +73,17 @@
 .preview :global(.dashboard-v2__kpi-renderer .kpi-tile),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-content),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-content--vrm),
-.preview :global(.dashboard-v2__kpi-renderer .kpi-panel-header) {
+.preview :global(.dashboard-v2__kpi-renderer .kpi-panel),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-panel-header),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-panel::before),
+.preview :global(.dashboard-v2__kpi-renderer .kpi-panel::after) {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+}
+
+.preview :global(.dashboard-v2__kpi-renderer .kpi-panel) {
+  background: transparent !important;
 }
 
 .wireEdgeAnchor {
