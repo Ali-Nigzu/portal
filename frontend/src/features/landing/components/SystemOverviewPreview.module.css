@@ -4,7 +4,7 @@
   --topo-gap-row: 8px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
-  --top-anchor-inset: 2px;
+  --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
   --mid-span: 56px;
 
@@ -78,7 +78,7 @@
 }
 
 .wireEdgeAnchorBottom {
-  bottom: var(--top-anchor-inset);
+  bottom: calc(var(--top-anchor-outset) * -1);
 }
 
 .wireEdgeAnchorTop {
@@ -253,18 +253,18 @@
 
 .connectorLine {
   stroke: color-mix(in srgb, #3c608f 68%, transparent);
-  stroke-width: 1.3;
+  stroke-width: 1.45;
   fill: none;
 }
 
 .beamRoute {
-  stroke-width: 1.6;
+  stroke-width: 2;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 12 92;
-  filter: drop-shadow(0 0 3px rgba(64, 122, 192, 0.25));
-  opacity: 0.52;
+  stroke-dasharray: 14 86;
+  filter: drop-shadow(0 0 3px rgba(64, 122, 192, 0.32));
+  opacity: 0.72;
 }
 
 .beamRoute {

@@ -265,8 +265,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 const x2 = isToNode ? nodeX : wire.taps[route.id];
                 return (
                   <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={wire.busY} x2={x2} y2={wire.busY}>
-                    <stop offset="0%" stopColor="rgba(138, 188, 248, 0.68)" />
-                    <stop offset="100%" stopColor="rgba(42, 86, 148, 0.24)" />
+                    <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
+                    <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
+                    <stop offset="100%" stopColor="rgba(136, 188, 252, 0.78)" />
                   </linearGradient>
                 );
               })}
