@@ -5,14 +5,22 @@ import { findSiteById, getStoredSiteId } from "../../../lib/sites";
 
 type DashboardHeaderProps = {
   clientId?: string;
+  siteLabelOverride?: string;
+  mode?: "full" | "preview";
 };
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = () => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({
+  siteLabelOverride,
+  mode = "full",
+}) => {
   const { siteId } = useParams();
   const siteLabel = useMemo(() => {
+    if (siteLabelOverride) {
+      return siteLabelOverride;
+    }
     const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
     return findSiteById(resolvedSiteId)?.label ?? "All Sites";
-  }, [siteId]);
+  }, [siteId, siteLabelOverride]);
 
   return (
     <header className="dashboard-v2__header vrm-section vrm-section--header">
@@ -22,9 +30,11 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = () => {
             <div className="vrm-dashboard-title">{siteLabel}</div>
           </div>
         </div>
-        <div className="vrm-dashboard-header-right">
-          <HeaderStatusStrip className="vrm-dashboard-header-meta" />
-        </div>
+        {mode === "full" ? (
+          <div className="vrm-dashboard-header-right">
+            <HeaderStatusStrip className="vrm-dashboard-header-meta" />
+          </div>
+        ) : null}
       </div>
     </header>
   );

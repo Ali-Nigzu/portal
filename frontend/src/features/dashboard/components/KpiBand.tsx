@@ -1,15 +1,17 @@
 import React from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { ChartRenderer } from "../../../analytics/components/ChartRenderer/ChartRenderer";
 import type { DashboardWidgetState } from "../types";
 import { renderError, renderLoading } from "./dashboardRenderers";
 
 type KpiBandProps = {
+  mode?: "full" | "preview";
   kpiWidgets: DashboardWidgetState[];
   onRemoveWidget: (widgetId: string) => void;
 };
 
 type KpiTileProps = {
+  mode: "full" | "preview";
   title: string;
   result?: Parameters<typeof ChartRenderer>[0]["result"];
   state: DashboardWidgetState;
@@ -18,7 +20,10 @@ type KpiTileProps = {
   widgetId: string;
 };
 
+const PREVIEW_KPI_HEIGHT = 76;
+
 const KpiTile: React.FC<KpiTileProps> = ({
+  mode,
   title,
   result,
   state,
@@ -38,6 +43,8 @@ const KpiTile: React.FC<KpiTileProps> = ({
         },
       } as Parameters<typeof ChartRenderer>[0]["result"])
     : result;
+  const isPreview = mode === "preview";
+  const kpiHeight = isPreview ? PREVIEW_KPI_HEIGHT : 168;
   let content: ReactNode = null;
   if (state.status === "loading") {
     content = renderLoading(title, "kpi");
@@ -47,13 +54,13 @@ const KpiTile: React.FC<KpiTileProps> = ({
     content = (
       <ChartRenderer
         result={renderedResult!}
-        height={168}
+        height={kpiHeight}
         className="dashboard-v2__kpi-renderer"
         widgetId={widgetId}
       />
     );
   }
-  const showRemove = Boolean(onRemove) && !locked;
+  const showRemove = mode === "full" && Boolean(onRemove) && !locked;
   return (
     <div
       className="dashboard-v2__kpi-tile vrm-kpi-tile vrm-kpi-tile--panel"
@@ -82,14 +89,19 @@ const KpiTile: React.FC<KpiTileProps> = ({
   );
 };
 
-const KpiBand: React.FC<KpiBandProps> = ({ kpiWidgets, onRemoveWidget }) => {
+const KpiBand: React.FC<KpiBandProps> = ({ mode = "full", kpiWidgets, onRemoveWidget }) => {
   if (kpiWidgets.length === 0) {
     return null;
   }
+  const bandClassName = `dashboard-v2__kpi-band vrm-section vrm-section--kpis ${mode === "preview" ? "dashboard-v2__kpi-band--preview" : ""}`.trim();
+  const bandStyle = mode === "preview"
+    ? ({ "--dashboard-kpi-preview-height": `${PREVIEW_KPI_HEIGHT}px` } as CSSProperties)
+    : undefined;
   return (
-    <section className="dashboard-v2__kpi-band vrm-section vrm-section--kpis">
+    <section className={bandClassName} style={bandStyle}>
       {kpiWidgets.map((state) => (
         <KpiTile
+          mode={mode}
           key={state.widget.id}
           title={state.widget.title}
           result={state.result}

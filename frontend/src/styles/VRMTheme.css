@@ -21,3 +21,19 @@
 .demo-overlay-active .demo-overlay__content .vrm-main {
   min-height: 0;
 }
+
+:root {
+  --sys-bg-0: var(--vrm-color-surface-0);
+  --sys-bg-1: var(--vrm-bg-primary);
+  --sys-bg-2: var(--vrm-bg-panel);
+  --sys-line: color-mix(in srgb, var(--vrm-border) 75%, transparent);
+  --sys-line-soft: color-mix(in srgb, var(--vrm-border) 45%, transparent);
+  --sys-text-1: var(--vrm-text-primary);
+  --sys-text-2: var(--vrm-text-secondary);
+  --sys-text-3: var(--vrm-text-muted);
+  --sys-radius-sm: var(--vrm-radii-badge);
+  --sys-radius-md: var(--vrm-radii-card);
+  --sys-shadow-soft: var(--vrm-elevation-card);
+  --sys-shadow-card: var(--vrm-elevation-card);
+  --sys-accent: var(--vrm-color-accent-occupancy);
+}

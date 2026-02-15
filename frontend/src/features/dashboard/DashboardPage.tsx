@@ -1,16 +1,15 @@
 import { useMemo } from "react";
 import ErrorBoundary from "../../common/components/ErrorBoundary";
-import type { DashboardManifest, DashboardWidget } from "./types";
+import type { DashboardManifest } from "./types";
 import { Credentials } from "../../types/credentials";
 import "./styles/DashboardPage.css";
-import DashboardHeader from "./components/DashboardHeader";
-import KpiBand from "./components/KpiBand";
-import ChartGrid from "./components/ChartGrid";
 import { useDashboardManifest } from "./hooks/useDashboardManifest";
 import { useDashboardWidgets } from "./hooks/useDashboardWidgets";
 import { useSiteFlow } from "./hooks/useSiteFlow";
 import type { FetchDashboardManifestOptions } from "./transport/fetchDashboardManifest";
-import type { LoadWidgetOptions, loadWidgetResult } from "./transport/loadWidgetResult";
+import type { loadWidgetResult } from "./transport/loadWidgetResult";
+import DashboardView from "./components/DashboardView";
+
 const DashboardPage = ({
   credentials,
   manifestLoader,
@@ -77,32 +76,25 @@ const DashboardPage = ({
   }, [manifestStatus, widgetStatus]);
 
   const error = manifestStatus === "error" ? manifestError : widgetError;
-
   const gridColumns = manifest?.layout.grid.columns ?? 12;
 
   return (
-    <div className="dashboard-v2" aria-busy={status === "loading"}>
-      <div className="dashboard-v2__content vrm-dashboard-shell">
-        <DashboardHeader clientId={resolvedUiClient} />
-        {status === "error" && error ? (
-          <div className="dashboard-v2__error-banner" role="alert">
-            {error}
-          </div>
-        ) : null}
-        <KpiBand kpiWidgets={kpiWidgets} onRemoveWidget={handleUnpinWidget} />
-        <ChartGrid
-          chartWidgets={chartWidgets}
-          gridColumns={gridColumns}
-          onRemoveWidget={handleUnpinWidget}
-          siteFlowMode={siteFlowMode}
-          onSiteFlowModeChange={setSiteFlowMode}
-          siteFlowTimeframe={siteFlowTimeframe}
-          onSiteFlowTimeframeChange={handleSiteFlowTimeframeChange}
-          siteFlowDemographics={siteFlowDemographics}
-          siteFlowActivity={siteFlowActivity}
-        />
-      </div>
-    </div>
+    <DashboardView
+      mode="full"
+      clientId={resolvedUiClient}
+      status={status}
+      error={error}
+      kpiWidgets={kpiWidgets}
+      chartWidgets={chartWidgets}
+      gridColumns={gridColumns}
+      onRemoveWidget={handleUnpinWidget}
+      siteFlowMode={siteFlowMode}
+      onSiteFlowModeChange={setSiteFlowMode}
+      siteFlowTimeframe={siteFlowTimeframe}
+      onSiteFlowTimeframeChange={handleSiteFlowTimeframeChange}
+      siteFlowDemographics={siteFlowDemographics}
+      siteFlowActivity={siteFlowActivity}
+    />
   );
 };
 
