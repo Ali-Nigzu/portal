@@ -144,6 +144,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
       const container = containerRef.current.getBoundingClientRect();
       const topCluster = topClusterRef.current.getBoundingClientRect();
       const bottomCluster = bottomClusterRef.current.getBoundingClientRect();
+      const leftSlot = leftRef.current.getBoundingClientRect();
+      const rightSlot = dwellSlotRef.current.getBoundingClientRect();
       const left = trafficTile.getBoundingClientRect();
       const right = dwellTile.getBoundingClientRect();
       const node = nodeRef.current.getBoundingClientRect();
@@ -166,6 +168,9 @@ const SystemOverviewLiveKpis: React.FC = () => {
       const busX1 = Math.min(...taps);
       const busX2 = Math.max(...taps);
 
+      const lowerLeftAnchorY = Math.max(left.top, leftSlot.top) - container.top + lowerConnectorInset;
+      const lowerRightAnchorY = Math.max(right.top, rightSlot.top) - container.top + lowerConnectorInset;
+
       setWire({
         width: container.width,
         height: container.height,
@@ -174,8 +179,8 @@ const SystemOverviewLiveKpis: React.FC = () => {
         busX2,
         taps,
         connectedBottomY,
-        leftTopY: left.top - container.top + lowerConnectorInset,
-        rightTopY: right.top - container.top + lowerConnectorInset,
+        leftTopY: lowerLeftAnchorY,
+        rightTopY: lowerRightAnchorY,
         nodeX: node.left - container.left + node.width / 2,
       });
     };
