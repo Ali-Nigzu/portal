@@ -83,7 +83,38 @@
 }
 
 .dashboard-v2__kpi-band--preview .dashboard-v2__kpi-content {
-  min-height: var(--dashboard-kpi-preview-height, 76px);
+  min-height: var(--dashboard-kpi-preview-height, 84px);
+}
+
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-content--vrm {
+  gap: 6px;
+}
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-panel-header {
+  padding: 8px 10px 0;
+}
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-header {
+  align-items: flex-start;
+}
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-label {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-value {
+  font-size: clamp(2rem, 2.2vw, 2.25rem);
+  line-height: 0.95;
+}
+
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-sparkline-shell--vrm,
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-sparkline-anchor--vrm,
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-sparkline-plot,
+.dashboard-v2__kpi-band--preview .dashboard-v2__kpi-renderer .kpi-sparkline--vrm {
+  height: 36px;
+  min-height: 36px;
 }
 
 .dashboard-v2__kpi-controls,
