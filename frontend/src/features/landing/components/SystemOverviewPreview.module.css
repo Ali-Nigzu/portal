@@ -1,6 +1,6 @@
 .preview {
-  --topo-gap-col: 16px;
-  --kpi-col: 204px;
+  --topo-gap-col: 18px;
+  --kpi-col: 248px;
   --topo-gap-row: 10px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
@@ -304,10 +304,10 @@
 @media (max-width: 1279px) {
   .preview {
     width: min(920px, 100%);
-    --kpi-col: 176px;
+    --kpi-col: 214px;
     --kpi-min: var(--kpi-col);
     --kpi-max: var(--kpi-col);
-    --topo-gap-col: 12px;
+    --topo-gap-col: 14px;
     --topo-gap-row: 8px;
     --top-to-bus: 48px;
     --bus-to-bottom: 38px;
