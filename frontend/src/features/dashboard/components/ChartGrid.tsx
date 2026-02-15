@@ -19,6 +19,7 @@ type ChartGridEntry = {
 };
 
 type ChartGridProps = {
+  mode?: "full" | "preview";
   chartWidgets: ChartGridEntry[];
   gridColumns: number;
   onRemoveWidget: (widgetId: string) => void;
@@ -39,6 +40,7 @@ type ChartGridProps = {
 };
 
 type ChartCardProps = {
+  mode: "full" | "preview";
   title: string;
   subtitle?: string;
   state: DashboardWidgetState;
@@ -49,6 +51,7 @@ type ChartCardProps = {
 };
 
 const ChartCard: React.FC<ChartCardProps> = ({
+  mode,
   title,
   subtitle,
   state,
@@ -66,7 +69,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
     body = <ChartRenderer result={result} height={360} widgetId={widgetId} />;
   }
   const footer =
-    !locked && onRemove ? (
+    mode === "full" && !locked && onRemove ? (
       <div className="dashboard-v2__widget-footer">
         <button
           type="button"
@@ -90,6 +93,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
 };
 
 const ChartGrid: React.FC<ChartGridProps> = ({
+  mode = "full",
   chartWidgets,
   gridColumns,
   onRemoveWidget,
@@ -117,14 +121,15 @@ const ChartGrid: React.FC<ChartGridProps> = ({
           >
             {isSiteFlowWidget(state.widget) ? (
               <SiteFlowCard
+                mode={mode}
                 locked={state.widget.locked}
                 widgetId={state.widget.id}
                 onRemove={
-                  state.widget.locked
+                  state.widget.locked || mode === "preview"
                     ? undefined
                     : () => onRemoveWidget(state.widget.id)
                 }
-                mode={siteFlowMode}
+                modeState={siteFlowMode}
                 onModeChange={onSiteFlowModeChange}
                 timeframe={siteFlowTimeframe}
                 onTimeframeChange={onSiteFlowTimeframeChange}
@@ -133,6 +138,7 @@ const ChartGrid: React.FC<ChartGridProps> = ({
               />
             ) : (
               <ChartCard
+                mode={mode}
                 title={state.widget.title}
                 subtitle={state.widget.subtitle}
                 state={state}
@@ -140,7 +146,7 @@ const ChartGrid: React.FC<ChartGridProps> = ({
                 locked={state.widget.locked}
                 widgetId={state.widget.id}
                 onRemove={
-                  state.widget.locked
+                  state.widget.locked || mode === "preview"
                     ? undefined
                     : () => onRemoveWidget(state.widget.id)
                 }
