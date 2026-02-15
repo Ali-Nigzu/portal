@@ -244,7 +244,7 @@ const SystemOverviewLiveKpis: React.FC = () => {
             <line className={styles.connectorLine} x1={wire.taps[3]} y1={wire.leftTopY} x2={wire.taps[3]} y2={wire.busY} />
             <line className={styles.connectorLine} x1={wire.taps[4]} y1={wire.busY} x2={wire.taps[4]} y2={wire.rightTopY} />
             {wire.taps.map((tap, index) => (
-              <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="2.5" />
+              <circle key={`tap-${index}`} className={styles.tapMark} cx={tap} cy={wire.busY} r="3" />
             ))}
           </svg>
         ) : null}
@@ -285,7 +285,9 @@ const SystemOverviewLiveKpis: React.FC = () => {
             <div className={styles.pieWrap}>
               <svg className={styles.pieSvg} viewBox="0 0 100 100" aria-hidden="true">
                 {arcs.map((arc) => <path key={arc.label} d={arc.d} fill={arc.color} />)}
-                <circle cx="50" cy="50" r="14" fill="color-mix(in srgb, var(--sys-bg-1) 90%, transparent)" />
+                <circle cx="50" cy="50" r="13" fill="color-mix(in srgb, var(--sys-bg-1) 90%, transparent)" />
+                <text x="50" y="45" className={styles.pieCenterLabel}>Traffic</text>
+                <text x="50" y="56" className={styles.pieCenterValue}>100%</text>
               </svg>
             </div>
             <div className={styles.legend}>
