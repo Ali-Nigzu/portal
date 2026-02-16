@@ -142,6 +142,7 @@ body {
 
 .landing-system-surface {
   position: relative;
+  min-height: 308px;
   border-top: 1px solid var(--sys-plate-line);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--sys-bg-1) 95%, transparent) 0%, color-mix(in srgb, var(--sys-bg-1) 98%, transparent) 100%);
@@ -152,8 +153,8 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 96px;
   align-items: stretch;
-  min-height: 440px;
-  padding: 152px 48px 72px;
+  min-height: 306px;
+  padding: 104px 48px 76px;
 }
 
 .landing-capabilities,
@@ -177,7 +178,7 @@ body {
 
 .landing-capabilities h2,
 .landing-deployment h2 {
-  margin-bottom: 56px;
+  margin-bottom: 44px;
 }
 
 .landing-section-head--sr-only {
@@ -221,7 +222,7 @@ body {
   --deploy-step-width: 272px;
   --deploy-step-height: 112px;
   --deploy-x-step: 136px;
-  --deploy-y-step: 48px;
+  --deploy-y-step: 34px;
 
   max-width: 460px;
   margin-inline: auto;
@@ -250,7 +251,7 @@ body {
 .landing-capability-row {
   grid-template-columns: 48px 1fr;
   gap: 24px;
-  padding: 24px 0;
+  padding: 20px 0;
 }
 
 .landing-assurance-row {
@@ -419,7 +420,7 @@ body {
   .landing-deployment-content {
     --deploy-step-width: 264px;
     --deploy-x-step: 120px;
-    --deploy-y-step: 44px;
+    --deploy-y-step: 32px;
   }
 }
 
@@ -428,9 +429,9 @@ body {
 
   .landing-operational-grid {
     grid-template-columns: 1fr;
-    gap: 48px;
+    gap: 42px;
     min-height: 0;
-    padding: 112px 36px 60px;
+    padding: 96px 36px 56px;
   }
 
   .landing-capabilities,
@@ -440,7 +441,7 @@ body {
 
   .landing-capabilities h2,
   .landing-deployment h2 {
-    margin-bottom: 40px;
+    margin-bottom: 34px;
   }
 
   .landing-capabilities-content,
@@ -451,7 +452,7 @@ body {
   .landing-deployment-content {
     --deploy-step-width: 280px;
     --deploy-x-step: 96px;
-    --deploy-y-step: 38px;
+    --deploy-y-step: 30px;
   }
 }
 
