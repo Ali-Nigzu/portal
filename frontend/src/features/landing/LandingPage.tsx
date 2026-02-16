@@ -75,17 +75,19 @@ const LandingPage: React.FC = () => {
             <div className="landing-system-surface">
               <div className="landing-operational-grid">
                 <section className="landing-capabilities" aria-labelledby="capabilities-title">
-                  <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
-                  <div className="landing-capabilities-content" data-align-anchor="capabilities">
-                    <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
-                    {landingCopy.capabilities.items.map((item, index) => (
-                      <div key={item} className="landing-capability-row" role="listitem">
-                        <span className="landing-capability-index" aria-hidden="true">
-                          {(index + 1).toString().padStart(2, "0")}
-                        </span>
-                        <span>{item}</span>
+                  <div className="landing-capabilities-inner" data-align-anchor="capabilities">
+                    <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
+                    <div className="landing-capabilities-content">
+                      <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
+                      {landingCopy.capabilities.items.map((item, index) => (
+                        <div key={item} className="landing-capability-row" role="listitem">
+                          <span className="landing-capability-index" aria-hidden="true">
+                            {(index + 1).toString().padStart(2, "0")}
+                          </span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
                       </div>
-                    ))}
                     </div>
                   </div>
                 </section>

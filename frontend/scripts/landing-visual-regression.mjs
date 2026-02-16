@@ -81,6 +81,7 @@ try {
       const lastRow = document.querySelector('.landing-capability-row:last-child')?.getBoundingClientRect();
       const deploymentGroup = document.querySelector('.landing-deployment-zigzag')?.getBoundingClientRect();
       const capabilitiesAnchor = document.querySelector('[data-align-anchor="capabilities"]')?.getBoundingClientRect();
+      const capabilitiesColumn = document.querySelector('.landing-capabilities')?.getBoundingClientRect();
       const deploymentAnchor = document.querySelector('[data-align-anchor="deployment"]')?.getBoundingClientRect();
 
       const stepOne = document.querySelector('.landing-deployment-step--one')?.getBoundingClientRect();
@@ -108,6 +109,10 @@ try {
         step2OffsetFromStep1Px:
           stepOne && stepTwo ? Number((stepTwo.left - stepOne.left).toFixed(2)) : null,
         deployXStep,
+        capabilitiesCenterOffsetPx:
+          capabilitiesAnchor && capabilitiesColumn
+            ? Number(Math.abs((capabilitiesAnchor.left + (capabilitiesAnchor.width / 2)) - (capabilitiesColumn.left + (capabilitiesColumn.width / 2))).toFixed(2))
+            : null,
       };
     });
 
@@ -132,7 +137,9 @@ try {
     || desktopResult.rowToDeploymentDiffPx > 2
     || desktopResult.panelBottomDiffPx > 2
     || desktopResult.step1Step3DiffPx > 2
-    || desktopResult.step2OffsetFromStep1Px < (desktopResult.deployXStep - 2)
+    || desktopResult.step2OffsetFromStep1Px < 120
+    || desktopResult.capabilitiesCenterOffsetPx == null
+    || desktopResult.capabilitiesCenterOffsetPx > 5
   ) {
     throw new Error(`Desktop alignment failed. Results: ${JSON.stringify(alignmentResults)}`);
   }

@@ -149,7 +149,7 @@ body {
 
 .landing-operational-grid {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  grid-template-columns: minmax(0, 5.5fr) minmax(0, 6.5fr);
   gap: 80px;
   align-items: stretch;
   min-height: 440px;
@@ -203,27 +203,28 @@ body {
   min-height: 0;
 }
 
-.landing-capabilities-content {
-  max-width: 460px;
+.landing-capabilities-inner {
+  max-width: 468px;
+  width: 100%;
   margin-inline: auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-capabilities-content {
   width: 100%;
 }
 
 .landing-deployment-content {
   --deploy-step-width: 272px;
   --deploy-step-height: 112px;
-  --deploy-x-step: 132px;
+  --deploy-x-step: 136px;
   --deploy-y-step: 48px;
 
   max-width: 500px;
   margin-inline: auto;
   width: 100%;
-}
-
-.landing-capabilities > h2 {
-  max-width: 460px;
-  width: 100%;
-  margin-inline: auto;
 }
 
 .landing-capability-rows {
@@ -273,15 +274,13 @@ body {
   margin: 0;
   padding: 0;
   list-style: none;
-  position: relative;
-  width: calc(var(--deploy-step-width) + var(--deploy-x-step));
-  min-height: calc(var(--deploy-step-height) + (var(--deploy-y-step) * 2));
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--deploy-y-step);
 }
 
 .landing-deployment-step {
-  position: absolute;
-  left: 0;
-  top: 0;
   min-width: 0;
   width: min(var(--deploy-step-width), 100%);
   min-height: var(--deploy-step-height);
@@ -294,16 +293,13 @@ body {
   gap: 8px;
 }
 
-.landing-deployment-step--one {
-  transform: translate(0, 0);
+.landing-deployment-step--one,
+.landing-deployment-step--three {
+  margin-left: 0;
 }
 
 .landing-deployment-step--two {
-  transform: translate(var(--deploy-x-step), var(--deploy-y-step));
-}
-
-.landing-deployment-step--three {
-  transform: translate(0, calc(var(--deploy-y-step) * 2));
+  margin-left: var(--deploy-x-step);
 }
 
 .landing-deployment-step-label {
@@ -421,7 +417,7 @@ body {
 
   .landing-deployment-content {
     --deploy-step-width: 264px;
-    --deploy-x-step: 112px;
+    --deploy-x-step: 120px;
     --deploy-y-step: 44px;
   }
 }
@@ -486,20 +482,15 @@ body {
   }
 
   .landing-deployment-zigzag {
-    position: static;
     width: 100%;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
     gap: 16px;
   }
 
   .landing-deployment-step {
-    position: static;
     width: 100%;
     min-height: 104px;
     padding: 20px;
-    transform: none !important;
+    margin-left: 0 !important;
   }
 
   .landing-deployment-step-label { font-size: 0.82rem; }
