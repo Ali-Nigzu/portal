@@ -79,14 +79,14 @@ try {
 
     const geometry = await page.evaluate(() => {
       const lastRow = document.querySelector('.landing-capability-row:last-child')?.getBoundingClientRect();
-      const deploymentGroup = document.querySelector('.landing-deployment-rail')?.getBoundingClientRect();
+      const deploymentGroup = document.querySelector('.landing-deployment-zigzag')?.getBoundingClientRect();
       const capabilitiesAnchor = document.querySelector('[data-align-anchor="capabilities"]')?.getBoundingClientRect();
       const deploymentAnchor = document.querySelector('[data-align-anchor="deployment"]')?.getBoundingClientRect();
 
       return {
         capabilityBottom: lastRow ? Number(lastRow.bottom.toFixed(2)) : null,
         deploymentBottom: deploymentGroup ? Number(deploymentGroup.bottom.toFixed(2)) : null,
-        rowToRailDiffPx:
+        rowToDeploymentDiffPx:
           lastRow && deploymentGroup ? Number(Math.abs(lastRow.bottom - deploymentGroup.bottom).toFixed(2)) : null,
         panelBottomDiffPx:
           capabilitiesAnchor && deploymentAnchor
@@ -108,9 +108,9 @@ try {
   const desktopResult = alignmentResults.find((result) => result.viewport === 'desktop');
   if (
     !desktopResult
-    || desktopResult.rowToRailDiffPx == null
+    || desktopResult.rowToDeploymentDiffPx == null
     || desktopResult.panelBottomDiffPx == null
-    || desktopResult.rowToRailDiffPx > 2
+    || desktopResult.rowToDeploymentDiffPx > 2
     || desktopResult.panelBottomDiffPx > 2
   ) {
     throw new Error(`Desktop alignment failed. Results: ${JSON.stringify(alignmentResults)}`);

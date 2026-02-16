@@ -93,23 +93,20 @@ const LandingPage: React.FC = () => {
                 <section className="landing-deployment" aria-labelledby="deployment-title">
                   <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
                   <div className="landing-deployment-content" data-align-anchor="deployment">
-                    <div className="landing-deployment-field">
-                    <span className="landing-deployment-spine" aria-hidden="true" />
-                    <ol className="landing-deployment-rail" aria-label="System deployment flow">
-                      <li className="landing-deployment-step">
+                    <ol className="landing-deployment-zigzag" aria-label="System deployment flow">
+                      <li className="landing-deployment-step landing-deployment-step--one">
                         <span className="landing-deployment-step-index">01</span>
                         <span className="landing-deployment-step-label">{landingCopy.deployment.firstStep}</span>
                       </li>
-                      <li className="landing-deployment-step">
+                      <li className="landing-deployment-step landing-deployment-step--two">
                         <span className="landing-deployment-step-index">02</span>
                         <span className="landing-deployment-step-label">{landingCopy.deployment.secondStep}</span>
                       </li>
-                      <li className="landing-deployment-step">
+                      <li className="landing-deployment-step landing-deployment-step--three">
                         <span className="landing-deployment-step-index">03</span>
                         <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
                       </li>
                     </ol>
-                    </div>
                   </div>
                 </section>
               </div>
