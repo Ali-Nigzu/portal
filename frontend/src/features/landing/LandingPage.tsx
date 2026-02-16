@@ -72,51 +72,57 @@ const LandingPage: React.FC = () => {
 
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
           <div className="landing-container landing-spec-sheet-inner">
-            <div className="landing-operational-grid">
-              <section className="landing-capabilities" aria-labelledby="capabilities-title">
-                <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
-                <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
-                  {landingCopy.capabilities.items.map((item, index) => (
-                    <div key={item} className="landing-capability-row" role="listitem">
-                      <span className="landing-capability-index" aria-hidden="true">
-                        {(index + 1).toString().padStart(2, "0")}
-                      </span>
-                      <span>{item}</span>
+            <div className="landing-system-surface">
+              <div className="landing-operational-grid">
+                <section className="landing-capabilities" aria-labelledby="capabilities-title">
+                  <div className="landing-capabilities-inner" data-align-anchor="capabilities">
+                    <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
+                    <div className="landing-capabilities-content">
+                      <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
+                      {landingCopy.capabilities.items.map((item, index) => (
+                        <div key={item} className="landing-capability-row" role="listitem">
+                          <span className="landing-capability-index" aria-hidden="true">
+                            {(index + 1).toString().padStart(2, "0")}
+                          </span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                </section>
+
+                <section className="landing-deployment" aria-labelledby="deployment-title">
+                  <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
+                  <div className="landing-deployment-content" data-align-anchor="deployment">
+                    <ol className="landing-deployment-zigzag" aria-label="System deployment flow">
+                      <li className="landing-deployment-step landing-deployment-step--one">
+                        <span className="landing-deployment-step-index">01</span>
+                        <span className="landing-deployment-step-label">{landingCopy.deployment.firstStep}</span>
+                      </li>
+                      <li className="landing-deployment-step landing-deployment-step--two">
+                        <span className="landing-deployment-step-index">02</span>
+                        <span className="landing-deployment-step-label">{landingCopy.deployment.secondStep}</span>
+                      </li>
+                      <li className="landing-deployment-step landing-deployment-step--three">
+                        <span className="landing-deployment-step-index">03</span>
+                        <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
+                      </li>
+                    </ol>
+                  </div>
+                </section>
+              </div>
+
+              <section className="landing-preview" aria-labelledby="live-preview-title">
+                <div className="landing-section-head landing-section-head--sr-only">
+                  <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
+                  <p>{landingCopy.livePreview.description}</p>
+                </div>
+                <div className="landing-dashboard-preview">
+                  <SystemOverviewPreview />
                 </div>
               </section>
-
-              <section className="landing-deployment" aria-labelledby="deployment-title">
-                <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
-                <ol className="landing-deployment-rail" aria-label="System deployment flow">
-                  <li className="landing-deployment-step landing-deployment-step--active">
-                    <span className="landing-deployment-step-index">01</span>
-                    <span className="landing-deployment-step-label">{landingCopy.deployment.firstStep}</span>
-                  </li>
-                  <li className="landing-deployment-arrow" aria-hidden="true">→</li>
-                  <li className="landing-deployment-step">
-                    <span className="landing-deployment-step-index">02</span>
-                    <span className="landing-deployment-step-label">{landingCopy.deployment.secondStep}</span>
-                  </li>
-                  <li className="landing-deployment-arrow" aria-hidden="true">→</li>
-                  <li className="landing-deployment-step">
-                    <span className="landing-deployment-step-index">03</span>
-                    <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
-                  </li>
-                </ol>
-              </section>
             </div>
-
-            <section className="landing-preview" aria-labelledby="live-preview-title">
-              <div className="landing-section-head">
-                <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
-                <p>{landingCopy.livePreview.description}</p>
-              </div>
-              <div className="landing-dashboard-preview">
-                <SystemOverviewPreview />
-              </div>
-            </section>
 
             <section className="landing-assurances" aria-labelledby="assurances-title">
               <h2 id="assurances-title">{landingCopy.assurances.heading}</h2>

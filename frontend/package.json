@@ -18,7 +18,8 @@
     "build": "vite build && if [ -d ../backend ]; then rm -rf ../backend/frontend_build && cp -R build ../backend/frontend_build; fi",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "ci": "npm run build",
-    "verify:topology": "node scripts/topology-check.mjs"
+    "verify:topology": "node scripts/topology-check.mjs",
+    "test:landing-visual": "node scripts/landing-visual-regression.mjs"
   },
   "browserslist": {
     "production": [
