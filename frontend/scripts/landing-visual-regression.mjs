@@ -83,6 +83,14 @@ try {
       const capabilitiesAnchor = document.querySelector('[data-align-anchor="capabilities"]')?.getBoundingClientRect();
       const deploymentAnchor = document.querySelector('[data-align-anchor="deployment"]')?.getBoundingClientRect();
 
+      const stepOne = document.querySelector('.landing-deployment-step--one')?.getBoundingClientRect();
+      const stepTwo = document.querySelector('.landing-deployment-step--two')?.getBoundingClientRect();
+      const stepThree = document.querySelector('.landing-deployment-step--three')?.getBoundingClientRect();
+      const deploymentStyle = document.querySelector('.landing-deployment-content')
+        ? getComputedStyle(document.querySelector('.landing-deployment-content'))
+        : null;
+      const deployXStep = deploymentStyle ? Number.parseFloat(deploymentStyle.getPropertyValue('--deploy-x-step')) : null;
+
       return {
         capabilityBottom: lastRow ? Number(lastRow.bottom.toFixed(2)) : null,
         deploymentBottom: deploymentGroup ? Number(deploymentGroup.bottom.toFixed(2)) : null,
@@ -92,6 +100,14 @@ try {
           capabilitiesAnchor && deploymentAnchor
             ? Number(Math.abs(capabilitiesAnchor.bottom - deploymentAnchor.bottom).toFixed(2))
             : null,
+        stepOneLeft: stepOne ? Number(stepOne.left.toFixed(2)) : null,
+        stepTwoLeft: stepTwo ? Number(stepTwo.left.toFixed(2)) : null,
+        stepThreeLeft: stepThree ? Number(stepThree.left.toFixed(2)) : null,
+        step1Step3DiffPx:
+          stepOne && stepThree ? Number(Math.abs(stepOne.left - stepThree.left).toFixed(2)) : null,
+        step2OffsetFromStep1Px:
+          stepOne && stepTwo ? Number((stepTwo.left - stepOne.left).toFixed(2)) : null,
+        deployXStep,
       };
     });
 
@@ -110,8 +126,13 @@ try {
     !desktopResult
     || desktopResult.rowToDeploymentDiffPx == null
     || desktopResult.panelBottomDiffPx == null
+    || desktopResult.step1Step3DiffPx == null
+    || desktopResult.step2OffsetFromStep1Px == null
+    || desktopResult.deployXStep == null
     || desktopResult.rowToDeploymentDiffPx > 2
     || desktopResult.panelBottomDiffPx > 2
+    || desktopResult.step1Step3DiffPx > 2
+    || desktopResult.step2OffsetFromStep1Px < (desktopResult.deployXStep - 2)
   ) {
     throw new Error(`Desktop alignment failed. Results: ${JSON.stringify(alignmentResults)}`);
   }
