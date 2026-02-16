@@ -4,6 +4,8 @@
   --sys-bg-2: var(--vrm-bg-panel);
   --sys-line: color-mix(in srgb, var(--vrm-border) 75%, transparent);
   --sys-line-soft: color-mix(in srgb, var(--vrm-border) 45%, transparent);
+  --sys-plate-line: color-mix(in srgb, var(--vrm-border) 24%, transparent);
+  --sys-plate-line-strong: color-mix(in srgb, var(--vrm-border) 34%, transparent);
   --sys-text-1: var(--vrm-text-primary);
   --sys-text-2: var(--vrm-text-secondary);
   --sys-text-3: var(--vrm-text-muted);
@@ -140,8 +142,12 @@ body {
 }
 
 .landing-system-surface {
+  --deployment-rail-drop: 22px;
+
   position: relative;
-  border-top: 1px solid color-mix(in srgb, var(--sys-line-soft) 22%, transparent);
+  border-top: 1px solid var(--sys-plate-line);
+  border-left: 1px solid color-mix(in srgb, var(--sys-plate-line) 74%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--sys-plate-line) 74%, transparent);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--sys-bg-1) 95%, transparent) 0%, color-mix(in srgb, var(--sys-bg-1) 98%, transparent) 100%);
 }
@@ -245,9 +251,9 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 22px;
+  bottom: var(--deployment-rail-drop);
   height: 1px;
-  background: color-mix(in srgb, var(--sys-line) 34%, transparent);
+  background: var(--sys-plate-line-strong);
 }
 
 .landing-deployment-rail {
@@ -261,7 +267,7 @@ body {
   align-items: end;
   position: relative;
   z-index: 1;
-  padding-bottom: 22px;
+  padding-bottom: var(--deployment-rail-drop);
 }
 
 .landing-deployment-step {
@@ -281,11 +287,11 @@ body {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -22px;
+  bottom: calc(var(--deployment-rail-drop) * -1);
   width: 1px;
-  height: 22px;
+  height: var(--deployment-rail-drop);
   transform: translateX(-0.5px);
-  background: color-mix(in srgb, var(--sys-line) 38%, transparent);
+  background: var(--sys-plate-line-strong);
 }
 
 .landing-deployment-step-label {
@@ -308,7 +314,17 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: color-mix(in srgb, var(--sys-line-soft) 24%, transparent);
+  background: var(--sys-plate-line);
+}
+
+.landing-preview::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(50% + 48px);
+  right: 0;
+  height: 1px;
+  background: var(--sys-plate-line-strong);
 }
 
 .landing-dashboard-preview {
@@ -425,18 +441,12 @@ body {
     margin-bottom: 40px;
   }
 
-  .landing-deployment-spine {
-    bottom: 18px;
+  .landing-system-surface {
+    --deployment-rail-drop: 18px;
   }
 
   .landing-deployment-rail {
     gap: 24px;
-    padding-bottom: 18px;
-  }
-
-  .landing-deployment-step::after {
-    bottom: -18px;
-    height: 18px;
   }
 }
 
@@ -461,6 +471,10 @@ body {
     margin-bottom: 28px;
   }
 
+  .landing-system-surface {
+    --deployment-rail-drop: 0px;
+  }
+
   .landing-deployment-spine {
     display: none;
   }
@@ -477,6 +491,10 @@ body {
   }
 
   .landing-deployment-step::after {
+    content: none;
+  }
+
+  .landing-preview::after {
     content: none;
   }
 

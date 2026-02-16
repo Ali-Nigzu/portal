@@ -1,7 +1,6 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { mkdir, access } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const rootDir = path.resolve(process.cwd());
@@ -45,14 +44,46 @@ try {
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
+  const alignmentResults = [];
 
   for (const viewport of viewports) {
     const page = await context.newPage({ viewport: { width: viewport.width, height: viewport.height } });
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
-    const target = page.locator('.landing-system-surface');
-    await access(path.join(rootDir, 'src', 'styles', 'LandingPage.css'), constants.F_OK);
-    await target.screenshot({ path: path.join(screenshotsDir, `${viewport.name}-system-surface.png`) });
+
+    await page.locator('.landing-system-surface').screenshot({
+      path: path.join(screenshotsDir, `${viewport.name}-system-band.png`),
+    });
+
+    await page.locator('.landing-preview').screenshot({
+      path: path.join(screenshotsDir, `${viewport.name}-seam-preview.png`),
+    });
+
+    const geometry = await page.evaluate(() => {
+      const lastRow = document.querySelector('.landing-capability-row:last-child')?.getBoundingClientRect();
+      const deploymentGroup = document.querySelector('.landing-deployment-rail')?.getBoundingClientRect();
+      if (!lastRow || !deploymentGroup) {
+        return { diffPx: null };
+      }
+      return {
+        capabilityBottom: Number(lastRow.bottom.toFixed(2)),
+        deploymentBottom: Number(deploymentGroup.bottom.toFixed(2)),
+        diffPx: Number(Math.abs(lastRow.bottom - deploymentGroup.bottom).toFixed(2)),
+      };
+    });
+
+    alignmentResults.push({ viewport: viewport.name, ...geometry });
     await page.close();
+  }
+
+  await writeFile(
+    path.join(screenshotsDir, 'alignment-results.json'),
+    `${JSON.stringify(alignmentResults, null, 2)}\n`,
+    'utf8',
+  );
+
+  const desktopResult = alignmentResults.find((result) => result.viewport === 'desktop');
+  if (!desktopResult || desktopResult.diffPx == null || desktopResult.diffPx > 2) {
+    throw new Error(`Desktop bottom alignment failed. Results: ${JSON.stringify(alignmentResults)}`);
   }
 
   await browser.close();
