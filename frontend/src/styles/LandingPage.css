@@ -149,11 +149,11 @@ body {
 
 .landing-operational-grid {
   display: grid;
-  grid-template-columns: minmax(0, 5.5fr) minmax(0, 6.5fr);
-  gap: 80px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 96px;
   align-items: stretch;
   min-height: 440px;
-  padding: 152px 0 72px;
+  padding: 152px 48px 72px;
 }
 
 .landing-capabilities,
@@ -161,6 +161,7 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  padding-inline: 20px;
 }
 
 .landing-capabilities h2,
@@ -204,7 +205,7 @@ body {
 }
 
 .landing-capabilities-inner {
-  max-width: 468px;
+  max-width: 440px;
   width: 100%;
   margin-inline: auto;
   min-height: 100%;
@@ -222,7 +223,7 @@ body {
   --deploy-x-step: 136px;
   --deploy-y-step: 48px;
 
-  max-width: 500px;
+  max-width: 460px;
   margin-inline: auto;
   width: 100%;
 }
@@ -411,8 +412,8 @@ body {
 @media (max-width: 1100px) {
   .landing-container { width: min(1180px, calc(100% - 44px)); }
   .landing-operational-grid {
-    gap: 56px;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 64px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .landing-deployment-content {
@@ -429,7 +430,12 @@ body {
     grid-template-columns: 1fr;
     gap: 48px;
     min-height: 0;
-    padding: 112px 0 60px;
+    padding: 112px 36px 60px;
+  }
+
+  .landing-capabilities,
+  .landing-deployment {
+    padding-inline: 0;
   }
 
   .landing-capabilities h2,
@@ -461,7 +467,7 @@ body {
   .landing-hero-actions .btn, .landing-signup-form .btn { width: 100%; }
 
   .landing-operational-grid {
-    padding-top: 96px;
+    padding: 96px 0 0;
     gap: 40px;
   }
 
