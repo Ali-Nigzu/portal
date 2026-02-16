@@ -238,17 +238,16 @@ body {
   position: relative;
   flex: 1;
   display: flex;
-  align-items: stretch;
+  align-items: flex-end;
 }
 
 .landing-deployment-spine {
   position: absolute;
   left: 0;
   right: 0;
-  top: 50%;
+  bottom: 22px;
   height: 1px;
-  background: color-mix(in srgb, var(--sys-line) 30%, transparent);
-  transform: translateY(-0.5px);
+  background: color-mix(in srgb, var(--sys-line) 34%, transparent);
 }
 
 .landing-deployment-rail {
@@ -259,21 +258,34 @@ body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 64px;
-  align-items: center;
+  align-items: end;
   position: relative;
   z-index: 1;
+  padding-bottom: 22px;
 }
 
 .landing-deployment-step {
+  position: relative;
   min-width: 0;
-  min-height: 112px;
+  min-height: 116px;
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--sys-line) 44%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 42%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sys-line) 42%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 40%, transparent);
   padding: 24px;
   display: grid;
   align-content: center;
   gap: 8px;
+}
+
+.landing-deployment-step::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -22px;
+  width: 1px;
+  height: 22px;
+  transform: translateX(-0.5px);
+  background: color-mix(in srgb, var(--sys-line) 38%, transparent);
 }
 
 .landing-deployment-step-label {
@@ -284,7 +296,7 @@ body {
 }
 
 .landing-preview {
-  padding: 34px 0 28px;
+  padding: 26px 0 24px;
   border: 0;
   position: relative;
 }
@@ -394,7 +406,8 @@ body {
 .landing-footer-social-link svg { width: 14px; height: 14px; }
 @media (max-width: 1100px) {
   .landing-container { width: min(1180px, calc(100% - 44px)); }
-  .landing-operational-grid { gap: 56px; }
+  .landing-operational-grid { gap: 72px; }
+  .landing-deployment-rail { gap: 40px; }
 }
 
 @media (max-width: 900px) {
@@ -412,13 +425,23 @@ body {
     margin-bottom: 40px;
   }
 
+  .landing-deployment-spine {
+    bottom: 18px;
+  }
+
   .landing-deployment-rail {
-    gap: 32px;
+    gap: 24px;
+    padding-bottom: 18px;
+  }
+
+  .landing-deployment-step::after {
+    bottom: -18px;
+    height: 18px;
   }
 }
 
 @media (max-width: 767px) {
-  .landing-preview { padding: 26px 0 0; }
+  .landing-preview { padding: 24px 0 0; }
   .landing-assurances { padding: 14px 14px 16px; }
 
   .landing-container { width: min(1180px, calc(100% - 30px)); }
@@ -445,11 +468,16 @@ body {
   .landing-deployment-rail {
     grid-template-columns: 1fr;
     gap: 16px;
+    padding-bottom: 0;
   }
 
   .landing-deployment-step {
     min-height: 104px;
     padding: 20px;
+  }
+
+  .landing-deployment-step::after {
+    content: none;
   }
 
   .landing-deployment-step-label { font-size: 0.82rem; }
