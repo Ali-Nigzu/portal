@@ -152,6 +152,16 @@ body {
     linear-gradient(180deg, color-mix(in srgb, var(--sys-bg-1) 95%, transparent) 0%, color-mix(in srgb, var(--sys-bg-1) 98%, transparent) 100%);
 }
 
+.landing-system-surface::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--sys-plate-line);
+}
+
 .landing-operational-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -201,6 +211,13 @@ body {
   border-top: 1px solid color-mix(in srgb, var(--sys-line-soft) 18%, transparent);
 }
 
+.landing-capabilities-content,
+.landing-deployment-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .landing-capability-rows {
   margin-top: 0;
   display: flex;
@@ -238,6 +255,10 @@ body {
   font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
   font-size: 0.74rem;
   color: color-mix(in srgb, var(--sys-text-3) 88%, transparent);
+}
+
+.landing-deployment-content {
+  align-items: flex-end;
 }
 
 .landing-deployment-field {

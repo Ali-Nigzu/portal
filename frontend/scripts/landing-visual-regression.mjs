@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, firefox } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -26,6 +26,25 @@ const waitForServer = async (url, timeoutMs = 30000) => {
   throw new Error(`Timed out waiting for ${url}`);
 };
 
+const launchFallbackBrowser = async () => {
+  const launchers = [
+    ['chromium', chromium],
+    ['firefox', firefox],
+  ];
+
+  const launchErrors = [];
+  for (const [name, launcher] of launchers) {
+    try {
+      const browser = await launcher.launch({ headless: true });
+      return { browser, browserName: name };
+    } catch (error) {
+      launchErrors.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  throw new Error(`Could not launch Playwright browsers. ${launchErrors.join(' | ')}`);
+};
+
 const server = spawn('npm', ['run', 'dev', '--', '--port', '4173'], {
   cwd: rootDir,
   stdio: 'inherit',
@@ -42,7 +61,7 @@ try {
   await mkdir(screenshotsDir, { recursive: true });
   await waitForServer('http://127.0.0.1:4173');
 
-  const browser = await chromium.launch({ headless: true });
+  const { browser, browserName } = await launchFallbackBrowser();
   const context = await browser.newContext();
   const alignmentResults = [];
 
@@ -61,17 +80,22 @@ try {
     const geometry = await page.evaluate(() => {
       const lastRow = document.querySelector('.landing-capability-row:last-child')?.getBoundingClientRect();
       const deploymentGroup = document.querySelector('.landing-deployment-rail')?.getBoundingClientRect();
-      if (!lastRow || !deploymentGroup) {
-        return { diffPx: null };
-      }
+      const capabilitiesAnchor = document.querySelector('[data-align-anchor="capabilities"]')?.getBoundingClientRect();
+      const deploymentAnchor = document.querySelector('[data-align-anchor="deployment"]')?.getBoundingClientRect();
+
       return {
-        capabilityBottom: Number(lastRow.bottom.toFixed(2)),
-        deploymentBottom: Number(deploymentGroup.bottom.toFixed(2)),
-        diffPx: Number(Math.abs(lastRow.bottom - deploymentGroup.bottom).toFixed(2)),
+        capabilityBottom: lastRow ? Number(lastRow.bottom.toFixed(2)) : null,
+        deploymentBottom: deploymentGroup ? Number(deploymentGroup.bottom.toFixed(2)) : null,
+        rowToRailDiffPx:
+          lastRow && deploymentGroup ? Number(Math.abs(lastRow.bottom - deploymentGroup.bottom).toFixed(2)) : null,
+        panelBottomDiffPx:
+          capabilitiesAnchor && deploymentAnchor
+            ? Number(Math.abs(capabilitiesAnchor.bottom - deploymentAnchor.bottom).toFixed(2))
+            : null,
       };
     });
 
-    alignmentResults.push({ viewport: viewport.name, ...geometry });
+    alignmentResults.push({ viewport: viewport.name, browser: browserName, ...geometry });
     await page.close();
   }
 
@@ -82,8 +106,14 @@ try {
   );
 
   const desktopResult = alignmentResults.find((result) => result.viewport === 'desktop');
-  if (!desktopResult || desktopResult.diffPx == null || desktopResult.diffPx > 2) {
-    throw new Error(`Desktop bottom alignment failed. Results: ${JSON.stringify(alignmentResults)}`);
+  if (
+    !desktopResult
+    || desktopResult.rowToRailDiffPx == null
+    || desktopResult.panelBottomDiffPx == null
+    || desktopResult.rowToRailDiffPx > 2
+    || desktopResult.panelBottomDiffPx > 2
+  ) {
+    throw new Error(`Desktop alignment failed. Results: ${JSON.stringify(alignmentResults)}`);
   }
 
   await browser.close();

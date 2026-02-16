@@ -76,7 +76,8 @@ const LandingPage: React.FC = () => {
               <div className="landing-operational-grid">
                 <section className="landing-capabilities" aria-labelledby="capabilities-title">
                   <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
-                  <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
+                  <div className="landing-capabilities-content" data-align-anchor="capabilities">
+                    <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
                     {landingCopy.capabilities.items.map((item, index) => (
                       <div key={item} className="landing-capability-row" role="listitem">
                         <span className="landing-capability-index" aria-hidden="true">
@@ -85,12 +86,14 @@ const LandingPage: React.FC = () => {
                         <span>{item}</span>
                       </div>
                     ))}
+                    </div>
                   </div>
                 </section>
 
                 <section className="landing-deployment" aria-labelledby="deployment-title">
                   <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
-                  <div className="landing-deployment-field">
+                  <div className="landing-deployment-content" data-align-anchor="deployment">
+                    <div className="landing-deployment-field">
                     <span className="landing-deployment-spine" aria-hidden="true" />
                     <ol className="landing-deployment-rail" aria-label="System deployment flow">
                       <li className="landing-deployment-step">
@@ -106,6 +109,7 @@ const LandingPage: React.FC = () => {
                         <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
                       </li>
                     </ol>
+                    </div>
                   </div>
                 </section>
               </div>
