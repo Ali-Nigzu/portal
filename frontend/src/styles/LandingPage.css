@@ -202,18 +202,19 @@ body {
 .landing-capabilities-inner,
 .landing-deployment-content {
   --spec-title-gap: 22px;
-  --spec-gap-track: 20px;
+  --spec-row-track: 44px;
+  --spec-gap-track: 56px;
 
-  max-width: 460px;
+  max-width: 420px;
   width: 100%;
   margin-inline: auto;
   min-height: 100%;
   display: grid;
-  grid-template-rows: auto var(--spec-title-gap) auto var(--spec-gap-track) auto var(--spec-gap-track) auto var(--spec-gap-track) auto;
+  grid-template-rows: auto var(--spec-title-gap) var(--spec-row-track) var(--spec-gap-track) var(--spec-row-track) var(--spec-gap-track) var(--spec-row-track) var(--spec-gap-track) var(--spec-row-track);
 }
 
 .landing-capabilities-inner {
-  max-width: 440px;
+  max-width: 460px;
 }
 
 .landing-capability-rows,
@@ -244,7 +245,7 @@ body {
   border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 18%, transparent);
   font-size: 0.84rem;
   line-height: 1.32;
-  padding: 12px 0;
+  padding: 8px 0;
 }
 
 .landing-assurance-row {
@@ -269,8 +270,7 @@ body {
 
 .landing-deployment-row {
   background: transparent;
-  transform: translateY(-50%);
-  will-change: transform;
+  align-self: center;
 }
 
 .landing-deployment-step-button {
@@ -374,7 +374,7 @@ body {
 .landing-footer {
   border-top: 1px solid var(--sys-line-soft);
   background: color-mix(in srgb, var(--sys-bg-0) 92%, transparent);
-  padding: 12px 0;
+  padding: 8px 0;
 }
 .landing-footer-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px 20px; }
 .landing-footer-main p { margin: 0; color: var(--sys-text-3); font-size: 0.79rem; line-height: 1.38; }
@@ -410,7 +410,8 @@ body {
   .landing-capabilities-inner,
   .landing-deployment-content {
     --spec-title-gap: 20px;
-    --spec-gap-track: 18px;
+    --spec-row-track: 42px;
+    --spec-gap-track: 52px;
   }
 }
 
@@ -433,7 +434,8 @@ body {
   .landing-deployment-content {
     max-width: 560px;
     --spec-title-gap: 18px;
-    --spec-gap-track: 14px;
+    --spec-row-track: 40px;
+    --spec-gap-track: 16px;
   }
 
   .landing-deployment-content {
@@ -448,7 +450,6 @@ body {
 
   .landing-deployment-row {
     grid-row: auto;
-    transform: none;
   }
 }
 
@@ -472,7 +473,8 @@ body {
   .landing-deployment-content {
     max-width: 100%;
     --spec-title-gap: 16px;
-    --spec-gap-track: 12px;
+    --spec-row-track: 38px;
+    --spec-gap-track: 14px;
   }
 
   .landing-deployment-content {
@@ -487,7 +489,6 @@ body {
 
   .landing-deployment-row {
     grid-row: auto;
-    transform: none;
   }
 
   .landing-spec-row,
