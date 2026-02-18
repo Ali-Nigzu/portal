@@ -61,7 +61,14 @@ const LandingPage: React.FC = () => {
       <main>
         <section className="landing-hero" aria-labelledby="landing-hero-title">
           <div className="landing-container landing-hero-inner">
-            <h1 id="landing-hero-title">{landingCopy.hero.headline}</h1>
+            <h1 id="landing-hero-title" aria-label={landingCopy.hero.headline}>
+              <span aria-hidden="true" className="landing-hero-initial">C</span>
+              <span aria-hidden="true">amera </span>
+              <span aria-hidden="true" className="landing-hero-initial">O</span>
+              <span aria-hidden="true">perating </span>
+              <span aria-hidden="true" className="landing-hero-initial">S</span>
+              <span aria-hidden="true">ystems</span>
+            </h1>
             <p>{landingCopy.hero.supportLine}</p>
             <div className="landing-hero-actions">
               <button
@@ -88,8 +95,8 @@ const LandingPage: React.FC = () => {
               <div className="landing-operational-grid">
                 <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
                   <div className="landing-axis-headings">
-                    <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
-                    <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
+                    <h2 id="capabilities-title">Metrics</h2>
+                    <h2 id="deployment-title">Access</h2>
                   </div>
 
                   <ol className="landing-axis-row-matrix" role="list" aria-label="Platform capabilities and system deployment points" data-align-anchor="axis-matrix">
@@ -98,7 +105,11 @@ const LandingPage: React.FC = () => {
                         <span className="landing-axis-left">{capabilityAxisItems[index]}</span>
                         <span className="landing-axis-roman" aria-hidden="true">{label}</span>
                         {index === 0 ? (
-                          <button type="button" className="landing-axis-right landing-deployment-step-button">
+                          <button
+                            type="button"
+                            className="landing-axis-right landing-axis-right-action"
+                            onClick={scrollToSignUp}
+                          >
                             {deploymentAxisItems[index]}
                           </button>
                         ) : (

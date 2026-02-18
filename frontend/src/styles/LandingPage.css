@@ -115,11 +115,17 @@ body {
 .landing-hero-inner { max-width: 720px; }
 .landing-hero h1 {
   margin: 0;
-  font-size: clamp(2.2rem, 4.8vw, 3.55rem);
+  font-size: clamp(2.05rem, 4.4vw, 3.25rem);
   line-height: 1.03;
   letter-spacing: -0.02em;
   font-weight: 640;
-  max-width: 12ch;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.landing-hero-initial {
+  color: color-mix(in srgb, var(--sys-text-1) 82%, #c6dbf8 18%);
+  font-weight: 660;
 }
 .landing-hero p {
   margin: 16px 0 0;
@@ -264,27 +270,31 @@ body {
   color: color-mix(in srgb, var(--sys-text-3) 90%, transparent);
 }
 
-.landing-deployment-step-button {
-  border: 1px solid color-mix(in srgb, var(--sys-line) 28%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--sys-bg-2) 24%, transparent);
-  color: var(--sys-text-1);
-  padding: 5px 12px;
+.landing-axis-right-action {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--sys-text-2);
+  padding: 0;
+  margin: 0;
   font: inherit;
-  line-height: 1.25;
+  text-align: inherit;
+  line-height: inherit;
   cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease;
-  max-inline-size: 100%;
+  transition: color 140ms ease, opacity 140ms ease, text-decoration-color 140ms ease;
 }
 
-.landing-deployment-step-button:hover {
-  border-color: color-mix(in srgb, var(--sys-line) 34%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 30%, transparent);
+.landing-axis-right-action:hover {
+  color: var(--sys-text-1);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
 }
 
-.landing-deployment-step-button:focus-visible {
+.landing-axis-right-action:focus-visible {
   outline: 2px solid var(--sys-accent);
   outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .landing-preview {
@@ -424,6 +434,7 @@ body {
   .landing-header-top { min-height: auto; padding: 10px 0; }
   .landing-brand-name-wrap { flex-direction: column; align-items: flex-start; gap: 2px; }
   .landing-hero h1, .landing-hero p { max-width: none; }
+  .landing-hero h1 { white-space: normal; }
   .landing-hero-actions { flex-direction: column; align-items: stretch; }
   .landing-hero-actions .btn, .landing-signup-form .btn { width: 100%; }
 

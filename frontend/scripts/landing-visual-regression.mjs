@@ -88,12 +88,18 @@ try {
       const firstRoman = document.querySelector('.landing-axis-row .landing-axis-roman')?.getBoundingClientRect();
       const firstLeftElement = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-left');
       const firstRightElement = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-right');
-      const stepOneButton = document.querySelector('.landing-axis-row:nth-child(1) .landing-deployment-step-button');
+      const stepOneButton = document.querySelector('.landing-axis-row:nth-child(1) .landing-axis-right-action');
       const stepOneButtonRect = stepOneButton?.getBoundingClientRect() ?? null;
       const preview = document.querySelector('.landing-preview');
+      const firstHeadingText = document.querySelector('#capabilities-title')?.textContent?.trim() ?? null;
+      const secondHeadingText = document.querySelector('#deployment-title')?.textContent?.trim() ?? null;
 
       const stepTwoButton = document.querySelector('.landing-axis-row:nth-child(2) .landing-deployment-step-button');
       const stepThreeButton = document.querySelector('.landing-axis-row:nth-child(3) .landing-deployment-step-button');
+      const stepTwoText = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-right');
+
+      const stepOneStyles = stepOneButton ? getComputedStyle(stepOneButton) : null;
+      const stepTwoStyles = stepTwoText ? getComputedStyle(stepTwoText) : null;
 
       const leftTexts = Array.from(document.querySelectorAll('.landing-axis-left')).map((el) => el.textContent?.trim() ?? '');
       const rightTexts = Array.from(document.querySelectorAll('.landing-axis-right')).map((el) => el.textContent?.trim() ?? '');
@@ -130,6 +136,13 @@ try {
         bubbleOverlapsAxis: stepOneButtonRect && axisRightEdge != null
           ? stepOneButtonRect.left < axisRightEdge
           : null,
+        headingsCorrect: firstHeadingText === 'Metrics' && secondHeadingText === 'Access',
+        step1LooksLikeText: stepOneStyles && stepTwoStyles
+          ? stepOneStyles.backgroundColor === stepTwoStyles.backgroundColor
+            && stepOneStyles.borderTopWidth === '0px'
+            && stepOneStyles.paddingTop === '0px'
+            && stepOneStyles.color === stepTwoStyles.color
+          : null,
         step1IsButton: stepOneButton instanceof HTMLButtonElement,
         step2HasButton: Boolean(stepTwoButton),
         step3HasButton: Boolean(stepThreeButton),
@@ -165,6 +178,8 @@ try {
     || desktopResult.rightGapToAxisPx == null
     || Math.abs(desktopResult.leftGapToAxisPx - desktopResult.rightGapToAxisPx) > 2
     || desktopResult.bubbleOverlapsAxis !== false
+    || desktopResult.headingsCorrect !== true
+    || desktopResult.step1LooksLikeText !== true
     || desktopResult.step1IsButton !== true
     || desktopResult.step2HasButton !== false
     || desktopResult.step3HasButton !== false
