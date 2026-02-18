@@ -69,6 +69,10 @@ try {
     const page = await context.newPage({ viewport: { width: viewport.width, height: viewport.height } });
     await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
 
+    await page.locator('.landing-hero').screenshot({
+      path: path.join(screenshotsDir, `${viewport.name}-hero.png`),
+    });
+
     await page.locator('.landing-system-surface').screenshot({
       path: path.join(screenshotsDir, `${viewport.name}-system-band.png`),
     });
@@ -80,10 +84,14 @@ try {
     const geometry = await page.evaluate(() => {
       const axisRows = Array.from(document.querySelectorAll('.landing-axis-row')).map((row) => row.getBoundingClientRect());
       const axisContainer = document.querySelector('.landing-axis-row-matrix')?.getBoundingClientRect();
+      const landingContainer = document.querySelector('.landing-spec-sheet .landing-container')?.getBoundingClientRect();
       const firstRoman = document.querySelector('.landing-axis-row .landing-axis-roman')?.getBoundingClientRect();
+      const firstLeftElement = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-left');
+      const firstRightElement = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-right');
+      const stepOneButton = document.querySelector('.landing-axis-row:nth-child(1) .landing-deployment-step-button');
+      const stepOneButtonRect = stepOneButton?.getBoundingClientRect() ?? null;
       const preview = document.querySelector('.landing-preview');
 
-      const stepOneButton = document.querySelector('.landing-axis-row:nth-child(1) .landing-deployment-step-button');
       const stepTwoButton = document.querySelector('.landing-axis-row:nth-child(2) .landing-deployment-step-button');
       const stepThreeButton = document.querySelector('.landing-axis-row:nth-child(3) .landing-deployment-step-button');
 
@@ -99,13 +107,29 @@ try {
 
       const gap12Mid = row1Center != null && row2Center != null ? midpoint(row1Center, row2Center) : null;
       const gap23Mid = row2Center != null && row3Center != null ? midpoint(row2Center, row3Center) : null;
+      const axisCenter = axisContainer ? axisContainer.left + (axisContainer.width / 2) : null;
+      const axisHalf = 40;
+      const axisRightEdge = axisCenter != null && axisHalf != null ? axisCenter + axisHalf : null;
 
       return {
         rowCount: axisRows.length,
+        containerToAxisCenterDiffPx:
+          landingContainer && axisCenter != null
+            ? Number(Math.abs((landingContainer.left + (landingContainer.width / 2)) - axisCenter).toFixed(2))
+            : null,
         axisCenterDiffPx:
           axisContainer && firstRoman
             ? Number(Math.abs((axisContainer.left + (axisContainer.width / 2)) - (firstRoman.left + (firstRoman.width / 2))).toFixed(2))
             : null,
+        leftGapToAxisPx: firstLeftElement
+          ? Number(parseFloat(getComputedStyle(firstLeftElement).paddingRight).toFixed(2))
+          : null,
+        rightGapToAxisPx: firstRightElement
+          ? Number(parseFloat(getComputedStyle(firstRightElement).paddingLeft).toFixed(2))
+          : null,
+        bubbleOverlapsAxis: stepOneButtonRect && axisRightEdge != null
+          ? stepOneButtonRect.left < axisRightEdge
+          : null,
         step1IsButton: stepOneButton instanceof HTMLButtonElement,
         step2HasButton: Boolean(stepTwoButton),
         step3HasButton: Boolean(stepThreeButton),
@@ -133,8 +157,14 @@ try {
   if (
     !desktopResult
     || desktopResult.rowCount !== 3
+    || desktopResult.containerToAxisCenterDiffPx == null
+    || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null
     || desktopResult.axisCenterDiffPx > 1
+    || desktopResult.leftGapToAxisPx == null
+    || desktopResult.rightGapToAxisPx == null
+    || Math.abs(desktopResult.leftGapToAxisPx - desktopResult.rightGapToAxisPx) > 2
+    || desktopResult.bubbleOverlapsAxis !== false
     || desktopResult.step1IsButton !== true
     || desktopResult.step2HasButton !== false
     || desktopResult.step3HasButton !== false

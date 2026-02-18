@@ -1,4 +1,5 @@
 :root {
+  --landing-rail-max: 1200px;
   --sys-bg-0: var(--vrm-color-surface-0);
   --sys-bg-1: var(--vrm-bg-primary);
   --sys-bg-2: var(--vrm-bg-panel);
@@ -32,7 +33,7 @@ body {
 }
 
 .landing-container {
-  width: min(1180px, calc(100% - 64px));
+  width: min(var(--landing-rail-max), calc(100% - 64px));
   margin: 0 auto;
 }
 
@@ -63,8 +64,8 @@ body {
 
 .btn {
   border-radius: var(--sys-radius-sm);
-  min-height: 42px;
-  padding: 0 16px;
+  min-height: 40px;
+  padding: 0 14px;
   border: 1px solid transparent;
   font-size: 0.89rem;
   line-height: 1;
@@ -73,7 +74,7 @@ body {
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.btn-sm { min-height: 36px; padding: 0 12px; font-size: 0.82rem; }
+.btn-sm { min-height: 34px; padding: 0 11px; font-size: 0.82rem; }
 
 .btn-primary {
   color: #f6f9ff;
@@ -81,7 +82,10 @@ body {
   border-color: color-mix(in srgb, var(--sys-accent) 60%, white 16%);
 }
 
-.btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(153, 191, 234, 0.16), rgba(153, 191, 234, 0.04)), var(--sys-accent);
+  border-color: color-mix(in srgb, var(--sys-accent) 54%, white 14%);
+}
 
 .btn-secondary,
 .btn-tertiary {
@@ -107,24 +111,26 @@ body {
 .landing-hero,
 #create-account { scroll-margin-top: 86px; }
 
-.landing-hero { padding: 96px 0 60px; }
+.landing-hero { padding: 80px 0 48px; }
 .landing-hero-inner { max-width: 720px; }
 .landing-hero h1 {
   margin: 0;
-  font-size: clamp(2.35rem, 5vw, 3.8rem);
-  line-height: 1.06;
+  font-size: clamp(2.2rem, 4.8vw, 3.55rem);
+  line-height: 1.03;
   letter-spacing: -0.02em;
   font-weight: 640;
   max-width: 12ch;
 }
 .landing-hero p {
-  margin: 20px 0 0;
+  margin: 16px 0 0;
   max-width: 52ch;
   color: var(--sys-text-2);
-  font-size: clamp(1.02rem, 1.75vw, 1.2rem);
+  font-size: clamp(0.96rem, 1.6vw, 1.1rem);
+  letter-spacing: 0.005em;
+  opacity: 0.97;
   line-height: 1.55;
 }
-.landing-hero-actions { margin-top: 30px; display: flex; gap: 12px; }
+.landing-hero-actions { margin-top: 24px; display: flex; gap: 12px; }
 
 
 .landing-spec-sheet {
@@ -137,7 +143,7 @@ body {
   background: transparent;
   box-shadow: none;
   overflow: visible;
-  max-width: 1200px;
+  max-width: var(--landing-rail-max);
 }
 
 .landing-system-surface {
@@ -150,13 +156,13 @@ body {
 
 .landing-operational-grid {
   min-height: 260px;
-  padding: 56px 0 36px;
+  padding: 48px 0 30px;
 }
 
 .landing-axis-layout {
   --axis-column-width: 80px;
   --axis-side-padding: 32px;
-  --axis-row-min-height: 52px;
+  --axis-row-min-height: 48px;
 
   width: 100%;
 }
@@ -174,8 +180,8 @@ body {
 }
 
 .landing-axis-headings {
-  max-width: 1200px;
-  margin: 0 auto 24px;
+  max-width: var(--landing-rail-max);
+  margin: 0 auto 20px;
   display: grid;
   grid-template-columns: 1fr var(--axis-column-width) 1fr;
   align-items: end;
@@ -212,12 +218,12 @@ body {
 }
 
 .landing-axis-row-matrix {
-  max-width: 1200px;
+  max-width: var(--landing-rail-max);
   margin: 0 auto;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .landing-axis-row {
@@ -233,6 +239,7 @@ body {
   font-size: 0.84rem;
   line-height: 1.32;
   color: var(--sys-text-2);
+  max-width: 460px;
 }
 
 .landing-axis-left {
@@ -244,15 +251,17 @@ body {
   text-align: left;
   padding-left: var(--axis-side-padding);
   justify-self: start;
+  max-width: 420px;
 }
 
 .landing-axis-roman {
   justify-self: center;
   text-align: center;
   font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
-  font-size: 0.82rem;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--sys-text-3) 78%, transparent);
+  font-size: 0.84rem;
+  font-weight: 520;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--sys-text-3) 90%, transparent);
 }
 
 .landing-deployment-step-button {
@@ -260,16 +269,17 @@ body {
   border-radius: 999px;
   background: color-mix(in srgb, var(--sys-bg-2) 24%, transparent);
   color: var(--sys-text-1);
-  padding: 6px 14px;
+  padding: 5px 12px;
   font: inherit;
   line-height: 1.25;
   cursor: pointer;
   transition: background-color 160ms ease, border-color 160ms ease;
+  max-inline-size: 100%;
 }
 
 .landing-deployment-step-button:hover {
-  border-color: color-mix(in srgb, var(--sys-line) 40%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 32%, transparent);
+  border-color: color-mix(in srgb, var(--sys-line) 34%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 30%, transparent);
 }
 
 .landing-deployment-step-button:focus-visible {
@@ -278,7 +288,7 @@ body {
 }
 
 .landing-preview {
-  padding: 20px 0 20px;
+  padding: 18px 0 20px;
   border: 0;
   position: relative;
 }
@@ -377,7 +387,7 @@ body {
 }
 .landing-footer-social-link svg { width: 14px; height: 14px; }
 @media (max-width: 1100px) {
-  .landing-container { width: min(1180px, calc(100% - 44px)); }
+  .landing-container { width: min(var(--landing-rail-max), calc(100% - 44px)); }
   .landing-operational-grid {
     gap: 64px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -390,13 +400,13 @@ body {
 }
 
 @media (max-width: 900px) {
-  .landing-hero { padding: 86px 0 56px; }
+  .landing-hero { padding: 72px 0 46px; }
 
   .landing-operational-grid {
     grid-template-columns: 1fr;
     gap: 24px;
     min-height: 0;
-    padding: 60px 36px 32px;
+    padding: 52px 28px 30px;
   }
 
   .landing-axis-layout {
@@ -410,7 +420,7 @@ body {
   .landing-preview { padding: 16px 0 0; }
   .landing-assurances { padding: 14px 14px 16px; }
 
-  .landing-container { width: min(1180px, calc(100% - 30px)); }
+  .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
   .landing-header-top { min-height: auto; padding: 10px 0; }
   .landing-brand-name-wrap { flex-direction: column; align-items: flex-start; gap: 2px; }
   .landing-hero h1, .landing-hero p { max-width: none; }
@@ -418,7 +428,7 @@ body {
   .landing-hero-actions .btn, .landing-signup-form .btn { width: 100%; }
 
   .landing-operational-grid {
-    padding: 52px 0 0;
+    padding: 46px 0 0;
     gap: 20px;
   }
 
