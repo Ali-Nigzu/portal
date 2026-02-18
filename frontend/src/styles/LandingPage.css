@@ -149,26 +149,23 @@ body {
 }
 
 .landing-operational-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 96px;
-  align-items: stretch;
   min-height: 260px;
-  padding: 56px 48px 36px;
+  padding: 56px 0 36px;
 }
 
-.landing-capabilities,
-.landing-deployment {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding-inline: 20px;
+.landing-axis-layout {
+  --axis-column-width: 80px;
+  --axis-side-padding: 32px;
+  --axis-row-min-height: 52px;
+
+  width: 100%;
 }
 
 .landing-capabilities h2,
 .landing-deployment h2,
 .landing-signup-wrap h2,
-.landing-assurances h2 {
+.landing-assurances h2,
+.landing-axis-headings h2 {
   margin: 0;
   font-size: clamp(1.24rem, 1.8vw, 1.6rem);
   line-height: 1.28;
@@ -176,10 +173,26 @@ body {
   font-weight: 600;
 }
 
-.landing-capabilities h2,
-.landing-deployment h2 {
-  margin-bottom: 0;
-  grid-row: 1;
+.landing-axis-headings {
+  max-width: 1200px;
+  margin: 0 auto 24px;
+  display: grid;
+  grid-template-columns: 1fr var(--axis-column-width) 1fr;
+  align-items: end;
+}
+
+.landing-axis-headings h2:first-child {
+  grid-column: 1;
+  justify-self: end;
+  text-align: right;
+  padding-right: var(--axis-side-padding);
+}
+
+.landing-axis-headings h2:last-child {
+  grid-column: 3;
+  justify-self: start;
+  text-align: left;
+  padding-left: var(--axis-side-padding);
 }
 
 .landing-section-head--sr-only {
@@ -194,87 +207,55 @@ body {
   border: 0;
 }
 
-.landing-capability-rows,
 .landing-assurance-matrix {
   border-top: 1px solid color-mix(in srgb, var(--sys-line-soft) 18%, transparent);
 }
 
-.landing-capabilities-inner,
-.landing-deployment-content {
-  --spec-title-gap: 22px;
-  --spec-row-track: 44px;
-  --spec-gap-track: 56px;
-
-  max-width: 420px;
-  width: 100%;
-  margin-inline: auto;
-  min-height: 100%;
-  display: grid;
-  grid-template-rows: auto var(--spec-title-gap) var(--spec-row-track) var(--spec-gap-track) var(--spec-row-track) var(--spec-gap-track) var(--spec-row-track) var(--spec-gap-track) var(--spec-row-track);
-}
-
-.landing-capabilities-inner {
-  max-width: 460px;
-}
-
-.landing-capability-rows,
-.landing-deployment-rows {
-  margin: 0;
+.landing-axis-row-matrix {
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 0;
   list-style: none;
-  display: contents;
-}
-
-.landing-capability-row:nth-child(1) { grid-row: 3; }
-.landing-capability-row:nth-child(2) { grid-row: 5; }
-.landing-capability-row:nth-child(3) { grid-row: 7; }
-.landing-capability-row:nth-child(4) { grid-row: 9; }
-
-.landing-deployment-row--one { grid-row: 4; }
-.landing-deployment-row--two { grid-row: 6; }
-.landing-deployment-row--three { grid-row: 8; }
-
-.landing-spec-row,
-.landing-assurance-row {
-  margin: 0;
   display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 24px;
-  align-items: center;
-  color: var(--sys-text-2);
-  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 18%, transparent);
-  font-size: 0.84rem;
-  line-height: 1.32;
-  padding: 8px 0;
-}
-
-.landing-assurance-row {
-  min-height: 40px;
-  grid-template-columns: auto 1fr;
   gap: 12px;
-  padding: 0 2px;
 }
 
-.landing-spec-row-index {
-  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
-  font-size: 0.74rem;
-  color: color-mix(in srgb, var(--sys-text-3) 88%, transparent);
+.landing-axis-row {
+  margin: 0;
+  min-height: var(--axis-row-min-height);
+  display: grid;
+  grid-template-columns: 1fr var(--axis-column-width) 1fr;
+  align-items: center;
 }
 
-.landing-spec-row-label {
-  min-width: 0;
+.landing-axis-left,
+.landing-axis-right {
   font-size: 0.84rem;
   line-height: 1.32;
   color: var(--sys-text-2);
 }
 
-.landing-deployment-row {
-  background: transparent;
-  align-self: center;
+.landing-axis-left {
+  text-align: right;
+  padding-right: var(--axis-side-padding);
+}
+
+.landing-axis-right {
+  text-align: left;
+  padding-left: var(--axis-side-padding);
+  justify-self: start;
+}
+
+.landing-axis-roman {
+  justify-self: center;
+  text-align: center;
+  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--sys-text-3) 78%, transparent);
 }
 
 .landing-deployment-step-button {
-  justify-self: start;
   border: 1px solid color-mix(in srgb, var(--sys-line) 28%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--sys-bg-2) 24%, transparent);
@@ -284,11 +265,6 @@ body {
   line-height: 1.25;
   cursor: pointer;
   transition: background-color 160ms ease, border-color 160ms ease;
-}
-
-
-.landing-deployment-row .landing-spec-row-label {
-  white-space: nowrap;
 }
 
 .landing-deployment-step-button:hover {
@@ -407,11 +383,9 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .landing-capabilities-inner,
-  .landing-deployment-content {
-    --spec-title-gap: 20px;
-    --spec-row-track: 42px;
-    --spec-gap-track: 52px;
+  .landing-axis-layout {
+    --axis-column-width: 72px;
+    --axis-side-padding: 28px;
   }
 }
 
@@ -425,31 +399,10 @@ body {
     padding: 60px 36px 32px;
   }
 
-  .landing-capabilities,
-  .landing-deployment {
-    padding-inline: 0;
-  }
-
-  .landing-capabilities-inner,
-  .landing-deployment-content {
-    max-width: 560px;
-    --spec-title-gap: 18px;
-    --spec-row-track: 40px;
-    --spec-gap-track: 16px;
-  }
-
-  .landing-deployment-content {
-    grid-template-rows: auto var(--spec-title-gap) auto;
-  }
-
-  .landing-deployment-rows {
-    display: grid;
-    grid-row: 3;
-    gap: 12px;
-  }
-
-  .landing-deployment-row {
-    grid-row: auto;
+  .landing-axis-layout {
+    --axis-column-width: 64px;
+    --axis-side-padding: 20px;
+    --axis-row-min-height: 48px;
   }
 }
 
@@ -469,35 +422,42 @@ body {
     gap: 20px;
   }
 
-  .landing-capabilities-inner,
-  .landing-deployment-content {
-    max-width: 100%;
-    --spec-title-gap: 16px;
-    --spec-row-track: 38px;
-    --spec-gap-track: 14px;
+  .landing-axis-headings {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
   }
 
-  .landing-deployment-content {
-    grid-template-rows: auto var(--spec-title-gap) auto;
+  .landing-axis-headings h2:first-child,
+  .landing-axis-headings h2:last-child {
+    grid-column: 1;
+    justify-self: start;
+    text-align: left;
+    padding: 0;
   }
 
-  .landing-deployment-rows {
-    display: grid;
-    grid-row: 3;
+  .landing-axis-row-matrix {
     gap: 10px;
   }
 
-  .landing-deployment-row {
-    grid-row: auto;
+  .landing-axis-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    min-height: 0;
+    padding: 8px 0;
   }
 
-  .landing-spec-row,
-  .landing-deployment-row {
-    padding: 10px 0;
+  .landing-axis-left,
+  .landing-axis-right {
+    text-align: left;
+    padding: 0;
+    font-size: 0.82rem;
   }
 
-  .landing-spec-row-label { font-size: 0.82rem; }
-  .landing-deployment-row .landing-spec-row-label { white-space: normal; }
+  .landing-axis-roman {
+    justify-self: start;
+    font-size: 0.78rem;
+  }
   .landing-assurance-matrix { grid-template-columns: 1fr; }
   .landing-signup { padding: 46px 0 42px; }
   .landing-form-grid { grid-template-columns: 1fr; }

@@ -38,6 +38,18 @@ const LandingPage: React.FC = () => {
     navigate("/login");
   };
 
+  const capabilityAxisItems = landingCopy.capabilities.items
+    .filter((item) => item !== "Dwell time")
+    .slice(0, 3);
+
+  const deploymentAxisItems = [
+    landingCopy.deployment.firstStep,
+    landingCopy.deployment.secondStep,
+    landingCopy.deployment.thirdStep,
+  ];
+
+  const romanAxisLabels = ["I", "II", "III"];
+
   return (
     <div className="landing-page">
       <LandingHeader
@@ -74,42 +86,27 @@ const LandingPage: React.FC = () => {
           <div className="landing-container landing-spec-sheet-inner">
             <div className="landing-system-surface">
               <div className="landing-operational-grid">
-                <section className="landing-capabilities" aria-labelledby="capabilities-title">
-                  <div className="landing-capabilities-inner" data-align-anchor="capabilities">
+                <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
+                  <div className="landing-axis-headings">
                     <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
-                    <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
-                      {landingCopy.capabilities.items.map((item, index) => (
-                        <div key={item} className="landing-spec-row landing-capability-row" role="listitem">
-                          <span className="landing-spec-row-index" aria-hidden="true">
-                            {(index + 1).toString().padStart(2, "0")}
-                          </span>
-                          <span className="landing-spec-row-label">{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-
-                <section className="landing-deployment" aria-labelledby="deployment-title">
-                  <div className="landing-deployment-content" data-align-anchor="deployment">
                     <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
-                    <ol className="landing-deployment-rows" aria-label="System deployment flow">
-                      <li className="landing-spec-row landing-deployment-row landing-deployment-row--one">
-                        <span className="landing-spec-row-index" aria-hidden="true">01</span>
-                        <button type="button" className="landing-spec-row-label landing-deployment-step-button">
-                          {landingCopy.deployment.firstStep}
-                        </button>
-                      </li>
-                      <li className="landing-spec-row landing-deployment-row landing-deployment-row--two">
-                        <span className="landing-spec-row-index" aria-hidden="true">02</span>
-                        <span className="landing-spec-row-label">{landingCopy.deployment.secondStep}</span>
-                      </li>
-                      <li className="landing-spec-row landing-deployment-row landing-deployment-row--three">
-                        <span className="landing-spec-row-index" aria-hidden="true">03</span>
-                        <span className="landing-spec-row-label">{landingCopy.deployment.thirdStep}</span>
-                      </li>
-                    </ol>
                   </div>
+
+                  <ol className="landing-axis-row-matrix" role="list" aria-label="Platform capabilities and system deployment points" data-align-anchor="axis-matrix">
+                    {romanAxisLabels.map((label, index) => (
+                      <li key={label} className="landing-axis-row" role="listitem">
+                        <span className="landing-axis-left">{capabilityAxisItems[index]}</span>
+                        <span className="landing-axis-roman" aria-hidden="true">{label}</span>
+                        {index === 0 ? (
+                          <button type="button" className="landing-axis-right landing-deployment-step-button">
+                            {deploymentAxisItems[index]}
+                          </button>
+                        ) : (
+                          <span className="landing-axis-right">{deploymentAxisItems[index]}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
                 </section>
               </div>
 

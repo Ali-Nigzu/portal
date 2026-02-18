@@ -78,59 +78,44 @@ try {
     });
 
     const geometry = await page.evaluate(() => {
-      const capabilityRows = Array.from(document.querySelectorAll('.landing-capability-row')).map((row) => row.getBoundingClientRect());
-      const deploymentRows = {
-        one: document.querySelector('.landing-deployment-row--one')?.getBoundingClientRect(),
-        two: document.querySelector('.landing-deployment-row--two')?.getBoundingClientRect(),
-        three: document.querySelector('.landing-deployment-row--three')?.getBoundingClientRect(),
-      };
-      const capabilitiesAnchor = document.querySelector('[data-align-anchor="capabilities"]')?.getBoundingClientRect();
-      const capabilitiesColumn = document.querySelector('.landing-capabilities')?.getBoundingClientRect();
-      const deploymentAnchor = document.querySelector('[data-align-anchor="deployment"]')?.getBoundingClientRect();
+      const axisRows = Array.from(document.querySelectorAll('.landing-axis-row')).map((row) => row.getBoundingClientRect());
+      const axisContainer = document.querySelector('.landing-axis-row-matrix')?.getBoundingClientRect();
+      const firstRoman = document.querySelector('.landing-axis-row .landing-axis-roman')?.getBoundingClientRect();
+      const preview = document.querySelector('.landing-preview');
 
+      const stepOneButton = document.querySelector('.landing-axis-row:nth-child(1) .landing-deployment-step-button');
+      const stepTwoButton = document.querySelector('.landing-axis-row:nth-child(2) .landing-deployment-step-button');
+      const stepThreeButton = document.querySelector('.landing-axis-row:nth-child(3) .landing-deployment-step-button');
+
+      const leftTexts = Array.from(document.querySelectorAll('.landing-axis-left')).map((el) => el.textContent?.trim() ?? '');
+      const rightTexts = Array.from(document.querySelectorAll('.landing-axis-right')).map((el) => el.textContent?.trim() ?? '');
+
+      const rowCenter = (row) => Number((row.top + (row.height / 2)).toFixed(2));
       const midpoint = (a, b) => Number((((a + b) / 2)).toFixed(2));
-      const centerY = (rect) => (rect ? Number((rect.top + (rect.height / 2)).toFixed(2)) : null);
 
-      const gap1Mid = capabilityRows.length >= 2 ? midpoint(capabilityRows[0].bottom, capabilityRows[1].top) : null;
-      const gap2Mid = capabilityRows.length >= 3 ? midpoint(capabilityRows[1].bottom, capabilityRows[2].top) : null;
-      const gap3Mid = capabilityRows.length >= 4 ? midpoint(capabilityRows[2].bottom, capabilityRows[3].top) : null;
+      const row1Center = axisRows[0] ? rowCenter(axisRows[0]) : null;
+      const row2Center = axisRows[1] ? rowCenter(axisRows[1]) : null;
+      const row3Center = axisRows[2] ? rowCenter(axisRows[2]) : null;
 
-      const step1CenterY = centerY(deploymentRows.one);
-      const step2CenterY = centerY(deploymentRows.two);
-      const step3CenterY = centerY(deploymentRows.three);
-
-      const step1Button = document.querySelector('.landing-deployment-row--one .landing-deployment-step-button');
-      const step2Button = document.querySelector('.landing-deployment-row--two .landing-deployment-step-button');
-      const step3Button = document.querySelector('.landing-deployment-row--three .landing-deployment-step-button');
+      const gap12Mid = row1Center != null && row2Center != null ? midpoint(row1Center, row2Center) : null;
+      const gap23Mid = row2Center != null && row3Center != null ? midpoint(row2Center, row3Center) : null;
 
       return {
-        capabilityBottom: capabilityRows.length ? Number(capabilityRows[capabilityRows.length - 1].bottom.toFixed(2)) : null,
-        deploymentBottom: deploymentRows.three ? Number(deploymentRows.three.bottom.toFixed(2)) : null,
-        rowToDeploymentDiffPx:
-          capabilityRows.length && deploymentRows.three
-            ? Number(Math.abs(capabilityRows[capabilityRows.length - 1].bottom - deploymentRows.three.bottom).toFixed(2))
+        rowCount: axisRows.length,
+        axisCenterDiffPx:
+          axisContainer && firstRoman
+            ? Number(Math.abs((axisContainer.left + (axisContainer.width / 2)) - (firstRoman.left + (firstRoman.width / 2))).toFixed(2))
             : null,
-        panelBottomDiffPx:
-          capabilitiesAnchor && deploymentAnchor
-            ? Number(Math.abs(capabilitiesAnchor.bottom - deploymentAnchor.bottom).toFixed(2))
-            : null,
-        gap1Mid,
-        gap2Mid,
-        gap3Mid,
-        step1CenterY,
-        step2CenterY,
-        step3CenterY,
-        step1GapMidDiffPx: gap1Mid != null && step1CenterY != null ? Number(Math.abs(step1CenterY - gap1Mid).toFixed(2)) : null,
-        step2GapMidDiffPx: gap2Mid != null && step2CenterY != null ? Number(Math.abs(step2CenterY - gap2Mid).toFixed(2)) : null,
-        step3GapMidDiffPx: gap3Mid != null && step3CenterY != null ? Number(Math.abs(step3CenterY - gap3Mid).toFixed(2)) : null,
-        step1IsButton: step1Button instanceof HTMLButtonElement,
-        step2HasButton: Boolean(step2Button),
-        step3HasButton: Boolean(step3Button),
+        step1IsButton: stepOneButton instanceof HTMLButtonElement,
+        step2HasButton: Boolean(stepTwoButton),
+        step3HasButton: Boolean(stepThreeButton),
+        hasDwellTime: leftTexts.includes('Dwell time'),
+        leftTexts,
+        rightTexts,
+        row2InterleaveDiffPx: gap12Mid != null && row2Center != null ? Number(Math.abs(row2Center - gap12Mid).toFixed(2)) : null,
+        row3InterleaveDiffPx: gap23Mid != null && row3Center != null ? Number(Math.abs(row3Center - gap23Mid).toFixed(2)) : null,
         hasRailArtifacts: Boolean(document.querySelector('.landing-deployment-spine, .landing-deployment-rail, .landing-deployment-stem')),
-        capabilitiesCenterOffsetPx:
-          capabilitiesAnchor && capabilitiesColumn
-            ? Number(Math.abs((capabilitiesAnchor.left + (capabilitiesAnchor.width / 2)) - (capabilitiesColumn.left + (capabilitiesColumn.width / 2))).toFixed(2))
-            : null,
+        previewHasTopBorder: preview ? getComputedStyle(preview).borderTopWidth !== '0px' : null,
       };
     });
 
@@ -147,20 +132,15 @@ try {
   const desktopResult = alignmentResults.find((result) => result.viewport === 'desktop');
   if (
     !desktopResult
-    || desktopResult.panelBottomDiffPx == null
-    || desktopResult.step1GapMidDiffPx == null
-    || desktopResult.step2GapMidDiffPx == null
-    || desktopResult.step3GapMidDiffPx == null
-    || desktopResult.panelBottomDiffPx > 2
-    || desktopResult.step1GapMidDiffPx > 16
-    || desktopResult.step2GapMidDiffPx > 16
-    || desktopResult.step3GapMidDiffPx > 16
+    || desktopResult.rowCount !== 3
+    || desktopResult.axisCenterDiffPx == null
+    || desktopResult.axisCenterDiffPx > 1
     || desktopResult.step1IsButton !== true
     || desktopResult.step2HasButton !== false
     || desktopResult.step3HasButton !== false
+    || desktopResult.hasDwellTime !== false
     || desktopResult.hasRailArtifacts !== false
-    || desktopResult.capabilitiesCenterOffsetPx == null
-    || desktopResult.capabilitiesCenterOffsetPx > 5
+    || desktopResult.previewHasTopBorder !== false
   ) {
     throw new Error(`Desktop alignment failed. Results: ${JSON.stringify(alignmentResults)}`);
   }
