@@ -61,13 +61,9 @@ const LandingPage: React.FC = () => {
       <main>
         <section className="landing-hero" aria-labelledby="landing-hero-title">
           <div className="landing-container landing-hero-inner">
-            <h1 id="landing-hero-title" aria-label={landingCopy.hero.headline}>
-              <span aria-hidden="true" className="landing-hero-initial">C</span>
-              <span aria-hidden="true">amera </span>
-              <span aria-hidden="true" className="landing-hero-initial">O</span>
-              <span aria-hidden="true">perating </span>
-              <span aria-hidden="true" className="landing-hero-initial">S</span>
-              <span aria-hidden="true">ystems</span>
+            <h1 id="landing-hero-title" aria-label="camOS">
+              <span aria-hidden="true">cam</span>
+              <span aria-hidden="true" className="landing-hero-initial">OS</span>
             </h1>
             <p>{landingCopy.hero.supportLine}</p>
             <div className="landing-hero-actions">
@@ -94,30 +90,31 @@ const LandingPage: React.FC = () => {
             <div className="landing-system-surface">
               <div className="landing-operational-grid">
                 <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
-                  <div className="landing-axis-headings">
-                    <h2 id="capabilities-title">Metrics</h2>
-                    <h2 id="deployment-title">Access</h2>
-                  </div>
+                  <div className="landing-axis-matrix" data-align-anchor="axis-matrix">
+                    <h2 id="capabilities-title" className="landing-axis-cell landing-axis-cell-left landing-axis-cell-heading">Metrics</h2>
+                    <span className="landing-axis-cell landing-axis-cell-axis" aria-hidden="true" />
+                    <h2 id="deployment-title" className="landing-axis-cell landing-axis-cell-right landing-axis-cell-heading">Access</h2>
 
-                  <ol className="landing-axis-row-matrix" role="list" aria-label="Platform capabilities and system deployment points" data-align-anchor="axis-matrix">
                     {romanAxisLabels.map((label, index) => (
-                      <li key={label} className="landing-axis-row" role="listitem">
-                        <span className="landing-axis-left">{capabilityAxisItems[index]}</span>
-                        <span className="landing-axis-roman" aria-hidden="true">{label}</span>
+                      <React.Fragment key={label}>
+                        <span className="landing-axis-cell landing-axis-cell-left">{capabilityAxisItems[index]}</span>
+                        <span className="landing-axis-cell landing-axis-cell-axis landing-axis-roman" aria-hidden="true">{label}</span>
                         {index === 0 ? (
-                          <button
-                            type="button"
-                            className="landing-axis-right landing-axis-right-action"
-                            onClick={scrollToSignUp}
-                          >
-                            {deploymentAxisItems[index]}
-                          </button>
+                          <span className="landing-axis-cell landing-axis-cell-right">
+                            <button
+                              type="button"
+                              className="landing-axis-right-action"
+                              onClick={scrollToSignUp}
+                            >
+                              {deploymentAxisItems[index]}
+                            </button>
+                          </span>
                         ) : (
-                          <span className="landing-axis-right">{deploymentAxisItems[index]}</span>
+                          <span className="landing-axis-cell landing-axis-cell-right">{deploymentAxisItems[index]}</span>
                         )}
-                      </li>
+                      </React.Fragment>
                     ))}
-                  </ol>
+                  </div>
                 </section>
               </div>
 

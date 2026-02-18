@@ -167,7 +167,7 @@ body {
 
 .landing-axis-layout {
   --axis-column-width: 80px;
-  --axis-side-padding: 32px;
+  --axis-gap: 32px;
   --axis-row-min-height: 48px;
 
   width: 100%;
@@ -185,26 +185,42 @@ body {
   font-weight: 600;
 }
 
-.landing-axis-headings {
+.landing-axis-matrix {
   max-width: var(--landing-rail-max);
-  margin: 0 auto 20px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr var(--axis-column-width) 1fr;
-  align-items: end;
+  grid-template-rows: auto repeat(3, minmax(var(--axis-row-min-height), auto));
+  row-gap: 10px;
 }
 
-.landing-axis-headings h2:first-child {
-  grid-column: 1;
-  justify-self: end;
+.landing-axis-cell {
+  font-size: 0.84rem;
+  line-height: 1.32;
+  color: var(--sys-text-2);
+}
+
+.landing-axis-cell-left {
   text-align: right;
-  padding-right: var(--axis-side-padding);
+  padding-right: var(--axis-gap);
 }
 
-.landing-axis-headings h2:last-child {
-  grid-column: 3;
-  justify-self: start;
+.landing-axis-cell-right {
   text-align: left;
-  padding-left: var(--axis-side-padding);
+  padding-left: var(--axis-gap);
+}
+
+.landing-axis-cell-axis {
+  justify-self: center;
+  text-align: center;
+}
+
+.landing-axis-cell-heading {
+  font-size: clamp(1.24rem, 1.8vw, 1.6rem);
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  margin-bottom: 10px;
 }
 
 .landing-section-head--sr-only {
@@ -223,46 +239,7 @@ body {
   border-top: 1px solid color-mix(in srgb, var(--sys-line-soft) 18%, transparent);
 }
 
-.landing-axis-row-matrix {
-  max-width: var(--landing-rail-max);
-  margin: 0 auto;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 10px;
-}
-
-.landing-axis-row {
-  margin: 0;
-  min-height: var(--axis-row-min-height);
-  display: grid;
-  grid-template-columns: 1fr var(--axis-column-width) 1fr;
-  align-items: center;
-}
-
-.landing-axis-left,
-.landing-axis-right {
-  font-size: 0.84rem;
-  line-height: 1.32;
-  color: var(--sys-text-2);
-  max-width: 460px;
-}
-
-.landing-axis-left {
-  text-align: right;
-  padding-right: var(--axis-side-padding);
-}
-
-.landing-axis-right {
-  text-align: left;
-  padding-left: var(--axis-side-padding);
-  justify-self: start;
-  max-width: 420px;
-}
-
 .landing-axis-roman {
-  justify-self: center;
-  text-align: center;
   font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
   font-size: 0.84rem;
   font-weight: 520;
@@ -274,7 +251,7 @@ body {
   appearance: none;
   border: 0;
   background: transparent;
-  color: var(--sys-text-2);
+  color: inherit;
   padding: 0;
   margin: 0;
   font: inherit;
@@ -405,7 +382,7 @@ body {
 
   .landing-axis-layout {
     --axis-column-width: 72px;
-    --axis-side-padding: 28px;
+    --axis-gap: 28px;
   }
 }
 
@@ -421,7 +398,7 @@ body {
 
   .landing-axis-layout {
     --axis-column-width: 64px;
-    --axis-side-padding: 20px;
+    --axis-gap: 20px;
     --axis-row-min-height: 48px;
   }
 }
@@ -443,35 +420,20 @@ body {
     gap: 20px;
   }
 
-  .landing-axis-headings {
+  .landing-axis-matrix {
     grid-template-columns: 1fr;
-    gap: 12px;
-    margin-bottom: 18px;
+    grid-template-rows: repeat(8, auto);
+    row-gap: 8px;
   }
 
-  .landing-axis-headings h2:first-child,
-  .landing-axis-headings h2:last-child {
-    grid-column: 1;
-    justify-self: start;
+  .landing-axis-cell-left,
+  .landing-axis-cell-right,
+  .landing-axis-cell-heading {
     text-align: left;
     padding: 0;
   }
 
-  .landing-axis-row-matrix {
-    gap: 10px;
-  }
-
-  .landing-axis-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
-    min-height: 0;
-    padding: 8px 0;
-  }
-
-  .landing-axis-left,
-  .landing-axis-right {
-    text-align: left;
-    padding: 0;
+  .landing-axis-cell {
     font-size: 0.82rem;
   }
 

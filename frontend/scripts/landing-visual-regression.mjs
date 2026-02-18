@@ -82,34 +82,35 @@ try {
     });
 
     const geometry = await page.evaluate(() => {
-      const axisRows = Array.from(document.querySelectorAll('.landing-axis-row')).map((row) => row.getBoundingClientRect());
-      const axisContainer = document.querySelector('.landing-axis-row-matrix')?.getBoundingClientRect();
+      const axisRows = Array.from(document.querySelectorAll('.landing-axis-roman')).map((roman) => roman.closest('.landing-axis-matrix')?.querySelectorAll('.landing-axis-cell-axis')[0]?.parentElement?.getBoundingClientRect()).filter(Boolean);
+      const axisContainer = document.querySelector('.landing-axis-matrix')?.getBoundingClientRect();
       const landingContainer = document.querySelector('.landing-spec-sheet .landing-container')?.getBoundingClientRect();
-      const firstRoman = document.querySelector('.landing-axis-row .landing-axis-roman')?.getBoundingClientRect();
-      const firstLeftElement = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-left');
-      const firstRightElement = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-right');
-      const stepOneButton = document.querySelector('.landing-axis-row:nth-child(1) .landing-axis-right-action');
+      const firstRoman = document.querySelector('.landing-axis-roman')?.getBoundingClientRect();
+      const firstLeftElement = document.querySelector('.landing-axis-cell-left:not(.landing-axis-cell-heading)');
+      const firstRightElement = document.querySelector('.landing-axis-cell-right:not(.landing-axis-cell-heading)');
+      const stepOneButton = document.querySelector('.landing-axis-right-action');
       const stepOneButtonRect = stepOneButton?.getBoundingClientRect() ?? null;
       const preview = document.querySelector('.landing-preview');
       const firstHeadingText = document.querySelector('#capabilities-title')?.textContent?.trim() ?? null;
       const secondHeadingText = document.querySelector('#deployment-title')?.textContent?.trim() ?? null;
 
-      const stepTwoButton = document.querySelector('.landing-axis-row:nth-child(2) .landing-deployment-step-button');
-      const stepThreeButton = document.querySelector('.landing-axis-row:nth-child(3) .landing-deployment-step-button');
-      const stepTwoText = document.querySelector('.landing-axis-row:nth-child(2) .landing-axis-right');
+      const stepTwoButton = document.querySelectorAll('.landing-axis-right-action')[1];
+      const stepThreeButton = document.querySelectorAll('.landing-axis-right-action')[2];
+      const stepTwoText = document.querySelectorAll('.landing-axis-cell-right:not(.landing-axis-cell-heading)')[1];
 
       const stepOneStyles = stepOneButton ? getComputedStyle(stepOneButton) : null;
       const stepTwoStyles = stepTwoText ? getComputedStyle(stepTwoText) : null;
 
-      const leftTexts = Array.from(document.querySelectorAll('.landing-axis-left')).map((el) => el.textContent?.trim() ?? '');
-      const rightTexts = Array.from(document.querySelectorAll('.landing-axis-right')).map((el) => el.textContent?.trim() ?? '');
+      const leftTexts = Array.from(document.querySelectorAll('.landing-axis-cell-left:not(.landing-axis-cell-heading)')).map((el) => el.textContent?.trim() ?? '');
+      const rightTexts = Array.from(document.querySelectorAll('.landing-axis-cell-right:not(.landing-axis-cell-heading)')).map((el) => el.textContent?.trim() ?? '');
 
       const rowCenter = (row) => Number((row.top + (row.height / 2)).toFixed(2));
       const midpoint = (a, b) => Number((((a + b) / 2)).toFixed(2));
 
-      const row1Center = axisRows[0] ? rowCenter(axisRows[0]) : null;
-      const row2Center = axisRows[1] ? rowCenter(axisRows[1]) : null;
-      const row3Center = axisRows[2] ? rowCenter(axisRows[2]) : null;
+      const rows = Array.from(document.querySelectorAll('.landing-axis-roman')).map((roman) => roman.parentElement?.getBoundingClientRect()).filter(Boolean);
+      const row1Center = rows[0] ? rowCenter(rows[0]) : null;
+      const row2Center = rows[1] ? rowCenter(rows[1]) : null;
+      const row3Center = rows[2] ? rowCenter(rows[2]) : null;
 
       const gap12Mid = row1Center != null && row2Center != null ? midpoint(row1Center, row2Center) : null;
       const gap23Mid = row2Center != null && row3Center != null ? midpoint(row2Center, row3Center) : null;
@@ -118,7 +119,7 @@ try {
       const axisRightEdge = axisCenter != null && axisHalf != null ? axisCenter + axisHalf : null;
 
       return {
-        rowCount: axisRows.length,
+        rowCount: rows.length,
         containerToAxisCenterDiffPx:
           landingContainer && axisCenter != null
             ? Number(Math.abs((landingContainer.left + (landingContainer.width / 2)) - axisCenter).toFixed(2))
