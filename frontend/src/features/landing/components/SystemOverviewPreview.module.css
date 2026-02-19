@@ -364,11 +364,15 @@
   grid-column: 1;
 }
 
+.trafficTile .wireEdgeAnchorTop {
+  top: 4px;
+}
+
 
 .trafficStemAnchor {
   position: absolute;
-  left: 50%;
-  top: 58px;
+  left: 58%;
+  top: 8px;
   width: 2px;
   height: 2px;
   transform: translateX(-50%);
@@ -377,15 +381,48 @@
 .trafficTitleMask {
   position: absolute;
   left: 0;
-  top: 0;
+  top: 4px;
   z-index: 7;
-  padding-right: 10px;
+  padding-right: 14px;
   font-size: 1.04rem;
   line-height: 1;
   letter-spacing: -0.01em;
   color: var(--sys-text-1);
   background: color-mix(in srgb, var(--sys-bg-1) 94%, transparent);
   pointer-events: none;
+}
+
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-title),
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel-title) {
+  opacity: 0 !important;
+}
+
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel),
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-content) {
+  max-width: 196px;
+}
+
+.trafficTile :global(.recharts-wrapper) {
+  transform: scale(0.82);
+  transform-origin: 50% 0%;
+}
+
+.trafficTile :global(.recharts-sector) {
+  stroke: transparent !important;
+  fill: #2d5fb4 !important;
+  filter: saturate(0.66) brightness(0.8);
+}
+
+.trafficTile :global(.recharts-sector:nth-of-type(1)) {
+  fill: #356fd9 !important;
+}
+
+.trafficTile :global(.recharts-sector:nth-of-type(2)) {
+  fill: #2f63bf !important;
+}
+
+.trafficTile :global(.recharts-sector:nth-of-type(3)) {
+  fill: #284f95 !important;
 }
 
 
