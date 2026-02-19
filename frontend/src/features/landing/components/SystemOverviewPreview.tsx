@@ -28,7 +28,8 @@ type WireLayout = {
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
   trafficTopY: number;
-  trafficInnerY: number;
+  trafficSocketX: number;
+  trafficSocketY: number;
 };
 
 type RouteDefinition = {
@@ -68,7 +69,8 @@ const initialWireLayout: WireLayout = {
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   trafficTopY: 0,
-  trafficInnerY: 0,
+  trafficSocketX: 0,
+  trafficSocketY: 0,
 };
 
 const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
@@ -89,6 +91,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   });
   const leftSlotRef = useRef<HTMLDivElement | null>(null);
   const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
+  const trafficSocketRef = useRef<HTMLSpanElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
@@ -145,6 +148,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           !topClusterRef.current ||
           !bottomClusterRef.current ||
           !leftSlotRef.current ||
+          !trafficSocketRef.current ||
           !dwellSlotRef.current ||
           !nodeAnchorRef.current
         ) {
@@ -160,6 +164,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
         const trafficRect = leftEdgeRef.current.getBoundingClientRect();
+        const trafficSocketRect = trafficSocketRef.current.getBoundingClientRect();
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
         const taps: Record<RouteId, number> = {
@@ -186,7 +191,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
           trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
-          trafficInnerY: (leftSlotRef.current.getBoundingClientRect().top - containerRect.top) + Math.min(leftSlotRef.current.getBoundingClientRect().height * 0.42, 88),
+          trafficSocketX: trafficSocketRect.left - containerRect.left + (trafficSocketRect.width / 2),
+          trafficSocketY: trafficSocketRect.top - containerRect.top + (trafficSocketRect.height / 2),
         });
       });
     };
@@ -269,8 +275,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               data-testid="traffic-node-drop-connector"
               x1={wire.taps.traffic}
               y1={wire.endpointsY.traffic}
-              x2={wire.taps.traffic}
-              y2={wire.trafficInnerY}
+              x2={wire.trafficSocketX}
+              y2={wire.trafficSocketY}
             />
             <defs>
               {flowRoutes.map((route) => {
@@ -305,6 +311,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               <div
                 key={item.widgetId}
                 className={`${styles.kpiSlot} ${item.slotClass}`}
+                data-testid={item.key === "footfall" ? "footfall-module" : undefined}
                 ref={(node) => {
                   topSlotRefs.current[item.key] = node;
                 }}
@@ -329,7 +336,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Loading live KPI preview…</div>
           )}
 
-          <article className={styles.capacityTile}>
+          <article className={styles.capacityTile} data-testid="capacity-module">
             <div className={styles.capacityHeaderRow}>
               <p className={styles.capacityLabel}>Capacity</p>
               <p className={styles.capacityValue}>{CAPACITY_PERCENT}%</p>
@@ -348,19 +355,20 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               data-testid="preview-enter-demo-cta"
               onClick={onAccessDemo}
             >
-              Access Demo
+              <span className={styles.previewNodeCtaLabel}>Access Demo</span>
             </button>
           </div>
         </div>
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
-          <article className={styles.trafficTile}>
+          <article className={styles.trafficTile} data-testid="traffic-split-module">
             {trafficWidget || forceMockTopology ? (
               <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
                 {forceMockTopology
                   ? renderMockTile("Traffic Split", "41/34/25")
                   : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
                 <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
+                <span className={styles.trafficSocketPort} data-testid="traffic-socket-port" ref={trafficSocketRef} />
               </div>
             ) : hasError ? (
               <div className={styles.inlineNotice}>Preview unavailable.</div>

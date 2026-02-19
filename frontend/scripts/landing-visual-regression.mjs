@@ -108,6 +108,10 @@ try {
       const previewNodeCtaRect = previewNodeCta?.getBoundingClientRect() ?? null;
       const trafficNodeConnector = document.querySelector('[data-testid="traffic-node-drop-connector"]');
       const trafficTileRect = document.querySelector('[class*="trafficTile"]')?.getBoundingClientRect() ?? null;
+      const trafficSocketRect = document.querySelector('[data-testid="traffic-socket-port"]')?.getBoundingClientRect() ?? null;
+      const wireSvgRect = document.querySelector('[class*="wireSvg"]')?.getBoundingClientRect() ?? null;
+      const footfallRect = document.querySelector('[data-testid="footfall-module"]')?.getBoundingClientRect() ?? null;
+      const capacityRect = document.querySelector('[data-testid="capacity-module"]')?.getBoundingClientRect() ?? null;
       const row1Assurances = document.querySelectorAll('[data-testid="assurance-row-1"] .landing-assurance-row');
       const row2Assurances = document.querySelectorAll('[data-testid="assurance-row-2"] .landing-assurance-row');
       const row3Group = document.querySelector('[data-testid="assurance-row-3"]');
@@ -162,8 +166,30 @@ try {
       const connectorY2 = trafficNodeConnector ? Number(trafficNodeConnector.getAttribute('y2')) : null;
       const connectorX1 = trafficNodeConnector ? Number(trafficNodeConnector.getAttribute('x1')) : null;
       const connectorX2 = trafficNodeConnector ? Number(trafficNodeConnector.getAttribute('x2')) : null;
-      const connectorDepthIntoTrafficPx = trafficTileRect && connectorY2 != null
-        ? Number((connectorY2 - (trafficTileRect.top - (document.querySelector('[class*="wireSvg"]')?.getBoundingClientRect().top ?? 0))).toFixed(2))
+      const connectorScreenY2 = connectorY2 != null && wireSvgRect ? wireSvgRect.top + connectorY2 : null;
+      const connectorScreenX2 = connectorX2 != null && wireSvgRect ? wireSvgRect.left + connectorX2 : null;
+      const connectorDepthIntoTrafficPx = trafficTileRect && connectorScreenY2 != null
+        ? Number((connectorScreenY2 - trafficTileRect.top).toFixed(2))
+        : null;
+      const socketAlignDiffX = connectorScreenX2 != null && trafficSocketRect
+        ? Number(Math.abs(connectorScreenX2 - (trafficSocketRect.left + (trafficSocketRect.width / 2))).toFixed(2))
+        : null;
+      const socketAlignDiffY = connectorScreenY2 != null && trafficSocketRect
+        ? Number(Math.abs(connectorScreenY2 - (trafficSocketRect.top + (trafficSocketRect.height / 2))).toFixed(2))
+        : null;
+      const donutSector = trafficTileRect ? document.querySelector('[data-testid="traffic-split-module"] svg .recharts-sector')?.getBoundingClientRect() ?? null : null;
+      const donutInnerBounds = donutSector
+        ? {
+          cx: donutSector.left + (donutSector.width / 2),
+          cy: donutSector.top + (donutSector.height / 2),
+          innerRadius: Math.min(donutSector.width, donutSector.height) * 0.18,
+        }
+        : null;
+      const connectorInDonutInnerBounds = connectorScreenX2 != null && connectorScreenY2 != null && donutInnerBounds
+        ? Math.hypot(connectorScreenX2 - donutInnerBounds.cx, connectorScreenY2 - donutInnerBounds.cy) < donutInnerBounds.innerRadius
+        : null;
+      const footfallToCapacityGap = footfallRect && capacityRect
+        ? Number(Math.max(0, capacityRect.top - footfallRect.bottom).toFixed(2))
         : null;
       const assuranceRow3ToCtaGap = row3Group && assuranceCta
         ? Number(Math.max(0, assuranceCta.getBoundingClientRect().top - row3Group.getBoundingClientRect().bottom).toFixed(2))
@@ -225,6 +251,11 @@ try {
         connectorExists: Boolean(trafficNodeConnector),
         connectorVertical: connectorX1 != null && connectorX2 != null ? Math.abs(connectorX1 - connectorX2) <= 0.5 : null,
         connectorDepthIntoTrafficPx,
+        socketExists: Boolean(trafficSocketRect),
+        socketAlignDiffX,
+        socketAlignDiffY,
+        connectorInDonutInnerBounds,
+        footfallToCapacityGap,
         assuranceRow1Count: row1Assurances.length,
         assuranceRow2Count: row2Assurances.length,
         assuranceRow3HasCta: Boolean(assuranceCta),
@@ -299,6 +330,15 @@ try {
     || desktopResult.connectorDepthIntoTrafficPx == null
     || desktopResult.connectorDepthIntoTrafficPx < 12
     || desktopResult.connectorDepthIntoTrafficPx > 96
+    || desktopResult.socketExists !== true
+    || desktopResult.socketAlignDiffX == null
+    || desktopResult.socketAlignDiffY == null
+    || desktopResult.socketAlignDiffX > 2
+    || desktopResult.socketAlignDiffY > 2
+    || desktopResult.connectorInDonutInnerBounds === true
+    || desktopResult.footfallToCapacityGap == null
+    || desktopResult.footfallToCapacityGap < 4
+    || desktopResult.footfallToCapacityGap > 12
     || desktopResult.assuranceRow1Count !== 3
     || desktopResult.assuranceRow2Count !== 2
     || desktopResult.assuranceRow3HasCta !== true
