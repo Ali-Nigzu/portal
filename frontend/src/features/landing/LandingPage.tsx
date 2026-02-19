@@ -38,19 +38,37 @@ const LandingPage: React.FC = () => {
     navigate("/login");
   };
 
+  const capabilityAxisItems = landingCopy.capabilities.items
+    .filter((item) => item !== "Dwell time")
+    .slice(0, 3);
+
+  const deploymentAxisItems = [
+    landingCopy.deployment.firstStep,
+    landingCopy.deployment.secondStep,
+    landingCopy.deployment.thirdStep,
+  ];
+
+  const romanAxisLabels = ["I", "II", "III"];
+
   return (
     <div className="landing-page">
       <LandingHeader
-        onDemo={goToDemo}
-        onCreateAccount={scrollToSignUp}
         onLogin={goToLogin}
       />
 
       <main>
-        <section className="landing-hero" aria-labelledby="landing-hero-title">
-          <div className="landing-container landing-hero-inner">
-            <h1 id="landing-hero-title">{landingCopy.hero.headline}</h1>
-            <p>{landingCopy.hero.supportLine}</p>
+        <section className="landing-hero-zone" aria-label="Hero zone">
+          <div className="landing-container landing-hero-zone-grid">
+            <section className="landing-hero" aria-labelledby="landing-hero-title">
+              <div className="landing-hero-stack" data-align-anchor="hero-stack">
+                <h1 id="landing-hero-title" aria-label="camOS">
+                  <span aria-hidden="true" className="landing-hero-cam">cam</span>
+                  <span aria-hidden="true" className="landing-hero-initial">OS</span>
+                </h1>
+                <p>{landingCopy.hero.supportLine}</p>
+              </div>
+            </section>
+
             <div className="landing-hero-actions">
               <button
                 type="button"
@@ -67,56 +85,50 @@ const LandingPage: React.FC = () => {
                 {landingCopy.nav.actions.createAccount}
               </button>
             </div>
+
+            <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
+              <div className="landing-axis-matrix" data-align-anchor="axis-matrix">
+                <h2 id="capabilities-title" className="landing-axis-cell landing-axis-cell-left landing-axis-cell-heading">Metrics</h2>
+                <span className="landing-axis-cell landing-axis-cell-axis" aria-hidden="true" />
+                <h2 id="deployment-title" className="landing-axis-cell landing-axis-cell-right landing-axis-cell-heading">Access</h2>
+
+                {romanAxisLabels.map((label, index) => (
+                  <React.Fragment key={label}>
+                    <span className="landing-axis-cell landing-axis-cell-left">{capabilityAxisItems[index]}</span>
+                    <span className="landing-axis-cell landing-axis-cell-axis landing-axis-roman" aria-hidden="true">{label}</span>
+                    {index === 0 ? (
+                      <span className="landing-axis-cell landing-axis-cell-right">
+                        <button
+                          type="button"
+                          className="landing-axis-right-action"
+                          onClick={scrollToSignUp}
+                        >
+                          {deploymentAxisItems[index]}
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="landing-axis-cell landing-axis-cell-right">{deploymentAxisItems[index]}</span>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </section>
           </div>
         </section>
 
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
           <div className="landing-container landing-spec-sheet-inner">
-            <div className="landing-operational-grid">
-              <section className="landing-capabilities" aria-labelledby="capabilities-title">
-                <h2 id="capabilities-title">{landingCopy.capabilities.heading}</h2>
-                <div className="landing-capability-rows" role="list" aria-label="Platform capabilities">
-                  {landingCopy.capabilities.items.map((item, index) => (
-                    <div key={item} className="landing-capability-row" role="listitem">
-                      <span className="landing-capability-index" aria-hidden="true">
-                        {(index + 1).toString().padStart(2, "0")}
-                      </span>
-                      <span>{item}</span>
-                    </div>
-                  ))}
+            <div className="landing-system-surface">
+              <section className="landing-preview" aria-labelledby="live-preview-title">
+                <div className="landing-section-head landing-section-head--sr-only">
+                  <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
+                  <p>{landingCopy.livePreview.description}</p>
+                </div>
+                <div className="landing-dashboard-preview">
+                  <SystemOverviewPreview />
                 </div>
               </section>
-
-              <section className="landing-deployment" aria-labelledby="deployment-title">
-                <h2 id="deployment-title">{landingCopy.deployment.heading}</h2>
-                <ol className="landing-deployment-rail" aria-label="System deployment flow">
-                  <li className="landing-deployment-step landing-deployment-step--active">
-                    <span className="landing-deployment-step-index">01</span>
-                    <span className="landing-deployment-step-label">{landingCopy.deployment.firstStep}</span>
-                  </li>
-                  <li className="landing-deployment-arrow" aria-hidden="true">→</li>
-                  <li className="landing-deployment-step">
-                    <span className="landing-deployment-step-index">02</span>
-                    <span className="landing-deployment-step-label">{landingCopy.deployment.secondStep}</span>
-                  </li>
-                  <li className="landing-deployment-arrow" aria-hidden="true">→</li>
-                  <li className="landing-deployment-step">
-                    <span className="landing-deployment-step-index">03</span>
-                    <span className="landing-deployment-step-label">{landingCopy.deployment.thirdStep}</span>
-                  </li>
-                </ol>
-              </section>
             </div>
-
-            <section className="landing-preview" aria-labelledby="live-preview-title">
-              <div className="landing-section-head">
-                <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
-                <p>{landingCopy.livePreview.description}</p>
-              </div>
-              <div className="landing-dashboard-preview">
-                <SystemOverviewPreview />
-              </div>
-            </section>
 
             <section className="landing-assurances" aria-labelledby="assurances-title">
               <h2 id="assurances-title">{landingCopy.assurances.heading}</h2>
@@ -150,7 +162,7 @@ const LandingPage: React.FC = () => {
                 >
                   {landingCopy.createAccount.button}
                 </button>
-              </div>
+            </div>
             ) : (
               <form className="landing-signup-form" onSubmit={handleSubmit}>
                 <div className="landing-form-grid">
