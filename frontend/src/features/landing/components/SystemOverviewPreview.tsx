@@ -74,6 +74,8 @@ const initialWireLayout: WireLayout = {
 };
 
 
+const TRAFFIC_SOCKET_SURFACE_EPSILON_PX = 0.6;
+
 const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
@@ -189,6 +191,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const donutRadius = donutOuterLeft != null && donutOuterRight != null && donutOuterTop != null && donutOuterBottom != null
           ? (Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop) / 2)
           : null;
+        const donutNorthSurfaceY = donutCenterY != null && donutRadius != null
+          ? (donutCenterY - donutRadius + TRAFFIC_SOCKET_SURFACE_EPSILON_PX)
+          : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
         const shouldFailTraffic = widgetStatus === "ready" && Boolean(trafficWidget) && donutSectorRects.length === 0;
@@ -225,8 +230,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           trafficSocketX: donutCenterX != null
             ? donutCenterX - containerRect.left
             : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
-          trafficSocketY: donutCenterY != null && donutRadius != null
-            ? Math.round((donutCenterY - donutRadius) - containerRect.top)
+          trafficSocketY: donutNorthSurfaceY != null
+            ? donutNorthSurfaceY - containerRect.top
             : trafficStemRect.top - containerRect.top,
         });
       });
