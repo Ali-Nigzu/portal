@@ -28,6 +28,7 @@ type WireLayout = {
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
   trafficTopY: number;
+  trafficSocketX: number;
   trafficSocketY: number;
 };
 
@@ -68,6 +69,7 @@ const initialWireLayout: WireLayout = {
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   trafficTopY: 0,
+  trafficSocketX: 0,
   trafficSocketY: 0,
 };
 
@@ -166,13 +168,18 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const donutOuterTop = donutSectorRects.length > 0
           ? Math.min(...donutSectorRects.map((rect) => rect.top))
           : null;
+        const donutCenterX = donutSectorRects.length > 0
+          ? ((Math.min(...donutSectorRects.map((rect) => rect.left)) + Math.max(...donutSectorRects.map((rect) => rect.right))) / 2)
+          : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
           occupancy: topRects[1].left - containerRect.left + topRects[1].width / 2,
           exits: topRects[2].left - containerRect.left + topRects[2].width / 2,
-          traffic: trafficRect.left - containerRect.left + trafficRect.width / 2,
+          traffic: donutCenterX != null
+            ? donutCenterX - containerRect.left
+            : trafficRect.left - containerRect.left + trafficRect.width / 2,
           dwell: dwellRect.left - containerRect.left + dwellRect.width / 2,
         };
 
@@ -192,6 +199,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
           trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
+          trafficSocketX: donutCenterX != null
+            ? donutCenterX - containerRect.left
+            : trafficRect.left - containerRect.left + trafficRect.width / 2,
           trafficSocketY: donutOuterTop != null
             ? donutOuterTop - containerRect.top
             : leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
@@ -275,9 +285,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             <line
               className={styles.nodeDropConnector}
               data-testid="traffic-node-drop-connector"
-              x1={wire.taps.traffic}
+              x1={wire.trafficSocketX}
               y1={wire.endpointsY.traffic}
-              x2={wire.taps.traffic}
+              x2={wire.trafficSocketX}
               y2={wire.trafficSocketY}
             />
             <defs>

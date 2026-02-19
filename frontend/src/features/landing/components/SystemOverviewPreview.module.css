@@ -18,6 +18,8 @@
   --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #9dc4ff 18%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 18%, transparent);
   --preview-node-cta-stem: 22px;
   --preview-capacity-gap: 4px;
+  --preview-top-row-lift: 18px;
+  --preview-traffic-donut-scale: 0.84;
 
   position: relative;
   width: 100%;
@@ -66,6 +68,8 @@
   width: max-content;
   margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+  transform: translateY(calc(-1 * var(--preview-top-row-lift)));
+  transform-origin: top center;
 }
 
 .kpiSlot {
@@ -175,6 +179,8 @@
   width: max-content;
   margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+  transform: translateY(calc(-1 * var(--preview-top-row-lift)));
+  transform-origin: top center;
 }
 
 .inlineNotice {
@@ -357,6 +363,13 @@
 .trafficTile {
   grid-column: 1;
 }
+
+
+.trafficTile :global(.recharts-wrapper) {
+  transform: scale(var(--preview-traffic-donut-scale));
+  transform-origin: 50% 0%;
+}
+
 
 .mockTile {
   min-height: 112px;

@@ -104,6 +104,8 @@ try {
       const stepOneButton = document.querySelector('.landing-axis-right-action');
       const stepOneButtonRect = stepOneButton?.getBoundingClientRect() ?? null;
       const preview = document.querySelector('.landing-preview');
+      const topologyCanvasRect = document.querySelector('[class*="canvas"]')?.getBoundingClientRect() ?? null;
+      const topClusterRect = document.querySelector('[class*="topCluster"]')?.getBoundingClientRect() ?? null;
       const systemSurface = document.querySelector('.landing-system-surface');
       const assuranceMatrix = document.querySelector('.landing-assurance-matrix');
       const previewNodeCta = document.querySelector('[data-testid="preview-enter-demo-cta"]');
@@ -177,6 +179,9 @@ try {
       const donutOuterBottom = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.bottom)) : null;
       const donutOuterLeft = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.left)) : null;
       const donutOuterRight = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.right)) : null;
+      const donutDiameterPx = donutOuterTop != null && donutOuterBottom != null && donutOuterLeft != null && donutOuterRight != null
+        ? Number(Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop).toFixed(2))
+        : null;
       const donutInnerBounds = donutOuterTop != null && donutOuterBottom != null && donutOuterLeft != null && donutOuterRight != null
         ? {
           cx: (donutOuterLeft + donutOuterRight) / 2,
@@ -189,6 +194,12 @@ try {
         : null;
       const connectorToDonutOuterTopDiff = connectorScreenY2 != null && donutOuterTop != null
         ? Number(Math.abs(connectorScreenY2 - donutOuterTop).toFixed(2))
+        : null;
+      const connectorToDonutRadiusDiff = connectorScreenX2 != null && connectorScreenY2 != null && donutInnerBounds
+        ? Number(Math.abs(Math.hypot(connectorScreenX2 - donutInnerBounds.cx, connectorScreenY2 - donutInnerBounds.cy) - (donutDiameterPx / 2)).toFixed(2))
+        : null;
+      const topClusterLiftPx = topologyCanvasRect && topClusterRect
+        ? Number((topologyCanvasRect.top - topClusterRect.top).toFixed(2))
         : null;
       const footfallToCapacityGap = footfallRect && capacityRect
         ? Number(Math.max(0, capacityRect.top - footfallRect.bottom).toFixed(2))
@@ -254,7 +265,10 @@ try {
         connectorVertical: connectorX1 != null && connectorX2 != null ? Math.abs(connectorX1 - connectorX2) <= 0.5 : null,
         connectorDepthIntoTrafficPx,
         donutSectorPresent: donutSectors.length > 0,
+        donutDiameterPx,
+        topClusterLiftPx,
         connectorToDonutOuterTopDiff,
+        connectorToDonutRadiusDiff,
         connectorInDonutInnerBounds,
         footfallToCapacityGap,
         assuranceRow1Count: row1Assurances.length,
@@ -339,8 +353,12 @@ try {
     || desktopResult.connectorDepthIntoTrafficPx == null
     || desktopResult.connectorDepthIntoTrafficPx < 0
     || desktopResult.connectorDepthIntoTrafficPx > 20
+    || desktopResult.topClusterLiftPx == null
+    || desktopResult.topClusterLiftPx < 16
     || (desktopResult.donutSectorPresent === true
-      && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2))
+      && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2
+        || desktopResult.connectorToDonutRadiusDiff == null || desktopResult.connectorToDonutRadiusDiff > 2
+        || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 95))
     || desktopResult.connectorInDonutInnerBounds === true
     || desktopResult.footfallToCapacityGap == null
     || desktopResult.footfallToCapacityGap < 4
