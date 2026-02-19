@@ -312,13 +312,14 @@ try {
 
   const desktopResult = alignmentResults.find((result) => result.viewport === 'desktop');
 
-  const trafficReady = desktopResult?.donutSectorPresent === true && desktopResult?.trafficErrorExists === false;
   if (
     !desktopResult
     || desktopResult.rowCount !== 3
     || desktopResult.heroSubtextIsSeeMore !== true
     || desktopResult.topNavHasDemoCta !== false
     || desktopResult.topNavHasCreateAccountCta !== false
+    || desktopResult.trafficErrorExists !== false
+    || desktopResult.donutSectorPresent !== true
     || desktopResult.titleToSubtextGap == null
     || desktopResult.titleToSubtextGap < 10
     || desktopResult.titleToSubtextGap > 16
@@ -362,21 +363,21 @@ try {
     || desktopResult.rowGap23 == null
     || desktopResult.headingToRow1 < desktopResult.rowGap12 + 6
     || Math.abs(desktopResult.rowGap12 - desktopResult.rowGap23) > 2
-    || (trafficReady && desktopResult.previewNodeCtaExists !== true)
-    || (trafficReady && desktopResult.previewNodeCtaText !== "Access Demo")
-    || (trafficReady && desktopResult.connectorExists !== true)
-    || (trafficReady && desktopResult.connectorVertical !== true)
-    || (trafficReady && (desktopResult.connectorDepthIntoTrafficPx == null || desktopResult.connectorDepthIntoTrafficPx < 0 || desktopResult.connectorDepthIntoTrafficPx > 40))
-    || (trafficReady && (desktopResult.topClusterLiftPx == null || desktopResult.topClusterLiftPx < 16))
-    || (trafficReady && desktopResult.donutSectorPresent !== true)
-    || (trafficReady && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2
+    || desktopResult.previewNodeCtaExists !== true
+    || desktopResult.previewNodeCtaText !== "Access Demo"
+    || desktopResult.connectorExists !== true
+    || desktopResult.connectorVertical !== true
+    || (desktopResult.connectorDepthIntoTrafficPx == null || desktopResult.connectorDepthIntoTrafficPx < 0 || desktopResult.connectorDepthIntoTrafficPx > 40)
+    || (desktopResult.topClusterLiftPx == null || desktopResult.topClusterLiftPx < 16)
+    || desktopResult.donutSectorPresent !== true
+    || (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2
       || desktopResult.connectorToDonutRadiusDiff == null || desktopResult.connectorToDonutRadiusDiff > 2
       || desktopResult.connectorToDonutCenterXDiff == null || desktopResult.connectorToDonutCenterXDiff > 2
       || desktopResult.connectorEndsAboveDonutCenter !== true
-      || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 120))
-    || (trafficReady && desktopResult.connectorInDonutInnerBounds === true)
-    || (trafficReady && (desktopResult.donutDistinctFillCount == null || desktopResult.donutDistinctFillCount < 2))
-    || (trafficReady && (desktopResult.footfallToCapacityGap == null || desktopResult.footfallToCapacityGap < 4 || desktopResult.footfallToCapacityGap > 12))
+      || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 120)
+    || desktopResult.connectorInDonutInnerBounds === true
+    || (desktopResult.donutDistinctFillCount == null || desktopResult.donutDistinctFillCount < 2)
+    || (desktopResult.footfallToCapacityGap == null || desktopResult.footfallToCapacityGap < 4 || desktopResult.footfallToCapacityGap > 12)
     || desktopResult.assuranceRow1Count !== 3
     || desktopResult.assuranceRow2Count !== 2
     || desktopResult.assuranceRow3HasCta !== true

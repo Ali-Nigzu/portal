@@ -449,6 +449,7 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
   const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
   const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [bootstrapDegraded, setBootstrapDegraded] = useState(false);
   const bootstrapStartedRef = useRef(false);
 
   const runBootstrap = async () => {
@@ -470,8 +471,10 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
       await enableDemoSession();
       applyDemoDefaultsOnce();
       setBootstrapState("ready");
-    } catch {
-      setBootstrapState("error");
+    } catch (error) {
+      console.warn("Landing demo bootstrap failed; continuing with live preview pipeline.", error);
+      setBootstrapDegraded(true);
+      setBootstrapState("ready");
     }
   };
 
@@ -488,6 +491,7 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
       window.sessionStorage.removeItem(LANDING_BOOTSTRAP_KEY);
     }
     bootstrapStartedRef.current = false;
+    setBootstrapDegraded(false);
     setBootstrapState("idle");
   };
 
@@ -513,7 +517,12 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     );
   }
 
-  return <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />;
+  return (
+    <>
+      <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />
+      {bootstrapDegraded ? <p className={styles.errorNote}>Demo bootstrap unavailable; preview is using direct live data flow.</p> : null}
+    </>
+  );
 };
 
 export default SystemOverviewPreview;
