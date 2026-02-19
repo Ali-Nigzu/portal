@@ -69,7 +69,9 @@ try {
 
   for (const viewport of viewports) {
     const page = await context.newPage({ viewport: { width: viewport.width, height: viewport.height } });
-    await page.goto('http://127.0.0.1:4173/?topologyMock=1', { waitUntil: 'networkidle' });
+    const liveUrl = 'http://127.0.0.1:4173/';
+    const mockUrl = 'http://127.0.0.1:4173/?topologyMock=1';
+    await page.goto(liveUrl, { waitUntil: 'networkidle' });
 
     await page.locator('.landing-hero').screenshot({
       path: path.join(screenshotsDir, `${viewport.name}-hero.png`),
@@ -83,7 +85,7 @@ try {
       path: path.join(screenshotsDir, `${viewport.name}-seam-preview.png`),
     });
 
-    const geometry = await page.evaluate(() => {
+    const readGeometry = async () => page.evaluate(() => {
       const axisContainer = document.querySelector('.landing-axis-matrix')?.getBoundingClientRect();
       const landingContainer = document.querySelector('.landing-spec-sheet .landing-container')?.getBoundingClientRect();
       const firstRoman = document.querySelector('.landing-axis-roman')?.getBoundingClientRect();
@@ -108,7 +110,6 @@ try {
       const previewNodeCtaRect = previewNodeCta?.getBoundingClientRect() ?? null;
       const trafficNodeConnector = document.querySelector('[data-testid="traffic-node-drop-connector"]');
       const trafficTileRect = document.querySelector('[class*="trafficTile"]')?.getBoundingClientRect() ?? null;
-      const trafficSocketRect = document.querySelector('[data-testid="traffic-socket-port"]')?.getBoundingClientRect() ?? null;
       const wireSvgRect = document.querySelector('[class*="wireSvg"]')?.getBoundingClientRect() ?? null;
       const footfallRect = document.querySelector('[data-testid="footfall-module"]')?.getBoundingClientRect() ?? null;
       const capacityRect = document.querySelector('[data-testid="capacity-module"]')?.getBoundingClientRect() ?? null;
@@ -171,22 +172,23 @@ try {
       const connectorDepthIntoTrafficPx = trafficTileRect && connectorScreenY2 != null
         ? Number((connectorScreenY2 - trafficTileRect.top).toFixed(2))
         : null;
-      const socketAlignDiffX = connectorScreenX2 != null && trafficSocketRect
-        ? Number(Math.abs(connectorScreenX2 - (trafficSocketRect.left + (trafficSocketRect.width / 2))).toFixed(2))
-        : null;
-      const socketAlignDiffY = connectorScreenY2 != null && trafficSocketRect
-        ? Number(Math.abs(connectorScreenY2 - (trafficSocketRect.top + (trafficSocketRect.height / 2))).toFixed(2))
-        : null;
-      const donutSector = trafficTileRect ? document.querySelector('[data-testid="traffic-split-module"] svg .recharts-sector')?.getBoundingClientRect() ?? null : null;
-      const donutInnerBounds = donutSector
+      const donutSectors = Array.from(document.querySelectorAll('[data-testid="traffic-split-module"] svg .recharts-sector')).map((sector) => sector.getBoundingClientRect());
+      const donutOuterTop = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.top)) : null;
+      const donutOuterBottom = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.bottom)) : null;
+      const donutOuterLeft = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.left)) : null;
+      const donutOuterRight = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.right)) : null;
+      const donutInnerBounds = donutOuterTop != null && donutOuterBottom != null && donutOuterLeft != null && donutOuterRight != null
         ? {
-          cx: donutSector.left + (donutSector.width / 2),
-          cy: donutSector.top + (donutSector.height / 2),
-          innerRadius: Math.min(donutSector.width, donutSector.height) * 0.18,
+          cx: (donutOuterLeft + donutOuterRight) / 2,
+          cy: (donutOuterTop + donutOuterBottom) / 2,
+          innerRadius: Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop) * 0.22,
         }
         : null;
       const connectorInDonutInnerBounds = connectorScreenX2 != null && connectorScreenY2 != null && donutInnerBounds
         ? Math.hypot(connectorScreenX2 - donutInnerBounds.cx, connectorScreenY2 - donutInnerBounds.cy) < donutInnerBounds.innerRadius
+        : null;
+      const connectorToDonutOuterTopDiff = connectorScreenY2 != null && donutOuterTop != null
+        ? Number(Math.abs(connectorScreenY2 - donutOuterTop).toFixed(2))
         : null;
       const footfallToCapacityGap = footfallRect && capacityRect
         ? Number(Math.max(0, capacityRect.top - footfallRect.bottom).toFixed(2))
@@ -251,9 +253,8 @@ try {
         connectorExists: Boolean(trafficNodeConnector),
         connectorVertical: connectorX1 != null && connectorX2 != null ? Math.abs(connectorX1 - connectorX2) <= 0.5 : null,
         connectorDepthIntoTrafficPx,
-        socketExists: Boolean(trafficSocketRect),
-        socketAlignDiffX,
-        socketAlignDiffY,
+        donutSectorPresent: donutSectors.length > 0,
+        connectorToDonutOuterTopDiff,
         connectorInDonutInnerBounds,
         footfallToCapacityGap,
         assuranceRow1Count: row1Assurances.length,
@@ -263,7 +264,15 @@ try {
       };
     });
 
-    alignmentResults.push({ viewport: viewport.name, browser: browserName, ...geometry });
+    let geometrySource = 'live';
+    let geometry = await readGeometry();
+    if (!geometry.connectorExists || !geometry.donutSectorPresent || geometry.previewNodeCtaExists !== true) {
+      await page.goto(mockUrl, { waitUntil: 'networkidle' });
+      geometry = await readGeometry();
+      geometrySource = 'mock-fallback';
+    }
+
+    alignmentResults.push({ viewport: viewport.name, browser: browserName, geometrySource, ...geometry });
     await page.close();
   }
 
@@ -328,13 +337,10 @@ try {
     || desktopResult.connectorExists !== true
     || desktopResult.connectorVertical !== true
     || desktopResult.connectorDepthIntoTrafficPx == null
-    || desktopResult.connectorDepthIntoTrafficPx < 12
-    || desktopResult.connectorDepthIntoTrafficPx > 96
-    || desktopResult.socketExists !== true
-    || desktopResult.socketAlignDiffX == null
-    || desktopResult.socketAlignDiffY == null
-    || desktopResult.socketAlignDiffX > 2
-    || desktopResult.socketAlignDiffY > 2
+    || desktopResult.connectorDepthIntoTrafficPx < 0
+    || desktopResult.connectorDepthIntoTrafficPx > 20
+    || (desktopResult.donutSectorPresent === true
+      && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2))
     || desktopResult.connectorInDonutInnerBounds === true
     || desktopResult.footfallToCapacityGap == null
     || desktopResult.footfallToCapacityGap < 4

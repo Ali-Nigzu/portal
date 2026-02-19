@@ -353,18 +353,6 @@
   transform: translateY(0.5px);
 }
 
-.trafficSocketPort {
-  position: absolute;
-  left: 50%;
-  top: 56px;
-  width: 6px;
-  height: 6px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: color-mix(in srgb, #5d83b3 70%, transparent);
-  opacity: 0.88;
-  pointer-events: none;
-}
 
 .trafficTile {
   grid-column: 1;
@@ -505,9 +493,6 @@
     height: 14px;
   }
 
-  .trafficSocketPort {
-    top: 50px;
-  }
 
   .previewNodeCta {
     min-height: 30px;
