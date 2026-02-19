@@ -12,7 +12,7 @@ export const landingCopy = {
   },
   hero: {
     headline: "Camera Operating Systems",
-    supportLine: "See More",
+    supportLine: "See More.",
   },
   livePreview: {
     heading: "Live Platform Preview",

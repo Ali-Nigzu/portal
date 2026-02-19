@@ -87,7 +87,12 @@ try {
       const firstRoman = document.querySelector('.landing-axis-roman')?.getBoundingClientRect();
       const firstLeftElement = document.querySelector('.landing-axis-cell-left:not(.landing-axis-cell-heading)');
       const firstRightElement = document.querySelector('.landing-axis-cell-right:not(.landing-axis-cell-heading)');
-      const heroSubtext = document.querySelector('.landing-hero p')?.textContent?.trim() ?? null;
+      const heroTitleRect = document.querySelector('.landing-hero h1')?.getBoundingClientRect() ?? null;
+      const heroSubtextEl = document.querySelector('.landing-hero p');
+      const heroSubtext = heroSubtextEl?.textContent?.trim() ?? null;
+      const heroSubtextRect = heroSubtextEl?.getBoundingClientRect() ?? null;
+      const heroCtasRect = document.querySelector('.landing-hero-actions')?.getBoundingClientRect() ?? null;
+      const heroRect = document.querySelector('.landing-hero')?.getBoundingClientRect() ?? null;
       const headerActionsText = Array.from(document.querySelectorAll('.landing-header-actions button')).map((btn) => btn.textContent?.trim() ?? '');
       const stepOneButton = document.querySelector('.landing-axis-right-action');
       const stepOneButtonRect = stepOneButton?.getBoundingClientRect() ?? null;
@@ -121,13 +126,26 @@ try {
       const rowGap12 = row1Center != null && row2Center != null ? Number(Math.abs(row2Center - row1Center).toFixed(2)) : null;
       const rowGap23 = row2Center != null && row3Center != null ? Number(Math.abs(row3Center - row2Center).toFixed(2)) : null;
       const headingToRow1 = headingRect && rows[0] ? Number(Math.abs(row1Center - headingRect.bottom).toFixed(2)) : null;
+
+      const titleToSubtextGap = heroTitleRect && heroSubtextRect
+        ? Number(Math.max(0, heroSubtextRect.top - heroTitleRect.bottom).toFixed(2))
+        : null;
+      const subtextToCtaGap = heroSubtextRect && heroCtasRect
+        ? Number(Math.max(0, heroCtasRect.top - heroSubtextRect.bottom).toFixed(2))
+        : null;
+      const ctaOffsetFromHeroTop = heroRect && heroCtasRect
+        ? Number(Math.max(0, heroCtasRect.top - heroRect.top).toFixed(2))
+        : null;
       const axisCenter = axisContainer ? axisContainer.left + (axisContainer.width / 2) : null;
       const axisHalf = 40;
       const axisRightEdge = axisCenter != null && axisHalf != null ? axisCenter + axisHalf : null;
 
       return {
         rowCount: rows.length,
-        heroSubtextIsSeeMore: heroSubtext === 'See More',
+        heroSubtextIsSeeMore: heroSubtext === 'See More.',
+        titleToSubtextGap,
+        subtextToCtaGap,
+        ctaOffsetFromHeroTop,
         topNavHasDemoCta: headerActionsText.includes('Access Demo'),
         topNavHasCreateAccountCta: headerActionsText.includes('Create Account'),
         containerToAxisCenterDiffPx:
@@ -189,6 +207,13 @@ try {
     || desktopResult.heroSubtextIsSeeMore !== true
     || desktopResult.topNavHasDemoCta !== false
     || desktopResult.topNavHasCreateAccountCta !== false
+    || desktopResult.titleToSubtextGap == null
+    || desktopResult.titleToSubtextGap < 24
+    || desktopResult.subtextToCtaGap == null
+    || desktopResult.subtextToCtaGap < 50
+    || desktopResult.subtextToCtaGap <= desktopResult.titleToSubtextGap
+    || desktopResult.ctaOffsetFromHeroTop == null
+    || desktopResult.ctaOffsetFromHeroTop < 180
     || desktopResult.containerToAxisCenterDiffPx == null
     || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null
