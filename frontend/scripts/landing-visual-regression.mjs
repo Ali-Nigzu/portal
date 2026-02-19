@@ -6,6 +6,8 @@ import path from 'node:path';
 const rootDir = path.resolve(process.cwd());
 const screenshotsDir = path.join(rootDir, 'artifacts', 'landing-visual');
 
+const previousDesktopCtaToMetricsBaselinePx = 74;
+
 const viewports = [
   { name: 'mobile', width: 375, height: 812 },
   { name: 'tablet', width: 768, height: 1024 },
@@ -223,8 +225,9 @@ try {
     || desktopResult.headingToRow1 == null
     || desktopResult.subtextToCtaGap == null
     || desktopResult.ctaToMetricsGap == null
-    || desktopResult.ctaToMetricsGap < 56
-    || desktopResult.ctaToMetricsGap > 80
+    || desktopResult.ctaToMetricsGap < 52
+    || desktopResult.ctaToMetricsGap > 60
+    || desktopResult.ctaToMetricsGap > Number((previousDesktopCtaToMetricsBaselinePx * 0.8).toFixed(2))
     || desktopResult.containerToAxisCenterDiffPx == null
     || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null
@@ -241,7 +244,7 @@ try {
     || desktopResult.headingToRow1 == null
     || desktopResult.rowGap12 == null
     || desktopResult.rowGap23 == null
-    || desktopResult.headingToRow1 < desktopResult.rowGap12
+    || desktopResult.headingToRow1 < desktopResult.rowGap12 + 6
     || Math.abs(desktopResult.rowGap12 - desktopResult.rowGap23) > 2
     || desktopResult.hasDwellTime !== false
     || desktopResult.hasRailArtifacts !== false

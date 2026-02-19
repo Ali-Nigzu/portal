@@ -112,36 +112,54 @@ body {
 #create-account { scroll-margin-top: 86px; }
 
 .landing-hero {
-  --hero-gap-title-subline: 18px;
-  --hero-gap-subline-cta: 34px;
-  --hero-gap-cta-to-band: 24px;
-  padding: 74px 0 var(--hero-gap-cta-to-band);
+  --hero-title-size: clamp(2.16rem, 4.65vw, 3.46rem);
+  --hero-title-weight-cam: 600;
+  --hero-title-weight-os: 650;
+  --hero-statement-size: clamp(1.34rem, 2.5vw, 1.72rem);
+  --hero-statement-leading: 1.24;
+  --hero-stack-gap-1: 18px;
+  --hero-stack-gap-2: 34px;
+  --hero-to-metrics-gap: 18px;
+  padding: 72px 0 var(--hero-to-metrics-gap);
 }
 .landing-hero-inner { max-width: 720px; }
+.landing-hero-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hero-stack-gap-1);
+}
 .landing-hero h1 {
   margin: 0;
-  font-size: clamp(2.1rem, 4.6vw, 3.35rem);
+  font-size: var(--hero-title-size);
   line-height: 1.01;
   letter-spacing: -0.02em;
-  font-weight: 640;
+  font-weight: var(--hero-title-weight-cam);
   max-width: none;
   white-space: nowrap;
 }
 
+.landing-hero-cam {
+  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
+  font-weight: var(--hero-title-weight-cam);
+  letter-spacing: -0.018em;
+}
+
 .landing-hero-initial {
-  color: color-mix(in srgb, var(--sys-text-1) 82%, #c6dbf8 18%);
-  font-weight: 660;
+  color: color-mix(in srgb, var(--sys-text-1) 97%, #d6e6fb 3%);
+  font-weight: var(--hero-title-weight-os);
+  letter-spacing: -0.022em;
 }
 .landing-hero p {
-  margin: var(--hero-gap-title-subline) 0 0;
+  margin: 0;
   max-width: 30ch;
   color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
-  font-size: clamp(1.26rem, 2.4vw, 1.64rem);
+  font-size: var(--hero-statement-size);
   letter-spacing: 0.002em;
   opacity: 1;
-  line-height: 1.26;
+  line-height: var(--hero-statement-leading);
 }
-.landing-hero-actions { margin-top: var(--hero-gap-subline-cta); display: flex; gap: 12px; }
+.landing-hero-actions { margin-top: calc(var(--hero-stack-gap-2) - var(--hero-stack-gap-1)); display: flex; gap: 12px; }
 
 
 .landing-spec-sheet {
@@ -166,7 +184,7 @@ body {
 
 .landing-operational-grid {
   min-height: 260px;
-  padding: 20px 0 56px;
+  padding: 16px 0 56px;
 }
 
 .landing-axis-layout {
@@ -174,8 +192,8 @@ body {
   --axis-gap: 32px;
   --axis-row-min-height: 48px;
   --mx-block-top: 20px;
-  --mx-header-to-rows: 24px;
-  --mx-row-gap: 20px;
+  --mx-header-to-row1: 42px;
+  --mx-row-gap: 34px;
   --mx-block-bottom: 56px;
 
   width: 100%;
@@ -229,7 +247,7 @@ body {
   line-height: 1.28;
   letter-spacing: -0.01em;
   font-weight: 600;
-  margin-bottom: var(--mx-header-to-rows);
+  margin-bottom: var(--mx-header-to-row1);
 }
 
 .landing-section-head--sr-only {
@@ -393,7 +411,7 @@ body {
     --axis-column-width: 72px;
     --axis-gap: 28px;
     --mx-block-top: 56px;
-    --mx-header-to-rows: 20px;
+    --mx-header-to-row1: 36px;
     --mx-row-gap: 18px;
     --mx-block-bottom: 48px;
   }
@@ -401,10 +419,12 @@ body {
 
 @media (max-width: 900px) {
   .landing-hero {
-    --hero-gap-title-subline: 16px;
-    --hero-gap-subline-cta: 30px;
-    --hero-gap-cta-to-band: 22px;
-    padding: 74px 0 var(--hero-gap-cta-to-band);
+    --hero-title-size: clamp(1.94rem, 4.5vw, 2.86rem);
+    --hero-statement-size: clamp(1.2rem, 2.8vw, 1.46rem);
+    --hero-stack-gap-1: 16px;
+    --hero-stack-gap-2: 30px;
+    --hero-to-metrics-gap: 14px;
+    padding: 64px 0 var(--hero-to-metrics-gap);
   }
 
   .landing-operational-grid {
@@ -419,8 +439,8 @@ body {
     --axis-gap: 20px;
     --axis-row-min-height: 48px;
     --mx-block-top: 18px;
-    --mx-header-to-rows: 18px;
-    --mx-row-gap: 16px;
+    --mx-header-to-row1: 30px;
+    --mx-row-gap: 24px;
     --mx-block-bottom: 38px;
   }
 }
@@ -434,14 +454,16 @@ body {
   .landing-brand-name-wrap { flex-direction: column; align-items: flex-start; gap: 2px; }
   .landing-hero h1, .landing-hero p { max-width: none; }
   .landing-hero {
-    --hero-gap-title-subline: 14px;
-    --hero-gap-subline-cta: 24px;
-    --hero-gap-cta-to-band: 16px;
-    padding: 56px 0 var(--hero-gap-cta-to-band);
+    --hero-title-size: clamp(1.78rem, 9vw, 2.34rem);
+    --hero-statement-size: clamp(1.08rem, 5vw, 1.26rem);
+    --hero-stack-gap-1: 14px;
+    --hero-stack-gap-2: 22px;
+    --hero-to-metrics-gap: 10px;
+    padding: 52px 0 var(--hero-to-metrics-gap);
   }
   .landing-hero h1 { white-space: normal; }
   .landing-hero p {
-    font-size: clamp(1.14rem, 4.9vw, 1.34rem);
+    font-size: var(--hero-statement-size);
     line-height: 1.28;
   }
   .landing-hero-actions { flex-direction: column; align-items: stretch; }

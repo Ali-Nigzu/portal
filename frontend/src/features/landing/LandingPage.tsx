@@ -59,12 +59,13 @@ const LandingPage: React.FC = () => {
       <main>
         <section className="landing-hero" aria-labelledby="landing-hero-title">
           <div className="landing-container landing-hero-inner">
-            <h1 id="landing-hero-title" aria-label="camOS">
-              <span aria-hidden="true">cam</span>
-              <span aria-hidden="true" className="landing-hero-initial">OS</span>
-            </h1>
-            <p>{landingCopy.hero.supportLine}</p>
-            <div className="landing-hero-actions">
+            <div className="landing-hero-stack" data-align-anchor="hero-stack">
+              <h1 id="landing-hero-title" aria-label="camOS">
+                <span aria-hidden="true" className="landing-hero-cam">cam</span>
+                <span aria-hidden="true" className="landing-hero-initial">OS</span>
+              </h1>
+              <p>{landingCopy.hero.supportLine}</p>
+              <div className="landing-hero-actions">
               <button
                 type="button"
                 className="btn btn-primary"
@@ -79,6 +80,7 @@ const LandingPage: React.FC = () => {
               >
                 {landingCopy.nav.actions.createAccount}
               </button>
+              </div>
             </div>
           </div>
         </section>
