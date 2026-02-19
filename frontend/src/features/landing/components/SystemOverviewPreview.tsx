@@ -211,7 +211,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             ? donutCenterX - containerRect.left
             : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
           trafficSocketY: donutOuterTop != null
-            ? donutOuterTop - containerRect.top
+            ? donutOuterTop - containerRect.top + 1
             : trafficStemRect.top - containerRect.top,
         });
       });
