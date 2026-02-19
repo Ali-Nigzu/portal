@@ -91,11 +91,12 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   });
   const leftSlotRef = useRef<HTMLDivElement | null>(null);
   const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
-  const trafficDonutRef = useRef<HTMLDivElement | null>(null);
+  const trafficStemAnchorRef = useRef<HTMLSpanElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const [trafficRenderFailure, setTrafficRenderFailure] = useState(false);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
   const {
@@ -132,6 +133,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   }));
   const hasTopWidgets = topWidgets.every((item) => Boolean(item.widget));
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
+  const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
   const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
 
@@ -147,7 +149,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           !topClusterRef.current ||
           !bottomClusterRef.current ||
           !leftSlotRef.current ||
-          !trafficDonutRef.current ||
+          !trafficStemAnchorRef.current ||
           !dwellSlotRef.current ||
           !nodeAnchorRef.current
         ) {
@@ -162,11 +164,22 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const containerRect = containerRef.current.getBoundingClientRect();
         const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
-        const trafficRect = leftEdgeRef.current.getBoundingClientRect();
-        const donutRect = trafficDonutRef.current.getBoundingClientRect();
-        const donutOuterTop = donutRect.top;
-        const donutCenterX = donutRect.left + donutRect.width / 2;
+        const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
+        const donutSectorRects = Array.from(leftSlotRef.current.querySelectorAll("svg .recharts-sector")).map((sector) =>
+          sector.getBoundingClientRect(),
+        );
+        const donutOuterTop = donutSectorRects.length > 0
+          ? Math.min(...donutSectorRects.map((rect) => rect.top))
+          : null;
+        const donutCenterX = donutSectorRects.length > 0
+          ? ((Math.min(...donutSectorRects.map((rect) => rect.left)) + Math.max(...donutSectorRects.map((rect) => rect.right))) / 2)
+          : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
+
+        const shouldFailTraffic = widgetStatus === "ready" && Boolean(trafficWidget) && donutSectorRects.length === 0;
+        if (shouldFailTraffic !== trafficRenderFailure) {
+          setTrafficRenderFailure(shouldFailTraffic);
+        }
 
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
@@ -174,7 +187,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           exits: topRects[2].left - containerRect.left + topRects[2].width / 2,
           traffic: donutCenterX != null
             ? donutCenterX - containerRect.left
-            : trafficRect.left - containerRect.left + trafficRect.width / 2,
+            : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
           dwell: dwellRect.left - containerRect.left + dwellRect.width / 2,
         };
 
@@ -190,16 +203,16 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             entrances: topRects[0].top - containerRect.top + topRects[0].height / 2,
             occupancy: topRects[1].top - containerRect.top + topRects[1].height / 2,
             exits: topRects[2].top - containerRect.top + topRects[2].height / 2,
-            traffic: trafficRect.top - containerRect.top + trafficRect.height / 2,
+            traffic: trafficStemRect.top - containerRect.top + trafficStemRect.height / 2,
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
           trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
           trafficSocketX: donutCenterX != null
             ? donutCenterX - containerRect.left
-            : trafficRect.left - containerRect.left + trafficRect.width / 2,
+            : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
           trafficSocketY: donutOuterTop != null
             ? donutOuterTop - containerRect.top
-            : leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
+            : trafficStemRect.top - containerRect.top,
         });
       });
     };
@@ -232,7 +245,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         rafRef.current = null;
       }
     };
-  }, [forceMockTopology, hasTopWidgets, dwellWidget]);
+  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget, trafficRenderFailure, widgetStatus]);
 
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
   const flowRoutes = useMemo(
@@ -285,6 +298,11 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               y1={wire.endpointsY.traffic}
               x2={wire.trafficSocketX}
               y2={wire.trafficSocketY}
+            />
+            <path
+              className={styles.trafficReceivePulse}
+              data-testid="traffic-receive-pulse"
+              d={`M ${wire.trafficSocketX} ${wire.trafficSocketY} A 12 12 0 0 1 ${wire.trafficSocketX + 10.5} ${wire.trafficSocketY + 5.3}`}
             />
             <defs>
               {flowRoutes.map((route) => {
@@ -370,15 +388,16 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
           <article className={styles.trafficTile} data-testid="traffic-split-module">
-            <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
-              <article className={styles.trafficPreviewCard} aria-label="Traffic Split KPI">
-                <p className={styles.trafficPreviewTitle}>Traffic Split</p>
-                <div className={styles.trafficDonutRing} data-testid="traffic-donut-ring" ref={trafficDonutRef}>
-                  <span className={styles.trafficDonutCenter}>0</span>
-                </div>
-              </article>
-              <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
-            </div>
+            {!trafficWidget || trafficRenderFailure || hasError ? (
+              <div className={styles.inlineNotice} data-testid="traffic-split-error">Traffic Split data unavailable.</div>
+            ) : (
+              <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
+                <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
+                <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+                <span className={styles.trafficTitleMask} aria-hidden="true">Traffic Split</span>
+                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
+              </div>
+            )}
           </article>
 
           <div className={`${styles.kpiSlot} ${styles.tileT5}`}>

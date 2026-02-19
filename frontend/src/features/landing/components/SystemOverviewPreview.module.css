@@ -365,52 +365,27 @@
 }
 
 
-.trafficPreviewCard {
-  width: 100%;
-  min-height: 168px;
-  display: grid;
-  align-content: start;
-  justify-items: start;
-  row-gap: 14px;
+.trafficStemAnchor {
+  position: absolute;
+  left: 50%;
+  top: 58px;
+  width: 2px;
+  height: 2px;
+  transform: translateX(-50%);
 }
 
-.trafficPreviewTitle {
-  margin: 0;
+.trafficTitleMask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 7;
+  padding-right: 10px;
   font-size: 1.04rem;
   line-height: 1;
-  color: var(--sys-text-1);
   letter-spacing: -0.01em;
-}
-
-.trafficDonutRing {
-  position: relative;
-  width: 108px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: conic-gradient(
-    from -90deg,
-    #3f82ff 0deg 210deg,
-    #356fd9 210deg 318deg,
-    #2f5fb6 318deg 360deg
-  );
-  display: grid;
-  place-items: center;
-}
-
-.trafficDonutRing::before {
-  content: "";
-  width: 66%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--sys-bg-1) 94%, transparent);
-}
-
-.trafficDonutCenter {
-  position: absolute;
   color: var(--sys-text-1);
-  font-size: 1.85rem;
-  font-weight: 650;
-  line-height: 1;
+  background: color-mix(in srgb, var(--sys-bg-1) 94%, transparent);
+  pointer-events: none;
 }
 
 
@@ -464,6 +439,16 @@
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
+}
+
+.trafficReceivePulse {
+  stroke: color-mix(in srgb, #86b8fa 72%, transparent);
+  stroke-width: var(--preview-stroke-beam);
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 8 80;
+  opacity: 0.42;
+  animation: beam-flow 4.8s linear infinite;
 }
 
 .beamRoute {

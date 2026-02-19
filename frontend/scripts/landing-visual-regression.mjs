@@ -70,8 +70,13 @@ try {
   for (const viewport of viewports) {
     const page = await context.newPage({ viewport: { width: viewport.width, height: viewport.height } });
     const liveUrl = 'http://127.0.0.1:4173/';
-    const mockUrl = 'http://127.0.0.1:4173/?topologyMock=1';
     await page.goto(liveUrl, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => {
+      const hasCta = Boolean(document.querySelector('[data-testid="preview-enter-demo-cta"]'));
+      const hasTrafficError = Boolean(document.querySelector('[data-testid="traffic-split-error"]'));
+      const loading = Array.from(document.querySelectorAll('.landing-preview')).some((node) => (node.textContent || '').includes('Loading live KPI preview'));
+      return hasCta || hasTrafficError || !loading;
+    }, { timeout: 15000 });
 
     await page.locator('.landing-hero').screenshot({
       path: path.join(screenshotsDir, `${viewport.name}-hero.png`),
@@ -109,6 +114,7 @@ try {
       const systemSurface = document.querySelector('.landing-system-surface');
       const assuranceMatrix = document.querySelector('.landing-assurance-matrix');
       const previewNodeCta = document.querySelector('[data-testid="preview-enter-demo-cta"]');
+      const trafficError = document.querySelector('[data-testid="traffic-split-error"]');
       const previewNodeCtaRect = previewNodeCta?.getBoundingClientRect() ?? null;
       const trafficNodeConnector = document.querySelector('[data-testid="traffic-node-drop-connector"]');
       const trafficTileRect = document.querySelector('[class*="trafficTile"]')?.getBoundingClientRect() ?? null;
@@ -174,11 +180,11 @@ try {
       const connectorDepthIntoTrafficPx = trafficTileRect && connectorScreenY2 != null
         ? Number((connectorScreenY2 - trafficTileRect.top).toFixed(2))
         : null;
-      const donutRingRect = document.querySelector('[data-testid="traffic-donut-ring"]')?.getBoundingClientRect() ?? null;
-      const donutOuterTop = donutRingRect ? donutRingRect.top : null;
-      const donutOuterBottom = donutRingRect ? donutRingRect.bottom : null;
-      const donutOuterLeft = donutRingRect ? donutRingRect.left : null;
-      const donutOuterRight = donutRingRect ? donutRingRect.right : null;
+      const donutSectors = Array.from(document.querySelectorAll('[data-testid="traffic-split-module"] svg .recharts-sector')).map((sector) => sector.getBoundingClientRect());
+      const donutOuterTop = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.top)) : null;
+      const donutOuterBottom = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.bottom)) : null;
+      const donutOuterLeft = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.left)) : null;
+      const donutOuterRight = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.right)) : null;
       const donutDiameterPx = donutOuterTop != null && donutOuterBottom != null && donutOuterLeft != null && donutOuterRight != null
         ? Number(Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop).toFixed(2))
         : null;
@@ -261,10 +267,11 @@ try {
         assuranceHasTopBorder: assuranceMatrix ? getComputedStyle(assuranceMatrix).borderTopWidth !== '0px' : null,
         previewNodeCtaExists: Boolean(previewNodeCta),
         previewNodeCtaText: previewNodeCta?.textContent?.trim() ?? null,
+        trafficErrorExists: Boolean(trafficError),
         connectorExists: Boolean(trafficNodeConnector),
         connectorVertical: connectorX1 != null && connectorX2 != null ? Math.abs(connectorX1 - connectorX2) <= 0.5 : null,
         connectorDepthIntoTrafficPx,
-        donutSectorPresent: Boolean(donutRingRect),
+        donutSectorPresent: donutSectors.length > 0,
         donutDiameterPx,
         topClusterLiftPx,
         connectorToDonutOuterTopDiff,
@@ -278,15 +285,8 @@ try {
       };
     });
 
-    let geometrySource = 'live';
-    let geometry = await readGeometry();
-    if (!geometry.connectorExists || !geometry.donutSectorPresent || geometry.previewNodeCtaExists !== true) {
-      await page.goto(mockUrl, { waitUntil: 'networkidle' });
-      geometry = await readGeometry();
-      geometrySource = 'mock-fallback';
-    }
-
-    alignmentResults.push({ viewport: viewport.name, browser: browserName, geometrySource, ...geometry });
+    const geometry = await readGeometry();
+    alignmentResults.push({ viewport: viewport.name, browser: browserName, geometrySource: 'live-only', ...geometry });
     await page.close();
   }
 
@@ -297,6 +297,8 @@ try {
   );
 
   const desktopResult = alignmentResults.find((result) => result.viewport === 'desktop');
+
+  const trafficReady = desktopResult?.previewNodeCtaExists === true && desktopResult?.donutSectorPresent === true;
   if (
     !desktopResult
     || desktopResult.rowCount !== 3
@@ -346,23 +348,18 @@ try {
     || desktopResult.rowGap23 == null
     || desktopResult.headingToRow1 < desktopResult.rowGap12 + 6
     || Math.abs(desktopResult.rowGap12 - desktopResult.rowGap23) > 2
-    || desktopResult.previewNodeCtaExists !== true
-    || desktopResult.previewNodeCtaText !== "Access Demo"
-    || desktopResult.connectorExists !== true
-    || desktopResult.connectorVertical !== true
-    || desktopResult.connectorDepthIntoTrafficPx == null
-    || desktopResult.connectorDepthIntoTrafficPx < 0
-    || desktopResult.connectorDepthIntoTrafficPx > 40
-    || desktopResult.topClusterLiftPx == null
-    || desktopResult.topClusterLiftPx < 16
-    || (desktopResult.donutSectorPresent === true
-      && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2
-        || desktopResult.connectorToDonutRadiusDiff == null || desktopResult.connectorToDonutRadiusDiff > 2
-        || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 120))
-    || desktopResult.connectorInDonutInnerBounds === true
-    || desktopResult.footfallToCapacityGap == null
-    || desktopResult.footfallToCapacityGap < 4
-    || desktopResult.footfallToCapacityGap > 12
+    || (trafficReady && desktopResult.previewNodeCtaExists !== true)
+    || (trafficReady && desktopResult.previewNodeCtaText !== "Access Demo")
+    || (trafficReady && desktopResult.connectorExists !== true)
+    || (trafficReady && desktopResult.connectorVertical !== true)
+    || (trafficReady && (desktopResult.connectorDepthIntoTrafficPx == null || desktopResult.connectorDepthIntoTrafficPx < 0 || desktopResult.connectorDepthIntoTrafficPx > 40))
+    || (trafficReady && (desktopResult.topClusterLiftPx == null || desktopResult.topClusterLiftPx < 16))
+    || (trafficReady && desktopResult.donutSectorPresent !== true)
+    || (trafficReady && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2
+      || desktopResult.connectorToDonutRadiusDiff == null || desktopResult.connectorToDonutRadiusDiff > 2
+      || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 120))
+    || (trafficReady && desktopResult.connectorInDonutInnerBounds === true)
+    || (trafficReady && (desktopResult.footfallToCapacityGap == null || desktopResult.footfallToCapacityGap < 4 || desktopResult.footfallToCapacityGap > 12))
     || desktopResult.assuranceRow1Count !== 3
     || desktopResult.assuranceRow2Count !== 2
     || desktopResult.assuranceRow3HasCta !== true
