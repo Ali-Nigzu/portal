@@ -42,7 +42,7 @@ body {
   top: 0;
   z-index: 30;
   background: color-mix(in srgb, var(--sys-bg-0) 92%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 52%, transparent);
+  border-bottom: 0;
   backdrop-filter: blur(8px);
 }
 
@@ -60,7 +60,7 @@ body {
 .landing-brand-name { font-size: 0.79rem; letter-spacing: 0.01em; color: var(--sys-text-3); font-weight: 500; }
 .landing-brand-short { font-size: 1.04rem; font-weight: 660; letter-spacing: 0.02em; color: var(--sys-text-1); }
 
-.landing-header-actions { display: flex; align-items: center; gap: 8px; }
+.landing-header-actions { display: flex; align-items: center; gap: 0; }
 
 .btn {
   border-radius: var(--sys-radius-sm);
@@ -111,7 +111,7 @@ body {
 .landing-hero,
 #create-account { scroll-margin-top: 86px; }
 
-.landing-hero { padding: 80px 0 48px; }
+.landing-hero { padding: 104px 0 72px; }
 .landing-hero-inner { max-width: 720px; }
 .landing-hero h1 {
   margin: 0;
@@ -128,19 +128,19 @@ body {
   font-weight: 660;
 }
 .landing-hero p {
-  margin: 16px 0 0;
-  max-width: 52ch;
+  margin: 24px 0 0;
+  max-width: 30ch;
   color: var(--sys-text-2);
-  font-size: clamp(0.96rem, 1.6vw, 1.1rem);
+  font-size: clamp(1rem, 1.8vw, 1.18rem);
   letter-spacing: 0.005em;
   opacity: 0.97;
-  line-height: 1.55;
+  line-height: 1.6;
 }
-.landing-hero-actions { margin-top: 24px; display: flex; gap: 12px; }
+.landing-hero-actions { margin-top: 34px; display: flex; gap: 12px; }
 
 
 .landing-spec-sheet {
-  padding: 0 0 84px;
+  padding: 12px 0 96px;
 }
 
 .landing-spec-sheet-inner {
@@ -155,20 +155,23 @@ body {
 .landing-system-surface {
   position: relative;
   min-height: 300px;
-  border-top: 1px solid var(--sys-plate-line);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--sys-bg-1) 95%, transparent) 0%, color-mix(in srgb, var(--sys-bg-1) 98%, transparent) 100%);
+  border-top: 0;
+  background: transparent;
 }
 
 .landing-operational-grid {
   min-height: 260px;
-  padding: 48px 0 30px;
+  padding: 64px 0 56px;
 }
 
 .landing-axis-layout {
   --axis-column-width: 80px;
   --axis-gap: 32px;
   --axis-row-min-height: 48px;
+  --mx-block-top: 64px;
+  --mx-header-to-rows: 24px;
+  --mx-row-gap: 20px;
+  --mx-block-bottom: 56px;
 
   width: 100%;
 }
@@ -191,7 +194,8 @@ body {
   display: grid;
   grid-template-columns: 1fr var(--axis-column-width) 1fr;
   grid-template-rows: auto repeat(3, minmax(var(--axis-row-min-height), auto));
-  row-gap: 10px;
+  row-gap: var(--mx-row-gap);
+  padding: var(--mx-block-top) 0 var(--mx-block-bottom);
 }
 
 .landing-axis-cell {
@@ -220,7 +224,7 @@ body {
   line-height: 1.28;
   letter-spacing: -0.01em;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: var(--mx-header-to-rows);
 }
 
 .landing-section-head--sr-only {
@@ -236,7 +240,7 @@ body {
 }
 
 .landing-assurance-matrix {
-  border-top: 1px solid color-mix(in srgb, var(--sys-line-soft) 18%, transparent);
+  border-top: 0;
 }
 
 .landing-axis-roman {
@@ -275,7 +279,7 @@ body {
 }
 
 .landing-preview {
-  padding: 18px 0 20px;
+  padding: 28px 0 34px;
   border: 0;
   position: relative;
 }
@@ -302,7 +306,7 @@ body {
 }
 
 .landing-assurances {
-  padding: 14px 18px 18px;
+  padding: 18px 18px 26px;
 }
 
 .landing-assurance-matrix {
@@ -383,29 +387,37 @@ body {
   .landing-axis-layout {
     --axis-column-width: 72px;
     --axis-gap: 28px;
+    --mx-block-top: 56px;
+    --mx-header-to-rows: 20px;
+    --mx-row-gap: 18px;
+    --mx-block-bottom: 48px;
   }
 }
 
 @media (max-width: 900px) {
-  .landing-hero { padding: 72px 0 46px; }
+  .landing-hero { padding: 88px 0 62px; }
 
   .landing-operational-grid {
     grid-template-columns: 1fr;
     gap: 24px;
     min-height: 0;
-    padding: 52px 28px 30px;
+    padding: 58px 28px 42px;
   }
 
   .landing-axis-layout {
     --axis-column-width: 64px;
     --axis-gap: 20px;
     --axis-row-min-height: 48px;
+    --mx-block-top: 48px;
+    --mx-header-to-rows: 18px;
+    --mx-row-gap: 16px;
+    --mx-block-bottom: 38px;
   }
 }
 
 @media (max-width: 767px) {
-  .landing-preview { padding: 16px 0 0; }
-  .landing-assurances { padding: 14px 14px 16px; }
+  .landing-preview { padding: 26px 0 4px; }
+  .landing-assurances { padding: 18px 14px 20px; }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
   .landing-header-top { min-height: auto; padding: 10px 0; }
@@ -416,7 +428,7 @@ body {
   .landing-hero-actions .btn, .landing-signup-form .btn { width: 100%; }
 
   .landing-operational-grid {
-    padding: 46px 0 0;
+    padding: 54px 0 8px;
     gap: 20px;
   }
 

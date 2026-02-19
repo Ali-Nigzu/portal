@@ -82,15 +82,18 @@ try {
     });
 
     const geometry = await page.evaluate(() => {
-      const axisRows = Array.from(document.querySelectorAll('.landing-axis-roman')).map((roman) => roman.closest('.landing-axis-matrix')?.querySelectorAll('.landing-axis-cell-axis')[0]?.parentElement?.getBoundingClientRect()).filter(Boolean);
       const axisContainer = document.querySelector('.landing-axis-matrix')?.getBoundingClientRect();
       const landingContainer = document.querySelector('.landing-spec-sheet .landing-container')?.getBoundingClientRect();
       const firstRoman = document.querySelector('.landing-axis-roman')?.getBoundingClientRect();
       const firstLeftElement = document.querySelector('.landing-axis-cell-left:not(.landing-axis-cell-heading)');
       const firstRightElement = document.querySelector('.landing-axis-cell-right:not(.landing-axis-cell-heading)');
+      const heroSubtext = document.querySelector('.landing-hero p')?.textContent?.trim() ?? null;
+      const headerActionsText = Array.from(document.querySelectorAll('.landing-header-actions button')).map((btn) => btn.textContent?.trim() ?? '');
       const stepOneButton = document.querySelector('.landing-axis-right-action');
       const stepOneButtonRect = stepOneButton?.getBoundingClientRect() ?? null;
       const preview = document.querySelector('.landing-preview');
+      const systemSurface = document.querySelector('.landing-system-surface');
+      const assuranceMatrix = document.querySelector('.landing-assurance-matrix');
       const firstHeadingText = document.querySelector('#capabilities-title')?.textContent?.trim() ?? null;
       const secondHeadingText = document.querySelector('#deployment-title')?.textContent?.trim() ?? null;
 
@@ -108,18 +111,25 @@ try {
       const midpoint = (a, b) => Number((((a + b) / 2)).toFixed(2));
 
       const rows = Array.from(document.querySelectorAll('.landing-axis-roman')).map((roman) => roman.parentElement?.getBoundingClientRect()).filter(Boolean);
+      const headingRect = document.querySelector('.landing-axis-cell-heading')?.getBoundingClientRect() ?? null;
       const row1Center = rows[0] ? rowCenter(rows[0]) : null;
       const row2Center = rows[1] ? rowCenter(rows[1]) : null;
       const row3Center = rows[2] ? rowCenter(rows[2]) : null;
 
       const gap12Mid = row1Center != null && row2Center != null ? midpoint(row1Center, row2Center) : null;
       const gap23Mid = row2Center != null && row3Center != null ? midpoint(row2Center, row3Center) : null;
+      const rowGap12 = row1Center != null && row2Center != null ? Number(Math.abs(row2Center - row1Center).toFixed(2)) : null;
+      const rowGap23 = row2Center != null && row3Center != null ? Number(Math.abs(row3Center - row2Center).toFixed(2)) : null;
+      const headingToRow1 = headingRect && rows[0] ? Number(Math.abs(row1Center - headingRect.bottom).toFixed(2)) : null;
       const axisCenter = axisContainer ? axisContainer.left + (axisContainer.width / 2) : null;
       const axisHalf = 40;
       const axisRightEdge = axisCenter != null && axisHalf != null ? axisCenter + axisHalf : null;
 
       return {
         rowCount: rows.length,
+        heroSubtextIsSeeMore: heroSubtext === 'See More',
+        topNavHasDemoCta: headerActionsText.includes('Access Demo'),
+        topNavHasCreateAccountCta: headerActionsText.includes('Create Account'),
         containerToAxisCenterDiffPx:
           landingContainer && axisCenter != null
             ? Number(Math.abs((landingContainer.left + (landingContainer.width / 2)) - axisCenter).toFixed(2))
@@ -152,8 +162,13 @@ try {
         rightTexts,
         row2InterleaveDiffPx: gap12Mid != null && row2Center != null ? Number(Math.abs(row2Center - gap12Mid).toFixed(2)) : null,
         row3InterleaveDiffPx: gap23Mid != null && row3Center != null ? Number(Math.abs(row3Center - gap23Mid).toFixed(2)) : null,
+        headingToRow1,
+        rowGap12,
+        rowGap23,
         hasRailArtifacts: Boolean(document.querySelector('.landing-deployment-spine, .landing-deployment-rail, .landing-deployment-stem')),
         previewHasTopBorder: preview ? getComputedStyle(preview).borderTopWidth !== '0px' : null,
+        systemSurfaceHasTopBorder: systemSurface ? getComputedStyle(systemSurface).borderTopWidth !== '0px' : null,
+        assuranceHasTopBorder: assuranceMatrix ? getComputedStyle(assuranceMatrix).borderTopWidth !== '0px' : null,
       };
     });
 
@@ -171,6 +186,9 @@ try {
   if (
     !desktopResult
     || desktopResult.rowCount !== 3
+    || desktopResult.heroSubtextIsSeeMore !== true
+    || desktopResult.topNavHasDemoCta !== false
+    || desktopResult.topNavHasCreateAccountCta !== false
     || desktopResult.containerToAxisCenterDiffPx == null
     || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null
@@ -184,9 +202,16 @@ try {
     || desktopResult.step1IsButton !== true
     || desktopResult.step2HasButton !== false
     || desktopResult.step3HasButton !== false
+    || desktopResult.headingToRow1 == null
+    || desktopResult.rowGap12 == null
+    || desktopResult.rowGap23 == null
+    || desktopResult.headingToRow1 < desktopResult.rowGap12
+    || Math.abs(desktopResult.rowGap12 - desktopResult.rowGap23) > 2
     || desktopResult.hasDwellTime !== false
     || desktopResult.hasRailArtifacts !== false
     || desktopResult.previewHasTopBorder !== false
+    || desktopResult.systemSurfaceHasTopBorder !== false
+    || desktopResult.assuranceHasTopBorder !== false
   ) {
     throw new Error(`Desktop alignment failed. Results: ${JSON.stringify(alignmentResults)}`);
   }

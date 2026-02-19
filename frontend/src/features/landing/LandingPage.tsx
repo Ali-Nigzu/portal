@@ -53,8 +53,6 @@ const LandingPage: React.FC = () => {
   return (
     <div className="landing-page">
       <LandingHeader
-        onDemo={goToDemo}
-        onCreateAccount={scrollToSignUp}
         onLogin={goToLogin}
       />
 
