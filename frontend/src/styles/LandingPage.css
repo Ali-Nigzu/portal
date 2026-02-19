@@ -129,6 +129,7 @@ body {
 .landing-hero-zone-grid {
   display: grid;
   grid-template-rows: auto auto auto;
+  justify-items: center;
 }
 
 .landing-hero {
@@ -138,8 +139,10 @@ body {
 .landing-hero-stack {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  text-align: center;
   gap: var(--hero-stack-gap-1);
+  margin-inline: auto;
 }
 .landing-hero h1 {
   margin: 0;
@@ -175,6 +178,8 @@ body {
   margin-top: var(--hero-mid-gap);
   margin-bottom: 0;
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 12px;
 }
 
@@ -471,7 +476,7 @@ body {
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
   .landing-header-top { min-height: auto; padding: 10px 0; }
   .landing-brand-name-wrap { flex-direction: column; align-items: flex-start; gap: 2px; }
-  .landing-hero h1, .landing-hero p { max-width: none; }
+  .landing-hero h1, .landing-hero p { max-width: none; text-align: center; }
   .landing-hero-zone {
     --hero-title-size: clamp(1.78rem, 9vw, 2.34rem);
     --hero-statement-size: clamp(1.12rem, 5vw, 1.32rem);
