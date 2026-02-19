@@ -73,6 +73,8 @@ const initialWireLayout: WireLayout = {
   trafficSocketY: 0,
 };
 
+const TRAFFIC_DONUT_PALETTE = ["#315d9f", "#1f3e6d", "#2a4f88", "#244980"];
+
 const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
@@ -165,9 +167,12 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
         const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
-        const donutSectorRects = Array.from(leftSlotRef.current.querySelectorAll("svg .recharts-sector")).map((sector) =>
-          sector.getBoundingClientRect(),
-        );
+        const donutSectors = Array.from(leftSlotRef.current.querySelectorAll<SVGElement>("svg .recharts-sector"));
+        donutSectors.forEach((sector, index) => {
+          sector.setAttribute("fill", TRAFFIC_DONUT_PALETTE[index % TRAFFIC_DONUT_PALETTE.length]);
+          sector.style.fill = TRAFFIC_DONUT_PALETTE[index % TRAFFIC_DONUT_PALETTE.length];
+        });
+        const donutSectorRects = donutSectors.map((sector) => sector.getBoundingClientRect());
         const donutOuterTop = donutSectorRects.length > 0
           ? Math.min(...donutSectorRects.map((rect) => rect.top))
           : null;
@@ -211,7 +216,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             ? donutCenterX - containerRect.left
             : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
           trafficSocketY: donutOuterTop != null
-            ? donutOuterTop - containerRect.top + 1
+            ? Math.round(donutOuterTop - containerRect.top)
             : trafficStemRect.top - containerRect.top,
         });
       });
