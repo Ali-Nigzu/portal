@@ -7,7 +7,6 @@ const rootDir = path.resolve(process.cwd());
 const screenshotsDir = path.join(rootDir, 'artifacts', 'landing-visual');
 
 const previousDesktopCtaToMetricsBaselinePx = 74;
-const previousDesktopMetricsToPreviewBaselinePx = 68;
 
 const viewports = [
   { name: 'mobile', width: 375, height: 812 },
@@ -224,29 +223,30 @@ try {
     || desktopResult.topNavHasDemoCta !== false
     || desktopResult.topNavHasCreateAccountCta !== false
     || desktopResult.titleToSubtextGap == null
-    || desktopResult.titleToSubtextGap < 14
-    || desktopResult.titleToSubtextGap > 18
+    || desktopResult.titleToSubtextGap < 10
+    || desktopResult.titleToSubtextGap > 16
     || desktopResult.subtextToCtaGap == null
-    || desktopResult.subtextToCtaGap < 32
-    || desktopResult.subtextToCtaGap > 36
+    || desktopResult.subtextToCtaGap < 40
+    || desktopResult.subtextToCtaGap > 48
     || desktopResult.subtextToCtaGap <= desktopResult.titleToSubtextGap
     || desktopResult.ctaOffsetFromHeroTop == null
     || desktopResult.ctaOffsetFromHeroTop < 130
     || desktopResult.heroTitleFontSizePx == null
     || desktopResult.heroTitleFontSizePx < 60
     || desktopResult.heroStatementFontSizePx == null
-    || desktopResult.heroStatementFontSizePx < 32
+    || desktopResult.heroStatementFontSizePx < 38
     || desktopResult.heroStatementFontSizePx >= desktopResult.heroTitleFontSizePx
     || desktopResult.headingToRow1 == null
     || desktopResult.subtextToCtaGap == null
     || desktopResult.ctaToMetricsGap == null
-    || desktopResult.ctaToMetricsGap < 74
-    || desktopResult.ctaToMetricsGap > 78
+    || desktopResult.ctaToMetricsGap < 88
+    || desktopResult.ctaToMetricsGap > 96
     || desktopResult.ctaToMetricsGap <= desktopResult.subtextToCtaGap
+    || desktopResult.ctaToMetricsGap < Number((previousDesktopCtaToMetricsBaselinePx * 1.2).toFixed(2))
     || desktopResult.subtextToCtaGap <= desktopResult.titleToSubtextGap
     || desktopResult.metricsBottomToPreviewTopGap == null
     || desktopResult.metricsBottomToPreviewTopGap < 34
-    || desktopResult.metricsBottomToPreviewTopGap > Number((previousDesktopMetricsToPreviewBaselinePx * 0.7).toFixed(2))
+    || desktopResult.metricsBottomToPreviewTopGap > 58
     || desktopResult.containerToAxisCenterDiffPx == null
     || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null

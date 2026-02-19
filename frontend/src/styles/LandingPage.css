@@ -112,17 +112,17 @@ body {
 #create-account { scroll-margin-top: 86px; }
 
 .landing-hero-zone {
-  --hero-title-size: clamp(2.34rem, 5.05vw, 3.8rem);
-  --hero-title-weight-cam: 600;
-  --hero-title-weight-os: 670;
-  --hero-statement-size: clamp(1.58rem, 2.9vw, 2.06rem);
-  --hero-statement-leading: 1.2;
-  --hero-statement-tracking: 0.36px;
-  --hero-stack-gap-1: 16px;
-  --hero-gap-b: 34px;
-  --hero-gap-c: 76px;
-  --hero-zone-top: 72px;
-  --hero-zone-bottom: 10px;
+  --hero-title-size: clamp(2.7rem, 5.8vw, 4.35rem);
+  --hero-title-weight-cam: 620;
+  --hero-title-weight-os: 720;
+  --hero-statement-size: clamp(1.9rem, 3.5vw, 2.5rem);
+  --hero-statement-leading: 1.14;
+  --hero-statement-tracking: 0.56px;
+  --hero-stack-gap-1: 12px;
+  --hero-gap-b: 44px;
+  --hero-gap-c: 92px;
+  --hero-zone-top: 88px;
+  --hero-zone-bottom: 18px;
 
   padding: var(--hero-zone-top) 0 var(--hero-zone-bottom);
 }
@@ -169,7 +169,7 @@ body {
 .landing-hero p {
   margin: 0;
   max-width: 30ch;
-  color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
+  color: color-mix(in srgb, var(--sys-text-1) 96%, var(--sys-text-2) 4%);
   font-size: var(--hero-statement-size);
   letter-spacing: var(--hero-statement-tracking);
   opacity: 1;
@@ -444,13 +444,13 @@ body {
 
 @media (max-width: 900px) {
   .landing-hero-zone {
-    --hero-title-size: clamp(1.94rem, 4.5vw, 2.86rem);
-    --hero-statement-size: clamp(1.32rem, 3vw, 1.66rem);
-    --hero-stack-gap-1: 14px;
-    --hero-gap-b: 28px;
-    --hero-gap-c: 56px;
-    --hero-zone-top: 62px;
-    --hero-zone-bottom: 8px;
+    --hero-title-size: clamp(2.22rem, 5.1vw, 3.24rem);
+    --hero-statement-size: clamp(1.58rem, 3.4vw, 1.96rem);
+    --hero-stack-gap-1: 12px;
+    --hero-gap-b: 34px;
+    --hero-gap-c: 68px;
+    --hero-zone-top: 72px;
+    --hero-zone-bottom: 14px;
   }
 
   .landing-operational-grid {
@@ -480,13 +480,13 @@ body {
   .landing-brand-name-wrap { flex-direction: column; align-items: flex-start; gap: 2px; }
   .landing-hero h1, .landing-hero p { max-width: none; text-align: center; }
   .landing-hero-zone {
-    --hero-title-size: clamp(1.78rem, 9vw, 2.34rem);
-    --hero-statement-size: clamp(1.2rem, 5.2vw, 1.44rem);
+    --hero-title-size: clamp(2.02rem, 10vw, 2.74rem);
+    --hero-statement-size: clamp(1.34rem, 5.8vw, 1.7rem);
     --hero-stack-gap-1: 10px;
-    --hero-gap-b: 18px;
-    --hero-gap-c: 32px;
-    --hero-zone-top: 52px;
-    --hero-zone-bottom: 6px;
+    --hero-gap-b: 22px;
+    --hero-gap-c: 40px;
+    --hero-zone-top: 58px;
+    --hero-zone-bottom: 10px;
   }
   .landing-hero h1 { white-space: normal; }
   .landing-hero p {
