@@ -208,12 +208,12 @@ try {
     || desktopResult.topNavHasDemoCta !== false
     || desktopResult.topNavHasCreateAccountCta !== false
     || desktopResult.titleToSubtextGap == null
-    || desktopResult.titleToSubtextGap < 24
+    || desktopResult.titleToSubtextGap < 34
     || desktopResult.subtextToCtaGap == null
-    || desktopResult.subtextToCtaGap < 50
+    || desktopResult.subtextToCtaGap < 72
     || desktopResult.subtextToCtaGap <= desktopResult.titleToSubtextGap
     || desktopResult.ctaOffsetFromHeroTop == null
-    || desktopResult.ctaOffsetFromHeroTop < 180
+    || desktopResult.ctaOffsetFromHeroTop < 230
     || desktopResult.containerToAxisCenterDiffPx == null
     || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null
