@@ -136,6 +136,9 @@ try {
       const ctaOffsetFromHeroTop = heroRect && heroCtasRect
         ? Number(Math.max(0, heroCtasRect.top - heroRect.top).toFixed(2))
         : null;
+      const ctaToMetricsGap = heroCtasRect && headingRect
+        ? Number(Math.max(0, headingRect.top - heroCtasRect.bottom).toFixed(2))
+        : null;
       const axisCenter = axisContainer ? axisContainer.left + (axisContainer.width / 2) : null;
       const axisHalf = 40;
       const axisRightEdge = axisCenter != null && axisHalf != null ? axisCenter + axisHalf : null;
@@ -146,6 +149,7 @@ try {
         titleToSubtextGap,
         subtextToCtaGap,
         ctaOffsetFromHeroTop,
+        ctaToMetricsGap,
         topNavHasDemoCta: headerActionsText.includes('Access Demo'),
         topNavHasCreateAccountCta: headerActionsText.includes('Create Account'),
         containerToAxisCenterDiffPx:
@@ -208,12 +212,19 @@ try {
     || desktopResult.topNavHasDemoCta !== false
     || desktopResult.topNavHasCreateAccountCta !== false
     || desktopResult.titleToSubtextGap == null
-    || desktopResult.titleToSubtextGap < 34
+    || desktopResult.titleToSubtextGap < 16
+    || desktopResult.titleToSubtextGap > 24
     || desktopResult.subtextToCtaGap == null
-    || desktopResult.subtextToCtaGap < 72
+    || desktopResult.subtextToCtaGap < 28
+    || desktopResult.subtextToCtaGap > 40
     || desktopResult.subtextToCtaGap <= desktopResult.titleToSubtextGap
     || desktopResult.ctaOffsetFromHeroTop == null
-    || desktopResult.ctaOffsetFromHeroTop < 230
+    || desktopResult.ctaOffsetFromHeroTop < 130
+    || desktopResult.headingToRow1 == null
+    || desktopResult.subtextToCtaGap == null
+    || desktopResult.ctaToMetricsGap == null
+    || desktopResult.ctaToMetricsGap < 56
+    || desktopResult.ctaToMetricsGap > 80
     || desktopResult.containerToAxisCenterDiffPx == null
     || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null

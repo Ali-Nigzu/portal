@@ -112,15 +112,15 @@ body {
 #create-account { scroll-margin-top: 86px; }
 
 .landing-hero {
-  --hero-gap-title-subline: 40px;
-  --hero-gap-subline-cta: 88px;
-  --hero-gap-cta-to-band: 128px;
-  padding: 70px 0 var(--hero-gap-cta-to-band);
+  --hero-gap-title-subline: 18px;
+  --hero-gap-subline-cta: 34px;
+  --hero-gap-cta-to-band: 24px;
+  padding: 74px 0 var(--hero-gap-cta-to-band);
 }
 .landing-hero-inner { max-width: 720px; }
 .landing-hero h1 {
   margin: 0;
-  font-size: clamp(2.2rem, 4.9vw, 3.7rem);
+  font-size: clamp(2.1rem, 4.6vw, 3.35rem);
   line-height: 1.01;
   letter-spacing: -0.02em;
   font-weight: 640;
@@ -136,10 +136,10 @@ body {
   margin: var(--hero-gap-title-subline) 0 0;
   max-width: 30ch;
   color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
-  font-size: clamp(1.52rem, 2.95vw, 2.16rem);
+  font-size: clamp(1.26rem, 2.4vw, 1.64rem);
   letter-spacing: 0.002em;
   opacity: 1;
-  line-height: 1.2;
+  line-height: 1.26;
 }
 .landing-hero-actions { margin-top: var(--hero-gap-subline-cta); display: flex; gap: 12px; }
 
@@ -166,14 +166,14 @@ body {
 
 .landing-operational-grid {
   min-height: 260px;
-  padding: 30px 0 56px;
+  padding: 20px 0 56px;
 }
 
 .landing-axis-layout {
   --axis-column-width: 80px;
   --axis-gap: 32px;
   --axis-row-min-height: 48px;
-  --mx-block-top: 44px;
+  --mx-block-top: 20px;
   --mx-header-to-rows: 24px;
   --mx-row-gap: 20px;
   --mx-block-bottom: 56px;
@@ -401,10 +401,10 @@ body {
 
 @media (max-width: 900px) {
   .landing-hero {
-    --hero-gap-title-subline: 32px;
-    --hero-gap-subline-cta: 66px;
-    --hero-gap-cta-to-band: 104px;
-    padding: 70px 0 var(--hero-gap-cta-to-band);
+    --hero-gap-title-subline: 16px;
+    --hero-gap-subline-cta: 30px;
+    --hero-gap-cta-to-band: 22px;
+    padding: 74px 0 var(--hero-gap-cta-to-band);
   }
 
   .landing-operational-grid {
@@ -418,7 +418,7 @@ body {
     --axis-column-width: 64px;
     --axis-gap: 20px;
     --axis-row-min-height: 48px;
-    --mx-block-top: 38px;
+    --mx-block-top: 18px;
     --mx-header-to-rows: 18px;
     --mx-row-gap: 16px;
     --mx-block-bottom: 38px;
@@ -434,14 +434,14 @@ body {
   .landing-brand-name-wrap { flex-direction: column; align-items: flex-start; gap: 2px; }
   .landing-hero h1, .landing-hero p { max-width: none; }
   .landing-hero {
-    --hero-gap-title-subline: 24px;
-    --hero-gap-subline-cta: 48px;
-    --hero-gap-cta-to-band: 78px;
-    padding: 60px 0 var(--hero-gap-cta-to-band);
+    --hero-gap-title-subline: 14px;
+    --hero-gap-subline-cta: 24px;
+    --hero-gap-cta-to-band: 16px;
+    padding: 56px 0 var(--hero-gap-cta-to-band);
   }
   .landing-hero h1 { white-space: normal; }
   .landing-hero p {
-    font-size: clamp(1.24rem, 5.8vw, 1.56rem);
+    font-size: clamp(1.14rem, 4.9vw, 1.34rem);
     line-height: 1.28;
   }
   .landing-hero-actions { flex-direction: column; align-items: stretch; }
