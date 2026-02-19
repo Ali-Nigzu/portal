@@ -27,6 +27,7 @@ type WireLayout = {
   nodeX: number;
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
+  trafficTopY: number;
 };
 
 type RouteDefinition = {
@@ -46,7 +47,6 @@ const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
   { id: "entrances", direction: "toNode" },
   { id: "occupancy", direction: "fromNode" },
   { id: "exits", direction: "toNode" },
-  { id: "traffic", direction: "fromNode" },
   { id: "dwell", direction: "fromNode" },
 ];
 
@@ -65,9 +65,10 @@ const initialWireLayout: WireLayout = {
   nodeX: 0,
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
+  trafficTopY: 0,
 };
 
-const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forceMockTopology }) => {
+const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -181,6 +182,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
             traffic: trafficRect.top - containerRect.top + trafficRect.height / 2,
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
+          trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
         });
       });
     };
@@ -247,7 +249,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
             <line className={styles.busLine} data-testid="topology-bus" x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-            {FLOW_ROUTE_DEFINITIONS.map((route) => (
+            {FLOW_ROUTE_DEFINITIONS.filter((route) => route.id !== "traffic").map((route) => (
               <line
                 key={`connector-${route.id}`}
                 className={styles.connectorLine}
@@ -258,6 +260,14 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 y2={wire.busY}
               />
             ))}
+            <line
+              className={styles.nodeDropConnector}
+              data-testid="traffic-node-drop-connector"
+              x1={nodeX}
+              y1={wire.busY}
+              x2={nodeX}
+              y2={wire.trafficTopY}
+            />
             <defs>
               {flowRoutes.map((route) => {
                 const isToNode = route.direction === "toNode";
@@ -325,7 +335,17 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         </div>
 
         <div className={styles.midZone}>
-          <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
+          <div className={styles.nodeStack}>
+            <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
+            <button
+              type="button"
+              className={styles.previewNodeCta}
+              data-testid="preview-enter-demo-cta"
+              onClick={onAccessDemo}
+            >
+              Access Demo
+            </button>
+          </div>
         </div>
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
@@ -367,7 +387,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
   );
 };
 
-const SystemOverviewPreview: React.FC = () => {
+const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAccessDemo }) => {
   const location = useLocation();
   const forceMockTopology = useMemo(() => {
     if (!import.meta.env.DEV && !import.meta.env.MODE.includes("test")) {
@@ -442,7 +462,7 @@ const SystemOverviewPreview: React.FC = () => {
     );
   }
 
-  return <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} />;
+  return <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />;
 };
 
 export default SystemOverviewPreview;

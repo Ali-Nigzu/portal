@@ -12,8 +12,7 @@ export const landingCopy = {
   },
   hero: {
     headline: "Camera Operating Systems",
-    supportLine:
-      "Operational analytics for existing CCTV infrastructure. Access real-time footfall, dwell time and site movement.",
+    supportLine: "See More.",
   },
   livePreview: {
     heading: "Live Platform Preview",
@@ -37,8 +36,6 @@ export const landingCopy = {
   assurances: {
     heading: "Operational Assurances",
     items: [
-      "Uses existing CCTV",
-      "No personal data is stored",
       "Reporting is anonymised and aggregated",
       "Built for continuous operation",
       "No additional hardware",
