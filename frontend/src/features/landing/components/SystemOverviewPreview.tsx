@@ -73,7 +73,6 @@ const initialWireLayout: WireLayout = {
   trafficSocketY: 0,
 };
 
-const TRAFFIC_DONUT_PALETTE = ["#315d9f", "#1f3e6d", "#2a4f88", "#244980"];
 
 const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -168,16 +167,27 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
         const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
         const donutSectors = Array.from(leftSlotRef.current.querySelectorAll<SVGElement>("svg .recharts-sector"));
-        donutSectors.forEach((sector, index) => {
-          sector.setAttribute("fill", TRAFFIC_DONUT_PALETTE[index % TRAFFIC_DONUT_PALETTE.length]);
-          sector.style.fill = TRAFFIC_DONUT_PALETTE[index % TRAFFIC_DONUT_PALETTE.length];
-        });
         const donutSectorRects = donutSectors.map((sector) => sector.getBoundingClientRect());
         const donutOuterTop = donutSectorRects.length > 0
           ? Math.min(...donutSectorRects.map((rect) => rect.top))
           : null;
-        const donutCenterX = donutSectorRects.length > 0
-          ? ((Math.min(...donutSectorRects.map((rect) => rect.left)) + Math.max(...donutSectorRects.map((rect) => rect.right))) / 2)
+        const donutOuterBottom = donutSectorRects.length > 0
+          ? Math.max(...donutSectorRects.map((rect) => rect.bottom))
+          : null;
+        const donutOuterLeft = donutSectorRects.length > 0
+          ? Math.min(...donutSectorRects.map((rect) => rect.left))
+          : null;
+        const donutOuterRight = donutSectorRects.length > 0
+          ? Math.max(...donutSectorRects.map((rect) => rect.right))
+          : null;
+        const donutCenterX = donutOuterLeft != null && donutOuterRight != null
+          ? ((donutOuterLeft + donutOuterRight) / 2)
+          : null;
+        const donutCenterY = donutOuterTop != null && donutOuterBottom != null
+          ? ((donutOuterTop + donutOuterBottom) / 2)
+          : null;
+        const donutRadius = donutOuterLeft != null && donutOuterRight != null && donutOuterTop != null && donutOuterBottom != null
+          ? (Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop) / 2)
           : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
@@ -215,8 +225,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           trafficSocketX: donutCenterX != null
             ? donutCenterX - containerRect.left
             : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
-          trafficSocketY: donutOuterTop != null
-            ? Math.round(donutOuterTop - containerRect.top)
+          trafficSocketY: donutCenterY != null && donutRadius != null
+            ? Math.round((donutCenterY - donutRadius) - containerRect.top)
             : trafficStemRect.top - containerRect.top,
         });
       });

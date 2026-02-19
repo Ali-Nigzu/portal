@@ -407,11 +407,6 @@
   transform-origin: 50% 0%;
 }
 
-.trafficTile :global(.recharts-sector) {
-  stroke: transparent !important;
-  fill: #244980 !important;
-}
-
 
 .mockTile {
   min-height: 112px;

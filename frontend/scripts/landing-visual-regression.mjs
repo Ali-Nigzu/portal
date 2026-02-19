@@ -180,7 +180,12 @@ try {
       const connectorDepthIntoTrafficPx = trafficTileRect && connectorScreenY2 != null
         ? Number((connectorScreenY2 - trafficTileRect.top).toFixed(2))
         : null;
-      const donutSectors = Array.from(document.querySelectorAll('[data-testid="traffic-split-module"] svg .recharts-sector')).map((sector) => sector.getBoundingClientRect());
+      const donutSectorNodes = Array.from(document.querySelectorAll('[data-testid="traffic-split-module"] svg .recharts-sector'));
+      const donutSectors = donutSectorNodes.map((sector) => sector.getBoundingClientRect());
+      const donutSectorFills = donutSectorNodes
+        .map((node) => getComputedStyle(node).fill)
+        .filter((fill) => typeof fill === 'string' && fill.length > 0);
+      const donutDistinctFillCount = new Set(donutSectorFills).size;
       const donutOuterTop = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.top)) : null;
       const donutOuterBottom = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.bottom)) : null;
       const donutOuterLeft = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.left)) : null;
@@ -203,6 +208,12 @@ try {
         : null;
       const connectorToDonutRadiusDiff = connectorScreenX2 != null && connectorScreenY2 != null && donutInnerBounds
         ? Number(Math.abs(Math.hypot(connectorScreenX2 - donutInnerBounds.cx, connectorScreenY2 - donutInnerBounds.cy) - (donutDiameterPx / 2)).toFixed(2))
+        : null;
+      const connectorToDonutCenterXDiff = connectorScreenX2 != null && donutInnerBounds
+        ? Number(Math.abs(connectorScreenX2 - donutInnerBounds.cx).toFixed(2))
+        : null;
+      const connectorEndsAboveDonutCenter = connectorScreenY2 != null && donutInnerBounds
+        ? connectorScreenY2 < donutInnerBounds.cy
         : null;
       const topClusterLiftPx = topologyCanvasRect && topClusterRect
         ? Number((topologyCanvasRect.top - topClusterRect.top).toFixed(2))
@@ -272,10 +283,13 @@ try {
         connectorVertical: connectorX1 != null && connectorX2 != null ? Math.abs(connectorX1 - connectorX2) <= 0.5 : null,
         connectorDepthIntoTrafficPx,
         donutSectorPresent: donutSectors.length > 0,
+        donutDistinctFillCount,
         donutDiameterPx,
         topClusterLiftPx,
         connectorToDonutOuterTopDiff,
         connectorToDonutRadiusDiff,
+        connectorToDonutCenterXDiff,
+        connectorEndsAboveDonutCenter,
         connectorInDonutInnerBounds,
         footfallToCapacityGap,
         assuranceRow1Count: row1Assurances.length,
@@ -298,7 +312,7 @@ try {
 
   const desktopResult = alignmentResults.find((result) => result.viewport === 'desktop');
 
-  const trafficReady = desktopResult?.previewNodeCtaExists === true && desktopResult?.donutSectorPresent === true;
+  const trafficReady = desktopResult?.donutSectorPresent === true && desktopResult?.trafficErrorExists === false;
   if (
     !desktopResult
     || desktopResult.rowCount !== 3
@@ -357,8 +371,11 @@ try {
     || (trafficReady && desktopResult.donutSectorPresent !== true)
     || (trafficReady && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2
       || desktopResult.connectorToDonutRadiusDiff == null || desktopResult.connectorToDonutRadiusDiff > 2
+      || desktopResult.connectorToDonutCenterXDiff == null || desktopResult.connectorToDonutCenterXDiff > 2
+      || desktopResult.connectorEndsAboveDonutCenter !== true
       || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 120))
     || (trafficReady && desktopResult.connectorInDonutInnerBounds === true)
+    || (trafficReady && (desktopResult.donutDistinctFillCount == null || desktopResult.donutDistinctFillCount < 2))
     || (trafficReady && (desktopResult.footfallToCapacityGap == null || desktopResult.footfallToCapacityGap < 4 || desktopResult.footfallToCapacityGap > 12))
     || desktopResult.assuranceRow1Count !== 3
     || desktopResult.assuranceRow2Count !== 2
