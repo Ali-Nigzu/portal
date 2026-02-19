@@ -96,6 +96,9 @@ try {
       const heroSubtextRect = heroSubtextEl?.getBoundingClientRect() ?? null;
       const heroCtasRect = document.querySelector('.landing-hero-actions')?.getBoundingClientRect() ?? null;
       const heroRect = document.querySelector('.landing-hero')?.getBoundingClientRect() ?? null;
+
+      const heroTitleStyles = document.querySelector('.landing-hero h1') ? getComputedStyle(document.querySelector('.landing-hero h1')) : null;
+      const heroStatementStyles = document.querySelector('.landing-hero p') ? getComputedStyle(document.querySelector('.landing-hero p')) : null;
       const headerActionsText = Array.from(document.querySelectorAll('.landing-header-actions button')).map((btn) => btn.textContent?.trim() ?? '');
       const stepOneButton = document.querySelector('.landing-axis-right-action');
       const stepOneButtonRect = stepOneButton?.getBoundingClientRect() ?? null;
@@ -142,9 +145,6 @@ try {
       const ctaToMetricsGap = heroCtasRect && headingRect
         ? Number(Math.max(0, headingRect.top - heroCtasRect.bottom).toFixed(2))
         : null;
-      const midpointGapDiff = subtextToCtaGap != null && ctaToMetricsGap != null
-        ? Number(Math.abs(subtextToCtaGap - ctaToMetricsGap).toFixed(2))
-        : null;
       const metricsBottomToPreviewTopGap = rows[2] && preview
         ? Number(Math.max(0, preview.getBoundingClientRect().top - rows[2].bottom).toFixed(2))
         : null;
@@ -159,7 +159,8 @@ try {
         subtextToCtaGap,
         ctaOffsetFromHeroTop,
         ctaToMetricsGap,
-        midpointGapDiff,
+        heroTitleFontSizePx: heroTitleStyles ? Number.parseFloat(heroTitleStyles.fontSize) : null,
+        heroStatementFontSizePx: heroStatementStyles ? Number.parseFloat(heroStatementStyles.fontSize) : null,
         metricsBottomToPreviewTopGap,
         topNavHasDemoCta: headerActionsText.includes('Access Demo'),
         topNavHasCreateAccountCta: headerActionsText.includes('Create Account'),
@@ -223,22 +224,26 @@ try {
     || desktopResult.topNavHasDemoCta !== false
     || desktopResult.topNavHasCreateAccountCta !== false
     || desktopResult.titleToSubtextGap == null
-    || desktopResult.titleToSubtextGap < 16
-    || desktopResult.titleToSubtextGap > 24
+    || desktopResult.titleToSubtextGap < 14
+    || desktopResult.titleToSubtextGap > 18
     || desktopResult.subtextToCtaGap == null
-    || desktopResult.subtextToCtaGap < 28
-    || desktopResult.subtextToCtaGap > 40
+    || desktopResult.subtextToCtaGap < 32
+    || desktopResult.subtextToCtaGap > 36
     || desktopResult.subtextToCtaGap <= desktopResult.titleToSubtextGap
     || desktopResult.ctaOffsetFromHeroTop == null
     || desktopResult.ctaOffsetFromHeroTop < 130
+    || desktopResult.heroTitleFontSizePx == null
+    || desktopResult.heroTitleFontSizePx < 60
+    || desktopResult.heroStatementFontSizePx == null
+    || desktopResult.heroStatementFontSizePx < 32
+    || desktopResult.heroStatementFontSizePx >= desktopResult.heroTitleFontSizePx
     || desktopResult.headingToRow1 == null
     || desktopResult.subtextToCtaGap == null
     || desktopResult.ctaToMetricsGap == null
-    || desktopResult.ctaToMetricsGap < 30
-    || desktopResult.ctaToMetricsGap > 42
-    || desktopResult.ctaToMetricsGap > Number((previousDesktopCtaToMetricsBaselinePx * 0.8).toFixed(2))
-    || desktopResult.midpointGapDiff == null
-    || desktopResult.midpointGapDiff > 2
+    || desktopResult.ctaToMetricsGap < 74
+    || desktopResult.ctaToMetricsGap > 78
+    || desktopResult.ctaToMetricsGap <= desktopResult.subtextToCtaGap
+    || desktopResult.subtextToCtaGap <= desktopResult.titleToSubtextGap
     || desktopResult.metricsBottomToPreviewTopGap == null
     || desktopResult.metricsBottomToPreviewTopGap < 34
     || desktopResult.metricsBottomToPreviewTopGap > Number((previousDesktopMetricsToPreviewBaselinePx * 0.7).toFixed(2))
