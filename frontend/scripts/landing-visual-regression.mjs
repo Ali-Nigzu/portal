@@ -7,6 +7,7 @@ const rootDir = path.resolve(process.cwd());
 const screenshotsDir = path.join(rootDir, 'artifacts', 'landing-visual');
 
 const previousDesktopCtaToMetricsBaselinePx = 74;
+const previousDesktopMetricsToPreviewBaselinePx = 68;
 
 const viewports = [
   { name: 'mobile', width: 375, height: 812 },
@@ -117,7 +118,7 @@ try {
       const rowCenter = (row) => Number((row.top + (row.height / 2)).toFixed(2));
       const midpoint = (a, b) => Number((((a + b) / 2)).toFixed(2));
 
-      const rows = Array.from(document.querySelectorAll('.landing-axis-roman')).map((roman) => roman.parentElement?.getBoundingClientRect()).filter(Boolean);
+      const rows = Array.from(document.querySelectorAll('.landing-axis-roman')).map((roman) => roman.getBoundingClientRect());
       const headingRect = document.querySelector('.landing-axis-cell-heading')?.getBoundingClientRect() ?? null;
       const row1Center = rows[0] ? rowCenter(rows[0]) : null;
       const row2Center = rows[1] ? rowCenter(rows[1]) : null;
@@ -141,6 +142,12 @@ try {
       const ctaToMetricsGap = heroCtasRect && headingRect
         ? Number(Math.max(0, headingRect.top - heroCtasRect.bottom).toFixed(2))
         : null;
+      const midpointGapDiff = subtextToCtaGap != null && ctaToMetricsGap != null
+        ? Number(Math.abs(subtextToCtaGap - ctaToMetricsGap).toFixed(2))
+        : null;
+      const metricsBottomToPreviewTopGap = rows[2] && preview
+        ? Number(Math.max(0, preview.getBoundingClientRect().top - rows[2].bottom).toFixed(2))
+        : null;
       const axisCenter = axisContainer ? axisContainer.left + (axisContainer.width / 2) : null;
       const axisHalf = 40;
       const axisRightEdge = axisCenter != null && axisHalf != null ? axisCenter + axisHalf : null;
@@ -152,6 +159,8 @@ try {
         subtextToCtaGap,
         ctaOffsetFromHeroTop,
         ctaToMetricsGap,
+        midpointGapDiff,
+        metricsBottomToPreviewTopGap,
         topNavHasDemoCta: headerActionsText.includes('Access Demo'),
         topNavHasCreateAccountCta: headerActionsText.includes('Create Account'),
         containerToAxisCenterDiffPx:
@@ -225,9 +234,14 @@ try {
     || desktopResult.headingToRow1 == null
     || desktopResult.subtextToCtaGap == null
     || desktopResult.ctaToMetricsGap == null
-    || desktopResult.ctaToMetricsGap < 52
-    || desktopResult.ctaToMetricsGap > 60
+    || desktopResult.ctaToMetricsGap < 30
+    || desktopResult.ctaToMetricsGap > 42
     || desktopResult.ctaToMetricsGap > Number((previousDesktopCtaToMetricsBaselinePx * 0.8).toFixed(2))
+    || desktopResult.midpointGapDiff == null
+    || desktopResult.midpointGapDiff > 2
+    || desktopResult.metricsBottomToPreviewTopGap == null
+    || desktopResult.metricsBottomToPreviewTopGap < 34
+    || desktopResult.metricsBottomToPreviewTopGap > Number((previousDesktopMetricsToPreviewBaselinePx * 0.7).toFixed(2))
     || desktopResult.containerToAxisCenterDiffPx == null
     || desktopResult.containerToAxisCenterDiffPx > 1
     || desktopResult.axisCenterDiffPx == null

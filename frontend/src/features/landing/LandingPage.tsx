@@ -57,15 +57,19 @@ const LandingPage: React.FC = () => {
       />
 
       <main>
-        <section className="landing-hero" aria-labelledby="landing-hero-title">
-          <div className="landing-container landing-hero-inner">
-            <div className="landing-hero-stack" data-align-anchor="hero-stack">
-              <h1 id="landing-hero-title" aria-label="camOS">
-                <span aria-hidden="true" className="landing-hero-cam">cam</span>
-                <span aria-hidden="true" className="landing-hero-initial">OS</span>
-              </h1>
-              <p>{landingCopy.hero.supportLine}</p>
-              <div className="landing-hero-actions">
+        <section className="landing-hero-zone" aria-label="Hero zone">
+          <div className="landing-container landing-hero-zone-grid">
+            <section className="landing-hero" aria-labelledby="landing-hero-title">
+              <div className="landing-hero-stack" data-align-anchor="hero-stack">
+                <h1 id="landing-hero-title" aria-label="camOS">
+                  <span aria-hidden="true" className="landing-hero-cam">cam</span>
+                  <span aria-hidden="true" className="landing-hero-initial">OS</span>
+                </h1>
+                <p>{landingCopy.hero.supportLine}</p>
+              </div>
+            </section>
+
+            <div className="landing-hero-actions">
               <button
                 type="button"
                 className="btn btn-primary"
@@ -80,44 +84,41 @@ const LandingPage: React.FC = () => {
               >
                 {landingCopy.nav.actions.createAccount}
               </button>
-              </div>
             </div>
+
+            <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
+              <div className="landing-axis-matrix" data-align-anchor="axis-matrix">
+                <h2 id="capabilities-title" className="landing-axis-cell landing-axis-cell-left landing-axis-cell-heading">Metrics</h2>
+                <span className="landing-axis-cell landing-axis-cell-axis" aria-hidden="true" />
+                <h2 id="deployment-title" className="landing-axis-cell landing-axis-cell-right landing-axis-cell-heading">Access</h2>
+
+                {romanAxisLabels.map((label, index) => (
+                  <React.Fragment key={label}>
+                    <span className="landing-axis-cell landing-axis-cell-left">{capabilityAxisItems[index]}</span>
+                    <span className="landing-axis-cell landing-axis-cell-axis landing-axis-roman" aria-hidden="true">{label}</span>
+                    {index === 0 ? (
+                      <span className="landing-axis-cell landing-axis-cell-right">
+                        <button
+                          type="button"
+                          className="landing-axis-right-action"
+                          onClick={scrollToSignUp}
+                        >
+                          {deploymentAxisItems[index]}
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="landing-axis-cell landing-axis-cell-right">{deploymentAxisItems[index]}</span>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </section>
           </div>
         </section>
 
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
           <div className="landing-container landing-spec-sheet-inner">
             <div className="landing-system-surface">
-              <div className="landing-operational-grid">
-                <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
-                  <div className="landing-axis-matrix" data-align-anchor="axis-matrix">
-                    <h2 id="capabilities-title" className="landing-axis-cell landing-axis-cell-left landing-axis-cell-heading">Metrics</h2>
-                    <span className="landing-axis-cell landing-axis-cell-axis" aria-hidden="true" />
-                    <h2 id="deployment-title" className="landing-axis-cell landing-axis-cell-right landing-axis-cell-heading">Access</h2>
-
-                    {romanAxisLabels.map((label, index) => (
-                      <React.Fragment key={label}>
-                        <span className="landing-axis-cell landing-axis-cell-left">{capabilityAxisItems[index]}</span>
-                        <span className="landing-axis-cell landing-axis-cell-axis landing-axis-roman" aria-hidden="true">{label}</span>
-                        {index === 0 ? (
-                          <span className="landing-axis-cell landing-axis-cell-right">
-                            <button
-                              type="button"
-                              className="landing-axis-right-action"
-                              onClick={scrollToSignUp}
-                            >
-                              {deploymentAxisItems[index]}
-                            </button>
-                          </span>
-                        ) : (
-                          <span className="landing-axis-cell landing-axis-cell-right">{deploymentAxisItems[index]}</span>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </section>
-              </div>
-
               <section className="landing-preview" aria-labelledby="live-preview-title">
                 <div className="landing-section-head landing-section-head--sr-only">
                   <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
@@ -161,7 +162,7 @@ const LandingPage: React.FC = () => {
                 >
                   {landingCopy.createAccount.button}
                 </button>
-              </div>
+            </div>
             ) : (
               <form className="landing-signup-form" onSubmit={handleSubmit}>
                 <div className="landing-form-grid">
