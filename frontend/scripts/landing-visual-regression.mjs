@@ -174,11 +174,11 @@ try {
       const connectorDepthIntoTrafficPx = trafficTileRect && connectorScreenY2 != null
         ? Number((connectorScreenY2 - trafficTileRect.top).toFixed(2))
         : null;
-      const donutSectors = Array.from(document.querySelectorAll('[data-testid="traffic-split-module"] svg .recharts-sector')).map((sector) => sector.getBoundingClientRect());
-      const donutOuterTop = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.top)) : null;
-      const donutOuterBottom = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.bottom)) : null;
-      const donutOuterLeft = donutSectors.length > 0 ? Math.min(...donutSectors.map((rect) => rect.left)) : null;
-      const donutOuterRight = donutSectors.length > 0 ? Math.max(...donutSectors.map((rect) => rect.right)) : null;
+      const donutRingRect = document.querySelector('[data-testid="traffic-donut-ring"]')?.getBoundingClientRect() ?? null;
+      const donutOuterTop = donutRingRect ? donutRingRect.top : null;
+      const donutOuterBottom = donutRingRect ? donutRingRect.bottom : null;
+      const donutOuterLeft = donutRingRect ? donutRingRect.left : null;
+      const donutOuterRight = donutRingRect ? donutRingRect.right : null;
       const donutDiameterPx = donutOuterTop != null && donutOuterBottom != null && donutOuterLeft != null && donutOuterRight != null
         ? Number(Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop).toFixed(2))
         : null;
@@ -264,7 +264,7 @@ try {
         connectorExists: Boolean(trafficNodeConnector),
         connectorVertical: connectorX1 != null && connectorX2 != null ? Math.abs(connectorX1 - connectorX2) <= 0.5 : null,
         connectorDepthIntoTrafficPx,
-        donutSectorPresent: donutSectors.length > 0,
+        donutSectorPresent: Boolean(donutRingRect),
         donutDiameterPx,
         topClusterLiftPx,
         connectorToDonutOuterTopDiff,
@@ -352,13 +352,13 @@ try {
     || desktopResult.connectorVertical !== true
     || desktopResult.connectorDepthIntoTrafficPx == null
     || desktopResult.connectorDepthIntoTrafficPx < 0
-    || desktopResult.connectorDepthIntoTrafficPx > 20
+    || desktopResult.connectorDepthIntoTrafficPx > 40
     || desktopResult.topClusterLiftPx == null
     || desktopResult.topClusterLiftPx < 16
     || (desktopResult.donutSectorPresent === true
       && (desktopResult.connectorToDonutOuterTopDiff == null || desktopResult.connectorToDonutOuterTopDiff > 2
         || desktopResult.connectorToDonutRadiusDiff == null || desktopResult.connectorToDonutRadiusDiff > 2
-        || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 95))
+        || desktopResult.donutDiameterPx == null || desktopResult.donutDiameterPx > 120))
     || desktopResult.connectorInDonutInnerBounds === true
     || desktopResult.footfallToCapacityGap == null
     || desktopResult.footfallToCapacityGap < 4

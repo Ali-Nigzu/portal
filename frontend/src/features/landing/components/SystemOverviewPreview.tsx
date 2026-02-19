@@ -91,11 +91,11 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   });
   const leftSlotRef = useRef<HTMLDivElement | null>(null);
   const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
+  const trafficDonutRef = useRef<HTMLDivElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const socketMeasureRetriesRef = useRef(0);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
   const {
@@ -132,8 +132,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   }));
   const hasTopWidgets = topWidgets.every((item) => Boolean(item.widget));
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
-  const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
-  const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget) && Boolean(trafficWidget));
+  const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
 
   useLayoutEffect(() => {
@@ -148,6 +147,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           !topClusterRef.current ||
           !bottomClusterRef.current ||
           !leftSlotRef.current ||
+          !trafficDonutRef.current ||
           !dwellSlotRef.current ||
           !nodeAnchorRef.current
         ) {
@@ -163,23 +163,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
         const trafficRect = leftEdgeRef.current.getBoundingClientRect();
-        const donutSectorRects = Array.from(leftSlotRef.current.querySelectorAll('svg .recharts-sector')).map((sector) =>
-          sector.getBoundingClientRect(),
-        );
-        const donutOuterTop = donutSectorRects.length > 0
-          ? Math.min(...donutSectorRects.map((rect) => rect.top))
-          : null;
-        const donutCenterX = donutSectorRects.length > 0
-          ? ((Math.min(...donutSectorRects.map((rect) => rect.left)) + Math.max(...donutSectorRects.map((rect) => rect.right))) / 2)
-          : null;
+        const donutRect = trafficDonutRef.current.getBoundingClientRect();
+        const donutOuterTop = donutRect.top;
+        const donutCenterX = donutRect.left + donutRect.width / 2;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
-
-        if (donutSectorRects.length === 0 && socketMeasureRetriesRef.current < 18) {
-          socketMeasureRetriesRef.current += 1;
-          requestAnimationFrame(scheduleMeasure);
-        } else if (donutSectorRects.length > 0) {
-          socketMeasureRetriesRef.current = 0;
-        }
 
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
@@ -235,23 +222,17 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
 
-    const mutationObserver = new MutationObserver(() => scheduleMeasure());
-    if (leftSlotRef.current) {
-      mutationObserver.observe(leftSlotRef.current, { childList: true, subtree: true, attributes: true });
-    }
-
     window.addEventListener("resize", scheduleMeasure);
 
     return () => {
       observer.disconnect();
-      mutationObserver.disconnect();
       window.removeEventListener("resize", scheduleMeasure);
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
     };
-  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget]);
+  }, [forceMockTopology, hasTopWidgets, dwellWidget]);
 
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
   const flowRoutes = useMemo(
@@ -389,18 +370,15 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
           <article className={styles.trafficTile} data-testid="traffic-split-module">
-            {trafficWidget || forceMockTopology ? (
-              <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
-                {forceMockTopology
-                  ? renderMockTile("Traffic Split", "41/34/25")
-                  : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
-                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
-              </div>
-            ) : hasError ? (
-              <div className={styles.inlineNotice}>Preview unavailable.</div>
-            ) : (
-              <div className={styles.inlineNotice}>Loading traffic KPI…</div>
-            )}
+            <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
+              <article className={styles.trafficPreviewCard} aria-label="Traffic Split KPI">
+                <p className={styles.trafficPreviewTitle}>Traffic Split</p>
+                <div className={styles.trafficDonutRing} data-testid="traffic-donut-ring" ref={trafficDonutRef}>
+                  <span className={styles.trafficDonutCenter}>0</span>
+                </div>
+              </article>
+              <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
+            </div>
           </article>
 
           <div className={`${styles.kpiSlot} ${styles.tileT5}`}>
