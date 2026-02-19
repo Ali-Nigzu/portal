@@ -95,6 +95,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const socketMeasureRetriesRef = useRef(0);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
   const {
@@ -173,6 +174,13 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
+        if (donutSectorRects.length === 0 && socketMeasureRetriesRef.current < 18) {
+          socketMeasureRetriesRef.current += 1;
+          requestAnimationFrame(scheduleMeasure);
+        } else if (donutSectorRects.length > 0) {
+          socketMeasureRetriesRef.current = 0;
+        }
+
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
           occupancy: topRects[1].left - containerRect.left + topRects[1].width / 2,
@@ -226,10 +234,17 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     if (leftEdgeRef.current) observer.observe(leftEdgeRef.current);
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
+
+    const mutationObserver = new MutationObserver(() => scheduleMeasure());
+    if (leftSlotRef.current) {
+      mutationObserver.observe(leftSlotRef.current, { childList: true, subtree: true, attributes: true });
+    }
+
     window.addEventListener("resize", scheduleMeasure);
 
     return () => {
       observer.disconnect();
+      mutationObserver.disconnect();
       window.removeEventListener("resize", scheduleMeasure);
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);

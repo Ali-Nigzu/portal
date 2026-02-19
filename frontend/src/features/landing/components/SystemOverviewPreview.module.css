@@ -370,6 +370,22 @@
   transform-origin: 50% 0%;
 }
 
+.trafficTile :global(.recharts-sector) {
+  stroke: transparent !important;
+}
+
+.trafficTile :global(.recharts-sector:nth-of-type(1)) {
+  fill: color-mix(in srgb, #3f82ff 86%, #2759aa 14%) !important;
+}
+
+.trafficTile :global(.recharts-sector:nth-of-type(2)) {
+  fill: color-mix(in srgb, #356fd9 82%, #203f76 18%) !important;
+}
+
+.trafficTile :global(.recharts-sector:nth-of-type(3)) {
+  fill: color-mix(in srgb, #2f5fb6 78%, #1a315a 22%) !important;
+}
+
 
 .mockTile {
   min-height: 112px;
