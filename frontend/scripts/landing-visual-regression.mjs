@@ -162,8 +162,8 @@ try {
       const connectorY2 = trafficNodeConnector ? Number(trafficNodeConnector.getAttribute('y2')) : null;
       const connectorX1 = trafficNodeConnector ? Number(trafficNodeConnector.getAttribute('x1')) : null;
       const connectorX2 = trafficNodeConnector ? Number(trafficNodeConnector.getAttribute('x2')) : null;
-      const connectorTouchesTrafficTopPx = trafficTileRect && connectorY2 != null
-        ? Number(Math.abs(connectorY2 - (trafficTileRect.top - (document.querySelector('[class*="wireSvg"]')?.getBoundingClientRect().top ?? 0))).toFixed(2))
+      const connectorDepthIntoTrafficPx = trafficTileRect && connectorY2 != null
+        ? Number((connectorY2 - (trafficTileRect.top - (document.querySelector('[class*="wireSvg"]')?.getBoundingClientRect().top ?? 0))).toFixed(2))
         : null;
       const assuranceRow3ToCtaGap = row3Group && assuranceCta
         ? Number(Math.max(0, assuranceCta.getBoundingClientRect().top - row3Group.getBoundingClientRect().bottom).toFixed(2))
@@ -224,7 +224,7 @@ try {
         previewNodeCtaText: previewNodeCta?.textContent?.trim() ?? null,
         connectorExists: Boolean(trafficNodeConnector),
         connectorVertical: connectorX1 != null && connectorX2 != null ? Math.abs(connectorX1 - connectorX2) <= 0.5 : null,
-        connectorTouchesTrafficTopPx,
+        connectorDepthIntoTrafficPx,
         assuranceRow1Count: row1Assurances.length,
         assuranceRow2Count: row2Assurances.length,
         assuranceRow3HasCta: Boolean(assuranceCta),
@@ -296,8 +296,9 @@ try {
     || desktopResult.previewNodeCtaText !== "Access Demo"
     || desktopResult.connectorExists !== true
     || desktopResult.connectorVertical !== true
-    || desktopResult.connectorTouchesTrafficTopPx == null
-    || desktopResult.connectorTouchesTrafficTopPx > 2
+    || desktopResult.connectorDepthIntoTrafficPx == null
+    || desktopResult.connectorDepthIntoTrafficPx < 12
+    || desktopResult.connectorDepthIntoTrafficPx > 96
     || desktopResult.assuranceRow1Count !== 3
     || desktopResult.assuranceRow2Count !== 2
     || desktopResult.assuranceRow3HasCta !== true

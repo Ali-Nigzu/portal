@@ -28,6 +28,7 @@ type WireLayout = {
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
   trafficTopY: number;
+  trafficInnerY: number;
 };
 
 type RouteDefinition = {
@@ -47,6 +48,7 @@ const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
   { id: "entrances", direction: "toNode" },
   { id: "occupancy", direction: "fromNode" },
   { id: "exits", direction: "toNode" },
+  { id: "traffic", direction: "fromNode" },
   { id: "dwell", direction: "fromNode" },
 ];
 
@@ -66,6 +68,7 @@ const initialWireLayout: WireLayout = {
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   trafficTopY: 0,
+  trafficInnerY: 0,
 };
 
 const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
@@ -183,6 +186,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
           trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
+          trafficInnerY: (leftSlotRef.current.getBoundingClientRect().top - containerRect.top) + Math.min(leftSlotRef.current.getBoundingClientRect().height * 0.42, 88),
         });
       });
     };
@@ -249,7 +253,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         {wire.width > 0 && wire.height > 0 ? (
           <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
             <line className={styles.busLine} data-testid="topology-bus" x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-            {FLOW_ROUTE_DEFINITIONS.filter((route) => route.id !== "traffic").map((route) => (
+            {FLOW_ROUTE_DEFINITIONS.map((route) => (
               <line
                 key={`connector-${route.id}`}
                 className={styles.connectorLine}
@@ -263,10 +267,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             <line
               className={styles.nodeDropConnector}
               data-testid="traffic-node-drop-connector"
-              x1={nodeX}
-              y1={wire.busY}
-              x2={nodeX}
-              y2={wire.trafficTopY}
+              x1={wire.taps.traffic}
+              y1={wire.endpointsY.traffic}
+              x2={wire.taps.traffic}
+              y2={wire.trafficInnerY}
             />
             <defs>
               {flowRoutes.map((route) => {
@@ -337,6 +341,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         <div className={styles.midZone}>
           <div className={styles.nodeStack}>
             <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
+            <span className={styles.nodeCtaConnector} aria-hidden="true" />
             <button
               type="button"
               className={styles.previewNodeCta}

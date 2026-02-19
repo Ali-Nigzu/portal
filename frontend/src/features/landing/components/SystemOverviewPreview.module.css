@@ -273,7 +273,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 0;
+}
+
+
+.nodeCtaConnector {
+  width: 1px;
+  height: 16px;
+  background: color-mix(in srgb, #4a6f9e 66%, transparent);
+  opacity: 0.6;
 }
 
 .node {
@@ -308,23 +316,26 @@
 
 .previewNodeCta {
   appearance: none;
-  border: 1px solid color-mix(in srgb, var(--sys-line) 72%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 58%, transparent);
-  color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
-  font-size: 0.76rem;
-  letter-spacing: 0.06em;
+  border: 1px solid color-mix(in srgb, var(--sys-line) 76%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 30%, transparent);
+  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   line-height: 1;
-  min-height: 30px;
-  padding: 0 10px;
+  min-height: 32px;
+  margin-top: 4px;
+  padding: 0 12px;
   border-radius: 999px;
   cursor: pointer;
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #9dc4ff 12%, transparent), 0 0 0 0 rgba(0, 0, 0, 0);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
 .previewNodeCta:hover {
-  background: color-mix(in srgb, var(--sys-bg-2) 72%, transparent);
-  border-color: color-mix(in srgb, var(--sys-line) 86%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 42%, transparent);
+  border-color: color-mix(in srgb, var(--sys-line) 92%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #9dc4ff 18%, transparent);
 }
 
 .previewNodeCta:focus-visible {
@@ -382,7 +393,7 @@
 }
 
 .nodeDropConnector {
-  stroke: color-mix(in srgb, #4a6f9e 66%, transparent);
+  stroke: color-mix(in srgb, #4f75a4 72%, transparent);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
@@ -467,8 +478,12 @@
     padding: 6px 0;
   }
 
+  .nodeCtaConnector {
+    height: 14px;
+  }
+
   .previewNodeCta {
-    min-height: 28px;
+    min-height: 30px;
     font-size: 0.72rem;
   }
 }
