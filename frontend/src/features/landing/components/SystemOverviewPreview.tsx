@@ -62,6 +62,8 @@ const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
+const BUS_GAP_BELOW_TOP = 18;
+const BUS_GAP_ABOVE_NODE = 28;
 
 const initialWireLayout: WireLayout = {
   width: 0,
@@ -86,6 +88,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
+  const capacityTileRef = useRef<HTMLElement | null>(null);
   const topSlotRefs = useRef<Record<TopTileId, HTMLDivElement | null>>({
     entrances: null,
     occupancy: null,
@@ -161,7 +164,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           !leftSlotRef.current ||
           !trafficStemAnchorRef.current ||
           !dwellSlotRef.current ||
-          !nodeShellRef.current
+          !nodeShellRef.current ||
+          !capacityTileRef.current
         ) {
           return;
         }
@@ -213,10 +217,21 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           dwell: dwellRect.left - containerRect.left + dwellRect.width / 2,
         };
 
+        const capacityRect = capacityTileRef.current.getBoundingClientRect();
+        const topBandBottom = Math.max(
+          ...topRects.map((rect) => rect.bottom - containerRect.top),
+          capacityRect.bottom - containerRect.top,
+        );
+        const nodeBandTop = nodeRect.top - containerRect.top;
+        const minBusY = topBandBottom + 2;
+        const maxBusY = nodeBandTop - 2;
+        const preferredBusY = Math.min(topBandBottom + BUS_GAP_BELOW_TOP, nodeBandTop - BUS_GAP_ABOVE_NODE);
+        const busY = Math.max(minBusY, Math.min(preferredBusY, maxBusY));
+
         setWire({
           width: containerRect.width,
           height: containerRect.height,
-          busY: nodeRect.top - containerRect.top + nodeRect.height / 2,
+          busY,
           busX1: Math.min(...Object.values(taps)),
           busX2: Math.max(...Object.values(taps)),
           nodeX: nodeRect.left - containerRect.left + nodeRect.width / 2,
@@ -453,7 +468,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                 <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Loading live KPI preview…</div>
               )}
 
-              <article className={styles.capacityTile} data-testid="capacity-module">
+              <article className={styles.capacityTile} data-testid="capacity-module" ref={capacityTileRef}>
                 <div className={styles.capacityHeaderRow}>
                   <p className={styles.capacityLabel}>Capacity</p>
                   <p className={styles.capacityValue}>{CAPACITY_PERCENT}%</p>
