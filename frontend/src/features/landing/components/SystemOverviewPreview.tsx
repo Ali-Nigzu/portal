@@ -25,6 +25,7 @@ type WireLayout = {
   busX1: number;
   busX2: number;
   nodeX: number;
+  nodeRadius: number;
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
   trafficTopY: number;
@@ -66,6 +67,7 @@ const initialWireLayout: WireLayout = {
   busX1: 0,
   busX2: 0,
   nodeX: 0,
+  nodeRadius: 0,
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   trafficTopY: 0,
@@ -96,6 +98,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const nodeShellRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
@@ -152,7 +155,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           !leftSlotRef.current ||
           !trafficStemAnchorRef.current ||
           !dwellSlotRef.current ||
-          !nodeAnchorRef.current
+          !nodeShellRef.current
         ) {
           return;
         }
@@ -163,7 +166,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         }
 
         const containerRect = containerRef.current.getBoundingClientRect();
-        const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
+        const nodeRect = nodeShellRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
         const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
         const donutSectors = Array.from(leftSlotRef.current.querySelectorAll<SVGElement>("svg .recharts-sector"));
@@ -211,6 +214,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           busX1: Math.min(...Object.values(taps)),
           busX2: Math.max(...Object.values(taps)),
           nodeX: nodeRect.left - containerRect.left + nodeRect.width / 2,
+          nodeRadius: Math.max(0, (Math.min(nodeRect.width, nodeRect.height) / 2) - 1),
           taps,
           endpointsY: {
             entrances: topRects[0].top - containerRect.top + topRects[0].height / 2,
@@ -236,6 +240,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     if (containerRef.current) observer.observe(containerRef.current);
     if (topClusterRef.current) observer.observe(topClusterRef.current);
     if (bottomClusterRef.current) observer.observe(bottomClusterRef.current);
+    if (nodeShellRef.current) observer.observe(nodeShellRef.current);
     if (nodeAnchorRef.current) observer.observe(nodeAnchorRef.current);
     TOP_TILES.forEach(({ key }) => {
       const slot = topSlotRefs.current[key];
@@ -271,27 +276,46 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget , widgetStatus]);
 
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
+  const nodeRadius = wire.nodeRadius || 0;
   const flowRoutes = useMemo(
-    () =>
-      FLOW_ROUTE_DEFINITIONS.map((route) => {
+    () => {
+      const projectToNodeBoundary = (towardX: number, towardY: number) => {
+        const dx = towardX - nodeX;
+        const dy = towardY - wire.busY;
+        const len = Math.hypot(dx, dy);
+        if (len <= 0 || nodeRadius <= 0) {
+          return { x: nodeX, y: wire.busY };
+        }
+        const unitX = dx / len;
+        const unitY = dy / len;
+        return {
+          x: nodeX + unitX * nodeRadius,
+          y: wire.busY + unitY * nodeRadius,
+        };
+      };
+
+      return FLOW_ROUTE_DEFINITIONS.map((route) => {
         const tapX = wire.taps[route.id];
         const endpointY = wire.endpointsY[route.id];
         const isToNode = route.direction === "toNode";
-        const sourceX = isToNode ? tapX : nodeX;
-        const sourceY = isToNode ? endpointY : wire.busY;
-        const targetX = isToNode ? nodeX : tapX;
+        const nodeBoundaryPoint = projectToNodeBoundary(tapX, wire.busY);
+        const sourceX = isToNode ? tapX : nodeBoundaryPoint.x;
+        const sourceY = isToNode ? endpointY : nodeBoundaryPoint.y;
+        const targetX = isToNode ? nodeBoundaryPoint.x : tapX;
         const targetY = route.id === "traffic"
           ? wire.trafficSocketY
           : isToNode
-            ? wire.busY
+            ? nodeBoundaryPoint.y
             : endpointY;
         return {
           ...route,
           d: `M ${sourceX} ${sourceY} L ${tapX} ${wire.busY} L ${targetX} ${targetY}`,
           gradientId: `topology-gradient-${route.id}`,
+          nodeBoundaryX: nodeBoundaryPoint.x,
         };
-      }),
-    [nodeX, wire],
+      });
+    },
+    [nodeRadius, nodeX, wire],
   );
 
   const renderMockTile = (label: string, value: string) => (
@@ -331,8 +355,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                 <defs>
                   {flowRoutes.map((route) => {
                     const isToNode = route.direction === "toNode";
-                    const x1 = isToNode ? wire.taps[route.id] : nodeX;
-                    const x2 = isToNode ? nodeX : wire.taps[route.id];
+                    const x1 = isToNode ? wire.taps[route.id] : route.nodeBoundaryX;
+                    const x2 = isToNode ? route.nodeBoundaryX : wire.taps[route.id];
                     return (
                       <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={wire.busY} x2={x2} y2={wire.busY}>
                         <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
@@ -397,7 +421,18 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
             <div className={styles.midZone}>
               <div className={styles.nodeStack}>
-                <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
+                <div className={styles.node} ref={nodeShellRef}>
+                  <span className={styles.nodeTitle}>camOS</span>
+                  <button
+                    type="button"
+                    className={styles.previewNodeCta}
+                    data-testid="preview-enter-demo-cta"
+                    onClick={onAccessDemo}
+                  >
+                    View Demo
+                  </button>
+                  <span className={styles.nodeAnchor} ref={nodeAnchorRef} />
+                </div>
               </div>
             </div>
 
@@ -433,17 +468,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         </div>
 
         <div className={styles.veilLayer} aria-hidden="true" />
-
-        <div className={styles.clearLayer}>
-          <button
-            type="button"
-            className={styles.previewNodeCta}
-            data-testid="preview-enter-demo-cta"
-            onClick={onAccessDemo}
-          >
-            <span className={styles.previewNodeCtaLabel}>View Demo</span>
-          </button>
-        </div>
       </div>
       {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
         <p className={styles.errorNote}>Preview unavailable.</p>

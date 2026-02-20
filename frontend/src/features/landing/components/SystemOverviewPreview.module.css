@@ -356,14 +356,25 @@
 .node {
   z-index: 6;
   position: relative;
-  text-align: center;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  width: 104px;
+  min-height: 62px;
+  padding: 10px 10px 8px;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 54%, transparent);
+  background: color-mix(in srgb, #0d1625 86%, var(--sys-bg-1) 14%);
+  box-shadow: 0 3px 10px rgba(4, 8, 16, 0.2), inset 0 1px 0 rgba(210, 225, 247, 0.08);
+}
+
+.nodeTitle {
+  display: block;
   font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--sys-text-1);
-  background: color-mix(in srgb, var(--sys-bg-1) 84%, transparent);
-  padding: 2px 8px;
-  opacity: 0.94;
+  line-height: 1.05;
+  font-weight: 620;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--sys-text-1) 96%, #dbe8fb 4%);
 }
 
 .nodeAnchor {
@@ -371,53 +382,37 @@
   inset: 0;
 }
 
-.nodeSub {
-  display: block;
-  margin-top: 2px;
-  font-size: 10px;
-  line-height: 1;
-  color: var(--sys-text-3);
-  letter-spacing: 0.12em;
-  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
-  text-transform: uppercase;
-}
-
-
 .previewNodeCta {
   pointer-events: auto;
   appearance: none;
-  border: 1px solid color-mix(in srgb, var(--sys-line) 76%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 30%, transparent);
-  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
-  font-size: 0.74rem;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, var(--sys-text-2) 88%, var(--sys-text-3) 12%);
+  font-size: 0.64rem;
+  font-weight: 540;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  line-height: 1;
-  min-height: 34px;
-  margin-top: 8px;
-  padding: 0 14px;
-  border-radius: var(--sys-radius-sm);
+  line-height: 1.1;
+  margin-top: 5px;
+  padding: 0;
   cursor: pointer;
-  transform: translateY(var(--preview-clear-cta-offset-y));
-  box-shadow: var(--preview-cta-edge-glow);
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+  transition: color 140ms ease, opacity 140ms ease;
+  opacity: 0.9;
 }
 
 .previewNodeCta:hover {
-  background: color-mix(in srgb, var(--sys-bg-2) 40%, transparent);
-  border-color: color-mix(in srgb, var(--sys-line) 88%, transparent);
-  box-shadow: var(--preview-cta-edge-glow-hover);
+  color: color-mix(in srgb, var(--sys-text-1) 84%, var(--sys-text-2) 16%);
+  opacity: 1;
 }
 
 .previewNodeCta:focus-visible {
   outline: 2px solid var(--sys-accent);
   outline-offset: 2px;
+  border-radius: 2px;
 }
-
 
 .previewNodeCtaLabel {
   display: inline-block;
-  transform: translateY(0.5px);
 }
 
 
@@ -586,9 +581,7 @@
   }
 
   .previewNodeCta {
-    min-height: 30px;
-    font-size: 0.72rem;
-    --preview-clear-cta-offset-y: 18px;
+    font-size: 0.62rem;
   }
 }
 
