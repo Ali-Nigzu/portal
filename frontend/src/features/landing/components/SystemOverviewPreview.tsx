@@ -99,7 +99,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const [trafficRenderFailure, setTrafficRenderFailure] = useState(false);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
   const {
@@ -196,11 +195,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
-        const shouldFailTraffic = widgetStatus === "ready" && Boolean(trafficWidget) && donutSectorRects.length === 0;
-        if (shouldFailTraffic !== trafficRenderFailure) {
-          setTrafficRenderFailure(shouldFailTraffic);
-        }
-
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
           occupancy: topRects[1].left - containerRect.left + topRects[1].width / 2,
@@ -265,7 +259,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         rafRef.current = null;
       }
     };
-  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget, trafficRenderFailure, widgetStatus]);
+  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget , widgetStatus]);
 
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
   const flowRoutes = useMemo(
@@ -408,7 +402,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
           <article className={styles.trafficTile} data-testid="traffic-split-module">
-            {!trafficWidget || trafficRenderFailure || hasError ? (
+            {!trafficWidget || hasError ? (
               <div className={styles.inlineNotice} data-testid="traffic-split-error">Traffic Split data unavailable.</div>
             ) : (
               <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
