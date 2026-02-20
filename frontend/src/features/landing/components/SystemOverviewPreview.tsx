@@ -64,6 +64,9 @@ const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
+const BUS_CORRIDOR_GAP_TOP = 20;
+const BUS_CORRIDOR_GAP_NODE = 52;
+const BUS_BIAS_FROM_NODE = 10;
 
 const initialWireLayout: WireLayout = {
   width: 0,
@@ -148,7 +151,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
   const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
-  const trafficUnavailable = !trafficWidget || trafficWidget.status === "error";
+  const trafficUnavailable = !forceMockTopology && (!trafficWidget || trafficWidget.status === "error");
 
   useLayoutEffect(() => {
     const scheduleMeasure = () => {
@@ -175,9 +178,15 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           return;
         }
 
+        const topTileSlots = TOP_TILES.map(({ key }) => topSlotRefs.current[key]);
+        if (topTileSlots.some((slot) => !slot)) {
+          return;
+        }
+
         const containerRect = containerRef.current.getBoundingClientRect();
         const nodeRect = nodeShellRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
+        const topTileRects = topTileSlots.map((slot) => (slot as HTMLDivElement).getBoundingClientRect());
         const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
         const donutSectors = Array.from(leftSlotRef.current.querySelectorAll<SVGElement>("svg .recharts-sector"));
         const donutSectorRects = donutSectors.map((sector) => sector.getBoundingClientRect());
@@ -219,13 +228,27 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         const capacityRect = capacityTileRef.current.getBoundingClientRect();
         const topBandBottom = Math.max(
-          ...topRects.map((rect) => rect.bottom - containerRect.top),
+          ...topTileRects.map((rect) => rect.bottom - containerRect.top),
           capacityRect.bottom - containerRect.top,
         );
         const nodeBandTop = nodeRect.top - containerRect.top;
-        const minBusY = topBandBottom + 2;
-        const maxBusY = nodeBandTop - 2;
-        const preferredBusY = Math.min(topBandBottom + BUS_GAP_BELOW_TOP, nodeBandTop - BUS_GAP_ABOVE_NODE);
+        const minBusY = topBandBottom + BUS_CORRIDOR_GAP_TOP;
+        const maxBusY = nodeBandTop - BUS_CORRIDOR_GAP_NODE;
+
+        if (maxBusY <= minBusY) {
+          console.error("Topology bus corridor collapsed", {
+            minBusY,
+            maxBusY,
+            topBandBottom,
+            nodeBandTop,
+          });
+          return;
+        }
+
+        const preferredBusY = Math.min(
+          topBandBottom + BUS_GAP_BELOW_TOP + BUS_CORRIDOR_GAP_TOP,
+          nodeBandTop - BUS_GAP_ABOVE_NODE - BUS_BIAS_FROM_NODE,
+        );
         const busY = Math.max(minBusY, Math.min(preferredBusY, maxBusY));
 
         setWire({
@@ -485,7 +508,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                 ) : (
                   <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
                     <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
-                    <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+                    {forceMockTopology
+                      ? renderMockTile("Traffic Split", "48 / 32 / 20")
+                      : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
                   </div>
                 )}
