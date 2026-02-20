@@ -3,6 +3,11 @@ const getApiBaseUrl = (): string => {
   if (envUrl) {
     return envUrl;
   }
+
+  if (import.meta.env.DEV) {
+    return "";
+  }
+
   if (import.meta.env.VITE_ENVIRONMENT === "production") {
     return window.location.origin;
   }

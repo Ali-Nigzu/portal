@@ -402,11 +402,6 @@
   max-width: 196px;
 }
 
-.trafficTile :global(.recharts-wrapper) {
-  transform: scale(0.78);
-  transform-origin: 50% 0%;
-}
-
 
 .mockTile {
   min-height: 112px;

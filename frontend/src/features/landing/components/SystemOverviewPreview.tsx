@@ -74,8 +74,6 @@ const initialWireLayout: WireLayout = {
 };
 
 
-const TRAFFIC_SOCKET_SURFACE_EPSILON_PX = 0.6;
-
 const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
@@ -138,6 +136,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
   const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
+  const trafficUnavailable = !trafficWidget || trafficWidget.status === "error";
 
   useLayoutEffect(() => {
     const scheduleMeasure = () => {
@@ -191,7 +190,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           ? (Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop) / 2)
           : null;
         const donutNorthSurfaceY = donutCenterY != null && donutRadius != null
-          ? (donutCenterY - donutRadius + TRAFFIC_SOCKET_SURFACE_EPSILON_PX)
+          ? (donutCenterY - donutRadius)
           : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
@@ -249,9 +248,19 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
 
+    const mutationObserver = new MutationObserver(() => scheduleMeasure());
+    if (leftSlotRef.current) {
+      mutationObserver.observe(leftSlotRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      });
+    }
+
     window.addEventListener("resize", scheduleMeasure);
 
     return () => {
+      mutationObserver.disconnect();
       observer.disconnect();
       window.removeEventListener("resize", scheduleMeasure);
       if (rafRef.current !== null) {
@@ -316,7 +325,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             <path
               className={styles.trafficReceivePulse}
               data-testid="traffic-receive-pulse"
-              d={`M ${wire.trafficSocketX} ${wire.trafficSocketY} A 12 12 0 0 1 ${wire.trafficSocketX + 10.5} ${wire.trafficSocketY + 5.3}`}
+              d={`M ${wire.trafficSocketX} ${wire.trafficSocketY} L ${wire.trafficSocketX} ${wire.trafficSocketY + 8}`}
             />
             <defs>
               {flowRoutes.map((route) => {
@@ -402,7 +411,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
           <article className={styles.trafficTile} data-testid="traffic-split-module">
-            {!trafficWidget || hasError ? (
+            {trafficUnavailable ? (
               <div className={styles.inlineNotice} data-testid="traffic-split-error">Traffic Split data unavailable.</div>
             ) : (
               <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
