@@ -187,6 +187,13 @@ body {
 
 .landing-spec-sheet {
   padding: 0 0 96px;
+  background:
+    linear-gradient(180deg,
+      rgba(9,14,24,0.00) 0%,
+      rgba(9,14,24,0.03) 24%,
+      rgba(9,14,24,0.045) 58%,
+      rgba(9,14,24,0.04) 100%
+    );
 }
 
 .landing-spec-sheet-inner {
@@ -203,6 +210,21 @@ body {
   min-height: 300px;
   border-top: 0;
   background: transparent;
+}
+
+.landing-system-surface::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 84px;
+  background: linear-gradient(180deg,
+    rgba(6,10,18,0.12) 0%,
+    rgba(6,10,18,0.06) 22%,
+    rgba(6,10,18,0.00) 66%
+  );
+  pointer-events: none;
 }
 
 .landing-operational-grid {
