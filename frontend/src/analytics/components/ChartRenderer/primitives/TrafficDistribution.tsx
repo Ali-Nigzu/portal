@@ -2,13 +2,13 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { formatNumeric } from "../utils/format";
 const sliceColors = [
-  "#2d6cdf",
-  "#4bcf9f",
-  "#f4b63d",
-  "#f97066",
-  "#7c3aed",
-  "#0ea5e9",
+  "#1f3f78",
+  "#2b5da8",
+  "#3b77c8",
 ];
+
+const DONUT_INNER_RADIUS = 42;
+const DONUT_OUTER_RADIUS = 58;
 export const TrafficDistribution = ({
   result,
   series,
@@ -44,20 +44,9 @@ export const TrafficDistribution = ({
   const contentClassName = `traffic-distribution__content${
     isVrmTraffic ? " traffic-distribution__content--vrm" : ""
   }`;
-  if (!primary || data.length === 0) {
-    return (
-      <div
-        className={`traffic-distribution kpi-tile ${className ?? ""}`}
-        style={{ minHeight: height }}
-      >
-        <div className="traffic-distribution__empty">
-          No traffic data available.
-        </div>
-      </div>
-    );
-  }
-  const legend = data.map((point, index) => {
-    const rawCamera = point.x ?? `Cam ${index + 1}`;
+  const tupleData = Array.from({ length: 3 }, (_, index) => data[index]);
+  const legend = tupleData.map((point, index) => {
+    const rawCamera = point?.x ?? `Cam ${index + 1}`;
     const normalizedCameraId = String(rawCamera)
       .replace(/^Cam\s*/i, "")
       .trim();
@@ -70,9 +59,9 @@ export const TrafficDistribution = ({
     const rawLabel =
       String(baseLabel ?? rawCamera).trim() || `Slice ${index + 1}`;
     const rawValue =
-      typeof point.value === "number"
+      typeof point?.value === "number"
         ? point.value
-        : typeof point.y === "number"
+        : typeof point?.y === "number"
           ? point.y
           : 0;
     const numericValue = Number(rawValue);
@@ -87,54 +76,6 @@ export const TrafficDistribution = ({
     };
   });
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
-  const nonFiniteValues = legend
-    .map((entry) => entry.value)
-    .filter((value) => !Number.isFinite(value))
-    .slice(0, 5);
-  if (!legend.length || totalValue <= 0) {
-    const emptySlice = [
-      {
-        label: "No data",
-        value: 1,
-        color: "var(--vrm-border)",
-      },
-    ];
-    return (
-      <div
-        className={`traffic-distribution kpi-tile ${className ?? ""}`}
-        style={{ minHeight: height }}
-      >
-        <div className="traffic-distribution__title">{title}</div>
-        <div className={contentClassName}>
-          <ResponsiveContainer width="100%" height={140}>
-            <PieChart>
-              <Pie
-                dataKey="value"
-                data={emptySlice}
-                cx="50%"
-                cy="50%"
-                innerRadius={48}
-                outerRadius={68}
-                paddingAngle={0}
-                startAngle={90}
-                endAngle={450}
-                label={undefined}
-                labelLine={false}
-                stroke="none"
-                isAnimationActive={false}
-              >
-                <Cell
-                  key="empty"
-                  fill={emptySlice[0].color}
-                  stroke="none"
-                />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    );
-  }
   const renderLegend = legend.map((entry) => ({
     ...entry,
     renderValue: entry.value,
@@ -149,6 +90,10 @@ export const TrafficDistribution = ({
     ...entry,
     value: entry.renderValue,
   }));
+  const isEmptyRing = totalValue <= 0;
+  const donutData = isEmptyRing
+    ? [{ label: "Empty", value: 1, color: "rgba(61, 95, 145, 0.18)", camId: "—", displayValue: 0 }]
+    : pieLegend;
   const topCameraLabel =
     renderTopSlice.camId === null ||
     renderTopSlice.camId === undefined ||
@@ -161,7 +106,7 @@ export const TrafficDistribution = ({
       style={{ minHeight: height }}
     >
       <div className="traffic-distribution__title">{title}</div>
-      <div className={contentClassName}>
+      <div className={contentClassName} data-traffic-donut="true" data-traffic-donut-radius={DONUT_OUTER_RADIUS}>
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
             <Tooltip
@@ -182,23 +127,24 @@ export const TrafficDistribution = ({
             />
             <Pie
               dataKey="value"
-              data={pieLegend}
+              data={donutData}
               nameKey={labelKey ?? undefined}
               cx="50%"
               cy="50%"
-              innerRadius={48}
-              outerRadius={68}
-              paddingAngle={0}
+              innerRadius={DONUT_INNER_RADIUS}
+              outerRadius={DONUT_OUTER_RADIUS}
+              paddingAngle={isEmptyRing ? 0 : 1.25}
               startAngle={90}
               endAngle={450}
               label={undefined}
               labelLine={false}
-              stroke="none"
+              stroke={isEmptyRing ? "none" : "rgba(11, 24, 44, 0.9)"}
+              strokeWidth={isEmptyRing ? 0 : 1}
+              isAnimationActive={false}
             >
-              {" "}
-              {pieLegend.map((entry) => (
+              {donutData.map((entry) => (
                 <Cell key={entry.label} fill={entry.color} stroke="none" />
-              ))}{" "}
+              ))}
               <text
                 x="50%"
                 y="50%"

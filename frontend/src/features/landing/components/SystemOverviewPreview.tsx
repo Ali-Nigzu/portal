@@ -83,8 +83,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
     exits: null,
     footfall: null,
   });
-  const leftSlotRef = useRef<HTMLDivElement | null>(null);
-  const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
+  const trafficSlotRef = useRef<HTMLDivElement | null>(null);
+  const trafficEdgeRef = useRef<HTMLSpanElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
@@ -140,7 +140,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
           !containerRef.current ||
           !topClusterRef.current ||
           !bottomClusterRef.current ||
-          !leftSlotRef.current ||
+          !trafficSlotRef.current ||
           !dwellSlotRef.current ||
           !nodeAnchorRef.current
         ) {
@@ -148,21 +148,36 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         }
 
         const connectedTopEdges = CONNECTED_TOP_IDS.map((id) => topEdgeRefs.current[id]);
-        if (connectedTopEdges.some((edge) => !edge) || !leftEdgeRef.current || !dwellEdgeRef.current) {
+        if (connectedTopEdges.some((edge) => !edge) || !dwellEdgeRef.current) {
           return;
         }
 
         const containerRect = containerRef.current.getBoundingClientRect();
         const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
-        const trafficRect = leftEdgeRef.current.getBoundingClientRect();
+        const trafficDonut = trafficSlotRef.current.querySelector<HTMLElement>("[data-traffic-donut='true']");
+        let trafficCenterX = 0;
+        let trafficNorthY = 0;
+        if (trafficDonut) {
+          const trafficRect = trafficDonut.getBoundingClientRect();
+          const trafficRadius = Number(trafficDonut.dataset.trafficDonutRadius ?? "58");
+          trafficCenterX = trafficRect.left - containerRect.left + trafficRect.width / 2;
+          const trafficCenterY = trafficRect.top - containerRect.top + trafficRect.height / 2;
+          trafficNorthY = trafficCenterY - trafficRadius;
+        } else if (trafficEdgeRef.current) {
+          const trafficRect = trafficEdgeRef.current.getBoundingClientRect();
+          trafficCenterX = trafficRect.left - containerRect.left + trafficRect.width / 2;
+          trafficNorthY = trafficRect.top - containerRect.top + trafficRect.height / 2;
+        } else {
+          return;
+        }
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
           occupancy: topRects[1].left - containerRect.left + topRects[1].width / 2,
           exits: topRects[2].left - containerRect.left + topRects[2].width / 2,
-          traffic: trafficRect.left - containerRect.left + trafficRect.width / 2,
+          traffic: trafficCenterX,
           dwell: dwellRect.left - containerRect.left + dwellRect.width / 2,
         };
 
@@ -178,7 +193,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
             entrances: topRects[0].top - containerRect.top + topRects[0].height / 2,
             occupancy: topRects[1].top - containerRect.top + topRects[1].height / 2,
             exits: topRects[2].top - containerRect.top + topRects[2].height / 2,
-            traffic: trafficRect.top - containerRect.top + trafficRect.height / 2,
+            traffic: trafficNorthY,
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
         });
@@ -198,8 +213,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
       if (slot) observer.observe(slot);
       if (edge) observer.observe(edge);
     });
-    if (leftSlotRef.current) observer.observe(leftSlotRef.current);
-    if (leftEdgeRef.current) observer.observe(leftEdgeRef.current);
+    if (trafficSlotRef.current) observer.observe(trafficSlotRef.current);
+    const trafficDonut = trafficSlotRef.current?.querySelector<HTMLElement>("[data-traffic-donut='true']");
+    if (trafficDonut) observer.observe(trafficDonut);
+    if (trafficEdgeRef.current) observer.observe(trafficEdgeRef.current);
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
     window.addEventListener("resize", scheduleMeasure);
@@ -331,11 +348,11 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
           <article className={styles.trafficTile}>
             {trafficWidget || forceMockTopology ? (
-              <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
+              <div className={styles.wireAnchorSlot} ref={trafficSlotRef}>
                 {forceMockTopology
                   ? renderMockTile("Traffic Split", "41/34/25")
                   : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
-                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
+                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={trafficEdgeRef} />
               </div>
             ) : hasError ? (
               <div className={styles.inlineNotice}>Preview unavailable.</div>
