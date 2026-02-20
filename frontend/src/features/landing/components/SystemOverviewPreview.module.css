@@ -7,10 +7,23 @@
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
   --mid-span: 56px;
+  --preview-alpha-content: 0.9;
+  --preview-accent-sat: 0.78;
+  --preview-number-alpha: 0.9;
+  --preview-line-alpha: 0.62;
+  --preview-stroke-bus: 1.5px;
+  --preview-stroke-connector: 1.35px;
+  --preview-stroke-beam: 1.6px;
+  --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, #9dc4ff 10%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 10%, transparent);
+  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #9dc4ff 18%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 18%, transparent);
+  --preview-node-cta-stem: 22px;
+  --preview-capacity-gap: 4px;
+  --preview-top-row-lift: 18px;
+  --preview-traffic-donut-scale: 0.84;
 
   position: relative;
-  width: min(1040px, 100%);
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -38,7 +51,7 @@
   grid-template-rows: auto var(--mid-span) auto;
   row-gap: var(--topo-gap-row);
   min-height: 286px;
-  padding: 6px 8px;
+  padding: 0;
 }
 
 .topCluster {
@@ -46,15 +59,17 @@
   z-index: 4;
   display: grid;
   grid-template-columns: repeat(4, var(--kpi-col));
-  grid-template-rows: auto 72px;
+  grid-template-rows: auto 44px;
   column-gap: var(--topo-gap-col);
-  row-gap: var(--topo-gap-row);
+  row-gap: var(--preview-capacity-gap);
   justify-content: center;
   align-items: end;
   padding-inline: 2px;
   width: max-content;
   margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+  transform: translateY(calc(-1 * var(--preview-top-row-lift)));
+  transform-origin: top center;
 }
 
 .kpiSlot {
@@ -120,7 +135,8 @@
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline-region--vrm),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm) {
-  filter: saturate(0.8) brightness(0.8);
+  filter: saturate(var(--preview-accent-sat)) brightness(0.86);
+  opacity: var(--preview-alpha-content);
 }
 
 .wireEdgeAnchor {
@@ -163,6 +179,8 @@
   width: max-content;
   margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+  transform: translateY(calc(-1 * var(--preview-top-row-lift)));
+  transform-origin: top center;
 }
 
 .inlineNotice {
@@ -189,7 +207,7 @@
 .capacityTile {
   border-radius: var(--sys-radius-sm);
   border: 1px solid color-mix(in srgb, var(--sys-line-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 70%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 54%, transparent);
   grid-column: 4;
   grid-row: 2;
   width: 100%;
@@ -229,8 +247,9 @@
 
 .capacityValue {
   margin: 0;
-  color: var(--sys-text-1);
+  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
   font-size: 0.78rem;
+  opacity: var(--preview-number-alpha);
   line-height: 1;
   font-weight: 620;
 }
@@ -245,7 +264,7 @@
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--sys-accent) 58%, #8dc0ff 42%), color-mix(in srgb, var(--sys-accent) 40%, #5f9aea 60%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--sys-accent) 48%, #8dbdff 52%), color-mix(in srgb, var(--sys-accent) 38%, #5f98dc 62%));
   border-radius: 999px;
 }
 
@@ -260,6 +279,21 @@
   align-items: center;
 }
 
+.nodeStack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+
+.nodeCtaConnector {
+  width: 1px;
+  height: var(--preview-node-cta-stem);
+  background: color-mix(in srgb, #4a6f9e 66%, transparent);
+  opacity: 0.6;
+}
+
 .node {
   z-index: 6;
   position: relative;
@@ -268,8 +302,9 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--sys-text-1);
-  background: color-mix(in srgb, var(--sys-bg-1) 88%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-1) 84%, transparent);
   padding: 2px 8px;
+  opacity: 0.94;
 }
 
 .nodeAnchor {
@@ -288,14 +323,95 @@
   text-transform: uppercase;
 }
 
+
+.previewNodeCta {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--sys-line) 76%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 30%, transparent);
+  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  min-height: 34px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border-radius: var(--sys-radius-sm);
+  cursor: pointer;
+  box-shadow: var(--preview-cta-edge-glow);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.previewNodeCta:hover {
+  background: color-mix(in srgb, var(--sys-bg-2) 40%, transparent);
+  border-color: color-mix(in srgb, var(--sys-line) 88%, transparent);
+  box-shadow: var(--preview-cta-edge-glow-hover);
+}
+
+.previewNodeCta:focus-visible {
+  outline: 2px solid var(--sys-accent);
+  outline-offset: 2px;
+}
+
+
+.previewNodeCtaLabel {
+  display: inline-block;
+  transform: translateY(0.5px);
+}
+
+
 .trafficTile {
   grid-column: 1;
 }
 
+.trafficTile .wireEdgeAnchorTop {
+  top: 4px;
+}
+
+
+.trafficStemAnchor {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 2px;
+  height: 2px;
+  transform: translateX(-50%);
+}
+
+.trafficTitleMask {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  z-index: 7;
+  padding-right: 14px;
+  font-size: 1.04rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--sys-text-1);
+  background: color-mix(in srgb, var(--sys-bg-1) 94%, transparent);
+  pointer-events: none;
+}
+
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-title),
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel-title) {
+  opacity: 0 !important;
+}
+
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel),
+.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-content) {
+  max-width: 196px;
+}
+
+.trafficTile :global(.recharts-wrapper) {
+  transform: scale(0.78);
+  transform-origin: 50% 0%;
+}
+
+
 .mockTile {
   min-height: 112px;
   border: 1px solid color-mix(in srgb, var(--sys-line-soft) 55%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 70%, transparent);
+  background: color-mix(in srgb, var(--sys-bg-2) 54%, transparent);
   padding: 14px 12px;
 }
 
@@ -324,25 +440,44 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, #2e4b77 72%, transparent);
-  stroke-width: 1.8;
+  stroke: color-mix(in srgb, #3e5e8f 74%, transparent);
+  stroke-opacity: var(--preview-line-alpha);
+  stroke-width: var(--preview-stroke-bus);
   fill: none;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, #3c608f 68%, transparent);
-  stroke-width: 1.45;
+  stroke: color-mix(in srgb, #446a99 70%, transparent);
+  stroke-opacity: var(--preview-line-alpha);
+  stroke-width: var(--preview-stroke-connector);
   fill: none;
 }
 
+.nodeDropConnector {
+  stroke: color-mix(in srgb, #4f75a4 72%, transparent);
+  stroke-opacity: var(--preview-line-alpha);
+  stroke-width: var(--preview-stroke-connector);
+  fill: none;
+}
+
+.trafficReceivePulse {
+  stroke: color-mix(in srgb, #86b8fa 72%, transparent);
+  stroke-width: var(--preview-stroke-beam);
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 8 80;
+  opacity: 0.42;
+  animation: beam-flow 4.8s linear infinite;
+}
+
 .beamRoute {
-  stroke-width: 2;
+  stroke-width: var(--preview-stroke-beam);
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 14 86;
-  filter: drop-shadow(0 0 3px rgba(64, 122, 192, 0.32));
-  opacity: 0.72;
+  filter: none;
+  opacity: 0.58;
 }
 
 .beamRoute {
@@ -362,7 +497,7 @@
 
 @media (max-width: 1279px) {
   .preview {
-    width: min(920px, 100%);
+    width: 100%;
     --kpi-col: 214px;
     --topo-gap-col: 14px;
     --topo-gap-row: 7px;
@@ -376,7 +511,7 @@
 
 @media (max-width: 767px) {
   .preview {
-    padding: 14px 14px;
+    padding: 0;
   }
 
   .canvas {
@@ -411,9 +546,17 @@
   }
 
   .midZone {
-    border-top: 1px solid var(--sys-line-soft);
-    border-bottom: 1px solid var(--sys-line-soft);
-    padding: 8px 0;
+    padding: 6px 0;
+  }
+
+  .nodeCtaConnector {
+    height: 14px;
+  }
+
+
+  .previewNodeCta {
+    min-height: 30px;
+    font-size: 0.72rem;
   }
 }
 

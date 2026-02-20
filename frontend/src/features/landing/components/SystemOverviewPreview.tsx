@@ -27,6 +27,9 @@ type WireLayout = {
   nodeX: number;
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
+  trafficTopY: number;
+  trafficSocketX: number;
+  trafficSocketY: number;
 };
 
 type RouteDefinition = {
@@ -65,9 +68,15 @@ const initialWireLayout: WireLayout = {
   nodeX: 0,
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
+  trafficTopY: 0,
+  trafficSocketX: 0,
+  trafficSocketY: 0,
 };
 
-const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forceMockTopology }) => {
+
+const TRAFFIC_SOCKET_SURFACE_EPSILON_PX = 0.6;
+
+const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -85,6 +94,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
   });
   const leftSlotRef = useRef<HTMLDivElement | null>(null);
   const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
+  const trafficStemAnchorRef = useRef<HTMLSpanElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
@@ -126,7 +136,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
   const hasTopWidgets = topWidgets.every((item) => Boolean(item.widget));
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
   const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
-  const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget) && Boolean(trafficWidget));
+  const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
 
   useLayoutEffect(() => {
@@ -141,6 +151,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
           !topClusterRef.current ||
           !bottomClusterRef.current ||
           !leftSlotRef.current ||
+          !trafficStemAnchorRef.current ||
           !dwellSlotRef.current ||
           !nodeAnchorRef.current
         ) {
@@ -155,14 +166,42 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         const containerRect = containerRef.current.getBoundingClientRect();
         const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
-        const trafficRect = leftEdgeRef.current.getBoundingClientRect();
+        const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
+        const donutSectors = Array.from(leftSlotRef.current.querySelectorAll<SVGElement>("svg .recharts-sector"));
+        const donutSectorRects = donutSectors.map((sector) => sector.getBoundingClientRect());
+        const donutOuterTop = donutSectorRects.length > 0
+          ? Math.min(...donutSectorRects.map((rect) => rect.top))
+          : null;
+        const donutOuterBottom = donutSectorRects.length > 0
+          ? Math.max(...donutSectorRects.map((rect) => rect.bottom))
+          : null;
+        const donutOuterLeft = donutSectorRects.length > 0
+          ? Math.min(...donutSectorRects.map((rect) => rect.left))
+          : null;
+        const donutOuterRight = donutSectorRects.length > 0
+          ? Math.max(...donutSectorRects.map((rect) => rect.right))
+          : null;
+        const donutCenterX = donutOuterLeft != null && donutOuterRight != null
+          ? ((donutOuterLeft + donutOuterRight) / 2)
+          : null;
+        const donutCenterY = donutOuterTop != null && donutOuterBottom != null
+          ? ((donutOuterTop + donutOuterBottom) / 2)
+          : null;
+        const donutRadius = donutOuterLeft != null && donutOuterRight != null && donutOuterTop != null && donutOuterBottom != null
+          ? (Math.min(donutOuterRight - donutOuterLeft, donutOuterBottom - donutOuterTop) / 2)
+          : null;
+        const donutNorthSurfaceY = donutCenterY != null && donutRadius != null
+          ? (donutCenterY - donutRadius + TRAFFIC_SOCKET_SURFACE_EPSILON_PX)
+          : null;
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
           occupancy: topRects[1].left - containerRect.left + topRects[1].width / 2,
           exits: topRects[2].left - containerRect.left + topRects[2].width / 2,
-          traffic: trafficRect.left - containerRect.left + trafficRect.width / 2,
+          traffic: donutCenterX != null
+            ? donutCenterX - containerRect.left
+            : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
           dwell: dwellRect.left - containerRect.left + dwellRect.width / 2,
         };
 
@@ -178,9 +217,16 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
             entrances: topRects[0].top - containerRect.top + topRects[0].height / 2,
             occupancy: topRects[1].top - containerRect.top + topRects[1].height / 2,
             exits: topRects[2].top - containerRect.top + topRects[2].height / 2,
-            traffic: trafficRect.top - containerRect.top + trafficRect.height / 2,
+            traffic: trafficStemRect.top - containerRect.top + trafficStemRect.height / 2,
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
+          trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
+          trafficSocketX: donutCenterX != null
+            ? donutCenterX - containerRect.left
+            : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
+          trafficSocketY: donutNorthSurfaceY != null
+            ? donutNorthSurfaceY - containerRect.top
+            : trafficStemRect.top - containerRect.top,
         });
       });
     };
@@ -202,6 +248,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
     if (leftEdgeRef.current) observer.observe(leftEdgeRef.current);
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
+
     window.addEventListener("resize", scheduleMeasure);
 
     return () => {
@@ -212,7 +259,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         rafRef.current = null;
       }
     };
-  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget]);
+  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget , widgetStatus]);
 
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
   const flowRoutes = useMemo(
@@ -258,6 +305,19 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 y2={wire.busY}
               />
             ))}
+            <line
+              className={styles.nodeDropConnector}
+              data-testid="traffic-node-drop-connector"
+              x1={wire.trafficSocketX}
+              y1={wire.endpointsY.traffic}
+              x2={wire.trafficSocketX}
+              y2={wire.trafficSocketY}
+            />
+            <path
+              className={styles.trafficReceivePulse}
+              data-testid="traffic-receive-pulse"
+              d={`M ${wire.trafficSocketX} ${wire.trafficSocketY} A 12 12 0 0 1 ${wire.trafficSocketX + 10.5} ${wire.trafficSocketY + 5.3}`}
+            />
             <defs>
               {flowRoutes.map((route) => {
                 const isToNode = route.direction === "toNode";
@@ -291,6 +351,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
               <div
                 key={item.widgetId}
                 className={`${styles.kpiSlot} ${item.slotClass}`}
+                data-testid={item.key === "footfall" ? "footfall-module" : undefined}
                 ref={(node) => {
                   topSlotRefs.current[item.key] = node;
                 }}
@@ -315,7 +376,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
             <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Loading live KPI preview…</div>
           )}
 
-          <article className={styles.capacityTile}>
+          <article className={styles.capacityTile} data-testid="capacity-module">
             <div className={styles.capacityHeaderRow}>
               <p className={styles.capacityLabel}>Capacity</p>
               <p className={styles.capacityValue}>{CAPACITY_PERCENT}%</p>
@@ -325,22 +386,31 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         </div>
 
         <div className={styles.midZone}>
-          <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
+          <div className={styles.nodeStack}>
+            <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
+            <span className={styles.nodeCtaConnector} aria-hidden="true" />
+            <button
+              type="button"
+              className={styles.previewNodeCta}
+              data-testid="preview-enter-demo-cta"
+              onClick={onAccessDemo}
+            >
+              <span className={styles.previewNodeCtaLabel}>Access Demo</span>
+            </button>
+          </div>
         </div>
 
         <div className={styles.bottomCluster} ref={bottomClusterRef}>
-          <article className={styles.trafficTile}>
-            {trafficWidget || forceMockTopology ? (
+          <article className={styles.trafficTile} data-testid="traffic-split-module">
+            {!trafficWidget || hasError ? (
+              <div className={styles.inlineNotice} data-testid="traffic-split-error">Traffic Split data unavailable.</div>
+            ) : (
               <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
-                {forceMockTopology
-                  ? renderMockTile("Traffic Split", "41/34/25")
-                  : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
+                <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+                <span className={styles.trafficTitleMask} aria-hidden="true">Traffic Split</span>
                 <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
               </div>
-            ) : hasError ? (
-              <div className={styles.inlineNotice}>Preview unavailable.</div>
-            ) : (
-              <div className={styles.inlineNotice}>Loading traffic KPI…</div>
             )}
           </article>
 
@@ -367,7 +437,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
   );
 };
 
-const SystemOverviewPreview: React.FC = () => {
+const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAccessDemo }) => {
   const location = useLocation();
   const forceMockTopology = useMemo(() => {
     if (!import.meta.env.DEV && !import.meta.env.MODE.includes("test")) {
@@ -378,6 +448,7 @@ const SystemOverviewPreview: React.FC = () => {
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
   const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
   const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [bootstrapDegraded, setBootstrapDegraded] = useState(false);
   const bootstrapStartedRef = useRef(false);
 
   const runBootstrap = async () => {
@@ -399,8 +470,10 @@ const SystemOverviewPreview: React.FC = () => {
       await enableDemoSession();
       applyDemoDefaultsOnce();
       setBootstrapState("ready");
-    } catch {
-      setBootstrapState("error");
+    } catch (error) {
+      console.warn("Landing demo bootstrap failed; continuing with live preview pipeline.", error);
+      setBootstrapDegraded(true);
+      setBootstrapState("ready");
     }
   };
 
@@ -417,6 +490,7 @@ const SystemOverviewPreview: React.FC = () => {
       window.sessionStorage.removeItem(LANDING_BOOTSTRAP_KEY);
     }
     bootstrapStartedRef.current = false;
+    setBootstrapDegraded(false);
     setBootstrapState("idle");
   };
 
@@ -442,7 +516,12 @@ const SystemOverviewPreview: React.FC = () => {
     );
   }
 
-  return <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} />;
+  return (
+    <>
+      <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />
+      {bootstrapDegraded ? <p className={styles.errorNote}>Demo bootstrap unavailable; preview is using direct live data flow.</p> : null}
+    </>
+  );
 };
 
 export default SystemOverviewPreview;

@@ -1,7 +1,8 @@
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { formatNumeric } from "../utils/format";
-const sliceColors = [
+
+const DEFAULT_SLICE_COLORS = [
   "#2d6cdf",
   "#4bcf9f",
   "#f4b63d",
@@ -9,6 +10,9 @@ const sliceColors = [
   "#7c3aed",
   "#0ea5e9",
 ];
+
+const VRM_SLICE_COLORS = ["#315d9f", "#1f3e6d", "#2a4f88"];
+
 export const TrafficDistribution = ({
   result,
   series,
@@ -44,18 +48,22 @@ export const TrafficDistribution = ({
   const contentClassName = `traffic-distribution__content${
     isVrmTraffic ? " traffic-distribution__content--vrm" : ""
   }`;
+  const palette = isVrmTraffic ? VRM_SLICE_COLORS : DEFAULT_SLICE_COLORS;
+
   if (!primary || data.length === 0) {
     return (
       <div
         className={`traffic-distribution kpi-tile ${className ?? ""}`}
         style={{ minHeight: height }}
       >
+        <div className="traffic-distribution__title">{title}</div>
         <div className="traffic-distribution__empty">
-          No traffic data available.
+          Traffic Split data unavailable.
         </div>
       </div>
     );
   }
+
   const legend = data.map((point, index) => {
     const rawCamera = point.x ?? `Cam ${index + 1}`;
     const normalizedCameraId = String(rawCamera)
@@ -83,58 +91,25 @@ export const TrafficDistribution = ({
       label,
       camId: useRawLabels || labelKey ? rawLabel : cleanCamId || cameraId,
       value,
-      color: sliceColors[index % sliceColors.length],
+      color: palette[index % palette.length],
     };
   });
+
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
-  const nonFiniteValues = legend
-    .map((entry) => entry.value)
-    .filter((value) => !Number.isFinite(value))
-    .slice(0, 5);
   if (!legend.length || totalValue <= 0) {
-    const emptySlice = [
-      {
-        label: "No data",
-        value: 1,
-        color: "var(--vrm-border)",
-      },
-    ];
     return (
       <div
         className={`traffic-distribution kpi-tile ${className ?? ""}`}
         style={{ minHeight: height }}
       >
         <div className="traffic-distribution__title">{title}</div>
-        <div className={contentClassName}>
-          <ResponsiveContainer width="100%" height={140}>
-            <PieChart>
-              <Pie
-                dataKey="value"
-                data={emptySlice}
-                cx="50%"
-                cy="50%"
-                innerRadius={48}
-                outerRadius={68}
-                paddingAngle={0}
-                startAngle={90}
-                endAngle={450}
-                label={undefined}
-                labelLine={false}
-                stroke="none"
-                isAnimationActive={false}
-              >
-                <Cell
-                  key="empty"
-                  fill={emptySlice[0].color}
-                  stroke="none"
-                />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="traffic-distribution__empty">
+          Traffic Split data unavailable.
         </div>
       </div>
     );
   }
+
   const renderLegend = legend.map((entry) => ({
     ...entry,
     renderValue: entry.value,
@@ -155,6 +130,7 @@ export const TrafficDistribution = ({
     renderTopSlice.camId === ""
       ? "—"
       : String(renderTopSlice.camId);
+
   return (
     <div
       className={`traffic-distribution kpi-tile ${className ?? ""}`}
@@ -188,17 +164,16 @@ export const TrafficDistribution = ({
               cy="50%"
               innerRadius={48}
               outerRadius={68}
-              paddingAngle={0}
+              paddingAngle={1.2}
               startAngle={90}
               endAngle={450}
               label={undefined}
               labelLine={false}
               stroke="none"
             >
-              {" "}
               {pieLegend.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} stroke="none" />
-              ))}{" "}
+                <Cell key={entry.label} fill={entry.color} stroke="#0d1626" strokeWidth={1} />
+              ))}
               <text
                 x="50%"
                 y="50%"
@@ -206,18 +181,16 @@ export const TrafficDistribution = ({
                 dominantBaseline="middle"
                 className="traffic-distribution__center"
               >
-                {" "}
-                {topCameraLabel}{" "}
+                {topCameraLabel}
               </text>
             </Pie>
           </PieChart>
-        </ResponsiveContainer>{" "}
+        </ResponsiveContainer>
         {!isVrmTraffic ? (
           <div
             className="traffic-distribution__annotations"
             aria-label="Traffic by camera annotations"
           >
-            {" "}
             {renderLegend.map((entry) => (
               <div
                 className="traffic-distribution__annotation"
@@ -231,11 +204,13 @@ export const TrafficDistribution = ({
                 <span className="traffic-distribution__annotation-label">
                   {entry.label}
                 </span>
-                <span className="traffic-distribution__annotation-value">{`${Math.round(entry.displayValue ?? entry.value)}%`}</span>
+                <span className="traffic-distribution__annotation-value">{`${Math.round(
+                  entry.displayValue ?? entry.value,
+                )}%`}</span>
               </div>
-            ))}{" "}
+            ))}
           </div>
-        ) : null}{" "}
+        ) : null}
       </div>
     </div>
   );
