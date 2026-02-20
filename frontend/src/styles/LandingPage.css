@@ -187,12 +187,19 @@ body {
 
 .landing-spec-sheet {
   padding: 0 0 96px;
+  border: none;
+  outline: none;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
 }
 
 .landing-spec-sheet-inner {
   border: none;
+  outline: none;
   border-radius: 0;
   background: transparent;
+  background-image: none;
   box-shadow: none;
   overflow: visible;
   max-width: var(--landing-rail-max);
@@ -201,8 +208,16 @@ body {
 .landing-system-surface {
   position: relative;
   min-height: 300px;
-  border-top: 0;
+  border: none;
+  outline: none;
   background: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+.landing-system-surface::before {
+  content: none;
+  pointer-events: none;
 }
 
 .landing-operational-grid {
@@ -329,7 +344,11 @@ body {
   --preview-pad-top: 12px;
   --preview-pad-bottom: 22px;
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
-  border: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
   position: relative;
 }
 
@@ -339,6 +358,7 @@ body {
   outline: none;
   box-shadow: none;
   background: transparent;
+  background-image: none;
   backdrop-filter: none;
   filter: none;
 }
