@@ -21,9 +21,10 @@
   --preview-top-row-lift: 18px;
   --preview-traffic-donut-scale: 0.84;
   --preview-surface-radius: 14px;
-  --preview-surface-border: color-mix(in srgb, var(--sys-line-soft) 58%, transparent);
-  --preview-surface-shadow: 0 8px 22px rgba(4, 10, 20, 0.16);
-  --preview-surface-inner-line: inset 0 0 0 1px rgba(170, 195, 230, 0.08);
+  --preview-surface-shadow: 0 20px 48px rgba(4, 10, 20, 0.12);
+  --preview-zone-tone: rgba(9, 14, 24, 0.04);
+  --preview-zone-feather-top: linear-gradient(180deg, rgba(12, 18, 28, 0.08) 0%, rgba(12, 18, 28, 0) 26%);
+  --preview-zone-feather-bottom: linear-gradient(0deg, rgba(12, 18, 28, 0.07) 0%, rgba(12, 18, 28, 0) 30%);
   --preview-veil-fill: rgba(9, 14, 24, 0.05);
   --preview-gated-filter: blur(1.25px) saturate(0.94) contrast(0.97);
   --preview-clear-cta-offset-y: 24px;
@@ -66,12 +67,31 @@
 
 .consoleSurface {
   position: relative;
-  border: 1px solid var(--preview-surface-border);
+  border: none;
+  outline: none;
   border-radius: var(--preview-surface-radius);
-  background: color-mix(in srgb, var(--sys-bg-2) 24%, transparent);
-  box-shadow: var(--preview-surface-shadow), var(--preview-surface-inner-line);
-  overflow: hidden;
+  background: var(--preview-zone-tone);
+  box-shadow: var(--preview-surface-shadow);
+  overflow: visible;
   isolation: isolate;
+}
+
+.consoleSurface::before,
+.consoleSurface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  border: none;
+}
+
+.consoleSurface::before {
+  background: var(--preview-zone-feather-top);
+}
+
+.consoleSurface::after {
+  background: var(--preview-zone-feather-bottom);
 }
 
 .gatedContent {
