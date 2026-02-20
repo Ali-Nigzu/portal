@@ -26,6 +26,9 @@ type WireLayout = {
   busX2: number;
   nodeX: number;
   nodeRadius: number;
+  nodeHalfWidth: number;
+  nodeHalfHeight: number;
+  nodeCornerRadius: number;
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
   trafficTopY: number;
@@ -68,6 +71,9 @@ const initialWireLayout: WireLayout = {
   busX2: 0,
   nodeX: 0,
   nodeRadius: 0,
+  nodeHalfWidth: 0,
+  nodeHalfHeight: 0,
+  nodeCornerRadius: 0,
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   trafficTopY: 0,
@@ -215,6 +221,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           busX2: Math.max(...Object.values(taps)),
           nodeX: nodeRect.left - containerRect.left + nodeRect.width / 2,
           nodeRadius: Math.max(0, (Math.min(nodeRect.width, nodeRect.height) / 2) - 1),
+          nodeHalfWidth: nodeRect.width / 2,
+          nodeHalfHeight: nodeRect.height / 2,
+          nodeCornerRadius: Math.max(0, Number.parseFloat(window.getComputedStyle(nodeShellRef.current).borderTopLeftRadius) || 0),
           taps,
           endpointsY: {
             entrances: topRects[0].top - containerRect.top + topRects[0].height / 2,
@@ -283,14 +292,44 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const dx = towardX - nodeX;
         const dy = towardY - wire.busY;
         const len = Math.hypot(dx, dy);
-        if (len <= 0 || nodeRadius <= 0) {
+        if (len <= 0) {
           return { x: nodeX, y: wire.busY };
         }
-        const unitX = dx / len;
-        const unitY = dy / len;
+
+        const ux = dx / len;
+        const uy = dy / len;
+        const halfWidth = Math.max(0, wire.nodeHalfWidth - 1);
+        const halfHeight = Math.max(0, wire.nodeHalfHeight - 1);
+        const maxCornerRadius = Math.max(0, Math.min(halfWidth, halfHeight));
+        const cornerRadius = Math.max(0, Math.min(wire.nodeCornerRadius, maxCornerRadius));
+
+        if (halfWidth <= 0 || halfHeight <= 0 || cornerRadius <= 0) {
+          return {
+            x: nodeX + ux * nodeRadius,
+            y: wire.busY + uy * nodeRadius,
+          };
+        }
+
+        const coreHalfWidth = Math.max(0, halfWidth - cornerRadius);
+        const coreHalfHeight = Math.max(0, halfHeight - cornerRadius);
+        const rectScale = 1 / Math.max(Math.abs(ux) / halfWidth, Math.abs(uy) / halfHeight);
+        const rectX = ux * rectScale;
+        const rectY = uy * rectScale;
+
+        if (Math.abs(rectX) <= coreHalfWidth || Math.abs(rectY) <= coreHalfHeight) {
+          return { x: nodeX + rectX, y: wire.busY + rectY };
+        }
+
+        const cornerCenterX = (rectX >= 0 ? 1 : -1) * coreHalfWidth;
+        const cornerCenterY = (rectY >= 0 ? 1 : -1) * coreHalfHeight;
+        const proj = ux * cornerCenterX + uy * cornerCenterY;
+        const centerLenSq = (cornerCenterX * cornerCenterX) + (cornerCenterY * cornerCenterY);
+        const radicand = Math.max(0, (proj * proj) - (centerLenSq - (cornerRadius * cornerRadius)));
+        const arcDistance = proj + Math.sqrt(radicand);
+
         return {
-          x: nodeX + unitX * nodeRadius,
-          y: wire.busY + unitY * nodeRadius,
+          x: nodeX + ux * arcDistance,
+          y: wire.busY + uy * arcDistance,
         };
       };
 
@@ -312,6 +351,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           d: `M ${sourceX} ${sourceY} L ${tapX} ${wire.busY} L ${targetX} ${targetY}`,
           gradientId: `topology-gradient-${route.id}`,
           nodeBoundaryX: nodeBoundaryPoint.x,
+          nodeBoundaryY: nodeBoundaryPoint.y,
         };
       });
     },
@@ -356,12 +396,15 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                   {flowRoutes.map((route) => {
                     const isToNode = route.direction === "toNode";
                     const x1 = isToNode ? wire.taps[route.id] : route.nodeBoundaryX;
+                    const y1 = isToNode ? wire.busY : route.nodeBoundaryY;
                     const x2 = isToNode ? route.nodeBoundaryX : wire.taps[route.id];
+                    const y2 = isToNode ? route.nodeBoundaryY : wire.busY;
                     return (
-                      <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={wire.busY} x2={x2} y2={wire.busY}>
+                      <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2}>
                         <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
                         <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
-                        <stop offset="100%" stopColor="rgba(136, 188, 252, 0.78)" />
+                        {isToNode ? <stop offset="88%" stopColor="rgba(120, 174, 244, 0.46)" /> : null}
+                        <stop offset="100%" stopColor={isToNode ? "rgba(130, 184, 249, 0.28)" : "rgba(136, 188, 252, 0.78)"} />
                       </linearGradient>
                     );
                   })}
@@ -371,7 +414,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                     key={route.id}
                     data-route-id={route.id}
                     data-direction={route.direction}
-                    className={`${styles.beamRoute} beamRoute`}
+                    className={`${styles.beamRoute} ${route.direction === "toNode" ? styles.beamRouteToNode : ""} beamRoute`}
                     style={{ stroke: `url(#${route.gradientId})` }}
                     d={route.d}
                   />
@@ -419,22 +462,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               </article>
             </div>
 
-            <div className={styles.midZone}>
-              <div className={styles.nodeStack}>
-                <div className={styles.node} ref={nodeShellRef}>
-                  <span className={styles.nodeTitle}>camOS</span>
-                  <button
-                    type="button"
-                    className={styles.previewNodeCta}
-                    data-testid="preview-enter-demo-cta"
-                    onClick={onAccessDemo}
-                  >
-                    View Demo
-                  </button>
-                  <span className={styles.nodeAnchor} ref={nodeAnchorRef} />
-                </div>
-              </div>
-            </div>
 
             <div className={styles.bottomCluster} ref={bottomClusterRef}>
               <article className={styles.trafficTile} data-testid="traffic-split-module">
@@ -468,6 +495,27 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         </div>
 
         <div className={styles.veilLayer} aria-hidden="true" />
+
+        <div className={styles.nodeLayer}>
+          <div className={styles.midZone}>
+            <div className={styles.nodeStack}>
+              <div className={styles.node} ref={nodeShellRef}>
+                <span className={styles.nodeTitle}>camOS</span>
+                <button
+                  type="button"
+                  className={styles.previewNodeCta}
+                  data-testid="preview-enter-demo-cta"
+                  onClick={onAccessDemo}
+                >
+                  View Demo
+                </button>
+                <span className={styles.nodeAnchor} ref={nodeAnchorRef} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+
       </div>
       {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
         <p className={styles.errorNote}>Preview unavailable.</p>
