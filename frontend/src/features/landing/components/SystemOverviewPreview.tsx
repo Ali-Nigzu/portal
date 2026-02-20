@@ -322,11 +322,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               x2={wire.trafficSocketX}
               y2={wire.trafficSocketY}
             />
-            <path
-              className={styles.trafficReceivePulse}
-              data-testid="traffic-receive-pulse"
-              d={`M ${wire.trafficSocketX} ${wire.trafficSocketY} L ${wire.trafficSocketX} ${wire.endpointsY.traffic} L ${wire.trafficSocketX} ${wire.trafficSocketY} L ${wire.trafficSocketX} ${wire.trafficSocketY + 8}`}
-            />
             <defs>
               {flowRoutes.map((route) => {
                 const isToNode = route.direction === "toNode";
@@ -346,7 +341,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                 key={route.id}
                 data-route-id={route.id}
                 data-direction={route.direction}
-                className={styles.beamRoute}
+                className={`${styles.beamRoute} beamRoute`}
                 style={{ stroke: `url(#${route.gradientId})` }}
                 d={route.d}
               />

@@ -455,16 +455,6 @@
   fill: none;
 }
 
-.trafficReceivePulse {
-  stroke: color-mix(in srgb, #86b8fa 72%, transparent);
-  stroke-width: var(--preview-stroke-beam);
-  fill: none;
-  stroke-linecap: round;
-  stroke-dasharray: 18 120;
-  opacity: 0.5;
-  animation: beam-flow 4.2s linear infinite;
-}
-
 .beamRoute {
   stroke-width: var(--preview-stroke-beam);
   fill: none;
