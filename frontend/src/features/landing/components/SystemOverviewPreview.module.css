@@ -20,6 +20,16 @@
   --preview-capacity-gap: 4px;
   --preview-top-row-lift: 18px;
   --preview-traffic-donut-scale: 0.84;
+  --preview-surface-radius: 14px;
+  --preview-surface-border: color-mix(in srgb, var(--sys-line-soft) 58%, transparent);
+  --preview-surface-shadow: 0 8px 22px rgba(4, 10, 20, 0.16);
+  --preview-surface-inner-line: inset 0 0 0 1px rgba(170, 195, 230, 0.08);
+  --preview-veil-fill: rgba(9, 14, 24, 0.05);
+  --preview-gated-filter: blur(1.25px) saturate(0.94) contrast(0.97);
+  --preview-clear-cta-offset-y: 24px;
+  --preview-z-gated: 10;
+  --preview-z-veil: 20;
+  --preview-z-clear: 30;
 
   position: relative;
   width: 100%;
@@ -52,6 +62,41 @@
   row-gap: var(--topo-gap-row);
   min-height: 286px;
   padding: 0;
+}
+
+.consoleSurface {
+  position: relative;
+  border: 1px solid var(--preview-surface-border);
+  border-radius: var(--preview-surface-radius);
+  background: color-mix(in srgb, var(--sys-bg-2) 24%, transparent);
+  box-shadow: var(--preview-surface-shadow), var(--preview-surface-inner-line);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.gatedContent {
+  position: relative;
+  z-index: var(--preview-z-gated);
+  filter: var(--preview-gated-filter);
+  pointer-events: none;
+}
+
+.veilLayer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--preview-z-veil);
+  background: var(--preview-veil-fill);
+  pointer-events: none;
+}
+
+.clearLayer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--preview-z-clear);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
 }
 
 .topCluster {
@@ -287,13 +332,6 @@
 }
 
 
-.nodeCtaConnector {
-  width: 1px;
-  height: var(--preview-node-cta-stem);
-  background: color-mix(in srgb, #4a6f9e 66%, transparent);
-  opacity: 0.6;
-}
-
 .node {
   z-index: 6;
   position: relative;
@@ -325,6 +363,7 @@
 
 
 .previewNodeCta {
+  pointer-events: auto;
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--sys-line) 76%, transparent);
   background: color-mix(in srgb, var(--sys-bg-2) 30%, transparent);
@@ -338,6 +377,7 @@
   padding: 0 14px;
   border-radius: var(--sys-radius-sm);
   cursor: pointer;
+  transform: translateY(var(--preview-clear-cta-offset-y));
   box-shadow: var(--preview-cta-edge-glow);
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
@@ -524,14 +564,10 @@
     padding: 6px 0;
   }
 
-  .nodeCtaConnector {
-    height: 14px;
-  }
-
-
   .previewNodeCta {
     min-height: 30px;
     font-size: 0.72rem;
+    --preview-clear-cta-offset-y: 18px;
   }
 }
 

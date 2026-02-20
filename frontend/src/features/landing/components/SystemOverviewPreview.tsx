@@ -303,138 +303,146 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
-      <div className={styles.canvas} ref={containerRef} data-topology-mock={forceMockTopology ? "true" : "false"}>
-        {wire.width > 0 && wire.height > 0 ? (
-          <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
-            <line className={styles.busLine} data-testid="topology-bus" x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
-            {FLOW_ROUTE_DEFINITIONS.map((route) => (
-              <line
-                key={`connector-${route.id}`}
-                className={styles.connectorLine}
-                data-route-id={route.id}
-                x1={wire.taps[route.id]}
-                y1={wire.endpointsY[route.id]}
-                x2={wire.taps[route.id]}
-                y2={wire.busY}
-              />
-            ))}
-            <line
-              className={styles.nodeDropConnector}
-              data-testid="traffic-node-drop-connector"
-              x1={wire.trafficSocketX}
-              y1={wire.endpointsY.traffic}
-              x2={wire.trafficSocketX}
-              y2={wire.trafficSocketY}
-            />
-            <defs>
-              {flowRoutes.map((route) => {
-                const isToNode = route.direction === "toNode";
-                const x1 = isToNode ? wire.taps[route.id] : nodeX;
-                const x2 = isToNode ? nodeX : wire.taps[route.id];
-                return (
-                  <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={wire.busY} x2={x2} y2={wire.busY}>
-                    <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
-                    <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
-                    <stop offset="100%" stopColor="rgba(136, 188, 252, 0.78)" />
-                  </linearGradient>
-                );
-              })}
-            </defs>
-            {flowRoutes.map((route) => (
-              <path
-                key={route.id}
-                data-route-id={route.id}
-                data-direction={route.direction}
-                className={`${styles.beamRoute} beamRoute`}
-                style={{ stroke: `url(#${route.gradientId})` }}
-                d={route.d}
-              />
-            ))}
-          </svg>
-        ) : null}
-
-        <div className={styles.topCluster} ref={topClusterRef}>
-          {hasKpis ? (
-            topWidgets.map((item) => (
-              <div
-                key={item.widgetId}
-                className={`${styles.kpiSlot} ${item.slotClass}`}
-                data-testid={item.key === "footfall" ? "footfall-module" : undefined}
-                ref={(node) => {
-                  topSlotRefs.current[item.key] = node;
-                }}
-              >
-                <div className={styles.wireAnchorSlot}>
-                  {forceMockTopology
-                    ? renderMockTile(item.key, item.key === "occupancy" ? "67%" : "2,481")
-                    : <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
-                  <span
-                    className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorBottom}`}
-                    data-anchor-id={`top-${item.key}`}
-                    ref={(node) => {
-                      topEdgeRefs.current[item.key] = node;
-                    }}
+      <div className={styles.consoleSurface}>
+        <div className={styles.gatedContent}>
+          <div className={styles.canvas} ref={containerRef} data-topology-mock={forceMockTopology ? "true" : "false"}>
+            {wire.width > 0 && wire.height > 0 ? (
+              <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
+                <line className={styles.busLine} data-testid="topology-bus" x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
+                {FLOW_ROUTE_DEFINITIONS.map((route) => (
+                  <line
+                    key={`connector-${route.id}`}
+                    className={styles.connectorLine}
+                    data-route-id={route.id}
+                    x1={wire.taps[route.id]}
+                    y1={wire.endpointsY[route.id]}
+                    x2={wire.taps[route.id]}
+                    y2={wire.busY}
                   />
+                ))}
+                <line
+                  className={styles.nodeDropConnector}
+                  data-testid="traffic-node-drop-connector"
+                  x1={wire.trafficSocketX}
+                  y1={wire.endpointsY.traffic}
+                  x2={wire.trafficSocketX}
+                  y2={wire.trafficSocketY}
+                />
+                <defs>
+                  {flowRoutes.map((route) => {
+                    const isToNode = route.direction === "toNode";
+                    const x1 = isToNode ? wire.taps[route.id] : nodeX;
+                    const x2 = isToNode ? nodeX : wire.taps[route.id];
+                    return (
+                      <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={wire.busY} x2={x2} y2={wire.busY}>
+                        <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
+                        <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
+                        <stop offset="100%" stopColor="rgba(136, 188, 252, 0.78)" />
+                      </linearGradient>
+                    );
+                  })}
+                </defs>
+                {flowRoutes.map((route) => (
+                  <path
+                    key={route.id}
+                    data-route-id={route.id}
+                    data-direction={route.direction}
+                    className={`${styles.beamRoute} beamRoute`}
+                    style={{ stroke: `url(#${route.gradientId})` }}
+                    d={route.d}
+                  />
+                ))}
+              </svg>
+            ) : null}
+
+            <div className={styles.topCluster} ref={topClusterRef}>
+              {hasKpis ? (
+                topWidgets.map((item) => (
+                  <div
+                    key={item.widgetId}
+                    className={`${styles.kpiSlot} ${item.slotClass}`}
+                    data-testid={item.key === "footfall" ? "footfall-module" : undefined}
+                    ref={(node) => {
+                      topSlotRefs.current[item.key] = node;
+                    }}
+                  >
+                    <div className={styles.wireAnchorSlot}>
+                      {forceMockTopology
+                        ? renderMockTile(item.key, item.key === "occupancy" ? "67%" : "2,481")
+                        : <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
+                      <span
+                        className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorBottom}`}
+                        data-anchor-id={`top-${item.key}`}
+                        ref={(node) => {
+                          topEdgeRefs.current[item.key] = node;
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : hasError ? (
+                <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Preview unavailable.</div>
+              ) : (
+                <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Loading live KPI preview…</div>
+              )}
+
+              <article className={styles.capacityTile} data-testid="capacity-module">
+                <div className={styles.capacityHeaderRow}>
+                  <p className={styles.capacityLabel}>Capacity</p>
+                  <p className={styles.capacityValue}>{CAPACITY_PERCENT}%</p>
                 </div>
-              </div>
-            ))
-          ) : hasError ? (
-            <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Preview unavailable.</div>
-          ) : (
-            <div className={`${styles.inlineNotice} ${styles.topNotice}`}>Loading live KPI preview…</div>
-          )}
-
-          <article className={styles.capacityTile} data-testid="capacity-module">
-            <div className={styles.capacityHeaderRow}>
-              <p className={styles.capacityLabel}>Capacity</p>
-              <p className={styles.capacityValue}>{CAPACITY_PERCENT}%</p>
+                <div className={styles.capacityTrack}><div className={styles.capacityFill} style={{ width: `${CAPACITY_PERCENT}%` }} /></div>
+              </article>
             </div>
-            <div className={styles.capacityTrack}><div className={styles.capacityFill} style={{ width: `${CAPACITY_PERCENT}%` }} /></div>
-          </article>
-        </div>
 
-        <div className={styles.midZone}>
-          <div className={styles.nodeStack}>
-            <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
-            <span className={styles.nodeCtaConnector} aria-hidden="true" />
-            <button
-              type="button"
-              className={styles.previewNodeCta}
-              data-testid="preview-enter-demo-cta"
-              onClick={onAccessDemo}
-            >
-              <span className={styles.previewNodeCtaLabel}>Access Demo</span>
-            </button>
+            <div className={styles.midZone}>
+              <div className={styles.nodeStack}>
+                <div className={styles.node}>camOS<span className={styles.nodeSub}>System Sheet</span><span className={styles.nodeAnchor} ref={nodeAnchorRef} /></div>
+              </div>
+            </div>
+
+            <div className={styles.bottomCluster} ref={bottomClusterRef}>
+              <article className={styles.trafficTile} data-testid="traffic-split-module">
+                {trafficUnavailable ? (
+                  <div className={styles.inlineNotice} data-testid="traffic-split-error">Traffic Split data unavailable.</div>
+                ) : (
+                  <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
+                    <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
+                    <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+                    <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
+                  </div>
+                )}
+              </article>
+
+              <div className={`${styles.kpiSlot} ${styles.tileT5}`}>
+                {dwellWidget || forceMockTopology ? (
+                  <div className={styles.wireAnchorSlot} ref={dwellSlotRef}>
+                    {forceMockTopology
+                      ? renderMockTile("Dwell Minutes", "18.2")
+                      : <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                    <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-dwell" ref={dwellEdgeRef} />
+                  </div>
+                ) : hasError ? (
+                  <div className={styles.inlineNotice}>Preview unavailable.</div>
+                ) : (
+                  <div className={styles.inlineNotice}>Loading dwell KPI…</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className={styles.bottomCluster} ref={bottomClusterRef}>
-          <article className={styles.trafficTile} data-testid="traffic-split-module">
-            {trafficUnavailable ? (
-              <div className={styles.inlineNotice} data-testid="traffic-split-error">Traffic Split data unavailable.</div>
-            ) : (
-              <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
-                <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
-                <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
-                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
-              </div>
-            )}
-          </article>
+        <div className={styles.veilLayer} aria-hidden="true" />
 
-          <div className={`${styles.kpiSlot} ${styles.tileT5}`}>
-            {dwellWidget || forceMockTopology ? (
-              <div className={styles.wireAnchorSlot} ref={dwellSlotRef}>
-                {forceMockTopology
-                  ? renderMockTile("Dwell Minutes", "18.2")
-                  : <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
-                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-dwell" ref={dwellEdgeRef} />
-              </div>
-            ) : hasError ? (
-              <div className={styles.inlineNotice}>Preview unavailable.</div>
-            ) : (
-              <div className={styles.inlineNotice}>Loading dwell KPI…</div>
-            )}
-          </div>
+        <div className={styles.clearLayer}>
+          <button
+            type="button"
+            className={styles.previewNodeCta}
+            data-testid="preview-enter-demo-cta"
+            onClick={onAccessDemo}
+          >
+            <span className={styles.previewNodeCtaLabel}>View Demo</span>
+          </button>
         </div>
       </div>
       {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
