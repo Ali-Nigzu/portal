@@ -17,7 +17,7 @@
   --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, #9dc4ff 10%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 10%, transparent);
   --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #9dc4ff 18%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 18%, transparent);
   --preview-node-cta-stem: 22px;
-  --preview-capacity-gap: 14px;
+  --preview-capacity-gap: 6px;
   --preview-top-row-lift: 48px;
   --preview-bottom-row-lift: -38px;
   --preview-traffic-donut-scale: 0.84;
@@ -275,10 +275,8 @@
   border-radius: var(--sys-radius-sm);
   border: 1px solid color-mix(in srgb, var(--sys-line-soft) 64%, transparent);
   background: color-mix(in srgb, var(--sys-bg-2) 54%, transparent);
-  grid-column: 2 / 4;
+  grid-column: 4;
   grid-row: 2;
-  width: min(100%, 352px);
-  justify-self: center;
   min-height: 44px;
   max-height: 44px;
   padding: 6px 9px 5px;
@@ -345,19 +343,29 @@
   inset: 0;
   z-index: 24;
   pointer-events: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   transform: none;
 }
 
 .midZone {
+  position: absolute;
+  inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
+.nodeMeasureGhost {
+  width: 112px;
+  min-height: 68px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .nodeStack {
+  position: absolute;
+  left: var(--node-anchor-x, 50%);
+  top: var(--node-anchor-y, 50%);
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;

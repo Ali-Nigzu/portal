@@ -322,6 +322,11 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     };
   }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget , widgetStatus]);
 
+  const nodeLayerStyle = {
+    "--node-anchor-x": wire.nodeX > 0 ? `${wire.nodeX}px` : "50%",
+    "--node-anchor-y": wire.busY > 0 ? `${wire.busY}px` : "50%",
+  } as React.CSSProperties;
+
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
   const nodeRadius = wire.nodeRadius || 0;
   const flowRoutes = useMemo(
@@ -536,21 +541,22 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         <div className={styles.veilLayer} aria-hidden="true" />
 
-        <div className={styles.nodeLayer}>
+        <div className={styles.nodeLayer} style={nodeLayerStyle}>
           <div className={styles.midZone}>
-            <div className={styles.nodeStack}>
-              <div className={styles.node} ref={nodeShellRef}>
-                <span className={styles.nodeTitle}>camOS</span>
-                <button
-                  type="button"
-                  className={styles.previewNodeCta}
-                  data-testid="preview-enter-demo-cta"
-                  onClick={onAccessDemo}
-                >
-                  View Demo
-                </button>
-                <span className={styles.nodeAnchor} ref={nodeAnchorRef} />
-              </div>
+            <div className={styles.nodeMeasureGhost} ref={nodeShellRef} aria-hidden="true" />
+          </div>
+          <div className={styles.nodeStack}>
+            <div className={styles.node}>
+              <span className={styles.nodeTitle}>camOS</span>
+              <button
+                type="button"
+                className={styles.previewNodeCta}
+                data-testid="preview-enter-demo-cta"
+                onClick={onAccessDemo}
+              >
+                View Demo
+              </button>
+              <span className={styles.nodeAnchor} ref={nodeAnchorRef} />
             </div>
           </div>
         </div>
