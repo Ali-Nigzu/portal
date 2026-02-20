@@ -11,7 +11,8 @@ const DEFAULT_SLICE_COLORS = [
   "#0ea5e9",
 ];
 
-const VRM_SLICE_COLORS = ["#315d9f", "#1f3e6d", "#2a4f88"];
+const VRM_SLICE_COLORS = ["#2c4f82", "#24456f", "#1e3a5e"];
+const EMPTY_RING_COLOR = "rgba(96, 122, 165, 0.28)";
 
 export const TrafficDistribution = ({
   result,
@@ -96,25 +97,22 @@ export const TrafficDistribution = ({
   });
 
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
-  if (!legend.length || totalValue <= 0) {
-    return (
-      <div
-        className={`traffic-distribution kpi-tile ${className ?? ""}`}
-        style={{ minHeight: height }}
-      >
-        <div className="traffic-distribution__title">{title}</div>
-        <div className="traffic-distribution__empty">
-          Traffic Split data unavailable.
-        </div>
-      </div>
-    );
-  }
+  const hasPositiveTraffic = totalValue > 0;
 
-  const renderLegend = legend.map((entry) => ({
-    ...entry,
-    renderValue: entry.value,
-    displayValue: entry.value,
-  }));
+  const renderLegend = hasPositiveTraffic
+    ? legend.map((entry) => ({
+      ...entry,
+      renderValue: entry.value,
+      displayValue: entry.value,
+    }))
+    : [{
+      label: "No traffic",
+      camId: "—",
+      value: 1,
+      color: EMPTY_RING_COLOR,
+      renderValue: 1,
+      displayValue: 0,
+    }];
   const renderTopSlice = renderLegend.reduce(
     (winner, candidate) =>
       candidate.renderValue >= winner.renderValue ? candidate : winner,
@@ -124,12 +122,15 @@ export const TrafficDistribution = ({
     ...entry,
     value: entry.renderValue,
   }));
-  const topCameraLabel =
-    renderTopSlice.camId === null ||
-    renderTopSlice.camId === undefined ||
-    renderTopSlice.camId === ""
-      ? "—"
-      : String(renderTopSlice.camId);
+  const topCameraLabel = hasPositiveTraffic
+    ? (
+      renderTopSlice.camId === null ||
+      renderTopSlice.camId === undefined ||
+      renderTopSlice.camId === ""
+        ? "—"
+        : String(renderTopSlice.camId)
+    )
+    : "—";
 
   return (
     <div
@@ -164,15 +165,16 @@ export const TrafficDistribution = ({
               cy="50%"
               innerRadius={48}
               outerRadius={68}
-              paddingAngle={1.2}
+              paddingAngle={0}
               startAngle={90}
               endAngle={450}
               label={undefined}
               labelLine={false}
               stroke="none"
+              isAnimationActive={false}
             >
               {pieLegend.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} stroke="#0d1626" strokeWidth={1} />
+                <Cell key={entry.label} fill={entry.color} stroke="none" />
               ))}
               <text
                 x="50%"
@@ -186,7 +188,7 @@ export const TrafficDistribution = ({
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        {!isVrmTraffic ? (
+        {!isVrmTraffic && hasPositiveTraffic ? (
           <div
             className="traffic-distribution__annotations"
             aria-label="Traffic by camera annotations"

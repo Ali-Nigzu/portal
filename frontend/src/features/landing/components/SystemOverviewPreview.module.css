@@ -378,33 +378,18 @@
   transform: translateX(-50%);
 }
 
-.trafficTitleMask {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  z-index: 7;
-  padding-right: 14px;
-  font-size: 1.04rem;
-  line-height: 1;
-  letter-spacing: -0.01em;
+.trafficTile :global(.traffic-distribution__title) {
+  font-size: 0.86rem;
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--sys-text-1);
-  background: color-mix(in srgb, var(--sys-bg-1) 94%, transparent);
-  pointer-events: none;
-}
-
-.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-title),
-.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel-title) {
-  opacity: 0 !important;
+  opacity: 1;
 }
 
 .trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel),
 .trafficTile :global(.dashboard-v2__kpi-renderer .kpi-content) {
   max-width: 196px;
-}
-
-.trafficTile :global(.recharts-wrapper) {
-  transform: scale(0.78);
-  transform-origin: 50% 0%;
 }
 
 
@@ -458,16 +443,6 @@
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
-}
-
-.trafficReceivePulse {
-  stroke: color-mix(in srgb, #86b8fa 72%, transparent);
-  stroke-width: var(--preview-stroke-beam);
-  fill: none;
-  stroke-linecap: round;
-  stroke-dasharray: 8 80;
-  opacity: 0.42;
-  animation: beam-flow 4.8s linear infinite;
 }
 
 .beamRoute {

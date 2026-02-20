@@ -5,6 +5,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Iterable, Optional
 
 from google.cloud import bigquery
@@ -16,6 +17,7 @@ SNAPSHOT_ORG_IDS = {"client1", "client2"}
 
 _TIMESTAMP_COLUMN_CANDIDATES = ("ts", "timestamp", "snapshot_ts", "created_at")
 _PAYLOAD_COLUMN_CANDIDATES = ("payload", "snapshot_payload", "data")
+_FALLBACK_SNAPSHOT_PATH = Path("backend/data/demo_snapshot.json")
 
 
 class SnapshotLookupError(RuntimeError):
@@ -43,6 +45,18 @@ def _snapshot_table_name() -> str:
     if not project or not dataset:
         raise SnapshotLookupError("BQ_PROJECT and BQ_DATASET must be set for snapshot access")
     return f"{project}.{dataset}.snapshots"
+
+
+def _fallback_snapshot_row(org_id: str) -> SnapshotRow:
+    if not _FALLBACK_SNAPSHOT_PATH.exists():
+        raise SnapshotLookupError(
+            f"Missing fallback snapshot fixture at {_FALLBACK_SNAPSHOT_PATH}"
+        )
+    raw = json.loads(_FALLBACK_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    payload = _coerce_payload(raw.get("payload"))
+    ts_raw = raw.get("ts")
+    ts = str(ts_raw) if isinstance(ts_raw, str) and ts_raw else datetime.now(timezone.utc).isoformat()
+    return SnapshotRow(org_id=_normalize_org_id(org_id), ts=ts, payload=payload)
 
 
 def _select_column(columns: Iterable[str], candidates: Iterable[str], label: str) -> str:
@@ -82,6 +96,9 @@ def _format_timestamp(value: Any) -> str:
 
 def fetch_latest_snapshot(org_id: str, *, as_of: Optional[datetime] = None) -> Optional[SnapshotRow]:
     normalized = _normalize_org_id(org_id)
+    if not os.getenv("BQ_PROJECT") or not os.getenv("BQ_DATASET"):
+        return _fallback_snapshot_row(normalized)
+
     table_name = _snapshot_table_name()
     ts_column, payload_column = _resolve_snapshot_columns()
     resolved_as_of = as_of or datetime.now(timezone.utc)
