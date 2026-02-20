@@ -325,7 +325,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             <path
               className={styles.trafficReceivePulse}
               data-testid="traffic-receive-pulse"
-              d={`M ${wire.trafficSocketX} ${wire.trafficSocketY} L ${wire.trafficSocketX} ${wire.trafficSocketY + 8}`}
+              d={`M ${wire.trafficSocketX} ${wire.trafficSocketY} L ${wire.trafficSocketX} ${wire.endpointsY.traffic} L ${wire.trafficSocketX} ${wire.trafficSocketY} L ${wire.trafficSocketX} ${wire.trafficSocketY + 8}`}
             />
             <defs>
               {flowRoutes.map((route) => {

@@ -460,9 +460,9 @@
   stroke-width: var(--preview-stroke-beam);
   fill: none;
   stroke-linecap: round;
-  stroke-dasharray: 8 80;
-  opacity: 0.42;
-  animation: beam-flow 4.8s linear infinite;
+  stroke-dasharray: 18 120;
+  opacity: 0.5;
+  animation: beam-flow 4.2s linear infinite;
 }
 
 .beamRoute {

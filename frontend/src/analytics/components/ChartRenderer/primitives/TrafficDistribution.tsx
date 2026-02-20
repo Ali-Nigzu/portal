@@ -11,7 +11,7 @@ const DEFAULT_SLICE_COLORS = [
   "#0ea5e9",
 ];
 
-const VRM_SLICE_COLORS = ["#315d9f", "#1f3e6d", "#2a4f88"];
+const VRM_SLICE_COLORS = ["#2c4f82", "#24456f", "#1e3a5e"];
 const EMPTY_RING_COLOR = "rgba(96, 122, 165, 0.28)";
 
 export const TrafficDistribution = ({
@@ -165,7 +165,7 @@ export const TrafficDistribution = ({
               cy="50%"
               innerRadius={48}
               outerRadius={68}
-              paddingAngle={1.2}
+              paddingAngle={0}
               startAngle={90}
               endAngle={450}
               label={undefined}
@@ -174,7 +174,7 @@ export const TrafficDistribution = ({
               isAnimationActive={false}
             >
               {pieLegend.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} stroke="#0d1626" strokeWidth={1} />
+                <Cell key={entry.label} fill={entry.color} stroke="none" />
               ))}
               <text
                 x="50%"
