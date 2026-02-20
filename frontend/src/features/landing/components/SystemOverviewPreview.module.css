@@ -378,24 +378,13 @@
   transform: translateX(-50%);
 }
 
-.trafficTitleMask {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  z-index: 7;
-  padding-right: 14px;
+.trafficTile :global(.traffic-distribution__title) {
   font-size: 0.86rem;
   line-height: 1.1;
+  font-weight: 400;
   letter-spacing: 0;
   color: var(--sys-text-1);
   opacity: 1;
-  background: color-mix(in srgb, var(--sys-bg-1) 94%, transparent);
-  pointer-events: none;
-}
-
-.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-title),
-.trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel-title) {
-  opacity: 0 !important;
 }
 
 .trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel),

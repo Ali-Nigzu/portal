@@ -416,7 +416,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
                 <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
                 <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
-                <span className={styles.trafficTitleMask} aria-hidden="true">Traffic Split</span>
                 <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
               </div>
             )}
