@@ -280,7 +280,11 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const sourceX = isToNode ? tapX : nodeX;
         const sourceY = isToNode ? endpointY : wire.busY;
         const targetX = isToNode ? nodeX : tapX;
-        const targetY = isToNode ? wire.busY : endpointY;
+        const targetY = route.id === "traffic"
+          ? wire.trafficSocketY
+          : isToNode
+            ? wire.busY
+            : endpointY;
         return {
           ...route,
           d: `M ${sourceX} ${sourceY} L ${tapX} ${wire.busY} L ${targetX} ${targetY}`,
