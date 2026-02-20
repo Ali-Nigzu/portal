@@ -26,7 +26,7 @@
   --preview-zone-feather-top: none;
   --preview-zone-feather-bottom: none;
   --preview-veil-fill: rgba(9, 14, 24, 0.05);
-  --preview-gated-filter: blur(0.72px) saturate(0.5) contrast(0.97);
+  --preview-gated-filter: blur(0.72px) saturate(0.65) contrast(0.97);
   --preview-clear-cta-offset-y: 24px;
   --preview-z-gated: 10;
   --preview-z-veil: 20;
