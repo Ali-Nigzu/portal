@@ -27,6 +27,7 @@ type WireLayout = {
   nodeX: number;
   taps: Record<RouteId, number>;
   endpointsY: Record<RouteId, number>;
+  trafficDonut: { cx: number; cy: number; r: number } | null;
 };
 
 type RouteDefinition = {
@@ -65,6 +66,7 @@ const initialWireLayout: WireLayout = {
   nodeX: 0,
   taps: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
   endpointsY: { entrances: 0, occupancy: 0, exits: 0, traffic: 0, dwell: 0 },
+  trafficDonut: null,
 };
 
 const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forceMockTopology }) => {
@@ -84,7 +86,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
     footfall: null,
   });
   const leftSlotRef = useRef<HTMLDivElement | null>(null);
-  const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
   const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
@@ -148,14 +149,17 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
         }
 
         const connectedTopEdges = CONNECTED_TOP_IDS.map((id) => topEdgeRefs.current[id]);
-        if (connectedTopEdges.some((edge) => !edge) || !leftEdgeRef.current || !dwellEdgeRef.current) {
+        const trafficNorthAnchor = leftSlotRef.current.querySelector('[data-traffic-donut-north]') as HTMLSpanElement | null;
+        const trafficCenterAnchor = leftSlotRef.current.querySelector('[data-traffic-donut-center]') as HTMLSpanElement | null;
+        if (connectedTopEdges.some((edge) => !edge) || !trafficNorthAnchor || !trafficCenterAnchor || !dwellEdgeRef.current) {
           return;
         }
 
         const containerRect = containerRef.current.getBoundingClientRect();
         const nodeRect = nodeAnchorRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
-        const trafficRect = leftEdgeRef.current.getBoundingClientRect();
+        const trafficRect = trafficNorthAnchor.getBoundingClientRect();
+        const trafficCenterRect = trafficCenterAnchor.getBoundingClientRect();
         const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
 
         const taps: Record<RouteId, number> = {
@@ -181,6 +185,11 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
             traffic: trafficRect.top - containerRect.top + trafficRect.height / 2,
             dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
           },
+          trafficDonut: {
+            cx: trafficCenterRect.left - containerRect.left + trafficCenterRect.width / 2,
+            cy: trafficCenterRect.top - containerRect.top + trafficCenterRect.height / 2,
+            r: Math.abs((trafficRect.top - containerRect.top + trafficRect.height / 2) - (trafficCenterRect.top - containerRect.top + trafficCenterRect.height / 2)),
+          },
         });
       });
     };
@@ -199,7 +208,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
       if (edge) observer.observe(edge);
     });
     if (leftSlotRef.current) observer.observe(leftSlotRef.current);
-    if (leftEdgeRef.current) observer.observe(leftEdgeRef.current);
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
     if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
     window.addEventListener("resize", scheduleMeasure);
@@ -258,6 +266,17 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 y2={wire.busY}
               />
             ))}
+            {wire.trafficDonut ? (
+              <line
+                className={styles.trafficPulsePath}
+                data-route-id="traffic-pulse-path"
+                x1={wire.taps.traffic}
+                y1={wire.busY}
+                x2={wire.taps.traffic}
+                y2={wire.endpointsY.traffic}
+              />
+            ) : null}
+
             <defs>
               {flowRoutes.map((route) => {
                 const isToNode = route.direction === "toNode";
@@ -265,9 +284,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 const x2 = isToNode ? nodeX : wire.taps[route.id];
                 return (
                   <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={wire.busY} x2={x2} y2={wire.busY}>
-                    <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
-                    <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
-                    <stop offset="100%" stopColor="rgba(136, 188, 252, 0.78)" />
+                    <stop offset="0%" stopColor="rgba(138, 188, 248, 0.68)" />
+                    <stop offset="100%" stopColor="rgba(42, 86, 148, 0.24)" />
                   </linearGradient>
                 );
               })}
@@ -282,6 +300,18 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 d={route.d}
               />
             ))}
+            {wire.trafficDonut ? (
+              <>
+                <path
+                  className={styles.trafficArcPulse}
+                  data-testid="traffic-arc-pulse"
+                  d={`M ${wire.trafficDonut.cx - wire.trafficDonut.r * 0.28} ${wire.trafficDonut.cy - wire.trafficDonut.r * 0.96} A ${wire.trafficDonut.r} ${wire.trafficDonut.r} 0 0 1 ${wire.trafficDonut.cx + wire.trafficDonut.r * 0.28} ${wire.trafficDonut.cy - wire.trafficDonut.r * 0.96}`}
+                />
+                <circle className={styles.trafficPulseDot} r="2.5">
+                  <animateMotion dur="2.6s" repeatCount="indefinite" path={`M ${wire.taps.traffic} ${wire.busY} L ${wire.taps.traffic} ${wire.endpointsY.traffic}`} />
+                </circle>
+              </>
+            ) : null}
           </svg>
         ) : null}
 
@@ -316,11 +346,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
           )}
 
           <article className={styles.capacityTile}>
-            <div className={styles.capacityHeaderRow}>
-              <p className={styles.capacityLabel}>Capacity</p>
-              <p className={styles.capacityValue}>{CAPACITY_PERCENT}%</p>
-            </div>
+            <p className={styles.capacityLabel}>Capacity</p>
             <div className={styles.capacityTrack}><div className={styles.capacityFill} style={{ width: `${CAPACITY_PERCENT}%` }} /></div>
+            <p className={styles.capacityMeta}>{CAPACITY_PERCENT}% active capacity</p>
           </article>
         </div>
 
@@ -335,7 +363,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean }> = ({ forc
                 {forceMockTopology
                   ? renderMockTile("Traffic Split", "41/34/25")
                   : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
-                <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
               </div>
             ) : hasError ? (
               <div className={styles.inlineNotice}>Preview unavailable.</div>
