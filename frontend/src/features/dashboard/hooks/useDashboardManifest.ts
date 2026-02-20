@@ -50,7 +50,21 @@ export const useDashboardManifest = ({
   dashboardId,
 }: UseDashboardManifestParams): UseDashboardManifestResult => {
   const viewToken = useMemo(() => getViewTokenFromLocation(), []);
-  const isDemoSession = useMemo(() => isDemoSessionActive(), []);
+  const [isDemoSession, setIsDemoSession] = useState<boolean>(() =>
+    isDemoSessionActive(),
+  );
+  useEffect(() => {
+    const handleDemoSessionChange = () => {
+      setIsDemoSession(isDemoSessionActive());
+    };
+    window.addEventListener("demo-session-changed", handleDemoSessionChange);
+    return () => {
+      window.removeEventListener(
+        "demo-session-changed",
+        handleDemoSessionChange,
+      );
+    };
+  }, []);
   const demoTimeRangeOverrideRef = useRef(consumeDemoTimeRangeOverride());
   const orgId =
     viewToken || isDemoSession ? undefined : determineOrgId(credentials);
