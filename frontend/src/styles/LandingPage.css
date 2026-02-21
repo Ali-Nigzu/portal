@@ -328,7 +328,7 @@ body {
   background: color-mix(in srgb, #152942 70%, var(--sys-bg-1) 30%);
   color: color-mix(in srgb, var(--sys-text-1) 94%, var(--sys-text-2) 6%);
   min-height: 33px;
-  padding: 0 10px 0 4px;
+  padding: 0 10px 0 0;
   margin: 0;
   font-size: 0.96rem;
   font-weight: 590;
