@@ -79,10 +79,10 @@ const NODE_WINDOW_MIN_PX = 80;
 const NODE_WINDOW_MAX_PX = 140;
 const NODE_WINDOW_RATIO_MIN = 0.18;
 const NODE_WINDOW_RATIO_MAX = 0.42;
-const ALPHA_BASE = 0.66;
-const ALPHA_LIFT = 0.74;
+const ALPHA_BASE = 0.62;
+const ALPHA_LIFT = 0.82;
 const ALPHA_EDGE = 0.02;
-const ALPHA_TRANSITION = 0.28;
+const ALPHA_TRANSITION = 0.34;
 
 const initialWireLayout: WireLayout = {
   width: 0,
@@ -473,8 +473,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                     const x2 = isToNode ? route.nodeBoundaryX : wire.taps[route.id];
                     const y2 = isToNode ? route.nodeBoundaryY : wire.busY;
                     const windowPct = Math.max(0, Math.min(100, route.nodeWindowRatio * 100));
-                    const shoulderPct = Math.max(0, Math.min(100, windowPct * 0.45));
-                    const corePct = Math.max(0, Math.min(100, windowPct * 0.18));
+                    const shoulderPct = Math.max(0, Math.min(100, windowPct * 0.60));
+                    const corePct = Math.max(0, Math.min(100, windowPct * 0.32));
                     const inboundWindowStartPct = Math.max(0, 100 - windowPct);
                     const inboundShoulderPct = Math.max(0, 100 - shoulderPct);
                     const inboundCorePct = Math.max(0, 100 - corePct);
