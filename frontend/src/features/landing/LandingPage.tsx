@@ -103,7 +103,7 @@ const LandingPage: React.FC = () => {
                           className="landing-axis-right-action"
                           onClick={scrollToSignUp}
                         >
-                          {deploymentAxisItems[index]}
+                          <span className="landing-axis-right-action-label">{deploymentAxisItems[index]}</span>
                         </button>
                       </span>
                     ) : (

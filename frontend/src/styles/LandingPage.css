@@ -319,6 +319,7 @@ body {
 }
 
 .landing-axis-right-action {
+  --axis-action-shell-offset-y: 19px;
   position: relative;
   z-index: 0;
   appearance: none;
@@ -342,6 +343,11 @@ body {
   transition: color 140ms ease;
 }
 
+.landing-axis-right-action-label {
+  display: block;
+  transform: translateY(calc(-1 * var(--axis-action-shell-offset-y)));
+}
+
 .landing-axis-right-action::before {
   content: "";
   position: absolute;
@@ -349,7 +355,7 @@ body {
   right: -12px;
   top: 50%;
   height: 34px;
-  transform: translateY(calc(-50% - 19px));
+  transform: translateY(calc(-50% - var(--axis-action-shell-offset-y)));
   pointer-events: none;
   z-index: -1;
   border-radius: 12px;
