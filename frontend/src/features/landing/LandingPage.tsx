@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LandingPage.css";
-import { useRegisterInterestForm } from "./hooks/useRegisterInterestForm";
 import { landingCopy } from "./content";
 import LandingHeader from "./components/LandingHeader";
 import LandingFooter from "./components/LandingFooter";
@@ -9,26 +8,6 @@ import SystemOverviewPreview from "./components/SystemOverviewPreview";
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    formData,
-    isSubmitting,
-    submitSuccess,
-    submitError,
-    setFormData,
-    handleSubmit,
-    resetSubmissionState,
-  } = useRegisterInterestForm();
-
-  const scrollToSignUp = () => {
-    const section = document.getElementById("create-account");
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [event.target.name]: event.target.value });
-  };
 
   const goToDemo = () => {
     navigate("/demo");
@@ -80,7 +59,7 @@ const LandingPage: React.FC = () => {
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={scrollToSignUp}
+                onClick={(e) => e.preventDefault()}
               >
                 {landingCopy.nav.actions.createAccount}
               </button>
@@ -101,7 +80,7 @@ const LandingPage: React.FC = () => {
                         <button
                           type="button"
                           className="landing-axis-right-action"
-                          onClick={scrollToSignUp}
+                          onClick={(e) => e.preventDefault()}
                         >
                           <span className="landing-axis-right-action-label">{deploymentAxisItems[index]}</span>
                         </button>
@@ -152,103 +131,13 @@ const LandingPage: React.FC = () => {
                     type="button"
                     className="btn btn-secondary landing-assurance-cta"
                     data-testid="assurance-create-account-cta"
-                    onClick={scrollToSignUp}
+                    onClick={(e) => e.preventDefault()}
                   >
                     {landingCopy.createAccount.button}
                   </button>
                 </div>
               </div>
             </section>
-          </div>
-        </section>
-
-        <section id="create-account" className="landing-signup" aria-labelledby="create-account-title">
-          <div className="landing-container landing-signup-wrap">
-            <h2 id="create-account-title">{landingCopy.createAccount.heading}</h2>
-            <p>{landingCopy.createAccount.line}</p>
-
-            {submitSuccess ? (
-              <div
-                className="landing-status landing-status-success"
-                role="status"
-                aria-live="polite"
-              >
-                <p>Sign-up submitted.</p>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={resetSubmissionState}
-                >
-                  {landingCopy.createAccount.button}
-                </button>
-            </div>
-            ) : (
-              <form className="landing-signup-form" onSubmit={handleSubmit}>
-                <div className="landing-form-grid">
-                  <div className="landing-form-field">
-                    <label htmlFor="name">Full name</label>
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      autoComplete="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="landing-form-field">
-                    <label htmlFor="email">Work email</label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="landing-form-field">
-                    <label htmlFor="company">Location name</label>
-                    <input
-                      id="company"
-                      name="company"
-                      type="text"
-                      autoComplete="organization"
-                      value={formData.company}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="landing-form-field">
-                    <label htmlFor="phone">Phone (optional)</label>
-                    <input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      autoComplete="tel"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                {submitError ? (
-                  <div
-                    className="landing-status landing-status-error"
-                    role="alert"
-                    aria-live="assertive"
-                  >
-                    <p>{submitError}</p>
-                  </div>
-                ) : null}
-
-                <button type="submit" className="btn btn-secondary" disabled={isSubmitting}>
-                  {isSubmitting ? "Submitting..." : landingCopy.createAccount.button}
-                </button>
-              </form>
-            )}
           </div>
         </section>
       </main>
