@@ -112,13 +112,13 @@ body {
 #create-account { scroll-margin-top: 86px; }
 
 .landing-hero-zone {
-  --hero-title-size: clamp(2.7rem, 5.8vw, 4.35rem);
+  --hero-title-size: clamp(2.85rem, 6.12vw, 4.6rem);
   --hero-title-weight-cam: 620;
   --hero-title-weight-os: 720;
   --hero-statement-size: clamp(1.9rem, 3.5vw, 2.5rem);
   --hero-statement-leading: 1.14;
   --hero-statement-tracking: 0.56px;
-  --hero-stack-gap-1: 12px;
+  --hero-stack-gap-1: 3px;
   --hero-gap-b: 44px;
   --hero-gap-c: 92px;
   --hero-zone-top: 88px;
@@ -149,7 +149,7 @@ body {
   margin: 0;
   font-size: var(--hero-title-size);
   line-height: 1.01;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.024em;
   font-weight: var(--hero-title-weight-cam);
   max-width: none;
   white-space: nowrap;
@@ -172,7 +172,7 @@ body {
   color: color-mix(in srgb, var(--sys-text-1) 96%, var(--sys-text-2) 4%);
   font-size: var(--hero-statement-size);
   letter-spacing: var(--hero-statement-tracking);
-  opacity: 1;
+  opacity: 0.91;
   line-height: var(--hero-statement-leading);
 }
 .landing-hero-actions {
@@ -233,7 +233,7 @@ body {
   --mx-block-top: 14px;
   --mx-header-to-row1: 40px;
   --mx-row-gap: 32px;
-  --mx-block-bottom: 50px;
+  --mx-block-bottom: 38px;
 
   width: 100%;
 }
@@ -346,7 +346,7 @@ body {
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
-  background: transparent;
+  background: color-mix(in srgb, var(--sys-bg-1) 98%, black 2%);
   background-image: none;
   box-shadow: none;
   position: relative;
