@@ -319,38 +319,60 @@ body {
 }
 
 .landing-axis-right-action {
+  position: relative;
+  z-index: 0;
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   border: 0;
   outline: none;
-  background: color-mix(in srgb, #152942 70%, var(--sys-bg-1) 30%);
+  background: transparent;
   color: color-mix(in srgb, var(--sys-text-1) 94%, var(--sys-text-2) 6%);
   min-height: 33px;
-  padding: 0 10px 0 0;
+  padding: 0;
   margin: 0;
   font-size: 0.96rem;
-  font-weight: 590;
+  font-weight: 580;
   line-height: 1.28;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
   transform: none;
-  transition: background-color 140ms ease, box-shadow 140ms ease, color 140ms ease;
+  transition: color 140ms ease;
+}
+
+.landing-axis-right-action::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -12px;
+  top: 50%;
+  height: 34px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: -1;
   border-radius: 12px;
+  background: color-mix(in srgb, #152942 70%, var(--sys-bg-1) 30%);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(229, 239, 252, 0.08);
+  transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
 .landing-axis-right-action:hover {
-  background: color-mix(in srgb, #1a304b 68%, var(--sys-bg-1) 32%);
   color: color-mix(in srgb, var(--sys-text-1) 96%, #dbe8fb 4%);
   text-decoration: none;
+}
+
+.landing-axis-right-action:hover::before {
+  background: color-mix(in srgb, #1a304b 68%, var(--sys-bg-1) 32%);
   box-shadow: 0 7px 16px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(236, 244, 255, 0.1);
 }
 
 .landing-axis-right-action:focus-visible {
   outline: none;
+}
+
+.landing-axis-right-action:focus-visible::before {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--sys-accent) 12%, transparent), 0 6px 14px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(229, 239, 252, 0.08);
 }
 
