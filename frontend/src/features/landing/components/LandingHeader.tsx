@@ -18,7 +18,6 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
           className="landing-brand-logo"
         />
         <div className="landing-brand-name-wrap">
-          <div className="landing-brand-short">{landingCopy.brand.shortName}</div>
           <div className="landing-brand-name">{landingCopy.brand.fullName}</div>
         </div>
       </div>

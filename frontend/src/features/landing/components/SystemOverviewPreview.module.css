@@ -10,7 +10,7 @@
   --preview-alpha-content: 0.9;
   --preview-accent-sat: 0.78;
   --preview-number-alpha: 0.9;
-  --preview-line-alpha: 0.62;
+  --preview-line-alpha: 0.54;
   --preview-stroke-bus: 1.5px;
   --preview-stroke-connector: 1.35px;
   --preview-stroke-beam: 1.6px;
@@ -538,7 +538,7 @@
   stroke-linejoin: round;
   stroke-dasharray: 14 86;
   filter: none;
-  opacity: 0.58;
+  opacity: 0.52;
 }
 
 .beamRoute {
