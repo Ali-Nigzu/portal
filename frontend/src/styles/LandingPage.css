@@ -74,7 +74,7 @@ body {
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.btn-sm { min-height: 34px; padding: 0 11px; font-size: 0.82rem; }
+.btn-sm { min-height: 33px; padding: 0 11px; font-size: 0.82rem; }
 
 .btn-primary {
   color: #f6f9ff;
@@ -112,13 +112,13 @@ body {
 #create-account { scroll-margin-top: 86px; }
 
 .landing-hero-zone {
-  --hero-title-size: clamp(2.7rem, 5.8vw, 4.35rem);
+  --hero-title-size: clamp(2.85rem, 6.12vw, 4.6rem);
   --hero-title-weight-cam: 620;
   --hero-title-weight-os: 720;
   --hero-statement-size: clamp(1.9rem, 3.5vw, 2.5rem);
   --hero-statement-leading: 1.14;
   --hero-statement-tracking: 0.56px;
-  --hero-stack-gap-1: 12px;
+  --hero-stack-gap-1: 3px;
   --hero-gap-b: 44px;
   --hero-gap-c: 92px;
   --hero-zone-top: 88px;
@@ -149,7 +149,7 @@ body {
   margin: 0;
   font-size: var(--hero-title-size);
   line-height: 1.01;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.024em;
   font-weight: var(--hero-title-weight-cam);
   max-width: none;
   white-space: nowrap;
@@ -172,7 +172,7 @@ body {
   color: color-mix(in srgb, var(--sys-text-1) 96%, var(--sys-text-2) 4%);
   font-size: var(--hero-statement-size);
   letter-spacing: var(--hero-statement-tracking);
-  opacity: 1;
+  opacity: 0.91;
   line-height: var(--hero-statement-leading);
 }
 .landing-hero-actions {
@@ -233,7 +233,7 @@ body {
   --mx-block-top: 14px;
   --mx-header-to-row1: 40px;
   --mx-row-gap: 32px;
-  --mx-block-bottom: 50px;
+  --mx-block-bottom: 38px;
 
   width: 100%;
 }
@@ -313,31 +313,73 @@ body {
   color: color-mix(in srgb, var(--sys-text-3) 90%, transparent);
 }
 
+.landing-axis-cell-right-action-row {
+  display: flex;
+  align-items: center;
+}
+
 .landing-axis-right-action {
+  --axis-action-shell-offset-y: 19px;
+  position: relative;
+  z-index: 0;
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
   border: 0;
+  outline: none;
   background: transparent;
-  color: inherit;
+  color: color-mix(in srgb, var(--sys-text-1) 94%, var(--sys-text-2) 6%);
+  min-height: 33px;
   padding: 0;
   margin: 0;
-  font: inherit;
-  text-align: inherit;
-  line-height: inherit;
+  font-size: 0.96rem;
+  font-weight: 580;
+  line-height: 1.28;
+  text-align: left;
+  text-decoration: none;
   cursor: pointer;
-  transition: color 140ms ease, opacity 140ms ease, text-decoration-color 140ms ease;
+  transform: none;
+  transition: color 140ms ease;
+}
+
+.landing-axis-right-action-label {
+  display: block;
+  transform: translateY(calc(-1 * var(--axis-action-shell-offset-y)));
+}
+
+.landing-axis-right-action::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -12px;
+  top: 50%;
+  height: 34px;
+  transform: translateY(calc(-50% - var(--axis-action-shell-offset-y)));
+  pointer-events: none;
+  z-index: -1;
+  border-radius: 12px;
+  background: color-mix(in srgb, #152942 70%, var(--sys-bg-1) 30%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(229, 239, 252, 0.08);
+  transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
 .landing-axis-right-action:hover {
-  color: var(--sys-text-1);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.16em;
+  color: color-mix(in srgb, var(--sys-text-1) 96%, #dbe8fb 4%);
+  text-decoration: none;
+}
+
+.landing-axis-right-action:hover::before {
+  background: color-mix(in srgb, #1a304b 68%, var(--sys-bg-1) 32%);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
 }
 
 .landing-axis-right-action:focus-visible {
-  outline: 2px solid var(--sys-accent);
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline: none;
+}
+
+.landing-axis-right-action:focus-visible::before {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sys-accent) 12%, transparent), 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(229, 239, 252, 0.08);
 }
 
 .landing-preview {
@@ -346,7 +388,7 @@ body {
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
-  background: transparent;
+  background: color-mix(in srgb, var(--sys-bg-1) 98%, black 2%);
   background-image: none;
   box-shadow: none;
   position: relative;
