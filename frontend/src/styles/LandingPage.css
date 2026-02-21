@@ -349,12 +349,12 @@ body {
   right: -12px;
   top: 50%;
   height: 34px;
-  transform: translateY(-50%);
+  transform: translateY(calc(-50% - 19px));
   pointer-events: none;
   z-index: -1;
   border-radius: 12px;
   background: color-mix(in srgb, #152942 70%, var(--sys-bg-1) 30%);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(229, 239, 252, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(229, 239, 252, 0.08);
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
@@ -365,7 +365,7 @@ body {
 
 .landing-axis-right-action:hover::before {
   background: color-mix(in srgb, #1a304b 68%, var(--sys-bg-1) 32%);
-  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(236, 244, 255, 0.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
 }
 
 .landing-axis-right-action:focus-visible {
@@ -373,7 +373,7 @@ body {
 }
 
 .landing-axis-right-action:focus-visible::before {
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sys-accent) 12%, transparent), 0 6px 14px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(229, 239, 252, 0.08);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sys-accent) 12%, transparent), 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(229, 239, 252, 0.08);
 }
 
 .landing-preview {
