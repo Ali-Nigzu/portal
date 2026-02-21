@@ -186,7 +186,7 @@ body {
 
 
 .landing-spec-sheet {
-  padding: 0 0 96px;
+  padding: 0 0 72px;
   border: none;
   outline: none;
   background: transparent;
@@ -417,37 +417,39 @@ body {
 }
 
 .landing-assurances {
-  padding: 4px 18px 40px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 6px 10vw 24px;
+  overflow-x: clip;
 }
 
 .landing-assurance-matrix {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  row-gap: 12px;
 }
 
 .landing-assurance-row-group {
-  display: grid;
-  align-items: center;
-  justify-content: center;
-  justify-items: center;
-  column-gap: 24px;
-  row-gap: 10px;
+  display: contents;
 }
 
-.landing-assurance-row-group-r1 {
-  grid-template-columns: repeat(4, minmax(0, auto));
-}
+.landing-assurance-row-group-r1 > *:nth-child(1) { grid-column: 1 / 4; }
+.landing-assurance-row-group-r1 > *:nth-child(2) { grid-column: 4 / 7; }
+.landing-assurance-row-group-r1 > *:nth-child(3) { grid-column: 7 / 10; }
+.landing-assurance-row-group-r1 > *:nth-child(4) { grid-column: 10 / 13; }
 
-.landing-assurance-row-group-r2 {
-  grid-template-columns: repeat(3, minmax(0, auto));
-}
+.landing-assurance-row-group-r2 > *:nth-child(1) { grid-column: 2 / 6; }
+.landing-assurance-row-group-r2 > *:nth-child(2) { grid-column: 5 / 9; }
+.landing-assurance-row-group-r2 > *:nth-child(3) { grid-column: 8 / 12; }
 
-.landing-assurance-row-group-r3 {
-  grid-template-columns: repeat(2, minmax(0, auto));
-}
+.landing-assurance-row-group-r3 > *:nth-child(1) { grid-column: 4 / 7; }
+.landing-assurance-row-group-r3 > *:nth-child(2) { grid-column: 7 / 10; }
 
 .landing-assurance-row-group-r4 {
-  grid-template-columns: minmax(0, auto);
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
   margin-top: 4px;
 }
 
@@ -456,6 +458,8 @@ body {
   text-align: center;
   color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
   letter-spacing: 0.01em;
+  align-self: center;
+  justify-self: center;
 }
 
 .landing-assurance-row-r1 {
@@ -480,7 +484,6 @@ body {
 
 .landing-assurance-cta {
   width: min(320px, 100%);
-  justify-self: center;
   min-height: 46px;
   font-size: clamp(1.02rem, 1.35vw, 1.2rem);
   font-weight: 620;
@@ -599,7 +602,11 @@ body {
 
 @media (max-width: 767px) {
   .landing-preview { --preview-pad-top: 8px; --preview-pad-bottom: 14px; }
-  .landing-assurances { padding: 4px 14px 36px; }
+  .landing-assurances {
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 6px 6vw 22px;
+  }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
   .landing-header-top { min-height: auto; padding: 10px 0; }
@@ -648,18 +655,16 @@ body {
     justify-self: start;
     font-size: 0.78rem;
   }
-  .landing-assurance-matrix { gap: 12px; }
-  .landing-assurance-row-group-r1,
-  .landing-assurance-row-group-r2,
-  .landing-assurance-row-group-r3,
-  .landing-assurance-row-group-r4 {
-    width: 100%;
-    justify-content: center;
-  }
-  .landing-assurance-row-group-r1 { grid-template-columns: repeat(2, minmax(0, auto)); }
-  .landing-assurance-row-group-r2 { grid-template-columns: repeat(2, minmax(0, auto)); }
-  .landing-assurance-row-group-r3 { grid-template-columns: repeat(2, minmax(0, auto)); }
-  .landing-assurance-row-group-r4 { grid-template-columns: minmax(0, auto); }
+  .landing-assurance-matrix { row-gap: 10px; }
+  .landing-assurance-row-group-r1 > *:nth-child(1) { grid-column: 2 / 6; }
+  .landing-assurance-row-group-r1 > *:nth-child(2) { grid-column: 7 / 11; }
+  .landing-assurance-row-group-r1 > *:nth-child(3) { grid-column: 2 / 6; }
+  .landing-assurance-row-group-r1 > *:nth-child(4) { grid-column: 7 / 11; }
+  .landing-assurance-row-group-r2 > *:nth-child(1) { grid-column: 2 / 6; }
+  .landing-assurance-row-group-r2 > *:nth-child(2) { grid-column: 7 / 11; }
+  .landing-assurance-row-group-r2 > *:nth-child(3) { grid-column: 4 / 9; }
+  .landing-assurance-row-group-r3 > *:nth-child(1) { grid-column: 3 / 7; }
+  .landing-assurance-row-group-r3 > *:nth-child(2) { grid-column: 7 / 11; }
   .landing-assurance-cta { width: min(320px, 100%); }
   .landing-signup { padding: 46px 0 42px; }
   .landing-form-grid { grid-template-columns: 1fr; }
