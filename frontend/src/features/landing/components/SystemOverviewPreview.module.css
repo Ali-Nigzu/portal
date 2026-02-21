@@ -384,9 +384,9 @@
   min-height: 68px;
   padding: 11px 11px 9px;
   border-radius: 13px;
-  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 58%, transparent);
-  background: color-mix(in srgb, #132339 74%, var(--sys-bg-1) 26%);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(215, 230, 250, 0.09);
+  border: 1px solid color-mix(in srgb, #7fa4d7 30%, var(--sys-line-soft) 70%);
+  background: color-mix(in srgb, #0f1f33 82%, var(--sys-bg-1) 18%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36), 0 0 0 1px rgba(120, 156, 205, 0.12), 0 0 24px rgba(94, 133, 186, 0.12), inset 0 1px 0 rgba(222, 235, 252, 0.11);
   filter: none;
 }
 

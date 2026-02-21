@@ -34,7 +34,7 @@ export const landingCopy = {
     thirdStep: "System Live",
   },
   assurances: {
-    heading: "Operational Assurances",
+    heading: "Assurances",
     items: [
       "Reporting is anonymised and aggregated",
       "Built for continuous operation",
