@@ -111,27 +111,24 @@ const LandingPage: React.FC = () => {
 
             <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
-                <div className="landing-assurance-row-group landing-assurance-row-group-r1" data-testid="assurance-row-1">
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">PRIVATE</p>
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">OPERATIONAL</p>
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">SYSTEM</p>
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">TRANSPARENT</p>
-                </div>
-                <div className="landing-assurance-row-group landing-assurance-row-group-r2" data-testid="assurance-row-2">
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r2">Anonymous &amp; Aggregated</p>
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r2">Plug &amp; Play</p>
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r2">Live Reporting</p>
-                </div>
-                <div className="landing-assurance-row-group landing-assurance-row-group-r3" data-testid="assurance-row-3">
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r3">No Personal Data</p>
-                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r3">&lt;1% Error</p>
-                </div>
-                <div className="landing-assurance-row-group landing-assurance-row-group-r4" data-testid="assurance-row-4">
+                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-1" data-testid="assurance-r1-1">PRIVATE</div>
+                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-2" data-testid="assurance-r1-2">OPERATIONAL</div>
+                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-3" data-testid="assurance-r1-3">SYSTEM</div>
+                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-4" data-testid="assurance-r1-4">TRANSPARENT</div>
+
+                <div role="listitem" className="landing-assurance-item landing-assurance-r2 assurance-r2-1" data-testid="assurance-r2-1">Anonymous &amp; Aggregated</div>
+                <div role="listitem" className="landing-assurance-item landing-assurance-r2 assurance-r2-2" data-testid="assurance-r2-2">Plug &amp; Play</div>
+                <div role="listitem" className="landing-assurance-item landing-assurance-r2 assurance-r2-3" data-testid="assurance-r2-3">Live Reporting</div>
+
+                <div role="listitem" className="landing-assurance-item landing-assurance-r3 assurance-r3-1" data-testid="assurance-r3-1">No Personal Data</div>
+                <div role="listitem" className="landing-assurance-item landing-assurance-r3 assurance-r3-2" data-testid="assurance-r3-2">&lt;1% Error</div>
+
+                <div className="assurance-cta-row" data-testid="assurance-row-4">
                   <button
                     type="button"
                     className="btn btn-secondary landing-assurance-cta"
                     data-testid="assurance-create-account-cta"
-                    onClick={(e) => e.preventDefault()}
+                    onClick={(e) => { e.preventDefault(); }}
                   >
                     CREATE ACCOUNT
                   </button>
