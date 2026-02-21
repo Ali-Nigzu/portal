@@ -41,6 +41,14 @@ type RouteDefinition = {
   direction: FlowDirection;
 };
 
+type FlowRoute = RouteDefinition & {
+  d: string;
+  gradientId: string;
+  nodeBoundaryX: number;
+  nodeBoundaryY: number;
+  nodeFadeRatio: number;
+};
+
 const TOP_TILES: Array<{ key: TopTileId; widgetId: string; slotClass: string }> = [
   { key: "entrances", widgetId: VRM_KPI_IDS.entrances, slotClass: styles.tileT1 },
   { key: "occupancy", widgetId: VRM_KPI_IDS.occupancy, slotClass: styles.tileT2 },
@@ -67,6 +75,7 @@ const BUS_GAP_ABOVE_NODE = 28;
 const BUS_CORRIDOR_GAP_TOP = 20;
 const BUS_CORRIDOR_GAP_NODE = 52;
 const BUS_BIAS_FROM_NODE = 10;
+const NODE_FADE_PX = 18;
 
 const initialWireLayout: WireLayout = {
   width: 0,
@@ -376,7 +385,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         };
       };
 
-      return FLOW_ROUTE_DEFINITIONS.map((route) => {
+      return FLOW_ROUTE_DEFINITIONS.map((route): FlowRoute => {
         const tapX = wire.taps[route.id];
         const endpointY = wire.endpointsY[route.id];
         const isToNode = route.direction === "toNode";
@@ -389,12 +398,19 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           : isToNode
             ? nodeBoundaryPoint.y
             : endpointY;
+        const segmentA = Math.hypot(tapX - sourceX, wire.busY - sourceY);
+        const segmentB = Math.hypot(targetX - tapX, targetY - wire.busY);
+        const totalLength = segmentA + segmentB;
+        const nodeFadeRatio = totalLength > 0
+          ? Math.min(0.24, NODE_FADE_PX / totalLength)
+          : 0.18;
         return {
           ...route,
           d: `M ${sourceX} ${sourceY} L ${tapX} ${wire.busY} L ${targetX} ${targetY}`,
           gradientId: `topology-gradient-${route.id}`,
           nodeBoundaryX: nodeBoundaryPoint.x,
           nodeBoundaryY: nodeBoundaryPoint.y,
+          nodeFadeRatio,
         };
       });
     },
@@ -442,12 +458,26 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                     const y1 = isToNode ? wire.busY : route.nodeBoundaryY;
                     const x2 = isToNode ? route.nodeBoundaryX : wire.taps[route.id];
                     const y2 = isToNode ? route.nodeBoundaryY : wire.busY;
+                    const fadePct = Math.max(6, Math.min(24, route.nodeFadeRatio * 100));
+                    const fadeStartPct = Math.max(0, 100 - fadePct);
+                    const preFadePct = Math.max(0, fadeStartPct - 8);
                     return (
                       <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2}>
-                        <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
-                        <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
-                        {isToNode ? <stop offset="88%" stopColor="rgba(120, 174, 244, 0.46)" /> : null}
-                        <stop offset="100%" stopColor={isToNode ? "rgba(130, 184, 249, 0.28)" : "rgba(136, 188, 252, 0.78)"} />
+                        {isToNode ? (
+                          <>
+                            <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
+                            <stop offset={`${preFadePct.toFixed(2)}%`} stopColor="rgba(105, 166, 241, 0.58)" />
+                            <stop offset={`${fadeStartPct.toFixed(2)}%`} stopColor="rgba(122, 177, 246, 0.38)" />
+                            <stop offset="100%" stopColor="rgba(130, 184, 249, 0.15)" />
+                          </>
+                        ) : (
+                          <>
+                            <stop offset="0%" stopColor="rgba(130, 184, 249, 0.16)" />
+                            <stop offset={`${fadePct.toFixed(2)}%`} stopColor="rgba(132, 186, 250, 0.45)" />
+                            <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
+                            <stop offset="100%" stopColor="rgba(136, 188, 252, 0.78)" />
+                          </>
+                        )}
                       </linearGradient>
                     );
                   })}

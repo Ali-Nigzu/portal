@@ -551,7 +551,7 @@
 
 @keyframes beam-flow {
   from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -208; }
+  to { stroke-dashoffset: -200; }
 }
 
 .errorNote {
