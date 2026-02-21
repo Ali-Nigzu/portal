@@ -41,6 +41,14 @@ type RouteDefinition = {
   direction: FlowDirection;
 };
 
+type FlowRoute = RouteDefinition & {
+  d: string;
+  gradientId: string;
+  nodeBoundaryX: number;
+  nodeBoundaryY: number;
+  nodeFadeRatio: number;
+};
+
 const TOP_TILES: Array<{ key: TopTileId; widgetId: string; slotClass: string }> = [
   { key: "entrances", widgetId: VRM_KPI_IDS.entrances, slotClass: styles.tileT1 },
   { key: "occupancy", widgetId: VRM_KPI_IDS.occupancy, slotClass: styles.tileT2 },
@@ -64,6 +72,10 @@ const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
+const BUS_CORRIDOR_GAP_TOP = 20;
+const BUS_CORRIDOR_GAP_NODE = 52;
+const BUS_BIAS_FROM_NODE = 10;
+const NODE_FADE_PX = 18;
 
 const initialWireLayout: WireLayout = {
   width: 0,
@@ -148,7 +160,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
   const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
-  const trafficUnavailable = !trafficWidget || trafficWidget.status === "error";
+  const trafficUnavailable = !forceMockTopology && (!trafficWidget || trafficWidget.status === "error");
 
   useLayoutEffect(() => {
     const scheduleMeasure = () => {
@@ -175,9 +187,15 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           return;
         }
 
+        const topTileSlots = TOP_TILES.map(({ key }) => topSlotRefs.current[key]);
+        if (topTileSlots.some((slot) => !slot)) {
+          return;
+        }
+
         const containerRect = containerRef.current.getBoundingClientRect();
         const nodeRect = nodeShellRef.current.getBoundingClientRect();
         const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
+        const topTileRects = topTileSlots.map((slot) => (slot as HTMLDivElement).getBoundingClientRect());
         const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
         const donutSectors = Array.from(leftSlotRef.current.querySelectorAll<SVGElement>("svg .recharts-sector"));
         const donutSectorRects = donutSectors.map((sector) => sector.getBoundingClientRect());
@@ -219,13 +237,27 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         const capacityRect = capacityTileRef.current.getBoundingClientRect();
         const topBandBottom = Math.max(
-          ...topRects.map((rect) => rect.bottom - containerRect.top),
+          ...topTileRects.map((rect) => rect.bottom - containerRect.top),
           capacityRect.bottom - containerRect.top,
         );
         const nodeBandTop = nodeRect.top - containerRect.top;
-        const minBusY = topBandBottom + 2;
-        const maxBusY = nodeBandTop - 2;
-        const preferredBusY = Math.min(topBandBottom + BUS_GAP_BELOW_TOP, nodeBandTop - BUS_GAP_ABOVE_NODE);
+        const minBusY = topBandBottom + BUS_CORRIDOR_GAP_TOP;
+        const maxBusY = nodeBandTop - BUS_CORRIDOR_GAP_NODE;
+
+        if (maxBusY <= minBusY) {
+          console.error("Topology bus corridor collapsed", {
+            minBusY,
+            maxBusY,
+            topBandBottom,
+            nodeBandTop,
+          });
+          return;
+        }
+
+        const preferredBusY = Math.min(
+          topBandBottom + BUS_GAP_BELOW_TOP + BUS_CORRIDOR_GAP_TOP,
+          nodeBandTop - BUS_GAP_ABOVE_NODE - BUS_BIAS_FROM_NODE,
+        );
         const busY = Math.max(minBusY, Math.min(preferredBusY, maxBusY));
 
         setWire({
@@ -299,6 +331,11 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     };
   }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget , widgetStatus]);
 
+  const nodeLayerStyle = {
+    "--node-anchor-x": wire.nodeX > 0 ? `${wire.nodeX}px` : "50%",
+    "--node-anchor-y": wire.busY > 0 ? `${wire.busY}px` : "50%",
+  } as React.CSSProperties;
+
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
   const nodeRadius = wire.nodeRadius || 0;
   const flowRoutes = useMemo(
@@ -348,7 +385,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         };
       };
 
-      return FLOW_ROUTE_DEFINITIONS.map((route) => {
+      return FLOW_ROUTE_DEFINITIONS.map((route): FlowRoute => {
         const tapX = wire.taps[route.id];
         const endpointY = wire.endpointsY[route.id];
         const isToNode = route.direction === "toNode";
@@ -361,12 +398,19 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           : isToNode
             ? nodeBoundaryPoint.y
             : endpointY;
+        const segmentA = Math.hypot(tapX - sourceX, wire.busY - sourceY);
+        const segmentB = Math.hypot(targetX - tapX, targetY - wire.busY);
+        const totalLength = segmentA + segmentB;
+        const nodeFadeRatio = totalLength > 0
+          ? Math.min(0.24, NODE_FADE_PX / totalLength)
+          : 0.18;
         return {
           ...route,
           d: `M ${sourceX} ${sourceY} L ${tapX} ${wire.busY} L ${targetX} ${targetY}`,
           gradientId: `topology-gradient-${route.id}`,
           nodeBoundaryX: nodeBoundaryPoint.x,
           nodeBoundaryY: nodeBoundaryPoint.y,
+          nodeFadeRatio,
         };
       });
     },
@@ -414,12 +458,26 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                     const y1 = isToNode ? wire.busY : route.nodeBoundaryY;
                     const x2 = isToNode ? route.nodeBoundaryX : wire.taps[route.id];
                     const y2 = isToNode ? route.nodeBoundaryY : wire.busY;
+                    const fadePct = Math.max(6, Math.min(24, route.nodeFadeRatio * 100));
+                    const fadeStartPct = Math.max(0, 100 - fadePct);
+                    const preFadePct = Math.max(0, fadeStartPct - 8);
                     return (
                       <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2}>
-                        <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
-                        <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
-                        {isToNode ? <stop offset="88%" stopColor="rgba(120, 174, 244, 0.46)" /> : null}
-                        <stop offset="100%" stopColor={isToNode ? "rgba(130, 184, 249, 0.28)" : "rgba(136, 188, 252, 0.78)"} />
+                        {isToNode ? (
+                          <>
+                            <stop offset="0%" stopColor="rgba(136, 188, 252, 0.78)" />
+                            <stop offset={`${preFadePct.toFixed(2)}%`} stopColor="rgba(105, 166, 241, 0.58)" />
+                            <stop offset={`${fadeStartPct.toFixed(2)}%`} stopColor="rgba(122, 177, 246, 0.38)" />
+                            <stop offset="100%" stopColor="rgba(130, 184, 249, 0.15)" />
+                          </>
+                        ) : (
+                          <>
+                            <stop offset="0%" stopColor="rgba(130, 184, 249, 0.16)" />
+                            <stop offset={`${fadePct.toFixed(2)}%`} stopColor="rgba(132, 186, 250, 0.45)" />
+                            <stop offset="58%" stopColor="rgba(97, 159, 236, 0.56)" />
+                            <stop offset="100%" stopColor="rgba(136, 188, 252, 0.78)" />
+                          </>
+                        )}
                       </linearGradient>
                     );
                   })}
@@ -485,7 +543,9 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                 ) : (
                   <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
                     <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
-                    <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget]} onRemoveWidget={NOOP_REMOVE} />
+                    {forceMockTopology
+                      ? renderMockTile("Traffic Split", "48 / 32 / 20")
+                      : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
                   </div>
                 )}
@@ -511,21 +571,22 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         <div className={styles.veilLayer} aria-hidden="true" />
 
-        <div className={styles.nodeLayer}>
+        <div className={styles.nodeLayer} style={nodeLayerStyle}>
           <div className={styles.midZone}>
-            <div className={styles.nodeStack}>
-              <div className={styles.node} ref={nodeShellRef}>
-                <span className={styles.nodeTitle}>camOS</span>
-                <button
-                  type="button"
-                  className={styles.previewNodeCta}
-                  data-testid="preview-enter-demo-cta"
-                  onClick={onAccessDemo}
-                >
-                  View Demo
-                </button>
-                <span className={styles.nodeAnchor} ref={nodeAnchorRef} />
-              </div>
+            <div className={styles.nodeMeasureGhost} ref={nodeShellRef} aria-hidden="true" />
+          </div>
+          <div className={styles.nodeStack}>
+            <div className={styles.node}>
+              <span className={styles.nodeTitle}>camOS</span>
+              <button
+                type="button"
+                className={styles.previewNodeCta}
+                data-testid="preview-enter-demo-cta"
+                onClick={onAccessDemo}
+              >
+                View Demo
+              </button>
+              <span className={styles.nodeAnchor} ref={nodeAnchorRef} />
             </div>
           </div>
         </div>

@@ -233,7 +233,7 @@ body {
   --mx-block-top: 14px;
   --mx-header-to-row1: 40px;
   --mx-row-gap: 32px;
-  --mx-block-bottom: 36px;
+  --mx-block-bottom: 50px;
 
   width: 100%;
 }
@@ -341,8 +341,8 @@ body {
 }
 
 .landing-preview {
-  --preview-pad-top: 12px;
-  --preview-pad-bottom: 22px;
+  --preview-pad-top: 26px;
+  --preview-pad-bottom: 6px;
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
@@ -376,6 +376,10 @@ body {
 
 .landing-assurances {
   padding: 12px 18px 20px;
+}
+
+.landing-assurances h2 {
+  text-align: center;
 }
 
 .landing-assurance-matrix {
@@ -537,7 +541,7 @@ body {
     --mx-block-top: 12px;
     --mx-header-to-row1: 30px;
     --mx-row-gap: 22px;
-    --mx-block-bottom: 24px;
+    --mx-block-bottom: 38px;
   }
 }
 
