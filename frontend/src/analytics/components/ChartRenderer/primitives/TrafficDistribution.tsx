@@ -11,7 +11,7 @@ const DEFAULT_SLICE_COLORS = [
   "#0ea5e9",
 ];
 
-const VRM_SLICE_COLORS = ["#2c4f82", "#24456f", "#1e3a5e"];
+const VRM_SLICE_COLORS = ["#7EA6DC", "#3F78C1", "#1F3F73"];
 const EMPTY_RING_COLOR = "rgba(96, 122, 165, 0.28)";
 
 export const TrafficDistribution = ({
