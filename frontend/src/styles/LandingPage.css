@@ -74,7 +74,7 @@ body {
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.btn-sm { min-height: 34px; padding: 0 11px; font-size: 0.82rem; }
+.btn-sm { min-height: 33px; padding: 0 11px; font-size: 0.82rem; }
 
 .btn-primary {
   color: #f6f9ff;
@@ -313,6 +313,11 @@ body {
   color: color-mix(in srgb, var(--sys-text-3) 90%, transparent);
 }
 
+.landing-axis-cell-right-action-row {
+  display: flex;
+  align-items: center;
+}
+
 .landing-axis-right-action {
   appearance: none;
   display: inline-flex;
@@ -322,12 +327,12 @@ body {
   outline: none;
   background: color-mix(in srgb, #152942 70%, var(--sys-bg-1) 30%);
   color: color-mix(in srgb, var(--sys-text-1) 94%, var(--sys-text-2) 6%);
-  min-height: 34px;
-  padding: 0 11px 0 8px;
+  min-height: 33px;
+  padding: 0 10px 0 4px;
   margin: 0;
-  font-size: 0.97rem;
+  font-size: 0.96rem;
   font-weight: 590;
-  line-height: 1.2;
+  line-height: 1.28;
   text-align: left;
   text-decoration: none;
   cursor: pointer;

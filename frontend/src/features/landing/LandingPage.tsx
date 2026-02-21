@@ -97,7 +97,7 @@ const LandingPage: React.FC = () => {
                     <span className="landing-axis-cell landing-axis-cell-left">{capabilityAxisItems[index]}</span>
                     <span className="landing-axis-cell landing-axis-cell-axis landing-axis-roman" aria-hidden="true">{label}</span>
                     {index === 0 ? (
-                      <span className="landing-axis-cell landing-axis-cell-right">
+                      <span className="landing-axis-cell landing-axis-cell-right landing-axis-cell-right-action-row">
                         <button
                           type="button"
                           className="landing-axis-right-action"
