@@ -315,29 +315,37 @@ body {
 
 .landing-axis-right-action {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
-  background: transparent;
-  color: inherit;
-  padding: 0;
+  outline: none;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--sys-bg-2) 80%, transparent);
+  color: var(--sys-text-1);
+  min-height: 37px;
+  padding: 0 15px;
   margin: 0;
-  font: inherit;
-  text-align: inherit;
-  line-height: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
   cursor: pointer;
-  transition: color 140ms ease, opacity 140ms ease, text-decoration-color 140ms ease;
+  transform: none;
+  transition: background-color 140ms ease, color 140ms ease;
+  border-radius: 999px;
 }
 
 .landing-axis-right-action:hover {
+  background: color-mix(in srgb, var(--sys-bg-2) 88%, transparent);
   color: var(--sys-text-1);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.16em;
+  text-decoration: none;
 }
 
 .landing-axis-right-action:focus-visible {
-  outline: 2px solid var(--sys-accent);
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline: none;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--sys-accent) 16%, transparent);
 }
 
 .landing-preview {

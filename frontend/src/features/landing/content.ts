@@ -5,7 +5,7 @@ export const landingCopy = {
   },
   nav: {
     actions: {
-      demo: "Access Demo",
+      demo: "View Demo",
       createAccount: "Create Account",
       login: "Login",
     },
@@ -21,16 +21,16 @@ export const landingCopy = {
   capabilities: {
     heading: "Platform Capabilities",
     items: [
-      "Footfall and occupancy",
-      "Site flow and peak times",
+      "Footfall & Occupancy",
+      "Site Flow & Dwell",
       "Dwell time",
-      "Customer profile",
+      "Visitor Profile",
     ],
   },
   deployment: {
     heading: "System Deployment",
-    firstStep: "Sign Up at No Cost",
-    secondStep: "System Mapping",
+    firstStep: "Create Account at No Cost",
+    secondStep: "Connect Camera",
     thirdStep: "System Live",
   },
   assurances: {
