@@ -109,31 +109,31 @@ const LandingPage: React.FC = () => {
               </section>
             </div>
 
-            <section className="landing-assurances" aria-labelledby="assurances-title">
-              <h2 id="assurances-title">{landingCopy.assurances.heading}</h2>
+            <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
                 <div className="landing-assurance-row-group landing-assurance-row-group-r1" data-testid="assurance-row-1">
-                  {landingCopy.assurances.items.slice(0, 3).map((assurance) => (
-                    <p key={assurance} role="listitem" className="landing-assurance-row landing-assurance-row-small">
-                      {assurance}
-                    </p>
-                  ))}
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">PRIVATE</p>
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">OPERATIONAL</p>
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">SYSTEM</p>
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r1">TRANSPARENT</p>
                 </div>
                 <div className="landing-assurance-row-group landing-assurance-row-group-r2" data-testid="assurance-row-2">
-                  {landingCopy.assurances.items.slice(3, 5).map((assurance) => (
-                    <p key={assurance} role="listitem" className="landing-assurance-row landing-assurance-row-medium">
-                      {assurance}
-                    </p>
-                  ))}
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r2">Anonymous &amp; Aggregated</p>
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r2">Plug &amp; Play</p>
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r2">Live Reporting</p>
                 </div>
                 <div className="landing-assurance-row-group landing-assurance-row-group-r3" data-testid="assurance-row-3">
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r3">No Personal Data</p>
+                  <p role="listitem" className="landing-assurance-row landing-assurance-row-r3">&lt;1% Error</p>
+                </div>
+                <div className="landing-assurance-row-group landing-assurance-row-group-r4" data-testid="assurance-row-4">
                   <button
                     type="button"
                     className="btn btn-secondary landing-assurance-cta"
                     data-testid="assurance-create-account-cta"
                     onClick={(e) => e.preventDefault()}
                   >
-                    {landingCopy.createAccount.button}
+                    CREATE ACCOUNT
                   </button>
                 </div>
               </div>
