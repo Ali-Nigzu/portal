@@ -565,9 +565,19 @@
 }
 
 .errorNote {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 0.74rem;
   color: var(--sys-text-3);
+}
+
+.statusOverlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
 }
 
 @media (max-width: 1279px) {

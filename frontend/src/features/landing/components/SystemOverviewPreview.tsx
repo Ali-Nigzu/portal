@@ -70,6 +70,7 @@ const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
+const LANDING_PREVIEW_DIAGNOSTICS_PARAM = "landingPreviewDiagnostics";
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
 const BUS_CORRIDOR_GAP_TOP = 20;
@@ -103,7 +104,7 @@ const initialWireLayout: WireLayout = {
 };
 
 
-const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
+const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void; showDiagnostics: boolean; statusMessage?: string }> = ({ forceMockTopology, onAccessDemo, showDiagnostics, statusMessage }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -612,8 +613,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
 
       </div>
-      {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
-        <p className={styles.errorNote}>Preview unavailable.</p>
+      {showDiagnostics && ((manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) || statusMessage) ? (
+        <div className={styles.statusOverlay} aria-live="polite">
+          <p className={styles.errorNote}>{(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? "Preview unavailable." : statusMessage}</p>
+        </div>
       ) : null}
     </section>
   );
@@ -626,6 +629,12 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
       return false;
     }
     return new URLSearchParams(location.search).get(TOPOLOGY_MOCK_PARAM) === "1";
+  }, [location.search]);
+  const showLandingDiagnostics = useMemo(() => {
+    if (!import.meta.env.DEV && !import.meta.env.MODE.includes("test")) {
+      return false;
+    }
+    return new URLSearchParams(location.search).get(LANDING_PREVIEW_DIAGNOSTICS_PARAM) === "1";
   }, [location.search]);
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
   const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
@@ -698,12 +707,9 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     );
   }
 
-  return (
-    <>
-      <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />
-      {bootstrapDegraded ? <p className={styles.errorNote}>Demo bootstrap unavailable; preview is using direct live data flow.</p> : null}
-    </>
-  );
+  const statusMessage = bootstrapDegraded ? "Demo bootstrap unavailable; preview is using direct live data flow." : undefined;
+
+  return <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} showDiagnostics={showLandingDiagnostics} statusMessage={statusMessage} />;
 };
 
 export default SystemOverviewPreview;
