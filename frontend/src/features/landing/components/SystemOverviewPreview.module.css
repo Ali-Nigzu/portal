@@ -6,7 +6,7 @@
   --kpi-max: var(--kpi-col);
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
-  --mid-span: 292px;
+  --mid-span: 236px;
   --preview-alpha-content: 0.9;
   --preview-accent-sat: 0.78;
   --preview-number-alpha: 0.9;
@@ -40,7 +40,7 @@
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  padding: 0 0 12px;
+  padding: 0;
   overflow: visible;
 }
 
@@ -576,7 +576,7 @@
     --kpi-col: 214px;
     --topo-gap-col: 14px;
     --topo-gap-row: 14px;
-    --mid-span: 286px;
+    --mid-span: 230px;
     --preview-top-row-lift: 42px;
     --preview-bottom-row-lift: -34px;
   }
