@@ -392,7 +392,7 @@ body {
   background-image: none;
   box-shadow: none;
   position: relative;
-  overflow: clip;
+  overflow: visible;
   isolation: isolate;
 }
 
