@@ -195,7 +195,6 @@ body {
 }
 
 .landing-spec-sheet-inner {
-  --assurances-dynamic-lift: 0px;
   border: none;
   outline: none;
   border-radius: 0;
@@ -245,7 +244,7 @@ body {
 .landing-assurances h2,
 .landing-axis-headings h2 {
   margin: 0;
-  font-size: clamp(1.24rem, 1.8vw, 1.6rem);
+  font-size: clamp(1.24rem, 1rem + 0.5vw, 1.6rem);
   line-height: 1.28;
   letter-spacing: -0.01em;
   font-weight: 600;
@@ -283,7 +282,7 @@ body {
 }
 
 .landing-axis-cell-heading {
-  font-size: clamp(1.24rem, 1.8vw, 1.6rem);
+  font-size: clamp(1.24rem, 1rem + 0.5vw, 1.6rem);
   line-height: 1.28;
   letter-spacing: -0.01em;
   font-weight: 700;
@@ -385,7 +384,7 @@ body {
 
 .landing-preview {
   --preview-pad-top: 26px;
-  --preview-pad-bottom: 2px;
+  --preview-pad-bottom: 0px;
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
@@ -393,6 +392,8 @@ body {
   background-image: none;
   box-shadow: none;
   position: relative;
+  overflow: visible;
+  isolation: isolate;
 }
 
 .landing-dashboard-preview {
@@ -418,12 +419,12 @@ body {
 }
 
 .landing-assurances {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  margin-top: var(--assurances-dynamic-lift);
-  padding: 8px 10vw 24px;
-  overflow-x: clip;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 24px;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
 }
 
 .landing-assurance-spec {
@@ -431,6 +432,8 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   column-gap: clamp(28px, 4vw, 72px);
   align-items: start;
+  max-width: 1160px;
+  margin: 0 auto;
 }
 
 .assurance-col {
@@ -444,7 +447,7 @@ body {
 .assurance-col-title {
   margin: 0;
   text-align: center;
-  font-size: clamp(1.24rem, 1.8vw, 1.6rem);
+  font-size: clamp(1.24rem, 1rem + 0.5vw, 1.6rem);
   line-height: 1.28;
   letter-spacing: 0.04em;
   font-weight: 600;
@@ -636,9 +639,8 @@ body {
 @media (max-width: 767px) {
   .landing-preview { --preview-pad-top: 8px; --preview-pad-bottom: 14px; }
   .landing-assurances {
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-    padding: 8px 6vw 22px;
+    margin: 0;
+    padding: 10px 0 22px;
   }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }

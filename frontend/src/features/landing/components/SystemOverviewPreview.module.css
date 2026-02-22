@@ -6,7 +6,7 @@
   --kpi-max: var(--kpi-col);
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
-  --mid-span: 292px;
+  --mid-span: 236px;
   --preview-alpha-content: 0.9;
   --preview-accent-sat: 0.78;
   --preview-number-alpha: 0.9;
@@ -40,7 +40,7 @@
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  padding: 0 0 64px;
+  padding: 0;
   overflow: visible;
 }
 
@@ -62,7 +62,7 @@
   display: grid;
   grid-template-rows: auto var(--mid-span) auto;
   row-gap: var(--topo-gap-row);
-  min-height: 468px;
+  min-height: 420px;
   padding: 0;
 }
 
@@ -231,7 +231,7 @@
 
 .topNotice {
   grid-column: 1 / -1;
-  min-height: 120px;
+  min-height: 72px;
 }
 
 .bottomCluster {
@@ -252,7 +252,7 @@
 
 .inlineNotice {
   margin: 0;
-  min-height: 120px;
+  min-height: 72px;
   display: grid;
   place-items: center;
   gap: 8px;
@@ -576,13 +576,13 @@
     --kpi-col: 214px;
     --topo-gap-col: 14px;
     --topo-gap-row: 14px;
-    --mid-span: 286px;
+    --mid-span: 230px;
     --preview-top-row-lift: 42px;
     --preview-bottom-row-lift: -34px;
   }
 
   .canvas {
-    min-height: 468px;
+    min-height: 420px;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LandingPage.css";
 import { landingCopy } from "./content";
@@ -28,107 +28,6 @@ const LandingPage: React.FC = () => {
   ];
 
   const romanAxisLabels = ["I", "II", "III"];
-  const specSheetInnerRef = useRef<HTMLDivElement | null>(null);
-  const previewRef = useRef<HTMLElement | null>(null);
-  const assurancesRef = useRef<HTMLElement | null>(null);
-
-  useLayoutEffect(() => {
-    const root = specSheetInnerRef.current;
-    const preview = previewRef.current;
-    const assurances = assurancesRef.current;
-
-    if (!root || !preview || !assurances) {
-      return;
-    }
-
-    let rafId: number | null = null;
-    const targetGap = 12;
-
-    const getMeaningfulPreviewBottom = () => {
-      const previewRect = preview.getBoundingClientRect();
-      const selectors = [
-        '[data-testid="traffic-split-module"]',
-        '[data-testid="traffic-split-error"]',
-        '[data-testid="capacity-module"]',
-        '[data-testid="preview-enter-demo-cta"]',
-        'article',
-      ];
-
-      const candidates = Array.from(preview.querySelectorAll<HTMLElement>(selectors.join(",")))
-        .map((node) => ({
-          node,
-          rect: node.getBoundingClientRect(),
-        }))
-        .filter(({ node, rect }) => {
-          if (rect.width <= 0 || rect.height <= 0) {
-            return false;
-          }
-          const style = window.getComputedStyle(node);
-          if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
-            return false;
-          }
-          return rect.bottom <= previewRect.bottom + 1;
-        });
-
-      if (candidates.length === 0) {
-        return previewRect.bottom;
-      }
-
-      return Math.max(...candidates.map(({ rect }) => rect.bottom));
-    };
-
-    const updateAssurancesLift = () => {
-      const assurancesTitle = assurances.querySelector<HTMLElement>(".assurance-col-title");
-      if (!assurancesTitle) {
-        root.style.setProperty("--assurances-dynamic-lift", "0px");
-        return;
-      }
-
-      const meaningfulPreviewBottom = getMeaningfulPreviewBottom();
-      const currentGap = assurancesTitle.getBoundingClientRect().top - meaningfulPreviewBottom;
-      const currentLift = Number.parseFloat(window.getComputedStyle(assurances).marginTop) || 0;
-      const nextLift = Math.max(-520, Math.min(120, currentLift + targetGap - currentGap));
-
-      root.style.setProperty("--assurances-dynamic-lift", `${nextLift}px`);
-    };
-
-    const scheduleUpdate = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        updateAssurancesLift();
-      });
-    };
-
-    scheduleUpdate();
-
-    const resizeObserver = new ResizeObserver(scheduleUpdate);
-    resizeObserver.observe(root);
-    resizeObserver.observe(preview);
-    resizeObserver.observe(assurances);
-
-    const mutationObserver = new MutationObserver(scheduleUpdate);
-    mutationObserver.observe(preview, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "style", "data-testid"],
-    });
-
-    window.addEventListener("resize", scheduleUpdate);
-
-    return () => {
-      window.removeEventListener("resize", scheduleUpdate);
-      mutationObserver.disconnect();
-      resizeObserver.disconnect();
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, []);
-
   return (
     <div className="landing-page">
       <LandingHeader
@@ -196,9 +95,9 @@ const LandingPage: React.FC = () => {
         </section>
 
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
-          <div className="landing-container landing-spec-sheet-inner" ref={specSheetInnerRef}>
+          <div className="landing-container landing-spec-sheet-inner">
             <div className="landing-system-surface">
-              <section className="landing-preview" aria-labelledby="live-preview-title" ref={previewRef}>
+              <section className="landing-preview" aria-labelledby="live-preview-title">
                 <div className="landing-section-head landing-section-head--sr-only">
                   <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                   <p>{landingCopy.livePreview.description}</p>
@@ -209,7 +108,7 @@ const LandingPage: React.FC = () => {
               </section>
             </div>
 
-            <section className="landing-assurances" aria-label="Assurances" ref={assurancesRef}>
+            <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-spec" aria-label="Operational assurances">
                 <div className="assurance-col" data-testid="assurance-col-privacy">
                   <h3 className="assurance-col-title">PRIVACY</h3>
