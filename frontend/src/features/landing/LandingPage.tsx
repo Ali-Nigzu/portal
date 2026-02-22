@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LandingPage.css";
 import { landingCopy } from "./content";
@@ -28,6 +28,96 @@ const LandingPage: React.FC = () => {
   ];
 
   const romanAxisLabels = ["I", "II", "III"];
+  const specSheetInnerRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (!specSheetInnerRef.current) {
+      return;
+    }
+
+    const root = specSheetInnerRef.current;
+    let rafId: number | null = null;
+
+    const updateAssurancesLift = () => {
+      if (!root) {
+        return;
+      }
+
+      const bus = root.querySelector<SVGLineElement>('.landing-preview [data-testid="topology-bus"]');
+      if (bus) {
+        root.style.setProperty("--assurances-no-bus-lift", "0px");
+        return;
+      }
+
+      const trafficModule = root.querySelector<HTMLElement>('.landing-preview [data-testid="traffic-split-module"]');
+      const assurancesTitle = root.querySelector<HTMLElement>('[data-testid="assurance-col-privacy"] .assurance-col-title');
+
+      if (!trafficModule || !assurancesTitle) {
+        root.style.setProperty("--assurances-no-bus-lift", "0px");
+        return;
+      }
+
+      const assurances = root.querySelector<HTMLElement>('.landing-assurances');
+      if (!assurances) {
+        root.style.setProperty("--assurances-no-bus-lift", "0px");
+        return;
+      }
+
+      const trafficBottom = trafficModule.getBoundingClientRect().bottom;
+      const titleTop = assurancesTitle.getBoundingClientRect().top;
+      const currentGap = titleTop - trafficBottom;
+      const currentLift = Number.parseFloat(window.getComputedStyle(assurances).marginTop) || 0;
+      const targetGap = 12;
+      const requiredLift = Math.max(-420, Math.min(80, currentLift + targetGap - currentGap));
+
+      root.style.setProperty("--assurances-no-bus-lift", `${requiredLift}px`);
+    };
+
+    const scheduleUpdate = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        updateAssurancesLift();
+      });
+    };
+
+    scheduleUpdate();
+
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    resizeObserver.observe(root);
+
+    const preview = root.querySelector('.landing-preview');
+    const assurances = root.querySelector('.landing-assurances');
+    if (preview) {
+      resizeObserver.observe(preview);
+    }
+    if (assurances) {
+      resizeObserver.observe(assurances);
+    }
+
+    const mutationObserver = new MutationObserver(scheduleUpdate);
+    mutationObserver.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "style", "data-testid"],
+    });
+
+    window.addEventListener("resize", scheduleUpdate);
+    const intervalId = window.setInterval(scheduleUpdate, 400);
+
+    return () => {
+      window.removeEventListener("resize", scheduleUpdate);
+      window.clearInterval(intervalId);
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, []);
 
   return (
     <div className="landing-page">
@@ -96,7 +186,7 @@ const LandingPage: React.FC = () => {
         </section>
 
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
-          <div className="landing-container landing-spec-sheet-inner">
+          <div className="landing-container landing-spec-sheet-inner" ref={specSheetInnerRef}>
             <div className="landing-system-surface">
               <section className="landing-preview" aria-labelledby="live-preview-title">
                 <div className="landing-section-head landing-section-head--sr-only">
