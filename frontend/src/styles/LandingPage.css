@@ -186,7 +186,7 @@ body {
 
 
 .landing-spec-sheet {
-  padding: 0 0 72px;
+  padding: 0 0 56px;
   border: none;
   outline: none;
   background: transparent;
@@ -420,66 +420,95 @@ body {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  padding: 6px 10vw 22px;
+  padding: 48px 10vw 24px;
   overflow-x: clip;
 }
 
-.landing-assurance-matrix {
+.landing-assurance-spec {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-rows: auto auto auto auto;
-  row-gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: clamp(28px, 4vw, 72px);
+  align-items: start;
 }
 
-.assurance-r1-1 { grid-row: 1; grid-column: 1 / 4; }
-.assurance-r1-2 { grid-row: 1; grid-column: 4 / 7; }
-.assurance-r1-3 { grid-row: 1; grid-column: 7 / 10; }
-.assurance-r1-4 { grid-row: 1; grid-column: 10 / 13; }
-
-.assurance-r2-1 { grid-row: 2; grid-column: 2 / 6; }
-.assurance-r2-2 { grid-row: 2; grid-column: 5 / 9; }
-.assurance-r2-3 { grid-row: 2; grid-column: 8 / 12; }
-
-.assurance-r3-1 { grid-row: 3; grid-column: 4 / 7; }
-.assurance-r3-2 { grid-row: 3; grid-column: 7 / 10; }
-
-.assurance-cta-row {
-  grid-row: 4;
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: center;
-  margin-top: 4px;
+.assurance-col {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto;
+  justify-items: stretch;
+  align-items: start;
 }
 
-.landing-assurance-item {
+.assurance-col-title {
   margin: 0;
   text-align: center;
-  color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
-  letter-spacing: 0.01em;
-  line-height: 1.25;
-  align-self: start;
-  justify-self: center;
-}
-
-.landing-assurance-r1 {
   font-size: clamp(1.24rem, 1.8vw, 1.6rem);
   line-height: 1.28;
   letter-spacing: 0.04em;
   font-weight: 600;
-  opacity: 0.95;
+  color: color-mix(in srgb, var(--sys-text-1) 95%, var(--sys-text-2) 5%);
 }
 
-.landing-assurance-r2 {
-  font-size: clamp(0.9rem, 1.15vw, 1.02rem);
-  line-height: 1.25;
-  font-weight: 400;
-  opacity: 0.78;
+.assurance-col-list {
+  position: relative;
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0 0 0 clamp(26px, 2.2vw, 34px);
+  display: grid;
+  row-gap: 12px;
 }
 
-.landing-assurance-r3 {
-  font-size: clamp(1rem, 1.3vw, 1.16rem);
-  font-weight: 520;
-  opacity: 0.9;
+.assurance-col-list::before {
+  content: "";
+  position: absolute;
+  left: clamp(12px, 1.2vw, 18px);
+  top: -16px;
+  width: 1px;
+  height: calc(100% + 2px);
+  background: color-mix(in srgb, var(--sys-line) 70%, transparent);
+}
+
+.assurance-col-item {
+  position: relative;
+  margin: 0;
+  text-align: left;
+  font-size: clamp(0.92rem, 1.12vw, 1.02rem);
+  line-height: 1.28;
+  font-weight: 420;
+  color: color-mix(in srgb, var(--sys-text-1) 88%, var(--sys-text-2) 12%);
+}
+
+.assurance-col-item::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * clamp(14px, 1.2vw, 18px));
+  top: 50%;
+  width: clamp(10px, 1vw, 14px);
+  height: 1px;
+  background: color-mix(in srgb, var(--sys-line) 70%, transparent);
+  transform: translateY(-50%);
+}
+
+.assurance-col-item + .assurance-col-item {
+  margin-top: 0;
+}
+
+.landing-assurances .assurance-col[data-testid="assurance-col-privacy"] {
+  grid-column: 1;
+}
+
+.landing-assurances .assurance-col[data-testid="assurance-col-operation"] {
+  grid-column: 2;
+}
+
+.landing-assurances .assurance-col[data-testid="assurance-col-system"] {
+  grid-column: 3;
+}
+
+.assurance-cta-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
 }
 
 .landing-assurance-cta {
@@ -605,7 +634,7 @@ body {
   .landing-assurances {
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
-    padding: 6px 6vw 22px;
+    padding: 40px 6vw 22px;
   }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
@@ -655,17 +684,11 @@ body {
     justify-self: start;
     font-size: 0.78rem;
   }
-  .landing-assurance-matrix { row-gap: 10px; }
-  .assurance-r1-1 { grid-row: 1; grid-column: 2 / 6; }
-  .assurance-r1-2 { grid-row: 1; grid-column: 7 / 11; }
-  .assurance-r1-3 { grid-row: 2; grid-column: 2 / 6; }
-  .assurance-r1-4 { grid-row: 2; grid-column: 7 / 11; }
-  .assurance-r2-1 { grid-row: 3; grid-column: 2 / 6; }
-  .assurance-r2-2 { grid-row: 3; grid-column: 7 / 11; }
-  .assurance-r2-3 { grid-row: 4; grid-column: 4 / 9; }
-  .assurance-r3-1 { grid-row: 5; grid-column: 3 / 7; }
-  .assurance-r3-2 { grid-row: 5; grid-column: 7 / 11; }
-  .assurance-cta-row { grid-row: 6; }
+  .landing-assurance-spec {
+    grid-template-columns: 1fr;
+    row-gap: 18px;
+  }
+  .assurance-col-list { padding-left: 28px; }
   .landing-assurance-cta { width: min(320px, 100%); }
   .landing-signup { padding: 46px 0 42px; }
   .landing-form-grid { grid-template-columns: 1fr; }
@@ -673,13 +696,6 @@ body {
   .landing-footer-row { grid-template-columns: 1fr; }
   .landing-footer-social { justify-content: flex-start; }
 }
-
-@media (min-width: 900px) {
-  .landing-assurance-r2 {
-    white-space: nowrap;
-  }
-}
-
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

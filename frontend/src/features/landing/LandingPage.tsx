@@ -110,29 +110,38 @@ const LandingPage: React.FC = () => {
             </div>
 
             <section className="landing-assurances" aria-label="Assurances">
-              <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
-                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-1" data-testid="assurance-r1-1">PRIVATE</div>
-                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-2" data-testid="assurance-r1-2">OPERATIONAL</div>
-                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-3" data-testid="assurance-r1-3">SYSTEM</div>
-                <div role="listitem" className="landing-assurance-item landing-assurance-r1 assurance-r1-4" data-testid="assurance-r1-4">TRANSPARENT</div>
-
-                <div role="listitem" className="landing-assurance-item landing-assurance-r2 assurance-r2-1" data-testid="assurance-r2-1">Anonymous &amp; Aggregated</div>
-                <div role="listitem" className="landing-assurance-item landing-assurance-r2 assurance-r2-2" data-testid="assurance-r2-2">Plug &amp; Play</div>
-                <div role="listitem" className="landing-assurance-item landing-assurance-r2 assurance-r2-3" data-testid="assurance-r2-3">Live Reporting</div>
-
-                <div role="listitem" className="landing-assurance-item landing-assurance-r3 assurance-r3-1" data-testid="assurance-r3-1">No Personal Data</div>
-                <div role="listitem" className="landing-assurance-item landing-assurance-r3 assurance-r3-2" data-testid="assurance-r3-2">&lt;1% Error</div>
-
-                <div className="assurance-cta-row" data-testid="assurance-row-4">
-                  <button
-                    type="button"
-                    className="btn btn-secondary landing-assurance-cta"
-                    data-testid="assurance-create-account-cta"
-                    onClick={(e) => { e.preventDefault(); }}
-                  >
-                    CREATE ACCOUNT
-                  </button>
+              <div className="landing-assurance-spec" aria-label="Operational assurances">
+                <div className="assurance-col" data-testid="assurance-col-privacy">
+                  <h3 className="assurance-col-title">PRIVACY</h3>
+                  <ul className="assurance-col-list">
+                    <li className="assurance-col-item">No Personal Data</li>
+                    <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
+                  </ul>
                 </div>
+                <div className="assurance-col" data-testid="assurance-col-operation">
+                  <h3 className="assurance-col-title">OPERATION</h3>
+                  <ul className="assurance-col-list">
+                    <li className="assurance-col-item">Live Reporting</li>
+                    <li className="assurance-col-item">99.9% Uptime</li>
+                  </ul>
+                </div>
+                <div className="assurance-col" data-testid="assurance-col-system">
+                  <h3 className="assurance-col-title">SYSTEM</h3>
+                  <ul className="assurance-col-list">
+                    <li className="assurance-col-item">Plug &amp; Play</li>
+                    <li className="assurance-col-item">&lt;1% Error</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="assurance-cta-row" data-testid="assurance-row-cta">
+                <button
+                  type="button"
+                  className="btn btn-secondary landing-assurance-cta"
+                  data-testid="assurance-create-account-cta"
+                  onClick={(e) => { e.preventDefault(); }}
+                >
+                  CREATE ACCOUNT
+                </button>
               </div>
             </section>
           </div>
