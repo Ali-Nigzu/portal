@@ -207,7 +207,7 @@ body {
 
 .landing-system-surface {
   position: relative;
-  min-height: 300px;
+  min-height: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -420,7 +420,7 @@ body {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  padding: 8px 10vw 24px;
+  padding: 14px 10vw 24px;
   overflow-x: clip;
 }
 
