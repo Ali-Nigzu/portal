@@ -388,7 +388,7 @@ body {
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
-  background: color-mix(in srgb, var(--sys-bg-1) 98%, black 2%);
+  background: transparent;
   background-image: none;
   box-shadow: none;
   position: relative;
@@ -455,30 +455,31 @@ body {
 }
 
 .assurance-col-title-text {
-  --tree-axis-offset: 0.12em;
-  --tree-line: rgba(255, 255, 255, 0.14);
+  --tree-line: rgba(255, 255, 255, 0.42);
   display: inline-block;
   position: relative;
 }
 
-.assurance-col-title-text::after {
+.assurance-col-tree {
+  --tree-trunk-x: 34px;
+  --tree-text-x: 56px;
+  --tree-branch-gap: 10px;
+  --tree-row-h: 32px;
+  --tree-line: rgba(255, 255, 255, 0.42);
+  position: relative;
+  width: 210px;
+  margin: 18px auto 0;
+}
+
+.assurance-col-tree::before {
   content: "";
   position: absolute;
-  left: var(--tree-axis-offset);
-  top: calc(100% + 8px);
+  left: var(--tree-trunk-x);
+  top: -10px;
   width: 1px;
   height: 10px;
   background: var(--tree-line);
-}
-
-.assurance-col-tree {
-  --tree-x: 0.12em;
-  --tree-line: rgba(255, 255, 255, 0.14);
-  --tree-shift: 0px;
-  position: relative;
-  width: fit-content;
-  margin: 18px auto 0;
-  left: var(--tree-shift);
+  border-radius: 1px;
 }
 
 .assurance-col-list {
@@ -487,24 +488,29 @@ body {
   margin: 0;
   padding: 0;
   display: grid;
-  row-gap: 9px;
+  row-gap: 0;
 }
 
 .assurance-col-list::before {
   content: "";
   position: absolute;
-  left: var(--tree-x);
-  top: -2px;
-  bottom: 2px;
+  left: var(--tree-trunk-x);
+  top: calc((var(--tree-row-h) / 2) - 1px);
+  height: calc(var(--tree-row-h) + 2px);
   width: 1px;
   background: var(--tree-line);
+  border-radius: 1px;
 }
 
 .assurance-col-item {
   position: relative;
   margin: 0;
+  min-height: var(--tree-row-h);
+  display: flex;
+  align-items: center;
   text-align: left;
-  padding-left: calc(var(--tree-x) + 15px);
+  white-space: nowrap;
+  padding-left: var(--tree-text-x);
   font-size: clamp(0.92rem, 1.12vw, 1.02rem);
   line-height: 1.28;
   font-weight: 420;
@@ -514,25 +520,19 @@ body {
 .assurance-col-item::before {
   content: "";
   position: absolute;
-  left: var(--tree-x);
-  top: 0.9em;
-  width: 11px;
+  left: var(--tree-trunk-x);
+  top: 50%;
+  width: calc(var(--tree-text-x) - var(--tree-trunk-x) - var(--tree-branch-gap));
   height: 1px;
   background: var(--tree-line);
+  border-radius: 1px;
+  transform: translateY(-50%);
 }
 
 .assurance-col-item + .assurance-col-item {
   margin-top: 0;
 }
 
-
-.landing-assurances .assurance-col[data-testid="assurance-col-privacy"] .assurance-col-tree {
-  --tree-shift: 55px;
-}
-
-.landing-assurances .assurance-col[data-testid="assurance-col-operation"] .assurance-col-tree {
-  --tree-shift: -11px;
-}
 .landing-assurances .assurance-col[data-testid="assurance-col-privacy"] {
   grid-column: 1;
 }
