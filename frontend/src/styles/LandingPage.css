@@ -424,6 +424,11 @@ body {
   overflow-x: clip;
 }
 
+.landing-spec-sheet-inner:not(:has(.landing-preview [data-testid="topology-bus"])) .landing-assurances {
+  margin-top: -220px;
+  padding-top: 0;
+}
+
 .landing-assurance-spec {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -637,6 +642,11 @@ body {
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
     padding: 8px 6vw 22px;
+  }
+
+  .landing-spec-sheet-inner:not(:has(.landing-preview [data-testid="topology-bus"])) .landing-assurances {
+    margin-top: -140px;
+    padding-top: 0;
   }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
