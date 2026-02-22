@@ -454,31 +454,53 @@ body {
   color: color-mix(in srgb, var(--sys-text-1) 95%, var(--sys-text-2) 5%);
 }
 
+.assurance-col-title-text {
+  --tree-axis-offset: 0.1em;
+  display: inline-block;
+  position: relative;
+}
+
+.assurance-col-title-text::after {
+  content: "";
+  position: absolute;
+  left: var(--tree-axis-offset);
+  top: calc(100% + 8px);
+  width: 1px;
+  height: 12px;
+  background: color-mix(in srgb, var(--sys-line) 10%, transparent);
+}
+
+.assurance-col-tree {
+  --tree-x: 0.1em;
+  position: relative;
+  width: fit-content;
+  margin: 20px auto 0;
+}
+
 .assurance-col-list {
   position: relative;
   list-style: none;
-  margin: 20px 0 0;
+  margin: 0;
   padding: 0;
   display: grid;
-  row-gap: 12px;
-  justify-items: center;
+  row-gap: 9px;
 }
 
 .assurance-col-list::before {
   content: "";
   position: absolute;
-  left: 50%;
-  top: -16px;
+  left: var(--tree-x);
+  top: -8px;
   width: 1px;
-  height: calc(100% + 2px);
-  background: color-mix(in srgb, var(--sys-line) 70%, transparent);
-  transform: translateX(-50%);
+  height: calc(100% - 2px);
+  background: color-mix(in srgb, var(--sys-line) 10%, transparent);
 }
 
 .assurance-col-item {
   position: relative;
   margin: 0;
-  text-align: center;
+  text-align: left;
+  padding-left: calc(var(--tree-x) + 16px);
   font-size: clamp(0.92rem, 1.12vw, 1.02rem);
   line-height: 1.28;
   font-weight: 420;
@@ -488,12 +510,11 @@ body {
 .assurance-col-item::before {
   content: "";
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: clamp(12px, 1.1vw, 16px);
+  left: var(--tree-x);
+  top: 0.88em;
+  width: 12px;
   height: 1px;
-  background: color-mix(in srgb, var(--sys-line) 70%, transparent);
-  transform: translate(-50%, -50%);
+  background: color-mix(in srgb, var(--sys-line) 10%, transparent);
 }
 
 .assurance-col-item + .assurance-col-item {

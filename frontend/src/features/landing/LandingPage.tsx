@@ -111,25 +111,31 @@ const LandingPage: React.FC = () => {
             <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-spec" aria-label="Operational assurances">
                 <div className="assurance-col" data-testid="assurance-col-privacy">
-                  <h3 className="assurance-col-title">PRIVACY</h3>
-                  <ul className="assurance-col-list">
-                    <li className="assurance-col-item">No Personal Data</li>
-                    <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
-                  </ul>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text">PRIVACY</span></h3>
+                  <div className="assurance-col-tree">
+                    <ul className="assurance-col-list">
+                      <li className="assurance-col-item">No Personal Data</li>
+                      <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
+                    </ul>
+                  </div>
                 </div>
                 <div className="assurance-col" data-testid="assurance-col-operation">
-                  <h3 className="assurance-col-title">OPERATION</h3>
-                  <ul className="assurance-col-list">
-                    <li className="assurance-col-item">Live Reporting</li>
-                    <li className="assurance-col-item">99.9% Uptime</li>
-                  </ul>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text">OPERATION</span></h3>
+                  <div className="assurance-col-tree">
+                    <ul className="assurance-col-list">
+                      <li className="assurance-col-item">Live Reporting</li>
+                      <li className="assurance-col-item">99.9% Uptime</li>
+                    </ul>
+                  </div>
                 </div>
                 <div className="assurance-col" data-testid="assurance-col-system">
-                  <h3 className="assurance-col-title">SYSTEM</h3>
-                  <ul className="assurance-col-list">
-                    <li className="assurance-col-item">Plug &amp; Play</li>
-                    <li className="assurance-col-item">&lt;1% Error</li>
-                  </ul>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text">SYSTEM</span></h3>
+                  <div className="assurance-col-tree">
+                    <ul className="assurance-col-list">
+                      <li className="assurance-col-item">Plug &amp; Play</li>
+                      <li className="assurance-col-item">&lt;1% Error</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
               <div className="assurance-cta-row" data-testid="assurance-row-cta">
