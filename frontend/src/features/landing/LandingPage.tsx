@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LandingPage.css";
-import { useRegisterInterestForm } from "./hooks/useRegisterInterestForm";
 import { landingCopy } from "./content";
 import LandingHeader from "./components/LandingHeader";
 import LandingFooter from "./components/LandingFooter";
@@ -9,26 +8,6 @@ import SystemOverviewPreview from "./components/SystemOverviewPreview";
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    formData,
-    isSubmitting,
-    submitSuccess,
-    submitError,
-    setFormData,
-    handleSubmit,
-    resetSubmissionState,
-  } = useRegisterInterestForm();
-
-  const scrollToSignUp = () => {
-    const section = document.getElementById("create-account");
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [event.target.name]: event.target.value });
-  };
 
   const goToDemo = () => {
     navigate("/demo");
@@ -49,6 +28,106 @@ const LandingPage: React.FC = () => {
   ];
 
   const romanAxisLabels = ["I", "II", "III"];
+  const specSheetInnerRef = useRef<HTMLDivElement | null>(null);
+  const previewRef = useRef<HTMLElement | null>(null);
+  const assurancesRef = useRef<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    const root = specSheetInnerRef.current;
+    const preview = previewRef.current;
+    const assurances = assurancesRef.current;
+
+    if (!root || !preview || !assurances) {
+      return;
+    }
+
+    let rafId: number | null = null;
+    const targetGap = 12;
+
+    const getMeaningfulPreviewBottom = () => {
+      const previewRect = preview.getBoundingClientRect();
+      const selectors = [
+        '[data-testid="traffic-split-module"]',
+        '[data-testid="traffic-split-error"]',
+        '[data-testid="capacity-module"]',
+        '[data-testid="preview-enter-demo-cta"]',
+        'article',
+      ];
+
+      const candidates = Array.from(preview.querySelectorAll<HTMLElement>(selectors.join(",")))
+        .map((node) => ({
+          node,
+          rect: node.getBoundingClientRect(),
+        }))
+        .filter(({ node, rect }) => {
+          if (rect.width <= 0 || rect.height <= 0) {
+            return false;
+          }
+          const style = window.getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+            return false;
+          }
+          return rect.bottom <= previewRect.bottom + 1;
+        });
+
+      if (candidates.length === 0) {
+        return previewRect.bottom;
+      }
+
+      return Math.max(...candidates.map(({ rect }) => rect.bottom));
+    };
+
+    const updateAssurancesLift = () => {
+      const assurancesTitle = assurances.querySelector<HTMLElement>(".assurance-col-title");
+      if (!assurancesTitle) {
+        root.style.setProperty("--assurances-dynamic-lift", "0px");
+        return;
+      }
+
+      const meaningfulPreviewBottom = getMeaningfulPreviewBottom();
+      const currentGap = assurancesTitle.getBoundingClientRect().top - meaningfulPreviewBottom;
+      const currentLift = Number.parseFloat(window.getComputedStyle(assurances).marginTop) || 0;
+      const nextLift = Math.max(-520, Math.min(120, currentLift + targetGap - currentGap));
+
+      root.style.setProperty("--assurances-dynamic-lift", `${nextLift}px`);
+    };
+
+    const scheduleUpdate = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        updateAssurancesLift();
+      });
+    };
+
+    scheduleUpdate();
+
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    resizeObserver.observe(root);
+    resizeObserver.observe(preview);
+    resizeObserver.observe(assurances);
+
+    const mutationObserver = new MutationObserver(scheduleUpdate);
+    mutationObserver.observe(preview, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "style", "data-testid"],
+    });
+
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      window.removeEventListener("resize", scheduleUpdate);
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, []);
 
   return (
     <div className="landing-page">
@@ -80,7 +159,7 @@ const LandingPage: React.FC = () => {
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={scrollToSignUp}
+                onClick={(e) => e.preventDefault()}
               >
                 {landingCopy.nav.actions.createAccount}
               </button>
@@ -101,7 +180,7 @@ const LandingPage: React.FC = () => {
                         <button
                           type="button"
                           className="landing-axis-right-action"
-                          onClick={scrollToSignUp}
+                          onClick={(e) => e.preventDefault()}
                         >
                           <span className="landing-axis-right-action-label">{deploymentAxisItems[index]}</span>
                         </button>
@@ -117,9 +196,9 @@ const LandingPage: React.FC = () => {
         </section>
 
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
-          <div className="landing-container landing-spec-sheet-inner">
+          <div className="landing-container landing-spec-sheet-inner" ref={specSheetInnerRef}>
             <div className="landing-system-surface">
-              <section className="landing-preview" aria-labelledby="live-preview-title">
+              <section className="landing-preview" aria-labelledby="live-preview-title" ref={previewRef}>
                 <div className="landing-section-head landing-section-head--sr-only">
                   <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                   <p>{landingCopy.livePreview.description}</p>
@@ -130,125 +209,41 @@ const LandingPage: React.FC = () => {
               </section>
             </div>
 
-            <section className="landing-assurances" aria-labelledby="assurances-title">
-              <h2 id="assurances-title">{landingCopy.assurances.heading}</h2>
-              <div className="landing-assurance-matrix" role="list" aria-label="Operational assurances">
-                <div className="landing-assurance-row-group landing-assurance-row-group-r1" data-testid="assurance-row-1">
-                  {landingCopy.assurances.items.slice(0, 3).map((assurance) => (
-                    <p key={assurance} role="listitem" className="landing-assurance-row landing-assurance-row-small">
-                      {assurance}
-                    </p>
-                  ))}
+            <section className="landing-assurances" aria-label="Assurances" ref={assurancesRef}>
+              <div className="landing-assurance-spec" aria-label="Operational assurances">
+                <div className="assurance-col" data-testid="assurance-col-privacy">
+                  <h3 className="assurance-col-title">PRIVACY</h3>
+                  <ul className="assurance-col-list">
+                    <li className="assurance-col-item">No Personal Data</li>
+                    <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
+                  </ul>
                 </div>
-                <div className="landing-assurance-row-group landing-assurance-row-group-r2" data-testid="assurance-row-2">
-                  {landingCopy.assurances.items.slice(3, 5).map((assurance) => (
-                    <p key={assurance} role="listitem" className="landing-assurance-row landing-assurance-row-medium">
-                      {assurance}
-                    </p>
-                  ))}
+                <div className="assurance-col" data-testid="assurance-col-operation">
+                  <h3 className="assurance-col-title">OPERATION</h3>
+                  <ul className="assurance-col-list">
+                    <li className="assurance-col-item">Live Reporting</li>
+                    <li className="assurance-col-item">99.9% Uptime</li>
+                  </ul>
                 </div>
-                <div className="landing-assurance-row-group landing-assurance-row-group-r3" data-testid="assurance-row-3">
-                  <button
-                    type="button"
-                    className="btn btn-secondary landing-assurance-cta"
-                    data-testid="assurance-create-account-cta"
-                    onClick={scrollToSignUp}
-                  >
-                    {landingCopy.createAccount.button}
-                  </button>
+                <div className="assurance-col" data-testid="assurance-col-system">
+                  <h3 className="assurance-col-title">SYSTEM</h3>
+                  <ul className="assurance-col-list">
+                    <li className="assurance-col-item">Plug &amp; Play</li>
+                    <li className="assurance-col-item">&lt;1% Error</li>
+                  </ul>
                 </div>
               </div>
-            </section>
-          </div>
-        </section>
-
-        <section id="create-account" className="landing-signup" aria-labelledby="create-account-title">
-          <div className="landing-container landing-signup-wrap">
-            <h2 id="create-account-title">{landingCopy.createAccount.heading}</h2>
-            <p>{landingCopy.createAccount.line}</p>
-
-            {submitSuccess ? (
-              <div
-                className="landing-status landing-status-success"
-                role="status"
-                aria-live="polite"
-              >
-                <p>Sign-up submitted.</p>
+              <div className="assurance-cta-row" data-testid="assurance-row-cta">
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  onClick={resetSubmissionState}
+                  className="btn btn-secondary landing-assurance-cta"
+                  data-testid="assurance-create-account-cta"
+                  onClick={(e) => { e.preventDefault(); }}
                 >
-                  {landingCopy.createAccount.button}
+                  CREATE ACCOUNT
                 </button>
-            </div>
-            ) : (
-              <form className="landing-signup-form" onSubmit={handleSubmit}>
-                <div className="landing-form-grid">
-                  <div className="landing-form-field">
-                    <label htmlFor="name">Full name</label>
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      autoComplete="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="landing-form-field">
-                    <label htmlFor="email">Work email</label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="landing-form-field">
-                    <label htmlFor="company">Location name</label>
-                    <input
-                      id="company"
-                      name="company"
-                      type="text"
-                      autoComplete="organization"
-                      value={formData.company}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="landing-form-field">
-                    <label htmlFor="phone">Phone (optional)</label>
-                    <input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      autoComplete="tel"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                {submitError ? (
-                  <div
-                    className="landing-status landing-status-error"
-                    role="alert"
-                    aria-live="assertive"
-                  >
-                    <p>{submitError}</p>
-                  </div>
-                ) : null}
-
-                <button type="submit" className="btn btn-secondary" disabled={isSubmitting}>
-                  {isSubmitting ? "Submitting..." : landingCopy.createAccount.button}
-                </button>
-              </form>
-            )}
+              </div>
+            </section>
           </div>
         </section>
       </main>
