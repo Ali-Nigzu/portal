@@ -245,7 +245,7 @@ body {
 .landing-assurances h2,
 .landing-axis-headings h2 {
   margin: 0;
-  font-size: clamp(1.24rem, 1.8vw, 1.6rem);
+  font-size: 1.32rem;
   line-height: 1.28;
   letter-spacing: -0.01em;
   font-weight: 600;
@@ -283,7 +283,7 @@ body {
 }
 
 .landing-axis-cell-heading {
-  font-size: clamp(1.24rem, 1.8vw, 1.6rem);
+  font-size: 1.32rem;
   line-height: 1.28;
   letter-spacing: -0.01em;
   font-weight: 700;
@@ -385,7 +385,7 @@ body {
 
 .landing-preview {
   --preview-pad-top: 26px;
-  --preview-pad-bottom: 2px;
+  --preview-pad-bottom: 8px;
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
@@ -418,12 +418,12 @@ body {
 }
 
 .landing-assurances {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  margin-top: var(--assurances-dynamic-lift);
-  padding: 8px 10vw 24px;
-  overflow-x: clip;
+  width: 100%;
+  margin: var(--assurances-dynamic-lift) 0 0;
+  padding: 12px 0 24px;
+  overflow: visible;
+  position: relative;
+  z-index: 5;
 }
 
 .landing-assurance-spec {
@@ -431,6 +431,8 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   column-gap: clamp(28px, 4vw, 72px);
   align-items: start;
+  max-width: 1160px;
+  margin: 0 auto;
 }
 
 .assurance-col {
@@ -444,7 +446,7 @@ body {
 .assurance-col-title {
   margin: 0;
   text-align: center;
-  font-size: clamp(1.24rem, 1.8vw, 1.6rem);
+  font-size: 1.32rem;
   line-height: 1.28;
   letter-spacing: 0.04em;
   font-weight: 600;
@@ -518,7 +520,7 @@ body {
 .landing-assurance-cta {
   width: min(320px, 100%);
   min-height: 46px;
-  font-size: clamp(1.02rem, 1.35vw, 1.2rem);
+  font-size: 1.05rem;
   font-weight: 620;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -636,9 +638,7 @@ body {
 @media (max-width: 767px) {
   .landing-preview { --preview-pad-top: 8px; --preview-pad-bottom: 14px; }
   .landing-assurances {
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-    padding: 8px 6vw 22px;
+    padding: 10px 0 22px;
   }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }

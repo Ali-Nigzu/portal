@@ -70,6 +70,7 @@ const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
+const PREVIEW_DEGRADED_PARAM = "previewDegraded";
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
 const BUS_CORRIDOR_GAP_TOP = 20;
@@ -431,6 +432,14 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     [nodeRadius, nodeX, wire],
   );
 
+  const topologyBranch = forceMockTopology
+    ? "mock"
+    : hasError
+      ? "unavailable"
+      : hasKpis
+        ? "live"
+        : "loading";
+
   const renderMockTile = (label: string, value: string) => (
     <article className={styles.mockTile}>
       <p>{label}</p>
@@ -439,10 +448,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   );
 
   return (
-    <section className={styles.preview} aria-label="System overview topology preview">
+    <section className={styles.preview} aria-label="System overview topology preview" data-preview-topology-branch={topologyBranch}>
       <div className={styles.consoleSurface}>
         <div className={styles.gatedContent}>
-          <div className={styles.canvas} ref={containerRef} data-topology-mock={forceMockTopology ? "true" : "false"}>
+          <div className={styles.canvas} ref={containerRef} data-topology-mock={forceMockTopology ? "true" : "false"} data-preview-topology-branch={topologyBranch}>
             {wire.width > 0 && wire.height > 0 ? (
               <svg className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
                 <line className={styles.busLine} data-testid="topology-bus" x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
@@ -628,12 +637,23 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     return new URLSearchParams(location.search).get(TOPOLOGY_MOCK_PARAM) === "1";
   }, [location.search]);
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
+  const forceDegradedPreview = useMemo(() => {
+    if (!import.meta.env.DEV && !import.meta.env.MODE.includes("test")) {
+      return false;
+    }
+    return new URLSearchParams(location.search).get(PREVIEW_DEGRADED_PARAM) === "1";
+  }, [location.search]);
   const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
   const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [bootstrapDegraded, setBootstrapDegraded] = useState(false);
   const bootstrapStartedRef = useRef(false);
 
   const runBootstrap = async () => {
+    if (forceDegradedPreview) {
+      setBootstrapDegraded(true);
+      setBootstrapState("ready");
+      return;
+    }
     if (forceMockTopology || isLoggedIn || hasViewToken || isDemoSessionActive()) {
       setBootstrapState("ready");
       return;
@@ -665,7 +685,7 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     }
     bootstrapStartedRef.current = true;
     void runBootstrap();
-  }, [hasViewToken, isLoggedIn, forceMockTopology]);
+  }, [hasViewToken, isLoggedIn, forceMockTopology, forceDegradedPreview]);
 
   const handleRetry = () => {
     if (typeof window !== "undefined") {
@@ -685,11 +705,11 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
   }, [bootstrapState]);
 
   if (bootstrapState === "loading") {
-    return <section className={styles.preview}><div className={styles.inlineNotice}>Loading live KPI preview…</div></section>;
+    return <section className={styles.preview} data-preview-bootstrap-branch="loading"><div className={styles.inlineNotice}>Loading live KPI preview…</div></section>;
   }
   if (bootstrapState === "error") {
     return (
-      <section className={styles.preview}>
+      <section className={styles.preview} data-preview-bootstrap-branch="error">
         <div className={styles.inlineNotice}>
           <span>Preview unavailable.</span>
           <button type="button" className={styles.retryButton} onClick={handleRetry}>Retry</button>
@@ -698,11 +718,19 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     );
   }
 
+  const bootstrapBranch = forceMockTopology
+    ? "mock"
+    : bootstrapDegraded
+      ? "degraded"
+      : (isLoggedIn || hasViewToken || isDemoSessionActive())
+        ? "live-equivalent"
+        : "default";
+
   return (
-    <>
+    <div data-preview-bootstrap-branch={bootstrapBranch}>
       <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />
       {bootstrapDegraded ? <p className={styles.errorNote}>Demo bootstrap unavailable; preview is using direct live data flow.</p> : null}
-    </>
+    </div>
   );
 };
 

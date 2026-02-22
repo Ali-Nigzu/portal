@@ -19,7 +19,8 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "ci": "npm run build",
     "verify:topology": "node scripts/topology-check.mjs",
-    "test:landing-visual": "node scripts/landing-visual-regression.mjs"
+    "test:landing-visual": "node scripts/landing-visual-regression.mjs",
+    "verify:landing-layout": "node scripts/landing-layout-validate.mjs"
   },
   "browserslist": {
     "production": [

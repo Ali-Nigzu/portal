@@ -27,7 +27,6 @@ const LandingPage: React.FC = () => {
     landingCopy.deployment.thirdStep,
   ];
 
-  const romanAxisLabels = ["I", "II", "III"];
   const specSheetInnerRef = useRef<HTMLDivElement | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
   const assurancesRef = useRef<HTMLElement | null>(null);
@@ -36,99 +35,64 @@ const LandingPage: React.FC = () => {
     const root = specSheetInnerRef.current;
     const preview = previewRef.current;
     const assurances = assurancesRef.current;
-
-    if (!root || !preview || !assurances) {
-      return;
-    }
+    if (!root || !preview || !assurances) return;
 
     let rafId: number | null = null;
     const targetGap = 12;
 
-    const getMeaningfulPreviewBottom = () => {
-      const previewRect = preview.getBoundingClientRect();
-      const selectors = [
-        '[data-testid="traffic-split-module"]',
-        '[data-testid="traffic-split-error"]',
-        '[data-testid="capacity-module"]',
-        '[data-testid="preview-enter-demo-cta"]',
-        'article',
-      ];
-
-      const candidates = Array.from(preview.querySelectorAll<HTMLElement>(selectors.join(",")))
-        .map((node) => ({
-          node,
-          rect: node.getBoundingClientRect(),
-        }))
-        .filter(({ node, rect }) => {
-          if (rect.width <= 0 || rect.height <= 0) {
-            return false;
-          }
-          const style = window.getComputedStyle(node);
-          if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
-            return false;
-          }
-          return rect.bottom <= previewRect.bottom + 1;
-        });
-
-      if (candidates.length === 0) {
-        return previewRect.bottom;
-      }
-
-      return Math.max(...candidates.map(({ rect }) => rect.bottom));
+    const isVisible = (node: HTMLElement) => {
+      const rect = node.getBoundingClientRect();
+      const style = window.getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
     };
 
-    const updateAssurancesLift = () => {
+    const getMeaningfulPreviewBottom = () => {
+      const selectors = [
+        '[class*="topCluster"] > *',
+        '[class*="bottomCluster"] > *',
+        '[data-testid="preview-enter-demo-cta"]',
+        '[class*="inlineNotice"]',
+        '.errorNote',
+      ];
+      const nodes = Array.from(preview.querySelectorAll<HTMLElement>(selectors.join(","))).filter(isVisible);
+      if (nodes.length === 0) return preview.getBoundingClientRect().bottom;
+      return Math.max(...nodes.map((n) => n.getBoundingClientRect().bottom));
+    };
+
+    const updateGap = () => {
       const assurancesTitle = assurances.querySelector<HTMLElement>(".assurance-col-title");
-      if (!assurancesTitle) {
-        root.style.setProperty("--assurances-dynamic-lift", "0px");
-        return;
-      }
-
-      const meaningfulPreviewBottom = getMeaningfulPreviewBottom();
-      const currentGap = assurancesTitle.getBoundingClientRect().top - meaningfulPreviewBottom;
-      const currentLift = Number.parseFloat(window.getComputedStyle(assurances).marginTop) || 0;
-      const nextLift = Math.max(-520, Math.min(120, currentLift + targetGap - currentGap));
-
+      if (!assurancesTitle) return;
+      const currentGap = assurancesTitle.getBoundingClientRect().top - getMeaningfulPreviewBottom();
+      const nextLift = Math.max(-180, Math.min(60, targetGap - currentGap));
       root.style.setProperty("--assurances-dynamic-lift", `${nextLift}px`);
     };
 
-    const scheduleUpdate = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
+    const schedule = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         rafId = null;
-        updateAssurancesLift();
+        updateGap();
       });
     };
 
-    scheduleUpdate();
-
-    const resizeObserver = new ResizeObserver(scheduleUpdate);
-    resizeObserver.observe(root);
-    resizeObserver.observe(preview);
-    resizeObserver.observe(assurances);
-
-    const mutationObserver = new MutationObserver(scheduleUpdate);
-    mutationObserver.observe(preview, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "style", "data-testid"],
-    });
-
-    window.addEventListener("resize", scheduleUpdate);
+    schedule();
+    const ro = new ResizeObserver(schedule);
+    ro.observe(preview);
+    ro.observe(assurances);
+    ro.observe(root);
+    const mo = new MutationObserver(schedule);
+    mo.observe(preview, { childList: true, subtree: true, attributes: true });
+    window.addEventListener("resize", schedule);
 
     return () => {
-      window.removeEventListener("resize", scheduleUpdate);
-      mutationObserver.disconnect();
-      resizeObserver.disconnect();
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
+      window.removeEventListener("resize", schedule);
+      ro.disconnect();
+      mo.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, []);
 
+  const romanAxisLabels = ["I", "II", "III"];
   return (
     <div className="landing-page">
       <LandingHeader
