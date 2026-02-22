@@ -453,25 +453,27 @@ body {
   position: relative;
   list-style: none;
   margin: 20px 0 0;
-  padding: 0 0 0 clamp(26px, 2.2vw, 34px);
+  padding: 0;
   display: grid;
   row-gap: 12px;
+  justify-items: center;
 }
 
 .assurance-col-list::before {
   content: "";
   position: absolute;
-  left: clamp(12px, 1.2vw, 18px);
+  left: 50%;
   top: -16px;
   width: 1px;
   height: calc(100% + 2px);
   background: color-mix(in srgb, var(--sys-line) 70%, transparent);
+  transform: translateX(-50%);
 }
 
 .assurance-col-item {
   position: relative;
   margin: 0;
-  text-align: left;
+  text-align: center;
   font-size: clamp(0.92rem, 1.12vw, 1.02rem);
   line-height: 1.28;
   font-weight: 420;
@@ -481,12 +483,12 @@ body {
 .assurance-col-item::before {
   content: "";
   position: absolute;
-  left: calc(-1 * clamp(14px, 1.2vw, 18px));
+  left: 50%;
   top: 50%;
-  width: clamp(10px, 1vw, 14px);
+  width: clamp(12px, 1.1vw, 16px);
   height: 1px;
   background: color-mix(in srgb, var(--sys-line) 70%, transparent);
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .assurance-col-item + .assurance-col-item {
@@ -688,7 +690,6 @@ body {
     grid-template-columns: 1fr;
     row-gap: 18px;
   }
-  .assurance-col-list { padding-left: 28px; }
   .landing-assurance-cta { width: min(320px, 100%); }
   .landing-signup { padding: 46px 0 42px; }
   .landing-form-grid { grid-template-columns: 1fr; }
