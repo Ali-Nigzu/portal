@@ -29,48 +29,67 @@ const LandingPage: React.FC = () => {
 
   const romanAxisLabels = ["I", "II", "III"];
   const specSheetInnerRef = useRef<HTMLDivElement | null>(null);
+  const previewRef = useRef<HTMLElement | null>(null);
+  const assurancesRef = useRef<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
-    if (!specSheetInnerRef.current) {
+    const root = specSheetInnerRef.current;
+    const preview = previewRef.current;
+    const assurances = assurancesRef.current;
+
+    if (!root || !preview || !assurances) {
       return;
     }
 
-    const root = specSheetInnerRef.current;
     let rafId: number | null = null;
+    const targetGap = 12;
+
+    const getMeaningfulPreviewBottom = () => {
+      const previewRect = preview.getBoundingClientRect();
+      const selectors = [
+        '[data-testid="traffic-split-module"]',
+        '[data-testid="traffic-split-error"]',
+        '[data-testid="capacity-module"]',
+        '[data-testid="preview-enter-demo-cta"]',
+        'article',
+      ];
+
+      const candidates = Array.from(preview.querySelectorAll<HTMLElement>(selectors.join(",")))
+        .map((node) => ({
+          node,
+          rect: node.getBoundingClientRect(),
+        }))
+        .filter(({ node, rect }) => {
+          if (rect.width <= 0 || rect.height <= 0) {
+            return false;
+          }
+          const style = window.getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+            return false;
+          }
+          return rect.bottom <= previewRect.bottom + 1;
+        });
+
+      if (candidates.length === 0) {
+        return previewRect.bottom;
+      }
+
+      return Math.max(...candidates.map(({ rect }) => rect.bottom));
+    };
 
     const updateAssurancesLift = () => {
-      if (!root) {
+      const assurancesTitle = assurances.querySelector<HTMLElement>(".assurance-col-title");
+      if (!assurancesTitle) {
+        root.style.setProperty("--assurances-dynamic-lift", "0px");
         return;
       }
 
-      const bus = root.querySelector<SVGLineElement>('.landing-preview [data-testid="topology-bus"]');
-      if (bus) {
-        root.style.setProperty("--assurances-no-bus-lift", "0px");
-        return;
-      }
-
-      const trafficModule = root.querySelector<HTMLElement>('.landing-preview [data-testid="traffic-split-module"]');
-      const assurancesTitle = root.querySelector<HTMLElement>('[data-testid="assurance-col-privacy"] .assurance-col-title');
-
-      if (!trafficModule || !assurancesTitle) {
-        root.style.setProperty("--assurances-no-bus-lift", "0px");
-        return;
-      }
-
-      const assurances = root.querySelector<HTMLElement>('.landing-assurances');
-      if (!assurances) {
-        root.style.setProperty("--assurances-no-bus-lift", "0px");
-        return;
-      }
-
-      const trafficBottom = trafficModule.getBoundingClientRect().bottom;
-      const titleTop = assurancesTitle.getBoundingClientRect().top;
-      const currentGap = titleTop - trafficBottom;
+      const meaningfulPreviewBottom = getMeaningfulPreviewBottom();
+      const currentGap = assurancesTitle.getBoundingClientRect().top - meaningfulPreviewBottom;
       const currentLift = Number.parseFloat(window.getComputedStyle(assurances).marginTop) || 0;
-      const targetGap = 12;
-      const requiredLift = Math.max(-420, Math.min(80, currentLift + targetGap - currentGap));
+      const nextLift = Math.max(-520, Math.min(120, currentLift + targetGap - currentGap));
 
-      root.style.setProperty("--assurances-no-bus-lift", `${requiredLift}px`);
+      root.style.setProperty("--assurances-dynamic-lift", `${nextLift}px`);
     };
 
     const scheduleUpdate = () => {
@@ -87,18 +106,11 @@ const LandingPage: React.FC = () => {
 
     const resizeObserver = new ResizeObserver(scheduleUpdate);
     resizeObserver.observe(root);
-
-    const preview = root.querySelector('.landing-preview');
-    const assurances = root.querySelector('.landing-assurances');
-    if (preview) {
-      resizeObserver.observe(preview);
-    }
-    if (assurances) {
-      resizeObserver.observe(assurances);
-    }
+    resizeObserver.observe(preview);
+    resizeObserver.observe(assurances);
 
     const mutationObserver = new MutationObserver(scheduleUpdate);
-    mutationObserver.observe(root, {
+    mutationObserver.observe(preview, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -106,11 +118,9 @@ const LandingPage: React.FC = () => {
     });
 
     window.addEventListener("resize", scheduleUpdate);
-    const intervalId = window.setInterval(scheduleUpdate, 400);
 
     return () => {
       window.removeEventListener("resize", scheduleUpdate);
-      window.clearInterval(intervalId);
       mutationObserver.disconnect();
       resizeObserver.disconnect();
       if (rafId !== null) {
@@ -188,7 +198,7 @@ const LandingPage: React.FC = () => {
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
           <div className="landing-container landing-spec-sheet-inner" ref={specSheetInnerRef}>
             <div className="landing-system-surface">
-              <section className="landing-preview" aria-labelledby="live-preview-title">
+              <section className="landing-preview" aria-labelledby="live-preview-title" ref={previewRef}>
                 <div className="landing-section-head landing-section-head--sr-only">
                   <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                   <p>{landingCopy.livePreview.description}</p>
@@ -199,7 +209,7 @@ const LandingPage: React.FC = () => {
               </section>
             </div>
 
-            <section className="landing-assurances" aria-label="Assurances">
+            <section className="landing-assurances" aria-label="Assurances" ref={assurancesRef}>
               <div className="landing-assurance-spec" aria-label="Operational assurances">
                 <div className="assurance-col" data-testid="assurance-col-privacy">
                   <h3 className="assurance-col-title">PRIVACY</h3>
