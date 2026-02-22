@@ -384,7 +384,7 @@ body {
 
 .landing-preview {
   --preview-pad-top: 26px;
-  --preview-pad-bottom: 6px;
+  --preview-pad-bottom: 2px;
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
@@ -420,7 +420,7 @@ body {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  padding: 14px 10vw 24px;
+  padding: 8px 10vw 24px;
   overflow-x: clip;
 }
 
