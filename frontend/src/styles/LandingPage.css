@@ -420,7 +420,7 @@ body {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  padding: 48px 10vw 24px;
+  padding: 8px 10vw 24px;
   overflow-x: clip;
 }
 
@@ -636,7 +636,7 @@ body {
   .landing-assurances {
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
-    padding: 40px 6vw 22px;
+    padding: 8px 6vw 22px;
   }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
