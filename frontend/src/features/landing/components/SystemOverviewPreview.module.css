@@ -40,7 +40,7 @@
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  padding: 0 0 2px;
+  padding: 0 0 64px;
   overflow: visible;
 }
 
@@ -60,9 +60,9 @@
 .canvas {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto var(--mid-span) auto;
   row-gap: var(--topo-gap-row);
-  min-height: 0;
+  min-height: 468px;
   padding: 0;
 }
 
@@ -135,6 +135,8 @@
   width: max-content;
   margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+  transform: translateY(calc(-1 * var(--preview-top-row-lift)));
+  transform-origin: top center;
 }
 
 .kpiSlot {
@@ -229,7 +231,7 @@
 
 .topNotice {
   grid-column: 1 / -1;
-  min-height: 44px;
+  min-height: 120px;
 }
 
 .bottomCluster {
@@ -244,11 +246,13 @@
   width: max-content;
   margin-inline: auto;
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+  transform: translateY(calc(-1 * var(--preview-bottom-row-lift)));
+  transform-origin: top center;
 }
 
 .inlineNotice {
   margin: 0;
-  min-height: 44px;
+  min-height: 120px;
   display: grid;
   place-items: center;
   gap: 8px;
@@ -561,19 +565,9 @@
 }
 
 .errorNote {
-  margin: 0;
+  margin: 6px 0 0;
   font-size: 0.74rem;
   color: var(--sys-text-3);
-}
-
-.statusOverlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 2px;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
 }
 
 @media (max-width: 1279px) {
@@ -587,6 +581,9 @@
     --preview-bottom-row-lift: -34px;
   }
 
+  .canvas {
+    min-height: 468px;
+  }
 }
 
 @media (max-width: 767px) {

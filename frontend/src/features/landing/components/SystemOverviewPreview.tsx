@@ -70,7 +70,6 @@ const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
-const LANDING_PREVIEW_DIAGNOSTICS_PARAM = "landingPreviewDiagnostics";
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
 const BUS_CORRIDOR_GAP_TOP = 20;
@@ -104,7 +103,7 @@ const initialWireLayout: WireLayout = {
 };
 
 
-const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void; showDiagnostics: boolean; statusMessage?: string; runtimeState: string; bootstrapDegraded: boolean }> = ({ forceMockTopology, onAccessDemo, showDiagnostics, statusMessage, runtimeState, bootstrapDegraded }) => {
+const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -440,13 +439,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   );
 
   return (
-    <section
-      className={styles.preview}
-      aria-label="System overview topology preview"
-      data-preview-runtime-state={runtimeState}
-      data-preview-bootstrap-degraded={bootstrapDegraded ? "true" : "false"}
-      data-preview-force-mock={forceMockTopology ? "true" : "false"}
-    >
+    <section className={styles.preview} aria-label="System overview topology preview">
       <div className={styles.consoleSurface}>
         <div className={styles.gatedContent}>
           <div className={styles.canvas} ref={containerRef} data-topology-mock={forceMockTopology ? "true" : "false"}>
@@ -619,10 +612,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
 
       </div>
-      {showDiagnostics && ((manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) || statusMessage) ? (
-        <div className={styles.statusOverlay} aria-live="polite">
-          <p className={styles.errorNote}>{(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? "Preview unavailable." : statusMessage}</p>
-        </div>
+      {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
+        <p className={styles.errorNote}>Preview unavailable.</p>
       ) : null}
     </section>
   );
@@ -635,12 +626,6 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
       return false;
     }
     return new URLSearchParams(location.search).get(TOPOLOGY_MOCK_PARAM) === "1";
-  }, [location.search]);
-  const showLandingDiagnostics = useMemo(() => {
-    if (!import.meta.env.DEV && !import.meta.env.MODE.includes("test")) {
-      return false;
-    }
-    return new URLSearchParams(location.search).get(LANDING_PREVIEW_DIAGNOSTICS_PARAM) === "1";
   }, [location.search]);
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
   const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
@@ -700,11 +685,11 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
   }, [bootstrapState]);
 
   if (bootstrapState === "loading") {
-    return <section className={styles.preview} data-preview-runtime-state="loading" data-preview-bootstrap-degraded="false" data-preview-force-mock={forceMockTopology ? "true" : "false"}><div className={styles.inlineNotice}>Loading live KPI preview…</div></section>;
+    return <section className={styles.preview}><div className={styles.inlineNotice}>Loading live KPI preview…</div></section>;
   }
   if (bootstrapState === "error") {
     return (
-      <section className={styles.preview} data-preview-runtime-state="error" data-preview-bootstrap-degraded={bootstrapDegraded ? "true" : "false"} data-preview-force-mock={forceMockTopology ? "true" : "false"}>
+      <section className={styles.preview}>
         <div className={styles.inlineNotice}>
           <span>Preview unavailable.</span>
           <button type="button" className={styles.retryButton} onClick={handleRetry}>Retry</button>
@@ -713,9 +698,12 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     );
   }
 
-  const statusMessage = bootstrapDegraded ? "Demo bootstrap unavailable; preview is using direct live data flow." : undefined;
-
-  return <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} showDiagnostics={showLandingDiagnostics} statusMessage={statusMessage} runtimeState={bootstrapState} bootstrapDegraded={bootstrapDegraded} />;
+  return (
+    <>
+      <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />
+      {bootstrapDegraded ? <p className={styles.errorNote}>Demo bootstrap unavailable; preview is using direct live data flow.</p> : null}
+    </>
+  );
 };
 
 export default SystemOverviewPreview;
