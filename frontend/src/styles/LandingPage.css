@@ -425,7 +425,7 @@ body {
 }
 
 .landing-spec-sheet-inner:not(:has(.landing-preview [data-testid="topology-bus"])) .landing-assurances {
-  margin-top: -220px;
+  margin-top: -300px;
   padding-top: 0;
 }
 
@@ -645,7 +645,7 @@ body {
   }
 
   .landing-spec-sheet-inner:not(:has(.landing-preview [data-testid="topology-bus"])) .landing-assurances {
-    margin-top: -140px;
+    margin-top: -190px;
     padding-top: 0;
   }
 
