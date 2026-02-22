@@ -38,7 +38,7 @@
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  padding: 0 0 12px;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -58,8 +58,8 @@
 .canvas {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto;
-  row-gap: var(--topo-gap-row);
+  grid-template-rows: auto auto;
+  row-gap: 8px;
   min-height: 0;
   padding: 0;
 }
@@ -229,7 +229,7 @@
 
 .topNotice {
   grid-column: 1 / -1;
-  min-height: 72px;
+  min-height: 56px;
 }
 
 .bottomCluster {
@@ -238,7 +238,7 @@
   display: grid;
   grid-template-columns: repeat(4, var(--kpi-col));
   column-gap: var(--topo-gap-col);
-  row-gap: var(--topo-gap-row);
+  row-gap: 8px;
   justify-content: center;
   align-items: start;
   width: max-content;
@@ -250,7 +250,7 @@
 
 .inlineNotice {
   margin: 0;
-  min-height: 72px;
+  min-height: 56px;
   display: grid;
   place-items: center;
   gap: 8px;

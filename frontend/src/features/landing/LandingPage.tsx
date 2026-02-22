@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LandingPage.css";
 import { landingCopy } from "./content";
@@ -26,71 +26,6 @@ const LandingPage: React.FC = () => {
     landingCopy.deployment.secondStep,
     landingCopy.deployment.thirdStep,
   ];
-
-  const specSheetInnerRef = useRef<HTMLDivElement | null>(null);
-  const previewRef = useRef<HTMLElement | null>(null);
-  const assurancesRef = useRef<HTMLElement | null>(null);
-
-  useLayoutEffect(() => {
-    const root = specSheetInnerRef.current;
-    const preview = previewRef.current;
-    const assurances = assurancesRef.current;
-    if (!root || !preview || !assurances) return;
-
-    let rafId: number | null = null;
-    const targetGap = 12;
-
-    const isVisible = (node: HTMLElement) => {
-      const rect = node.getBoundingClientRect();
-      const style = window.getComputedStyle(node);
-      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
-    };
-
-    const getMeaningfulPreviewBottom = () => {
-      const selectors = [
-        '[class*="topCluster"] > *',
-        '[class*="bottomCluster"] > *',
-        '[data-testid="preview-enter-demo-cta"]',
-        '[class*="inlineNotice"]',
-        '.errorNote',
-      ];
-      const nodes = Array.from(preview.querySelectorAll<HTMLElement>(selectors.join(","))).filter(isVisible);
-      if (nodes.length === 0) return preview.getBoundingClientRect().bottom;
-      return Math.max(...nodes.map((n) => n.getBoundingClientRect().bottom));
-    };
-
-    const updateGap = () => {
-      const assurancesTitle = assurances.querySelector<HTMLElement>(".assurance-col-title");
-      if (!assurancesTitle) return;
-      const currentGap = assurancesTitle.getBoundingClientRect().top - getMeaningfulPreviewBottom();
-      const nextLift = Math.max(-180, Math.min(60, targetGap - currentGap));
-      root.style.setProperty("--assurances-dynamic-lift", `${nextLift}px`);
-    };
-
-    const schedule = () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        updateGap();
-      });
-    };
-
-    schedule();
-    const ro = new ResizeObserver(schedule);
-    ro.observe(preview);
-    ro.observe(assurances);
-    ro.observe(root);
-    const mo = new MutationObserver(schedule);
-    mo.observe(preview, { childList: true, subtree: true, attributes: true });
-    window.addEventListener("resize", schedule);
-
-    return () => {
-      window.removeEventListener("resize", schedule);
-      ro.disconnect();
-      mo.disconnect();
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, []);
 
   const romanAxisLabels = ["I", "II", "III"];
   return (
@@ -160,9 +95,9 @@ const LandingPage: React.FC = () => {
         </section>
 
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
-          <div className="landing-container landing-spec-sheet-inner" ref={specSheetInnerRef}>
+          <div className="landing-container landing-spec-sheet-inner">
             <div className="landing-system-surface">
-              <section className="landing-preview" aria-labelledby="live-preview-title" ref={previewRef}>
+              <section className="landing-preview" aria-labelledby="live-preview-title">
                 <div className="landing-section-head landing-section-head--sr-only">
                   <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                   <p>{landingCopy.livePreview.description}</p>
@@ -173,7 +108,7 @@ const LandingPage: React.FC = () => {
               </section>
             </div>
 
-            <section className="landing-assurances" aria-label="Assurances" ref={assurancesRef}>
+            <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-spec" aria-label="Operational assurances">
                 <div className="assurance-col" data-testid="assurance-col-privacy">
                   <h3 className="assurance-col-title">PRIVACY</h3>
