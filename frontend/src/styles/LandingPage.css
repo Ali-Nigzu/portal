@@ -384,7 +384,7 @@ body {
 
 .landing-preview {
   --preview-pad-top: 26px;
-  --preview-pad-bottom: 2px;
+  --preview-pad-bottom: 0px;
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
   outline: none;
@@ -392,6 +392,8 @@ body {
   background-image: none;
   box-shadow: none;
   position: relative;
+  overflow: clip;
+  isolation: isolate;
 }
 
 .landing-dashboard-preview {
@@ -418,9 +420,11 @@ body {
 
 .landing-assurances {
   width: 100%;
-  margin: -262px 0 0;
-  padding: 8px 0 24px;
+  margin: 0;
+  padding: 12px 0 24px;
   overflow: visible;
+  position: relative;
+  z-index: 2;
 }
 
 .landing-assurance-spec {
@@ -636,7 +640,7 @@ body {
   .landing-preview { --preview-pad-top: 8px; --preview-pad-bottom: 14px; }
   .landing-assurances {
     margin: 0;
-    padding: 8px 0 22px;
+    padding: 10px 0 22px;
   }
 
   .landing-container { width: min(var(--landing-rail-max), calc(100% - 30px)); }
