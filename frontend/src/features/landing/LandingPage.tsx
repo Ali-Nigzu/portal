@@ -48,13 +48,15 @@ const LandingPage: React.FC = () => {
   const assuranceTree = {
     trunkX: 0,
     trunkY1: 2,
-    rowHeight: 30,
-    rowOffset: 5,
+    rowHeight: 29,
+    rowOffset: 4,
+    textOpticalCenterY: 13,
     dockX: 28,
+    dockGap: 4,
   } as const;
-  const assuranceBranchY1 = assuranceTree.rowOffset + (assuranceTree.rowHeight / 2);
-  const assuranceBranchY2 = assuranceTree.rowOffset + (assuranceTree.rowHeight * 1.5);
-  const assuranceTrunkY2 = assuranceTree.rowOffset + (assuranceTree.rowHeight * 1.5);
+  const assuranceBranchY1 = assuranceTree.rowOffset + assuranceTree.textOpticalCenterY;
+  const assuranceBranchY2 = assuranceBranchY1 + assuranceTree.rowHeight;
+  const assuranceTrunkY2 = assuranceBranchY2;
   const assuranceSvgHeight = assuranceTree.rowOffset + (assuranceTree.rowHeight * 2);
 
   return (
@@ -148,8 +150,8 @@ const LandingPage: React.FC = () => {
                       <div className="assurance-col-tree">
                         <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox={`0 0 ${assuranceTree.dockX} ${assuranceSvgHeight}`} preserveAspectRatio="none">
                           <line className="assurance-tree-line assurance-tree-line--trunk" x1={assuranceTree.trunkX} y1={assuranceTree.trunkY1} x2={assuranceTree.trunkX} y2={assuranceTrunkY2} />
-                          <line className="assurance-tree-line assurance-tree-line--branch" x1={assuranceTree.trunkX} y1={assuranceBranchY1} x2={assuranceTree.dockX} y2={assuranceBranchY1} />
-                          <line className="assurance-tree-line assurance-tree-line--branch" x1={assuranceTree.trunkX} y1={assuranceBranchY2} x2={assuranceTree.dockX} y2={assuranceBranchY2} />
+                          <line className="assurance-tree-line assurance-tree-line--branch" x1={assuranceTree.trunkX} y1={assuranceBranchY1} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={assuranceBranchY1} />
+                          <line className="assurance-tree-line assurance-tree-line--branch" x1={assuranceTree.trunkX} y1={assuranceBranchY2} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={assuranceBranchY2} />
                         </svg>
                         <ul className="assurance-col-list">
                           {column.items.map((item) => (

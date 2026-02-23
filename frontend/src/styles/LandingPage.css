@@ -489,10 +489,10 @@ body {
 }
 
 .assurance-col-body {
-  --assurance-stem-x: -2px;
+  --assurance-stem-x: -1px;
   --assurance-dock-indent: 28px;
-  --assurance-row-h: 30px;
-  --assurance-row-gap-top: 5px;
+  --assurance-row-h: 29px;
+  --assurance-row-gap-top: 4px;
   display: inline-grid;
   grid-template-columns: auto;
   justify-items: start;
@@ -506,8 +506,8 @@ body {
   font-size: clamp(1.24rem, 1rem + 0.5vw, 1.6rem);
   line-height: 1.28;
   letter-spacing: 0.032em;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--sys-text-1) 95%, var(--sys-text-2) 5%);
+  font-weight: 620;
+  color: color-mix(in srgb, var(--sys-text-1) 96%, var(--sys-text-2) 4%);
 }
 
 .assurance-col-title-text {
@@ -516,13 +516,13 @@ body {
 }
 
 .assurance-col-tree {
-  --tree-line-opacity: 0.62;
+  --tree-line-opacity: 0.66;
   --tree-stroke: 1.2px;
   --tree-branch-row-1: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 0.5));
   --tree-branch-row-2: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 1.5));
   --tree-trunk-y2: var(--tree-branch-row-2);
   position: relative;
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   padding-left: var(--assurance-stem-x);
   width: max-content;
 }
@@ -567,7 +567,7 @@ body {
   font-size: clamp(0.92rem, 1.12vw, 1.02rem);
   line-height: 1.28;
   font-weight: 420;
-  color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
+  color: color-mix(in srgb, var(--sys-text-1) 91%, var(--sys-text-2) 9%);
 }
 
 .assurance-col-item-dock {
