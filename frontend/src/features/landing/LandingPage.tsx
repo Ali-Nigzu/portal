@@ -50,17 +50,17 @@ const LandingPage: React.FC = () => {
             <div className="landing-hero-actions">
               <button
                 type="button"
-                className="btn btn-primary"
-                onClick={goToDemo}
-              >
-                {landingCopy.nav.actions.demo}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
+                className="btn landing-cta-btn landing-cta-create"
                 onClick={(e) => e.preventDefault()}
               >
                 {landingCopy.nav.actions.createAccount}
+              </button>
+              <button
+                type="button"
+                className="btn landing-cta-btn landing-cta-node-secondary"
+                onClick={goToDemo}
+              >
+                {landingCopy.nav.actions.demo}
               </button>
             </div>
 
@@ -156,11 +156,19 @@ const LandingPage: React.FC = () => {
               <div className="assurance-cta-row" data-testid="assurance-row-cta">
                 <button
                   type="button"
-                  className="btn btn-secondary landing-assurance-cta"
+                  className="btn landing-cta-btn landing-cta-create landing-assurance-cta"
                   data-testid="assurance-create-account-cta"
                   onClick={(e) => { e.preventDefault(); }}
                 >
                   CREATE ACCOUNT
+                </button>
+                <button
+                  type="button"
+                  className="btn landing-cta-btn landing-cta-node-secondary landing-assurance-cta"
+                  data-testid="assurance-contact-us-cta"
+                  onClick={(e) => { e.preventDefault(); }}
+                >
+                  CONTACT US
                 </button>
               </div>
             </section>

@@ -24,13 +24,24 @@ body {
   color: var(--sys-text-1);
 }
 
+
 .landing-page {
   min-height: 100vh;
   background:
     radial-gradient(120% 80% at 15% 0%, rgba(58, 94, 138, 0.2), transparent 62%),
     radial-gradient(110% 70% at 100% 8%, rgba(37, 67, 102, 0.2), transparent 65%),
     linear-gradient(180deg, var(--sys-bg-0) 0%, var(--sys-bg-1) 44%, var(--sys-bg-0) 100%);
+  --cta-create-bg: #2f6fbe;
+  --cta-create-bg-hover: #285fa4;
+  --cta-create-text: #f4f8ff;
+  --cta-secondary-bg: color-mix(in srgb, #152942 76%, var(--sys-bg-1) 24%);
+  --cta-secondary-bg-hover: color-mix(in srgb, #1a304b 74%, var(--sys-bg-1) 26%);
+  --cta-secondary-text: color-mix(in srgb, var(--sys-text-1) 94%, #dbe8fb 6%);
+  --cta-radius: var(--sys-radius-sm);
+  --cta-height: 40px;
+  --cta-padding-x: 14px;
 }
+
 
 .landing-container {
   width: min(var(--landing-rail-max), calc(100% - 64px));
@@ -75,6 +86,36 @@ body {
 }
 
 .btn-sm { min-height: 33px; padding: 0 11px; font-size: 0.82rem; }
+
+.landing-cta-btn {
+  min-height: var(--cta-height);
+  padding: 0 var(--cta-padding-x);
+  border-radius: var(--cta-radius);
+}
+
+.landing-cta-create {
+  color: var(--cta-create-text);
+  background: var(--cta-create-bg);
+  border-color: color-mix(in srgb, var(--cta-create-bg) 86%, white 14%);
+}
+
+.landing-cta-create:hover:not(:disabled) {
+  background: var(--cta-create-bg-hover);
+  border-color: color-mix(in srgb, var(--cta-create-bg-hover) 82%, white 18%);
+}
+
+.landing-cta-node-secondary {
+  color: var(--cta-secondary-text);
+  border-color: color-mix(in srgb, var(--sys-line) 68%, #9fb9dc 18%);
+  background: var(--cta-secondary-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
+}
+
+.landing-cta-node-secondary:hover:not(:disabled) {
+  background: var(--cta-secondary-bg-hover);
+  border-color: color-mix(in srgb, var(--sys-line) 72%, #a8c0df 26%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(241, 247, 255, 0.12);
+}
 
 .btn-primary {
   color: #f6f9ff;
@@ -329,7 +370,7 @@ body {
   border: 0;
   outline: none;
   background: transparent;
-  color: color-mix(in srgb, var(--sys-text-1) 94%, var(--sys-text-2) 6%);
+  color: var(--cta-create-text);
   min-height: 33px;
   padding: 0;
   margin: 0;
@@ -359,19 +400,19 @@ body {
   pointer-events: none;
   z-index: -1;
   border-radius: 12px;
-  background: color-mix(in srgb, #152942 70%, var(--sys-bg-1) 30%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(229, 239, 252, 0.08);
+  background: var(--cta-create-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
 .landing-axis-right-action:hover {
-  color: color-mix(in srgb, var(--sys-text-1) 96%, #dbe8fb 4%);
+  color: var(--cta-create-text);
   text-decoration: none;
 }
 
 .landing-axis-right-action:hover::before {
-  background: color-mix(in srgb, #1a304b 68%, var(--sys-bg-1) 32%);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
+  background: var(--cta-create-bg-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(241, 247, 255, 0.12);
 }
 
 .landing-axis-right-action:focus-visible {
@@ -466,17 +507,17 @@ body {
 
 .assurance-col-tree {
   --tree-row-h: 32px;
-  --tree-header-gap: 9px;
+  --tree-header-gap: 7px;
   --tree-trunk-to-text: 26px;
   --tree-branch-gap: 10px;
-  --tree-line-opacity: 0.44;
-  --tree-stroke: 1px;
+  --tree-line-opacity: 0.52;
+  --tree-stroke: 1.2px;
   --tree-trunk-x: 32px;
   --tree-text-x: calc(var(--tree-trunk-x) + var(--tree-trunk-to-text));
   --tree-shift: 0px;
   position: relative;
   width: 220px;
-  margin: 18px auto 0;
+  margin: 14px auto 0;
   left: var(--tree-shift);
 }
 
@@ -553,14 +594,16 @@ body {
 .assurance-cta-row {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 12px;
   margin-top: 22px;
 }
 
 .landing-assurance-cta {
-  width: min(320px, 100%);
-  min-height: 46px;
-  font-size: clamp(1.02rem, 1.35vw, 1.2rem);
-  font-weight: 620;
+  width: min(240px, 100%);
+  min-height: var(--cta-height);
+  font-size: 0.89rem;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -732,7 +775,8 @@ body {
     grid-template-columns: 1fr;
     row-gap: 18px;
   }
-  .landing-assurance-cta { width: min(320px, 100%); }
+  .assurance-cta-row { flex-direction: column; align-items: stretch; }
+  .landing-assurance-cta { width: 100%; }
   .landing-signup { padding: 46px 0 42px; }
   .landing-form-grid { grid-template-columns: 1fr; }
   .landing-status-success { flex-direction: column; align-items: flex-start; }
