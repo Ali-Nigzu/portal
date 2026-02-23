@@ -455,51 +455,56 @@ body {
 }
 
 .assurance-col-title-text {
-  --tree-line: rgba(255, 255, 255, 0.42);
-  display: inline-block;
+  display: inline-flex;
   position: relative;
+}
+
+.assurance-col-title-first,
+.assurance-col-title-rest {
+  display: inline-block;
 }
 
 .assurance-col-tree {
-  --tree-trunk-x: 34px;
-  --tree-text-x: 56px;
-  --tree-branch-gap: 10px;
   --tree-row-h: 32px;
-  --tree-line: rgba(255, 255, 255, 0.42);
+  --tree-header-gap: 9px;
+  --tree-trunk-to-text: 26px;
+  --tree-branch-gap: 10px;
+  --tree-line-opacity: 0.44;
+  --tree-stroke: 1px;
+  --tree-trunk-x: 32px;
+  --tree-text-x: calc(var(--tree-trunk-x) + var(--tree-trunk-to-text));
+  --tree-shift: 0px;
   position: relative;
-  width: 210px;
+  width: 220px;
   margin: 18px auto 0;
+  left: var(--tree-shift);
 }
 
-.assurance-col-tree::before {
-  content: "";
+.assurance-tree-svg {
   position: absolute;
-  left: var(--tree-trunk-x);
-  top: -10px;
-  width: 1px;
-  height: 10px;
-  background: var(--tree-line);
-  border-radius: 1px;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: calc(var(--tree-header-gap) + (var(--tree-row-h) * 2));
+  pointer-events: none;
+  overflow: visible;
+  z-index: 0;
+}
+
+.assurance-tree-line {
+  stroke: rgba(255, 255, 255, var(--tree-line-opacity));
+  stroke-width: var(--tree-stroke);
+  stroke-linecap: round;
 }
 
 .assurance-col-list {
   position: relative;
+  z-index: 1;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: var(--tree-header-gap) 0 0;
   display: grid;
   row-gap: 0;
-}
-
-.assurance-col-list::before {
-  content: "";
-  position: absolute;
-  left: var(--tree-trunk-x);
-  top: calc((var(--tree-row-h) / 2) - 1px);
-  height: calc(var(--tree-row-h) + 2px);
-  width: 1px;
-  background: var(--tree-line);
-  border-radius: 1px;
 }
 
 .assurance-col-item {
@@ -517,20 +522,20 @@ body {
   color: color-mix(in srgb, var(--sys-text-1) 88%, var(--sys-text-2) 12%);
 }
 
-.assurance-col-item::before {
-  content: "";
-  position: absolute;
-  left: var(--tree-trunk-x);
-  top: 50%;
-  width: calc(var(--tree-text-x) - var(--tree-trunk-x) - var(--tree-branch-gap));
-  height: 1px;
-  background: var(--tree-line);
-  border-radius: 1px;
-  transform: translateY(-50%);
-}
-
 .assurance-col-item + .assurance-col-item {
   margin-top: 0;
+}
+
+.landing-assurances .assurance-col[data-testid="assurance-col-privacy"] .assurance-col-tree {
+  --tree-shift: 34px;
+}
+
+.landing-assurances .assurance-col[data-testid="assurance-col-operation"] .assurance-col-tree {
+  --tree-shift: 16px;
+}
+
+.landing-assurances .assurance-col[data-testid="assurance-col-system"] .assurance-col-tree {
+  --tree-shift: 38px;
 }
 
 .landing-assurances .assurance-col[data-testid="assurance-col-privacy"] {

@@ -111,8 +111,13 @@ const LandingPage: React.FC = () => {
             <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-spec" aria-label="Operational assurances">
                 <div className="assurance-col" data-testid="assurance-col-privacy">
-                  <h3 className="assurance-col-title"><span className="assurance-col-title-text">PRIVACY</span></h3>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">P</span><span className="assurance-col-title-rest">RIVACY</span></span></h3>
                   <div className="assurance-col-tree">
+                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
+                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
+                    </svg>
                     <ul className="assurance-col-list">
                       <li className="assurance-col-item">No Personal Data</li>
                       <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
@@ -120,8 +125,13 @@ const LandingPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="assurance-col" data-testid="assurance-col-operation">
-                  <h3 className="assurance-col-title"><span className="assurance-col-title-text">OPERATION</span></h3>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">O</span><span className="assurance-col-title-rest">PERATION</span></span></h3>
                   <div className="assurance-col-tree">
+                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
+                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
+                    </svg>
                     <ul className="assurance-col-list">
                       <li className="assurance-col-item">Live Reporting</li>
                       <li className="assurance-col-item">99.9% Uptime</li>
@@ -129,8 +139,13 @@ const LandingPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="assurance-col" data-testid="assurance-col-system">
-                  <h3 className="assurance-col-title"><span className="assurance-col-title-text">SYSTEM</span></h3>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">S</span><span className="assurance-col-title-rest">YSTEM</span></span></h3>
                   <div className="assurance-col-tree">
+                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
+                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
+                    </svg>
                     <ul className="assurance-col-list">
                       <li className="assurance-col-item">Plug &amp; Play</li>
                       <li className="assurance-col-item">&lt;1% Error</li>
