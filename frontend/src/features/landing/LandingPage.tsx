@@ -50,17 +50,17 @@ const LandingPage: React.FC = () => {
             <div className="landing-hero-actions">
               <button
                 type="button"
-                className="btn btn-primary"
-                onClick={goToDemo}
-              >
-                {landingCopy.nav.actions.demo}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
+                className="btn landing-cta-btn landing-cta-create"
                 onClick={(e) => e.preventDefault()}
               >
                 {landingCopy.nav.actions.createAccount}
+              </button>
+              <button
+                type="button"
+                className="btn landing-cta-btn landing-cta-node-secondary"
+                onClick={goToDemo}
+              >
+                {landingCopy.nav.actions.demo}
               </button>
             </div>
 
@@ -111,35 +111,64 @@ const LandingPage: React.FC = () => {
             <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-spec" aria-label="Operational assurances">
                 <div className="assurance-col" data-testid="assurance-col-privacy">
-                  <h3 className="assurance-col-title">PRIVACY</h3>
-                  <ul className="assurance-col-list">
-                    <li className="assurance-col-item">No Personal Data</li>
-                    <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
-                  </ul>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">P</span><span className="assurance-col-title-rest">RIVACY</span></span></h3>
+                  <div className="assurance-col-tree">
+                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
+                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
+                    </svg>
+                    <ul className="assurance-col-list">
+                      <li className="assurance-col-item">No Personal Data</li>
+                      <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
+                    </ul>
+                  </div>
                 </div>
                 <div className="assurance-col" data-testid="assurance-col-operation">
-                  <h3 className="assurance-col-title">OPERATION</h3>
-                  <ul className="assurance-col-list">
-                    <li className="assurance-col-item">Live Reporting</li>
-                    <li className="assurance-col-item">99.9% Uptime</li>
-                  </ul>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">O</span><span className="assurance-col-title-rest">PERATION</span></span></h3>
+                  <div className="assurance-col-tree">
+                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
+                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
+                    </svg>
+                    <ul className="assurance-col-list">
+                      <li className="assurance-col-item">Live Reporting</li>
+                      <li className="assurance-col-item">99.9% Uptime</li>
+                    </ul>
+                  </div>
                 </div>
                 <div className="assurance-col" data-testid="assurance-col-system">
-                  <h3 className="assurance-col-title">SYSTEM</h3>
-                  <ul className="assurance-col-list">
-                    <li className="assurance-col-item">Plug &amp; Play</li>
-                    <li className="assurance-col-item">&lt;1% Error</li>
-                  </ul>
+                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">S</span><span className="assurance-col-title-rest">YSTEM</span></span></h3>
+                  <div className="assurance-col-tree">
+                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
+                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
+                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
+                    </svg>
+                    <ul className="assurance-col-list">
+                      <li className="assurance-col-item">Plug &amp; Play</li>
+                      <li className="assurance-col-item">&lt;1% Error</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
               <div className="assurance-cta-row" data-testid="assurance-row-cta">
                 <button
                   type="button"
-                  className="btn btn-secondary landing-assurance-cta"
+                  className="btn landing-cta-btn landing-cta-create landing-assurance-cta"
                   data-testid="assurance-create-account-cta"
                   onClick={(e) => { e.preventDefault(); }}
                 >
                   CREATE ACCOUNT
+                </button>
+                <button
+                  type="button"
+                  className="btn landing-cta-btn landing-cta-node-secondary landing-assurance-cta"
+                  data-testid="assurance-contact-us-cta"
+                  onClick={(e) => { e.preventDefault(); }}
+                >
+                  CONTACT US
                 </button>
               </div>
             </section>
