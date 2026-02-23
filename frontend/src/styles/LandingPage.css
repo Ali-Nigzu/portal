@@ -489,7 +489,7 @@ body {
 }
 
 .assurance-col-body {
-  --assurance-stem-x: 0px;
+  --assurance-stem-x: -2px;
   --assurance-dock-indent: 28px;
   --assurance-row-h: 30px;
   --assurance-row-gap-top: 5px;
@@ -522,7 +522,7 @@ body {
   --tree-branch-row-2: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 1.5));
   --tree-trunk-y2: var(--tree-branch-row-2);
   position: relative;
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   padding-left: var(--assurance-stem-x);
   width: max-content;
 }

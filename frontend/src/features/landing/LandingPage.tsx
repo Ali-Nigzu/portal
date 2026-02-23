@@ -47,7 +47,7 @@ const LandingPage: React.FC = () => {
   ] as const;
   const assuranceTree = {
     trunkX: 0,
-    trunkY1: 0,
+    trunkY1: 2,
     rowHeight: 30,
     rowOffset: 5,
     dockX: 28,
