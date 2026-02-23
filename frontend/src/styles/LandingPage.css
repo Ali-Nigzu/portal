@@ -515,6 +515,10 @@ body {
   position: relative;
 }
 
+.assurance-col-title-first-letter {
+  display: inline-block;
+}
+
 .assurance-col-tree {
   --tree-line-opacity: 0.66;
   --tree-stroke: 1.2px;
@@ -522,7 +526,7 @@ body {
   --tree-branch-row-2: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 1.5));
   --tree-trunk-y2: var(--tree-branch-row-2);
   position: relative;
-  margin: 3px 0 0;
+  margin: 1px 0 0;
   padding-left: var(--assurance-stem-x);
   width: max-content;
 }
