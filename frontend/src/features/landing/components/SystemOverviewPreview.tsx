@@ -114,17 +114,16 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     exits: null,
     footfall: null,
   });
-  const topEdgeRefs = useRef<Record<TopTileId, HTMLSpanElement | null>>({
+  const topDockRefs = useRef<Record<TopTileId, HTMLDivElement | null>>({
     entrances: null,
     occupancy: null,
     exits: null,
     footfall: null,
   });
   const leftSlotRef = useRef<HTMLDivElement | null>(null);
-  const leftEdgeRef = useRef<HTMLSpanElement | null>(null);
-  const trafficStemAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const trafficDockRef = useRef<HTMLDivElement | null>(null);
   const dwellSlotRef = useRef<HTMLDivElement | null>(null);
-  const dwellEdgeRef = useRef<HTMLSpanElement | null>(null);
+  const dwellDockRef = useRef<HTMLDivElement | null>(null);
   const nodeAnchorRef = useRef<HTMLSpanElement | null>(null);
   const nodeShellRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -181,7 +180,6 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           !topClusterRef.current ||
           !bottomClusterRef.current ||
           !leftSlotRef.current ||
-          !trafficStemAnchorRef.current ||
           !dwellSlotRef.current ||
           !nodeShellRef.current ||
           !capacityTileRef.current
@@ -189,8 +187,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           return;
         }
 
-        const connectedTopEdges = CONNECTED_TOP_IDS.map((id) => topEdgeRefs.current[id]);
-        if (connectedTopEdges.some((edge) => !edge) || !leftEdgeRef.current || !dwellEdgeRef.current) {
+        const connectedTopDocks = CONNECTED_TOP_IDS.map((id) => topDockRefs.current[id]);
+        if (connectedTopDocks.some((dock) => !dock) || !dwellDockRef.current) {
           return;
         }
 
@@ -201,9 +199,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         const containerRect = containerRef.current.getBoundingClientRect();
         const nodeRect = nodeShellRef.current.getBoundingClientRect();
-        const topRects = connectedTopEdges.map((edge) => (edge as HTMLSpanElement).getBoundingClientRect());
+        const topRects = connectedTopDocks.map((dock) => (dock as HTMLDivElement).getBoundingClientRect());
         const topTileRects = topTileSlots.map((slot) => (slot as HTMLDivElement).getBoundingClientRect());
-        const trafficStemRect = trafficStemAnchorRef.current.getBoundingClientRect();
         const donutSectors = Array.from(leftSlotRef.current.querySelectorAll<SVGElement>("svg .recharts-sector"));
         const donutSectorRects = donutSectors.map((sector) => sector.getBoundingClientRect());
         const donutOuterTop = donutSectorRects.length > 0
@@ -230,7 +227,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const donutNorthSurfaceY = donutCenterY != null && donutRadius != null
           ? (donutCenterY - donutRadius)
           : null;
-        const dwellRect = dwellEdgeRef.current.getBoundingClientRect();
+        const dwellRect = dwellDockRef.current.getBoundingClientRect();
 
         const taps: Record<RouteId, number> = {
           entrances: topRects[0].left - containerRect.left + topRects[0].width / 2,
@@ -238,7 +235,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           exits: topRects[2].left - containerRect.left + topRects[2].width / 2,
           traffic: donutCenterX != null
             ? donutCenterX - containerRect.left
-            : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
+            : ((trafficDockRef.current?.getBoundingClientRect().left ?? 0) - containerRect.left + (trafficDockRef.current?.getBoundingClientRect().width ?? 0) / 2),
           dwell: dwellRect.left - containerRect.left + dwellRect.width / 2,
         };
 
@@ -280,19 +277,21 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           nodeCornerRadius: Math.max(0, Number.parseFloat(window.getComputedStyle(nodeShellRef.current).borderTopLeftRadius) || 0),
           taps,
           endpointsY: {
-            entrances: topRects[0].top - containerRect.top + topRects[0].height / 2,
-            occupancy: topRects[1].top - containerRect.top + topRects[1].height / 2,
-            exits: topRects[2].top - containerRect.top + topRects[2].height / 2,
-            traffic: trafficStemRect.top - containerRect.top + trafficStemRect.height / 2,
-            dwell: dwellRect.top - containerRect.top + dwellRect.height / 2,
+            entrances: topRects[0].bottom - containerRect.top,
+            occupancy: topRects[1].bottom - containerRect.top,
+            exits: topRects[2].bottom - containerRect.top,
+            traffic: donutNorthSurfaceY != null
+              ? donutNorthSurfaceY - containerRect.top
+              : ((trafficDockRef.current?.getBoundingClientRect().top ?? 0) - containerRect.top),
+            dwell: dwellRect.top - containerRect.top,
           },
           trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
           trafficSocketX: donutCenterX != null
             ? donutCenterX - containerRect.left
-            : trafficStemRect.left - containerRect.left + trafficStemRect.width / 2,
+            : ((trafficDockRef.current?.getBoundingClientRect().left ?? 0) - containerRect.left + (trafficDockRef.current?.getBoundingClientRect().width ?? 0) / 2),
           trafficSocketY: donutNorthSurfaceY != null
             ? donutNorthSurfaceY - containerRect.top
-            : trafficStemRect.top - containerRect.top,
+            : ((trafficDockRef.current?.getBoundingClientRect().top ?? 0) - containerRect.top),
         });
       });
     };
@@ -307,14 +306,14 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     if (nodeAnchorRef.current) observer.observe(nodeAnchorRef.current);
     TOP_TILES.forEach(({ key }) => {
       const slot = topSlotRefs.current[key];
-      const edge = topEdgeRefs.current[key];
+      const dock = topDockRefs.current[key];
       if (slot) observer.observe(slot);
-      if (edge) observer.observe(edge);
+      if (dock) observer.observe(dock);
     });
     if (leftSlotRef.current) observer.observe(leftSlotRef.current);
-    if (leftEdgeRef.current) observer.observe(leftEdgeRef.current);
+    if (trafficDockRef.current) observer.observe(trafficDockRef.current);
     if (dwellSlotRef.current) observer.observe(dwellSlotRef.current);
-    if (dwellEdgeRef.current) observer.observe(dwellEdgeRef.current);
+    if (dwellDockRef.current) observer.observe(dwellDockRef.current);
 
     const mutationObserver = new MutationObserver(() => scheduleMeasure());
     if (leftSlotRef.current) {
@@ -526,15 +525,19 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                     }}
                   >
                     <div className={styles.wireAnchorSlot}>
-                      {forceMockTopology
-                        ? renderMockTile(item.key, item.key === "occupancy" ? "67%" : "2,481")
-                        : <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
+                      <div
+                        className={styles.dockSurface}
+                        ref={(node) => {
+                          topDockRefs.current[item.key] = node;
+                        }}
+                      >
+                        {forceMockTopology
+                          ? renderMockTile(item.key, item.key === "occupancy" ? "67%" : "2,481")
+                          : <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
+                      </div>
                       <span
                         className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorBottom}`}
                         data-anchor-id={`top-${item.key}`}
-                        ref={(node) => {
-                          topEdgeRefs.current[item.key] = node;
-                        }}
                       />
                     </div>
                   </div>
@@ -561,11 +564,12 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                   <div className={styles.inlineNotice} data-testid="traffic-split-error">Traffic Split data unavailable.</div>
                 ) : (
                   <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
-                    <span className={styles.trafficStemAnchor} ref={trafficStemAnchorRef} aria-hidden="true" />
-                    {forceMockTopology
-                      ? renderMockTile("Traffic Split", "48 / 32 / 20")
-                      : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
-                    <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" ref={leftEdgeRef} />
+                    <div className={styles.dockSurface} ref={trafficDockRef}>
+                      {forceMockTopology
+                        ? renderMockTile("Traffic Split", "48 / 32 / 20")
+                        : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                    </div>
+                    <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" />
                   </div>
                 )}
               </article>
@@ -573,10 +577,12 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               <div className={`${styles.kpiSlot} ${styles.tileT5}`}>
                 {dwellWidget || forceMockTopology ? (
                   <div className={styles.wireAnchorSlot} ref={dwellSlotRef}>
-                    {forceMockTopology
-                      ? renderMockTile("Dwell Minutes", "18.2")
-                      : <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
-                    <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-dwell" ref={dwellEdgeRef} />
+                    <div className={styles.dockSurface} ref={dwellDockRef}>
+                      {forceMockTopology
+                        ? renderMockTile("Dwell Minutes", "18.2")
+                        : <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                    </div>
+                    <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-dwell" />
                   </div>
                 ) : hasError ? (
                   <div className={styles.inlineNotice}>Preview unavailable.</div>

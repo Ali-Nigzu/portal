@@ -150,6 +150,12 @@
   width: 100%;
 }
 
+
+.dockSurface {
+  position: relative;
+  width: 100%;
+}
+
 .preview :global(.dashboard-v2__kpi-tile),
 .preview :global(.dashboard-v2__kpi-content),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-tile),
@@ -465,14 +471,6 @@
 }
 
 
-.trafficStemAnchor {
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  width: 2px;
-  height: 2px;
-  transform: translateX(-50%);
-}
 
 .trafficTile :global(.traffic-distribution__title) {
   font-size: 0.86rem;
