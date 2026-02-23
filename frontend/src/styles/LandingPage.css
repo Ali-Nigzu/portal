@@ -467,7 +467,7 @@ body {
 .landing-assurances {
   width: 100%;
   margin: 0;
-  padding: 0 0 42px;
+  padding: 0 0 120px;
   overflow: visible;
   position: relative;
   z-index: 2;
@@ -602,7 +602,7 @@ body {
   align-items: center;
   gap: 12px;
   margin-top: 34px;
-  margin-bottom: 52px;
+  margin-bottom: 0;
 }
 
 .landing-assurance-cta {
