@@ -484,15 +484,25 @@ body {
 
 .assurance-col {
   position: relative;
-  display: grid;
-  grid-template-rows: auto auto;
-  justify-items: stretch;
+  display: flex;
+  justify-content: center;
+}
+
+.assurance-col-body {
+  --assurance-stem-x: 0px;
+  --assurance-dock-indent: 28px;
+  --assurance-row-h: 30px;
+  --assurance-row-gap-top: 5px;
+  display: inline-grid;
+  grid-template-columns: auto;
+  justify-items: start;
   align-items: start;
+  width: max-content;
 }
 
 .assurance-col-title {
   margin: 0;
-  text-align: center;
+  text-align: left;
   font-size: clamp(1.24rem, 1rem + 0.5vw, 1.6rem);
   line-height: 1.28;
   letter-spacing: 0.032em;
@@ -501,44 +511,36 @@ body {
 }
 
 .assurance-col-title-text {
-  display: inline-flex;
-  position: relative;
-}
-
-.assurance-col-title-first,
-.assurance-col-title-rest {
   display: inline-block;
+  position: relative;
 }
 
 .assurance-col-tree {
-  --tree-row-h: 30px;
-  --tree-header-gap: 5px;
-  --tree-trunk-to-text: 26px;
-  --tree-branch-gap: 10px;
-  --tree-line-opacity: 0.52;
+  --tree-line-opacity: 0.62;
   --tree-stroke: 1.2px;
-  --tree-trunk-x: 32px;
-  --tree-text-x: calc(var(--tree-trunk-x) + var(--tree-trunk-to-text));
-  --tree-shift: 0px;
+  --tree-branch-row-1: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 0.5));
+  --tree-branch-row-2: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 1.5));
+  --tree-trunk-y2: var(--tree-branch-row-2);
   position: relative;
-  width: 220px;
-  margin: 12px auto 0;
-  left: var(--tree-shift);
+  margin: 8px 0 0;
+  padding-left: var(--assurance-stem-x);
+  width: max-content;
 }
 
 .assurance-tree-svg {
   position: absolute;
   left: 0;
   top: 0;
-  width: 220px;
-  height: calc(var(--tree-header-gap) + (var(--tree-row-h) * 2));
+  width: var(--assurance-dock-indent);
+  height: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 2));
   pointer-events: none;
   overflow: visible;
   z-index: 0;
 }
 
 .assurance-tree-line {
-  stroke: rgba(255, 255, 255, var(--tree-line-opacity));
+  stroke: color-mix(in srgb, var(--sys-text-2) 68%, var(--sys-text-1) 32%);
+  opacity: var(--tree-line-opacity);
   stroke-width: var(--tree-stroke);
   stroke-linecap: round;
 }
@@ -548,7 +550,7 @@ body {
   z-index: 1;
   list-style: none;
   margin: 0;
-  padding: var(--tree-header-gap) 0 0;
+  padding: var(--assurance-row-gap-top) 0 0;
   display: grid;
   row-gap: 0;
 }
@@ -556,16 +558,26 @@ body {
 .assurance-col-item {
   position: relative;
   margin: 0;
-  min-height: var(--tree-row-h);
-  display: flex;
+  min-height: var(--assurance-row-h);
+  display: grid;
+  grid-template-columns: var(--assurance-dock-indent) auto;
   align-items: center;
   text-align: left;
   white-space: nowrap;
-  padding-left: var(--tree-text-x);
   font-size: clamp(0.92rem, 1.12vw, 1.02rem);
   line-height: 1.28;
   font-weight: 420;
-  color: color-mix(in srgb, var(--sys-text-1) 88%, var(--sys-text-2) 12%);
+  color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
+}
+
+.assurance-col-item-dock {
+  width: 1px;
+  height: 1px;
+  justify-self: start;
+}
+
+.assurance-col-item-text {
+  display: inline-block;
 }
 
 .assurance-col-item + .assurance-col-item {
