@@ -1,33 +1,33 @@
 .preview {
   --topo-gap-col: 18px;
   --kpi-col: 248px;
-  --topo-gap-row: 18px;
+  --topo-gap-row: 14px;
   --kpi-min: var(--kpi-col);
   --kpi-max: var(--kpi-col);
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
-  --mid-span: 236px;
-  --preview-alpha-content: 0.9;
+  --mid-span: 214px;
+  --preview-alpha-content: 0.94;
   --preview-accent-sat: 0.78;
   --preview-number-alpha: 0.9;
-  --preview-line-alpha: 0.54;
-  --preview-stroke-bus: 1.5px;
-  --preview-stroke-connector: 1.35px;
-  --preview-stroke-beam: 1.6px;
+  --preview-line-alpha: 0.6;
+  --preview-stroke-bus: 1.58px;
+  --preview-stroke-connector: 1.42px;
+  --preview-stroke-beam: 1.5px;
   --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, #9dc4ff 10%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 10%, transparent);
   --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #9dc4ff 18%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 18%, transparent);
   --preview-node-cta-stem: 22px;
-  --preview-capacity-gap: 6px;
-  --preview-top-row-lift: 48px;
-  --preview-bottom-row-lift: -38px;
+  --preview-capacity-gap: 4px;
+  --preview-top-row-lift: 52px;
+  --preview-bottom-row-lift: -32px;
   --preview-traffic-donut-scale: 0.84;
   --preview-surface-radius: 14px;
   --preview-surface-shadow: none;
   --preview-zone-tone: transparent;
   --preview-zone-feather-top: none;
   --preview-zone-feather-bottom: none;
-  --preview-veil-fill: rgba(9, 14, 24, 0.05);
-  --preview-gated-filter: blur(0.72px) saturate(0.65) contrast(0.97);
+  --preview-veil-fill: rgba(9, 14, 24, 0.038);
+  --preview-gated-filter: blur(0.64px) saturate(0.68) contrast(0.99);
   --preview-clear-cta-offset-y: 24px;
   --preview-z-gated: 10;
   --preview-z-veil: 20;
@@ -62,7 +62,7 @@
   display: grid;
   grid-template-rows: auto var(--mid-span) auto;
   row-gap: var(--topo-gap-row);
-  min-height: 420px;
+  min-height: 404px;
   padding: 0;
 }
 
@@ -146,6 +146,12 @@
 }
 
 .wireAnchorSlot {
+  position: relative;
+  width: 100%;
+}
+
+
+.dockSurface {
   position: relative;
   width: 100%;
 }
@@ -341,7 +347,7 @@
 .nodeLayer {
   position: absolute;
   inset: 0;
-  z-index: 24;
+  z-index: 12;
   pointer-events: none;
   transform: none;
 }
@@ -380,14 +386,14 @@
   display: grid;
   justify-items: center;
   align-content: center;
-  width: 136px;
-  min-height: 82px;
-  padding: 14px 14px 12px;
+  width: 140px;
+  min-height: 86px;
+  padding: 14px 14px 13px;
   border-radius: 15px;
   border: none;
   outline: none;
   background: color-mix(in srgb, #152942 76%, var(--sys-bg-1) 24%);
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.45), 0 0 28px rgba(110, 138, 176, 0.1), inset 0 1px 0 rgba(229, 239, 252, 0.1);
+  box-shadow: 0 13px 32px rgba(0, 0, 0, 0.42), 0 0 20px rgba(110, 138, 176, 0.08), inset 0 1px 0 rgba(229, 239, 252, 0.09);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
 }
@@ -405,12 +411,12 @@
 .node:hover,
 .node:focus-within {
   background: color-mix(in srgb, #1a304b 74%, var(--sys-bg-1) 26%);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.48), 0 0 30px rgba(110, 138, 176, 0.11), inset 0 1px 0 rgba(236, 244, 255, 0.12);
+  box-shadow: 0 15px 36px rgba(0, 0, 0, 0.45), 0 0 24px rgba(110, 138, 176, 0.09), inset 0 1px 0 rgba(236, 244, 255, 0.1);
 }
 
 .nodeTitle {
   display: block;
-  font-size: 16.8px;
+  font-size: 17px;
   line-height: 1.03;
   font-weight: 690;
   letter-spacing: 0.005em;
@@ -433,7 +439,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   line-height: 1.1;
-  margin-top: 5px;
+  margin-top: 6px;
   padding: 0;
   cursor: pointer;
   transition: color 140ms ease, opacity 140ms ease;
@@ -465,14 +471,6 @@
 }
 
 
-.trafficStemAnchor {
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  width: 2px;
-  height: 2px;
-  transform: translateX(-50%);
-}
 
 .trafficTile :global(.traffic-distribution__title) {
   font-size: 0.86rem;
@@ -548,7 +546,7 @@
   stroke-linejoin: round;
   stroke-dasharray: 14 86;
   filter: none;
-  opacity: 0.52;
+  opacity: 0.5;
 }
 
 .beamRoute {
@@ -576,13 +574,22 @@
     --kpi-col: 214px;
     --topo-gap-col: 14px;
     --topo-gap-row: 14px;
-    --mid-span: 230px;
-    --preview-top-row-lift: 42px;
-    --preview-bottom-row-lift: -34px;
+    --mid-span: 212px;
+    --preview-top-row-lift: 46px;
+    --preview-bottom-row-lift: -28px;
   }
 
   .canvas {
-    min-height: 420px;
+    min-height: 404px;
+  }
+}
+
+
+@media (max-width: 900px) {
+  .preview {
+    --kpi-col: 206px;
+    --topo-gap-col: 12px;
+    --mid-span: 206px;
   }
 }
 

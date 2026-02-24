@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LandingPage.css";
 import { landingCopy } from "./content";
@@ -28,6 +28,113 @@ const LandingPage: React.FC = () => {
   ];
 
   const romanAxisLabels = ["I", "II", "III"];
+  const assuranceColumns = [
+    {
+      id: "privacy",
+      title: "PRIVACY",
+      items: ["No Personal Data", "Anonymous & Aggregated"],
+    },
+    {
+      id: "operation",
+      title: "OPERATION",
+      items: ["Live Reporting", "99.9% Uptime"],
+    },
+    {
+      id: "system",
+      title: "SYSTEM",
+      items: ["Plug & Play", "<1% Error"],
+    },
+  ] as const;
+  const assuranceTree = {
+    trunkY1: 1,
+    rowHeight: 29,
+    rowOffset: 4,
+    textOpticalCenterY: 13,
+    dockX: 28,
+    dockGap: 4,
+  } as const;
+  const assuranceBranchY1 = assuranceTree.rowOffset + assuranceTree.textOpticalCenterY;
+  const assuranceBranchY2 = assuranceBranchY1 + assuranceTree.rowHeight;
+  const assuranceTrunkY2 = assuranceBranchY2;
+  const assuranceSvgHeight = assuranceTree.rowOffset + (assuranceTree.rowHeight * 2);
+  const [assuranceTrunkXById, setAssuranceTrunkXById] = useState<Record<string, number>>({});
+  const firstLetterRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const treeSvgRefs = useRef<Record<string, SVGSVGElement | null>>({});
+
+  useLayoutEffect(() => {
+    let frameId = 0;
+
+    const measureTrunkAnchors = () => {
+      setAssuranceTrunkXById((prev) => {
+        const next = { ...prev };
+        let changed = false;
+
+        assuranceColumns.forEach(({ id }) => {
+          const firstLetter = firstLetterRefs.current[id];
+          const treeSvg = treeSvgRefs.current[id];
+
+          if (!firstLetter || !treeSvg) {
+            return;
+          }
+
+          const firstLetterRect = firstLetter.getBoundingClientRect();
+          const treeSvgRect = treeSvg.getBoundingClientRect();
+          const viewBoxWidth = treeSvg.viewBox.baseVal.width || treeSvgRect.width;
+
+          if (!treeSvgRect.width || !viewBoxWidth) {
+            return;
+          }
+
+          const firstLetterCenterX = firstLetterRect.left + (firstLetterRect.width / 2);
+          const trunkX = (firstLetterCenterX - treeSvgRect.left) * (viewBoxWidth / treeSvgRect.width);
+          const normalizedTrunkX = Number(trunkX.toFixed(3));
+
+          if (next[id] !== normalizedTrunkX) {
+            next[id] = normalizedTrunkX;
+            changed = true;
+          }
+        });
+
+        return changed ? next : prev;
+      });
+    };
+
+    const scheduleMeasure = () => {
+      cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(measureTrunkAnchors);
+    };
+
+    scheduleMeasure();
+    window.addEventListener("resize", scheduleMeasure);
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(scheduleMeasure).catch(() => undefined);
+    }
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(scheduleMeasure)
+      : null;
+
+    assuranceColumns.forEach(({ id }) => {
+      const firstLetter = firstLetterRefs.current[id];
+      const treeSvg = treeSvgRefs.current[id];
+
+      if (firstLetter && resizeObserver) {
+        resizeObserver.observe(firstLetter);
+      }
+
+      if (treeSvg && resizeObserver) {
+        resizeObserver.observe(treeSvg);
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", scheduleMeasure);
+      resizeObserver?.disconnect();
+    };
+  }, []);
+
   return (
     <div className="landing-page">
       <LandingHeader
@@ -110,48 +217,59 @@ const LandingPage: React.FC = () => {
 
             <section className="landing-assurances" aria-label="Assurances">
               <div className="landing-assurance-spec" aria-label="Operational assurances">
-                <div className="assurance-col" data-testid="assurance-col-privacy">
-                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">P</span><span className="assurance-col-title-rest">RIVACY</span></span></h3>
-                  <div className="assurance-col-tree">
-                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
-                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
-                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
-                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
-                    </svg>
-                    <ul className="assurance-col-list">
-                      <li className="assurance-col-item">No Personal Data</li>
-                      <li className="assurance-col-item">Anonymous &amp; Aggregated</li>
-                    </ul>
+                {assuranceColumns.map((column) => (
+                  <div className="assurance-col" data-testid={`assurance-col-${column.id}`} key={column.id}>
+                    <div className="assurance-col-body">
+                      {(() => {
+                        const firstLetter = column.title.slice(0, 1);
+                        const remainder = column.title.slice(1);
+                        const trunkX = assuranceTrunkXById[column.id] ?? 0;
+
+                        return (
+                          <>
+                      <h3 className="assurance-col-title">
+                        <span className="assurance-col-title-text">
+                          <span
+                            className="assurance-col-title-first-letter"
+                            ref={(node) => {
+                              firstLetterRefs.current[column.id] = node;
+                            }}
+                          >
+                            {firstLetter}
+                          </span>
+                          <span>{remainder}</span>
+                        </span>
+                      </h3>
+                      <div className="assurance-col-tree">
+                        <svg
+                          className="assurance-tree-svg"
+                          aria-hidden="true"
+                          focusable="false"
+                          viewBox={`0 0 ${assuranceTree.dockX} ${assuranceSvgHeight}`}
+                          preserveAspectRatio="none"
+                          ref={(node) => {
+                            treeSvgRefs.current[column.id] = node;
+                          }}
+                        >
+                          <line className="assurance-tree-line assurance-tree-line--trunk" x1={trunkX} y1={assuranceTree.trunkY1} x2={trunkX} y2={assuranceTrunkY2} />
+                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={assuranceBranchY1} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={assuranceBranchY1} />
+                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={assuranceBranchY2} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={assuranceBranchY2} />
+                        </svg>
+                        <ul className="assurance-col-list">
+                          {column.items.map((item) => (
+                            <li className="assurance-col-item" key={item}>
+                              <span className="assurance-col-item-dock" aria-hidden="true" />
+                              <span className="assurance-col-item-text">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
-                </div>
-                <div className="assurance-col" data-testid="assurance-col-operation">
-                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">O</span><span className="assurance-col-title-rest">PERATION</span></span></h3>
-                  <div className="assurance-col-tree">
-                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
-                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
-                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
-                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
-                    </svg>
-                    <ul className="assurance-col-list">
-                      <li className="assurance-col-item">Live Reporting</li>
-                      <li className="assurance-col-item">99.9% Uptime</li>
-                    </ul>
-                  </div>
-                </div>
-                <div className="assurance-col" data-testid="assurance-col-system">
-                  <h3 className="assurance-col-title"><span className="assurance-col-title-text"><span className="assurance-col-title-first">S</span><span className="assurance-col-title-rest">YSTEM</span></span></h3>
-                  <div className="assurance-col-tree">
-                    <svg className="assurance-tree-svg" aria-hidden="true" focusable="false" viewBox="0 0 220 73" preserveAspectRatio="none">
-                      <line className="assurance-tree-line assurance-tree-line--trunk" x1="32" y1="0" x2="32" y2="57" />
-                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="25" x2="46" y2="25" />
-                      <line className="assurance-tree-line assurance-tree-line--branch" x1="32" y1="57" x2="46" y2="57" />
-                    </svg>
-                    <ul className="assurance-col-list">
-                      <li className="assurance-col-item">Plug &amp; Play</li>
-                      <li className="assurance-col-item">&lt;1% Error</li>
-                    </ul>
-                  </div>
-                </div>
+                ))}
               </div>
               <div className="assurance-cta-row" data-testid="assurance-row-cta">
                 <button

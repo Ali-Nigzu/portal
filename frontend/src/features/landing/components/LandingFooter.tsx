@@ -9,11 +9,7 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
   <footer className="landing-footer">
     <div className="landing-container landing-footer-row">
       <div className="landing-footer-main">
-        <p>{landingCopy.footer.legalLine1}</p>
-        <p>{landingCopy.footer.legalLine2}</p>
-        <p className="landing-footer-contact">{landingCopy.footer.contactEmail}</p>
         <p className="landing-footer-links">
-          <span>Links: </span>
           <span className="landing-footer-static-link">{landingCopy.footer.links[0]}</span>
           <span aria-hidden="true"> · </span>
           <span className="landing-footer-static-link">{landingCopy.footer.links[1]}</span>
@@ -28,6 +24,8 @@ const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
             {landingCopy.footer.links[3]}
           </button>
         </p>
+        <p>{landingCopy.footer.legalLine1}</p>
+        <p>{landingCopy.footer.legalLine2}</p>
       </div>
 
       <div className="landing-footer-social" aria-label="Social links">
