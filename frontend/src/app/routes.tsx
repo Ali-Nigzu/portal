@@ -9,9 +9,9 @@ import {
 
 import VRMLayout from "../components/VRMLayout";
 import { isDemoSessionActive } from "../lib/demoSession";
-import { determineOrgId } from "../lib/org";
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
+import { fetchMe } from "../features/auth/transport/me";
 import { Credentials } from "../types/credentials";
 
 const DashboardPage = React.lazy(() => import("../pages/DashboardPage"));
@@ -22,6 +22,8 @@ const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
+const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"));
+const EmptyDashboardPage = React.lazy(() => import("../pages/EmptyDashboardPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 
 const AppRoutes: React.FC = () => {
@@ -41,32 +43,25 @@ const AppRoutes: React.FC = () => {
       setIsSessionChecked(true);
       return;
     }
-    const savedCredentials = sessionStorage.getItem("camOS_credentials");
-    if (savedCredentials) {
+
+    const checkSession = async () => {
       try {
-        const { username, password, orgId } = JSON.parse(savedCredentials);
-        const resolvedOrgId = orgId ?? determineOrgId({ username });
-        setCredentials({ username, password, orgId: resolvedOrgId });
-        setUserRole(username === "admin" ? "admin" : "client");
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.error("Failed to restore session:", error);
-        sessionStorage.removeItem("camOS_credentials");
+        const me = await fetchMe();
+        setIsLoggedIn(me.ok);
+      } catch {
+        setIsLoggedIn(false);
+      } finally {
+        setIsSessionChecked(true);
       }
-    }
-    setIsSessionChecked(true);
+    };
+
+    checkSession();
   }, [hasViewToken]);
 
-  const handleLogin = (nextCreds: Credentials) => {
-    const resolvedOrgId =
-      nextCreds.orgId ?? determineOrgId({ username: nextCreds.username });
-    setCredentials({ ...nextCreds, orgId: resolvedOrgId });
-    setUserRole(nextCreds.username === "admin" ? "admin" : "client");
+  const handleLogin = () => {
     setIsLoggedIn(true);
-    sessionStorage.setItem(
-      "camOS_credentials",
-      JSON.stringify({ ...nextCreds, orgId: resolvedOrgId }),
-    );
+    setCredentials({ username: "", password: "" });
+    setUserRole("client");
   };
 
   const resolvedRole = hasViewToken ? "client" : userRole;
@@ -146,45 +141,35 @@ const AppRoutes: React.FC = () => {
           !isLoggedIn && !hasViewToken && !isDemoSession ? (
             lazyRoute(<LandingPage />)
           ) : (
-            <Navigate
-              to={(() => {
-                if (hasViewToken) {
-                  return appendViewToken("/sites/all/dashboard");
-                }
-                if (isDemoSession) {
-                  return "/sites/all/dashboard";
-                }
-                return appendViewToken(
-                  `/sites/${getDefaultSiteId()}/dashboard`,
-                );
-              })()}
-              replace
-            />
+            <Navigate to="/dashboard" replace />
           )
         }
       />
       <Route path="/demo" element={lazyRoute(<DemoPage />)} />
+      <Route
+        path="/create-account"
+        element={
+          !isLoggedIn && !hasViewToken && !isDemoSession ? (
+            lazyRoute(<CreateAccountPage />)
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
       <Route
         path="/login"
         element={
           !isLoggedIn && !hasViewToken && !isDemoSession ? (
             lazyRoute(<LoginPage onLogin={handleLogin} />)
           ) : (
-            <Navigate
-              to={(() => {
-                if (hasViewToken) {
-                  return appendViewToken("/sites/all/dashboard");
-                }
-                if (isDemoSession) {
-                  return "/sites/all/dashboard";
-                }
-                return appendViewToken(
-                  `/sites/${getDefaultSiteId()}/dashboard`,
-                );
-              })()}
-              replace
-            />
+            <Navigate to="/dashboard" replace />
           )
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          shouldAllowAppRoutes ? lazyRoute(<EmptyDashboardPage />) : <Navigate to="/login" replace />
         }
       />
       {shouldAllowAppRoutes && (
@@ -251,61 +236,6 @@ const AppRoutes: React.FC = () => {
               lazyRoute(<ReportsPage credentials={credentials} />),
             )}
           />
-          <Route
-            path="/dashboard"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/dashboard`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/event-logs"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/event-logs`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/alarm-logs"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/alarm-logs`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/device-list"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/device-list`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/reports"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/reports`,
-                )}
-                replace
-              />
-            }
-          />
           {userRole === "admin" && (
             <Route
               path="/admin"
@@ -324,20 +254,7 @@ const AppRoutes: React.FC = () => {
           !isLoggedIn && !hasViewToken && !isDemoSession ? (
             <Navigate to="/" replace />
           ) : (
-            <Navigate
-              to={(() => {
-                if (hasViewToken) {
-                  return appendViewToken("/sites/all/dashboard");
-                }
-                if (isDemoSession) {
-                  return "/sites/all/dashboard";
-                }
-                return appendViewToken(
-                  `/sites/${getDefaultSiteId()}/dashboard`,
-                );
-              })()}
-              replace
-            />
+            <Navigate to="/dashboard" replace />
           )
         }
       />

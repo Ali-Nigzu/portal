@@ -1,20 +1,19 @@
 import React from "react";
 
 import { companyLogoDataUri } from "../../assets/companyLogo";
-import { Credentials } from "../../types/credentials";
 import { useLoginForm } from "./hooks/useLoginForm";
 
 interface LoginPageProps {
-  onLogin: (credentials: Credentials) => void;
+  onLogin: () => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const {
-    username,
+    email,
     password,
     error,
     loading,
-    setUsername,
+    setEmail,
     setPassword,
     handleSubmit,
   } = useLoginForm(onLogin);
@@ -33,21 +32,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <h2 id="camOS-login-title" className="vrm-auth-title">
             camOS
           </h2>
-          <p className="vrm-auth-subtitle">Sign in to monitor your sites</p>
+          <p className="vrm-auth-subtitle">Sign in</p>
         </div>
         <form onSubmit={handleSubmit} className="vrm-auth-form">
           <div className="vrm-field">
-            <label className="vrm-label" htmlFor="login-username">
-              Username
+            <label className="vrm-label" htmlFor="login-email">
+              Email
             </label>
             <input
-              id="login-username"
+              id="login-email"
               className="vrm-input"
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Enter username"
-              autoComplete="username"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Enter email"
+              autoComplete="email"
               required
             />
           </div>
@@ -86,13 +85,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </button>
           </div>
         </form>
-        <div className="vrm-auth-hint">
-          <strong>Demo credentials</strong>
-          <br />
-          Client: client1 / client123
-          <br />
-          Admin: admin / admin123
-        </div>
       </div>
     </div>
   );

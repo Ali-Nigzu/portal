@@ -5,19 +5,60 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 
-from backend.app.auth import verify_password
-from backend.app.data.json_store import load_users, save_users
-from backend.app.models import LoginRequest, LoginResponse, RegisterInterestRequest, RegisterInterestResponse
+from backend.app.auth import (
+    clear_auth_cookie,
+    create_session_token,
+    get_session_user,
+    hash_session_token,
+    set_auth_cookie,
+    verify_password,
+)
+from backend.app.data.json_store import (
+    create_account_user,
+    find_user_by_email,
+    load_users,
+    normalize_email,
+    save_users,
+)
+from backend.app.models import (
+    AuthUser,
+    AuthUserResponse,
+    CreateAccountRequest,
+    EmailLoginRequest,
+    LoginRequest,
+    LoginResponse,
+    RegisterInterestRequest,
+    RegisterInterestResponse,
+)
 from backend.app.services.auth_context import org_id_for_user_record
 from backend.app.config import INTEREST_SUBMISSIONS_FILE
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+PHONE_RE = re.compile(r"^\+[1-9]\d{6,14}$")
+
+
+def _validate_email(email: str) -> str:
+    normalized = normalize_email(email)
+    if not EMAIL_RE.match(normalized):
+        raise HTTPException(status_code=422, detail="Enter a valid email address")
+    return normalized
+
+
+def _safe_auth_user(user_data: dict) -> AuthUser:
+    return AuthUser(
+        id=user_data["id"],
+        name=user_data["name"],
+        email=user_data["email"],
+        phone=user_data.get("phone"),
+    )
 
 
 @router.post("/api/register-interest", response_model=RegisterInterestResponse)
@@ -60,23 +101,70 @@ async def register_interest(submission: RegisterInterestRequest):
         raise HTTPException(status_code=500, detail="Unable to process submission") from exc
 
 
-@router.post("/api/login", response_model=LoginResponse)
-async def login(login_request: LoginRequest):
+@router.post("/api/create-account", response_model=AuthUserResponse, status_code=201)
+async def create_account(payload: CreateAccountRequest, response: Response):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Enter your name")
+
+    email = _validate_email(payload.email)
+
+    phone = payload.phone.strip() if payload.phone else None
+    if phone and not PHONE_RE.match(phone):
+        raise HTTPException(status_code=422, detail="Enter a valid phone number")
+
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+
+    users = load_users()
+    existing_username, _ = find_user_by_email(users, email)
+    if existing_username:
+        raise HTTPException(status_code=409, detail="Email already in use")
+
+    username, user_data = create_account_user(users, name, email, phone, payload.password)
+    session_token = create_session_token()
+    user_data["session_token_hash"] = hash_session_token(session_token)
+    user_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    users[username] = user_data
+    save_users(users)
+    set_auth_cookie(response, session_token)
+    return AuthUserResponse(user=_safe_auth_user(user_data))
+
+
+@router.post("/api/login")
+async def login(login_request: LoginRequest | EmailLoginRequest, response: Response):
     """Authentication endpoint for user login."""
     try:
         users = load_users()
-        username = login_request.username
-        password = login_request.password
 
-        if username not in users:
+        if hasattr(login_request, "email"):
+            email = _validate_email(login_request.email)
+            username, user_data = find_user_by_email(users, email)
+            password = login_request.password
+            if not username or not user_data:
+                raise HTTPException(status_code=401, detail="Invalid email or password")
+        else:
+            username = login_request.username
+            password = login_request.password
+            user_data = users.get(username)
+            if not user_data:
+                raise HTTPException(status_code=401, detail="Invalid username or password")
+
+        stored_hash = user_data.get("password_hash") or user_data.get("password", "")
+        if not verify_password(password, stored_hash):
+            if hasattr(login_request, "email"):
+                raise HTTPException(status_code=401, detail="Invalid email or password")
             raise HTTPException(status_code=401, detail="Invalid username or password")
 
-        user_data = users[username]
-        if not verify_password(password, user_data["password"]):
-            raise HTTPException(status_code=401, detail="Invalid username or password")
-
-        users[username]["last_login"] = datetime.now().isoformat()
+        users[username]["last_login"] = datetime.now(timezone.utc).isoformat()
+        session_token = create_session_token()
+        users[username]["session_token_hash"] = hash_session_token(session_token)
+        users[username]["updated_at"] = datetime.now(timezone.utc).isoformat()
         save_users(users)
+        set_auth_cookie(response, session_token)
+
+        if hasattr(login_request, "email"):
+            return AuthUserResponse(user=_safe_auth_user(users[username]))
 
         org_id = org_id_for_user_record(username, user_data)
         safe_user = {
@@ -94,3 +182,14 @@ async def login(login_request: LoginRequest):
     except Exception as exc:
         logger.error("Login error: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.get("/api/me", response_model=AuthUserResponse)
+async def me(session_user: tuple[str, dict] = Depends(get_session_user)):
+    _, user_data = session_user
+    return AuthUserResponse(user=_safe_auth_user(user_data))
+
+
+@router.post("/api/logout", status_code=204)
+async def logout(response: Response):
+    clear_auth_cookie(response)

@@ -17,6 +17,10 @@ const LandingPage: React.FC = () => {
     navigate("/login");
   };
 
+  const goToCreateAccount = () => {
+    navigate("/create-account");
+  };
+
   const capabilityAxisItems = landingCopy.capabilities.items
     .filter((item) => item !== "Dwell time")
     .slice(0, 3);
@@ -158,7 +162,7 @@ const LandingPage: React.FC = () => {
               <button
                 type="button"
                 className="btn landing-cta-btn landing-cta-create"
-                onClick={(e) => e.preventDefault()}
+                onClick={goToCreateAccount}
               >
                 {landingCopy.nav.actions.createAccount}
               </button>
@@ -186,7 +190,7 @@ const LandingPage: React.FC = () => {
                         <button
                           type="button"
                           className="landing-axis-right-action"
-                          onClick={(e) => e.preventDefault()}
+                          onClick={goToCreateAccount}
                         >
                           <span className="landing-axis-right-action-label">{deploymentAxisItems[index]}</span>
                         </button>
@@ -276,7 +280,7 @@ const LandingPage: React.FC = () => {
                   type="button"
                   className="btn landing-cta-btn landing-cta-create landing-assurance-cta"
                   data-testid="assurance-create-account-cta"
-                  onClick={(e) => { e.preventDefault(); }}
+                  onClick={goToCreateAccount}
                 >
                   CREATE ACCOUNT
                 </button>
