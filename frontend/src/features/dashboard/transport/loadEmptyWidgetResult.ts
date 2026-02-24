@@ -1,4 +1,4 @@
-import type { ChartResult, DataPoint, SeriesSummary } from '../../../analytics/schemas/charting';
+import type { ChartResult, ChartSeries, DataPoint, SeriesSummary } from '../../../analytics/schemas/charting';
 import type { DashboardWidget } from '../types';
 import type { LoadWidgetOptions } from './loadWidgetResult';
 import { loadWidgetResult } from './loadWidgetResult';
@@ -20,6 +20,17 @@ const zeroPoint = (point: DataPoint): DataPoint => ({
   target: point.target == null ? point.target : 0,
   rawCount: point.rawCount == null ? point.rawCount : 0,
 });
+
+
+const buildKpiFallbackSeries = (): ChartSeries[] => [{
+  id: 'value',
+  geometry: 'line',
+  data: Array.from({ length: 24 }, (_, idx) => ({
+    x: String(idx),
+    y: 0,
+    value: 0,
+  })),
+}];
 
 const toEmptyResult = (result: ChartResult): ChartResult => {
   const nextSeries = result.series.map((series) => {
@@ -43,6 +54,10 @@ const toEmptyResult = (result: ChartResult): ChartResult => {
     };
   });
 
+  const normalizedSeries = result.chartType === 'single_value' && nextSeries.length === 0
+    ? buildKpiFallbackSeries()
+    : nextSeries;
+
   const summary = result.meta.summary ?? {};
   const nextSummary: Record<string, number | string | null> = {};
   Object.entries(summary).forEach(([key, value]) => {
@@ -51,7 +66,7 @@ const toEmptyResult = (result: ChartResult): ChartResult => {
 
   return {
     ...result,
-    series: nextSeries,
+    series: normalizedSeries,
     meta: {
       ...result.meta,
       summary: nextSummary,

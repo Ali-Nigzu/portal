@@ -251,7 +251,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
-  const showLogout = isAuthenticated && !isDemoSession && !hasViewToken;
+  const showLogout = isAuthenticated;
   const handleLogoutClick = async () => {
     await logout();
     onLogout?.();
@@ -646,6 +646,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               className="vrm-nav-row--placeholder"
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
             />
+            {showLogout && (
+              <NavRow
+                onClick={handleLogoutClick}
+                leftIcon={<NavIcon icon={LogOut} />}
+                label="Logout"
+                className="vrm-nav-row--interactive"
+                ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+              />
+            )}
           </NavList>
         </nav>
         <nav
@@ -763,18 +772,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   />
                 );
               })}
-              {showLogout && (
-                <>
-                  <SecondaryDivider />
-                  <NavRow
-                    onClick={handleLogoutClick}
-                    leftIcon={<NavIcon icon={LogOut} />}
-                    label="Logout"
-                    className="vrm-nav-row--interactive"
-                    ariaLabel={!isSecondaryExpanded ? "Logout" : undefined}
-                  />
-                </>
-              )}
             </NavList>
           )}
           {shouldShowAdminMenu && (
@@ -790,18 +787,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                 />
               ))}
-              {showLogout && (
-                <>
-                  <SecondaryDivider />
-                  <NavRow
-                    onClick={handleLogoutClick}
-                    leftIcon={<NavIcon icon={LogOut} />}
-                    label="Logout"
-                    className="vrm-nav-row--interactive"
-                    ariaLabel={!isSecondaryExpanded ? "Logout" : undefined}
-                  />
-                </>
-              )}
             </NavList>
           )}
         </nav>

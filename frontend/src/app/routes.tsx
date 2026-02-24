@@ -13,6 +13,7 @@ import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
 import { fetchMe } from "../features/auth/transport/me";
 import { Credentials } from "../types/credentials";
+import { loadEmptyWidgetResult } from "../features/dashboard/transport/loadEmptyWidgetResult";
 
 const DashboardPage = React.lazy(() => import("../pages/DashboardPage"));
 const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
@@ -23,7 +24,6 @@ const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
 const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"));
-const AuthDashboardPage = React.lazy(() => import("../pages/AuthDashboardPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 
 const AppRoutes: React.FC = () => {
@@ -72,9 +72,17 @@ const AppRoutes: React.FC = () => {
     setUserRole("client");
   };
 
-  const resolvedRole = hasViewToken ? "client" : userRole;
   const isDemoSession = isDemoSessionActive();
-  const shouldAllowAppRoutes = isLoggedIn || hasViewToken || isDemoSession;
+  const appMode: "public" | "authenticated" | "view_token" | "demo" = isLoggedIn
+    ? "authenticated"
+    : hasViewToken
+      ? "view_token"
+      : isDemoSession
+        ? "demo"
+        : "public";
+  const isAuthenticatedMode = appMode === "authenticated";
+  const resolvedRole = appMode === "view_token" ? "client" : userRole;
+  const shouldAllowAppRoutes = appMode !== "public";
   const appendParams = (
     path: string,
     params?: Record<string, string | undefined>,
@@ -128,7 +136,7 @@ const AppRoutes: React.FC = () => {
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
-    <VRMLayout userRole={resolvedRole} isAuthenticated={isLoggedIn && !hasViewToken && !isDemoSession} onLogout={handleLogout}>
+    <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout}>
       {userRole === "admin" && !hasViewToken ? (
         <Navigate to="/admin" replace />
       ) : (
@@ -146,9 +154,9 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/"
         element={
-          !isLoggedIn && !hasViewToken && !isDemoSession ? (
+          appMode === "public" ? (
             lazyRoute(<LandingPage />)
-          ) : hasViewToken || isDemoSession ? (
+          ) : appMode === "view_token" || appMode === "demo" ? (
             <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/dashboard" replace />
@@ -159,7 +167,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/create-account"
         element={
-          !isLoggedIn && !hasViewToken ? (
+          appMode === "public" ? (
             lazyRoute(<CreateAccountPage />)
           ) : (
             <Navigate to="/dashboard" replace />
@@ -169,7 +177,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/login"
         element={
-          !isLoggedIn && !hasViewToken ? (
+          appMode === "public" ? (
             lazyRoute(<LoginPage onLogin={handleLogin} />)
           ) : (
             <Navigate to="/dashboard" replace />
@@ -223,9 +231,14 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/sites/:siteId/dashboard"
             element={renderClientRoute(
-              isLoggedIn && !isDemoSession && !hasViewToken
-                ? lazyRoute(<AuthDashboardPage />)
-                : lazyRoute(<DashboardPage credentials={credentials} />),
+              lazyRoute(
+                <DashboardPage
+                  credentials={credentials}
+                  widgetResultLoader={
+                    isAuthenticatedMode ? loadEmptyWidgetResult : undefined
+                  }
+                />,
+              ),
             )}
           />
           <Route
@@ -256,7 +269,7 @@ const AppRoutes: React.FC = () => {
             <Route
               path="/admin"
               element={
-                <VRMLayout userRole={resolvedRole} isAuthenticated={isLoggedIn && !hasViewToken && !isDemoSession} onLogout={handleLogout}>
+                <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout}>
                   {lazyRoute(<AdminPage credentials={credentials} />)}
                 </VRMLayout>
               }
@@ -267,9 +280,9 @@ const AppRoutes: React.FC = () => {
       <Route
         path="*"
         element={
-          !isLoggedIn && !hasViewToken && !isDemoSession ? (
+          appMode === "public" ? (
             <Navigate to="/" replace />
-          ) : hasViewToken || isDemoSession ? (
+          ) : appMode === "view_token" || appMode === "demo" ? (
             <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/dashboard" replace />
