@@ -23,7 +23,7 @@ const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
 const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"));
-const EmptyDashboardPage = React.lazy(() => import("../pages/EmptyDashboardPage"));
+const AuthDashboardPage = React.lazy(() => import("../pages/AuthDashboardPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 
 const AppRoutes: React.FC = () => {
@@ -140,6 +140,8 @@ const AppRoutes: React.FC = () => {
         element={
           !isLoggedIn && !hasViewToken && !isDemoSession ? (
             lazyRoute(<LandingPage />)
+          ) : hasViewToken || isDemoSession ? (
+            <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/dashboard" replace />
           )
@@ -149,8 +151,8 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/create-account"
         element={
-          !isLoggedIn && !hasViewToken && !isDemoSession ? (
-            lazyRoute(<CreateAccountPage />)
+          !isLoggedIn && !hasViewToken ? (
+            lazyRoute(<CreateAccountPage onAuthenticated={handleLogin} />)
           ) : (
             <Navigate to="/dashboard" replace />
           )
@@ -159,7 +161,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/login"
         element={
-          !isLoggedIn && !hasViewToken && !isDemoSession ? (
+          !isLoggedIn && !hasViewToken ? (
             lazyRoute(<LoginPage onLogin={handleLogin} />)
           ) : (
             <Navigate to="/dashboard" replace />
@@ -169,7 +171,11 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/dashboard"
         element={
-          shouldAllowAppRoutes ? lazyRoute(<EmptyDashboardPage />) : <Navigate to="/login" replace />
+          shouldAllowAppRoutes ? (
+            <Navigate to={appendViewToken(`/sites/${resolveLegacySiteId()}/dashboard`)} replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
         }
       />
       {shouldAllowAppRoutes && (
@@ -209,7 +215,9 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/sites/:siteId/dashboard"
             element={renderClientRoute(
-              lazyRoute(<DashboardPage credentials={credentials} />),
+              isLoggedIn && !isDemoSession && !hasViewToken
+                ? lazyRoute(<AuthDashboardPage />)
+                : lazyRoute(<DashboardPage credentials={credentials} />),
             )}
           />
           <Route
@@ -253,6 +261,8 @@ const AppRoutes: React.FC = () => {
         element={
           !isLoggedIn && !hasViewToken && !isDemoSession ? (
             <Navigate to="/" replace />
+          ) : hasViewToken || isDemoSession ? (
+            <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/dashboard" replace />
           )

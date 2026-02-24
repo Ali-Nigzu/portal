@@ -47,8 +47,10 @@ PHONE_RE = re.compile(r"^\+[1-9]\d{6,14}$")
 
 def _validate_email(email: str) -> str:
     normalized = normalize_email(email)
+    if not normalized:
+        raise HTTPException(status_code=422, detail="This field is required")
     if not EMAIL_RE.match(normalized):
-        raise HTTPException(status_code=422, detail="Enter a valid email address")
+        raise HTTPException(status_code=422, detail="Not a valid email address")
     return normalized
 
 
@@ -105,14 +107,16 @@ async def register_interest(submission: RegisterInterestRequest):
 async def create_account(payload: CreateAccountRequest, response: Response):
     name = payload.name.strip()
     if not name:
-        raise HTTPException(status_code=422, detail="Enter your name")
+        raise HTTPException(status_code=422, detail="This field is required")
 
     email = _validate_email(payload.email)
 
     phone = payload.phone.strip() if payload.phone else None
     if phone and not PHONE_RE.match(phone):
-        raise HTTPException(status_code=422, detail="Enter a valid phone number")
+        raise HTTPException(status_code=422, detail="Not a valid phone number")
 
+    if not payload.password:
+        raise HTTPException(status_code=422, detail="This field is required")
     if len(payload.password) < 8:
         raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
 

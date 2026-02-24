@@ -11,9 +11,16 @@ const COUNTRY_CODES = [
   { label: 'India (+91)', value: '+91' },
 ];
 
-const CreateAccountPage: React.FC = () => {
+type CreateAccountPageProps = {
+  onAuthenticated?: () => void;
+};
+
+const CreateAccountPage: React.FC<CreateAccountPageProps> = ({ onAuthenticated }) => {
   const navigate = useNavigate();
-  const form = useCreateAccountForm(() => navigate('/dashboard'));
+  const form = useCreateAccountForm(() => {
+    onAuthenticated?.();
+    navigate('/dashboard');
+  });
 
   return (
     <div className="create-account-shell">
@@ -27,14 +34,14 @@ const CreateAccountPage: React.FC = () => {
           <form className="create-account-form" onSubmit={form.submit}>
             <div className="vrm-field">
               <label className="vrm-label" htmlFor="create-name">Name</label>
-              <input id="create-name" className="vrm-input" value={form.name} onChange={(e) => form.setName(e.target.value)} />
-              {form.fieldErrors.name && <div className="create-account-error">{form.fieldErrors.name}</div>}
+              <input id="create-name" className="vrm-input" value={form.name} onChange={(e) => form.setName(e.target.value)} onBlur={() => form.markTouched("name")} />
+              {form.visibleErrors.name && <div className="create-account-error">{form.visibleErrors.name}</div>}
             </div>
 
             <div className="vrm-field">
               <label className="vrm-label" htmlFor="create-email">Email</label>
-              <input id="create-email" type="email" className="vrm-input" value={form.email} onChange={(e) => form.setEmail(e.target.value)} />
-              {form.fieldErrors.email && <div className="create-account-error">{form.fieldErrors.email}</div>}
+              <input id="create-email" type="email" className="vrm-input" value={form.email} onChange={(e) => form.setEmail(e.target.value)} onBlur={() => form.markTouched("email")} />
+              {form.visibleErrors.email && <div className="create-account-error">{form.visibleErrors.email}</div>}
             </div>
 
             <div className="vrm-field">
@@ -45,21 +52,21 @@ const CreateAccountPage: React.FC = () => {
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                <input className="vrm-input" inputMode="tel" placeholder="Phone number" value={form.phoneLocal} onChange={(e) => form.setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))} />
+                <input className="vrm-input" inputMode="tel" placeholder="Phone number" value={form.phoneLocal} onChange={(e) => form.setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))} onBlur={() => form.markTouched("phone")} />
               </div>
-              {form.fieldErrors.phone && <div className="create-account-error">{form.fieldErrors.phone}</div>}
+              {form.visibleErrors.phone && <div className="create-account-error">{form.visibleErrors.phone}</div>}
             </div>
 
             <div className="vrm-field">
               <label className="vrm-label" htmlFor="create-password">Password</label>
-              <input id="create-password" type="password" className="vrm-input" value={form.password} onChange={(e) => form.setPassword(e.target.value)} />
-              {form.fieldErrors.password && <div className="create-account-error">{form.fieldErrors.password}</div>}
+              <input id="create-password" type="password" className="vrm-input" value={form.password} onChange={(e) => form.setPassword(e.target.value)} onBlur={() => form.markTouched("password")} />
+              {form.visibleErrors.password && <div className="create-account-error">{form.visibleErrors.password}</div>}
             </div>
 
             <div className="vrm-field">
               <label className="vrm-label" htmlFor="create-confirm-password">Confirm password</label>
-              <input id="create-confirm-password" type="password" className="vrm-input" value={form.confirmPassword} onChange={(e) => form.setConfirmPassword(e.target.value)} />
-              {form.fieldErrors.confirmPassword && <div className="create-account-error">{form.fieldErrors.confirmPassword}</div>}
+              <input id="create-confirm-password" type="password" className="vrm-input" value={form.confirmPassword} onChange={(e) => form.setConfirmPassword(e.target.value)} onBlur={() => form.markTouched("confirmPassword")} />
+              {form.visibleErrors.confirmPassword && <div className="create-account-error">{form.visibleErrors.confirmPassword}</div>}
             </div>
 
             <div className="create-account-actions">

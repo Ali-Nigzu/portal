@@ -4,6 +4,8 @@ import { createAccount } from '../transport/createAccount';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 
+type FieldName = 'name' | 'email' | 'phone' | 'password' | 'confirmPassword';
+
 export const useCreateAccountForm = (onSuccess: () => void) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -12,32 +14,72 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [touched, setTouched] = useState<Record<FieldName, boolean>>({
+    name: false,
+    email: false,
+    phone: false,
+    password: false,
+    confirmPassword: false,
+  });
 
   const phone = phoneLocal.trim() ? `${countryCode}${phoneLocal.trim().replace(/^0+/, '')}` : '';
 
   const validate = () => {
-    const errors: Record<string, string> = {};
-    if (!name.trim()) errors.name = 'Enter your name.';
+    const errors: Record<FieldName, string | undefined> = {
+      name: undefined,
+      email: undefined,
+      phone: undefined,
+      password: undefined,
+      confirmPassword: undefined,
+    };
+
+    if (!name.trim()) errors.name = 'This field is required';
+
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) errors.email = 'Enter your email address.';
-    else if (!EMAIL_RE.test(normalizedEmail)) errors.email = 'Enter a valid email address.';
-    if (phone && !PHONE_RE.test(phone)) errors.phone = 'Enter a valid phone number.';
-    if (password.length < 8) errors.password = 'Password must be at least 8 characters.';
-    if (confirmPassword !== password) errors.confirmPassword = 'Passwords do not match.';
+    if (!normalizedEmail) errors.email = 'This field is required';
+    else if (!EMAIL_RE.test(normalizedEmail)) errors.email = 'Not a valid email address';
+
+    if (phone && !PHONE_RE.test(phone)) errors.phone = 'Not a valid phone number';
+
+    if (!password) errors.password = 'This field is required';
+    else if (password.length < 8) errors.password = 'Password must be at least 8 characters';
+
+    if (!confirmPassword) errors.confirmPassword = 'This field is required';
+    else if (confirmPassword !== password) errors.confirmPassword = 'Passwords do not match';
+
     return errors;
   };
 
-  const errors = useMemo(() => validate(), [name, email, phone, password, confirmPassword]);
-  const canSubmit = Object.keys(errors).length === 0 && !submitting;
+  const errors = useMemo(
+    () => validate(),
+    [name, email, phone, password, confirmPassword],
+  );
+
+  const visibleErrors = useMemo(() => {
+    const output: Partial<Record<FieldName, string>> = {};
+    (Object.keys(errors) as FieldName[]).forEach((key) => {
+      if ((submitAttempted || touched[key]) && errors[key]) {
+        output[key] = errors[key];
+      }
+    });
+    return output;
+  }, [errors, submitAttempted, touched]);
+
+  const canSubmit = !Object.values(errors).some(Boolean) && !submitting;
+
+  const markTouched = (field: FieldName) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const nextErrors = validate();
-    setFieldErrors(nextErrors);
+    setSubmitAttempted(true);
+    setTouched({ name: true, email: true, phone: true, password: true, confirmPassword: true });
     setFormError(null);
-    if (Object.keys(nextErrors).length > 0) return;
+
+    if (Object.values(errors).some(Boolean)) return;
 
     setSubmitting(true);
     try {
@@ -69,8 +111,8 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
     password,
     confirmPassword,
     submitting,
-    fieldErrors,
     formError,
+    visibleErrors,
     canSubmit,
     setName,
     setEmail,
@@ -78,6 +120,7 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
     setPhoneLocal,
     setPassword,
     setConfirmPassword,
+    markTouched,
     submit,
   };
 };
