@@ -7,6 +7,9 @@ type AlarmUsersResponse = Record<string, AlarmUser>;
 export const fetchAlarmUsers = async (
   credentials: Credentials,
 ): Promise<AlarmUsersResponse> => {
+  if (!credentials.username || !credentials.password) {
+    return {};
+  }
   const auth = btoa(`${credentials.username}:${credentials.password}`);
   const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
     headers: {

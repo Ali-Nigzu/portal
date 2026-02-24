@@ -23,13 +23,22 @@ const zeroPoint = (point: DataPoint): DataPoint => ({
 
 const toEmptyResult = (result: ChartResult): ChartResult => {
   const nextSeries = result.series.map((series) => {
-    const nextData = result.chartType === 'single_value'
-      ? (series.data.length > 0 ? [zeroPoint(series.data[0])] : [{ x: '0', y: 0, value: 0 }])
-      : [];
+    const nextData = series.data.length > 0
+      ? series.data.map((point) => zeroPoint(point))
+      : [{ x: '0', y: 0, value: 0 }];
+
+    const expandedData = result.chartType === 'single_value' && nextData.length < 24
+      ? Array.from({ length: 24 }, (_, idx) => ({
+          ...nextData[0],
+          x: String(idx),
+          y: 0,
+          value: 0,
+        }))
+      : nextData;
 
     return {
       ...series,
-      data: nextData,
+      data: expandedData,
       summary: zeroSummary(series.summary),
     };
   });

@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 
 import VRMLayout from "../components/VRMLayout";
-import { isDemoSessionActive } from "../lib/demoSession";
+import { clearDemoSessionLocal, isDemoSessionActive } from "../lib/demoSession";
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
 import { fetchMe } from "../features/auth/transport/me";
@@ -59,7 +59,15 @@ const AppRoutes: React.FC = () => {
   }, [hasViewToken]);
 
   const handleLogin = () => {
+    clearDemoSessionLocal();
     setIsLoggedIn(true);
+    setCredentials({ username: "", password: "" });
+    setUserRole("client");
+  };
+
+  const handleLogout = () => {
+    clearDemoSessionLocal();
+    setIsLoggedIn(false);
     setCredentials({ username: "", password: "" });
     setUserRole("client");
   };
@@ -120,7 +128,7 @@ const AppRoutes: React.FC = () => {
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
-    <VRMLayout userRole={resolvedRole}>
+    <VRMLayout userRole={resolvedRole} isAuthenticated={isLoggedIn && !hasViewToken && !isDemoSession} onLogout={handleLogout}>
       {userRole === "admin" && !hasViewToken ? (
         <Navigate to="/admin" replace />
       ) : (
@@ -152,7 +160,7 @@ const AppRoutes: React.FC = () => {
         path="/create-account"
         element={
           !isLoggedIn && !hasViewToken ? (
-            lazyRoute(<CreateAccountPage onAuthenticated={handleLogin} />)
+            lazyRoute(<CreateAccountPage />)
           ) : (
             <Navigate to="/dashboard" replace />
           )
@@ -248,7 +256,7 @@ const AppRoutes: React.FC = () => {
             <Route
               path="/admin"
               element={
-                <VRMLayout userRole={resolvedRole}>
+                <VRMLayout userRole={resolvedRole} isAuthenticated={isLoggedIn && !hasViewToken && !isDemoSession} onLogout={handleLogout}>
                   {lazyRoute(<AdminPage credentials={credentials} />)}
                 </VRMLayout>
               }

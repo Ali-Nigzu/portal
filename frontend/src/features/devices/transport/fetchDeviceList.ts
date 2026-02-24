@@ -30,6 +30,9 @@ export const fetchDeviceList = async ({
   if (viewToken) {
     apiUrl += `?view_token=${encodeURIComponent(viewToken)}`;
   } else if (!isDemoSession) {
+    if (!credentials.username || !credentials.password) {
+      return { devices: [], data_sources: [] };
+    }
     const auth = btoa(`${credentials.username}:${credentials.password}`);
     headers.Authorization = `Basic ${auth}`;
     if (isAdmin && clientId) {

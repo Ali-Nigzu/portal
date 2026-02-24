@@ -11,15 +11,10 @@ const COUNTRY_CODES = [
   { label: 'India (+91)', value: '+91' },
 ];
 
-type CreateAccountPageProps = {
-  onAuthenticated?: () => void;
-};
-
-const CreateAccountPage: React.FC<CreateAccountPageProps> = ({ onAuthenticated }) => {
+const CreateAccountPage: React.FC = () => {
   const navigate = useNavigate();
   const form = useCreateAccountForm(() => {
-    onAuthenticated?.();
-    navigate('/dashboard');
+    navigate('/login');
   });
 
   return (

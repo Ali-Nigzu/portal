@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import { logout } from "../features/auth/transport/me";
 import {
   ArrowLeft,
   BarChart3,
@@ -17,6 +18,7 @@ import {
   Shield,
   TrendingUp,
   Upload,
+  LogOut,
 } from "lucide-react";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
@@ -39,10 +41,14 @@ import { NavIcon } from "../common/components/icons";
 
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
+  isAuthenticated?: boolean;
+  onLogout?: () => void;
   children?: React.ReactNode;
 }
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
+  isAuthenticated = false,
+  onLogout,
   children,
 }) => {
   // Sidebar state and refs
@@ -79,6 +85,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     [location.search],
   );
   const isEmbedMode = searchParams.get("embed") === "1";
+  const hasViewToken = searchParams.has("view_token");
   const isSelectorOpen = searchParams.get("panel") === "sites";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
@@ -244,6 +251,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
+  const showLogout = isAuthenticated && !isDemoSession && !hasViewToken;
+  const handleLogoutClick = async () => {
+    await logout();
+    onLogout?.();
+    navigate("/login", { replace: true });
+  };
   const focusZone = isSecondaryFocused
     ? "SECONDARY"
     : isPrimaryFocused
@@ -750,6 +763,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   />
                 );
               })}
+              {showLogout && (
+                <>
+                  <SecondaryDivider />
+                  <NavRow
+                    onClick={handleLogoutClick}
+                    leftIcon={<NavIcon icon={LogOut} />}
+                    label="Logout"
+                    className="vrm-nav-row--interactive"
+                    ariaLabel={!isSecondaryExpanded ? "Logout" : undefined}
+                  />
+                </>
+              )}
             </NavList>
           )}
           {shouldShowAdminMenu && (
@@ -765,6 +790,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                 />
               ))}
+              {showLogout && (
+                <>
+                  <SecondaryDivider />
+                  <NavRow
+                    onClick={handleLogoutClick}
+                    leftIcon={<NavIcon icon={LogOut} />}
+                    label="Logout"
+                    className="vrm-nav-row--interactive"
+                    ariaLabel={!isSecondaryExpanded ? "Logout" : undefined}
+                  />
+                </>
+              )}
             </NavList>
           )}
         </nav>

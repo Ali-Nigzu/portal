@@ -104,7 +104,7 @@ async def register_interest(submission: RegisterInterestRequest):
 
 
 @router.post("/api/create-account", response_model=AuthUserResponse, status_code=201)
-async def create_account(payload: CreateAccountRequest, response: Response):
+async def create_account(payload: CreateAccountRequest):
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="This field is required")
@@ -126,12 +126,9 @@ async def create_account(payload: CreateAccountRequest, response: Response):
         raise HTTPException(status_code=409, detail="Email already in use")
 
     username, user_data = create_account_user(users, name, email, phone, payload.password)
-    session_token = create_session_token()
-    user_data["session_token_hash"] = hash_session_token(session_token)
     user_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     users[username] = user_data
     save_users(users)
-    set_auth_cookie(response, session_token)
     return AuthUserResponse(user=_safe_auth_user(user_data))
 
 

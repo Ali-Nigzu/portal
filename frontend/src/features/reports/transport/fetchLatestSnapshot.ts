@@ -5,6 +5,12 @@ import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import type { Credentials } from "../../../types/credentials";
 import type { SnapshotResponse } from "../../../lib/snapshots";
 
+const buildEmptySnapshot = (): SnapshotResponse => ({
+  ts: new Date().toISOString(),
+  mode: "snapshots",
+  payload: Array.from({ length: 20 }, () => []),
+});
+
 export const fetchLatestSnapshot = async (
   credentials?: Credentials,
 ): Promise<SnapshotResponse> => {
@@ -24,6 +30,9 @@ export const fetchLatestSnapshot = async (
     throw new Error("Missing view_token or client_id for snapshot lookup.");
   }
   if (!viewToken && credentials && !isDemoSession) {
+    if (!credentials.username || !credentials.password) {
+      return buildEmptySnapshot();
+    }
     const auth = btoa(`${credentials.username}:${credentials.password}`);
     headers["Authorization"] = `Basic ${auth}`;
   }
