@@ -661,8 +661,7 @@ body {
 .landing-footer-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px 20px; }
 .landing-footer-main p { margin: 0; color: var(--sys-text-3); font-size: 0.79rem; line-height: 1.38; }
 .landing-footer-main p + p { margin-top: 2px; }
-.landing-footer-contact { color: var(--sys-text-2) !important; }
-.landing-footer-links { margin-top: 4px !important; }
+.landing-footer-links { margin: 0 !important; }
 .landing-footer-static-link,
 .landing-footer-login-btn,
 .landing-footer-social-link { color: var(--sys-text-2); }
