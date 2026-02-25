@@ -268,7 +268,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     !keepMenuExpanded &&
     pointerZone === "OUTSIDE" &&
     focusZone === "OUTSIDE" &&
-    !sitesIntentOpen;
+    !sitesIntentOpen &&
+    !isSelectorOpen;
   const isPrimaryExpanded =
     keepMenuExpanded ||
     pointerZone === "PRIMARY" ||
@@ -281,7 +282,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       pointerZone === "SITES_ROW" ||
       pointerZone === "SECONDARY" ||
       focusZone === "SECONDARY" ||
-      sitesIntentOpen);
+      sitesIntentOpen ||
+      isSelectorOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
