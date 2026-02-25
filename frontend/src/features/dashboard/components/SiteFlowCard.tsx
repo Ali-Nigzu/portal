@@ -9,6 +9,25 @@ import {
 } from "../../../lib/siteFlowTimeframe";
 import { renderError } from "./dashboardRenderers";
 
+
+const EMPTY_ACTIVITY_RESULT = {
+  chartType: "composed_time" as const,
+  xDimension: { id: "timestamp", type: "time" as const, bucket: "HOUR", timezone: "UTC" },
+  series: [
+    { id: "entrances", geometry: "line" as const, data: [{ x: "0", y: 0, value: 0 }] },
+    { id: "exits", geometry: "line" as const, data: [{ x: "0", y: 0, value: 0 }] },
+    { id: "occupancy", geometry: "line" as const, data: [{ x: "0", y: 0, value: 0 }] },
+  ],
+  meta: { timezone: "UTC", summary: { title: "Site Flow" } },
+};
+
+const EMPTY_DEMOGRAPHICS = {
+  timezone: "UTC",
+  age: [],
+  gender: [],
+  race: [],
+};
+
 type SiteFlowCardProps = {
   mode?: "full" | "preview";
   locked?: boolean;
@@ -50,10 +69,10 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
       if (demographics.status === "error") {
         return renderError(demographics.error ?? "Failed to load demographics");
       }
-      if (demographics.status !== "ready" || !demographics.data) {
-        return null;
+      if (demographics.status === "ready" && demographics.data) {
+        return <SiteFlowDemographicsView data={demographics.data} />;
       }
-      return <SiteFlowDemographicsView data={demographics.data} />;
+      return <SiteFlowDemographicsView data={EMPTY_DEMOGRAPHICS} />;
     }
     if (activity.status === "loading") {
       return null;
@@ -61,11 +80,8 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
     if (activity.status === "error") {
       return renderError(activity.error ?? "Failed to load Site Flow");
     }
-    if (!activity.result) {
-      return null;
-    }
     return (
-      <ChartRenderer result={activity.result} height={360} widgetId={widgetId} />
+      <ChartRenderer result={activity.result ?? EMPTY_ACTIVITY_RESULT} height={360} widgetId={widgetId} />
     );
   };
 

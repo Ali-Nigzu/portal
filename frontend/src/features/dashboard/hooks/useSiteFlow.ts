@@ -18,13 +18,14 @@ import {
   resolveSiteFlowTimeRange,
   type SiteFlowTimeframe,
 } from "../../../lib/siteFlowTimeframe";
-import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
+import type { DashboardDataMode, LoadWidgetOptions } from "../transport/loadWidgetResult";
 import { loadWidgetResult } from "../transport/loadWidgetResult";
 import { isSnapshotOrg } from "../utils/snapshotMode";
 import {
   consumeDemoSiteFlowModeOverride,
   consumeDemoSiteFlowTimeframeOverride,
 } from "../../../lib/demoSession";
+import { sanitizeChartResultForAuthenticated } from "../transport/loadEmptyWidgetResult";
 
 const TIMESTAMP_DIMENSION_ID = "timestamp";
 
@@ -38,6 +39,7 @@ type UseSiteFlowParams = {
   viewToken: string | null;
   clientContextId: string | undefined;
   widgetResultLoader?: WidgetResultLoader;
+  dataMode: DashboardDataMode;
 };
 
 type UseSiteFlowResult = {
@@ -64,6 +66,7 @@ export const useSiteFlow = ({
   viewToken,
   clientContextId,
   widgetResultLoader,
+  dataMode,
 }: UseSiteFlowParams): UseSiteFlowResult => {
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
   const demoSiteFlowModeRef = useRef(consumeDemoSiteFlowModeOverride());
@@ -124,6 +127,11 @@ export const useSiteFlow = ({
   }, [isSnapshotMode]);
 
   useEffect(() => {
+    setSiteFlowActivity({ status: "idle" });
+    setSiteFlowDemographics({ status: "idle" });
+  }, [dataMode]);
+
+  useEffect(() => {
     if (!siteFlowWidget || !manifest) {
       setSiteFlowActivity((previous) =>
         previous.status === "idle" ? previous : { status: "idle" },
@@ -172,12 +180,16 @@ export const useSiteFlow = ({
       orgId,
       viewToken,
       snapshotTimeframe: siteFlowTimeframe,
+      dataMode,
     } as LoadWidgetOptions)
       .then((result) => {
         if (controller.signal.aborted) {
           return;
         }
-        const decorated = decorateResult(widget.id, result, clientContextId);
+        const normalizedResult = dataMode === "authenticated"
+          ? sanitizeChartResultForAuthenticated(result)
+          : result;
+        const decorated = decorateResult(widget.id, normalizedResult, clientContextId);
         decorated.meta = decorated.meta ?? { timezone: "UTC" };
         decorated.meta.summary = {
           ...(decorated.meta.summary ?? {}),
@@ -202,6 +214,7 @@ export const useSiteFlow = ({
     siteFlowWidget,
     viewToken,
     widgetResultLoaderImpl,
+    dataMode,
   ]);
 
   useEffect(() => {
@@ -235,6 +248,7 @@ export const useSiteFlow = ({
         orgId,
         viewToken,
         snapshotTimeframe: siteFlowTimeframe,
+        dataMode,
       } as LoadWidgetOptions);
     Promise.all(kinds.map((kind) => loadDemographic(kind)))
       .then(([ageResult, genderResult, raceResult]) => {
@@ -242,9 +256,9 @@ export const useSiteFlow = ({
           return;
         }
         const data: SiteFlowDemographicsData = mapChartResultsToDemographics({
-          age: ageResult,
-          gender: genderResult,
-          race: raceResult,
+          age: dataMode === "authenticated" ? sanitizeChartResultForAuthenticated(ageResult) : ageResult,
+          gender: dataMode === "authenticated" ? sanitizeChartResultForAuthenticated(genderResult) : genderResult,
+          race: dataMode === "authenticated" ? sanitizeChartResultForAuthenticated(raceResult) : raceResult,
           timezone,
         });
         setSiteFlowDemographics({ status: "ready", data });
@@ -266,6 +280,7 @@ export const useSiteFlow = ({
     siteFlowTimeframe,
     siteFlowMode,
     siteFlowWidget,
+    dataMode,
   ]);
 
   return {

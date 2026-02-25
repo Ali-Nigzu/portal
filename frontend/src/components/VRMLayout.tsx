@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import { logout } from "../features/auth/transport/me";
 import {
   ArrowLeft,
   BarChart3,
@@ -9,6 +10,7 @@ import {
   ClipboardList,
   Cpu,
   FileBarChart2,
+  FileText,
   Home,
   LayoutDashboard,
   MapPin,
@@ -17,6 +19,7 @@ import {
   Shield,
   TrendingUp,
   Upload,
+  LogOut,
 } from "lucide-react";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
@@ -39,10 +42,14 @@ import { NavIcon } from "../common/components/icons";
 
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
+  isAuthenticated?: boolean;
+  onLogout?: () => void;
   children?: React.ReactNode;
 }
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
+  isAuthenticated = false,
+  onLogout,
   children,
 }) => {
   // Sidebar state and refs
@@ -244,6 +251,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
+  const showLogout = isAuthenticated;
+  const handleLogoutClick = async () => {
+    await logout();
+    onLogout?.();
+    navigate("/login", { replace: true });
+  };
   const focusZone = isSecondaryFocused
     ? "SECONDARY"
     : isPrimaryFocused
@@ -620,6 +633,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
             />
             <NavRow
+              leftIcon={<NavIcon icon={FileText} />}
+              label="Documents"
+              className="vrm-nav-row--placeholder"
+              ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
+            />
+            <NavRow
               leftIcon={toggleIcon}
               label={toggleLabel}
               onClick={handleKeepExpandedToggle}
@@ -633,6 +652,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               className="vrm-nav-row--placeholder"
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
             />
+            {showLogout && (
+              <NavRow
+                onClick={handleLogoutClick}
+                leftIcon={<NavIcon icon={LogOut} />}
+                label="Logout"
+                className="vrm-nav-row--interactive"
+                ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+              />
+            )}
           </NavList>
         </nav>
         <nav

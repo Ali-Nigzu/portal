@@ -1,0 +1,62 @@
+.create-account-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #0f131a;
+  color: #fff;
+}
+
+.create-account-form-pane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.create-account-card {
+  width: 100%;
+  max-width: 480px;
+  display: grid;
+  gap: 16px;
+}
+
+.create-account-title {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.create-account-subtitle {
+  color: #b9c3d3;
+  font-size: 14px;
+}
+
+.create-account-form {
+  display: grid;
+  gap: 12px;
+}
+
+.create-account-right-pane {
+  background: #151a22;
+  border-left: 1px solid #2d3748;
+}
+
+.create-account-error {
+  color: #f4b63d;
+  font-size: 13px;
+}
+
+.create-account-actions {
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .create-account-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .create-account-right-pane {
+    min-height: 160px;
+    border-left: none;
+    border-top: 1px solid #2d3748;
+  }
+}

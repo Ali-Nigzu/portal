@@ -2,11 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { useLocation } from "react-router-dom";
 import type { Credentials } from "../../../types/credentials";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
-import {
-  applyDemoDefaultsOnce,
-  enableDemoSession,
-  isDemoSessionActive,
-} from "../../../lib/demoSession";
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { useDashboardManifest } from "../../dashboard/hooks/useDashboardManifest";
 import { useDashboardWidgets } from "../../dashboard/hooks/useDashboardWidgets";
 import { VRM_KPI_IDS } from "../../dashboard/utils/applyVRMOverrides";
@@ -68,7 +64,6 @@ const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
 const CAPACITY_PERCENT = 68;
 const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
-const LANDING_BOOTSTRAP_KEY = "landing_demo_bootstrap_done";
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
@@ -703,25 +698,9 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
       setBootstrapState("ready");
       return;
     }
-    if (typeof window !== "undefined" && window.sessionStorage.getItem(LANDING_BOOTSTRAP_KEY) === "1") {
-      setBootstrapState("ready");
-      return;
-    }
 
     setBootstrapState("loading");
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(LANDING_BOOTSTRAP_KEY, "1");
-    }
-
-    try {
-      await enableDemoSession();
-      applyDemoDefaultsOnce();
-      setBootstrapState("ready");
-    } catch (error) {
-      console.warn("Landing demo bootstrap failed; continuing with live preview pipeline.", error);
-      setBootstrapDegraded(true);
-      setBootstrapState("ready");
-    }
+    setBootstrapState("ready");
   };
 
   useEffect(() => {
@@ -733,9 +712,6 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
   }, [hasViewToken, isLoggedIn, forceMockTopology]);
 
   const handleRetry = () => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem(LANDING_BOOTSTRAP_KEY);
-    }
     bootstrapStartedRef.current = false;
     setBootstrapDegraded(false);
     setBootstrapState("idle");

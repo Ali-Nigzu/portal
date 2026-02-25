@@ -8,11 +8,13 @@ import {
 } from "react-router-dom";
 
 import VRMLayout from "../components/VRMLayout";
-import { isDemoSessionActive } from "../lib/demoSession";
-import { determineOrgId } from "../lib/org";
+import { clearDemoSessionLocal, isDemoSessionActive } from "../lib/demoSession";
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
+import { fetchMe } from "../features/auth/transport/me";
 import { Credentials } from "../types/credentials";
+import { loadEmptyWidgetResult } from "../features/dashboard/transport/loadEmptyWidgetResult";
+import type { DashboardDataMode } from "../features/dashboard/transport/loadWidgetResult";
 
 const DashboardPage = React.lazy(() => import("../pages/DashboardPage"));
 const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
@@ -22,6 +24,7 @@ const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
+const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 
 const AppRoutes: React.FC = () => {
@@ -41,37 +44,51 @@ const AppRoutes: React.FC = () => {
       setIsSessionChecked(true);
       return;
     }
-    const savedCredentials = sessionStorage.getItem("camOS_credentials");
-    if (savedCredentials) {
+
+    const checkSession = async () => {
       try {
-        const { username, password, orgId } = JSON.parse(savedCredentials);
-        const resolvedOrgId = orgId ?? determineOrgId({ username });
-        setCredentials({ username, password, orgId: resolvedOrgId });
-        setUserRole(username === "admin" ? "admin" : "client");
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.error("Failed to restore session:", error);
-        sessionStorage.removeItem("camOS_credentials");
+        const me = await fetchMe();
+        setIsLoggedIn(me.ok);
+      } catch {
+        setIsLoggedIn(false);
+      } finally {
+        setIsSessionChecked(true);
       }
-    }
-    setIsSessionChecked(true);
+    };
+
+    checkSession();
   }, [hasViewToken]);
 
-  const handleLogin = (nextCreds: Credentials) => {
-    const resolvedOrgId =
-      nextCreds.orgId ?? determineOrgId({ username: nextCreds.username });
-    setCredentials({ ...nextCreds, orgId: resolvedOrgId });
-    setUserRole(nextCreds.username === "admin" ? "admin" : "client");
+  const handleLogin = () => {
+    clearDemoSessionLocal();
     setIsLoggedIn(true);
-    sessionStorage.setItem(
-      "camOS_credentials",
-      JSON.stringify({ ...nextCreds, orgId: resolvedOrgId }),
-    );
+    setCredentials({ username: "", password: "" });
+    setUserRole("client");
   };
 
-  const resolvedRole = hasViewToken ? "client" : userRole;
+  const handleLogout = () => {
+    clearDemoSessionLocal();
+    setIsLoggedIn(false);
+    setCredentials({ username: "", password: "" });
+    setUserRole("client");
+  };
+
   const isDemoSession = isDemoSessionActive();
-  const shouldAllowAppRoutes = isLoggedIn || hasViewToken || isDemoSession;
+  const appMode: "public" | "authenticated" | "view_token" | "demo" = isLoggedIn
+    ? "authenticated"
+    : hasViewToken
+      ? "view_token"
+      : isDemoSession
+        ? "demo"
+        : "public";
+  const isAuthenticatedMode = appMode === "authenticated";
+  const dashboardDataMode: DashboardDataMode = appMode === "authenticated"
+    ? "authenticated"
+    : appMode === "demo"
+      ? "demo"
+      : "view_token";
+  const resolvedRole = appMode === "view_token" ? "client" : userRole;
+  const shouldAllowAppRoutes = appMode !== "public";
   const appendParams = (
     path: string,
     params?: Record<string, string | undefined>,
@@ -125,7 +142,7 @@ const AppRoutes: React.FC = () => {
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
-    <VRMLayout userRole={resolvedRole}>
+    <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout}>
       {userRole === "admin" && !hasViewToken ? (
         <Navigate to="/admin" replace />
       ) : (
@@ -143,47 +160,43 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/"
         element={
-          !isLoggedIn && !hasViewToken && !isDemoSession ? (
+          appMode === "public" ? (
             lazyRoute(<LandingPage />)
+          ) : appMode === "view_token" || appMode === "demo" ? (
+            <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
-            <Navigate
-              to={(() => {
-                if (hasViewToken) {
-                  return appendViewToken("/sites/all/dashboard");
-                }
-                if (isDemoSession) {
-                  return "/sites/all/dashboard";
-                }
-                return appendViewToken(
-                  `/sites/${getDefaultSiteId()}/dashboard`,
-                );
-              })()}
-              replace
-            />
+            <Navigate to="/dashboard" replace />
           )
         }
       />
       <Route path="/demo" element={lazyRoute(<DemoPage />)} />
       <Route
+        path="/create-account"
+        element={
+          appMode === "public" ? (
+            lazyRoute(<CreateAccountPage />)
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
+      <Route
         path="/login"
         element={
-          !isLoggedIn && !hasViewToken && !isDemoSession ? (
+          appMode === "public" ? (
             lazyRoute(<LoginPage onLogin={handleLogin} />)
           ) : (
-            <Navigate
-              to={(() => {
-                if (hasViewToken) {
-                  return appendViewToken("/sites/all/dashboard");
-                }
-                if (isDemoSession) {
-                  return "/sites/all/dashboard";
-                }
-                return appendViewToken(
-                  `/sites/${getDefaultSiteId()}/dashboard`,
-                );
-              })()}
-              replace
-            />
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          shouldAllowAppRoutes ? (
+            <Navigate to={appendViewToken(`/sites/${resolveLegacySiteId()}/dashboard`)} replace />
+          ) : (
+            <Navigate to="/login" replace />
           )
         }
       />
@@ -224,7 +237,15 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/sites/:siteId/dashboard"
             element={renderClientRoute(
-              lazyRoute(<DashboardPage credentials={credentials} />),
+              lazyRoute(
+                <DashboardPage
+                  credentials={credentials}
+                  dataMode={dashboardDataMode}
+                  widgetResultLoader={
+                    isAuthenticatedMode ? loadEmptyWidgetResult : undefined
+                  }
+                />,
+              ),
             )}
           />
           <Route
@@ -251,66 +272,11 @@ const AppRoutes: React.FC = () => {
               lazyRoute(<ReportsPage credentials={credentials} />),
             )}
           />
-          <Route
-            path="/dashboard"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/dashboard`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/event-logs"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/event-logs`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/alarm-logs"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/alarm-logs`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/device-list"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/device-list`,
-                )}
-                replace
-              />
-            }
-          />
-          <Route
-            path="/reports"
-            element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/reports`,
-                )}
-                replace
-              />
-            }
-          />
           {userRole === "admin" && (
             <Route
               path="/admin"
               element={
-                <VRMLayout userRole={resolvedRole}>
+                <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout}>
                   {lazyRoute(<AdminPage credentials={credentials} />)}
                 </VRMLayout>
               }
@@ -321,23 +287,12 @@ const AppRoutes: React.FC = () => {
       <Route
         path="*"
         element={
-          !isLoggedIn && !hasViewToken && !isDemoSession ? (
+          appMode === "public" ? (
             <Navigate to="/" replace />
+          ) : appMode === "view_token" || appMode === "demo" ? (
+            <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
-            <Navigate
-              to={(() => {
-                if (hasViewToken) {
-                  return appendViewToken("/sites/all/dashboard");
-                }
-                if (isDemoSession) {
-                  return "/sites/all/dashboard";
-                }
-                return appendViewToken(
-                  `/sites/${getDefaultSiteId()}/dashboard`,
-                );
-              })()}
-              replace
-            />
+            <Navigate to="/dashboard" replace />
           )
         }
       />

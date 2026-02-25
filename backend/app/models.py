@@ -17,6 +17,29 @@ class LoginResponse(BaseModel):
     message: str
 
 
+class AuthUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: Optional[str] = None
+
+
+class CreateAccountRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    password: str
+
+
+class EmailLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthUserResponse(BaseModel):
+    user: AuthUser
+
+
 class CreateUserRequest(BaseModel):
     username: str
     password: str
