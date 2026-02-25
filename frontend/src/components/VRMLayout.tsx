@@ -171,9 +171,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const primaryNavigationItems = useMemo(
     () => [
       {
+        path: "/home",
         label: "Home",
         icon: <NavIcon icon={Home} />,
-        placeholder: true,
       },
       {
         path: "/sites",
@@ -249,6 +249,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isSiteSelection = isSelectorOpen;
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
+  const isHomeRoute = location.pathname === "/home";
+  const shouldRenderSecondaryPanel = !isHomeRoute;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
@@ -600,9 +602,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
-                  className={
-                    item.placeholder ? "vrm-nav-row--placeholder" : undefined
-                  }
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
                     item.path === "/sites" ? (
@@ -663,7 +662,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             )}
           </NavList>
         </nav>
-        <nav
+        {shouldRenderSecondaryPanel && (
+          <nav
           className="vrm-extended-panel"
           aria-label="Secondary"
           ref={secondaryPanelRef}
@@ -795,7 +795,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ))}
             </NavList>
           )}
-        </nav>
+          </nav>
+        )}
       </div>
       <main className="vrm-main">
         <div className="vrm-content">{children || <Outlet />}</div>
