@@ -250,7 +250,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const isHomeRoute = location.pathname === "/home";
-  const shouldRenderSecondaryPanel = !isHomeRoute;
+  const shouldRenderSecondaryPanel = !isHomeRoute || isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;

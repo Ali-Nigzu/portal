@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Activity, Building2, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Activity, Building2, ChevronRight, Search } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "../../analytics/components/Card/Card";
 import { fetchMe } from "../auth/transport/me";
 import "../dashboard/styles/DashboardPage.css";
@@ -10,6 +10,7 @@ const HomePage: React.FC = () => {
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -47,7 +48,7 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--fleet"
-            onClick={() => navigate("/sites/all/alarm-logs")}
+            onClick={() => navigate("/sites/all/dashboard")}
             aria-label="Open Monitor Fleet"
           >
             <Card title="Monitor Fleet" className="home-page__card home-page__card--interactive">
@@ -62,7 +63,11 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--sites"
-            onClick={() => navigate("/sites")}
+            onClick={() => {
+              const params = new URLSearchParams(location.search);
+              params.set("panel", "sites");
+              navigate({ pathname: location.pathname, search: `?${params.toString()}` });
+            }}
             aria-label="Open My Sites"
           >
             <Card title="My Sites" className="home-page__card home-page__card--interactive">
@@ -94,14 +99,39 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--recent">
             <Card title="Recently Viewed" className="home-page__card home-page__card--recent">
               <div className="home-page__card-body home-page__card-body--recent">
+                <div className="home-page__tab-row">
+                  <button
+                    type="button"
+                    className="home-page__tab"
+                    onClick={() => navigate("/sites/all/dashboard")}
+                  >
+                    All sites
+                  </button>
+                </div>
                 <button
                   type="button"
-                  className="home-page__tab"
+                  className="home-page__recent-row"
                   onClick={() => navigate("/sites/all/dashboard")}
                 >
-                  All sites
+                  <span>SoEnergy-Site-001</span>
+                  <ChevronRight size={18} aria-hidden="true" />
                 </button>
-                <div className="home-page__recent-empty" />
+                <button
+                  type="button"
+                  className="home-page__recent-row"
+                  onClick={() => navigate("/sites/all/dashboard")}
+                >
+                  <span>SoEnergy-Site-002</span>
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="home-page__recent-row"
+                  onClick={() => navigate("/sites/all/dashboard")}
+                >
+                  <span>SoEnergy-Site-003</span>
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>
               </div>
             </Card>
           </div>

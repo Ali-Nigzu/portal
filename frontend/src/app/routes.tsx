@@ -166,7 +166,7 @@ const AppRoutes: React.FC = () => {
           ) : appMode === "view_token" || appMode === "demo" ? (
             <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
-            <Navigate to="/dashboard" replace />
+            <Navigate to="/home" replace />
           )
         }
       />
@@ -177,7 +177,7 @@ const AppRoutes: React.FC = () => {
           appMode === "public" ? (
             lazyRoute(<CreateAccountPage />)
           ) : (
-            <Navigate to="/dashboard" replace />
+            <Navigate to="/home" replace />
           )
         }
       />
@@ -187,7 +187,7 @@ const AppRoutes: React.FC = () => {
           appMode === "public" ? (
             lazyRoute(<LoginPage onLogin={handleLogin} />)
           ) : (
-            <Navigate to="/dashboard" replace />
+            <Navigate to="/home" replace />
           )
         }
       />
@@ -297,7 +297,7 @@ const AppRoutes: React.FC = () => {
           ) : appMode === "view_token" || appMode === "demo" ? (
             <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
           ) : (
-            <Navigate to="/dashboard" replace />
+            <Navigate to="/home" replace />
           )
         }
       />
