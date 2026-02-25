@@ -81,13 +81,22 @@
   border-color: rgba(59, 130, 246, 0.3);
 }
 
+.home-page__card--compact.analytics-card {
+  padding: 14px 16px;
+}
+
+.home-page__card--compact .analytics-card__header {
+  padding-bottom: 8px;
+  gap: var(--vrm-spacing-2);
+}
+
 .home-page__card .analytics-card__body {
   min-height: 160px;
   padding-top: var(--vrm-spacing-1);
 }
 
 .home-page__card--compact .analytics-card__body {
-  min-height: 132px;
+  min-height: 96px;
 }
 
 .home-page__card--news .analytics-card__body {

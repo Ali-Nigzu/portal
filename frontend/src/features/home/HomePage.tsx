@@ -34,7 +34,7 @@ const HomePage: React.FC = () => {
     <div className="dashboard-v2 home-page">
       <div className="dashboard-v2__content home-page__content">
         <header className="dashboard-v2__header home-page__header">
-          <h1 className="home-page__title">Welcome, {userName}</h1>
+          <h1 className="home-page__title">Welcome {userName}</h1>
           <label className="vrm-secondary-search home-page__search" aria-label="Search installations">
             <span className="vrm-secondary-search__icon" aria-hidden="true">
               <Search />
@@ -47,7 +47,7 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--fleet"
-            onClick={() => navigate("/sites/all/alarm-logs")}
+            onClick={() => navigate("/sites/all/alarm-logs?panel=sites")}
             aria-label="Open Monitor Fleet"
           >
             <Card

@@ -18,7 +18,6 @@ import {
   Settings,
   Shield,
   TrendingUp,
-  Upload,
   LogOut,
 } from "lucide-react";
 import "../styles/VRMTheme.css";
@@ -91,6 +90,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isDemoSession = isDemoSessionActive();
   const allSitesOption =
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
+  const selectorSiteOptions = isAuthenticated
+    ? []
+    : SITE_OPTIONS.filter((site) => site.id !== "all");
   const buildSearch = (overrides?: Record<string, string | undefined>) => {
     const params = new URLSearchParams(location.search);
     if (!overrides || !Object.prototype.hasOwnProperty.call(overrides, "panel")) {
@@ -268,8 +270,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     !keepMenuExpanded &&
     pointerZone === "OUTSIDE" &&
     focusZone === "OUTSIDE" &&
-    !sitesIntentOpen &&
-    !isSelectorOpen;
+    !sitesIntentOpen;
   const isPrimaryExpanded =
     keepMenuExpanded ||
     pointerZone === "PRIMARY" ||
@@ -316,6 +317,39 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     const isFocused = secondaryPanel?.matches(":focus-within") ?? false;
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
+  useEffect(() => {
+    if (!isSelectorOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      const isInsideSecondary =
+        Boolean(secondaryPanelRef.current) &&
+        secondaryPanelRef.current.contains(target);
+      const isInsideSitesToggle =
+        Boolean(sitesRowRef.current) && sitesRowRef.current.contains(target);
+      if (isInsideSecondary || isInsideSitesToggle) {
+        return;
+      }
+
+      navigate(
+        {
+          pathname: location.pathname,
+          search: buildSearch({ panel: undefined }),
+        },
+        { replace: true },
+      );
+    };
+
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+    };
+  }, [buildSearch, isSelectorOpen, location.pathname, navigate]);
   useEffect(() => {
     if (keepMenuExpanded || isTouchMode || typeof window === "undefined") {
       return;
@@ -628,12 +662,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               );
             })}
             <NavRow
-              leftIcon={<NavIcon icon={Upload} />}
-              label="Upload"
-              className="vrm-nav-row--placeholder"
-              ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
-            />
-            <NavRow
               leftIcon={<NavIcon icon={FileText} />}
               label="Documents"
               className="vrm-nav-row--placeholder"
@@ -706,7 +734,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           </div>
           {!showSiteMenu && (
             <NavList className="vrm-secondary-list">
-              {SITE_OPTIONS.filter((site) => site.id !== "all").map((site) => {
+              {selectorSiteOptions.map((site) => {
                 const siteSubPath = (() => {
                   const match = location.pathname.match(/^\/sites\/[^/]+(\/.*)?$/);
                   const trailing = match?.[1];
