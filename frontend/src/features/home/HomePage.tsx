@@ -50,7 +50,10 @@ const HomePage: React.FC = () => {
             onClick={() => navigate("/sites/all/alarm-logs")}
             aria-label="Open Monitor Fleet"
           >
-            <Card title="Monitor Fleet" className="home-page__card home-page__card--interactive">
+            <Card
+              title="Monitor Fleet"
+              className="home-page__card home-page__card--interactive home-page__card--compact"
+            >
               <div className="home-page__card-body home-page__card-body--icon">
                 <span className="home-page__footer-icon" aria-hidden="true">
                   <Activity size={22} />
@@ -62,10 +65,13 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--sites"
-            onClick={() => navigate("/sites/all/dashboard")}
+            onClick={() => navigate("/sites/all/dashboard?panel=sites")}
             aria-label="Open My Sites"
           >
-            <Card title="My Sites" className="home-page__card home-page__card--interactive">
+            <Card
+              title="My Sites"
+              className="home-page__card home-page__card--interactive home-page__card--compact"
+            >
               <div className="home-page__card-body home-page__card-body--icon">
                 <span className="home-page__footer-icon" aria-hidden="true">
                   <Building2 size={22} />
@@ -84,8 +90,8 @@ const HomePage: React.FC = () => {
             <Card title="Favourite Sites" className="home-page__card home-page__card--favorites">
               <div className="home-page__card-body home-page__card-body--text">
                 <p>
-                  You don't have any Sites installations yet. Get started by marking a Site as
-                  favorite from the dashboard page.
+                  You don't have any Favorite Sites yet. Get started by marking a Site as favorite
+                  from the dashboard page.
                 </p>
               </div>
             </Card>
@@ -94,31 +100,12 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--recent">
             <Card title="Recently Viewed" className="home-page__card home-page__card--recent">
               <div className="home-page__card-body home-page__card-body--recent">
-                <div className="home-page__tab-row" aria-label="Recently viewed scope">
-                  <span className="home-page__tab-label">All Sites</span>
-                </div>
                 <button
                   type="button"
-                  className="home-page__recent-row"
-                  onClick={() => navigate("/sites/all/dashboard")}
+                  className="home-page__list-row"
+                  onClick={() => navigate("/sites/all/dashboard?panel=sites")}
                 >
-                  <span>SoEnergy-Site-001</span>
-                  <ChevronRight size={18} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className="home-page__recent-row"
-                  onClick={() => navigate("/sites/all/dashboard")}
-                >
-                  <span>SoEnergy-Site-002</span>
-                  <ChevronRight size={18} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className="home-page__recent-row"
-                  onClick={() => navigate("/sites/all/dashboard")}
-                >
-                  <span>SoEnergy-Site-003</span>
+                  <span>All Sites</span>
                   <ChevronRight size={18} aria-hidden="true" />
                 </button>
               </div>
