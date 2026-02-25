@@ -19,6 +19,9 @@ const zeroSummary = (summary?: SeriesSummary): SeriesSummary | undefined => {
   return next;
 };
 
+const toZeroOrOriginal = (value: unknown) =>
+  typeof value === 'number' ? 0 : value;
+
 const zeroPoint = (point: DataPoint): DataPoint => ({
   ...point,
   y: 0,
@@ -26,6 +29,12 @@ const zeroPoint = (point: DataPoint): DataPoint => ({
   comparison: point.comparison == null ? point.comparison : 0,
   target: point.target == null ? point.target : 0,
   rawCount: point.rawCount == null ? point.rawCount : 0,
+  min: toZeroOrOriginal((point as DataPoint & { min?: unknown }).min) as number | null | undefined,
+  max: toZeroOrOriginal((point as DataPoint & { max?: unknown }).max) as number | null | undefined,
+  avg: toZeroOrOriginal((point as DataPoint & { avg?: unknown }).avg) as number | null | undefined,
+  occupancy_min: toZeroOrOriginal((point as DataPoint & { occupancy_min?: unknown }).occupancy_min) as number | null | undefined,
+  occupancy_max: toZeroOrOriginal((point as DataPoint & { occupancy_max?: unknown }).occupancy_max) as number | null | undefined,
+  occupancy_avg: toZeroOrOriginal((point as DataPoint & { occupancy_avg?: unknown }).occupancy_avg) as number | null | undefined,
 });
 
 const buildKpiSeries = (): ChartSeries[] => [
