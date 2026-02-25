@@ -6,7 +6,9 @@ import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildSnapshotWidgetResult } from "../utils/snapshotPayload";
 import type { SnapshotResponse } from "../../../lib/snapshots";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
-import { isDemoSessionActive } from "../../../lib/demoSession";
+
+export type DashboardDataMode = "authenticated" | "demo" | "view_token";
+
 export interface LoadWidgetOptions {
   signal?: AbortSignal;
   timeRange?: DashboardTimeRangeOption;
@@ -14,8 +16,11 @@ export interface LoadWidgetOptions {
   orgId?: string;
   viewToken?: string;
   snapshotTimeframe?: SiteFlowTimeframe;
+  dataMode?: DashboardDataMode;
 }
+
 const SNAPSHOT_ENDPOINT = "/api/snapshots/latest";
+
 export const isAbortError = (error: unknown): boolean => {
   if (error instanceof DOMException) {
     return error.name === "AbortError";
@@ -26,49 +31,62 @@ export const isAbortError = (error: unknown): boolean => {
     (error as { name?: string }).name === "AbortError"
   );
 };
+
 async function loadSnapshotPayload(options: {
   signal?: AbortSignal;
   orgId?: string;
   viewToken?: string;
+  dataMode: DashboardDataMode;
 }): Promise<SnapshotResponse> {
-  const isDemoSession = isDemoSessionActive();
   const params = new URLSearchParams();
   if (options.viewToken) {
     params.append("viewToken", options.viewToken);
-  } else if (!isDemoSession && options.orgId) {
+  } else if (options.dataMode !== "demo" && options.orgId) {
     params.append("org", options.orgId);
-  } else if (!isDemoSession) {
+  } else if (options.dataMode !== "demo") {
     throw new Error("orgId or viewToken is required to load snapshots");
   }
+
   const query = params.toString();
   const response = await fetch(
     `${API_BASE_URL}${SNAPSHOT_ENDPOINT}${query ? `?${query}` : ""}`,
     {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      credentials: isDemoSession ? "include" : "same-origin",
+      credentials: options.dataMode === "demo" ? "include" : "same-origin",
       signal: options.signal,
     },
   );
+
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Snapshot fetch failed: ${response.status} ${text}`);
   }
+
   return (await response.json()) as SnapshotResponse;
 }
+
 export async function loadWidgetResult(
   widget: DashboardWidget,
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
-  const { signal, orgId, viewToken } = options;
+  const { signal, orgId, viewToken, dataMode = "demo" } = options;
   const snapshotTimeframe = options.snapshotTimeframe ?? "all_time";
   let result: ChartResult;
+
   logInfo("dashboard.widgets", "load_start", {
     widgetId: widget.id,
     mode: "snapshots",
+    dataMode,
   });
+
   try {
-    const snapshot = await loadSnapshotPayload({ signal, orgId, viewToken });
+    const snapshot = await loadSnapshotPayload({
+      signal,
+      orgId,
+      viewToken,
+      dataMode,
+    });
     result = buildSnapshotWidgetResult(widget.id, snapshot, snapshotTimeframe);
   } catch (error) {
     if (isAbortError(error)) {
@@ -81,14 +99,17 @@ export async function loadWidgetResult(
       logError("dashboard.widgets", "load_error", {
         widgetId: widget.id,
         mode: "snapshots",
+        dataMode,
         message: error instanceof Error ? error.message : String(error),
       });
     }
     throw error;
   }
+
   if (signal?.aborted) {
     throw new DOMException("Aborted", "AbortError");
   }
+
   const validationIssues = validateChartResult(result);
   if (validationIssues.length > 0) {
     const issues = validationIssues.map((issue) => issue.message).join(", ");
@@ -99,9 +120,11 @@ export async function loadWidgetResult(
     });
     throw error;
   }
+
   logInfo("dashboard.widgets", "load_success", {
     widgetId: widget.id,
     mode: "snapshots",
+    dataMode,
   });
   return result;
 }

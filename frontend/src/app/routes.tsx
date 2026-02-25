@@ -14,6 +14,7 @@ import { getViewTokenFromLocation } from "../lib/viewToken";
 import { fetchMe } from "../features/auth/transport/me";
 import { Credentials } from "../types/credentials";
 import { loadEmptyWidgetResult } from "../features/dashboard/transport/loadEmptyWidgetResult";
+import type { DashboardDataMode } from "../features/dashboard/transport/loadWidgetResult";
 
 const DashboardPage = React.lazy(() => import("../pages/DashboardPage"));
 const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
@@ -81,6 +82,11 @@ const AppRoutes: React.FC = () => {
         ? "demo"
         : "public";
   const isAuthenticatedMode = appMode === "authenticated";
+  const dashboardDataMode: DashboardDataMode = appMode === "authenticated"
+    ? "authenticated"
+    : appMode === "demo"
+      ? "demo"
+      : "view_token";
   const resolvedRole = appMode === "view_token" ? "client" : userRole;
   const shouldAllowAppRoutes = appMode !== "public";
   const appendParams = (
@@ -234,6 +240,7 @@ const AppRoutes: React.FC = () => {
               lazyRoute(
                 <DashboardPage
                   credentials={credentials}
+                  dataMode={dashboardDataMode}
                   widgetResultLoader={
                     isAuthenticatedMode ? loadEmptyWidgetResult : undefined
                   }

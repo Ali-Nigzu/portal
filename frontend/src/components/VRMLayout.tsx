@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Cpu,
   FileBarChart2,
+  FileText,
   Home,
   LayoutDashboard,
   MapPin,
@@ -85,7 +86,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     [location.search],
   );
   const isEmbedMode = searchParams.get("embed") === "1";
-  const hasViewToken = searchParams.has("view_token");
   const isSelectorOpen = searchParams.get("panel") === "sites";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
@@ -631,6 +631,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               label="Upload"
               className="vrm-nav-row--placeholder"
               ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
+            />
+            <NavRow
+              leftIcon={<NavIcon icon={FileText} />}
+              label="Documents"
+              className="vrm-nav-row--placeholder"
+              ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
             />
             <NavRow
               leftIcon={toggleIcon}

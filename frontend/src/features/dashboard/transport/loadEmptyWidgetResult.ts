@@ -1,7 +1,14 @@
-import type { ChartResult, ChartSeries, DataPoint, SeriesSummary } from '../../../analytics/schemas/charting';
+import type {
+  ChartResult,
+  ChartSeries,
+  DataPoint,
+  SeriesSummary,
+} from '../../../analytics/schemas/charting';
 import type { DashboardWidget } from '../types';
 import type { LoadWidgetOptions } from './loadWidgetResult';
 import { loadWidgetResult } from './loadWidgetResult';
+
+const KPI_POINT_COUNT = 24;
 
 const zeroSummary = (summary?: SeriesSummary): SeriesSummary | undefined => {
   if (!summary) return undefined;
@@ -21,31 +28,37 @@ const zeroPoint = (point: DataPoint): DataPoint => ({
   rawCount: point.rawCount == null ? point.rawCount : 0,
 });
 
+const buildKpiSeries = (): ChartSeries[] => [
+  {
+    id: 'value',
+    geometry: 'line',
+    data: Array.from({ length: KPI_POINT_COUNT }, (_, idx) => ({
+      x: String(idx),
+      y: 0,
+      value: 0,
+    })),
+  },
+];
 
-const buildKpiFallbackSeries = (): ChartSeries[] => [{
-  id: 'value',
-  geometry: 'line',
-  data: Array.from({ length: 24 }, (_, idx) => ({
-    x: String(idx),
-    y: 0,
-    value: 0,
-  })),
-}];
+const normalizeSeries = (result: ChartResult): ChartSeries[] => {
+  if (result.series.length === 0 && result.chartType === 'single_value') {
+    return buildKpiSeries();
+  }
 
-const toEmptyResult = (result: ChartResult): ChartResult => {
-  const nextSeries = result.series.map((series) => {
-    const nextData = series.data.length > 0
+  return result.series.map((series) => {
+    const fallbackPoint: DataPoint = { x: '0', y: 0, value: 0 };
+    const zeroedData = series.data.length > 0
       ? series.data.map((point) => zeroPoint(point))
-      : [{ x: '0', y: 0, value: 0 }];
+      : [fallbackPoint];
 
-    const expandedData = result.chartType === 'single_value' && nextData.length < 24
-      ? Array.from({ length: 24 }, (_, idx) => ({
-          ...nextData[0],
+    const expandedData = result.chartType === 'single_value' && zeroedData.length < KPI_POINT_COUNT
+      ? Array.from({ length: KPI_POINT_COUNT }, (_, idx) => ({
+          ...zeroedData[0],
           x: String(idx),
           y: 0,
           value: 0,
         }))
-      : nextData;
+      : zeroedData;
 
     return {
       ...series,
@@ -53,11 +66,11 @@ const toEmptyResult = (result: ChartResult): ChartResult => {
       summary: zeroSummary(series.summary),
     };
   });
+};
 
-  const normalizedSeries = result.chartType === 'single_value' && nextSeries.length === 0
-    ? buildKpiFallbackSeries()
-    : nextSeries;
-
+export const sanitizeChartResultForAuthenticated = (
+  result: ChartResult,
+): ChartResult => {
   const summary = result.meta.summary ?? {};
   const nextSummary: Record<string, number | string | null> = {};
   Object.entries(summary).forEach(([key, value]) => {
@@ -66,7 +79,7 @@ const toEmptyResult = (result: ChartResult): ChartResult => {
 
   return {
     ...result,
-    series: normalizedSeries,
+    series: normalizeSeries(result),
     meta: {
       ...result.meta,
       summary: nextSummary,
@@ -80,6 +93,9 @@ export async function loadEmptyWidgetResult(
   widget: DashboardWidget,
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
-  const result = await loadWidgetResult(widget, options);
-  return toEmptyResult(result);
+  const result = await loadWidgetResult(widget, {
+    ...options,
+    dataMode: 'authenticated',
+  });
+  return sanitizeChartResultForAuthenticated(result);
 }

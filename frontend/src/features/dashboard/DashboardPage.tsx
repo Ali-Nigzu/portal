@@ -7,7 +7,7 @@ import { useDashboardManifest } from "./hooks/useDashboardManifest";
 import { useDashboardWidgets } from "./hooks/useDashboardWidgets";
 import { useSiteFlow } from "./hooks/useSiteFlow";
 import type { FetchDashboardManifestOptions } from "./transport/fetchDashboardManifest";
-import type { loadWidgetResult } from "./transport/loadWidgetResult";
+import type { DashboardDataMode, loadWidgetResult } from "./transport/loadWidgetResult";
 import DashboardView from "./components/DashboardView";
 
 const DashboardPage = ({
@@ -16,6 +16,7 @@ const DashboardPage = ({
   widgetResultLoader,
   unpinWidget,
   dashboardId,
+  dataMode = "demo",
 }: DashboardPageProps) => {
   const {
     manifest,
@@ -45,6 +46,7 @@ const DashboardPage = ({
     unpinWidget,
     resolvedDashboardId,
     setManifest,
+    dataMode,
   });
 
   const {
@@ -60,6 +62,7 @@ const DashboardPage = ({
     viewToken,
     clientContextId: resolvedUiClient,
     widgetResultLoader,
+    dataMode,
   });
 
   const status = useMemo(() => {
@@ -118,6 +121,7 @@ interface DashboardPageProps {
   widgetResultLoader?: WidgetResultLoader;
   unpinWidget?: UnpinMutator;
   dashboardId?: string;
+  dataMode?: DashboardDataMode;
 }
 
 const DashboardPageWithBoundary = (props: DashboardPageProps) => (

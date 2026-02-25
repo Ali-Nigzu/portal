@@ -75,7 +75,7 @@ export const SiteFlowDemographicsView = ({
       {charts.map(({ title, slices }) => {
         const safeSlices = slices.length > 0
           ? slices
-          : [{ code: null, label: "No data", count: 1 }];
+          : [{ code: null, label: "No data", count: 0 }];
         const { series, result, axisConfig, visibility } =
           toTrafficDistributionProps(title, safeSlices, data.timezone);
         return (
