@@ -3,7 +3,7 @@
 }
 
 .home-page__content {
-  gap: var(--vrm-spacing-5);
+  gap: var(--vrm-spacing-6);
 }
 
 .home-page__header {
@@ -31,7 +31,7 @@
     "fleet sites news"
     "favorites favorites news"
     "recent recent news";
-  gap: var(--vrm-spacing-5);
+  gap: var(--vrm-spacing-6);
 }
 
 .home-page__card-button,
@@ -82,7 +82,7 @@
 }
 
 .home-page__card .analytics-card__body {
-  min-height: 174px;
+  min-height: 160px;
   padding-top: var(--vrm-spacing-1);
 }
 
@@ -91,11 +91,11 @@
 }
 
 .home-page__card--favorites .analytics-card__body {
-  min-height: 96px;
+  min-height: 0;
 }
 
 .home-page__card--recent .analytics-card__body {
-  min-height: 274px;
+  min-height: 248px;
 }
 
 .home-page__card-body {
@@ -111,7 +111,7 @@
 .home-page__footer-icon {
   width: 52px;
   height: 52px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.26);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.8);
@@ -122,10 +122,9 @@
 
 .home-page__card-body--text p {
   margin: 0;
-  max-width: 760px;
   color: var(--sys-text-2, var(--vrm-text-secondary));
   font-size: var(--vrm-typography-font-size-subtitle);
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .home-page__card-body--recent {
@@ -162,7 +161,7 @@
 .home-page__recent-row {
   width: 100%;
   min-height: 58px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
   color: var(--sys-text-1, var(--vrm-text-primary));
@@ -185,7 +184,7 @@
   color: var(--sys-text-3, var(--vrm-text-muted));
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1024px) {
   .home-page__layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
@@ -196,11 +195,11 @@
   }
 
   .home-page__card--news .analytics-card__body {
-    min-height: 274px;
+    min-height: 248px;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 760px) {
   .home-page__layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:

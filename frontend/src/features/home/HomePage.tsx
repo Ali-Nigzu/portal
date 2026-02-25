@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Activity, Building2, ChevronRight, Search } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../../analytics/components/Card/Card";
 import { fetchMe } from "../auth/transport/me";
 import "../dashboard/styles/DashboardPage.css";
@@ -10,7 +10,6 @@ const HomePage: React.FC = () => {
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -48,7 +47,7 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--fleet"
-            onClick={() => navigate("/sites/all/dashboard")}
+            onClick={() => navigate("/sites/all/alarm-logs")}
             aria-label="Open Monitor Fleet"
           >
             <Card title="Monitor Fleet" className="home-page__card home-page__card--interactive">
@@ -63,11 +62,7 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--sites"
-            onClick={() => {
-              const params = new URLSearchParams(location.search);
-              params.set("panel", "sites");
-              navigate({ pathname: location.pathname, search: `?${params.toString()}` });
-            }}
+            onClick={() => navigate("/sites/all/dashboard")}
             aria-label="Open My Sites"
           >
             <Card title="My Sites" className="home-page__card home-page__card--interactive">
@@ -105,7 +100,7 @@ const HomePage: React.FC = () => {
                     className="home-page__tab"
                     onClick={() => navigate("/sites/all/dashboard")}
                   >
-                    All sites
+                    All Sites
                   </button>
                 </div>
                 <button
