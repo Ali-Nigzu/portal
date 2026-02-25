@@ -139,8 +139,10 @@
   gap: var(--vrm-spacing-2);
 }
 
-.home-page__tab {
+.home-page__tab-label {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
   height: 30px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -151,12 +153,8 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  cursor: pointer;
 }
 
-.home-page__tab:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
 
 .home-page__recent-row {
   width: 100%;

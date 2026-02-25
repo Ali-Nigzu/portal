@@ -94,14 +94,8 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--recent">
             <Card title="Recently Viewed" className="home-page__card home-page__card--recent">
               <div className="home-page__card-body home-page__card-body--recent">
-                <div className="home-page__tab-row">
-                  <button
-                    type="button"
-                    className="home-page__tab"
-                    onClick={() => navigate("/sites/all/dashboard")}
-                  >
-                    All Sites
-                  </button>
+                <div className="home-page__tab-row" aria-label="Recently viewed scope">
+                  <span className="home-page__tab-label">All Sites</span>
                 </div>
                 <button
                   type="button"
