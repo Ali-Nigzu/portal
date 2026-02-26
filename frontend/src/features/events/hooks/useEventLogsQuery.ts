@@ -43,7 +43,13 @@ export const useEventLogsQuery = (
   const [totalEvents, setTotalEvents] = useState(0);
   const skipNextFetch = useRef(false);
   const eventsPerPage = 20;
-  const storageKey = "camOS.eventLogsState";
+  const resolvedViewToken =
+    overrides.viewToken !== undefined
+      ? overrides.viewToken ?? undefined
+      : typeof window === "undefined"
+        ? undefined
+        : getViewTokenFromLocation(window.location.search);
+  const storageKey = `camOS.eventLogsState:${resolvedViewToken ?? "auth"}`;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -51,6 +57,14 @@ export const useEventLogsQuery = (
     if (typeof window === "undefined") {
       return;
     }
+    if (!resolvedViewToken) {
+      setEvents([]);
+      setTotalPages(1);
+      setTotalEvents(0);
+      setCurrentPage(1);
+      return;
+    }
+
     const stored = window.sessionStorage.getItem(storageKey);
     if (!stored) {
       return;
@@ -107,7 +121,7 @@ export const useEventLogsQuery = (
       }
     } catch {
     }
-  }, [storageKey]);
+  }, [resolvedViewToken, storageKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -217,6 +231,13 @@ export const useEventLogsQuery = (
         overrides.viewToken !== undefined
           ? overrides.viewToken
           : getViewTokenFromLocation();
+      if (!viewToken) {
+        setEvents([]);
+        setTotalPages(1);
+        setTotalEvents(0);
+        setError(null);
+        return;
+      }
       const urlParams = new URLSearchParams(window.location.search);
       const clientId =
         overrides.clientId !== undefined
@@ -267,6 +288,9 @@ export const useEventLogsQuery = (
       overrides.viewToken !== undefined
         ? overrides.viewToken
         : getViewTokenFromLocation();
+    if (!viewToken) {
+      return [];
+    }
     const urlParams = new URLSearchParams(window.location.search);
     const clientId =
       overrides.clientId !== undefined

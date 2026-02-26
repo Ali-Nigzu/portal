@@ -117,9 +117,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     overrides?: Record<string, string | undefined>,
   ) => `${path}${buildSearch(overrides)}`;
   const openSitesSelector = () => {
+    const isCurrentPathSites = /^\/sites(?:\/|$)/.test(location.pathname);
+    const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
     navigate(
       {
-        pathname: location.pathname,
+        pathname: isCurrentPathSites
+          ? location.pathname
+          : `/sites/${resolvedSiteId}/dashboard`,
         search: buildSearch({ panel: "sites" }),
       },
       { replace: isDemoSession },
@@ -178,6 +182,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         path: "/home",
         label: "Home",
         icon: <NavIcon icon={Home} />,
+        disabled: isDemoSession,
       },
       {
         path: "/sites",
@@ -185,7 +190,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         icon: <NavIcon icon={MapPin} />,
       },
     ],
-    [],
+    [isDemoSession],
   );
   const clientNavigationItems = useMemo(
     () => [
@@ -272,17 +277,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     : isPrimaryFocused
       ? "PRIMARY"
       : "OUTSIDE";
+  const effectiveSitesIntentOpen = sitesIntentOpen || isSelectorOpen;
   const shouldForceCollapse =
     !keepMenuExpanded &&
     pointerZone === "OUTSIDE" &&
     focusZone === "OUTSIDE" &&
-    !sitesIntentOpen;
+    !effectiveSitesIntentOpen;
   const isPrimaryExpanded =
     keepMenuExpanded ||
     pointerZone === "PRIMARY" ||
     pointerZone === "SITES_ROW" ||
     focusZone === "PRIMARY" ||
-    sitesIntentOpen;
+    effectiveSitesIntentOpen;
   const isSecondaryExpanded = forcedSitesExpandOnceActive
     ? true
     : !shouldForceCollapse &&
@@ -290,7 +296,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         pointerZone === "SITES_ROW" ||
         pointerZone === "SECONDARY" ||
         focusZone === "SECONDARY" ||
-        sitesIntentOpen);
+        effectiveSitesIntentOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -677,15 +683,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 <NavRow
                   key={item.path ?? item.label}
                   to={
-                    item.path && item.path !== "/sites"
-                      ? getNavigationPath(item.path)
-                      : undefined
+                    item.disabled || !item.path || item.path === "/sites"
+                      ? undefined
+                      : getNavigationPath(item.path)
                   }
                   replace={Boolean(item.path) && isDemoSession}
-                  onClick={item.path === "/sites" ? handleSitesClick : undefined}
+                  onClick={item.disabled ? undefined : item.path === "/sites" ? handleSitesClick : undefined}
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
+                  disabled={item.disabled}
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
                     item.path === "/sites" ? (
