@@ -67,7 +67,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const pointerZoneRef = useRef(pointerZone);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [sitesIntentOpen, setSitesIntentOpen] = useState(false);
-  const [isForceExpandedOnce, setIsForceExpandedOnce] = useState(false);
+  const [forcedSitesExpandOnceActive, setForcedSitesExpandOnceActive] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -87,7 +87,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   );
   const isEmbedMode = searchParams.get("embed") === "1";
   const isSelectorOpen = searchParams.get("panel") === "sites";
-  const isForceExpandIntent = searchParams.get("expand") === "1";
+  const isForceExpandIntent = searchParams.get("expand_once") === "1";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
   const allSitesOption =
@@ -254,6 +254,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const isHomeRoute = location.pathname === "/home";
+  const isSitesRoute = /^\/sites(?:\/|$)/.test(location.pathname);
   const shouldRenderSecondaryPanel = !isHomeRoute || isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
@@ -279,15 +280,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     pointerZone === "SITES_ROW" ||
     focusZone === "PRIMARY" ||
     sitesIntentOpen;
-  const isSecondaryExpanded =
-    !shouldForceCollapse &&
-    (keepMenuExpanded ||
-      pointerZone === "SITES_ROW" ||
-      pointerZone === "SECONDARY" ||
-      focusZone === "SECONDARY" ||
-      sitesIntentOpen ||
-      isSelectorOpen ||
-      isForceExpandedOnce);
+  const isSecondaryExpanded = forcedSitesExpandOnceActive
+    ? true
+    : !shouldForceCollapse &&
+      (keepMenuExpanded ||
+        pointerZone === "SITES_ROW" ||
+        pointerZone === "SECONDARY" ||
+        focusZone === "SECONDARY" ||
+        sitesIntentOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -339,8 +339,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         return;
       }
 
-      if (isForceExpandedOnce) {
-        setIsForceExpandedOnce(false);
+      if (forcedSitesExpandOnceActive) {
+        setForcedSitesExpandOnceActive(false);
         return;
       }
 
@@ -359,15 +359,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     };
   }, [
     buildSearch,
-    isForceExpandedOnce,
+    forcedSitesExpandOnceActive,
     isSelectorOpen,
     location.pathname,
     navigate,
   ]);
 
   useEffect(() => {
-    if (!isSelectorOpen) {
-      setIsForceExpandedOnce(false);
+    if (!isSitesRoute || !isSelectorOpen) {
+      setForcedSitesExpandOnceActive(false);
       return;
     }
 
@@ -375,12 +375,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       return;
     }
 
-    setIsForceExpandedOnce(true);
+    setForcedSitesExpandOnceActive(true);
 
     navigate(
       {
         pathname: location.pathname,
-        search: buildSearch({ expand: undefined }),
+        search: buildSearch({ panel: "sites", expand_once: undefined }),
       },
       { replace: true },
     );
@@ -388,6 +388,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     buildSearch,
     isForceExpandIntent,
     isSelectorOpen,
+    isSitesRoute,
     location.pathname,
     navigate,
   ]);
@@ -505,7 +506,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       if (!keepMenuExpanded && outsideShell) {
         cancelSitesLeaveTimer();
         setSitesIntentOpen(false);
-        setIsForceExpandedOnce(false);
+        setForcedSitesExpandOnceActive(false);
         setPointerZone("OUTSIDE");
         setIsSecondaryFocused(false);
       }
