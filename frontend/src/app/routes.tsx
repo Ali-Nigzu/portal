@@ -23,6 +23,7 @@ const DeviceListPage = React.lazy(() => import("../pages/DeviceListPage"));
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const HomePage = React.lazy(() => import("../pages/HomePage"));
+const DocumentsPage = React.lazy(() => import("../pages/DocumentsPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
 const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"));
@@ -231,6 +232,21 @@ const AppRoutes: React.FC = () => {
                 )}
                 replace
               />
+            }
+          />
+          <Route
+            path="/documents"
+            element={
+              isAuthenticatedMode ? (
+                renderClientRoute(lazyRoute(<DocumentsPage />))
+              ) : (
+                <Navigate
+                  to={appendViewToken(
+                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                  )}
+                  replace
+                />
+              )
             }
           />
           <Route

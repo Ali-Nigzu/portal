@@ -705,9 +705,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               );
             })}
             <NavRow
+              to={isAuthenticated ? getNavigationPath("/documents") : undefined}
               leftIcon={<NavIcon icon={FileText} />}
               label="Documents"
-              className="vrm-nav-row--placeholder"
+              disabled={!isAuthenticated}
+              className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
             />
             <NavRow
