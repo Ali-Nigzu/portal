@@ -1,71 +1,76 @@
-import { useMemo, useState } from "react";
-import { ACCEPTED_DOCUMENT_TYPES, DocumentItem, DocumentsState } from "../types";
-
-const ACCEPTED_TYPE_SET = new Set<string>(ACCEPTED_DOCUMENT_TYPES);
-
-const isAcceptedFileType = (file: File) => {
-  if (file.type && ACCEPTED_TYPE_SET.has(file.type)) {
-    return true;
-  }
-  return /\.(pdf|csv|xlsx|docx)$/i.test(file.name);
-};
-
-const createDocumentItem = (file: File): DocumentItem => ({
-  id: typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  name: file.name,
-  mimeType: file.type || "application/octet-stream",
-  sizeBytes: file.size,
-  createdAt: Date.now(),
-  source: "local",
-  file,
-});
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  deleteDocument as deleteDocumentRequest,
+  getDownloadUrl,
+  listDocuments,
+  uploadDocuments,
+} from "../api/documentsApi";
+import { DocumentItem, UploadError } from "../types";
 
 export const useDocuments = () => {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const state: DocumentsState = documents.length > 0 ? "HAS_DOCS" : "EMPTY";
-
-  const addDocuments = (files: File[]) => {
-    const validFiles = files.filter(isAcceptedFileType);
-    const invalidFiles = files.filter((file) => !isAcceptedFileType(file));
-
-    if (validFiles.length > 0) {
-      setDocuments((prev) => [...createDocumentItems(validFiles), ...prev]);
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const nextDocuments = await listDocuments();
+      setDocuments(nextDocuments);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load documents");
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    return {
-      added: validFiles.length,
-      invalid: invalidFiles,
-    };
-  };
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  const removeDocument = (documentId: string) => {
+  const uploadBatch = useCallback(async (files: File[]) => {
+    const result = await uploadDocuments(files);
+    setDocuments((prev) => {
+      const merged = [...result.documents, ...prev];
+      const dedupe = new Map(merged.map((item) => [item.id, item]));
+      return Array.from(dedupe.values()).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    });
+    return result;
+  }, []);
+
+  const removeDocument = useCallback(async (documentId: string) => {
+    const previous = documents;
     setDocuments((prev) => prev.filter((item) => item.id !== documentId));
-  };
+    try {
+      await deleteDocumentRequest(documentId);
+    } catch (deleteError) {
+      setDocuments(previous);
+      throw deleteError;
+    }
+  }, [documents]);
 
-  const downloadDocument = (documentItem: DocumentItem) => {
-    const objectUrl = URL.createObjectURL(documentItem.file);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = documentItem.name;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
-  };
+  const downloadDocument = useCallback((documentItem: DocumentItem) => {
+    window.open(getDownloadUrl(documentItem.id), "_blank", "noopener,noreferrer");
+  }, []);
 
   return useMemo(
     () => ({
-      state,
       documents,
-      addDocuments,
+      isLoading,
+      error,
+      refresh,
+      uploadBatch,
       removeDocument,
       downloadDocument,
     }),
-    [documents, state],
+    [documents, isLoading, error, refresh, uploadBatch, removeDocument, downloadDocument],
   );
 };
 
-const createDocumentItems = (files: File[]) => files.map(createDocumentItem);
+export type UploadBatchResult = {
+  documents: DocumentItem[];
+  errors: UploadError[];
+};

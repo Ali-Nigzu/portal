@@ -1,20 +1,28 @@
+export type DocumentType = "pdf" | "csv" | "xlsx" | "docx" | "other";
+
 export type DocumentItem = {
   id: string;
+  accountId: string;
   name: string;
+  type: DocumentType;
   mimeType: string;
   sizeBytes: number;
-  createdAt: number;
-  source: "local";
-  file: File;
+  createdAt: string;
+  updatedAt: string;
+  status: "active" | "deleted";
 };
 
-export type DocumentsState = "EMPTY" | "HAS_DOCS";
+export type UploadError = {
+  filename: string;
+  code: "unsupported_type" | "too_large" | "internal";
+  message: string;
+};
 
-export const ACCEPTED_DOCUMENT_TYPES = [
-  "application/pdf",
-  "text/csv",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-] as const;
+export type PendingUploadItem = {
+  localId: string;
+  file: File;
+  status: "ready" | "uploading" | "failed";
+  error?: string;
+};
 
 export const ACCEPTED_EXTENSIONS = [".pdf", ".csv", ".xlsx", ".docx"];

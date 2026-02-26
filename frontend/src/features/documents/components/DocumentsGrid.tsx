@@ -7,7 +7,8 @@ type DocumentsGridProps = {
   documents: DocumentItem[];
   onUploadClick: () => void;
   onDownload: (documentItem: DocumentItem) => void;
-  onDelete: (documentId: string) => void;
+  onDelete: (documentId: string) => void | Promise<void>;
+  loading?: boolean;
 };
 
 const DocumentsGrid: React.FC<DocumentsGridProps> = ({
@@ -15,6 +16,7 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   onUploadClick,
   onDownload,
   onDelete,
+  loading,
 }) => {
   return (
     <div className="documents-page__grid" aria-live="polite">
@@ -27,6 +29,11 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
         <Plus size={28} aria-hidden="true" />
         <span>Upload</span>
       </button>
+      {loading && documents.length === 0 && (
+        <article className="documents-page__tile documents-page__tile--loading">
+          <span>Loading documents...</span>
+        </article>
+      )}
       {documents.map((documentItem) => (
         <DocumentTile
           key={documentItem.id}
