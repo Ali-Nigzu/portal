@@ -18,7 +18,6 @@ import {
   Settings,
   Shield,
   TrendingUp,
-  Upload,
   LogOut,
 } from "lucide-react";
 import "../styles/VRMTheme.css";
@@ -68,6 +67,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const pointerZoneRef = useRef(pointerZone);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [sitesIntentOpen, setSitesIntentOpen] = useState(false);
+  const [forcedSitesExpandOnceActive, setForcedSitesExpandOnceActive] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -87,10 +87,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   );
   const isEmbedMode = searchParams.get("embed") === "1";
   const isSelectorOpen = searchParams.get("panel") === "sites";
+  const isForceExpandIntent = searchParams.get("expand_once") === "1";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
   const allSitesOption =
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
+  const selectorSiteOptions = isAuthenticated
+    ? []
+    : SITE_OPTIONS.filter((site) => site.id !== "all");
   const buildSearch = (overrides?: Record<string, string | undefined>) => {
     const params = new URLSearchParams(location.search);
     if (!overrides || !Object.prototype.hasOwnProperty.call(overrides, "panel")) {
@@ -171,9 +175,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const primaryNavigationItems = useMemo(
     () => [
       {
+        path: "/home",
         label: "Home",
         icon: <NavIcon icon={Home} />,
-        placeholder: true,
       },
       {
         path: "/sites",
@@ -249,6 +253,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isSiteSelection = isSelectorOpen;
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
+  const isHomeRoute = location.pathname === "/home";
+  const isSitesRoute = /^\/sites(?:\/|$)/.test(location.pathname);
+  const shouldRenderSecondaryPanel = !isHomeRoute || isSelectorOpen;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
@@ -273,13 +280,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     pointerZone === "SITES_ROW" ||
     focusZone === "PRIMARY" ||
     sitesIntentOpen;
-  const isSecondaryExpanded =
-    !shouldForceCollapse &&
-    (keepMenuExpanded ||
-      pointerZone === "SITES_ROW" ||
-      pointerZone === "SECONDARY" ||
-      focusZone === "SECONDARY" ||
-      sitesIntentOpen);
+  const isSecondaryExpanded = forcedSitesExpandOnceActive
+    ? true
+    : !shouldForceCollapse &&
+      (keepMenuExpanded ||
+        pointerZone === "SITES_ROW" ||
+        pointerZone === "SECONDARY" ||
+        focusZone === "SECONDARY" ||
+        sitesIntentOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -312,6 +320,78 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     const isFocused = secondaryPanel?.matches(":focus-within") ?? false;
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
+  useEffect(() => {
+    if (!isSelectorOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      const isInsideSecondary =
+        Boolean(secondaryPanelRef.current) &&
+        secondaryPanelRef.current.contains(target);
+      const isInsideSitesToggle =
+        Boolean(sitesRowRef.current) && sitesRowRef.current.contains(target);
+      if (isInsideSecondary || isInsideSitesToggle) {
+        return;
+      }
+
+      if (forcedSitesExpandOnceActive) {
+        setForcedSitesExpandOnceActive(false);
+        return;
+      }
+
+      navigate(
+        {
+          pathname: location.pathname,
+          search: buildSearch({ panel: undefined }),
+        },
+        { replace: true },
+      );
+    };
+
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+    };
+  }, [
+    buildSearch,
+    forcedSitesExpandOnceActive,
+    isSelectorOpen,
+    location.pathname,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    if (!isSitesRoute || !isSelectorOpen) {
+      setForcedSitesExpandOnceActive(false);
+      return;
+    }
+
+    if (!isForceExpandIntent) {
+      return;
+    }
+
+    setForcedSitesExpandOnceActive(true);
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ panel: "sites", expand_once: undefined }),
+      },
+      { replace: true },
+    );
+  }, [
+    buildSearch,
+    isForceExpandIntent,
+    isSelectorOpen,
+    isSitesRoute,
+    location.pathname,
+    navigate,
+  ]);
   useEffect(() => {
     if (keepMenuExpanded || isTouchMode || typeof window === "undefined") {
       return;
@@ -426,6 +506,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       if (!keepMenuExpanded && outsideShell) {
         cancelSitesLeaveTimer();
         setSitesIntentOpen(false);
+        setForcedSitesExpandOnceActive(false);
         setPointerZone("OUTSIDE");
         setIsSecondaryFocused(false);
       }
@@ -600,9 +681,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
-                  className={
-                    item.placeholder ? "vrm-nav-row--placeholder" : undefined
-                  }
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
                     item.path === "/sites" ? (
@@ -626,12 +704,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 </div>
               );
             })}
-            <NavRow
-              leftIcon={<NavIcon icon={Upload} />}
-              label="Upload"
-              className="vrm-nav-row--placeholder"
-              ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
-            />
             <NavRow
               leftIcon={<NavIcon icon={FileText} />}
               label="Documents"
@@ -663,7 +735,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             )}
           </NavList>
         </nav>
-        <nav
+        {shouldRenderSecondaryPanel && (
+          <nav
           className="vrm-extended-panel"
           aria-label="Secondary"
           ref={secondaryPanelRef}
@@ -704,7 +777,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           </div>
           {!showSiteMenu && (
             <NavList className="vrm-secondary-list">
-              {SITE_OPTIONS.filter((site) => site.id !== "all").map((site) => {
+              {selectorSiteOptions.map((site) => {
                 const siteSubPath = (() => {
                   const match = location.pathname.match(/^\/sites\/[^/]+(\/.*)?$/);
                   const trailing = match?.[1];
@@ -795,7 +868,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ))}
             </NavList>
           )}
-        </nav>
+          </nav>
+        )}
       </div>
       <main className="vrm-main">
         <div className="vrm-content">{children || <Outlet />}</div>
