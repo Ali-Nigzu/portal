@@ -254,8 +254,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const isHomeRoute = location.pathname === "/home";
+  const isDocumentsRoute =
+    location.pathname === "/documents" || location.pathname.startsWith("/documents/");
   const isSitesRoute = /^\/sites(?:\/|$)/.test(location.pathname);
-  const shouldRenderSecondaryPanel = !isHomeRoute || isSelectorOpen;
+  const shouldRenderSecondaryPanel =
+    !isDocumentsRoute && (!isHomeRoute || isSelectorOpen);
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
@@ -640,6 +643,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           !keepMenuExpanded && isSecondaryExpanded
             ? "vrm-sidebar-shell--secondary-expanded"
             : ""
+        } ${
+          !shouldRenderSecondaryPanel ? "vrm-sidebar-shell--no-secondary" : ""
         }`}
         aria-label="Primary"
       >
@@ -708,7 +713,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               to={isAuthenticated ? getNavigationPath("/documents") : undefined}
               leftIcon={<NavIcon icon={FileText} />}
               label="Documents"
-              disabled={!isAuthenticated}
+              disabled={!isAuthenticated || isDemoSession}
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
             />

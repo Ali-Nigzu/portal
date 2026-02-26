@@ -16,17 +16,6 @@
   line-height: var(--vrm-typography-line-height-tight);
 }
 
-.documents-page__subtitle {
-  margin-top: var(--vrm-spacing-1);
-  color: var(--sys-text-2, var(--vrm-text-secondary));
-  font-size: var(--vrm-typography-font-size-body);
-}
-
-.documents-page__empty-copy {
-  color: var(--sys-text-2, var(--vrm-text-secondary));
-  font-size: var(--vrm-typography-font-size-subtitle);
-}
-
 .documents-page__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
