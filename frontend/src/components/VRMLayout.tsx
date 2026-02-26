@@ -67,6 +67,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const pointerZoneRef = useRef(pointerZone);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [sitesIntentOpen, setSitesIntentOpen] = useState(false);
+  const [isForceExpandedOnce, setIsForceExpandedOnce] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -86,6 +87,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   );
   const isEmbedMode = searchParams.get("embed") === "1";
   const isSelectorOpen = searchParams.get("panel") === "sites";
+  const isForceExpandIntent = searchParams.get("expand") === "1";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
   const allSitesOption =
@@ -284,7 +286,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       pointerZone === "SECONDARY" ||
       focusZone === "SECONDARY" ||
       sitesIntentOpen ||
-      isSelectorOpen);
+      isSelectorOpen ||
+      isForceExpandedOnce);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -336,6 +339,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         return;
       }
 
+      if (isForceExpandedOnce) {
+        setIsForceExpandedOnce(false);
+        return;
+      }
+
       navigate(
         {
           pathname: location.pathname,
@@ -349,7 +357,40 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     return () => {
       document.removeEventListener("pointerdown", handleDocumentPointerDown);
     };
-  }, [buildSearch, isSelectorOpen, location.pathname, navigate]);
+  }, [
+    buildSearch,
+    isForceExpandedOnce,
+    isSelectorOpen,
+    location.pathname,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    if (!isSelectorOpen) {
+      setIsForceExpandedOnce(false);
+      return;
+    }
+
+    if (!isForceExpandIntent) {
+      return;
+    }
+
+    setIsForceExpandedOnce(true);
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ expand: undefined }),
+      },
+      { replace: true },
+    );
+  }, [
+    buildSearch,
+    isForceExpandIntent,
+    isSelectorOpen,
+    location.pathname,
+    navigate,
+  ]);
   useEffect(() => {
     if (keepMenuExpanded || isTouchMode || typeof window === "undefined") {
       return;
@@ -464,6 +505,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       if (!keepMenuExpanded && outsideShell) {
         cancelSitesLeaveTimer();
         setSitesIntentOpen(false);
+        setIsForceExpandedOnce(false);
         setPointerZone("OUTSIDE");
         setIsSecondaryFocused(false);
       }

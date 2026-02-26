@@ -47,7 +47,7 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--fleet"
-            onClick={() => navigate("/sites/all/alarm-logs?panel=sites")}
+            onClick={() => navigate("/sites/all/alarm-logs?panel=sites&expand=1")}
             aria-label="Open Monitor Fleet"
           >
             <Card
@@ -65,7 +65,7 @@ const HomePage: React.FC = () => {
           <button
             type="button"
             className="home-page__card-button home-page__card-button--sites"
-            onClick={() => navigate("/sites/all/dashboard?panel=sites")}
+            onClick={() => navigate("/sites/all/dashboard?panel=sites&expand=1")}
             aria-label="Open My Sites"
           >
             <Card
