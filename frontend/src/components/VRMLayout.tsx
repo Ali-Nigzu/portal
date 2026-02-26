@@ -88,6 +88,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isEmbedMode = searchParams.get("embed") === "1";
   const isSelectorOpen = searchParams.get("panel") === "sites";
   const isForceExpandIntent = searchParams.get("expand_once") === "1";
+  const isSiteMenuForceExpandIntent =
+    searchParams.get("site_menu_expand_once") === "1";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
   const allSitesOption =
@@ -277,18 +279,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     : isPrimaryFocused
       ? "PRIMARY"
       : "OUTSIDE";
-  const effectiveSitesIntentOpen = sitesIntentOpen || isSelectorOpen;
+  const primarySitesIntentOpen = sitesIntentOpen;
+  const secondarySitesIntentOpen = sitesIntentOpen || isSelectorOpen;
   const shouldForceCollapse =
     !keepMenuExpanded &&
     pointerZone === "OUTSIDE" &&
     focusZone === "OUTSIDE" &&
-    !effectiveSitesIntentOpen;
+    !secondarySitesIntentOpen;
   const isPrimaryExpanded =
     keepMenuExpanded ||
     pointerZone === "PRIMARY" ||
     pointerZone === "SITES_ROW" ||
     focusZone === "PRIMARY" ||
-    effectiveSitesIntentOpen;
+    primarySitesIntentOpen;
   const isSecondaryExpanded = forcedSitesExpandOnceActive
     ? true
     : !shouldForceCollapse &&
@@ -296,7 +299,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         pointerZone === "SITES_ROW" ||
         pointerZone === "SECONDARY" ||
         focusZone === "SECONDARY" ||
-        effectiveSitesIntentOpen);
+        secondarySitesIntentOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -397,6 +400,32 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     buildSearch,
     isForceExpandIntent,
     isSelectorOpen,
+    isSitesRoute,
+    location.pathname,
+    navigate,
+  ]);
+  useEffect(() => {
+    if (!isSitesRoute || isSelectorOpen) {
+      return;
+    }
+
+    if (!isSiteMenuForceExpandIntent) {
+      return;
+    }
+
+    setForcedSitesExpandOnceActive(true);
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ site_menu_expand_once: undefined }),
+      },
+      { replace: true },
+    );
+  }, [
+    buildSearch,
+    isSelectorOpen,
+    isSiteMenuForceExpandIntent,
     isSitesRoute,
     location.pathname,
     navigate,
