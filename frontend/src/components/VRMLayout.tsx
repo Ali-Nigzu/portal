@@ -333,7 +333,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
   useEffect(() => {
-    if (!isSelectorOpen || typeof window === "undefined") {
+    if ((!isSelectorOpen && !forcedSitesExpandOnceActive) || typeof window === "undefined") {
       return;
     }
 
@@ -378,12 +378,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   ]);
 
   useEffect(() => {
-    if (!isSitesRoute || !isSelectorOpen) {
+    if (!isSitesRoute) {
       setForcedSitesExpandOnceActive(false);
       return;
     }
 
-    if (!isForceExpandIntent) {
+    if (!isSelectorOpen || !isForceExpandIntent) {
       return;
     }
 
