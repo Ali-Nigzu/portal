@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 import {
   getManagedUsers,
+  getMe,
   getPendingInvites,
   inviteUser,
   isNotImplementedError,
@@ -11,22 +12,34 @@ import PendingInvitesTable from "../components/PendingInvitesTable";
 import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
 import UsersTable from "../components/UsersTable";
-import type { AccessLevel, ManagedUser, PendingInvite } from "../types";
+import type { AccessLevel, ManagedUser, PendingInvite, SettingsUser } from "../types";
 import "../SettingsPages.css";
 
 const ManageAccessPage: React.FC = () => {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
+  const [currentUser, setCurrentUser] = useState<SettingsUser | null>(null);
+  const [currentUserSite, setCurrentUserSite] = useState("all-sites");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const inviteButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      const [loadedUsers, loadedInvites] = await Promise.all([
+      const [me, loadedUsers, loadedInvites] = await Promise.all([
+        getMe(),
         getManagedUsers(),
         getPendingInvites(),
       ]);
-      setUsers(loadedUsers);
+
+      setCurrentUser(me);
+      const currentUserRow: ManagedUser = {
+        username: me.name,
+        email: me.email,
+        site: "All Sites",
+        accessLevel: "Admin",
+      };
+
+      setUsers([currentUserRow, ...loadedUsers]);
       setInvites(loadedInvites);
     };
 
@@ -58,7 +71,11 @@ const ManageAccessPage: React.FC = () => {
       <SettingsPageHeader
         title="Manage Access"
         action={
-          <button ref={inviteButtonRef} className="vrm-btn vrm-btn-sm" onClick={() => setIsInviteOpen(true)}>
+          <button
+            ref={inviteButtonRef}
+            className="vrm-btn vrm-btn-primary vrm-btn-sm"
+            onClick={() => setIsInviteOpen(true)}
+          >
             Invite user
           </button>
         }
@@ -69,7 +86,12 @@ const ManageAccessPage: React.FC = () => {
           <h2 className="vrm-card-title">Users</h2>
         </div>
         <div className="vrm-card-body settings-table-card-body">
-          <UsersTable users={users} />
+          <UsersTable
+            users={users}
+            currentUsername={currentUser?.name}
+            currentUserSite={currentUserSite}
+            onCurrentUserSiteChange={setCurrentUserSite}
+          />
         </div>
       </div>
 
@@ -82,7 +104,11 @@ const ManageAccessPage: React.FC = () => {
         </div>
       </div>
 
-      <InviteUserModal isOpen={isInviteOpen} onClose={handleCloseModal} onSubmitted={handleInviteSubmit} />
+      <InviteUserModal
+        isOpen={isInviteOpen}
+        onClose={handleCloseModal}
+        onSubmitted={handleInviteSubmit}
+      />
     </SettingsFrame>
   );
 };

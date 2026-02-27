@@ -4,9 +4,17 @@ import type { ManagedUser } from "../types";
 
 type UsersTableProps = {
   users: ManagedUser[];
+  currentUsername?: string;
+  currentUserSite: string;
+  onCurrentUserSiteChange: (site: string) => void;
 };
 
-const UsersTable: React.FC<UsersTableProps> = ({ users }) => (
+const UsersTable: React.FC<UsersTableProps> = ({
+  users,
+  currentUsername,
+  currentUserSite,
+  onCurrentUserSiteChange,
+}) => (
   <div className="settings-table-wrap">
     <table className="vrm-table settings-table">
       <thead>
@@ -18,23 +26,29 @@ const UsersTable: React.FC<UsersTableProps> = ({ users }) => (
         </tr>
       </thead>
       <tbody>
-        {users.length === 0 ? (
-          <tr>
-            <td colSpan={4} className="settings-empty-row">
-              <div className="settings-empty-title">No users yet</div>
-              <div className="settings-empty-hint">Invite a user to grant access to a site.</div>
-            </td>
-          </tr>
-        ) : (
-          users.map((user) => (
-            <tr key={`${user.username}-${user.site}`}>
+        {users.map((user) => {
+          const isCurrentUser = Boolean(currentUsername) && user.username === currentUsername;
+          return (
+            <tr key={`${user.username}-${user.email}`}>
               <td>{user.username}</td>
               <td>{user.email}</td>
-              <td>{user.site}</td>
+              <td>
+                {isCurrentUser ? (
+                  <select
+                    className="settings-select settings-site-select"
+                    value={currentUserSite}
+                    onChange={(event) => onCurrentUserSiteChange(event.target.value)}
+                  >
+                    <option value="all-sites">All Sites</option>
+                  </select>
+                ) : (
+                  user.site
+                )}
+              </td>
               <td>{user.accessLevel}</td>
             </tr>
-          ))
-        )}
+          );
+        })}
       </tbody>
     </table>
   </div>

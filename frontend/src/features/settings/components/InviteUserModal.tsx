@@ -9,15 +9,15 @@ type InviteUserModalProps = {
   onSubmitted: (payload: { email: string; site: string; accessLevel: AccessLevel }) => Promise<void>;
 };
 
-type InviteState = "pristine" | "invalid" | "valid" | "submitting" | "error";
+type InviteState = "closed" | "pristine" | "invalid" | "valid" | "submitting" | "error";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSubmitted }) => {
   const [email, setEmail] = useState("");
-  const [site, setSite] = useState("");
+  const [site, setSite] = useState("all-sites");
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("Viewer");
-  const [state, setState] = useState<InviteState>("pristine");
+  const [state, setState] = useState<InviteState>("closed");
   const [error, setError] = useState<string | null>(null);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -25,36 +25,46 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
 
   useEffect(() => {
     if (!isOpen) {
+      setState("closed");
       return;
     }
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.setTimeout(() => emailInputRef.current?.focus(), 0);
 
+    if (!email) {
+      setState("pristine");
+    }
+
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen]);
+  }, [email, isOpen]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || state === "submitting" || state === "error") {
       return;
     }
 
-    if (!email && !site) {
+    if (!email) {
       setState("pristine");
       return;
     }
 
     setState(isValid ? "valid" : "invalid");
-  }, [email, site, accessLevel, isOpen, isValid]);
+  }, [email, isOpen, isValid, state]);
+
+  const resetState = () => {
+    setEmail("");
+    setSite("all-sites");
+    setAccessLevel("Viewer");
+    setState("closed");
+    setError(null);
+  };
 
   const handleClose = () => {
-    setEmail("");
-    setSite("");
-    setAccessLevel("Viewer");
-    setState("pristine");
-    setError(null);
+    resetState();
     onClose();
   };
 
@@ -71,7 +81,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
     try {
       await onSubmitted({
         email: email.trim(),
-        site: site.trim(),
+        site,
         accessLevel,
       });
       handleClose();
@@ -106,14 +116,14 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
             </div>
             <div className="settings-form-field">
               <label className="settings-form-label" htmlFor="invite-site">Site</label>
-              <input
+              <select
                 id="invite-site"
-                className="settings-input"
-                type="text"
+                className="settings-select"
                 value={site}
                 onChange={(event) => setSite(event.target.value)}
-                placeholder="Enter site"
-              />
+              >
+                <option value="all-sites">All Sites</option>
+              </select>
             </div>
             <div className="settings-form-field">
               <label className="settings-form-label" htmlFor="invite-level">Access level</label>

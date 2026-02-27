@@ -699,11 +699,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               </div>
               <div className="vrm-brand-text">
                 <div className="vrm-brand-title">camOS</div>
-                <div className="vrm-brand-subrow">
-                  <span className="vrm-brand-badge" aria-label="Demo">
-                    DEMO
-                  </span>
-                </div>
+                {isDemoSession && (
+                  <div className="vrm-brand-subrow">
+                    <span className="vrm-brand-badge" aria-label="Demo">
+                      DEMO
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

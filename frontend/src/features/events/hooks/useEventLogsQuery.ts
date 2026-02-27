@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Credentials } from "../../../types/credentials";
+
+import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
+import type { Credentials } from "../../../types/credentials";
 import { searchEvents } from "../transport/searchEvents";
 import type { EventData } from "../utils/eventTypes";
 
@@ -42,26 +44,31 @@ export const useEventLogsQuery = (
   const [totalPages, setTotalPages] = useState(1);
   const [totalEvents, setTotalEvents] = useState(0);
   const skipNextFetch = useRef(false);
+
   const eventsPerPage = 20;
+  const isDemoSession = isDemoSessionActive();
   const resolvedViewToken =
     overrides.viewToken !== undefined
       ? overrides.viewToken ?? undefined
       : typeof window === "undefined"
         ? undefined
         : getViewTokenFromLocation(window.location.search);
-  const storageKey = `camOS.eventLogsState:${resolvedViewToken ?? "auth"}`;
+  const storageKey = `camOS.eventLogsState:${isDemoSession ? "demo" : "auth"}`;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const applyHardZeroResult = useCallback(() => {
+    setEvents([]);
+    setTotalPages(1);
+    setTotalEvents(0);
+    setCurrentPage(1);
+    setError(null);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") {
-      return;
-    }
-    if (!resolvedViewToken) {
-      setEvents([]);
-      setTotalPages(1);
-      setTotalEvents(0);
-      setCurrentPage(1);
       return;
     }
 
@@ -69,6 +76,7 @@ export const useEventLogsQuery = (
     if (!stored) {
       return;
     }
+
     try {
       const parsed = JSON.parse(stored) as {
         events?: EventData[];
@@ -83,6 +91,7 @@ export const useEventLogsQuery = (
         appliedEndDate?: string | null;
         searchToken?: number;
       };
+
       if (Array.isArray(parsed.events)) {
         setEvents(parsed.events);
       }
@@ -120,13 +129,15 @@ export const useEventLogsQuery = (
         }
       }
     } catch {
+      // ignore malformed cache
     }
-  }, [resolvedViewToken, storageKey]);
+  }, [storageKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
+
     const payload = {
       events,
       totalPages,
@@ -136,12 +147,11 @@ export const useEventLogsQuery = (
       appliedFilters,
       draftStartDate: draftStartDate ? draftStartDate.toISOString() : null,
       draftEndDate: draftEndDate ? draftEndDate.toISOString() : null,
-      appliedStartDate: appliedStartDate
-        ? appliedStartDate.toISOString()
-        : null,
+      appliedStartDate: appliedStartDate ? appliedStartDate.toISOString() : null,
       appliedEndDate: appliedEndDate ? appliedEndDate.toISOString() : null,
       searchToken,
     };
+
     window.sessionStorage.setItem(storageKey, JSON.stringify(payload));
   }, [
     appliedEndDate,
@@ -183,16 +193,10 @@ export const useEventLogsQuery = (
         searchParams.append("per_page", eventsPerPage.toString());
       }
       if (appliedStartDate) {
-        searchParams.append(
-          "start_date",
-          appliedStartDate.toISOString().split("T")[0],
-        );
+        searchParams.append("start_date", appliedStartDate.toISOString().split("T")[0]);
       }
       if (appliedEndDate) {
-        searchParams.append(
-          "end_date",
-          appliedEndDate.toISOString().split("T")[0],
-        );
+        searchParams.append("end_date", appliedEndDate.toISOString().split("T")[0]);
       }
       if (appliedFilters.event) {
         searchParams.append("event", appliedFilters.event);
@@ -215,29 +219,21 @@ export const useEventLogsQuery = (
       }
       return searchParams;
     },
-    [
-      appliedEndDate,
-      appliedFilters,
-      appliedStartDate,
-      currentPage,
-      eventsPerPage,
-    ],
+    [appliedEndDate, appliedFilters, appliedStartDate, currentPage, eventsPerPage],
   );
 
   const fetchEvents = useCallback(async () => {
+    if (!isDemoSession) {
+      applyHardZeroResult();
+      return;
+    }
+
     try {
       setLoading(true);
       const viewToken =
         overrides.viewToken !== undefined
           ? overrides.viewToken
           : getViewTokenFromLocation();
-      if (!viewToken) {
-        setEvents([]);
-        setTotalPages(1);
-        setTotalEvents(0);
-        setError(null);
-        return;
-      }
       const urlParams = new URLSearchParams(window.location.search);
       const clientId =
         overrides.clientId !== undefined
@@ -256,13 +252,19 @@ export const useEventLogsQuery = (
       setTotalEvents(result.total || 0);
       setError(null);
     } catch (err) {
-      setError(
-        `Failed to fetch events: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
+      setError(`Failed to fetch events: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setLoading(false);
     }
-  }, [buildSearchParams, credentials, overrides.clientId, overrides.searchEventsFn, overrides.viewToken]);
+  }, [
+    applyHardZeroResult,
+    buildSearchParams,
+    credentials,
+    isDemoSession,
+    overrides.clientId,
+    overrides.searchEventsFn,
+    overrides.viewToken,
+  ]);
 
   useEffect(() => {
     if (searchToken === 0) {
@@ -284,13 +286,14 @@ export const useEventLogsQuery = (
   };
 
   const fetchExportEvents = useCallback(async () => {
+    if (!isDemoSession) {
+      return [];
+    }
+
     const viewToken =
       overrides.viewToken !== undefined
         ? overrides.viewToken
         : getViewTokenFromLocation();
-    if (!viewToken) {
-      return [];
-    }
     const urlParams = new URLSearchParams(window.location.search);
     const clientId =
       overrides.clientId !== undefined
@@ -305,7 +308,14 @@ export const useEventLogsQuery = (
       clientId,
     });
     return (result.events as EventData[]) || [];
-  }, [buildSearchParams, credentials, overrides.clientId, overrides.searchEventsFn, overrides.viewToken]);
+  }, [
+    buildSearchParams,
+    credentials,
+    isDemoSession,
+    overrides.clientId,
+    overrides.searchEventsFn,
+    overrides.viewToken,
+  ]);
 
   return {
     events,

@@ -1,13 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-import { getMe, isNotImplementedError, updateMe, updatePassword } from "../api/settingsApi";
+import {
+  getMe,
+  isNotImplementedError,
+  updateMe,
+  updatePassword,
+  verifyCurrentPassword,
+} from "../api/settingsApi";
 import EditableFieldRow from "../components/EditableFieldRow";
+import ReenterPasswordModal from "../components/ReenterPasswordModal";
 import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
 import type { SettingsUser } from "../types";
 import "../SettingsPages.css";
 
-type EditableRowKey = "name" | "email" | "phone" | "password";
+type EditableRowKey = "username" | "email" | "phone" | "password";
 
 type RowDraftState = Record<EditableRowKey, string>;
 type RowSavingState = Record<EditableRowKey, boolean>;
@@ -18,8 +25,8 @@ const maskEmail = (email: string) => {
   if (!domain) {
     return "••••";
   }
-  const localVisible = Math.min(2, localPart.length);
-  return `${localPart.slice(0, localVisible)}${"•".repeat(Math.max(localPart.length - localVisible, 4))}@${domain}`;
+  const visible = Math.min(2, localPart.length);
+  return `${localPart.slice(0, visible)}${"•".repeat(Math.max(localPart.length - visible, 4))}@${domain}`;
 };
 
 const maskPhone = (phone: string | null | undefined) => {
@@ -31,14 +38,14 @@ const maskPhone = (phone: string | null | undefined) => {
 };
 
 const defaultSavingState: RowSavingState = {
-  name: false,
+  username: false,
   email: false,
   phone: false,
   password: false,
 };
 
 const defaultErrorState: RowErrorState = {
-  name: null,
+  username: null,
   email: null,
   phone: null,
   password: null,
@@ -48,7 +55,14 @@ const MyAccountPage: React.FC = () => {
   const [user, setUser] = useState<SettingsUser | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [activeEditingRowId, setActiveEditingRowId] = useState<EditableRowKey | null>(null);
-  const [drafts, setDrafts] = useState<RowDraftState>({ name: "", email: "", phone: "", password: "" });
+  const [pendingRowToEdit, setPendingRowToEdit] = useState<EditableRowKey | null>(null);
+  const [isPasswordGateOpen, setIsPasswordGateOpen] = useState(false);
+  const [drafts, setDrafts] = useState<RowDraftState>({
+    username: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
   const [saving, setSaving] = useState<RowSavingState>(defaultSavingState);
   const [errors, setErrors] = useState<RowErrorState>(defaultErrorState);
 
@@ -57,7 +71,12 @@ const MyAccountPage: React.FC = () => {
       try {
         const me = await getMe();
         setUser(me);
-        setDrafts({ name: me.name, email: me.email, phone: me.phone ?? "", password: "" });
+        setDrafts({
+          username: me.name,
+          email: me.email,
+          phone: me.phone ?? "",
+          password: "",
+        });
       } catch (error) {
         setLoadingError(error instanceof Error ? error.message : "Unable to load account");
       }
@@ -66,29 +85,42 @@ const MyAccountPage: React.FC = () => {
     load();
   }, []);
 
-  const startEditing = (rowId: EditableRowKey) => {
+  const requestEdit = (rowId: EditableRowKey) => {
     if (!user) {
       return;
     }
     setErrors((prev) => ({ ...prev, [rowId]: null }));
-    setActiveEditingRowId(rowId);
+    setPendingRowToEdit(rowId);
+    setIsPasswordGateOpen(true);
+  };
+
+  const beginEditingApprovedRow = () => {
+    if (!user || !pendingRowToEdit) {
+      return;
+    }
+
+    const rowId = pendingRowToEdit;
     setDrafts((prev) => ({
       ...prev,
-      name: user.name,
+      username: user.name,
       email: user.email,
       phone: user.phone ?? "",
       password: rowId === "password" ? "" : prev.password,
     }));
+    setActiveEditingRowId(rowId);
+    setPendingRowToEdit(null);
+    setIsPasswordGateOpen(false);
   };
 
   const cancelEditing = (rowId: EditableRowKey) => {
     if (!user) {
       return;
     }
+
     setErrors((prev) => ({ ...prev, [rowId]: null }));
     setDrafts((prev) => ({
       ...prev,
-      name: user.name,
+      username: user.name,
       email: user.email,
       phone: user.phone ?? "",
       password: "",
@@ -102,9 +134,8 @@ const MyAccountPage: React.FC = () => {
     }
 
     const nextValue = drafts[rowId].trim();
-
     if (rowId !== "phone" && !nextValue) {
-      setErrors((prev) => ({ ...prev, [rowId]: `${rowId[0].toUpperCase()}${rowId.slice(1)} is required` }));
+      setErrors((prev) => ({ ...prev, [rowId]: "This field is required" }));
       return;
     }
 
@@ -114,7 +145,7 @@ const MyAccountPage: React.FC = () => {
     try {
       if (rowId === "password") {
         await updatePassword(nextValue);
-      } else if (rowId === "name") {
+      } else if (rowId === "username") {
         await updateMe({ name: nextValue });
       } else if (rowId === "email") {
         await updateMe({ email: nextValue });
@@ -123,16 +154,16 @@ const MyAccountPage: React.FC = () => {
       }
 
       setUser((prev) => {
-        if (!prev) {
+        if (!prev || rowId === "password") {
           return prev;
         }
-        if (rowId === "password") {
-          return prev;
+        if (rowId === "username") {
+          return { ...prev, name: nextValue };
         }
-        return {
-          ...prev,
-          [rowId]: rowId === "phone" ? nextValue : nextValue,
-        };
+        if (rowId === "email") {
+          return { ...prev, email: nextValue };
+        }
+        return { ...prev, phone: nextValue };
       });
       setActiveEditingRowId(null);
       setDrafts((prev) => ({ ...prev, password: "" }));
@@ -161,7 +192,7 @@ const MyAccountPage: React.FC = () => {
     }
 
     return [
-      { key: "name", label: "Name", displayValue: user.name, type: "text" as const },
+      { key: "username", label: "Username", displayValue: user.name, type: "text" as const },
       { key: "email", label: "Email", displayValue: maskEmail(user.email), type: "email" as const },
       { key: "phone", label: "Phone", displayValue: maskPhone(user.phone), type: "tel" as const },
       { key: "password", label: "Password", displayValue: "••••••••", type: "password" as const },
@@ -205,7 +236,7 @@ const MyAccountPage: React.FC = () => {
               isEditing={activeEditingRowId === row.key}
               isSaving={saving[row.key]}
               error={errors[row.key]}
-              onEdit={() => startEditing(row.key)}
+              onEdit={() => requestEdit(row.key)}
               onCancel={() => cancelEditing(row.key)}
               onSave={() => handleSave(row.key)}
               onChange={(value) => setDrafts((prev) => ({ ...prev, [row.key]: value }))}
@@ -213,6 +244,15 @@ const MyAccountPage: React.FC = () => {
           ))}
         </div>
       </div>
+      <ReenterPasswordModal
+        isOpen={isPasswordGateOpen}
+        onClose={() => {
+          setIsPasswordGateOpen(false);
+          setPendingRowToEdit(null);
+        }}
+        onVerified={beginEditingApprovedRow}
+        onVerifyPassword={(password) => verifyCurrentPassword(user.email, password)}
+      />
     </SettingsFrame>
   );
 };
