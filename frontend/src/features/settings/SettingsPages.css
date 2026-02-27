@@ -1,0 +1,98 @@
+.settings-page {
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  gap: 24px;
+}
+
+.settings-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-field-row {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--vrm-border-subtle);
+}
+
+.settings-field-label {
+  color: var(--vrm-text-muted);
+  font-size: 14px;
+}
+
+.settings-field-value {
+  color: var(--vrm-text-primary);
+}
+
+.settings-field-edit {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-input,
+.settings-select {
+  width: 100%;
+  border: 1px solid var(--vrm-border-subtle);
+  border-radius: 8px;
+  background: var(--vrm-surface-secondary);
+  color: var(--vrm-text-primary);
+  padding: 10px 12px;
+}
+
+.settings-field-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-inline-error,
+.settings-form-error {
+  color: #ff8b8b;
+  font-size: 12px;
+}
+
+.settings-empty-row {
+  text-align: center;
+  color: var(--vrm-text-muted);
+  padding: 20px;
+}
+
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.settings-modal {
+  width: min(520px, 92vw);
+}
+
+.settings-form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-form-label {
+  font-size: 14px;
+  color: var(--vrm-text-muted);
+}
+
+.settings-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

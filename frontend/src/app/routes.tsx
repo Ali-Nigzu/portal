@@ -24,6 +24,8 @@ const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
 const AdminPage = React.lazy(() => import("../pages/AdminPage"));
 const HomePage = React.lazy(() => import("../pages/HomePage"));
 const DocumentsPage = React.lazy(() => import("../pages/DocumentsPage"));
+const MyAccountPage = React.lazy(() => import("../features/settings/pages/MyAccountPage"));
+const ManageAccessPage = React.lazy(() => import("../features/settings/pages/ManageAccessPage"));
 const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
 const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"));
@@ -226,13 +228,51 @@ const AppRoutes: React.FC = () => {
           <Route
             path="/settings"
             element={
-              <Navigate
-                to={appendViewToken(
-                  `/sites/${resolveLegacySiteId()}/dashboard`,
-                )}
-                replace
-              />
+              isAuthenticatedMode ? (
+                <Navigate to="/settings/account" replace />
+              ) : (
+                <Navigate
+                  to={appendViewToken(
+                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                  )}
+                  replace
+                />
+              )
             }
+          />
+          <Route
+            path="/settings/account"
+            element={
+              isAuthenticatedMode ? (
+                renderClientRoute(lazyRoute(<MyAccountPage />))
+              ) : (
+                <Navigate
+                  to={appendViewToken(
+                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                  )}
+                  replace
+                />
+              )
+            }
+          />
+          <Route
+            path="/settings/access"
+            element={
+              isAuthenticatedMode ? (
+                renderClientRoute(lazyRoute(<ManageAccessPage />))
+              ) : (
+                <Navigate
+                  to={appendViewToken(
+                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                  )}
+                  replace
+                />
+              )
+            }
+          />
+          <Route
+            path="/settings/alarms"
+            element={<Navigate to="/settings/account" replace />}
           />
           <Route
             path="/documents"
