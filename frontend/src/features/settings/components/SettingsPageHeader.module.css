@@ -1,0 +1,27 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--vrm-text-primary);
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .action {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

@@ -7,8 +7,8 @@ type PendingInvitesTableProps = {
 };
 
 const PendingInvitesTable: React.FC<PendingInvitesTableProps> = ({ invites }) => (
-  <div style={{ overflowX: "auto" }}>
-    <table className="vrm-table">
+  <div className="settings-table-wrap">
+    <table className="vrm-table settings-table">
       <thead>
         <tr>
           <th>Email</th>
@@ -20,7 +20,10 @@ const PendingInvitesTable: React.FC<PendingInvitesTableProps> = ({ invites }) =>
       <tbody>
         {invites.length === 0 ? (
           <tr>
-            <td colSpan={4} className="settings-empty-row">No pending invitations.</td>
+            <td colSpan={4} className="settings-empty-row">
+              <div className="settings-empty-title">No pending invitations</div>
+              <div className="settings-empty-hint">Invited users will appear here until they accept access.</div>
+            </td>
           </tr>
         ) : (
           invites.map((invite) => (

@@ -1,37 +1,39 @@
-.settings-page {
-  max-width: 960px;
-  margin: 0 auto;
-  display: grid;
-  gap: 24px;
-}
-
-.settings-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.settings-account-card-body,
+.settings-table-card-body {
+  padding: 0;
 }
 
 .settings-field-row {
   display: grid;
-  grid-template-columns: 140px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 0;
+  grid-template-columns: 160px minmax(0, 1fr) 176px;
+  gap: 16px;
+  align-items: start;
+  padding: 18px 20px;
   border-bottom: 1px solid var(--vrm-border-subtle);
+}
+
+.settings-field-row:last-child {
+  border-bottom: none;
 }
 
 .settings-field-label {
   color: var(--vrm-text-muted);
   font-size: 14px;
+  line-height: 1.5;
+  padding-top: 8px;
+}
+
+.settings-field-main {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
 }
 
 .settings-field-value {
   color: var(--vrm-text-primary);
-}
-
-.settings-field-edit {
-  display: grid;
-  gap: 8px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
 
 .settings-input,
@@ -42,10 +44,15 @@
   background: var(--vrm-surface-secondary);
   color: var(--vrm-text-primary);
   padding: 10px 12px;
+  min-height: 40px;
 }
 
 .settings-field-actions {
+  width: 176px;
+  min-height: 40px;
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -55,24 +62,37 @@
   font-size: 12px;
 }
 
+.settings-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.settings-table {
+  width: 100%;
+}
+
+.settings-table th {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .settings-empty-row {
-  text-align: center;
+  text-align: left;
+  padding: 24px;
+}
+
+.settings-empty-title {
+  color: var(--vrm-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-empty-hint {
+  margin-top: 4px;
   color: var(--vrm-text-muted);
-  padding: 20px;
-}
-
-.settings-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.settings-modal {
-  width: min(520px, 92vw);
+  font-size: 13px;
 }
 
 .settings-form-grid {
@@ -95,4 +115,20 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .settings-field-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .settings-field-label {
+    padding-top: 0;
+  }
+
+  .settings-field-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }

@@ -1,11 +1,17 @@
-import React, { useState } from "react";
+import React from "react";
 
 type EditableFieldRowProps = {
   label: string;
   displayValue: string;
   value: string;
   type?: "text" | "email" | "tel" | "password";
-  onSave: (value: string) => Promise<void>;
+  isEditing: boolean;
+  isSaving: boolean;
+  error?: string | null;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  onChange: (value: string) => void;
 };
 
 const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
@@ -13,70 +19,66 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
   displayValue,
   value,
   type = "text",
+  isEditing,
+  isSaving,
+  error,
+  onEdit,
+  onCancel,
   onSave,
+  onChange,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [draftValue, setDraftValue] = useState(value);
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (!isSaving) {
+        onSave();
+      }
+      return;
+    }
 
-  const handleEdit = () => {
-    setDraftValue(value);
-    setError(null);
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setDraftValue(value);
-    setError(null);
-    setIsEditing(false);
-  };
-
-  const handleSave = async () => {
-    setError(null);
-    setIsSaving(true);
-    try {
-      await onSave(draftValue);
-      setIsEditing(false);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to save");
-    } finally {
-      setIsSaving(false);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (!isSaving) {
+        onCancel();
+      }
     }
   };
 
   return (
-    <div className="settings-field-row">
+    <div className={`settings-field-row ${isEditing ? "settings-field-row--editing" : ""}`}>
       <div className="settings-field-label">{label}</div>
-      {!isEditing ? (
-        <>
+      <div className="settings-field-main">
+        {!isEditing ? (
           <div className="settings-field-value">{displayValue || "—"}</div>
-          <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleEdit}>
+        ) : (
+          <input
+            className="settings-input"
+            value={value}
+            type={type}
+            onChange={(event) => onChange(event.target.value)}
+            disabled={isSaving}
+            onKeyDown={handleKeyDown}
+            autoFocus
+          />
+        )}
+        {error ? <div className="settings-inline-error">{error}</div> : null}
+      </div>
+      <div className="settings-field-actions">
+        {!isEditing ? (
+          <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={onEdit}>
             Edit
           </button>
-        </>
-      ) : (
-        <>
-          <div className="settings-field-edit">
-            <input
-              className="settings-input"
-              value={draftValue}
-              type={type}
-              onChange={(event) => setDraftValue(event.target.value)}
-              disabled={isSaving}
-            />
-            {error && <div className="settings-inline-error">{error}</div>}
-          </div>
-          <div className="settings-field-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleCancel} disabled={isSaving}>
+        ) : (
+          <>
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={onCancel} disabled={isSaving}>
               Cancel
             </button>
-            <button className="vrm-btn vrm-btn-sm" onClick={handleSave} disabled={isSaving}>
+            <button className="vrm-btn vrm-btn-sm" onClick={onSave} disabled={isSaving}>
               {isSaving ? "Saving..." : "Save"}
             </button>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

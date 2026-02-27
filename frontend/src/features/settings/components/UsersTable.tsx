@@ -7,8 +7,8 @@ type UsersTableProps = {
 };
 
 const UsersTable: React.FC<UsersTableProps> = ({ users }) => (
-  <div style={{ overflowX: "auto" }}>
-    <table className="vrm-table">
+  <div className="settings-table-wrap">
+    <table className="vrm-table settings-table">
       <thead>
         <tr>
           <th>Username</th>
@@ -20,7 +20,10 @@ const UsersTable: React.FC<UsersTableProps> = ({ users }) => (
       <tbody>
         {users.length === 0 ? (
           <tr>
-            <td colSpan={4} className="settings-empty-row">No users found.</td>
+            <td colSpan={4} className="settings-empty-row">
+              <div className="settings-empty-title">No users yet</div>
+              <div className="settings-empty-hint">Invite a user to grant access to a site.</div>
+            </td>
           </tr>
         ) : (
           users.map((user) => (
