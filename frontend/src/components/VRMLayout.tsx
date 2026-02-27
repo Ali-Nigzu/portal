@@ -88,6 +88,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isEmbedMode = searchParams.get("embed") === "1";
   const isSelectorOpen = searchParams.get("panel") === "sites";
   const isForceExpandIntent = searchParams.get("expand_once") === "1";
+  const isSiteMenuForceExpandIntent =
+    searchParams.get("site_menu_expand_once") === "1";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
   const allSitesOption =
@@ -117,9 +119,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     overrides?: Record<string, string | undefined>,
   ) => `${path}${buildSearch(overrides)}`;
   const openSitesSelector = () => {
+    const isCurrentPathSites = /^\/sites(?:\/|$)/.test(location.pathname);
+    const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
     navigate(
       {
-        pathname: location.pathname,
+        pathname: isCurrentPathSites
+          ? location.pathname
+          : `/sites/${resolvedSiteId}/dashboard`,
         search: buildSearch({ panel: "sites" }),
       },
       { replace: isDemoSession },
@@ -178,6 +184,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         path: "/home",
         label: "Home",
         icon: <NavIcon icon={Home} />,
+        disabled: isDemoSession,
       },
       {
         path: "/sites",
@@ -185,7 +192,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         icon: <NavIcon icon={MapPin} />,
       },
     ],
-    [],
+    [isDemoSession],
   );
   const clientNavigationItems = useMemo(
     () => [
@@ -254,8 +261,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const isHomeRoute = location.pathname === "/home";
+  const isDocumentsRoute =
+    location.pathname === "/documents" || location.pathname.startsWith("/documents/");
   const isSitesRoute = /^\/sites(?:\/|$)/.test(location.pathname);
-  const shouldRenderSecondaryPanel = !isHomeRoute || isSelectorOpen;
+  const shouldRenderSecondaryPanel =
+    !isDocumentsRoute && (!isHomeRoute || isSelectorOpen);
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
@@ -269,17 +279,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     : isPrimaryFocused
       ? "PRIMARY"
       : "OUTSIDE";
+  const primarySitesIntentOpen = sitesIntentOpen;
+  const secondarySitesIntentOpen = sitesIntentOpen || isSelectorOpen;
   const shouldForceCollapse =
     !keepMenuExpanded &&
     pointerZone === "OUTSIDE" &&
     focusZone === "OUTSIDE" &&
-    !sitesIntentOpen;
+    !secondarySitesIntentOpen;
   const isPrimaryExpanded =
     keepMenuExpanded ||
     pointerZone === "PRIMARY" ||
     pointerZone === "SITES_ROW" ||
     focusZone === "PRIMARY" ||
-    sitesIntentOpen;
+    primarySitesIntentOpen;
   const isSecondaryExpanded = forcedSitesExpandOnceActive
     ? true
     : !shouldForceCollapse &&
@@ -287,7 +299,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         pointerZone === "SITES_ROW" ||
         pointerZone === "SECONDARY" ||
         focusZone === "SECONDARY" ||
-        sitesIntentOpen);
+        secondarySitesIntentOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -321,7 +333,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
   useEffect(() => {
-    if (!isSelectorOpen || typeof window === "undefined") {
+    if ((!isSelectorOpen && !forcedSitesExpandOnceActive) || typeof window === "undefined") {
       return;
     }
 
@@ -366,12 +378,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   ]);
 
   useEffect(() => {
-    if (!isSitesRoute || !isSelectorOpen) {
+    if (!isSitesRoute) {
       setForcedSitesExpandOnceActive(false);
       return;
     }
 
-    if (!isForceExpandIntent) {
+    if (!isSelectorOpen || !isForceExpandIntent) {
       return;
     }
 
@@ -388,6 +400,32 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     buildSearch,
     isForceExpandIntent,
     isSelectorOpen,
+    isSitesRoute,
+    location.pathname,
+    navigate,
+  ]);
+  useEffect(() => {
+    if (!isSitesRoute || isSelectorOpen) {
+      return;
+    }
+
+    if (!isSiteMenuForceExpandIntent) {
+      return;
+    }
+
+    setForcedSitesExpandOnceActive(true);
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ site_menu_expand_once: undefined }),
+      },
+      { replace: true },
+    );
+  }, [
+    buildSearch,
+    isSelectorOpen,
+    isSiteMenuForceExpandIntent,
     isSitesRoute,
     location.pathname,
     navigate,
@@ -640,6 +678,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           !keepMenuExpanded && isSecondaryExpanded
             ? "vrm-sidebar-shell--secondary-expanded"
             : ""
+        } ${
+          !shouldRenderSecondaryPanel ? "vrm-sidebar-shell--no-secondary" : ""
         }`}
         aria-label="Primary"
       >
@@ -672,15 +712,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 <NavRow
                   key={item.path ?? item.label}
                   to={
-                    item.path && item.path !== "/sites"
-                      ? getNavigationPath(item.path)
-                      : undefined
+                    item.disabled || !item.path || item.path === "/sites"
+                      ? undefined
+                      : getNavigationPath(item.path)
                   }
                   replace={Boolean(item.path) && isDemoSession}
-                  onClick={item.path === "/sites" ? handleSitesClick : undefined}
+                  onClick={item.disabled ? undefined : item.path === "/sites" ? handleSitesClick : undefined}
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
+                  disabled={item.disabled}
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
                     item.path === "/sites" ? (
@@ -705,9 +746,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               );
             })}
             <NavRow
+              to={isAuthenticated ? getNavigationPath("/documents") : undefined}
               leftIcon={<NavIcon icon={FileText} />}
               label="Documents"
-              className="vrm-nav-row--placeholder"
+              disabled={!isAuthenticated || isDemoSession}
+              className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
             />
             <NavRow

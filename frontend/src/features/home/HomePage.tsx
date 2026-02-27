@@ -103,7 +103,7 @@ const HomePage: React.FC = () => {
                 <button
                   type="button"
                   className="home-page__list-row"
-                  onClick={() => navigate("/sites/all/dashboard?panel=sites")}
+                  onClick={() => navigate("/sites/all/dashboard?site_menu_expand_once=1")}
                 >
                   <span>All Sites</span>
                   <ChevronRight size={18} aria-hidden="true" />

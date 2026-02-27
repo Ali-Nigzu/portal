@@ -373,6 +373,10 @@ button.vrm-nav-row {
   padding: 0 10px;
 }
 
+.vrm-sidebar-shell--no-secondary .vrm-primary-rail {
+  border-right: none;
+}
+
 .vrm-primary-rail,
 .vrm-extended-panel {
   transition: width 180ms ease;
