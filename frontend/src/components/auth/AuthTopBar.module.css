@@ -1,7 +1,7 @@
 .topBar {
   min-height: 74px;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
   align-items: center;
   gap: 16px;
   padding: 0 32px;
@@ -15,9 +15,25 @@
 
 .centerZone {
   justify-self: center;
-  display: inline-flex;
+  width: min(100%, 520px);
+}
+
+.splitNav {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr;
   align-items: center;
-  gap: 26px;
+  column-gap: 20px;
+}
+
+.linkLeft {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.linkRight {
+  grid-column: 3;
+  justify-self: start;
 }
 
 .rightZone {
@@ -72,10 +88,11 @@
     justify-self: center;
   }
 
-  .centerZone {
+  .splitNav {
+    display: flex;
+    justify-content: center;
     gap: 18px;
     flex-wrap: wrap;
-    justify-content: center;
   }
 
   .rightZone {

@@ -1,32 +1,53 @@
 import React from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 
 import { companyLogoDataUri } from "../../assets/companyLogo";
 import styles from "./AuthTopBar.module.css";
 
-const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
-  event.preventDefault();
+const buildSafeDemoReturnTo = (pathname: string, search: string, hash: string) => {
+  const candidate = `${pathname}${search}${hash}` || "/";
+  return candidate.startsWith("/") ? candidate : "/";
 };
 
-const AuthTopBar: React.FC = () => (
-  <header className={styles.topBar}>
-    <div className={styles.leftZone}>
-      <Link className={styles.brand} to="/" aria-label="camOS landing page">
-        <img src={companyLogoDataUri} alt="camOS" className={styles.logo} />
-      </Link>
-    </div>
+const AuthTopBar: React.FC = () => {
+  const location = useLocation();
+  const returnTo = buildSafeDemoReturnTo(
+    location.pathname,
+    location.search,
+    location.hash,
+  );
+  const demoTarget = `/demo?returnTo=${encodeURIComponent(returnTo)}`;
 
-    <nav className={styles.centerZone} aria-label="Auth navigation">
-      <a href="#" onClick={stopNavigation} className={styles.link}>
-        Learn more about camOS
-      </a>
-      <NavLink to="/demo" className={styles.link}>
-        Try our free demo
-      </NavLink>
-    </nav>
+  const handleDemoClick = () => {
+    sessionStorage.setItem("demo:returnTo", returnTo);
+  };
 
-    <div className={styles.rightZone} aria-hidden="true" />
-  </header>
-);
+  return (
+    <header className={styles.topBar}>
+      <div className={styles.leftZone}>
+        <Link className={styles.brand} to="/" aria-label="camOS landing page">
+          <img src={companyLogoDataUri} alt="camOS" className={styles.logo} />
+        </Link>
+      </div>
+
+      <div className={styles.centerZone}>
+        <div className={styles.splitNav}>
+          <NavLink to="/" className={`${styles.link} ${styles.linkLeft}`}>
+            Learn more about camOS
+          </NavLink>
+          <NavLink
+            to={demoTarget}
+            className={`${styles.link} ${styles.linkRight}`}
+            onClick={handleDemoClick}
+          >
+            Try our free demo
+          </NavLink>
+        </div>
+      </div>
+
+      <div className={styles.rightZone} aria-hidden="true" />
+    </header>
+  );
+};
 
 export default AuthTopBar;

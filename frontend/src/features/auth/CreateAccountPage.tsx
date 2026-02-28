@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthTopBar from '../../components/auth/AuthTopBar';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
@@ -26,6 +27,12 @@ const CreateAccountPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
+  const showPasswordHint = isPasswordFocused || form.password.length > 0;
+  const showPasswordError = useMemo(
+    () => form.visibleErrors.password && form.visibleErrors.password !== 'Password must be at least 8 characters',
+    [form.visibleErrors.password],
+  );
+
   return (
     <div className="create-account-page">
       <AuthTopBar />
@@ -33,11 +40,13 @@ const CreateAccountPage: React.FC = () => {
       <div className="create-account-shell">
         <section className="create-account-left-pane" aria-label="Create account form panel">
           <div className="create-account-content">
-            <Link to="/login" className="create-account-back-link">← Login</Link>
+            <Link to="/login" className="create-account-back-link">
+              <ArrowLeft size={18} aria-hidden="true" />
+              <span>Login</span>
+            </Link>
 
             <p className="create-account-title">Create Account</p>
-            <h1 className="create-account-hero">Join us &amp; See More</h1>
-            <p className="create-account-subtitle">Set up your account access.</p>
+            <h1 className="create-account-hero">Join Us &amp; See More</h1>
 
             {form.formError && (
               <div className="create-account-error create-account-form-error" role="alert">
@@ -132,10 +141,10 @@ const CreateAccountPage: React.FC = () => {
                       form.markTouched('password');
                     }}
                     onChange={(e) => form.setPassword(e.target.value)}
-                    aria-invalid={Boolean(form.visibleErrors.password)}
+                    aria-invalid={Boolean(showPasswordError)}
                     aria-describedby={[
-                      form.visibleErrors.password ? 'create-password-error' : '',
-                      isPasswordFocused ? 'create-password-hint' : '',
+                      showPasswordError ? 'create-password-error' : '',
+                      showPasswordHint ? 'create-password-hint' : '',
                     ].filter(Boolean).join(' ') || undefined}
                   />
                   <button
@@ -144,16 +153,16 @@ const CreateAccountPage: React.FC = () => {
                     onClick={() => setShowPassword((value) => !value)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? '🙈' : '👁'}
+                    {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                   </button>
                 </div>
                 <div className="create-account-password-hint-slot" aria-live="polite">
-                  {isPasswordFocused && (
+                  {showPasswordHint && (
                     <div id="create-password-hint" className="create-account-hint">Use at least 8 characters.</div>
                   )}
                 </div>
                 <div className="create-account-error-slot" aria-live="polite">
-                  {form.visibleErrors.password && (
+                  {showPasswordError && (
                     <div id="create-password-error" className="create-account-error">{form.visibleErrors.password}</div>
                   )}
                 </div>
@@ -179,7 +188,7 @@ const CreateAccountPage: React.FC = () => {
                     onClick={() => setShowConfirmPassword((value) => !value)}
                     aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                   >
-                    {showConfirmPassword ? '🙈' : '👁'}
+                    {showConfirmPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                   </button>
                 </div>
                 <div className="create-account-error-slot" aria-live="polite">
