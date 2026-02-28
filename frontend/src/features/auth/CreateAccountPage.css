@@ -6,38 +6,104 @@
   color: #fff;
 }
 
+.create-account-left-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .create-account-form-pane {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px;
+  padding: 40px 32px;
 }
 
 .create-account-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .create-account-title {
-  font-size: 28px;
+  color: #c9d2e1;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.create-account-hero {
+  font-size: 42px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   font-weight: 600;
 }
 
 .create-account-subtitle {
   color: #b9c3d3;
   font-size: 14px;
+  margin-bottom: 6px;
 }
 
 .create-account-form {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
-.create-account-right-pane {
-  background: #151a22;
-  border-left: 1px solid #2d3748;
+.create-account-field {
+  margin: 0;
+}
+
+.create-account-phone-row {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 8px;
+}
+
+.create-account-password-wrap {
+  position: relative;
+}
+
+.create-account-password-input {
+  padding-right: 44px;
+}
+
+.create-account-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #b9c3d3;
+  cursor: pointer;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.create-account-password-toggle:hover,
+.create-account-password-toggle:focus-visible {
+  color: #fff;
+}
+
+.create-account-hint {
+  color: #97a8c3;
+  font-size: 12px;
+}
+
+.create-account-password-hint-slot {
+  min-height: 18px;
+  margin-top: 4px;
+}
+
+.create-account-error-slot {
+  min-height: 20px;
+  margin-top: 4px;
 }
 
 .create-account-error {
@@ -45,8 +111,41 @@
   font-size: 13px;
 }
 
+.create-account-form-error {
+  margin-bottom: 6px;
+}
+
 .create-account-actions {
+  margin-top: 6px;
+}
+
+.create-account-submit {
+  width: 100%;
+}
+
+.create-account-legal {
+  display: grid;
+  gap: 6px;
   margin-top: 8px;
+  color: #aab6c9;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.create-account-legal a {
+  color: #89b4ff;
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+.create-account-legal a:hover,
+.create-account-legal a:focus-visible {
+  text-decoration: underline;
+}
+
+.create-account-right-pane {
+  border-left: 1px solid #2d3748;
+  background: linear-gradient(145deg, #151a22 0%, #111722 55%, #0e1520 100%);
 }
 
 @media (max-width: 900px) {
@@ -54,8 +153,17 @@
     grid-template-columns: 1fr;
   }
 
+  .create-account-form-pane {
+    padding: 28px 20px;
+    align-items: flex-start;
+  }
+
+  .create-account-hero {
+    font-size: 34px;
+  }
+
   .create-account-right-pane {
-    min-height: 160px;
+    min-height: 140px;
     border-left: none;
     border-top: 1px solid #2d3748;
   }

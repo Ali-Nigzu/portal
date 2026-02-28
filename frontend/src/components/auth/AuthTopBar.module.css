@@ -1,0 +1,60 @@
+.topBar {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0f131a;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+.links {
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.link {
+  color: #c9d2e1;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1;
+  transition: color 160ms ease, text-decoration-color 160ms ease;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+}
+
+.link:hover,
+.link:focus-visible,
+.link[aria-current="page"] {
+  color: #ffffff;
+  text-decoration: underline;
+  text-decoration-color: rgba(137, 180, 255, 0.9);
+}
+
+@media (max-width: 900px) {
+  .topBar {
+    padding: 12px 20px;
+    min-height: 64px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .links {
+    width: 100%;
+    justify-content: center;
+  }
+}
