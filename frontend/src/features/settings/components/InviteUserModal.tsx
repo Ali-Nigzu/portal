@@ -118,7 +118,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
               <label className="settings-form-label" htmlFor="invite-site">Site</label>
               <select
                 id="invite-site"
-                className="settings-select"
+                className={`settings-select ${styles.select}`}
                 value={site}
                 onChange={(event) => setSite(event.target.value)}
               >
@@ -129,12 +129,11 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
               <label className="settings-form-label" htmlFor="invite-level">Access level</label>
               <select
                 id="invite-level"
-                className="settings-select"
+                className={`settings-select ${styles.select}`}
                 value={accessLevel}
                 onChange={(event) => setAccessLevel(event.target.value as AccessLevel)}
               >
                 <option value="Viewer">Viewer</option>
-                <option value="Manager">Manager</option>
                 <option value="Admin">Admin</option>
               </select>
             </div>

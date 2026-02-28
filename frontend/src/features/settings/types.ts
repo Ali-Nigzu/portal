@@ -5,7 +5,7 @@ export type SettingsUser = {
   phone?: string | null;
 };
 
-export type AccessLevel = "Admin" | "Manager" | "Viewer";
+export type AccessLevel = "Admin" | "Viewer";
 
 export type ManagedUser = {
   username: string;
