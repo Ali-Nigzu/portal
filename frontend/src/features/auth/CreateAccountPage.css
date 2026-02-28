@@ -1,30 +1,46 @@
-.create-account-shell {
+.create-account-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
   background: #0f131a;
   color: #fff;
 }
 
+.create-account-shell {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
 .create-account-left-pane {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
-}
-
-.create-account-form-pane {
-  flex: 1;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 40px 32px;
+  padding: 34px 32px 40px;
 }
 
-.create-account-card {
+.create-account-content {
   width: 100%;
   max-width: 520px;
   display: grid;
-  gap: 12px;
+  gap: 8px;
+}
+
+.create-account-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  margin-bottom: 10px;
+  color: #b9c3d3;
+  font-size: 14px;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.create-account-back-link:hover,
+.create-account-back-link:focus-visible {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .create-account-title {
@@ -34,8 +50,8 @@
 }
 
 .create-account-hero {
-  font-size: 42px;
-  line-height: 1.15;
+  font-size: 41px;
+  line-height: 1.14;
   letter-spacing: -0.02em;
   font-weight: 600;
 }
@@ -48,7 +64,7 @@
 
 .create-account-form {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .create-account-field {
@@ -126,10 +142,10 @@
 .create-account-legal {
   display: grid;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 6px;
   color: #aab6c9;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.42;
 }
 
 .create-account-legal a {
@@ -144,18 +160,27 @@
 }
 
 .create-account-right-pane {
-  border-left: 1px solid #2d3748;
-  background: linear-gradient(145deg, #151a22 0%, #111722 55%, #0e1520 100%);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at 22% 20%, rgba(105, 145, 215, 0.12), transparent 48%),
+    linear-gradient(145deg, #151a22 0%, #101722 60%, #0e1520 100%);
 }
 
 @media (max-width: 900px) {
+  .create-account-page {
+    grid-template-rows: auto auto;
+  }
+
   .create-account-shell {
     grid-template-columns: 1fr;
   }
 
-  .create-account-form-pane {
-    padding: 28px 20px;
-    align-items: flex-start;
+  .create-account-left-pane {
+    padding: 24px 20px 28px;
+  }
+
+  .create-account-content {
+    max-width: 560px;
   }
 
   .create-account-hero {
@@ -165,6 +190,6 @@
   .create-account-right-pane {
     min-height: 140px;
     border-left: none;
-    border-top: 1px solid #2d3748;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
 }

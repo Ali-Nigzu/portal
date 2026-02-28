@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthTopBar from '../../components/auth/AuthTopBar';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
 import './CreateAccountPage.css';
@@ -27,12 +27,14 @@ const CreateAccountPage: React.FC = () => {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   return (
-    <div className="create-account-shell">
-      <section className="create-account-left-pane" aria-label="Create account form panel">
-        <AuthTopBar />
+    <div className="create-account-page">
+      <AuthTopBar />
 
-        <div className="create-account-form-pane">
-          <div className="create-account-card">
+      <div className="create-account-shell">
+        <section className="create-account-left-pane" aria-label="Create account form panel">
+          <div className="create-account-content">
+            <Link to="/login" className="create-account-back-link">← Login</Link>
+
             <p className="create-account-title">Create Account</p>
             <h1 className="create-account-hero">Join us &amp; See More</h1>
             <p className="create-account-subtitle">Set up your account access.</p>
@@ -212,10 +214,10 @@ const CreateAccountPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <aside className="create-account-right-pane" aria-label="System visual placeholder" />
+        <aside className="create-account-right-pane" aria-label="System visual placeholder" />
+      </div>
     </div>
   );
 };

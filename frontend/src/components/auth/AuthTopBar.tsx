@@ -10,11 +10,13 @@ const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
 
 const AuthTopBar: React.FC = () => (
   <header className={styles.topBar}>
-    <Link className={styles.brand} to="/" aria-label="camOS landing page">
-      <img src={companyLogoDataUri} alt="camOS" className={styles.logo} />
-    </Link>
+    <div className={styles.leftZone}>
+      <Link className={styles.brand} to="/" aria-label="camOS landing page">
+        <img src={companyLogoDataUri} alt="camOS" className={styles.logo} />
+      </Link>
+    </div>
 
-    <nav className={styles.links} aria-label="Auth navigation">
+    <nav className={styles.centerZone} aria-label="Auth navigation">
       <a href="#" onClick={stopNavigation} className={styles.link}>
         Learn more about camOS
       </a>
@@ -22,6 +24,8 @@ const AuthTopBar: React.FC = () => (
         Try our free demo
       </NavLink>
     </nav>
+
+    <div className={styles.rightZone} aria-hidden="true" />
   </header>
 );
 
