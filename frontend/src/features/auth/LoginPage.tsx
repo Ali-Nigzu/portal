@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useLoginForm } from "./hooks/useLoginForm";
@@ -8,7 +8,7 @@ interface LoginPageProps {
   onLogin: () => void;
 }
 
-type LoginStep = "email" | "password" | "submitting" | "error";
+type LoginStep = "email" | "password";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -29,24 +29,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   const [step, setStep] = useState<LoginStep>("email");
   const [emailStepError, setEmailStepError] = useState<string | null>(null);
+  const [staySignedIn, setStaySignedIn] = useState(true);
 
   const emailValid = useMemo(() => EMAIL_RE.test(email.trim().toLowerCase()), [email]);
-  const isPasswordStep = step === "password" || step === "submitting" || step === "error";
-
-  useEffect(() => {
-    if (loading) {
-      setStep("submitting");
-      return;
-    }
-    if (step === "submitting") {
-      setStep(error ? "error" : "password");
-    }
-  }, [error, loading, step]);
 
   const onPrimaryAction = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!isPasswordStep) {
+    if (step === "email") {
       if (!email.trim()) {
         setEmailStepError("This field is required");
         return;
@@ -97,7 +87,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-              {isPasswordStep && (
+              {step === "password" && (
                 <div className="vrm-field login-field">
                   <label className="vrm-label" htmlFor="login-password">Password</label>
                   <input
@@ -112,7 +102,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </div>
               )}
 
-              {error && isPasswordStep && (
+              {error && step === "password" && (
                 <div className="vrm-status vrm-status-warning login-request-error" role="alert" aria-live="assertive">
                   {error}
                 </div>
@@ -120,13 +110,30 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
               <div className="login-actions">
                 <button type="submit" className="vrm-btn vrm-btn-primary login-submit" disabled={loading}>
-                  {!isPasswordStep ? "Continue" : loading ? "Signing in…" : "Login"}
+                  {step === "email" ? "Continue" : loading ? "Signing in…" : "Login"}
                 </button>
               </div>
 
-              <div className="login-links">
-                <Link to="/create-account" className="login-link">Sign up</Link>
-                <a href="#" onClick={stopNavigation} className="login-link">Reset password</a>
+              <div className="login-under-cta">
+                <label className="login-utility-row login-checkbox-row" htmlFor="login-stay-signed-in">
+                  <input
+                    id="login-stay-signed-in"
+                    type="checkbox"
+                    checked={staySignedIn}
+                    onChange={(event) => setStaySignedIn(event.target.checked)}
+                  />
+                  <span>Stay signed-in</span>
+                </label>
+
+                <p className="login-utility-row login-muted-row">
+                  Don’t have an account yet? <Link to="/create-account" className="login-inline-link">Sign up</Link>
+                </p>
+
+                {step === "password" && (
+                  <p className="login-utility-row login-muted-row">
+                    Forgot your password? <a href="#" onClick={stopNavigation} className="login-inline-link">Reset password</a>
+                  </p>
+                )}
               </div>
             </form>
           </div>
