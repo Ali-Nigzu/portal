@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Activity, Building2, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../analytics/components/Card/Card";
@@ -6,9 +6,13 @@ import { fetchMe } from "../auth/transport/me";
 import "../dashboard/styles/DashboardPage.css";
 import "./HomePage.css";
 
+const ALL_SITES_LABEL = "All Sites";
+
 const HomePage: React.FC = () => {
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [searchValue, setSearchValue] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,6 +30,23 @@ const HomePage: React.FC = () => {
     loadUser();
   }, []);
 
+  const navigateToAllSitesContext = () => {
+    navigate("/sites/all/dashboard?site_menu_expand_once=1");
+    setSearchValue(ALL_SITES_LABEL);
+    setIsSearchFocused(false);
+  };
+
+  const showAllSitesSuggestion = useMemo(() => {
+    if (!isSearchFocused) {
+      return false;
+    }
+    const normalizedInput = searchValue.trim().toLowerCase();
+    if (!normalizedInput) {
+      return true;
+    }
+    return ALL_SITES_LABEL.toLowerCase().startsWith(normalizedInput);
+  }, [isSearchFocused, searchValue]);
+
   if (isLoading) {
     return null;
   }
@@ -35,12 +56,41 @@ const HomePage: React.FC = () => {
       <div className="dashboard-v2__content home-page__content">
         <header className="dashboard-v2__header home-page__header">
           <h1 className="home-page__title">Welcome {userName}</h1>
-          <label className="vrm-secondary-search home-page__search" aria-label="Search installations">
-            <span className="vrm-secondary-search__icon" aria-hidden="true">
-              <Search />
-            </span>
-            <input type="search" placeholder="Search installations" readOnly />
-          </label>
+          <div
+            className="home-page__search-wrap"
+            onBlur={(event) => {
+              const nextTarget = event.relatedTarget as Node | null;
+              if (event.currentTarget.contains(nextTarget)) {
+                return;
+              }
+              setIsSearchFocused(false);
+            }}
+          >
+            <label className="vrm-secondary-search home-page__search" aria-label="Search installations">
+              <span className="vrm-secondary-search__icon" aria-hidden="true">
+                <Search />
+              </span>
+              <input
+                type="search"
+                placeholder="Search installations"
+                value={searchValue}
+                onFocus={() => setIsSearchFocused(true)}
+                onChange={(event) => setSearchValue(event.target.value)}
+              />
+            </label>
+            {showAllSitesSuggestion && (
+              <div className="home-page__search-suggestions" role="listbox" aria-label="Search suggestions">
+                <button
+                  type="button"
+                  className="home-page__search-suggestion"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={navigateToAllSitesContext}
+                >
+                  {ALL_SITES_LABEL}
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         <section className="home-page__layout" aria-label="Home modules">
@@ -103,9 +153,9 @@ const HomePage: React.FC = () => {
                 <button
                   type="button"
                   className="home-page__list-row"
-                  onClick={() => navigate("/sites/all/dashboard?site_menu_expand_once=1")}
+                  onClick={navigateToAllSitesContext}
                 >
-                  <span>All Sites</span>
+                  <span>{ALL_SITES_LABEL}</span>
                   <ChevronRight size={18} aria-hidden="true" />
                 </button>
               </div>

@@ -112,6 +112,8 @@ const AppRoutes: React.FC = () => {
   };
   const appendViewToken = (path: string) =>
     viewToken ? appendParams(path, { view_token: viewToken }) : path;
+  const demoAwareSitePath = (siteId: string, subPath = "dashboard") =>
+    appMode === "demo" ? `/demo/${siteId}/${subPath}` : `/sites/${siteId}/${subPath}`;
   const resolveLegacySiteId = () => {
     const stored = getStoredSiteId();
     if (!stored || stored === "all") {
@@ -124,7 +126,28 @@ const AppRoutes: React.FC = () => {
     const resolvedSiteId = siteId ?? resolveLegacySiteId();
     return (
       <Navigate
-        to={appendParams(`/sites/${resolvedSiteId}/dashboard`)}
+        to={appendParams(demoAwareSitePath(resolvedSiteId))}
+        replace
+      />
+    );
+  };
+  const DemoSiteIndexRedirect: React.FC = () => {
+    const { siteId } = useParams();
+    const resolvedSiteId = siteId ?? resolveLegacySiteId();
+    return (
+      <Navigate
+        to={appendParams(`/demo/${resolvedSiteId}/dashboard`)}
+        replace
+      />
+    );
+  };
+  const LegacyDemoSitesRedirect: React.FC = () => {
+    const { siteId, "*": remainder } = useParams();
+    const resolvedSiteId = siteId ?? resolveLegacySiteId();
+    const normalizedRemainder = remainder ? `/${remainder}` : "/dashboard";
+    return (
+      <Navigate
+        to={appendParams(`/demo/${resolvedSiteId}${normalizedRemainder}`)}
         replace
       />
     );
@@ -133,7 +156,7 @@ const AppRoutes: React.FC = () => {
     const resolvedSiteId = resolveLegacySiteId();
     return (
       <Navigate
-        to={appendParams(`/sites/${resolvedSiteId}/dashboard`, {
+        to={appendParams(demoAwareSitePath(resolvedSiteId), {
           panel: "sites",
         })}
         replace
@@ -167,7 +190,7 @@ const AppRoutes: React.FC = () => {
           appMode === "public" ? (
             lazyRoute(<LandingPage />)
           ) : appMode === "view_token" || appMode === "demo" ? (
-            <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
+            <Navigate to={appMode === "demo" ? appendParams("/demo/site-a/dashboard") : appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/home" replace />
           )
@@ -198,7 +221,7 @@ const AppRoutes: React.FC = () => {
         path="/dashboard"
         element={
           shouldAllowAppRoutes ? (
-            <Navigate to={appendViewToken(`/sites/${resolveLegacySiteId()}/dashboard`)} replace />
+            <Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -206,6 +229,62 @@ const AppRoutes: React.FC = () => {
       />
       {shouldAllowAppRoutes && (
         <>
+          {appMode === "demo" && (
+            <>
+              <Route
+                path="/sites"
+                element={<Navigate to={appendParams(`/demo/${resolveLegacySiteId()}/dashboard`, { panel: "sites" })} replace />}
+              />
+              <Route
+                path="/sites/:siteId/*"
+                element={<LegacyDemoSitesRedirect />}
+              />
+              <Route
+                path="/demo/:siteId"
+                element={renderClientRoute(
+                  <DemoSiteIndexRedirect />,
+                )}
+              />
+              <Route
+                path="/demo/:siteId/dashboard"
+                element={renderClientRoute(
+                  lazyRoute(
+                    <DashboardPage
+                      credentials={credentials}
+                      dataMode={dashboardDataMode}
+                      widgetResultLoader={
+                        isAuthenticatedMode ? loadEmptyWidgetResult : undefined
+                      }
+                    />,
+                  ),
+                )}
+              />
+              <Route
+                path="/demo/:siteId/event-logs"
+                element={renderClientRoute(
+                  lazyRoute(<EventLogsPage credentials={credentials} />),
+                )}
+              />
+              <Route
+                path="/demo/:siteId/alarm-logs"
+                element={renderClientRoute(
+                  lazyRoute(<AlarmLogsPage credentials={credentials} />),
+                )}
+              />
+              <Route
+                path="/demo/:siteId/device-list"
+                element={renderClientRoute(
+                  lazyRoute(<DeviceListPage credentials={credentials} />),
+                )}
+              />
+              <Route
+                path="/demo/:siteId/reports"
+                element={renderClientRoute(
+                  lazyRoute(<ReportsPage credentials={credentials} />),
+                )}
+              />
+            </>
+          )}
           <Route
             path="/sites"
             element={<SitesSelectorRedirect />}
@@ -218,7 +297,7 @@ const AppRoutes: React.FC = () => {
               ) : (
                 <Navigate
                   to={appendViewToken(
-                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                    demoAwareSitePath(resolveLegacySiteId()),
                   )}
                   replace
                 />
@@ -233,7 +312,7 @@ const AppRoutes: React.FC = () => {
               ) : (
                 <Navigate
                   to={appendViewToken(
-                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                    demoAwareSitePath(resolveLegacySiteId()),
                   )}
                   replace
                 />
@@ -248,7 +327,7 @@ const AppRoutes: React.FC = () => {
               ) : (
                 <Navigate
                   to={appendViewToken(
-                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                    demoAwareSitePath(resolveLegacySiteId()),
                   )}
                   replace
                 />
@@ -263,7 +342,7 @@ const AppRoutes: React.FC = () => {
               ) : (
                 <Navigate
                   to={appendViewToken(
-                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                    demoAwareSitePath(resolveLegacySiteId()),
                   )}
                   replace
                 />
@@ -282,7 +361,7 @@ const AppRoutes: React.FC = () => {
               ) : (
                 <Navigate
                   to={appendViewToken(
-                    `/sites/${resolveLegacySiteId()}/dashboard`,
+                    demoAwareSitePath(resolveLegacySiteId()),
                   )}
                   replace
                 />
@@ -351,7 +430,7 @@ const AppRoutes: React.FC = () => {
           appMode === "public" ? (
             <Navigate to="/" replace />
           ) : appMode === "view_token" || appMode === "demo" ? (
-            <Navigate to={appendViewToken("/sites/all/dashboard")} replace />
+            <Navigate to={appMode === "demo" ? appendParams("/demo/site-a/dashboard") : appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/home" replace />
           )

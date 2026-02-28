@@ -24,8 +24,8 @@ const DemoPage = () => {
         }
         navigate(
           isEmbedMode
-            ? "/sites/site-a/dashboard?embed=1"
-            : "/sites/site-a/dashboard",
+            ? "/demo/site-a/dashboard?embed=1"
+            : "/demo/site-a/dashboard",
           { replace: true },
         );
       } catch (err) {

@@ -66,9 +66,9 @@ const ReenterPasswordModal: React.FC<ReenterPasswordModalProps> = ({
 
   return (
     <div className={styles.backdrop}>
-      <div className={`vrm-card ${styles.modal}`} role="dialog" aria-modal="true" aria-label="Re-enter password">
+      <div className={`vrm-card ${styles.modal}`} role="dialog" aria-modal="true" aria-label="Enter password">
         <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Re-enter password</h3>
+          <h3 className="vrm-card-title">Enter password</h3>
         </div>
         <div className="vrm-card-body">
           <form onSubmit={handleSubmit} className="settings-form-grid">

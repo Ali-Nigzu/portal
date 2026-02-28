@@ -117,15 +117,37 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     clearDemoSessionServer();
   };
 
+  const resolveReturnPath = () => {
+    const params = new URLSearchParams(location.search);
+    const fromQuery = params.get("returnTo");
+    const fromStorage = sessionStorage.getItem("demo:returnTo");
+    const candidate = fromQuery ?? fromStorage ?? "/";
+
+    let decoded = candidate;
+    try {
+      decoded = decodeURIComponent(candidate);
+    } catch {
+      decoded = candidate;
+    }
+
+    if (!decoded.startsWith("/")) {
+      return "/";
+    }
+
+    return decoded;
+  };
+
   const startClose = () => {
     if (closingRef.current || !shouldRender) {
       return;
     }
+    const targetPath = resolveReturnPath();
     closingRef.current = true;
     setIsClosing(true);
     setIsVisible(false);
     clearDemoSessionLocal();
-    navigate("/", { replace: true, state: { fromDemo: true } });
+    sessionStorage.removeItem("demo:returnTo");
+    navigate(targetPath, { replace: true, state: { fromDemo: true } });
     closeTimeoutRef.current = window.setTimeout(finishClose, 240);
   };
 

@@ -21,7 +21,41 @@
 }
 
 .home-page__search {
+  width: 100%;
+}
+
+.home-page__search-wrap {
   width: min(420px, 100%);
+  position: relative;
+}
+
+.home-page__search-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 3;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: #161d2a;
+  padding: 4px;
+}
+
+.home-page__search-suggestion {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sys-text-1, var(--vrm-text-primary));
+  font-size: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.home-page__search-suggestion:hover,
+.home-page__search-suggestion:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .home-page__layout {
