@@ -16,6 +16,7 @@ import {
 } from "./utils/reportUtils";
 import { buildSiteFlowBucketLabels } from "../../lib/siteFlowBuckets";
 import { startOfYear } from "../../lib/timeWindows";
+import { isDemoSessionActive } from "../../lib/demoSession";
 interface ReportsPageProps {
   credentials?: Credentials;
   fetchSnapshotFn?: typeof fetchLatestSnapshot;
@@ -30,6 +31,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
   const [snapshot, setSnapshot] = useState<SnapshotResponse | null>(null);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloadBlockedMessage, setDownloadBlockedMessage] = useState<string | null>(null);
+  const isDemoMode = isDemoSessionActive();
   const fetchSnapshot = useCallback(async () => {
     try {
       setLoading(true);
@@ -47,6 +50,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
   useEffect(() => {
     fetchSnapshot();
   }, [fetchSnapshot]);
+
+  useEffect(() => {
+    if (downloadBlockedMessage && isDemoMode) {
+      setDownloadBlockedMessage(null);
+    }
+  }, [downloadBlockedMessage, isDemoMode]);
   const reportTemplates = [
     {
       id: "site-activity",
@@ -619,6 +628,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
     }
   };
   const handleGenerateReport = () => {
+    if (!isDemoMode) {
+      setDownloadBlockedMessage("Report download is unavailable in authenticated mode.");
+      return;
+    }
+    setDownloadBlockedMessage(null);
     generatePDFReport();
   };
   return (
@@ -736,6 +750,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
               {snapshotError}{" "}
             </div>
           )}{" "}
+          {downloadBlockedMessage && (
+            <div
+              style={{
+                marginTop: "12px",
+                color: "var(--vrm-text-secondary)",
+                fontSize: "12px",
+              }}
+            >
+              {downloadBlockedMessage}
+            </div>
+          )}
         </div>
       </div>{" "}
       {}{" "}

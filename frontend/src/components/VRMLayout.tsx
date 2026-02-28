@@ -93,6 +93,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     searchParams.get("site_menu_expand_once") === "1";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
+  const siteRoutePrefix = location.pathname.startsWith("/demo/") ? "/demo" : "/sites";
   const allSitesOption =
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
   const selectorSiteOptions = isAuthenticated
@@ -120,13 +121,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     overrides?: Record<string, string | undefined>,
   ) => `${path}${buildSearch(overrides)}`;
   const openSitesSelector = () => {
-    const isCurrentPathSites = /^\/sites(?:\/|$)/.test(location.pathname);
+    const isCurrentPathSites = /^\/(?:sites|demo)(?:\/|$)/.test(location.pathname);
     const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
     navigate(
       {
         pathname: isCurrentPathSites
           ? location.pathname
-          : `/sites/${resolvedSiteId}/dashboard`,
+          : `${siteRoutePrefix}/${resolvedSiteId}/dashboard`,
         search: buildSearch({ panel: "sites" }),
       },
       { replace: isDemoSession },
@@ -188,17 +189,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         disabled: isDemoSession,
       },
       {
-        path: "/sites",
+        path: `${siteRoutePrefix}`,
         label: "Sites",
         icon: <NavIcon icon={MapPin} />,
       },
     ],
-    [isDemoSession],
+    [isDemoSession, siteRoutePrefix],
   );
   const clientNavigationItems = useMemo(
     () => [
       {
-        path: siteId ? `/sites/${siteId}/dashboard` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/dashboard` : undefined,
         label: "Dashboard",
         icon: <NavIcon icon={LayoutDashboard} />,
       },
@@ -217,27 +218,27 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         statusLabel: "Coming Soon",
       },
       {
-        path: siteId ? `/sites/${siteId}/event-logs` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/event-logs` : undefined,
         label: "Event Logs",
         icon: <NavIcon icon={ClipboardList} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/alarm-logs` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/alarm-logs` : undefined,
         label: "Alarm Logs",
         icon: <NavIcon icon={Bell} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/device-list` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/device-list` : undefined,
         label: "Device List",
         icon: <NavIcon icon={Cpu} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/reports` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/reports` : undefined,
         label: "Reports",
         icon: <NavIcon icon={FileBarChart2} />,
       },
     ],
-    [siteId],
+    [siteId, siteRoutePrefix],
   );
   const adminNavigationItems = useMemo(
     () => [
@@ -264,7 +265,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isHomeRoute = location.pathname === "/home";
   const isDocumentsRoute =
     location.pathname === "/documents" || location.pathname.startsWith("/documents/");
-  const isSitesRoute = /^\/sites(?:\/|$)/.test(location.pathname);
+  const isSitesRoute = /^\/(?:sites|demo)(?:\/|$)/.test(location.pathname);
   const isSettingsRoute = location.pathname.startsWith("/settings");
   const shouldRenderSecondaryPanel =
     isSettingsRoute || (!isDocumentsRoute && (!isHomeRoute || isSelectorOpen));
@@ -716,25 +717,25 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 <NavRow
                   key={item.path ?? item.label}
                   to={
-                    item.disabled || !item.path || item.path === "/sites"
+                    item.disabled || !item.path || item.path === siteRoutePrefix
                       ? undefined
                       : getNavigationPath(item.path)
                   }
                   replace={Boolean(item.path) && isDemoSession}
-                  onClick={item.disabled ? undefined : item.path === "/sites" ? handleSitesClick : undefined}
+                  onClick={item.disabled ? undefined : item.path === siteRoutePrefix ? handleSitesClick : undefined}
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
-                    item.path === "/sites" ? (
+                    item.path === siteRoutePrefix ? (
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
                   }
                 />
               );
-              if (item.path !== "/sites") {
+              if (item.path !== siteRoutePrefix) {
                 return navRow;
               }
               return (
@@ -803,7 +804,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             {!showSiteMenu && (
               <SecondaryPinnedRow
                 to={getNavigationPath(
-                  `/sites/${allSitesOption.id}/dashboard`,
+                  `${siteRoutePrefix}/${allSitesOption.id}/dashboard`,
                   { panel: undefined },
                 )}
                 replace={isDemoSession}
@@ -832,14 +833,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             <NavList className="vrm-secondary-list">
               {selectorSiteOptions.map((site) => {
                 const siteSubPath = (() => {
-                  const match = location.pathname.match(/^\/sites\/[^/]+(\/.*)?$/);
+                  const match = location.pathname.match(/^\/(?:sites|demo)\/[^/]+(\/.*)?$/);
                   const trailing = match?.[1];
                   if (!trailing || trailing === "/") {
                     return "/dashboard";
                   }
                   return trailing;
                 })();
-                const siteTargetPath = `/sites/${site.id}${siteSubPath}`;
+                const siteTargetPath = `${siteRoutePrefix}/${site.id}${siteSubPath}`;
                 const isActive =
                   isSiteSelection && site.id === selectedSiteForList;
                 return (
