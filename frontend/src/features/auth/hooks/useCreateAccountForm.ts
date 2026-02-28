@@ -4,10 +4,10 @@ import { createAccount } from '../transport/createAccount';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 
-type FieldName = 'name' | 'email' | 'phone' | 'password' | 'confirmPassword';
+type FieldName = 'username' | 'email' | 'phone' | 'password' | 'confirmPassword';
 
 export const useCreateAccountForm = (onSuccess: () => void) => {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+44');
   const [phoneLocal, setPhoneLocal] = useState('');
@@ -17,7 +17,7 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [touched, setTouched] = useState<Record<FieldName, boolean>>({
-    name: false,
+    username: false,
     email: false,
     phone: false,
     password: false,
@@ -28,14 +28,14 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
 
   const validate = () => {
     const errors: Record<FieldName, string | undefined> = {
-      name: undefined,
+      username: undefined,
       email: undefined,
       phone: undefined,
       password: undefined,
       confirmPassword: undefined,
     };
 
-    if (!name.trim()) errors.name = 'This field is required';
+    if (!username.trim()) errors.username = 'This field is required';
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) errors.email = 'This field is required';
@@ -54,7 +54,7 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
 
   const errors = useMemo(
     () => validate(),
-    [name, email, phone, password, confirmPassword],
+    [username, email, phone, password, confirmPassword],
   );
 
   const visibleErrors = useMemo(() => {
@@ -76,7 +76,7 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitAttempted(true);
-    setTouched({ name: true, email: true, phone: true, password: true, confirmPassword: true });
+    setTouched({ username: true, email: true, phone: true, password: true, confirmPassword: true });
     setFormError(null);
 
     if (Object.values(errors).some(Boolean)) return;
@@ -84,7 +84,7 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
     setSubmitting(true);
     try {
       const result = await createAccount({
-        name: name.trim(),
+        name: username.trim(),
         email: email.trim().toLowerCase(),
         phone: phone || undefined,
         password,
@@ -104,7 +104,7 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
   };
 
   return {
-    name,
+    username,
     email,
     countryCode,
     phoneLocal,
@@ -114,7 +114,7 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
     formError,
     visibleErrors,
     canSubmit,
-    setName,
+    setUsername,
     setEmail,
     setCountryCode,
     setPhoneLocal,

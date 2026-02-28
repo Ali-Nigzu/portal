@@ -38,6 +38,7 @@ import {
   SecondarySearch,
 } from "../common/components/navigation";
 import { NavIcon } from "../common/components/icons";
+import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
 
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
@@ -264,8 +265,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isDocumentsRoute =
     location.pathname === "/documents" || location.pathname.startsWith("/documents/");
   const isSitesRoute = /^\/sites(?:\/|$)/.test(location.pathname);
+  const isSettingsRoute = location.pathname.startsWith("/settings");
   const shouldRenderSecondaryPanel =
-    !isDocumentsRoute && (!isHomeRoute || isSelectorOpen);
+    isSettingsRoute || (!isDocumentsRoute && (!isHomeRoute || isSelectorOpen));
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
@@ -697,11 +699,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               </div>
               <div className="vrm-brand-text">
                 <div className="vrm-brand-title">camOS</div>
-                <div className="vrm-brand-subrow">
-                  <span className="vrm-brand-badge" aria-label="Demo">
-                    DEMO
-                  </span>
-                </div>
+                {isDemoSession && (
+                  <div className="vrm-brand-subrow">
+                    <span className="vrm-brand-badge" aria-label="Demo">
+                      DEMO
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -762,9 +766,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
             />
             <NavRow
+              to={isAuthenticated ? getNavigationPath("/settings/account") : undefined}
               leftIcon={<NavIcon icon={Settings} />}
               label="Settings"
-              className="vrm-nav-row--placeholder"
+              disabled={!isAuthenticated || isDemoSession}
+              className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
             />
             {showLogout && (
@@ -788,6 +794,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onPointerEnter={cancelSitesLeaveTimer}
           onPointerLeave={handleSitesRowLeave}
         >
+          {isSettingsRoute ? (
+            <SettingsSecondaryNav />
+          ) : (
+            <>
           <div className="vrm-secondary-header">
             <SecondarySearch />
             {!showSiteMenu && (
@@ -910,6 +920,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 />
               ))}
             </NavList>
+          )}
+            </>
           )}
           </nav>
         )}

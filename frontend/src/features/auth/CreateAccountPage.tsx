@@ -28,9 +28,9 @@ const CreateAccountPage: React.FC = () => {
           )}
           <form className="create-account-form" onSubmit={form.submit}>
             <div className="vrm-field">
-              <label className="vrm-label" htmlFor="create-name">Name</label>
-              <input id="create-name" className="vrm-input" value={form.name} onChange={(e) => form.setName(e.target.value)} onBlur={() => form.markTouched("name")} />
-              {form.visibleErrors.name && <div className="create-account-error">{form.visibleErrors.name}</div>}
+              <label className="vrm-label" htmlFor="create-name">Username</label>
+              <input id="create-name" className="vrm-input" value={form.username} onChange={(e) => form.setUsername(e.target.value)} onBlur={() => form.markTouched("username")} />
+              {form.visibleErrors.username && <div className="create-account-error">{form.visibleErrors.username}</div>}
             </div>
 
             <div className="vrm-field">
