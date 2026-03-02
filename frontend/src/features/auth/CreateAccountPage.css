@@ -161,10 +161,24 @@
 }
 
 .create-account-right-pane {
+  position: relative;
+  overflow: hidden;
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   background:
     radial-gradient(circle at 22% 20%, rgba(105, 145, 215, 0.12), transparent 48%),
     linear-gradient(145deg, #151a22 0%, #101722 60%, #0e1520 100%);
+}
+
+.auth-right-pane-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.28;
+  pointer-events: none;
+  user-select: none;
 }
 
 @media (max-width: 900px) {
