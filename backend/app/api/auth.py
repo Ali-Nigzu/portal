@@ -143,11 +143,33 @@ def _load_pending_signups_pruned() -> tuple[dict, datetime, bool]:
     return pending_signups, now, modified
 
 
-def _raise_mail_delivery_error(exc: Exception) -> None:
+def _raise_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
     if isinstance(exc, PostmarkConfigurationError):
+        logger.error(
+            "signup.email.config_error request_id=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s detail=%s",
+            request_id,
+            bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
+            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+            bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
+            str(exc),
+        )
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     if isinstance(exc, PostmarkDeliveryError):
+        logger.error(
+            "signup.email.delivery_error request_id=%s status_code=%s error_code=%s message=%s from_email=%s to_email=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s response_body=%s",
+            request_id,
+            exc.status_code,
+            exc.error_code,
+            exc.error_message,
+            exc.from_email,
+            exc.to_email_masked,
+            bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
+            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+            bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
+            exc.response_body,
+        )
         raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
+    logger.exception("signup.email.unknown_error request_id=%s", request_id)
     raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
 
 
@@ -193,6 +215,7 @@ async def register_interest(submission: RegisterInterestRequest):
 
 @router.post("/api/signup/start", response_model=SignupStartResponse, status_code=202)
 async def signup_start(payload: CreateAccountRequest):
+    request_id = str(uuid.uuid4())
     name, email, phone = _validate_signup_payload(payload)
 
     users = load_users()
@@ -223,7 +246,7 @@ async def signup_start(payload: CreateAccountRequest):
     try:
         send_verification_email(to_email=email, code=code)
     except Exception as exc:
-        _raise_mail_delivery_error(exc)
+        _raise_mail_delivery_error(exc, request_id=request_id)
 
     save_pending_signups(pending_signups)
 
@@ -237,6 +260,7 @@ async def signup_start(payload: CreateAccountRequest):
 
 @router.post("/api/signup/resend", response_model=SignupResendResponse)
 async def signup_resend(payload: SignupResendRequest):
+    request_id = str(uuid.uuid4())
     email = _validate_email(payload.email)
 
     pending_signups, now, modified = _load_pending_signups_pruned()
@@ -276,7 +300,7 @@ async def signup_resend(payload: SignupResendRequest):
     try:
         send_verification_email(to_email=email, code=code)
     except Exception as exc:
-        _raise_mail_delivery_error(exc)
+        _raise_mail_delivery_error(exc, request_id=request_id)
 
     save_pending_signups(pending_signups)
 
