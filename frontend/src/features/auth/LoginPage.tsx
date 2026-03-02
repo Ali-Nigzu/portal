@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
+import camsvg from "../../assets/camsvg.svg";
 import { useLoginForm } from "./hooks/useLoginForm";
 import "./LoginPage.css";
 
@@ -139,7 +140,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         </section>
 
-        <aside className="login-right-pane" aria-label="System visual placeholder" />
+        <aside className="login-right-pane" aria-label="System visual placeholder">
+          <img
+            src={camsvg}
+            alt=""
+            aria-hidden="true"
+            focusable="false"
+            className="auth-right-pane-overlay"
+          />
+        </aside>
       </div>
     </div>
   );

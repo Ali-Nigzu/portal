@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthTopBar from '../../components/auth/AuthTopBar';
+import camsvg from '../../assets/camsvg.svg';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
 import './CreateAccountPage.css';
 
@@ -225,7 +226,15 @@ const CreateAccountPage: React.FC = () => {
           </div>
         </section>
 
-        <aside className="create-account-right-pane" aria-label="System visual placeholder" />
+        <aside className="create-account-right-pane" aria-label="System visual placeholder">
+          <img
+            src={camsvg}
+            alt=""
+            aria-hidden="true"
+            focusable="false"
+            className="auth-right-pane-overlay"
+          />
+        </aside>
       </div>
     </div>
   );
