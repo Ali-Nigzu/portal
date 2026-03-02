@@ -20,8 +20,8 @@ const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
 
 const CreateAccountPage: React.FC = () => {
   const navigate = useNavigate();
-  const form = useCreateAccountForm(() => {
-    navigate('/login');
+  const form = useCreateAccountForm((email) => {
+    navigate(`/verify-email?email=${encodeURIComponent(email)}`);
   });
 
   const [showPassword, setShowPassword] = useState(false);

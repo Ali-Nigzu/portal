@@ -1,12 +1,12 @@
 import { type FormEvent, useMemo, useState } from 'react';
-import { createAccount } from '../transport/createAccount';
+import { signupStart } from '../transport/signupStart';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 
 type FieldName = 'username' | 'email' | 'phone' | 'password' | 'confirmPassword';
 
-export const useCreateAccountForm = (onSuccess: () => void) => {
+export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+44');
@@ -83,18 +83,22 @@ export const useCreateAccountForm = (onSuccess: () => void) => {
 
     setSubmitting(true);
     try {
-      const result = await createAccount({
+      const result = await signupStart({
         name: username.trim(),
         email: email.trim().toLowerCase(),
         phone: phone || undefined,
         password,
       });
       if (result.ok) {
-        onSuccess();
+        onSuccess(result.data.email);
       } else if (result.status === 409) {
         setFormError('Email already in use.');
+      } else if (result.status === 503) {
+        setFormError(result.message || 'Email service is not configured.');
+      } else if (result.status === 502) {
+        setFormError(result.message || 'Failed to send verification email. Please try again.');
       } else {
-        setFormError('Unable to complete request. Please try again.');
+        setFormError(result.message || 'Unable to complete request. Please try again.');
       }
     } catch {
       setFormError('Unable to complete request. Please try again.');

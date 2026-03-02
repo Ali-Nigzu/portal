@@ -69,6 +69,29 @@ class ViewTokenResponse(BaseModel):
     client_id: str
 
 
+class SignupStartResponse(BaseModel):
+    ok: bool
+    email: str
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+
+
+class SignupVerifyRequest(BaseModel):
+    email: str
+    code: str
+
+
+class SignupResendRequest(BaseModel):
+    email: str
+
+
+class SignupResendResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+    resendsRemaining: int
+
+
 class RegisterInterestRequest(BaseModel):
     name: str
     email: str
