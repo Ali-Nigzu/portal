@@ -106,6 +106,10 @@ class RegisterInterestResponse(BaseModel):
     submission_id: str
 
 
+class ContactResponse(BaseModel):
+    message: str
+
+
 class CreateAlarmRequest(BaseModel):
     instance: str
     device: str

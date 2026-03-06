@@ -21,6 +21,10 @@ const LandingPage: React.FC = () => {
     navigate("/create-account");
   };
 
+  const goToContact = () => {
+    navigate("/contact");
+  };
+
   const capabilityAxisItems = landingCopy.capabilities.items
     .filter((item) => item !== "Dwell time")
     .slice(0, 3);
@@ -288,7 +292,7 @@ const LandingPage: React.FC = () => {
                   type="button"
                   className="btn landing-cta-btn landing-cta-node-secondary landing-assurance-cta"
                   data-testid="assurance-contact-us-cta"
-                  onClick={(e) => { e.preventDefault(); }}
+                  onClick={goToContact}
                 >
                   CONTACT US
                 </button>

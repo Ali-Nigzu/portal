@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -10,7 +11,7 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 
 from backend.app.auth import (
     clear_auth_cookie,
@@ -38,6 +39,7 @@ from backend.app.models import (
     EmailLoginRequest,
     LoginRequest,
     LoginResponse,
+    ContactResponse,
     RegisterInterestRequest,
     RegisterInterestResponse,
     SignupResendRequest,
@@ -49,6 +51,8 @@ from backend.app.services.auth_context import org_id_for_user_record
 from backend.app.services.postmark_email import (
     PostmarkConfigurationError,
     PostmarkDeliveryError,
+    PostmarkAttachment,
+    send_admin_contact_notification,
     send_admin_signup_notification,
     send_verification_email,
 )
@@ -62,6 +66,19 @@ SIGNUP_CODE_TTL_SECONDS = 15 * 60
 SIGNUP_MAX_VERIFY_ATTEMPTS = 5
 SIGNUP_RESEND_COOLDOWN_SECONDS = 30
 SIGNUP_MAX_RESENDS = 5
+
+CONTACT_MAX_FILES = 3
+CONTACT_MAX_FILE_BYTES = 10 * 1024 * 1024
+CONTACT_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".jpeg"}
+CONTACT_ALLOWED_CONTENT_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv",
+    "application/csv",
+    "image/png",
+    "image/jpeg",
+}
 
 
 def _utc_now() -> datetime:
@@ -171,6 +188,114 @@ def _raise_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
         raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
     logger.exception("signup.email.unknown_error request_id=%s", request_id)
     raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
+
+
+def _raise_contact_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
+    if isinstance(exc, PostmarkConfigurationError):
+        logger.error(
+            "contact.email.config_error request_id=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s detail=%s",
+            request_id,
+            bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
+            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+            bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
+            str(exc),
+        )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if isinstance(exc, PostmarkDeliveryError):
+        logger.error(
+            "contact.email.delivery_error request_id=%s status_code=%s error_code=%s message=%s from_email=%s to_email=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s response_body=%s",
+            request_id,
+            exc.status_code,
+            exc.error_code,
+            exc.error_message,
+            exc.from_email,
+            exc.to_email_masked,
+            bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
+            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+            bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
+            exc.response_body,
+        )
+        raise HTTPException(status_code=502, detail="Failed to send contact message.") from exc
+    logger.exception("contact.email.unknown_error request_id=%s", request_id)
+    raise HTTPException(status_code=502, detail="Failed to send contact message.") from exc
+
+
+def _validate_contact_fields(name: str, email: str, phone: str | None, message: str) -> tuple[str, str, str | None, str]:
+    safe_name = name.strip()
+    if not safe_name:
+        raise HTTPException(status_code=422, detail="Name is required")
+
+    safe_email = _validate_email(email)
+
+    safe_phone = phone.strip() if phone else None
+    if safe_phone and not PHONE_RE.match(safe_phone):
+        raise HTTPException(status_code=422, detail="Not a valid phone number")
+
+    safe_message = message.strip()
+    if not safe_message:
+        raise HTTPException(status_code=422, detail="Message is required")
+
+    return safe_name, safe_email, safe_phone, safe_message
+
+
+def _validate_contact_upload(content_type: str | None, filename: str, payload: bytes) -> None:
+    extension = os.path.splitext(filename)[1].lower()
+    normalized_type = (content_type or "").lower().strip()
+
+    if extension not in CONTACT_ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=422, detail=f"Unsupported file type: {filename}")
+
+    if normalized_type and normalized_type not in CONTACT_ALLOWED_CONTENT_TYPES:
+        raise HTTPException(status_code=422, detail=f"Unsupported file type: {filename}")
+
+    if len(payload) > CONTACT_MAX_FILE_BYTES:
+        raise HTTPException(status_code=422, detail=f"File exceeds 10MB limit: {filename}")
+
+
+@router.post("/api/contact", response_model=ContactResponse)
+async def submit_contact(
+    name: str = Form(...),
+    email: str = Form(...),
+    phone: str | None = Form(default=None),
+    message: str = Form(...),
+    attachments: list[UploadFile] = File(default=[]),
+):
+    request_id = str(uuid.uuid4())
+    safe_name, safe_email, safe_phone, safe_message = _validate_contact_fields(name, email, phone, message)
+
+    if len(attachments) > CONTACT_MAX_FILES:
+        raise HTTPException(status_code=422, detail="Upload up to 3 attachments.")
+
+    postmark_attachments: list[PostmarkAttachment] = []
+    attachment_names: list[str] = []
+
+    for attachment in attachments:
+        filename = (attachment.filename or "attachment").strip()
+        payload = await attachment.read()
+        _validate_contact_upload(attachment.content_type, filename, payload)
+
+        postmark_attachments.append(
+            PostmarkAttachment(
+                name=filename,
+                content_type=attachment.content_type or "application/octet-stream",
+                content_base64=base64.b64encode(payload).decode("ascii"),
+            )
+        )
+        attachment_names.append(filename)
+
+    try:
+        send_admin_contact_notification(
+            name=safe_name,
+            email=safe_email,
+            phone=safe_phone,
+            message=safe_message,
+            attachment_names=attachment_names,
+            attachments=postmark_attachments,
+        )
+    except Exception as exc:
+        _raise_contact_mail_delivery_error(exc, request_id=request_id)
+
+    return ContactResponse(message="Thanks for contacting us. We'll be in touch soon.")
 
 
 @router.post("/api/register-interest", response_model=RegisterInterestResponse)
