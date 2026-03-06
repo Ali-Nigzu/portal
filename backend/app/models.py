@@ -92,6 +92,45 @@ class SignupResendResponse(BaseModel):
     resendsRemaining: int
 
 
+
+
+class SettingsUnlockStartRequest(BaseModel):
+    current_password: str
+
+
+class SettingsUnlockStartResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+
+
+class SettingsUnlockVerifyRequest(BaseModel):
+    code: str
+
+
+class SettingsUnlockVerifyResponse(BaseModel):
+    ok: bool
+    unlockToken: str
+    unlockExpiresInSeconds: int
+
+
+class SettingsUnlockResendResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+    resendsRemaining: int
+
+
+class UpdateMeRequest(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    password: Optional[str] = None
+    confirm_password: Optional[str] = None
+    unlock_token: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RegisterInterestRequest(BaseModel):
     name: str
     email: str

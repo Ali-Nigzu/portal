@@ -26,9 +26,11 @@ from backend.app.data.json_store import (
     create_account_user,
     find_user_by_email,
     hash_password,
+    load_pending_settings_unlocks,
     load_pending_signups,
     load_users,
     normalize_email,
+    save_pending_settings_unlocks,
     save_pending_signups,
     save_users,
 )
@@ -40,6 +42,12 @@ from backend.app.models import (
     LoginRequest,
     LoginResponse,
     ContactResponse,
+    SettingsUnlockResendResponse,
+    SettingsUnlockStartRequest,
+    SettingsUnlockStartResponse,
+    SettingsUnlockVerifyRequest,
+    SettingsUnlockVerifyResponse,
+    UpdateMeRequest,
     RegisterInterestRequest,
     RegisterInterestResponse,
     SignupResendRequest,
@@ -55,6 +63,7 @@ from backend.app.services.postmark_email import (
     send_admin_contact_notification,
     send_admin_signup_notification,
     send_contact_confirmation_email,
+    send_settings_unlock_code_email,
     send_verification_email,
 )
 
@@ -67,6 +76,12 @@ SIGNUP_CODE_TTL_SECONDS = 15 * 60
 SIGNUP_MAX_VERIFY_ATTEMPTS = 5
 SIGNUP_RESEND_COOLDOWN_SECONDS = 30
 SIGNUP_MAX_RESENDS = 5
+
+SETTINGS_UNLOCK_CODE_TTL_SECONDS = 15 * 60
+SETTINGS_UNLOCK_MAX_VERIFY_ATTEMPTS = 5
+SETTINGS_UNLOCK_RESEND_COOLDOWN_SECONDS = 30
+SETTINGS_UNLOCK_MAX_RESENDS = 5
+SETTINGS_UNLOCK_SESSION_SECONDS = 10 * 60
 
 CONTACT_MAX_FILES = 3
 CONTACT_MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -251,6 +266,287 @@ def _validate_contact_upload(content_type: str | None, filename: str, payload: b
 
     if len(payload) > CONTACT_MAX_FILE_BYTES:
         raise HTTPException(status_code=422, detail=f"File exceeds 10MB limit: {filename}")
+
+
+def _settings_unlock_challenge_key(user_id: str) -> str:
+    return user_id
+
+
+def _raise_settings_unlock_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
+    if isinstance(exc, PostmarkConfigurationError):
+        logger.error(
+            "settings.unlock.email.config_error request_id=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s detail=%s",
+            request_id,
+            bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
+            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+            bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
+            str(exc),
+        )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if isinstance(exc, PostmarkDeliveryError):
+        logger.error(
+            "settings.unlock.email.delivery_error request_id=%s status_code=%s error_code=%s message=%s",
+            request_id,
+            exc.status_code,
+            exc.error_code,
+            exc.error_message,
+        )
+        raise HTTPException(status_code=502, detail="Failed to send unlock code.") from exc
+    logger.exception("settings.unlock.email.unknown_error request_id=%s", request_id)
+    raise HTTPException(status_code=502, detail="Failed to send unlock code.") from exc
+
+
+def _prune_expired_settings_unlocks(challenges: dict, now: datetime) -> bool:
+    to_delete: list[str] = []
+    for key, record in challenges.items():
+        expires_at = _parse_iso(record.get("code_expires_at"))
+        unlock_expires_at = _parse_iso(record.get("unlock_expires_at"))
+        is_verified = bool(record.get("is_verified"))
+        if (not expires_at or expires_at <= now) and (not is_verified or not unlock_expires_at or unlock_expires_at <= now):
+            to_delete.append(key)
+        elif is_verified and (not unlock_expires_at or unlock_expires_at <= now):
+            to_delete.append(key)
+    for key in to_delete:
+        del challenges[key]
+    return bool(to_delete)
+
+
+def _load_settings_unlocks_pruned() -> tuple[dict, datetime, bool]:
+    challenges = load_pending_settings_unlocks()
+    now = _utc_now()
+    modified = _prune_expired_settings_unlocks(challenges, now)
+    return challenges, now, modified
+
+
+def _validate_update_me_payload(payload: UpdateMeRequest) -> tuple[str | None, str | None, str | None]:
+    name = payload.name.strip() if isinstance(payload.name, str) else None
+    if name is not None and not name:
+        raise HTTPException(status_code=422, detail="Name is required")
+
+    phone = payload.phone.strip() if isinstance(payload.phone, str) else None
+    if phone is not None and phone and not PHONE_RE.match(phone):
+        raise HTTPException(status_code=422, detail="Not a valid phone number")
+
+    password = payload.password.strip() if isinstance(payload.password, str) else None
+    confirm_password = payload.confirm_password.strip() if isinstance(payload.confirm_password, str) else None
+
+    if (password and not confirm_password) or (confirm_password and not password):
+        raise HTTPException(status_code=422, detail="Password and confirm password are required")
+
+    if password:
+        if len(password) < 8:
+            raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+        if password != confirm_password:
+            raise HTTPException(status_code=422, detail="Passwords do not match")
+
+    return name, phone, password
+
+
+@router.post("/api/settings/unlock/start", response_model=SettingsUnlockStartResponse)
+async def settings_unlock_start(
+    payload: SettingsUnlockStartRequest,
+    session_user: tuple[str, dict] = Depends(get_session_user),
+):
+    request_id = str(uuid.uuid4())
+    username, user_data = session_user
+    current_password = payload.current_password
+    if not current_password:
+        raise HTTPException(status_code=422, detail="Current password is required")
+
+    stored_hash = user_data.get("password_hash") or user_data.get("password", "")
+    if not verify_password(current_password, stored_hash):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+
+    email = _validate_email(str(user_data.get("email", "")))
+    challenge_key = _settings_unlock_challenge_key(str(user_data.get("id", username)))
+    challenges, now, _ = _load_settings_unlocks_pruned()
+
+    code = _generate_verification_code()
+    now_iso = _to_iso(now)
+    code_expires_at_iso = _to_iso(now + timedelta(seconds=SETTINGS_UNLOCK_CODE_TTL_SECONDS))
+
+    challenges[challenge_key] = {
+        "user_id": str(user_data.get("id", username)),
+        "username": username,
+        "email": email,
+        "verification_code_hash": hash_password(code),
+        "code_expires_at": code_expires_at_iso,
+        "verify_attempts": 0,
+        "resend_count": 0,
+        "last_code_sent_at": now_iso,
+        "is_verified": False,
+        "unlock_token": None,
+        "unlock_expires_at": None,
+        "created_at": now_iso,
+        "updated_at": now_iso,
+    }
+
+    try:
+        send_settings_unlock_code_email(to_email=email, code=code)
+    except Exception as exc:
+        _raise_settings_unlock_mail_delivery_error(exc, request_id=request_id)
+
+    save_pending_settings_unlocks(challenges)
+    return SettingsUnlockStartResponse(
+        ok=True,
+        expiresInSeconds=SETTINGS_UNLOCK_CODE_TTL_SECONDS,
+        resendCooldownSeconds=SETTINGS_UNLOCK_RESEND_COOLDOWN_SECONDS,
+    )
+
+
+@router.post("/api/settings/unlock/resend", response_model=SettingsUnlockResendResponse)
+async def settings_unlock_resend(session_user: tuple[str, dict] = Depends(get_session_user)):
+    request_id = str(uuid.uuid4())
+    username, user_data = session_user
+    challenge_key = _settings_unlock_challenge_key(str(user_data.get("id", username)))
+
+    challenges, now, modified = _load_settings_unlocks_pruned()
+    record = challenges.get(challenge_key)
+    if not record:
+        if modified:
+            save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=404, detail="No unlock challenge found.")
+
+    expires_at = _parse_iso(record.get("code_expires_at"))
+    if not expires_at or expires_at <= now:
+        del challenges[challenge_key]
+        save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=410, detail="Unlock code expired. Restart unlock.")
+
+    last_sent_at = _parse_iso(record.get("last_code_sent_at"))
+    if last_sent_at and (now - last_sent_at).total_seconds() < SETTINGS_UNLOCK_RESEND_COOLDOWN_SECONDS:
+        raise HTTPException(status_code=429, detail="Please wait before requesting another code.")
+
+    resend_count = int(record.get("resend_count", 0))
+    if resend_count >= SETTINGS_UNLOCK_MAX_RESENDS:
+        raise HTTPException(status_code=429, detail="Maximum resend attempts reached.")
+
+    code = _generate_verification_code()
+    now_iso = _to_iso(now)
+    record["verification_code_hash"] = hash_password(code)
+    record["code_expires_at"] = _to_iso(now + timedelta(seconds=SETTINGS_UNLOCK_CODE_TTL_SECONDS))
+    record["resend_count"] = resend_count + 1
+    record["last_code_sent_at"] = now_iso
+    record["updated_at"] = now_iso
+
+    try:
+        send_settings_unlock_code_email(to_email=record["email"], code=code)
+    except Exception as exc:
+        _raise_settings_unlock_mail_delivery_error(exc, request_id=request_id)
+
+    save_pending_settings_unlocks(challenges)
+    return SettingsUnlockResendResponse(
+        ok=True,
+        expiresInSeconds=SETTINGS_UNLOCK_CODE_TTL_SECONDS,
+        resendCooldownSeconds=SETTINGS_UNLOCK_RESEND_COOLDOWN_SECONDS,
+        resendsRemaining=max(SETTINGS_UNLOCK_MAX_RESENDS - int(record["resend_count"]), 0),
+    )
+
+
+@router.post("/api/settings/unlock/verify", response_model=SettingsUnlockVerifyResponse)
+async def settings_unlock_verify(
+    payload: SettingsUnlockVerifyRequest,
+    session_user: tuple[str, dict] = Depends(get_session_user),
+):
+    username, user_data = session_user
+    challenge_key = _settings_unlock_challenge_key(str(user_data.get("id", username)))
+    code = payload.code.strip()
+    if not code:
+        raise HTTPException(status_code=422, detail="Verification code is required")
+
+    challenges, now, modified = _load_settings_unlocks_pruned()
+    record = challenges.get(challenge_key)
+    if not record:
+        if modified:
+            save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=404, detail="No unlock challenge found.")
+
+    expires_at = _parse_iso(record.get("code_expires_at"))
+    if not expires_at or expires_at <= now:
+        del challenges[challenge_key]
+        save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=410, detail="Unlock code expired. Restart unlock.")
+
+    current_attempts = int(record.get("verify_attempts", 0))
+    if current_attempts >= SETTINGS_UNLOCK_MAX_VERIFY_ATTEMPTS:
+        del challenges[challenge_key]
+        save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=429, detail="Too many verification attempts. Restart unlock.")
+
+    code_hash = str(record.get("verification_code_hash", ""))
+    if not verify_password(code, code_hash):
+        record["verify_attempts"] = current_attempts + 1
+        record["updated_at"] = _to_iso(now)
+        if int(record["verify_attempts"]) >= SETTINGS_UNLOCK_MAX_VERIFY_ATTEMPTS:
+            del challenges[challenge_key]
+            save_pending_settings_unlocks(challenges)
+            raise HTTPException(status_code=429, detail="Too many verification attempts. Restart unlock.")
+        save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=400, detail="Invalid verification code.")
+
+    unlock_token = secrets.token_urlsafe(24)
+    record["is_verified"] = True
+    record["unlock_token"] = hash_session_token(unlock_token)
+    record["unlock_expires_at"] = _to_iso(now + timedelta(seconds=SETTINGS_UNLOCK_SESSION_SECONDS))
+    record["updated_at"] = _to_iso(now)
+    save_pending_settings_unlocks(challenges)
+
+    return SettingsUnlockVerifyResponse(
+        ok=True,
+        unlockToken=unlock_token,
+        unlockExpiresInSeconds=SETTINGS_UNLOCK_SESSION_SECONDS,
+    )
+
+
+@router.put("/api/me", response_model=AuthUserResponse)
+async def update_me(
+    payload: UpdateMeRequest,
+    session_user: tuple[str, dict] = Depends(get_session_user),
+):
+    username, user_data = session_user
+    challenge_key = _settings_unlock_challenge_key(str(user_data.get("id", username)))
+    unlock_token = payload.unlock_token.strip()
+    if not unlock_token:
+        raise HTTPException(status_code=401, detail="Unlock required")
+
+    challenges, now, modified = _load_settings_unlocks_pruned()
+    record = challenges.get(challenge_key)
+    if not record:
+        if modified:
+            save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=401, detail="Unlock required")
+
+    unlock_expires_at = _parse_iso(record.get("unlock_expires_at"))
+    stored_unlock_token_hash = str(record.get("unlock_token", ""))
+    if not record.get("is_verified") or not unlock_expires_at or unlock_expires_at <= now or not secrets.compare_digest(hash_session_token(unlock_token), stored_unlock_token_hash):
+        del challenges[challenge_key]
+        save_pending_settings_unlocks(challenges)
+        raise HTTPException(status_code=401, detail="Unlock expired. Please unlock again.")
+
+    name, phone, password = _validate_update_me_payload(payload)
+
+    users = load_users()
+    existing = users.get(username)
+    if not existing:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if name is not None:
+        existing["name"] = name
+    if phone is not None:
+        existing["phone"] = phone or None
+    if password:
+        password_hash = hash_password(password)
+        existing["password_hash"] = password_hash
+        existing["password"] = password_hash
+
+    existing["updated_at"] = _to_iso(now)
+    users[username] = existing
+    save_users(users)
+
+    del challenges[challenge_key]
+    save_pending_settings_unlocks(challenges)
+
+    return AuthUserResponse(user=_safe_auth_user(existing))
 
 
 @router.post("/api/contact", response_model=ContactResponse)

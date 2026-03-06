@@ -280,3 +280,22 @@ def send_contact_confirmation_email(*, to_email: str, name: str) -> None:
         from_email=config.from_email,
         to_email=to_email,
     )
+
+
+def send_settings_unlock_code_email(*, to_email: str, code: str) -> None:
+    config = _load_config()
+    payload = {
+        "From": config.from_email,
+        "To": to_email,
+        "Subject": "Your camOS account unlock code",
+        "TextBody": (
+            f"Your camOS account unlock code is {code}.\n\n"
+            "It expires in 15 minutes."
+        ),
+    }
+    _postmark_send(
+        token=config.server_token,
+        payload=payload,
+        from_email=config.from_email,
+        to_email=to_email,
+    )

@@ -2,23 +2,33 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import {
   getMe,
-  isNotImplementedError,
+  resendSettingsUnlockCode,
+  startSettingsUnlock,
   updateMe,
-  updatePassword,
-  verifyCurrentPassword,
+  verifySettingsUnlockCode,
 } from "../api/settingsApi";
-import EditableFieldRow from "../components/EditableFieldRow";
 import ReenterPasswordModal from "../components/ReenterPasswordModal";
 import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
 import type { SettingsUser } from "../types";
 import "../SettingsPages.css";
 
-type EditableRowKey = "username" | "email" | "phone" | "password";
+type DraftState = {
+  name: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+};
 
-type RowDraftState = Record<EditableRowKey, string>;
-type RowSavingState = Record<EditableRowKey, boolean>;
-type RowErrorState = Record<EditableRowKey, string | null>;
+type FormErrorState = {
+  name?: string;
+  phone?: string;
+  password?: string;
+  confirmPassword?: string;
+  form?: string;
+};
+
+const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 
 const maskEmail = (email: string) => {
   const [localPart, domain] = email.split("@");
@@ -37,34 +47,22 @@ const maskPhone = (phone: string | null | undefined) => {
   return `${"•".repeat(Math.max(phone.length - 2, 4))}${visible}`;
 };
 
-const defaultSavingState: RowSavingState = {
-  username: false,
-  email: false,
-  phone: false,
-  password: false,
-};
-
-const defaultErrorState: RowErrorState = {
-  username: null,
-  email: null,
-  phone: null,
-  password: null,
-};
-
 const MyAccountPage: React.FC = () => {
   const [user, setUser] = useState<SettingsUser | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
-  const [activeEditingRowId, setActiveEditingRowId] = useState<EditableRowKey | null>(null);
-  const [pendingRowToEdit, setPendingRowToEdit] = useState<EditableRowKey | null>(null);
-  const [isPasswordGateOpen, setIsPasswordGateOpen] = useState(false);
-  const [drafts, setDrafts] = useState<RowDraftState>({
-    username: "",
-    email: "",
+  const [isUnlockOpen, setIsUnlockOpen] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [unlockToken, setUnlockToken] = useState<string | null>(null);
+  const [unlockExpiresAt, setUnlockExpiresAt] = useState<number | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FormErrorState>({});
+  const [drafts, setDrafts] = useState<DraftState>({
+    name: "",
     phone: "",
     password: "",
+    confirmPassword: "",
   });
-  const [saving, setSaving] = useState<RowSavingState>(defaultSavingState);
-  const [errors, setErrors] = useState<RowErrorState>(defaultErrorState);
 
   useEffect(() => {
     const load = async () => {
@@ -72,10 +70,10 @@ const MyAccountPage: React.FC = () => {
         const me = await getMe();
         setUser(me);
         setDrafts({
-          username: me.name,
-          email: me.email,
+          name: me.name,
           phone: me.phone ?? "",
           password: "",
+          confirmPassword: "",
         });
       } catch (error) {
         setLoadingError(error instanceof Error ? error.message : "Unable to load account");
@@ -85,119 +83,121 @@ const MyAccountPage: React.FC = () => {
     load();
   }, []);
 
-  const requestEdit = (rowId: EditableRowKey) => {
-    if (!user) {
+  useEffect(() => {
+    if (!isUnlocked || !unlockExpiresAt) {
       return;
     }
-    setErrors((prev) => ({ ...prev, [rowId]: null }));
-    setPendingRowToEdit(rowId);
-    setIsPasswordGateOpen(true);
-  };
+    const timer = window.setInterval(() => {
+      if (Date.now() >= unlockExpiresAt) {
+        setIsUnlocked(false);
+        setUnlockToken(null);
+        setUnlockExpiresAt(null);
+        setErrors((prev) => ({ ...prev, form: "Editing lock expired. Unlock again to continue." }));
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isUnlocked, unlockExpiresAt]);
 
-  const beginEditingApprovedRow = () => {
-    if (!user || !pendingRowToEdit) {
-      return;
+  useEffect(() => {
+    return () => {
+      setIsUnlocked(false);
+      setUnlockToken(null);
+      setUnlockExpiresAt(null);
+    };
+  }, []);
+
+  const unlockTimeLeftLabel = useMemo(() => {
+    if (!isUnlocked || !unlockExpiresAt) {
+      return null;
     }
+    const seconds = Math.max(0, Math.floor((unlockExpiresAt - Date.now()) / 1000));
+    return `${seconds}s`;
+  }, [isUnlocked, unlockExpiresAt]);
 
-    const rowId = pendingRowToEdit;
-    setDrafts((prev) => ({
-      ...prev,
-      username: user.name,
-      email: user.email,
-      phone: user.phone ?? "",
-      password: rowId === "password" ? "" : prev.password,
-    }));
-    setActiveEditingRowId(rowId);
-    setPendingRowToEdit(null);
-    setIsPasswordGateOpen(false);
-  };
-
-  const cancelEditing = (rowId: EditableRowKey) => {
-    if (!user) {
-      return;
-    }
-
-    setErrors((prev) => ({ ...prev, [rowId]: null }));
-    setDrafts((prev) => ({
-      ...prev,
-      username: user.name,
-      email: user.email,
-      phone: user.phone ?? "",
+  const resetDrafts = (nextUser: SettingsUser) => {
+    setDrafts({
+      name: nextUser.name,
+      phone: nextUser.phone ?? "",
       password: "",
-    }));
-    setActiveEditingRowId((prev) => (prev === rowId ? null : prev));
+      confirmPassword: "",
+    });
   };
 
-  const handleSave = async (rowId: EditableRowKey) => {
+  const relock = (nextUser?: SettingsUser) => {
+    setIsUnlocked(false);
+    setUnlockToken(null);
+    setUnlockExpiresAt(null);
+    setErrors({});
+    if (nextUser) {
+      resetDrafts(nextUser);
+    } else if (user) {
+      resetDrafts(user);
+    }
+  };
+
+  const handleSave = async () => {
     if (!user) {
       return;
     }
 
-    const nextValue = drafts[rowId].trim();
-    if (rowId !== "phone" && !nextValue) {
-      setErrors((prev) => ({ ...prev, [rowId]: "This field is required" }));
+    const nextErrors: FormErrorState = {};
+    const trimmedName = drafts.name.trim();
+    const trimmedPhone = drafts.phone.trim();
+
+    if (!trimmedName) {
+      nextErrors.name = "This field is required";
+    }
+
+    if (trimmedPhone && !PHONE_RE.test(trimmedPhone)) {
+      nextErrors.phone = "Phone must be in international format (e.g. +447700900123)";
+    }
+
+    const isPasswordProvided = drafts.password.length > 0 || drafts.confirmPassword.length > 0;
+    if (isPasswordProvided) {
+      if (!drafts.password || !drafts.confirmPassword) {
+        nextErrors.password = "Password and confirm password are required";
+      } else {
+        if (drafts.password.length < 8) {
+          nextErrors.password = "Password must be at least 8 characters";
+        }
+        if (drafts.password !== drafts.confirmPassword) {
+          nextErrors.confirmPassword = "Passwords do not match";
+        }
+      }
+    }
+
+    if (!unlockToken) {
+      nextErrors.form = "Unlock required before saving";
+    }
+
+    setErrors(nextErrors);
+    setSaveMessage(null);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
-    setSaving((prev) => ({ ...prev, [rowId]: true }));
-    setErrors((prev) => ({ ...prev, [rowId]: null }));
-
+    setSaving(true);
     try {
-      if (rowId === "password") {
-        await updatePassword(nextValue);
-      } else if (rowId === "username") {
-        await updateMe({ name: nextValue });
-      } else if (rowId === "email") {
-        await updateMe({ email: nextValue });
-      } else {
-        await updateMe({ phone: nextValue });
-      }
-
-      setUser((prev) => {
-        if (!prev || rowId === "password") {
-          return prev;
-        }
-        if (rowId === "username") {
-          return { ...prev, name: nextValue };
-        }
-        if (rowId === "email") {
-          return { ...prev, email: nextValue };
-        }
-        return { ...prev, phone: nextValue };
+      const updatedUser = await updateMe({
+        name: trimmedName,
+        phone: trimmedPhone,
+        password: drafts.password || undefined,
+        confirm_password: drafts.confirmPassword || undefined,
+        unlock_token: unlockToken,
       });
-      setActiveEditingRowId(null);
-      setDrafts((prev) => ({ ...prev, password: "" }));
+      setUser(updatedUser);
+      setSaveMessage("Account updated successfully.");
+      relock(updatedUser);
     } catch (error) {
-      if (isNotImplementedError(error)) {
-        setErrors((prev) => ({ ...prev, [rowId]: "Not implemented yet" }));
-      } else {
-        setErrors((prev) => ({
-          ...prev,
-          [rowId]: error instanceof Error ? error.message : "Unable to save",
-        }));
+      const message = error instanceof Error ? error.message : "Unable to save";
+      if (message.toLowerCase().includes("unlock")) {
+        relock();
       }
+      setErrors((prev) => ({ ...prev, form: message }));
     } finally {
-      setSaving((prev) => ({ ...prev, [rowId]: false }));
+      setSaving(false);
     }
   };
-
-  const rows = useMemo(() => {
-    if (!user) {
-      return [] as Array<{
-        key: EditableRowKey;
-        label: string;
-        displayValue: string;
-        type?: "text" | "email" | "tel" | "password";
-      }>;
-    }
-
-    return [
-      { key: "username", label: "Username", displayValue: user.name, type: "text" as const },
-      { key: "email", label: "Email", displayValue: maskEmail(user.email), type: "email" as const },
-      { key: "phone", label: "Phone", displayValue: maskPhone(user.phone), type: "tel" as const },
-      { key: "password", label: "Password", displayValue: "••••••••", type: "password" as const },
-    ];
-  }, [user]);
 
   if (loadingError) {
     return (
@@ -223,35 +223,144 @@ const MyAccountPage: React.FC = () => {
 
   return (
     <SettingsFrame>
-      <SettingsPageHeader title="My Account" />
+      <SettingsPageHeader
+        title="My Account"
+        action={(
+          <div className="settings-account-header-actions">
+            {!isUnlocked ? (
+              <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>
+                Unlock to edit
+              </button>
+            ) : (
+              <>
+                <span className="settings-unlock-chip" aria-live="polite">Unlocked {unlockTimeLeftLabel ? `(${unlockTimeLeftLabel})` : ""}</span>
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => relock()}>
+                  Cancel / Lock
+                </button>
+                <button className="vrm-btn vrm-btn-sm" onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving..." : "Save"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      />
       <div className="vrm-card">
-        <div className="vrm-card-body settings-account-card-body">
-          {rows.map((row) => (
-            <EditableFieldRow
-              key={row.key}
-              label={row.label}
-              displayValue={row.displayValue}
-              value={drafts[row.key]}
-              type={row.type}
-              isEditing={activeEditingRowId === row.key}
-              isSaving={saving[row.key]}
-              error={errors[row.key]}
-              onEdit={() => requestEdit(row.key)}
-              onCancel={() => cancelEditing(row.key)}
-              onSave={() => handleSave(row.key)}
-              onChange={(value) => setDrafts((prev) => ({ ...prev, [row.key]: value }))}
-            />
-          ))}
+        <div className="vrm-card-body settings-account-card-body settings-account-locked-layout">
+          <div className="settings-field-row">
+            <div className="settings-field-label">Username</div>
+            <div className="settings-field-main">
+              {!isUnlocked ? (
+                <div className="settings-field-value">{user.name}</div>
+              ) : (
+                <>
+                  <input
+                    className="settings-input"
+                    value={drafts.name}
+                    onChange={(event) => setDrafts((prev) => ({ ...prev, name: event.target.value }))}
+                  />
+                  {errors.name ? <div className="settings-inline-error">{errors.name}</div> : null}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="settings-field-row">
+            <div className="settings-field-label">Email</div>
+            <div className="settings-field-main">
+              <div className="settings-field-value">{maskEmail(user.email)}</div>
+              <div className="settings-field-help">Email cannot be changed from My Account.</div>
+            </div>
+          </div>
+
+          <div className="settings-field-row">
+            <div className="settings-field-label">Phone</div>
+            <div className="settings-field-main">
+              {!isUnlocked ? (
+                <div className="settings-field-value">{maskPhone(user.phone)}</div>
+              ) : (
+                <>
+                  <input
+                    className="settings-input"
+                    value={drafts.phone}
+                    onChange={(event) => setDrafts((prev) => ({ ...prev, phone: event.target.value }))}
+                    placeholder="+447700900123"
+                  />
+                  {errors.phone ? <div className="settings-inline-error">{errors.phone}</div> : null}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="settings-field-row">
+            <div className="settings-field-label">Password</div>
+            <div className="settings-field-main">
+              {!isUnlocked ? (
+                <div className="settings-field-value">••••••••</div>
+              ) : (
+                <div className="settings-password-group">
+                  <input
+                    className="settings-input"
+                    type="password"
+                    value={drafts.password}
+                    onChange={(event) => setDrafts((prev) => ({ ...prev, password: event.target.value }))}
+                    placeholder="New password"
+                  />
+                  <input
+                    className="settings-input"
+                    type="password"
+                    value={drafts.confirmPassword}
+                    onChange={(event) => setDrafts((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                    placeholder="Confirm new password"
+                  />
+                  {errors.password ? <div className="settings-inline-error">{errors.password}</div> : null}
+                  {errors.confirmPassword ? <div className="settings-inline-error">{errors.confirmPassword}</div> : null}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {errors.form ? <div className="settings-form-error settings-account-global-error">{errors.form}</div> : null}
+          {saveMessage ? <div className="settings-form-message settings-account-global-message">{saveMessage}</div> : null}
         </div>
       </div>
+
       <ReenterPasswordModal
-        isOpen={isPasswordGateOpen}
-        onClose={() => {
-          setIsPasswordGateOpen(false);
-          setPendingRowToEdit(null);
+        isOpen={isUnlockOpen}
+        onClose={() => setIsUnlockOpen(false)}
+        onVerified={({ unlockToken: verifiedUnlockToken, unlockExpiresInSeconds }) => {
+          setUnlockToken(verifiedUnlockToken);
+          setUnlockExpiresAt(Date.now() + (unlockExpiresInSeconds * 1000));
+          setIsUnlocked(true);
+          setIsUnlockOpen(false);
+          setErrors({});
+          setSaveMessage(null);
         }}
-        onVerified={beginEditingApprovedRow}
-        onVerifyPassword={(password) => verifyCurrentPassword(user.email, password)}
+        onStartUnlock={async (password) => {
+          const result = await startSettingsUnlock(password);
+          if (!result.ok) {
+            return { ok: false as const, message: result.message ?? "Unable to verify password" };
+          }
+          return { ok: true as const, resendCooldownSeconds: result.data.resendCooldownSeconds };
+        }}
+        onVerifyCode={async (code) => {
+          const result = await verifySettingsUnlockCode(code);
+          if (!result.ok) {
+            return { ok: false as const, message: result.message ?? "Unable to verify code" };
+          }
+          return {
+            ok: true as const,
+            unlockToken: result.data.unlockToken,
+            unlockExpiresInSeconds: result.data.unlockExpiresInSeconds,
+          };
+        }}
+        onResendCode={async () => {
+          const result = await resendSettingsUnlockCode();
+          if (!result.ok) {
+            return { ok: false as const, message: result.message ?? "Unable to resend code" };
+          }
+          return { ok: true as const, resendCooldownSeconds: result.data.resendCooldownSeconds };
+        }}
       />
     </SettingsFrame>
   );
