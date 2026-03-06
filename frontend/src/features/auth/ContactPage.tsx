@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import camsvg from "../../assets/camsvg.svg";
 import { submitContact } from "./transport/contact";
 import "./ContactPage.css";
 
@@ -266,13 +265,6 @@ const ContactPage: React.FC = () => {
               </button>
             </div>
           </div>
-          <img
-            src={camsvg}
-            alt=""
-            aria-hidden="true"
-            focusable="false"
-            className="auth-right-pane-overlay"
-          />
         </section>
       </form>
     </div>

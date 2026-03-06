@@ -75,10 +75,9 @@
   position: relative;
   overflow: hidden;
   border-left: 1px solid rgba(255, 255, 255, 0.12);
-  background:
-    radial-gradient(circle at 22% 20%, rgba(105, 145, 215, 0.12), transparent 48%),
-    linear-gradient(145deg, #151a22 0%, #101722 60%, #0e1520 100%);
+  background: #151a22;
   padding: 34px 32px 40px;
+  display: flex;
 }
 
 .contact-right-content {
@@ -87,12 +86,14 @@
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
+  min-height: min(620px, calc(100vh - 180px));
   display: grid;
-  gap: 8px;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 10px;
 }
 
 .contact-message-input {
-  min-height: 170px;
+  min-height: 300px;
   resize: vertical;
   padding-top: 10px;
 }
@@ -121,7 +122,8 @@
 }
 
 .contact-actions {
-  margin-top: 6px;
+  margin-top: 10px;
+  align-self: end;
 }
 
 .contact-submit {
@@ -150,6 +152,11 @@
   .contact-content,
   .contact-right-content {
     max-width: 560px;
+  }
+
+  .contact-right-content {
+    min-height: auto;
+    grid-template-rows: auto;
   }
 
   .contact-hero {

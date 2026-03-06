@@ -54,6 +54,7 @@ from backend.app.services.postmark_email import (
     PostmarkAttachment,
     send_admin_contact_notification,
     send_admin_signup_notification,
+    send_contact_confirmation_email,
     send_verification_email,
 )
 
@@ -294,6 +295,16 @@ async def submit_contact(
         )
     except Exception as exc:
         _raise_contact_mail_delivery_error(exc, request_id=request_id)
+
+    try:
+        send_contact_confirmation_email(to_email=safe_email, name=safe_name)
+    except Exception:
+        logger.exception(
+            "contact.email.sender_confirmation_failed request_id=%s from_email=%s to_email=%s",
+            request_id,
+            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+            safe_email,
+        )
 
     return ContactResponse(message="Thanks for contacting us. We'll be in touch soon.")
 

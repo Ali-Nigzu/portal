@@ -255,3 +255,28 @@ def send_admin_contact_notification(
         from_email=config.from_email,
         to_email=config.admin_notify_email,
     )
+
+
+
+def send_contact_confirmation_email(*, to_email: str, name: str) -> None:
+    config = _load_config()
+    greeting = f"Hi {name}," if name.strip() else "Hello,"
+    payload = {
+        "From": config.from_email,
+        "To": to_email,
+        "Subject": "We received your message",
+        "TextBody": (
+            f"{greeting}\n\n"
+            "Thank you for contacting camOS.\n"
+            "We have received your message and our team will review it.\n"
+            "We will get back to you as appropriate.\n\n"
+            "Regards,\n"
+            "camOS Team\n"
+        ),
+    }
+    _postmark_send(
+        token=config.server_token,
+        payload=payload,
+        from_email=config.from_email,
+        to_email=to_email,
+    )
