@@ -13,7 +13,14 @@ import secrets
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from backend.app.config import USERS_FILE, ALARM_LOGS_FILE, DEVICE_LISTS_FILE, PENDING_SIGNUPS_FILE
+from backend.app.config import (
+    USERS_FILE,
+    ALARM_LOGS_FILE,
+    DEVICE_LISTS_FILE,
+    PENDING_SIGNUPS_FILE,
+    PENDING_SETTINGS_UNLOCKS_FILE,
+    PENDING_PASSWORD_RESETS_FILE,
+)
 
 
 def hash_password(password: str) -> str:
@@ -216,3 +223,51 @@ def save_device_lists(device_data: dict):
     os.makedirs(os.path.dirname(DEVICE_LISTS_FILE), exist_ok=True)
     with open(DEVICE_LISTS_FILE, 'w') as f:
         json.dump(device_data, f, indent=2)
+
+
+def load_pending_settings_unlocks() -> dict:
+    """Load pending settings unlock records from JSON file."""
+    if not os.path.exists(PENDING_SETTINGS_UNLOCKS_FILE):
+        return {}
+    with open(PENDING_SETTINGS_UNLOCKS_FILE, 'r') as f:
+        return json.load(f)
+
+
+def save_pending_settings_unlocks(pending_data: dict):
+    """Save pending settings unlock data to JSON file using atomic write."""
+    file_dir = os.path.dirname(PENDING_SETTINGS_UNLOCKS_FILE) or '.'
+    os.makedirs(file_dir, exist_ok=True)
+
+    temp_fd, temp_path = tempfile.mkstemp(dir=file_dir, suffix='.tmp')
+    try:
+        with os.fdopen(temp_fd, 'w') as f:
+            json.dump(pending_data, f, indent=2)
+        shutil.move(temp_path, PENDING_SETTINGS_UNLOCKS_FILE)
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+        raise e
+
+
+def load_pending_password_resets() -> dict:
+    """Load pending password reset records from JSON file."""
+    if not os.path.exists(PENDING_PASSWORD_RESETS_FILE):
+        return {}
+    with open(PENDING_PASSWORD_RESETS_FILE, 'r') as f:
+        return json.load(f)
+
+
+def save_pending_password_resets(pending_data: dict):
+    """Save pending password reset data to JSON file using atomic write."""
+    file_dir = os.path.dirname(PENDING_PASSWORD_RESETS_FILE) or '.'
+    os.makedirs(file_dir, exist_ok=True)
+
+    temp_fd, temp_path = tempfile.mkstemp(dir=file_dir, suffix='.tmp')
+    try:
+        with os.fdopen(temp_fd, 'w') as f:
+            json.dump(pending_data, f, indent=2)
+        shutil.move(temp_path, PENDING_PASSWORD_RESETS_FILE)
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+        raise e

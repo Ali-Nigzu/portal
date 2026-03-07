@@ -48,6 +48,13 @@ class PostmarkConfig:
     admin_notify_email: str
 
 
+@dataclass(frozen=True)
+class PostmarkAttachment:
+    name: str
+    content_base64: str
+    content_type: str
+
+
 def _mask_email(email: str) -> str:
     if "@" not in email:
         return "***"
@@ -203,4 +210,111 @@ def send_admin_signup_notification(*, verified_email: str, name: str, username: 
         payload=payload,
         from_email=config.from_email,
         to_email=config.admin_notify_email,
+    )
+
+
+def send_admin_contact_notification(
+    *,
+    name: str,
+    email: str,
+    phone: str | None,
+    message: str,
+    attachment_names: list[str],
+    attachments: list[PostmarkAttachment] | None = None,
+) -> None:
+    config = _load_config()
+    attachments_line = ", ".join(attachment_names) if attachment_names else "None"
+    payload = {
+        "From": config.from_email,
+        "To": config.admin_notify_email,
+        "Subject": f"New contact submission: {name}",
+        "TextBody": (
+            "A new contact form submission has been received.\n\n"
+            f"Name: {name}\n"
+            f"Email: {email}\n"
+            f"Phone: {phone if phone else 'Not provided'}\n"
+            f"Attachments: {attachments_line}\n\n"
+            "Message:\n"
+            f"{message}\n"
+        ),
+    }
+
+    if attachments:
+        payload["Attachments"] = [
+            {
+                "Name": item.name,
+                "Content": item.content_base64,
+                "ContentType": item.content_type,
+            }
+            for item in attachments
+        ]
+
+    _postmark_send(
+        token=config.server_token,
+        payload=payload,
+        from_email=config.from_email,
+        to_email=config.admin_notify_email,
+    )
+
+
+
+def send_contact_confirmation_email(*, to_email: str, name: str) -> None:
+    config = _load_config()
+    greeting = f"Hi {name}," if name.strip() else "Hello,"
+    payload = {
+        "From": config.from_email,
+        "To": to_email,
+        "Subject": "We received your message",
+        "TextBody": (
+            f"{greeting}\n\n"
+            "Thank you for contacting camOS.\n"
+            "We have received your message and our team will review it.\n"
+            "We will get back to you as appropriate.\n\n"
+            "Regards,\n"
+            "camOS Team\n"
+        ),
+    }
+    _postmark_send(
+        token=config.server_token,
+        payload=payload,
+        from_email=config.from_email,
+        to_email=to_email,
+    )
+
+
+def send_settings_unlock_code_email(*, to_email: str, code: str) -> None:
+    config = _load_config()
+    payload = {
+        "From": config.from_email,
+        "To": to_email,
+        "Subject": "Your camOS account unlock code",
+        "TextBody": (
+            f"Your camOS account unlock code is {code}.\n\n"
+            "It expires in 15 minutes."
+        ),
+    }
+    _postmark_send(
+        token=config.server_token,
+        payload=payload,
+        from_email=config.from_email,
+        to_email=to_email,
+    )
+
+
+def send_password_reset_code_email(*, to_email: str, code: str) -> None:
+    config = _load_config()
+    payload = {
+        "From": config.from_email,
+        "To": to_email,
+        "Subject": "Your camOS password reset code",
+        "TextBody": (
+            f"Your camOS password reset code is {code}.\n\n"
+            "It expires in 15 minutes."
+        ),
+    }
+    _postmark_send(
+        token=config.server_token,
+        payload=payload,
+        from_email=config.from_email,
+        to_email=to_email,
     )

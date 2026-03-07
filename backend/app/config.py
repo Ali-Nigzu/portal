@@ -12,6 +12,8 @@ INTEREST_SUBMISSIONS_FILE = 'backend/data/interest_submissions.json'
 DOCUMENTS_FILE = 'backend/data/documents.json'
 DOCUMENT_BLOBS_DIR = 'backend/data/document_blobs'
 PENDING_SIGNUPS_FILE = 'backend/data/pending_signups.json'
+PENDING_SETTINGS_UNLOCKS_FILE = 'backend/data/pending_settings_unlocks.json'
+PENDING_PASSWORD_RESETS_FILE = 'backend/data/pending_password_resets.json'
 
 
 

@@ -17,23 +17,9 @@
   background: var(--vrm-surface-secondary);
   color: var(--vrm-text-primary);
   border-color: var(--vrm-border-subtle);
-  color-scheme: dark;
 }
 
 .select:focus {
   outline: 1px solid var(--vrm-accent-blue);
   outline-offset: 0;
-}
-
-.select option {
-  background: var(--vrm-surface-secondary);
-  color: var(--vrm-text-primary);
-}
-
-.select option:checked {
-  background: var(--vrm-surface-tertiary, var(--vrm-hover));
-}
-
-.select option:hover {
-  background: var(--vrm-hover);
 }
