@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   getMe,
@@ -7,11 +7,14 @@ import {
   updateMe,
   verifySettingsUnlockCode,
 } from "../api/settingsApi";
+import EditableFieldRow from "../components/EditableFieldRow";
 import ReenterPasswordModal from "../components/ReenterPasswordModal";
 import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
 import type { SettingsUser } from "../types";
 import "../SettingsPages.css";
+
+type RowId = "name" | "phone" | "password" | null;
 
 type DraftState = {
   name: string;
@@ -56,6 +59,7 @@ const MyAccountPage: React.FC = () => {
   const [unlockExpiresAt, setUnlockExpiresAt] = useState<number | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activeEditingRowId, setActiveEditingRowId] = useState<RowId>(null);
   const [errors, setErrors] = useState<FormErrorState>({});
   const [drafts, setDrafts] = useState<DraftState>({
     name: "",
@@ -69,17 +73,11 @@ const MyAccountPage: React.FC = () => {
       try {
         const me = await getMe();
         setUser(me);
-        setDrafts({
-          name: me.name,
-          phone: me.phone ?? "",
-          password: "",
-          confirmPassword: "",
-        });
+        setDrafts({ name: me.name, phone: me.phone ?? "", password: "", confirmPassword: "" });
       } catch (error) {
         setLoadingError(error instanceof Error ? error.message : "Unable to load account");
       }
     };
-
     load();
   }, []);
 
@@ -92,41 +90,22 @@ const MyAccountPage: React.FC = () => {
         setIsUnlocked(false);
         setUnlockToken(null);
         setUnlockExpiresAt(null);
+        setActiveEditingRowId(null);
         setErrors((prev) => ({ ...prev, form: "Editing lock expired. Unlock again to continue." }));
       }
     }, 1000);
     return () => window.clearInterval(timer);
   }, [isUnlocked, unlockExpiresAt]);
 
-  useEffect(() => {
-    return () => {
-      setIsUnlocked(false);
-      setUnlockToken(null);
-      setUnlockExpiresAt(null);
-    };
-  }, []);
-
-  const unlockTimeLeftLabel = useMemo(() => {
-    if (!isUnlocked || !unlockExpiresAt) {
-      return null;
-    }
-    const seconds = Math.max(0, Math.floor((unlockExpiresAt - Date.now()) / 1000));
-    return `${seconds}s`;
-  }, [isUnlocked, unlockExpiresAt]);
-
   const resetDrafts = (nextUser: SettingsUser) => {
-    setDrafts({
-      name: nextUser.name,
-      phone: nextUser.phone ?? "",
-      password: "",
-      confirmPassword: "",
-    });
+    setDrafts({ name: nextUser.name, phone: nextUser.phone ?? "", password: "", confirmPassword: "" });
   };
 
   const relock = (nextUser?: SettingsUser) => {
     setIsUnlocked(false);
     setUnlockToken(null);
     setUnlockExpiresAt(null);
+    setActiveEditingRowId(null);
     setErrors({});
     if (nextUser) {
       resetDrafts(nextUser);
@@ -135,25 +114,47 @@ const MyAccountPage: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (!user) {
+  const requestEdit = (rowId: Exclude<RowId, null>) => {
+    if (!isUnlocked) {
+      setIsUnlockOpen(true);
+      return;
+    }
+    setSaveMessage(null);
+    setErrors({});
+    setActiveEditingRowId(rowId);
+    if (rowId === "password") {
+      setDrafts((prev) => ({ ...prev, password: "", confirmPassword: "" }));
+    }
+  };
+
+  const handleSave = async (rowId: Exclude<RowId, null>) => {
+    if (!user || !unlockToken) {
+      setErrors({ form: "Unlock required before saving" });
       return;
     }
 
     const nextErrors: FormErrorState = {};
-    const trimmedName = drafts.name.trim();
-    const trimmedPhone = drafts.phone.trim();
+    const payload: Record<string, string> = { unlock_token: unlockToken };
 
-    if (!trimmedName) {
-      nextErrors.name = "This field is required";
+    if (rowId === "name") {
+      const trimmedName = drafts.name.trim();
+      if (!trimmedName) {
+        nextErrors.name = "This field is required";
+      } else {
+        payload.name = trimmedName;
+      }
     }
 
-    if (trimmedPhone && !PHONE_RE.test(trimmedPhone)) {
-      nextErrors.phone = "Phone must be in international format (e.g. +447700900123)";
+    if (rowId === "phone") {
+      const trimmedPhone = drafts.phone.trim();
+      if (trimmedPhone && !PHONE_RE.test(trimmedPhone)) {
+        nextErrors.phone = "Phone must be in international format (e.g. +447700900123)";
+      } else {
+        payload.phone = trimmedPhone;
+      }
     }
 
-    const isPasswordProvided = drafts.password.length > 0 || drafts.confirmPassword.length > 0;
-    if (isPasswordProvided) {
+    if (rowId === "password") {
       if (!drafts.password || !drafts.confirmPassword) {
         nextErrors.password = "Password and confirm password are required";
       } else {
@@ -164,27 +165,19 @@ const MyAccountPage: React.FC = () => {
           nextErrors.confirmPassword = "Passwords do not match";
         }
       }
-    }
-
-    if (!unlockToken) {
-      nextErrors.form = "Unlock required before saving";
+      payload.password = drafts.password;
+      payload.confirm_password = drafts.confirmPassword;
     }
 
     setErrors(nextErrors);
-    setSaveMessage(null);
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
     setSaving(true);
+    setSaveMessage(null);
     try {
-      const updatedUser = await updateMe({
-        name: trimmedName,
-        phone: trimmedPhone,
-        password: drafts.password || undefined,
-        confirm_password: drafts.confirmPassword || undefined,
-        unlock_token: unlockToken,
-      });
+      const updatedUser = await updateMe(payload);
       setUser(updatedUser);
       setSaveMessage("Account updated successfully.");
       relock(updatedUser);
@@ -200,25 +193,11 @@ const MyAccountPage: React.FC = () => {
   };
 
   if (loadingError) {
-    return (
-      <SettingsFrame>
-        <SettingsPageHeader title="My Account" />
-        <div className="vrm-card">
-          <div className="vrm-card-body">{loadingError}</div>
-        </div>
-      </SettingsFrame>
-    );
+    return <SettingsFrame><SettingsPageHeader title="My Account" /><div className="vrm-card"><div className="vrm-card-body">{loadingError}</div></div></SettingsFrame>;
   }
 
   if (!user) {
-    return (
-      <SettingsFrame>
-        <SettingsPageHeader title="My Account" />
-        <div className="vrm-card">
-          <div className="vrm-card-body">Loading account…</div>
-        </div>
-      </SettingsFrame>
-    );
+    return <SettingsFrame><SettingsPageHeader title="My Account" /><div className="vrm-card"><div className="vrm-card-body">Loading account…</div></div></SettingsFrame>;
   }
 
   return (
@@ -228,42 +207,31 @@ const MyAccountPage: React.FC = () => {
         action={(
           <div className="settings-account-header-actions">
             {!isUnlocked ? (
-              <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>
-                Unlock to edit
-              </button>
+              <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>Unlock to edit</button>
             ) : (
-              <>
-                <span className="settings-unlock-chip" aria-live="polite">Unlocked {unlockTimeLeftLabel ? `(${unlockTimeLeftLabel})` : ""}</span>
-                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => relock()}>
-                  Cancel / Lock
-                </button>
-                <button className="vrm-btn vrm-btn-sm" onClick={handleSave} disabled={saving}>
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </>
+              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => relock()}>Cancel / Lock</button>
             )}
           </div>
         )}
       />
       <div className="vrm-card">
         <div className="vrm-card-body settings-account-card-body settings-account-locked-layout">
-          <div className="settings-field-row">
-            <div className="settings-field-label">Username</div>
-            <div className="settings-field-main">
-              {!isUnlocked ? (
-                <div className="settings-field-value">{user.name}</div>
-              ) : (
-                <>
-                  <input
-                    className="settings-input"
-                    value={drafts.name}
-                    onChange={(event) => setDrafts((prev) => ({ ...prev, name: event.target.value }))}
-                  />
-                  {errors.name ? <div className="settings-inline-error">{errors.name}</div> : null}
-                </>
-              )}
-            </div>
-          </div>
+          <EditableFieldRow
+            label="Username"
+            displayValue={user.name}
+            value={drafts.name}
+            isEditing={activeEditingRowId === "name"}
+            isSaving={saving}
+            error={errors.name}
+            onEdit={() => requestEdit("name")}
+            onCancel={() => {
+              setDrafts((prev) => ({ ...prev, name: user.name }));
+              setActiveEditingRowId(null);
+              setErrors({});
+            }}
+            onSave={() => handleSave("name")}
+            onChange={(value) => setDrafts((prev) => ({ ...prev, name: value }))}
+          />
 
           <div className="settings-field-row">
             <div className="settings-field-label">Email</div>
@@ -273,49 +241,45 @@ const MyAccountPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="settings-field-row">
-            <div className="settings-field-label">Phone</div>
-            <div className="settings-field-main">
-              {!isUnlocked ? (
-                <div className="settings-field-value">{maskPhone(user.phone)}</div>
-              ) : (
-                <>
-                  <input
-                    className="settings-input"
-                    value={drafts.phone}
-                    onChange={(event) => setDrafts((prev) => ({ ...prev, phone: event.target.value }))}
-                    placeholder="+447700900123"
-                  />
-                  {errors.phone ? <div className="settings-inline-error">{errors.phone}</div> : null}
-                </>
-              )}
-            </div>
-          </div>
+          <EditableFieldRow
+            label="Phone"
+            displayValue={maskPhone(user.phone)}
+            value={drafts.phone}
+            isEditing={activeEditingRowId === "phone"}
+            isSaving={saving}
+            error={errors.phone}
+            onEdit={() => requestEdit("phone")}
+            onCancel={() => {
+              setDrafts((prev) => ({ ...prev, phone: user.phone ?? "" }));
+              setActiveEditingRowId(null);
+              setErrors({});
+            }}
+            onSave={() => handleSave("phone")}
+            onChange={(value) => setDrafts((prev) => ({ ...prev, phone: value }))}
+          />
 
           <div className="settings-field-row">
             <div className="settings-field-label">Password</div>
             <div className="settings-field-main">
-              {!isUnlocked ? (
+              {activeEditingRowId !== "password" ? (
                 <div className="settings-field-value">••••••••</div>
               ) : (
                 <div className="settings-password-group">
-                  <input
-                    className="settings-input"
-                    type="password"
-                    value={drafts.password}
-                    onChange={(event) => setDrafts((prev) => ({ ...prev, password: event.target.value }))}
-                    placeholder="New password"
-                  />
-                  <input
-                    className="settings-input"
-                    type="password"
-                    value={drafts.confirmPassword}
-                    onChange={(event) => setDrafts((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-                    placeholder="Confirm new password"
-                  />
+                  <input className="settings-input" type="password" value={drafts.password} onChange={(e) => setDrafts((prev) => ({ ...prev, password: e.target.value }))} placeholder="New password" />
+                  <input className="settings-input" type="password" value={drafts.confirmPassword} onChange={(e) => setDrafts((prev) => ({ ...prev, confirmPassword: e.target.value }))} placeholder="Confirm new password" />
                   {errors.password ? <div className="settings-inline-error">{errors.password}</div> : null}
                   {errors.confirmPassword ? <div className="settings-inline-error">{errors.confirmPassword}</div> : null}
                 </div>
+              )}
+            </div>
+            <div className="settings-field-actions">
+              {activeEditingRowId !== "password" ? (
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => requestEdit("password")}>Edit</button>
+              ) : (
+                <>
+                  <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => { setActiveEditingRowId(null); setDrafts((prev) => ({ ...prev, password: "", confirmPassword: "" })); setErrors({}); }} disabled={saving}>Cancel</button>
+                  <button className="vrm-btn vrm-btn-sm" onClick={() => handleSave("password")} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
+                </>
               )}
             </div>
           </div>
@@ -348,11 +312,7 @@ const MyAccountPage: React.FC = () => {
           if (!result.ok) {
             return { ok: false as const, message: result.message ?? "Unable to verify code" };
           }
-          return {
-            ok: true as const,
-            unlockToken: result.data.unlockToken,
-            unlockExpiresInSeconds: result.data.unlockExpiresInSeconds,
-          };
+          return { ok: true as const, unlockToken: result.data.unlockToken, unlockExpiresInSeconds: result.data.unlockExpiresInSeconds };
         }}
         onResendCode={async () => {
           const result = await resendSettingsUnlockCode();

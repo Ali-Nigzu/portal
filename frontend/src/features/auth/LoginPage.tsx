@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import camsvg from "../../assets/camsvg.svg";
 import { useLoginForm } from "./hooks/useLoginForm";
@@ -13,11 +13,8 @@ type LoginStep = "email" | "password";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
-  event.preventDefault();
-};
-
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+  const navigate = useNavigate();
   const {
     email,
     password,
@@ -52,6 +49,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
 
     await handleSubmit(event);
+  };
+
+  const handleResetPasswordClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
+    event.preventDefault();
+    if (!email.trim()) {
+      setEmailStepError("Enter your email before resetting your password");
+      if (step !== "email") {
+        setStep("email");
+      }
+      return;
+    }
+    if (!emailValid) {
+      setEmailStepError("Not a valid email address");
+      if (step !== "email") {
+        setStep("email");
+      }
+      return;
+    }
+    navigate(`/reset-password?email=${encodeURIComponent(email.trim().toLowerCase())}`);
   };
 
   return (
@@ -132,7 +148,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
                 {step === "password" && (
                   <p className="login-utility-row login-muted-row">
-                    Forgot your password? <a href="#" onClick={stopNavigation} className="login-inline-link">Reset password</a>
+                    Forgot your password? <a href="#" onClick={handleResetPasswordClick} className="login-inline-link">Reset password</a>
                   </p>
                 )}
               </div>

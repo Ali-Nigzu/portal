@@ -92,6 +92,39 @@ class SignupResendResponse(BaseModel):
     resendsRemaining: int
 
 
+class PasswordResetStartRequest(BaseModel):
+    email: str
+
+
+class PasswordResetStartResponse(BaseModel):
+    ok: bool
+    email: str
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+
+
+class PasswordResetResendRequest(BaseModel):
+    email: str
+
+
+class PasswordResetResendResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+    resendsRemaining: int
+
+
+class PasswordResetVerifyRequest(BaseModel):
+    email: str
+    code: str
+    password: str
+    confirm_password: str
+
+
+class PasswordResetVerifyResponse(BaseModel):
+    ok: bool
+
+
 
 
 class SettingsUnlockStartRequest(BaseModel):

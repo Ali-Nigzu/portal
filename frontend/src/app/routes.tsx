@@ -30,6 +30,7 @@ const LandingPage = React.lazy(() => import("../pages/LandingPage"));
 const LoginPage = React.lazy(() => import("../pages/LoginPage"));
 const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"));
 const VerifyEmailPage = React.lazy(() => import("../pages/VerifyEmailPage"));
+const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"));
 const ContactPage = React.lazy(() => import("../pages/ContactPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 
@@ -224,6 +225,16 @@ const AppRoutes: React.FC = () => {
         element={
           appMode === "public" ? (
             lazyRoute(<VerifyEmailPage />)
+          ) : (
+            <Navigate to="/home" replace />
+          )
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          appMode === "public" ? (
+            lazyRoute(<ResetPasswordPage />)
           ) : (
             <Navigate to="/home" replace />
           )

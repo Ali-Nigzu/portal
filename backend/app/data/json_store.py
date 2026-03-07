@@ -19,6 +19,7 @@ from backend.app.config import (
     DEVICE_LISTS_FILE,
     PENDING_SIGNUPS_FILE,
     PENDING_SETTINGS_UNLOCKS_FILE,
+    PENDING_PASSWORD_RESETS_FILE,
 )
 
 
@@ -242,6 +243,30 @@ def save_pending_settings_unlocks(pending_data: dict):
         with os.fdopen(temp_fd, 'w') as f:
             json.dump(pending_data, f, indent=2)
         shutil.move(temp_path, PENDING_SETTINGS_UNLOCKS_FILE)
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+        raise e
+
+
+def load_pending_password_resets() -> dict:
+    """Load pending password reset records from JSON file."""
+    if not os.path.exists(PENDING_PASSWORD_RESETS_FILE):
+        return {}
+    with open(PENDING_PASSWORD_RESETS_FILE, 'r') as f:
+        return json.load(f)
+
+
+def save_pending_password_resets(pending_data: dict):
+    """Save pending password reset data to JSON file using atomic write."""
+    file_dir = os.path.dirname(PENDING_PASSWORD_RESETS_FILE) or '.'
+    os.makedirs(file_dir, exist_ok=True)
+
+    temp_fd, temp_path = tempfile.mkstemp(dir=file_dir, suffix='.tmp')
+    try:
+        with os.fdopen(temp_fd, 'w') as f:
+            json.dump(pending_data, f, indent=2)
+        shutil.move(temp_path, PENDING_PASSWORD_RESETS_FILE)
     except Exception as e:
         if os.path.exists(temp_path):
             os.unlink(temp_path)
