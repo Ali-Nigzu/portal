@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
-import camOSLogo from "../assets/brand/camOS-logo.png";
+import brandSymbol from "../assets/Untitled design (4).svg";
 import {
   SITE_OPTIONS,
   findSiteById,
@@ -696,7 +696,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
               <div className="vrm-logo">
-                <img src={camOSLogo} alt="camOS" className="vrm-logo-img" />
+                <img src={brandSymbol} alt="camOS" className="vrm-logo-img" />
               </div>
               <div className="vrm-brand-text">
                 <div className="vrm-brand-title">camOS</div>
