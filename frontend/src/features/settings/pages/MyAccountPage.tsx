@@ -33,6 +33,7 @@ type FormErrorState = {
 };
 
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
+const INTERNAL_UNLOCK_SESSION_SECONDS = 300;
 
 const maskEmail = (email: string) => {
   const [localPart, domain] = email.split("@");
@@ -181,7 +182,14 @@ const MyAccountPage: React.FC = () => {
       const updatedUser = await updateMe(payload);
       setUser(updatedUser);
       setSaveMessage("Account updated successfully.");
-      relock(updatedUser);
+      setActiveEditingRowId(null);
+      setErrors({});
+      setDrafts({
+        name: updatedUser.name,
+        phone: updatedUser.phone ?? "",
+        password: "",
+        confirmPassword: "",
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save";
       if (message.toLowerCase().includes("unlock")) {
@@ -259,7 +267,7 @@ const MyAccountPage: React.FC = () => {
             onChange={(value) => setDrafts((prev) => ({ ...prev, phone: value }))}
           />
 
-          <div className="settings-field-row">
+          <div className={`settings-field-row ${activeEditingRowId !== "password" ? "settings-field-row--readonly" : ""}`}>
             <div className="settings-field-label">Password</div>
             <div className="settings-field-main">
               {activeEditingRowId !== "password" ? (
@@ -295,9 +303,9 @@ const MyAccountPage: React.FC = () => {
       <ReenterPasswordModal
         isOpen={isUnlockOpen}
         onClose={() => setIsUnlockOpen(false)}
-        onVerified={({ unlockToken: verifiedUnlockToken, unlockExpiresInSeconds }) => {
+        onVerified={({ unlockToken: verifiedUnlockToken }) => {
           setUnlockToken(verifiedUnlockToken);
-          setUnlockExpiresAt(Date.now() + (unlockExpiresInSeconds * 1000));
+          setUnlockExpiresAt(Date.now() + (INTERNAL_UNLOCK_SESSION_SECONDS * 1000));
           setIsUnlocked(true);
           setIsUnlockOpen(false);
           setErrors({});

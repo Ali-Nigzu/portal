@@ -19,9 +19,13 @@ const ManageAccessPage: React.FC = () => {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [currentUser, setCurrentUser] = useState<SettingsUser | null>(null);
-  const [currentUserSite, setCurrentUserSite] = useState("all-sites");
+  const [currentUserSites, setCurrentUserSites] = useState<string[]>(["all-sites"]);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const inviteButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const siteOptions = [
+    { id: "all-sites", label: "All Sites" },
+  ];
 
   useEffect(() => {
     const load = async () => {
@@ -89,8 +93,9 @@ const ManageAccessPage: React.FC = () => {
           <UsersTable
             users={users}
             currentUsername={currentUser?.name}
-            currentUserSite={currentUserSite}
-            onCurrentUserSiteChange={setCurrentUserSite}
+            currentUserSites={currentUserSites}
+            onCurrentUserSitesChange={setCurrentUserSites}
+            siteOptions={siteOptions}
           />
         </div>
       </div>

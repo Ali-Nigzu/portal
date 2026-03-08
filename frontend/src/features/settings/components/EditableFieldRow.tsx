@@ -46,7 +46,7 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
   };
 
   return (
-    <div className={`settings-field-row ${isEditing ? "settings-field-row--editing" : ""}`}>
+    <div className={`settings-field-row ${isEditing ? "settings-field-row--editing" : "settings-field-row--readonly"}`}>
       <div className="settings-field-label">{label}</div>
       <div className="settings-field-main">
         {!isEditing ? (
