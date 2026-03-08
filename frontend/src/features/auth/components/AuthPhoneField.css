@@ -1,0 +1,12 @@
+.auth-phone-row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px;
+}
+
+.auth-phone-country-select {
+  width: fit-content;
+  min-width: 0;
+  max-width: 9ch;
+  padding-right: 24px;
+}

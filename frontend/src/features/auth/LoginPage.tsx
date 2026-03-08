@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import camsvg from "../../assets/camsvg.svg";
 import { useLoginForm } from "./hooks/useLoginForm";
+import { passwordResetStart } from "./transport/passwordResetStart";
 import "./LoginPage.css";
 
 interface LoginPageProps {
@@ -51,7 +52,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     await handleSubmit(event);
   };
 
-  const handleResetPasswordClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
+  const handleResetPasswordClick: React.MouseEventHandler<HTMLAnchorElement> = async (event) => {
     event.preventDefault();
     if (!email.trim()) {
       setEmailStepError("Enter your email before resetting your password");
@@ -67,7 +68,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       }
       return;
     }
-    navigate(`/reset-password?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+    try {
+      await passwordResetStart(email.trim().toLowerCase());
+      navigate(`/reset-password/code?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+    } catch (resetError) {
+      setEmailStepError(resetError instanceof Error ? resetError.message : "Unable to start password reset.");
+    }
   };
 
   return (
@@ -77,7 +83,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       <div className="login-shell">
         <section className="login-left-pane" aria-label="Login form panel">
           <div className="login-content">
-            <p className="login-title">Login</p>
             <h1 className="login-hero">Welcome Back</h1>
 
             <form className="login-form" onSubmit={onPrimaryAction}>

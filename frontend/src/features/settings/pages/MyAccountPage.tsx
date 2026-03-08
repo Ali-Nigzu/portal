@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { PenLine } from "lucide-react";
 
 import {
   getMe,
@@ -31,7 +32,13 @@ type FormErrorState = {
   form?: string;
 };
 
+type UnlockSession = {
+  token: string;
+  expiresAt: number;
+} | null;
+
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
+const INTERNAL_UNLOCK_SESSION_SECONDS = 300;
 
 const maskEmail = (email: string) => {
   const [localPart, domain] = email.split("@");
@@ -54,9 +61,7 @@ const MyAccountPage: React.FC = () => {
   const [user, setUser] = useState<SettingsUser | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isUnlockOpen, setIsUnlockOpen] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [unlockToken, setUnlockToken] = useState<string | null>(null);
-  const [unlockExpiresAt, setUnlockExpiresAt] = useState<number | null>(null);
+  const [unlockSession, setUnlockSession] = useState<UnlockSession>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeEditingRowId, setActiveEditingRowId] = useState<RowId>(null);
@@ -67,6 +72,8 @@ const MyAccountPage: React.FC = () => {
     password: "",
     confirmPassword: "",
   });
+
+  const isUnlocked = useMemo(() => Boolean(unlockSession && Date.now() < unlockSession.expiresAt), [unlockSession]);
 
   useEffect(() => {
     const load = async () => {
@@ -82,29 +89,25 @@ const MyAccountPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isUnlocked || !unlockExpiresAt) {
+    if (!unlockSession) {
       return;
     }
     const timer = window.setInterval(() => {
-      if (Date.now() >= unlockExpiresAt) {
-        setIsUnlocked(false);
-        setUnlockToken(null);
-        setUnlockExpiresAt(null);
+      if (Date.now() >= unlockSession.expiresAt) {
+        setUnlockSession(null);
         setActiveEditingRowId(null);
         setErrors((prev) => ({ ...prev, form: "Editing lock expired. Unlock again to continue." }));
       }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [isUnlocked, unlockExpiresAt]);
+  }, [unlockSession]);
 
   const resetDrafts = (nextUser: SettingsUser) => {
     setDrafts({ name: nextUser.name, phone: nextUser.phone ?? "", password: "", confirmPassword: "" });
   };
 
   const relock = (nextUser?: SettingsUser) => {
-    setIsUnlocked(false);
-    setUnlockToken(null);
-    setUnlockExpiresAt(null);
+    setUnlockSession(null);
     setActiveEditingRowId(null);
     setErrors({});
     if (nextUser) {
@@ -115,7 +118,8 @@ const MyAccountPage: React.FC = () => {
   };
 
   const requestEdit = (rowId: Exclude<RowId, null>) => {
-    if (!isUnlocked) {
+    if (!isUnlocked || !unlockSession) {
+      relock();
       setIsUnlockOpen(true);
       return;
     }
@@ -128,13 +132,14 @@ const MyAccountPage: React.FC = () => {
   };
 
   const handleSave = async (rowId: Exclude<RowId, null>) => {
-    if (!user || !unlockToken) {
+    if (!user || !unlockSession || !isUnlocked) {
+      relock();
       setErrors({ form: "Unlock required before saving" });
       return;
     }
 
     const nextErrors: FormErrorState = {};
-    const payload: Record<string, string> = { unlock_token: unlockToken };
+    const payload: Record<string, string> = { unlock_token: unlockSession.token };
 
     if (rowId === "name") {
       const trimmedName = drafts.name.trim();
@@ -180,7 +185,14 @@ const MyAccountPage: React.FC = () => {
       const updatedUser = await updateMe(payload);
       setUser(updatedUser);
       setSaveMessage("Account updated successfully.");
-      relock(updatedUser);
+      setActiveEditingRowId(null);
+      setErrors({});
+      setDrafts({
+        name: updatedUser.name,
+        phone: updatedUser.phone ?? "",
+        password: "",
+        confirmPassword: "",
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save";
       if (message.toLowerCase().includes("unlock")) {
@@ -215,7 +227,7 @@ const MyAccountPage: React.FC = () => {
         )}
       />
       <div className="vrm-card">
-        <div className="vrm-card-body settings-account-card-body settings-account-locked-layout">
+        <div className="vrm-card-body settings-account-card-body">
           <EditableFieldRow
             label="Username"
             displayValue={user.name}
@@ -233,12 +245,13 @@ const MyAccountPage: React.FC = () => {
             onChange={(value) => setDrafts((prev) => ({ ...prev, name: value }))}
           />
 
-          <div className="settings-field-row">
+          <div className="settings-field-row settings-field-row--readonly">
             <div className="settings-field-label">Email</div>
             <div className="settings-field-main">
               <div className="settings-field-value">{maskEmail(user.email)}</div>
               <div className="settings-field-help">Email cannot be changed from My Account.</div>
             </div>
+            <div className="settings-field-actions" aria-hidden="true" />
           </div>
 
           <EditableFieldRow
@@ -258,7 +271,7 @@ const MyAccountPage: React.FC = () => {
             onChange={(value) => setDrafts((prev) => ({ ...prev, phone: value }))}
           />
 
-          <div className="settings-field-row">
+          <div className={`settings-field-row ${activeEditingRowId !== "password" ? "settings-field-row--readonly" : ""}`}>
             <div className="settings-field-label">Password</div>
             <div className="settings-field-main">
               {activeEditingRowId !== "password" ? (
@@ -274,7 +287,9 @@ const MyAccountPage: React.FC = () => {
             </div>
             <div className="settings-field-actions">
               {activeEditingRowId !== "password" ? (
-                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => requestEdit("password")}>Edit</button>
+                <button className="settings-edit-icon-btn" onClick={() => requestEdit("password")} aria-label="Edit password">
+                  <PenLine size={14} aria-hidden="true" />
+                </button>
               ) : (
                 <>
                   <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => { setActiveEditingRowId(null); setDrafts((prev) => ({ ...prev, password: "", confirmPassword: "" })); setErrors({}); }} disabled={saving}>Cancel</button>
@@ -292,10 +307,11 @@ const MyAccountPage: React.FC = () => {
       <ReenterPasswordModal
         isOpen={isUnlockOpen}
         onClose={() => setIsUnlockOpen(false)}
-        onVerified={({ unlockToken: verifiedUnlockToken, unlockExpiresInSeconds }) => {
-          setUnlockToken(verifiedUnlockToken);
-          setUnlockExpiresAt(Date.now() + (unlockExpiresInSeconds * 1000));
-          setIsUnlocked(true);
+        onVerified={({ unlockToken: verifiedUnlockToken }) => {
+          setUnlockSession({
+            token: verifiedUnlockToken,
+            expiresAt: Date.now() + (INTERNAL_UNLOCK_SESSION_SECONDS * 1000),
+          });
           setIsUnlockOpen(false);
           setErrors({});
           setSaveMessage(null);

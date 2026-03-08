@@ -4,15 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import AuthTopBar from '../../components/auth/AuthTopBar';
 import camsvg from '../../assets/camsvg.svg';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
+import AuthPhoneField from './components/AuthPhoneField';
 import './CreateAccountPage.css';
-
-const COUNTRY_CODES = [
-  { label: 'United Kingdom (+44)', value: '+44' },
-  { label: 'United States (+1)', value: '+1' },
-  { label: 'Germany (+49)', value: '+49' },
-  { label: 'France (+33)', value: '+33' },
-  { label: 'India (+91)', value: '+91' },
-];
+import './components/AuthPhoneField.css';
 
 const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
   event.preventDefault();
@@ -97,27 +91,14 @@ const CreateAccountPage: React.FC = () => {
 
               <div className="vrm-field create-account-field">
                 <label className="vrm-label" htmlFor="create-country">Phone (optional)</label>
-                <div className="create-account-phone-row">
-                  <select
-                    id="create-country"
-                    className="vrm-input"
-                    value={form.countryCode}
-                    onChange={(e) => form.setCountryCode(e.target.value)}
-                  >
-                    {COUNTRY_CODES.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                  <input
-                    className="vrm-input"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    placeholder="Phone number"
-                    value={form.phoneLocal}
-                    onChange={(e) => form.setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))}
-                    onBlur={() => form.markTouched('phone')}
-                    aria-invalid={Boolean(form.visibleErrors.phone)}
-                    aria-describedby={form.visibleErrors.phone ? 'create-phone-error' : undefined}
+                <div onBlur={() => form.markTouched('phone')}>
+                  <AuthPhoneField
+                    idPrefix="create"
+                    countryCode={form.countryCode}
+                    localNumber={form.phoneLocal}
+                    onCountryCodeChange={form.setCountryCode}
+                    onLocalNumberChange={form.setPhoneLocal}
+                    inputClassName="vrm-input"
                   />
                 </div>
                 <div className="create-account-error-slot" aria-live="polite">
@@ -220,6 +201,9 @@ const CreateAccountPage: React.FC = () => {
                   <a href="#" onClick={stopNavigation}>privacy policy</a>.{' '}
                   You can find the policy{' '}
                   <a href="#" onClick={stopNavigation}>here</a>
+                </p>
+                <p>
+                  Already have an Account? <Link to="/login">Login here</Link>
                 </p>
               </div>
             </form>

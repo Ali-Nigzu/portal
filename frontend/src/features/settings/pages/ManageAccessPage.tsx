@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getManagedUsers,
@@ -19,9 +19,22 @@ const ManageAccessPage: React.FC = () => {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [currentUser, setCurrentUser] = useState<SettingsUser | null>(null);
-  const [currentUserSite, setCurrentUserSite] = useState("all-sites");
+  const [baselineCurrentUserSites, setBaselineCurrentUserSites] = useState<string[]>(["all-sites"]);
+  const [currentUserSites, setCurrentUserSites] = useState<string[]>(["all-sites"]);
+  const [currentUserSitesError, setCurrentUserSitesError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const inviteButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const siteOptions = [
+    { id: "all-sites", label: "All Sites" },
+  ];
+
+  const isDirty = useMemo(() => {
+    const left = [...baselineCurrentUserSites].sort().join("|");
+    const right = [...currentUserSites].sort().join("|");
+    return left !== right;
+  }, [baselineCurrentUserSites, currentUserSites]);
 
   useEffect(() => {
     const load = async () => {
@@ -41,10 +54,30 @@ const ManageAccessPage: React.FC = () => {
 
       setUsers([currentUserRow, ...loadedUsers]);
       setInvites(loadedInvites);
+      setBaselineCurrentUserSites(["all-sites"]);
+      setCurrentUserSites(["all-sites"]);
     };
 
     load();
   }, []);
+
+  const handleCurrentUserSitesChange = (sites: string[]) => {
+    setCurrentUserSites(sites);
+    setSaveMessage(null);
+    if (sites.length > 0) {
+      setCurrentUserSitesError(null);
+    }
+  };
+
+  const handleCurrentUserSitesSave = () => {
+    if (currentUserSites.length === 0) {
+      setCurrentUserSitesError("Sites required");
+      return;
+    }
+    setCurrentUserSitesError(null);
+    setBaselineCurrentUserSites(currentUserSites);
+    setSaveMessage("Access settings saved.");
+  };
 
   const handleInviteSubmit = async (payload: {
     email: string;
@@ -82,16 +115,26 @@ const ManageAccessPage: React.FC = () => {
       />
 
       <div className="vrm-card">
-        <div className="vrm-card-header">
+        <div className="vrm-card-header settings-users-card-header">
+          <button
+            type="button"
+            className={`vrm-btn vrm-btn-sm ${isDirty ? "vrm-btn-primary settings-save-cta--active" : "vrm-btn-secondary settings-save-cta--inactive"}`}
+            onClick={handleCurrentUserSitesSave}
+          >
+            Save
+          </button>
           <h2 className="vrm-card-title">Users</h2>
         </div>
         <div className="vrm-card-body settings-table-card-body">
           <UsersTable
             users={users}
             currentUsername={currentUser?.name}
-            currentUserSite={currentUserSite}
-            onCurrentUserSiteChange={setCurrentUserSite}
+            currentUserSites={currentUserSites}
+            currentUserSitesError={currentUserSitesError}
+            onCurrentUserSitesChange={handleCurrentUserSitesChange}
+            siteOptions={siteOptions}
           />
+          {saveMessage ? <div className="settings-form-message settings-manage-access-save-message">{saveMessage}</div> : null}
         </div>
       </div>
 

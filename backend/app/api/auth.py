@@ -33,6 +33,7 @@ from backend.app.data.json_store import (
     save_pending_settings_unlocks,
     save_pending_signups,
     save_pending_password_resets,
+    load_pending_password_resets,
     save_users,
 )
 from backend.app.models import (
@@ -57,6 +58,8 @@ from backend.app.models import (
     PasswordResetResendResponse,
     PasswordResetVerifyRequest,
     PasswordResetVerifyResponse,
+    PasswordResetSetPasswordRequest,
+    PasswordResetSetPasswordResponse,
     SignupResendRequest,
     SignupResendResponse,
     SignupStartResponse,
@@ -88,12 +91,13 @@ PASSWORD_RESET_CODE_TTL_SECONDS = 15 * 60
 PASSWORD_RESET_MAX_VERIFY_ATTEMPTS = 5
 PASSWORD_RESET_RESEND_COOLDOWN_SECONDS = 30
 PASSWORD_RESET_MAX_RESENDS = 5
+PASSWORD_RESET_SESSION_TTL_SECONDS = 10 * 60
 
 SETTINGS_UNLOCK_CODE_TTL_SECONDS = 15 * 60
 SETTINGS_UNLOCK_MAX_VERIFY_ATTEMPTS = 5
 SETTINGS_UNLOCK_RESEND_COOLDOWN_SECONDS = 30
 SETTINGS_UNLOCK_MAX_RESENDS = 5
-SETTINGS_UNLOCK_SESSION_SECONDS = 10 * 60
+SETTINGS_UNLOCK_SESSION_SECONDS = 5 * 60
 
 CONTACT_MAX_FILES = 3
 CONTACT_MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -234,6 +238,29 @@ def _raise_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
         raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
     logger.exception("signup.email.unknown_error request_id=%s", request_id)
     raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
+
+
+def _raise_password_reset_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
+    if isinstance(exc, PostmarkConfigurationError):
+        logger.error(
+            "password_reset.email.config_error request_id=%s has_server_token=%s has_from_email=%s detail=%s",
+            request_id,
+            bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
+            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+            str(exc),
+        )
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if isinstance(exc, PostmarkDeliveryError):
+        logger.error(
+            "password_reset.email.delivery_error request_id=%s status_code=%s error_code=%s message=%s",
+            request_id,
+            exc.status_code,
+            exc.error_code,
+            exc.error_message,
+        )
+        raise HTTPException(status_code=502, detail="Failed to send reset code email.") from exc
+    logger.exception("password_reset.email.unknown_error request_id=%s", request_id)
+    raise HTTPException(status_code=502, detail="Failed to send reset code email.") from exc
 
 
 def _raise_contact_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
@@ -573,7 +600,8 @@ async def update_me(
     users[username] = existing
     save_users(users)
 
-    del challenges[challenge_key]
+    record["updated_at"] = _to_iso(now)
+    challenges[challenge_key] = record
     save_pending_settings_unlocks(challenges)
 
     return AuthUserResponse(user=_safe_auth_user(existing))
@@ -872,7 +900,7 @@ async def password_reset_start(payload: PasswordResetStartRequest):
     try:
         send_password_reset_code_email(to_email=email, code=code)
     except Exception as exc:
-        _raise_mail_delivery_error(exc, request_id=request_id)
+        _raise_password_reset_mail_delivery_error(exc, request_id=request_id)
     save_pending_password_resets(password_resets)
     return PasswordResetStartResponse(ok=True, email=email, expiresInSeconds=PASSWORD_RESET_CODE_TTL_SECONDS, resendCooldownSeconds=PASSWORD_RESET_RESEND_COOLDOWN_SECONDS)
 
@@ -910,24 +938,17 @@ async def password_reset_resend(payload: PasswordResetResendRequest):
     try:
         send_password_reset_code_email(to_email=email, code=code)
     except Exception as exc:
-        _raise_mail_delivery_error(exc, request_id=request_id)
+        _raise_password_reset_mail_delivery_error(exc, request_id=request_id)
     save_pending_password_resets(password_resets)
     return PasswordResetResendResponse(ok=True, expiresInSeconds=PASSWORD_RESET_CODE_TTL_SECONDS, resendCooldownSeconds=PASSWORD_RESET_RESEND_COOLDOWN_SECONDS, resendsRemaining=max(PASSWORD_RESET_MAX_RESENDS - int(record["resend_count"]), 0))
 
 
-@router.post("/api/password-reset/verify", response_model=PasswordResetVerifyResponse)
+@router.post("/api/password-reset/verify-code", response_model=PasswordResetVerifyResponse)
 async def password_reset_verify(payload: PasswordResetVerifyRequest):
     email = _validate_email(payload.email)
     code = payload.code.strip()
     if not code:
         raise HTTPException(status_code=422, detail="Verification code is required")
-    if not payload.password:
-        raise HTTPException(status_code=422, detail="Password is required")
-    if len(payload.password) < 8:
-        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
-    if payload.password != payload.confirm_password:
-        raise HTTPException(status_code=422, detail="Passwords do not match")
-
     password_resets, now, modified = _load_password_resets_pruned()
     record = password_resets.get(email)
     if not record:
@@ -951,6 +972,43 @@ async def password_reset_verify(payload: PasswordResetVerifyRequest):
         save_pending_password_resets(password_resets)
         raise HTTPException(status_code=400, detail="Invalid verification code.")
 
+    reset_token = secrets.token_urlsafe(24)
+    record["reset_token_hash"] = hash_session_token(reset_token)
+    record["reset_expires_at"] = _to_iso(now + timedelta(seconds=PASSWORD_RESET_SESSION_TTL_SECONDS))
+    record["updated_at"] = _to_iso(now)
+    save_pending_password_resets(password_resets)
+    return PasswordResetVerifyResponse(ok=True, resetToken=reset_token, resetExpiresInSeconds=PASSWORD_RESET_SESSION_TTL_SECONDS)
+
+
+@router.post("/api/password-reset/set-password", response_model=PasswordResetSetPasswordResponse)
+async def password_reset_set_password(payload: PasswordResetSetPasswordRequest):
+    email = _validate_email(payload.email)
+    reset_token = payload.reset_token.strip()
+    if not reset_token:
+        raise HTTPException(status_code=422, detail="Reset token is required")
+    if not payload.password:
+        raise HTTPException(status_code=422, detail="Password is required")
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+    if payload.password != payload.confirm_password:
+        raise HTTPException(status_code=422, detail="Passwords do not match")
+
+    password_resets, now, modified = _load_password_resets_pruned()
+    record = password_resets.get(email)
+    if not record:
+        if modified:
+            save_pending_password_resets(password_resets)
+        raise HTTPException(status_code=404, detail="No pending password reset found for this email.")
+
+    reset_expires_at = _parse_iso(record.get("reset_expires_at"))
+    if not reset_expires_at or reset_expires_at <= now:
+        del password_resets[email]
+        save_pending_password_resets(password_resets)
+        raise HTTPException(status_code=410, detail="Reset session expired. Restart password reset.")
+
+    if hash_session_token(reset_token) != str(record.get("reset_token_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid reset session. Restart password reset.")
+
     users = load_users()
     username, user_data = find_user_by_email(users, email)
     if username and user_data:
@@ -962,7 +1020,13 @@ async def password_reset_verify(payload: PasswordResetVerifyRequest):
 
     del password_resets[email]
     save_pending_password_resets(password_resets)
-    return PasswordResetVerifyResponse(ok=True)
+    return PasswordResetSetPasswordResponse(ok=True)
+
+
+@router.post("/api/password-reset/verify", response_model=PasswordResetSetPasswordResponse)
+async def password_reset_verify_legacy(payload: PasswordResetSetPasswordRequest):
+    """Backward compatible endpoint for older clients."""
+    return await password_reset_set_password(payload)
 
 
 @router.post("/api/create-account", response_model=AuthUserResponse, status_code=201)
@@ -1043,4 +1107,3 @@ async def me(session_user: tuple[str, dict] = Depends(get_session_user)):
 @router.post("/api/logout", status_code=204)
 async def logout(response: Response):
     clear_auth_cookie(response)
-    load_pending_password_resets,

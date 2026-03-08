@@ -45,7 +45,6 @@ class PostmarkDeliveryError(RuntimeError):
 class PostmarkConfig:
     server_token: str
     from_email: str
-    admin_notify_email: str
 
 
 @dataclass(frozen=True)
@@ -79,13 +78,11 @@ def _parse_postmark_error(body: str) -> tuple[int | None, str | None]:
 def _load_config() -> PostmarkConfig:
     server_token = os.getenv("POSTMARK_SERVER_TOKEN", "").strip()
     from_email = os.getenv("POSTMARK_FROM_EMAIL", "").strip()
-    admin_notify_email = os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()
     missing = [
         name
         for name, value in (
             ("POSTMARK_SERVER_TOKEN", server_token),
             ("POSTMARK_FROM_EMAIL", from_email),
-            ("ADMIN_NOTIFY_EMAIL", admin_notify_email),
         )
         if not value
     ]
@@ -97,8 +94,14 @@ def _load_config() -> PostmarkConfig:
     return PostmarkConfig(
         server_token=server_token,
         from_email=from_email,
-        admin_notify_email=admin_notify_email,
     )
+
+
+def _require_admin_notify_email() -> str:
+    admin_notify_email = os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()
+    if not admin_notify_email:
+        raise PostmarkConfigurationError("Email service is not configured. Missing ADMIN_NOTIFY_EMAIL.")
+    return admin_notify_email
 
 
 def _postmark_send(*, token: str, payload: dict, from_email: str, to_email: str) -> None:
@@ -193,9 +196,10 @@ def send_verification_email(*, to_email: str, code: str) -> None:
 
 def send_admin_signup_notification(*, verified_email: str, name: str, username: str, timestamp: str) -> None:
     config = _load_config()
+    admin_notify_email = _require_admin_notify_email()
     payload = {
         "From": config.from_email,
-        "To": config.admin_notify_email,
+        "To": admin_notify_email,
         "Subject": f"New verified signup: {verified_email}",
         "TextBody": (
             "A new user has verified their email and completed signup.\n\n"
@@ -209,7 +213,7 @@ def send_admin_signup_notification(*, verified_email: str, name: str, username: 
         token=config.server_token,
         payload=payload,
         from_email=config.from_email,
-        to_email=config.admin_notify_email,
+        to_email=admin_notify_email,
     )
 
 
@@ -223,10 +227,11 @@ def send_admin_contact_notification(
     attachments: list[PostmarkAttachment] | None = None,
 ) -> None:
     config = _load_config()
+    admin_notify_email = _require_admin_notify_email()
     attachments_line = ", ".join(attachment_names) if attachment_names else "None"
     payload = {
         "From": config.from_email,
-        "To": config.admin_notify_email,
+        "To": admin_notify_email,
         "Subject": f"New contact submission: {name}",
         "TextBody": (
             "A new contact form submission has been received.\n\n"
@@ -253,7 +258,7 @@ def send_admin_contact_notification(
         token=config.server_token,
         payload=payload,
         from_email=config.from_email,
-        to_email=config.admin_notify_email,
+        to_email=admin_notify_email,
     )
 
 

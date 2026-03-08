@@ -1,4 +1,5 @@
 import React from "react";
+import { PenLine } from "lucide-react";
 
 type EditableFieldRowProps = {
   label: string;
@@ -45,7 +46,7 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
   };
 
   return (
-    <div className={`settings-field-row ${isEditing ? "settings-field-row--editing" : ""}`}>
+    <div className={`settings-field-row ${isEditing ? "settings-field-row--editing" : "settings-field-row--readonly"}`}>
       <div className="settings-field-label">{label}</div>
       <div className="settings-field-main">
         {!isEditing ? (
@@ -65,8 +66,8 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
       </div>
       <div className="settings-field-actions">
         {!isEditing ? (
-          <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={onEdit}>
-            Edit
+          <button className="settings-edit-icon-btn" onClick={onEdit} aria-label={`Edit ${label}`}>
+            <PenLine size={14} aria-hidden="true" />
           </button>
         ) : (
           <>

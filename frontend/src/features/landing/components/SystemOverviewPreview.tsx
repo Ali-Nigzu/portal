@@ -98,7 +98,7 @@ const initialWireLayout: WireLayout = {
 };
 
 
-const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void }> = ({ forceMockTopology, onAccessDemo }) => {
+const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void; previewOrgId?: string }> = ({ forceMockTopology, onAccessDemo, previewOrgId }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -135,7 +135,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     resolvedDashboardId,
     resolvedUiClient,
     setManifest,
-  } = useDashboardManifest({ credentials: PREVIEW_CREDENTIALS });
+  } = useDashboardManifest({ credentials: PREVIEW_CREDENTIALS, orgIdOverride: previewOrgId });
 
   const {
     status: widgetStatus,
@@ -688,13 +688,13 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     return new URLSearchParams(location.search).get(TOPOLOGY_MOCK_PARAM) === "1";
   }, [location.search]);
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
-  const isLoggedIn = typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("camOS_credentials"));
+  const shouldUsePublicPreviewOrg = !hasViewToken && !isDemoSessionActive();
   const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [bootstrapDegraded, setBootstrapDegraded] = useState(false);
   const bootstrapStartedRef = useRef(false);
 
   const runBootstrap = async () => {
-    if (forceMockTopology || isLoggedIn || hasViewToken || isDemoSessionActive()) {
+    if (forceMockTopology || hasViewToken || isDemoSessionActive() || shouldUsePublicPreviewOrg) {
       setBootstrapState("ready");
       return;
     }
@@ -709,7 +709,7 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
     }
     bootstrapStartedRef.current = true;
     void runBootstrap();
-  }, [hasViewToken, isLoggedIn, forceMockTopology]);
+  }, [hasViewToken, forceMockTopology, shouldUsePublicPreviewOrg]);
 
   const handleRetry = () => {
     bootstrapStartedRef.current = false;
@@ -741,7 +741,11 @@ const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAcces
 
   return (
     <>
-      <SystemOverviewLiveKpis forceMockTopology={forceMockTopology} onAccessDemo={onAccessDemo} />
+      <SystemOverviewLiveKpis
+        forceMockTopology={forceMockTopology}
+        onAccessDemo={onAccessDemo}
+        previewOrgId={shouldUsePublicPreviewOrg ? "client1" : undefined}
+      />
       {bootstrapDegraded ? <p className={styles.errorNote}>Demo bootstrap unavailable; preview is using direct live data flow.</p> : null}
     </>
   );

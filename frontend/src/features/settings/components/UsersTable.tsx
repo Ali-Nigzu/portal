@@ -1,19 +1,24 @@
 import React from "react";
+import SiteMultiSelect from "./SiteMultiSelect";
 
 import type { ManagedUser } from "../types";
 
 type UsersTableProps = {
   users: ManagedUser[];
   currentUsername?: string;
-  currentUserSite: string;
-  onCurrentUserSiteChange: (site: string) => void;
+  currentUserSites: string[];
+  currentUserSitesError?: string | null;
+  onCurrentUserSitesChange: (sites: string[]) => void;
+  siteOptions: Array<{ id: string; label: string }>;
 };
 
 const UsersTable: React.FC<UsersTableProps> = ({
   users,
   currentUsername,
-  currentUserSite,
-  onCurrentUserSiteChange,
+  currentUserSites,
+  currentUserSitesError,
+  onCurrentUserSitesChange,
+  siteOptions,
 }) => (
   <div className="settings-table-wrap">
     <table className="vrm-table settings-table">
@@ -34,13 +39,13 @@ const UsersTable: React.FC<UsersTableProps> = ({
               <td>{user.email}</td>
               <td>
                 {isCurrentUser ? (
-                  <select
-                    className="settings-select settings-site-select"
-                    value={currentUserSite}
-                    onChange={(event) => onCurrentUserSiteChange(event.target.value)}
-                  >
-                    <option value="all-sites">All Sites</option>
-                  </select>
+                  <SiteMultiSelect
+                    options={siteOptions}
+                    selectedSites={currentUserSites}
+                    onChange={onCurrentUserSitesChange}
+                    placeholder="Select sites"
+                    error={currentUserSitesError}
+                  />
                 ) : (
                   user.site
                 )}
