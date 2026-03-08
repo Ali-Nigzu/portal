@@ -21,11 +21,27 @@ const ManageAccessPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<SettingsUser | null>(null);
   const [currentUserSites, setCurrentUserSites] = useState<string[]>(["all-sites"]);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [currentUserSitesError, setCurrentUserSitesError] = useState<string | null>(null);
   const inviteButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const siteOptions = [
     { id: "all-sites", label: "All Sites" },
   ];
+
+  const handleCurrentUserSitesChange = (sites: string[]) => {
+    setCurrentUserSites(sites);
+    if (sites.length > 0) {
+      setCurrentUserSitesError(null);
+    }
+  };
+
+  const handleCurrentUserSitesSave = () => {
+    if (currentUserSites.length === 0) {
+      setCurrentUserSitesError("Sites required");
+      return;
+    }
+    setCurrentUserSitesError(null);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -94,7 +110,9 @@ const ManageAccessPage: React.FC = () => {
             users={users}
             currentUsername={currentUser?.name}
             currentUserSites={currentUserSites}
-            onCurrentUserSitesChange={setCurrentUserSites}
+            currentUserSitesError={currentUserSitesError}
+            onCurrentUserSitesChange={handleCurrentUserSitesChange}
+            onCurrentUserSitesSave={handleCurrentUserSitesSave}
             siteOptions={siteOptions}
           />
         </div>

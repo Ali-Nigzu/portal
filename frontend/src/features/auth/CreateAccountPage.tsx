@@ -93,7 +93,7 @@ const CreateAccountPage: React.FC = () => {
                 <div className="create-account-phone-row">
                   <select
                     id="create-country"
-                    className="vrm-input"
+                    className="vrm-input create-account-country-select"
                     value={form.countryCode}
                     onChange={(e) => form.setCountryCode(e.target.value)}
                   >

@@ -113,7 +113,7 @@ const ContactPage: React.FC = () => {
         return;
       }
 
-      setSubmitSuccess("Message sent. We'll get back to you shortly.");
+      setSubmitSuccess("Message sent");
       setName("");
       setEmail("");
       setPhone("");
@@ -277,15 +277,15 @@ const ContactPage: React.FC = () => {
       </form>
       </div>
       {showSuccessModal ? (
-        <div className="contact-success-modal-backdrop" role="presentation" onClick={() => setShowSuccessModal(false)}>
-          <div className="contact-success-modal" role="dialog" aria-modal="true" aria-labelledby="contact-success-title" onClick={(event) => event.stopPropagation()}>
+        <div className="contact-success-modal-backdrop" role="presentation">
+          <div className="contact-success-modal" role="dialog" aria-modal="true" aria-labelledby="contact-success-title">
+            <button type="button" className="contact-success-close" onClick={() => setShowSuccessModal(false)} aria-label="Close success modal">×</button>
             <h2 id="contact-success-title">Message sent</h2>
-            <p>Thanks for contacting camOS. Our team will get back to you shortly.</p>
+            <p>Thanks for contacting camOS. Our team will get back to you within 24 Hours.</p>
             <div className="contact-success-modal-actions">
               <Link className="vrm-btn vrm-btn-secondary" to="/" onClick={() => setShowSuccessModal(false)}>Learn more about camOS</Link>
               <Link className="vrm-btn vrm-btn-primary" to="/create-account" onClick={() => setShowSuccessModal(false)}>Create Account</Link>
             </div>
-            <button type="button" className="contact-success-close" onClick={() => setShowSuccessModal(false)}>Close</button>
           </div>
         </div>
       ) : null}

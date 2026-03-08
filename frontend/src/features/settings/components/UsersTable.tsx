@@ -7,7 +7,9 @@ type UsersTableProps = {
   users: ManagedUser[];
   currentUsername?: string;
   currentUserSites: string[];
+  currentUserSitesError?: string | null;
   onCurrentUserSitesChange: (sites: string[]) => void;
+  onCurrentUserSitesSave: () => void;
   siteOptions: Array<{ id: string; label: string }>;
 };
 
@@ -15,7 +17,9 @@ const UsersTable: React.FC<UsersTableProps> = ({
   users,
   currentUsername,
   currentUserSites,
+  currentUserSitesError,
   onCurrentUserSitesChange,
+  onCurrentUserSitesSave,
   siteOptions,
 }) => (
   <div className="settings-table-wrap">
@@ -37,12 +41,18 @@ const UsersTable: React.FC<UsersTableProps> = ({
               <td>{user.email}</td>
               <td>
                 {isCurrentUser ? (
-                  <SiteMultiSelect
-                    options={siteOptions}
-                    selectedSites={currentUserSites}
-                    onChange={onCurrentUserSitesChange}
-                    placeholder="Select sites"
-                  />
+                  <div className="settings-current-user-site-cell">
+                    <SiteMultiSelect
+                      options={siteOptions}
+                      selectedSites={currentUserSites}
+                      onChange={onCurrentUserSitesChange}
+                      placeholder="Select sites"
+                      error={currentUserSitesError}
+                    />
+                    <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={onCurrentUserSitesSave}>
+                      Save
+                    </button>
+                  </div>
                 ) : (
                   user.site
                 )}

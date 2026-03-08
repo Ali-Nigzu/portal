@@ -16,6 +16,7 @@ interface DashboardViewProps {
   mode?: "full" | "preview";
   clientId?: string;
   siteLabel?: string;
+  isAuthenticatedView?: boolean;
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   kpiWidgets: DashboardWidgetState[];
@@ -42,6 +43,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   mode = "full",
   clientId,
   siteLabel,
+  isAuthenticatedView = false,
   status,
   error,
   kpiWidgets,
@@ -63,7 +65,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       aria-busy={status === "loading"}
     >
       <div className="dashboard-v2__content vrm-dashboard-shell">
-        <DashboardHeader clientId={clientId} siteLabelOverride={siteLabel} mode={mode} />
+        <DashboardHeader clientId={clientId} siteLabelOverride={siteLabel} mode={mode} isAuthenticatedView={isAuthenticatedView} />
         {status === "error" && error ? (
           <div
             className={`dashboard-v2__error-banner ${

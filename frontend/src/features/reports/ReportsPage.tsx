@@ -629,7 +629,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
   };
   const handleGenerateReport = () => {
     if (!isDemoMode) {
-      setDownloadBlockedMessage("Report download is unavailable in authenticated mode.");
+      setDownloadBlockedMessage("No Sites Connected");
       return;
     }
     setDownloadBlockedMessage(null);

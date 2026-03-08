@@ -85,6 +85,7 @@ const DashboardPage = ({
     <DashboardView
       mode="full"
       clientId={resolvedUiClient}
+      isAuthenticatedView={dataMode === "authenticated"}
       status={status}
       error={error}
       kpiWidgets={kpiWidgets}

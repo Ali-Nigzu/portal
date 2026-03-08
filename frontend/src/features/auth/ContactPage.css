@@ -23,7 +23,7 @@
   width: 100%;
   max-width: 520px;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .contact-title {
@@ -93,7 +93,7 @@
   min-height: min(620px, calc(100vh - 180px));
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  gap: 6px;
+  gap: 4px;
 }
 
 .contact-message-input {
@@ -143,6 +143,7 @@
   padding: 20px;
   display: grid;
   gap: 12px;
+  position: relative;
 }
 
 .contact-success-modal h2 {
@@ -162,11 +163,21 @@
 }
 
 .contact-success-close {
-  justify-self: end;
-  border: none;
-  background: transparent;
-  color: #89b4ff;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: #0f131a;
+  color: #dbe6ff;
   cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .contact-actions {
@@ -215,4 +226,10 @@
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
+}
+
+.contact-success-close:hover,
+.contact-success-close:focus-visible {
+  border-color: #89b4ff;
+  color: #89b4ff;
 }

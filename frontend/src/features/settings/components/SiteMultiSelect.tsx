@@ -7,6 +7,7 @@ type SiteMultiSelectProps = {
   selectedSites: string[];
   onChange: (next: string[]) => void;
   placeholder?: string;
+  error?: string | null;
 };
 
 const ALL_SITE_ID = "all-sites";
@@ -16,6 +17,7 @@ const SiteMultiSelect: React.FC<SiteMultiSelectProps> = ({
   selectedSites,
   onChange,
   placeholder = "Select sites",
+  error,
 }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -43,6 +45,10 @@ const SiteMultiSelect: React.FC<SiteMultiSelectProps> = ({
 
   const toggleOption = (siteId: string) => {
     if (siteId === ALL_SITE_ID) {
+      if (selectedSites.includes(ALL_SITE_ID)) {
+        onChange([]);
+        return;
+      }
       onChange([ALL_SITE_ID]);
       return;
     }
@@ -83,6 +89,7 @@ const SiteMultiSelect: React.FC<SiteMultiSelectProps> = ({
           })}
         </div>
       ) : null}
+      {error ? <div className="settings-inline-error settings-multiselect-error">{error}</div> : null}
     </div>
   );
 };

@@ -56,6 +56,11 @@
   gap: 8px;
 }
 
+.settings-select option {
+  background: #161d28;
+  color: var(--vrm-text-primary);
+}
+
 .settings-edit-icon-btn {
   width: 32px;
   height: 32px;
@@ -127,6 +132,16 @@
 
 .settings-multiselect-option input {
   accent-color: var(--vrm-accent-blue);
+}
+
+.settings-multiselect-error {
+  margin-top: 6px;
+}
+
+.settings-current-user-site-cell {
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
 }
 
 .settings-inline-error,

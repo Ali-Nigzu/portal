@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import type { AccessLevel } from "../types";
+import SiteMultiSelect from "./SiteMultiSelect";
 import styles from "./InviteUserModal.module.css";
 
 type InviteUserModalProps = {
@@ -15,13 +16,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSubmitted }) => {
   const [email, setEmail] = useState("");
-  const [site, setSite] = useState("all-sites");
+  const [sites, setSites] = useState<string[]>(["all-sites"]);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("Viewer");
   const [state, setState] = useState<InviteState>("closed");
   const [error, setError] = useState<string | null>(null);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isValid = EMAIL_RE.test(email.trim()) && Boolean(site.trim()) && Boolean(accessLevel);
+  const isValid = EMAIL_RE.test(email.trim()) && sites.length > 0 && Boolean(accessLevel);
 
   useEffect(() => {
     if (!isOpen) {
@@ -57,7 +58,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
 
   const resetState = () => {
     setEmail("");
-    setSite("all-sites");
+    setSites(["all-sites"]);
     setAccessLevel("Viewer");
     setState("closed");
     setError(null);
@@ -72,6 +73,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
     event.preventDefault();
     if (!isValid || state === "submitting") {
       setState("invalid");
+      setError(sites.length === 0 ? "Sites required" : null);
       return;
     }
 
@@ -81,7 +83,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
     try {
       await onSubmitted({
         email: email.trim(),
-        site,
+        site: sites[0],
         accessLevel,
       });
       handleClose();
@@ -116,14 +118,18 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
             </div>
             <div className="settings-form-field">
               <label className="settings-form-label" htmlFor="invite-site">Site</label>
-              <select
-                id="invite-site"
-                className={`settings-select ${styles.select}`}
-                value={site}
-                onChange={(event) => setSite(event.target.value)}
-              >
-                <option value="all-sites">All Sites</option>
-              </select>
+              <SiteMultiSelect
+                options={[{ id: "all-sites", label: "All Sites" }]}
+                selectedSites={sites}
+                onChange={(next) => {
+                  setSites(next);
+                  if (next.length > 0) {
+                    setError(null);
+                  }
+                }}
+                placeholder="Select sites"
+                error={state === "invalid" && sites.length === 0 ? "Sites required" : null}
+              />
             </div>
             <div className="settings-form-field">
               <label className="settings-form-label" htmlFor="invite-level">Access level</label>

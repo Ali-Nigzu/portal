@@ -83,7 +83,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       <div className="login-shell">
         <section className="login-left-pane" aria-label="Login form panel">
           <div className="login-content">
-            <p className="login-title">Login</p>
             <h1 className="login-hero">Welcome Back</h1>
 
             <form className="login-form" onSubmit={onPrimaryAction}>

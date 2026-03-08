@@ -7,11 +7,13 @@ type DashboardHeaderProps = {
   clientId?: string;
   siteLabelOverride?: string;
   mode?: "full" | "preview";
+  isAuthenticatedView?: boolean;
 };
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   siteLabelOverride,
   mode = "full",
+  isAuthenticatedView = false,
 }) => {
   const { siteId } = useParams();
   const siteLabel = useMemo(() => {
@@ -32,7 +34,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </div>
         {mode === "full" ? (
           <div className="vrm-dashboard-header-right">
-            <HeaderStatusStrip className="vrm-dashboard-header-meta" />
+            <HeaderStatusStrip className="vrm-dashboard-header-meta" isAuthenticatedView={isAuthenticatedView} />
           </div>
         ) : null}
       </div>

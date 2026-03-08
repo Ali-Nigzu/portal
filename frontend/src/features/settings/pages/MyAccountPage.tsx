@@ -103,6 +103,13 @@ const MyAccountPage: React.FC = () => {
     setDrafts({ name: nextUser.name, phone: nextUser.phone ?? "", password: "", confirmPassword: "" });
   };
 
+  const isUnlockSessionActive = () => {
+    if (!unlockToken || !unlockExpiresAt) {
+      return false;
+    }
+    return Date.now() < unlockExpiresAt;
+  };
+
   const relock = (nextUser?: SettingsUser) => {
     setIsUnlocked(false);
     setUnlockToken(null);
@@ -117,7 +124,8 @@ const MyAccountPage: React.FC = () => {
   };
 
   const requestEdit = (rowId: Exclude<RowId, null>) => {
-    if (!isUnlocked) {
+    if (!isUnlocked || !isUnlockSessionActive()) {
+      relock();
       setIsUnlockOpen(true);
       return;
     }
@@ -130,7 +138,8 @@ const MyAccountPage: React.FC = () => {
   };
 
   const handleSave = async (rowId: Exclude<RowId, null>) => {
-    if (!user || !unlockToken) {
+    if (!user || !unlockToken || !isUnlockSessionActive()) {
+      relock();
       setErrors({ form: "Unlock required before saving" });
       return;
     }
