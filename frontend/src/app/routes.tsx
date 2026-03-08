@@ -44,6 +44,7 @@ const AppRoutes: React.FC = () => {
   const location = useLocation();
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
+  const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
 
   useEffect(() => {
@@ -81,13 +82,13 @@ const AppRoutes: React.FC = () => {
   };
 
   const isDemoSession = isDemoSessionActive();
-  const appMode: "public" | "authenticated" | "view_token" | "demo" = isLoggedIn
-    ? "authenticated"
-    : hasViewToken
+  const appMode: "public" | "authenticated" | "view_token" | "demo" = hasViewToken
       ? "view_token"
-      : isDemoSession
+      : (isDemoSession || isDemoRoute)
         ? "demo"
-        : "public";
+        : isLoggedIn
+          ? "authenticated"
+          : "public";
   const isAuthenticatedMode = appMode === "authenticated";
   const dashboardDataMode: DashboardDataMode = appMode === "authenticated"
     ? "authenticated"
@@ -190,7 +191,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/"
         element={
-          appMode === "public" ? (
+          !isAuthenticatedMode ? (
             lazyRoute(<LandingPage />)
           ) : appMode === "view_token" || appMode === "demo" ? (
             <Navigate to={appMode === "demo" ? appendParams("/demo/site-a/dashboard") : appendViewToken("/sites/all/dashboard")} replace />
@@ -203,7 +204,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/create-account"
         element={
-          appMode === "public" ? (
+          !isAuthenticatedMode ? (
             lazyRoute(<CreateAccountPage />)
           ) : (
             <Navigate to="/home" replace />
@@ -213,7 +214,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/login"
         element={
-          appMode === "public" ? (
+          !isAuthenticatedMode ? (
             lazyRoute(<LoginPage onLogin={handleLogin} />)
           ) : (
             <Navigate to="/home" replace />
@@ -223,7 +224,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/verify-email"
         element={
-          appMode === "public" ? (
+          !isAuthenticatedMode ? (
             lazyRoute(<VerifyEmailPage />)
           ) : (
             <Navigate to="/home" replace />
@@ -233,7 +234,27 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/reset-password"
         element={
-          appMode === "public" ? (
+          !isAuthenticatedMode ? (
+            lazyRoute(<ResetPasswordPage />)
+          ) : (
+            <Navigate to="/home" replace />
+          )
+        }
+      />
+      <Route
+        path="/reset-password/code"
+        element={
+          !isAuthenticatedMode ? (
+            lazyRoute(<ResetPasswordPage />)
+          ) : (
+            <Navigate to="/home" replace />
+          )
+        }
+      />
+      <Route
+        path="/reset-password/new"
+        element={
+          !isAuthenticatedMode ? (
             lazyRoute(<ResetPasswordPage />)
           ) : (
             <Navigate to="/home" replace />
@@ -243,7 +264,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/contact"
         element={
-          appMode === "public" ? (
+          !isAuthenticatedMode ? (
             lazyRoute(<ContactPage />)
           ) : (
             <Navigate to="/home" replace />
@@ -460,7 +481,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="*"
         element={
-          appMode === "public" ? (
+          !isAuthenticatedMode ? (
             <Navigate to="/" replace />
           ) : appMode === "view_token" || appMode === "demo" ? (
             <Navigate to={appMode === "demo" ? appendParams("/demo/site-a/dashboard") : appendViewToken("/sites/all/dashboard")} replace />

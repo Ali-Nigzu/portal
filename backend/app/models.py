@@ -117,11 +117,22 @@ class PasswordResetResendResponse(BaseModel):
 class PasswordResetVerifyRequest(BaseModel):
     email: str
     code: str
+
+
+class PasswordResetVerifyResponse(BaseModel):
+    ok: bool
+    resetToken: str
+    resetExpiresInSeconds: int
+
+
+class PasswordResetSetPasswordRequest(BaseModel):
+    email: str
+    reset_token: str
     password: str
     confirm_password: str
 
 
-class PasswordResetVerifyResponse(BaseModel):
+class PasswordResetSetPasswordResponse(BaseModel):
     ok: bool
 
 

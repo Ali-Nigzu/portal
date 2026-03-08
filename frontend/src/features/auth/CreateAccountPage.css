@@ -23,7 +23,7 @@
   width: 100%;
   max-width: 520px;
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .create-account-back-link {
@@ -60,7 +60,7 @@
 
 .create-account-form {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .create-account-field {
@@ -109,13 +109,18 @@
 }
 
 .create-account-password-hint-slot {
-  min-height: 18px;
+  min-height: 0;
   margin-top: 4px;
 }
 
 .create-account-error-slot {
-  min-height: 20px;
+  min-height: 0;
   margin-top: 4px;
+}
+
+.create-account-error-slot:empty,
+.create-account-password-hint-slot:empty {
+  margin-top: 0;
 }
 
 .create-account-error {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { PenLine } from "lucide-react";
 
 import {
   getMe,
@@ -215,7 +216,7 @@ const MyAccountPage: React.FC = () => {
         )}
       />
       <div className="vrm-card">
-        <div className="vrm-card-body settings-account-card-body settings-account-locked-layout">
+        <div className={`vrm-card-body settings-account-card-body ${!isUnlocked ? "settings-account-locked-layout" : ""}`}>
           <EditableFieldRow
             label="Username"
             displayValue={user.name}
@@ -274,7 +275,9 @@ const MyAccountPage: React.FC = () => {
             </div>
             <div className="settings-field-actions">
               {activeEditingRowId !== "password" ? (
-                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => requestEdit("password")}>Edit</button>
+                <button className="settings-edit-icon-btn" onClick={() => requestEdit("password")} aria-label="Edit password">
+                  <PenLine size={14} aria-hidden="true" />
+                </button>
               ) : (
                 <>
                   <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => { setActiveEditingRowId(null); setDrafts((prev) => ({ ...prev, password: "", confirmPassword: "" })); setErrors({}); }} disabled={saving}>Cancel</button>

@@ -4,15 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import AuthTopBar from '../../components/auth/AuthTopBar';
 import camsvg from '../../assets/camsvg.svg';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
+import { COUNTRY_PHONE_OPTIONS } from './countryPhoneData';
 import './CreateAccountPage.css';
-
-const COUNTRY_CODES = [
-  { label: 'United Kingdom (+44)', value: '+44' },
-  { label: 'United States (+1)', value: '+1' },
-  { label: 'Germany (+49)', value: '+49' },
-  { label: 'France (+33)', value: '+33' },
-  { label: 'India (+91)', value: '+91' },
-];
 
 const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
   event.preventDefault();
@@ -104,8 +97,8 @@ const CreateAccountPage: React.FC = () => {
                     value={form.countryCode}
                     onChange={(e) => form.setCountryCode(e.target.value)}
                   >
-                    {COUNTRY_CODES.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
+                    {COUNTRY_PHONE_OPTIONS.map((option) => (
+                      <option key={`${option.iso2}-${option.dialCode}`} value={option.dialCode}>{option.iso2} ({option.dialCode})</option>
                     ))}
                   </select>
                   <input
@@ -220,6 +213,9 @@ const CreateAccountPage: React.FC = () => {
                   <a href="#" onClick={stopNavigation}>privacy policy</a>.{' '}
                   You can find the policy{' '}
                   <a href="#" onClick={stopNavigation}>here</a>
+                </p>
+                <p>
+                  Already have an Account? <Link to="/login">Login here</Link>
                 </p>
               </div>
             </form>

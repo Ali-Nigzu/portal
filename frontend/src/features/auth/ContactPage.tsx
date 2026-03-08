@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { submitContact } from "./transport/contact";
@@ -27,7 +27,9 @@ const ContactPage: React.FC = () => {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const attachmentSummary = useMemo(() => {
     if (attachments.length === 0) {
@@ -118,6 +120,10 @@ const ContactPage: React.FC = () => {
       setMessage("");
       setAttachments([]);
       setErrors({});
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setShowSuccessModal(true);
     } catch {
       setSubmitError("Unable to send your message. Please try again.");
     } finally {
@@ -126,7 +132,8 @@ const ContactPage: React.FC = () => {
   };
 
   return (
-    <div className="contact-page">
+    <>
+      <div className="contact-page">
       <AuthTopBar />
 
       <form className="contact-shell" onSubmit={handleSubmit}>
@@ -226,6 +233,7 @@ const ContactPage: React.FC = () => {
                 id="contact-attachments"
                 className="vrm-input"
                 type="file"
+                ref={fileInputRef}
                 multiple
                 accept={ACCEPTED_EXTENSIONS.join(",")}
                 onChange={onFilesChange}
@@ -267,7 +275,21 @@ const ContactPage: React.FC = () => {
           </div>
         </section>
       </form>
-    </div>
+      </div>
+      {showSuccessModal ? (
+        <div className="contact-success-modal-backdrop" role="presentation" onClick={() => setShowSuccessModal(false)}>
+          <div className="contact-success-modal" role="dialog" aria-modal="true" aria-labelledby="contact-success-title" onClick={(event) => event.stopPropagation()}>
+            <h2 id="contact-success-title">Message sent</h2>
+            <p>Thanks for contacting camOS. Our team will get back to you shortly.</p>
+            <div className="contact-success-modal-actions">
+              <Link className="vrm-btn vrm-btn-secondary" to="/" onClick={() => setShowSuccessModal(false)}>Learn more about camOS</Link>
+              <Link className="vrm-btn vrm-btn-primary" to="/create-account" onClick={() => setShowSuccessModal(false)}>Create Account</Link>
+            </div>
+            <button type="button" className="contact-success-close" onClick={() => setShowSuccessModal(false)}>Close</button>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 };
 

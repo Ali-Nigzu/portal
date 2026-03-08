@@ -56,6 +56,24 @@
   gap: 8px;
 }
 
+.settings-edit-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--vrm-border-subtle);
+  background: var(--vrm-surface-secondary);
+  color: var(--vrm-text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.settings-edit-icon-btn:hover,
+.settings-edit-icon-btn:focus-visible {
+  border-color: rgba(137, 180, 255, 0.55);
+}
+
 .settings-inline-error,
 .settings-form-error {
   color: #ff8b8b;

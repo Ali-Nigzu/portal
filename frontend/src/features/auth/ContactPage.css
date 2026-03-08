@@ -23,7 +23,7 @@
   width: 100%;
   max-width: 520px;
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .contact-title {
@@ -45,8 +45,12 @@
 }
 
 .contact-error-slot {
-  min-height: 20px;
+  min-height: 0;
   margin-top: 4px;
+}
+
+.contact-error-slot:empty {
+  margin-top: 0;
 }
 
 .contact-error {
@@ -89,7 +93,7 @@
   min-height: min(620px, calc(100vh - 180px));
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  gap: 10px;
+  gap: 6px;
 }
 
 .contact-message-input {
@@ -119,6 +123,50 @@
   margin-top: 4px;
   color: #8ad9a2;
   font-size: 13px;
+}
+
+.contact-success-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 15, 22, 0.72);
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.contact-success-modal {
+  width: min(520px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #151a22;
+  border-radius: 12px;
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.contact-success-modal h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.contact-success-modal p {
+  margin: 0;
+  color: #c9d2e1;
+}
+
+.contact-success-modal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.contact-success-close {
+  justify-self: end;
+  border: none;
+  background: transparent;
+  color: #89b4ff;
+  cursor: pointer;
 }
 
 .contact-actions {

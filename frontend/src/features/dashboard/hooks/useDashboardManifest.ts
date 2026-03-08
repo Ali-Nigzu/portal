@@ -25,6 +25,7 @@ type UseDashboardManifestParams = {
   credentials: Credentials;
   manifestLoader?: ManifestLoader;
   dashboardId?: string;
+  orgIdOverride?: string;
 };
 
 type UseDashboardManifestResult = {
@@ -48,12 +49,13 @@ export const useDashboardManifest = ({
   credentials,
   manifestLoader,
   dashboardId,
+  orgIdOverride,
 }: UseDashboardManifestParams): UseDashboardManifestResult => {
   const viewToken = useMemo(() => getViewTokenFromLocation(), []);
   const isDemoSession = useMemo(() => isDemoSessionActive(), []);
   const demoTimeRangeOverrideRef = useRef(consumeDemoTimeRangeOverride());
-  const orgId =
-    viewToken || isDemoSession ? undefined : determineOrgId(credentials);
+  const orgId = orgIdOverride
+    ?? (viewToken || isDemoSession ? undefined : determineOrgId(credentials));
   const resolvedDashboardId = dashboardId ?? "dashboard-default";
   const manifestLoaderImpl = manifestLoader ?? fetchDashboardManifest;
   const [manifest, setManifest] = useState<DashboardManifest | null>(null);
