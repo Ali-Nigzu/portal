@@ -211,7 +211,7 @@
 
 @media (max-width: 900px) {
   .settings-field-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 120px minmax(0, 1fr) auto;
     gap: 10px;
   }
 
@@ -220,8 +220,8 @@
   }
 
   .settings-field-actions {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto;
+    justify-content: flex-end;
   }
 }
 
@@ -263,10 +263,6 @@
   padding: 0 20px 18px;
 }
 
-.settings-account-locked-layout .settings-field-row {
-  grid-template-columns: 160px minmax(0, 1fr);
-}
-
 @media (max-width: 900px) {
   .settings-account-header-actions {
     width: 100%;
@@ -274,8 +270,22 @@
     grid-template-columns: 1fr;
     align-items: stretch;
   }
+}
 
-  .settings-account-locked-layout .settings-field-row {
-    grid-template-columns: 1fr;
-  }
+.settings-users-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-save-cta--active {
+  box-shadow: 0 0 0 2px rgba(137, 180, 255, 0.28);
+}
+
+.settings-save-cta--inactive {
+  opacity: 0.7;
+}
+
+.settings-manage-access-save-message {
+  padding: 0 16px 14px;
 }

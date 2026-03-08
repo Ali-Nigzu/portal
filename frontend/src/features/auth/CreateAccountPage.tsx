@@ -4,8 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import AuthTopBar from '../../components/auth/AuthTopBar';
 import camsvg from '../../assets/camsvg.svg';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
-import { COUNTRY_PHONE_OPTIONS } from './countryPhoneData';
+import AuthPhoneField from './components/AuthPhoneField';
 import './CreateAccountPage.css';
+import './components/AuthPhoneField.css';
 
 const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
   event.preventDefault();
@@ -90,27 +91,14 @@ const CreateAccountPage: React.FC = () => {
 
               <div className="vrm-field create-account-field">
                 <label className="vrm-label" htmlFor="create-country">Phone (optional)</label>
-                <div className="create-account-phone-row">
-                  <select
-                    id="create-country"
-                    className="vrm-input create-account-country-select"
-                    value={form.countryCode}
-                    onChange={(e) => form.setCountryCode(e.target.value)}
-                  >
-                    {COUNTRY_PHONE_OPTIONS.map((option) => (
-                      <option key={`${option.iso2}-${option.dialCode}`} value={option.dialCode}>{option.iso2} ({option.dialCode})</option>
-                    ))}
-                  </select>
-                  <input
-                    className="vrm-input"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    placeholder="Phone number"
-                    value={form.phoneLocal}
-                    onChange={(e) => form.setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))}
-                    onBlur={() => form.markTouched('phone')}
-                    aria-invalid={Boolean(form.visibleErrors.phone)}
-                    aria-describedby={form.visibleErrors.phone ? 'create-phone-error' : undefined}
+                <div onBlur={() => form.markTouched('phone')}>
+                  <AuthPhoneField
+                    idPrefix="create"
+                    countryCode={form.countryCode}
+                    localNumber={form.phoneLocal}
+                    onCountryCodeChange={form.setCountryCode}
+                    onLocalNumberChange={form.setPhoneLocal}
+                    inputClassName="vrm-input"
                   />
                 </div>
                 <div className="create-account-error-slot" aria-live="polite">

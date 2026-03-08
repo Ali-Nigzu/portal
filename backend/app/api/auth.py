@@ -97,7 +97,7 @@ SETTINGS_UNLOCK_CODE_TTL_SECONDS = 15 * 60
 SETTINGS_UNLOCK_MAX_VERIFY_ATTEMPTS = 5
 SETTINGS_UNLOCK_RESEND_COOLDOWN_SECONDS = 30
 SETTINGS_UNLOCK_MAX_RESENDS = 5
-SETTINGS_UNLOCK_SESSION_SECONDS = 10 * 60
+SETTINGS_UNLOCK_SESSION_SECONDS = 5 * 60
 
 CONTACT_MAX_FILES = 3
 CONTACT_MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -600,7 +600,8 @@ async def update_me(
     users[username] = existing
     save_users(users)
 
-    del challenges[challenge_key]
+    record["updated_at"] = _to_iso(now)
+    challenges[challenge_key] = record
     save_pending_settings_unlocks(challenges)
 
     return AuthUserResponse(user=_safe_auth_user(existing))

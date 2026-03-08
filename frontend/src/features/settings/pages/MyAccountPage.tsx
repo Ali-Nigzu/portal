@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { PenLine } from "lucide-react";
 
 import {
@@ -32,6 +32,11 @@ type FormErrorState = {
   form?: string;
 };
 
+type UnlockSession = {
+  token: string;
+  expiresAt: number;
+} | null;
+
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 const INTERNAL_UNLOCK_SESSION_SECONDS = 300;
 
@@ -56,9 +61,7 @@ const MyAccountPage: React.FC = () => {
   const [user, setUser] = useState<SettingsUser | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isUnlockOpen, setIsUnlockOpen] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [unlockToken, setUnlockToken] = useState<string | null>(null);
-  const [unlockExpiresAt, setUnlockExpiresAt] = useState<number | null>(null);
+  const [unlockSession, setUnlockSession] = useState<UnlockSession>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeEditingRowId, setActiveEditingRowId] = useState<RowId>(null);
@@ -69,6 +72,8 @@ const MyAccountPage: React.FC = () => {
     password: "",
     confirmPassword: "",
   });
+
+  const isUnlocked = useMemo(() => Boolean(unlockSession && Date.now() < unlockSession.expiresAt), [unlockSession]);
 
   useEffect(() => {
     const load = async () => {
@@ -84,36 +89,25 @@ const MyAccountPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isUnlocked || !unlockExpiresAt) {
+    if (!unlockSession) {
       return;
     }
     const timer = window.setInterval(() => {
-      if (Date.now() >= unlockExpiresAt) {
-        setIsUnlocked(false);
-        setUnlockToken(null);
-        setUnlockExpiresAt(null);
+      if (Date.now() >= unlockSession.expiresAt) {
+        setUnlockSession(null);
         setActiveEditingRowId(null);
         setErrors((prev) => ({ ...prev, form: "Editing lock expired. Unlock again to continue." }));
       }
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [isUnlocked, unlockExpiresAt]);
+  }, [unlockSession]);
 
   const resetDrafts = (nextUser: SettingsUser) => {
     setDrafts({ name: nextUser.name, phone: nextUser.phone ?? "", password: "", confirmPassword: "" });
   };
 
-  const isUnlockSessionActive = () => {
-    if (!unlockToken || !unlockExpiresAt) {
-      return false;
-    }
-    return Date.now() < unlockExpiresAt;
-  };
-
   const relock = (nextUser?: SettingsUser) => {
-    setIsUnlocked(false);
-    setUnlockToken(null);
-    setUnlockExpiresAt(null);
+    setUnlockSession(null);
     setActiveEditingRowId(null);
     setErrors({});
     if (nextUser) {
@@ -124,7 +118,7 @@ const MyAccountPage: React.FC = () => {
   };
 
   const requestEdit = (rowId: Exclude<RowId, null>) => {
-    if (!isUnlocked || !isUnlockSessionActive()) {
+    if (!isUnlocked || !unlockSession) {
       relock();
       setIsUnlockOpen(true);
       return;
@@ -138,14 +132,14 @@ const MyAccountPage: React.FC = () => {
   };
 
   const handleSave = async (rowId: Exclude<RowId, null>) => {
-    if (!user || !unlockToken || !isUnlockSessionActive()) {
+    if (!user || !unlockSession || !isUnlocked) {
       relock();
       setErrors({ form: "Unlock required before saving" });
       return;
     }
 
     const nextErrors: FormErrorState = {};
-    const payload: Record<string, string> = { unlock_token: unlockToken };
+    const payload: Record<string, string> = { unlock_token: unlockSession.token };
 
     if (rowId === "name") {
       const trimmedName = drafts.name.trim();
@@ -233,7 +227,7 @@ const MyAccountPage: React.FC = () => {
         )}
       />
       <div className="vrm-card">
-        <div className={`vrm-card-body settings-account-card-body ${!isUnlocked ? "settings-account-locked-layout" : ""}`}>
+        <div className="vrm-card-body settings-account-card-body">
           <EditableFieldRow
             label="Username"
             displayValue={user.name}
@@ -251,12 +245,13 @@ const MyAccountPage: React.FC = () => {
             onChange={(value) => setDrafts((prev) => ({ ...prev, name: value }))}
           />
 
-          <div className="settings-field-row">
+          <div className="settings-field-row settings-field-row--readonly">
             <div className="settings-field-label">Email</div>
             <div className="settings-field-main">
               <div className="settings-field-value">{maskEmail(user.email)}</div>
               <div className="settings-field-help">Email cannot be changed from My Account.</div>
             </div>
+            <div className="settings-field-actions" aria-hidden="true" />
           </div>
 
           <EditableFieldRow
@@ -313,9 +308,10 @@ const MyAccountPage: React.FC = () => {
         isOpen={isUnlockOpen}
         onClose={() => setIsUnlockOpen(false)}
         onVerified={({ unlockToken: verifiedUnlockToken }) => {
-          setUnlockToken(verifiedUnlockToken);
-          setUnlockExpiresAt(Date.now() + (INTERNAL_UNLOCK_SESSION_SECONDS * 1000));
-          setIsUnlocked(true);
+          setUnlockSession({
+            token: verifiedUnlockToken,
+            expiresAt: Date.now() + (INTERNAL_UNLOCK_SESSION_SECONDS * 1000),
+          });
           setIsUnlockOpen(false);
           setErrors({});
           setSaveMessage(null);
