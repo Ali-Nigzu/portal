@@ -11,6 +11,8 @@ type AuthPhoneFieldProps = {
   inputClassName?: string;
 };
 
+const MENU_HEIGHT_ESTIMATE = 272;
+
 const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
   idPrefix,
   selectedIso,
@@ -21,34 +23,72 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [direction, setDirection] = useState<"down" | "up">("down");
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const optionsRef = useRef<HTMLDivElement | null>(null);
+  const selectedOptionRef = useRef<HTMLButtonElement | null>(null);
 
   const selectedOption = getPhoneOptionByIso(selectedIso) ?? getPhoneOptionByIso(getDefaultPhoneIso());
-
-  useEffect(() => {
-    if (!open) return;
-    const timer = window.setTimeout(() => searchRef.current?.focus(), 0);
-    return () => window.clearTimeout(timer);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocClick = (event: MouseEvent) => {
-      const node = event.target as Node;
-      if (!rootRef.current?.contains(node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return PHONE_OPTIONS;
     return PHONE_OPTIONS.filter((option) => option.searchText.includes(normalizedQuery));
   }, [query]);
+
+  const recalculateDirection = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const nextDirection = spaceBelow >= MENU_HEIGHT_ESTIMATE || spaceBelow >= spaceAbove ? "down" : "up";
+    setDirection(nextDirection);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    recalculateDirection();
+
+    const timer = window.setTimeout(() => searchRef.current?.focus(), 0);
+    const onDocClick = (event: MouseEvent) => {
+      const node = event.target as Node;
+      if (!rootRef.current?.contains(node)) {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", recalculateDirection);
+    window.addEventListener("scroll", recalculateDirection, true);
+    document.addEventListener("mousedown", onDocClick);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", recalculateDirection);
+      window.removeEventListener("scroll", recalculateDirection, true);
+      document.removeEventListener("mousedown", onDocClick);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const container = optionsRef.current;
+    const selectedNode = selectedOptionRef.current;
+    if (!container || !selectedNode) return;
+
+    const topInset = 12;
+    const bottomInset = 12;
+    const selectedTop = selectedNode.offsetTop;
+    const selectedBottom = selectedTop + selectedNode.offsetHeight;
+
+    const target = direction === "down"
+      ? selectedTop - topInset
+      : selectedBottom - container.clientHeight + bottomInset;
+
+    const clamped = Math.max(0, Math.min(target, container.scrollHeight - container.clientHeight));
+    container.scrollTop = clamped;
+  }, [open, direction, filteredOptions, selectedIso]);
 
   const handleSelect = (iso: string) => {
     onSelectedIsoChange(iso);
@@ -60,6 +100,7 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
   return (
     <div className="auth-phone-combo" ref={rootRef}>
       <button
+        ref={triggerRef}
         id={`${idPrefix}-country`}
         type="button"
         className={`vrm-input auth-phone-country-select-trigger ${open ? "is-open" : ""}`}
@@ -72,7 +113,7 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
       </button>
 
       {open ? (
-        <div className="auth-phone-dropdown" role="listbox" aria-label="Country code options">
+        <div className={`auth-phone-dropdown ${direction}`} role="listbox" aria-label="Country code options">
           <input
             ref={searchRef}
             className="vrm-input auth-phone-search"
@@ -80,10 +121,11 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <div className="auth-phone-options">
+          <div className="auth-phone-options" ref={optionsRef}>
             {filteredOptions.map((option) => (
               <button
                 key={`${option.iso2}-${option.dialCode}`}
+                ref={option.iso2 === selectedIso ? selectedOptionRef : null}
                 type="button"
                 className={`auth-phone-option ${option.iso2 === selectedIso ? "is-active" : ""}`}
                 onClick={() => handleSelect(option.iso2)}

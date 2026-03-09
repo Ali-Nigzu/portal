@@ -1,16 +1,16 @@
 .auth-phone-combo {
   position: relative;
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 4px;
 }
 
 .auth-phone-country-select-trigger {
-  padding: 0 10px;
+  padding: 0 6px;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
   cursor: pointer;
 }
 
@@ -23,14 +23,13 @@
 
 .auth-phone-caret {
   color: var(--vrm-text-muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .auth-phone-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
   left: 0;
-  width: min(460px, 90vw);
+  width: min(440px, 90vw);
   z-index: 1400;
   border: 1px solid rgba(137, 180, 255, 0.35);
   border-radius: 10px;
@@ -39,6 +38,14 @@
   padding: 8px;
   display: grid;
   gap: 8px;
+}
+
+.auth-phone-dropdown.down {
+  top: calc(100% + 6px);
+}
+
+.auth-phone-dropdown.up {
+  bottom: calc(100% + 6px);
 }
 
 .auth-phone-search {
@@ -78,9 +85,9 @@
   border-radius: 6px;
   padding: 6px 8px;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
 }
 

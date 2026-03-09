@@ -16,7 +16,7 @@
   min-width: 0;
   display: flex;
   justify-content: center;
-  padding: 34px 32px 40px;
+  padding: 30px 32px 40px;
 }
 
 .contact-content {
@@ -24,7 +24,7 @@
   max-width: 520px;
   display: grid;
   gap: 6px;
-  padding-top: 10px;
+  padding-top: 4px;
 }
 
 .contact-left-form {
@@ -80,7 +80,7 @@
   overflow: hidden;
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   background: #151a22;
-  padding: 34px 32px 40px;
+  padding: 30px 32px 40px;
   display: flex;
 }
 
