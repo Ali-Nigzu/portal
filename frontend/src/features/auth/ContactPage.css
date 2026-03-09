@@ -23,12 +23,13 @@
   width: 100%;
   max-width: 520px;
   display: grid;
-  gap: 4px;
+  gap: 6px;
+  padding-top: 10px;
 }
 
 .contact-left-form {
   display: grid;
-  gap: 2px;
+  gap: 1px;
 }
 
 .contact-hero {
@@ -36,7 +37,7 @@
   line-height: 1.14;
   letter-spacing: -0.02em;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 10px;
 }
 
 .contact-field {
@@ -45,7 +46,7 @@
 
 .contact-error-slot {
   min-height: 0;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .contact-error-slot:empty {
@@ -58,7 +59,7 @@
 }
 
 .contact-under-cta {
-  margin-top: 4px;
+  margin-top: 3px;
   color: #aab6c9;
   font-size: 13px;
 }
@@ -156,11 +157,11 @@
 }
 
 .contact-request-error {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .contact-success {
-  margin-top: 4px;
+  margin-top: 3px;
   color: #8ad9a2;
   font-size: 13px;
 }

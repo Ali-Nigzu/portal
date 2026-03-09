@@ -1,6 +1,5 @@
 import React from "react";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { Credentials } from "../../types/credentials";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
 import type { searchEvents } from "./transport/searchEvents";

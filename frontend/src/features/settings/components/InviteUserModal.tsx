@@ -99,9 +99,9 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
 
   return (
     <div className={styles.backdrop}>
-      <div className={`vrm-card ${styles.modal}`} role="dialog" aria-modal="true" aria-label="Invite user modal">
+      <div className={`vrm-card ${styles.modal}`} role="dialog" aria-modal="true" aria-label="Invite Users modal">
         <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Invite user</h3>
+          <h3 className="vrm-card-title">Invite Users</h3>
         </div>
         <div className="vrm-card-body">
           <form onSubmit={handleSubmit} className="settings-form-grid">

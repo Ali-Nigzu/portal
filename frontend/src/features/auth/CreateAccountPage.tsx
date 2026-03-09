@@ -93,10 +93,10 @@ const CreateAccountPage: React.FC = () => {
                 <div onBlur={() => form.markTouched('phone')}>
                   <AuthPhoneField
                     idPrefix="create"
-                    countryCode={form.countryCode}
-                    localNumber={form.phoneLocal}
-                    onCountryCodeChange={form.setCountryCode}
-                    onLocalNumberChange={form.setPhoneLocal}
+                    selectedIso={form.selectedIso}
+                    phoneValue={form.phoneValue}
+                    onSelectedIsoChange={form.setSelectedIso}
+                    onPhoneValueChange={form.setPhoneValue}
                     inputClassName="vrm-input"
                   />
                 </div>

@@ -1,5 +1,6 @@
 import { type FormEvent, useMemo, useState } from 'react';
 import { signupStart } from '../transport/signupStart';
+import { ensurePhoneHasDialCode, getDefaultPhoneIso, normalizeInternationalPhone, matchIsoFromPhone } from '../phoneUtils';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
@@ -9,8 +10,8 @@ type FieldName = 'username' | 'email' | 'phone' | 'password' | 'confirmPassword'
 export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [countryCode, setCountryCode] = useState('+44');
-  const [phoneLocal, setPhoneLocal] = useState('');
+  const [selectedIso, setSelectedIso] = useState(getDefaultPhoneIso());
+  const [phoneValue, setPhoneValue] = useState(() => ensurePhoneHasDialCode('', getDefaultPhoneIso()));
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +25,9 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
     confirmPassword: false,
   });
 
-  const phone = phoneLocal.trim() ? `${countryCode}${phoneLocal.trim().replace(/^0+/, '')}` : '';
+  const normalizedPhone = normalizeInternationalPhone(phoneValue);
+  const selectedDialOnly = ensurePhoneHasDialCode('', selectedIso);
+  const phone = normalizedPhone && normalizedPhone !== selectedDialOnly ? normalizedPhone : '';
 
   const validate = () => {
     const errors: Record<FieldName, string | undefined> = {
@@ -110,8 +113,8 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
   return {
     username,
     email,
-    countryCode,
-    phoneLocal,
+    selectedIso,
+    phoneValue,
     password,
     confirmPassword,
     submitting,
@@ -120,8 +123,14 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
     canSubmit,
     setUsername,
     setEmail,
-    setCountryCode,
-    setPhoneLocal,
+    setSelectedIso,
+    setPhoneValue: (value: string) => {
+      setPhoneValue(value);
+      const detectedIso = matchIsoFromPhone(value);
+      if (detectedIso) {
+        setSelectedIso(detectedIso);
+      }
+    },
     setPassword,
     setConfirmPassword,
     markTouched,

@@ -14,7 +14,7 @@ import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
 import type { SettingsUser } from "../types";
 import AuthPhoneField from "../../auth/components/AuthPhoneField";
-import { COUNTRY_PHONE_OPTIONS } from "../../auth/countryPhoneData";
+import { ensurePhoneHasDialCode, getDefaultPhoneIso, getPhoneOptionByIso, matchIsoFromPhone, normalizeInternationalPhone } from "../../auth/phoneUtils";
 import "../../auth/components/AuthPhoneField.css";
 import "../SettingsPages.css";
 
@@ -42,19 +42,8 @@ type UnlockSession = {
 
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 const INTERNAL_UNLOCK_SESSION_SECONDS = 300;
-const FALLBACK_COUNTRY_CODE = "+44";
-const SORTED_DIAL_CODES = Array.from(new Set(COUNTRY_PHONE_OPTIONS.map((option) => option.dialCode))).sort(
-  (left, right) => right.length - left.length,
-);
 
-const maskEmail = (email: string) => {
-  const [localPart, domain] = email.split("@");
-  if (!domain) {
-    return "••••";
-  }
-  const visible = Math.min(2, localPart.length);
-  return `${localPart.slice(0, visible)}${"•".repeat(Math.max(localPart.length - visible, 4))}@${domain}`;
-};
+const maskEmail = () => "**************";
 
 const maskPhone = (phone: string | null | undefined) => {
   if (!phone) {
@@ -64,32 +53,12 @@ const maskPhone = (phone: string | null | undefined) => {
   return `${"•".repeat(Math.max(phone.length - 2, 4))}${visible}`;
 };
 
-const composePhoneValue = (countryCode: string, localNumber: string) => {
-  const normalizedLocal = localNumber.trim().replace(/^0+/, "");
-  return normalizedLocal ? `${countryCode}${normalizedLocal}` : "";
-};
-
 const splitPhoneValue = (phone: string | null | undefined) => {
-  const trimmed = (phone ?? "").trim();
-  if (!trimmed) {
-    return { countryCode: FALLBACK_COUNTRY_CODE, localNumber: "" };
-  }
-
-  const normalized = trimmed.startsWith("+")
-    ? `+${trimmed.slice(1).replace(/\D/g, "")}`
-    : `+${trimmed.replace(/\D/g, "")}`;
-
-  const matchedDialCode = SORTED_DIAL_CODES.find((dialCode) => normalized.startsWith(dialCode));
-  if (matchedDialCode) {
-    return {
-      countryCode: matchedDialCode,
-      localNumber: normalized.slice(matchedDialCode.length),
-    };
-  }
-
+  const normalized = normalizeInternationalPhone(phone ?? "");
+  const matchedIso = matchIsoFromPhone(normalized) ?? getDefaultPhoneIso();
   return {
-    countryCode: FALLBACK_COUNTRY_CODE,
-    localNumber: normalized.replace(/^\+/, ""),
+    selectedIso: matchedIso,
+    phoneValue: normalized || ensurePhoneHasDialCode("", matchedIso),
   };
 };
 
@@ -102,8 +71,8 @@ const MyAccountPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [activeEditingRowId, setActiveEditingRowId] = useState<RowId>(null);
   const [errors, setErrors] = useState<FormErrorState>({});
-  const [phoneCountryCode, setPhoneCountryCode] = useState(FALLBACK_COUNTRY_CODE);
-  const [phoneLocalNumber, setPhoneLocalNumber] = useState("");
+  const [selectedPhoneIso, setSelectedPhoneIso] = useState(getDefaultPhoneIso());
+  const [phoneInputValue, setPhoneInputValue] = useState(() => ensurePhoneHasDialCode("", getDefaultPhoneIso()));
   const [drafts, setDrafts] = useState<DraftState>({
     name: "",
     phone: "",
@@ -115,9 +84,9 @@ const MyAccountPage: React.FC = () => {
 
   const syncPhoneDrafts = (phone: string | null | undefined) => {
     const split = splitPhoneValue(phone);
-    setPhoneCountryCode(split.countryCode);
-    setPhoneLocalNumber(split.localNumber);
-    setDrafts((prev) => ({ ...prev, phone: composePhoneValue(split.countryCode, split.localNumber) }));
+    setSelectedPhoneIso(split.selectedIso);
+    setPhoneInputValue(split.phoneValue);
+    setDrafts((prev) => ({ ...prev, phone: split.phoneValue }));
   };
 
   useEffect(() => {
@@ -126,11 +95,11 @@ const MyAccountPage: React.FC = () => {
         const me = await getMe();
         setUser(me);
         const split = splitPhoneValue(me.phone);
-        setPhoneCountryCode(split.countryCode);
-        setPhoneLocalNumber(split.localNumber);
+        setSelectedPhoneIso(split.selectedIso);
+        setPhoneInputValue(split.phoneValue);
         setDrafts({
           name: me.name,
-          phone: composePhoneValue(split.countryCode, split.localNumber),
+          phone: split.phoneValue,
           password: "",
           confirmPassword: "",
         });
@@ -157,11 +126,11 @@ const MyAccountPage: React.FC = () => {
 
   const resetDrafts = (nextUser: SettingsUser) => {
     const split = splitPhoneValue(nextUser.phone);
-    setPhoneCountryCode(split.countryCode);
-    setPhoneLocalNumber(split.localNumber);
+    setSelectedPhoneIso(split.selectedIso);
+    setPhoneInputValue(split.phoneValue);
     setDrafts({
       name: nextUser.name,
-      phone: composePhoneValue(split.countryCode, split.localNumber),
+      phone: split.phoneValue,
       password: "",
       confirmPassword: "",
     });
@@ -215,7 +184,9 @@ const MyAccountPage: React.FC = () => {
     }
 
     if (rowId === "phone") {
-      const composedPhone = composePhoneValue(phoneCountryCode, phoneLocalNumber);
+      const normalizedPhone = normalizeInternationalPhone(phoneInputValue);
+      const selectedDialOnly = ensurePhoneHasDialCode("", selectedPhoneIso);
+      const composedPhone = normalizedPhone && normalizedPhone !== selectedDialOnly ? normalizedPhone : "";
       if (composedPhone && !PHONE_RE.test(composedPhone)) {
         nextErrors.phone = "Phone must be in international format (e.g. +447700900123)";
       } else {
@@ -285,7 +256,7 @@ const MyAccountPage: React.FC = () => {
           <div className="settings-account-header-actions">
             {isUnlocked ? <span className="settings-unlock-chip">Unlocked</span> : null}
             {!isUnlocked ? (
-              <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>Unlock to edit</button>
+              <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>Unlock to Edit</button>
             ) : (
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => relock()}>Cancel / Lock</button>
             )}
@@ -314,7 +285,7 @@ const MyAccountPage: React.FC = () => {
           <div className="settings-field-row settings-field-row--readonly">
             <div className="settings-field-label">Email</div>
             <div className="settings-field-main">
-              <div className="settings-field-value">{maskEmail(user.email)}</div>
+              <div className="settings-field-value">{maskEmail()}</div>
               <div className="settings-field-help">Email cannot be changed from My Account.</div>
             </div>
             <div className="settings-field-actions" aria-hidden="true" />
@@ -329,18 +300,24 @@ const MyAccountPage: React.FC = () => {
                 <div className="settings-phone-editor">
                   <AuthPhoneField
                     idPrefix="account-phone"
-                    countryCode={phoneCountryCode}
-                    localNumber={phoneLocalNumber}
-                    onCountryCodeChange={(value) => {
-                      setPhoneCountryCode(value);
-                      setDrafts((prev) => ({ ...prev, phone: composePhoneValue(value, phoneLocalNumber) }));
+                    selectedIso={selectedPhoneIso}
+                    phoneValue={phoneInputValue}
+                    onSelectedIsoChange={(iso) => {
+                      setSelectedPhoneIso(iso);
+                      const nextValue = ensurePhoneHasDialCode(phoneInputValue, iso);
+                      setPhoneInputValue(nextValue);
+                      setDrafts((prev) => ({ ...prev, phone: nextValue }));
                       if (errors.phone) {
                         setErrors((prev) => ({ ...prev, phone: undefined }));
                       }
                     }}
-                    onLocalNumberChange={(value) => {
-                      setPhoneLocalNumber(value);
-                      setDrafts((prev) => ({ ...prev, phone: composePhoneValue(phoneCountryCode, value) }));
+                    onPhoneValueChange={(value) => {
+                      setPhoneInputValue(value);
+                      setDrafts((prev) => ({ ...prev, phone: value }));
+                      const detectedIso = matchIsoFromPhone(value);
+                      if (detectedIso && getPhoneOptionByIso(detectedIso)) {
+                        setSelectedPhoneIso(detectedIso);
+                      }
                       if (errors.phone) {
                         setErrors((prev) => ({ ...prev, phone: undefined }));
                       }

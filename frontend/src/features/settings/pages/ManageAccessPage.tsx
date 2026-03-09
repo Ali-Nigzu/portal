@@ -109,7 +109,7 @@ const ManageAccessPage: React.FC = () => {
             className="vrm-btn vrm-btn-primary vrm-btn-sm"
             onClick={() => setIsInviteOpen(true)}
           >
-            Invite user
+            Invite Users
           </button>
         }
       />

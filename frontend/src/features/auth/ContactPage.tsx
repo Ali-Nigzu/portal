@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { submitContact } from "./transport/contact";
 import AuthPhoneField from "./components/AuthPhoneField";
+import { ensurePhoneHasDialCode, getDefaultPhoneIso, matchIsoFromPhone, normalizeInternationalPhone } from "./phoneUtils";
 import "./ContactPage.css";
 import "./components/AuthPhoneField.css";
 
@@ -25,8 +26,8 @@ const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", "
 const ContactPage: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phoneCountryCode, setPhoneCountryCode] = useState("+44");
-  const [phoneLocal, setPhoneLocal] = useState("");
+  const [selectedIso, setSelectedIso] = useState(getDefaultPhoneIso());
+  const [phoneValue, setPhoneValue] = useState(() => ensurePhoneHasDialCode("", getDefaultPhoneIso()));
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -43,10 +44,9 @@ const ContactPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const phoneValue = useMemo(
-    () => (phoneLocal.trim() ? `${phoneCountryCode}${phoneLocal.trim().replace(/^0+/, "")}` : ""),
-    [phoneCountryCode, phoneLocal],
-  );
+  const normalizedPhone = useMemo(() => normalizeInternationalPhone(phoneValue), [phoneValue]);
+  const selectedDialOnly = useMemo(() => ensurePhoneHasDialCode("", selectedIso), [selectedIso]);
+  const submittedPhoneValue = useMemo(() => (normalizedPhone && normalizedPhone !== selectedDialOnly ? normalizedPhone : ""), [normalizedPhone, selectedDialOnly]);
 
   const errors = useMemo((): FieldErrors => {
     const nextErrors: FieldErrors = {};
@@ -61,7 +61,7 @@ const ContactPage: React.FC = () => {
       nextErrors.email = "Not a valid email address";
     }
 
-    if (phoneValue && !PHONE_RE.test(phoneValue)) {
+    if (submittedPhoneValue && !PHONE_RE.test(submittedPhoneValue)) {
       nextErrors.phone = "Not a valid phone number";
     }
 
@@ -76,7 +76,7 @@ const ContactPage: React.FC = () => {
     }
 
     return nextErrors;
-  }, [attachments, email, message, name, phoneValue]);
+  }, [attachments, email, message, name, submittedPhoneValue]);
 
   const visibleErrors = useMemo(() => {
     const next: FieldErrors = {};
@@ -136,7 +136,7 @@ const ContactPage: React.FC = () => {
       const result = await submitContact({
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        phone: phoneValue,
+        phone: submittedPhoneValue,
         message: message.trim(),
         attachments,
       });
@@ -149,8 +149,9 @@ const ContactPage: React.FC = () => {
       setSubmitSuccess("Message sent");
       setName("");
       setEmail("");
-      setPhoneCountryCode("+44");
-      setPhoneLocal("");
+      const defaultIso = getDefaultPhoneIso();
+      setSelectedIso(defaultIso);
+      setPhoneValue(ensurePhoneHasDialCode("", defaultIso));
       setMessage("");
       setAttachments([]);
       setSubmitAttempted(false);
@@ -217,10 +218,16 @@ const ContactPage: React.FC = () => {
                   <div onBlur={() => markTouched("phone")}>
                     <AuthPhoneField
                       idPrefix="contact"
-                      countryCode={phoneCountryCode}
-                      localNumber={phoneLocal}
-                      onCountryCodeChange={setPhoneCountryCode}
-                      onLocalNumberChange={setPhoneLocal}
+                      selectedIso={selectedIso}
+                      phoneValue={phoneValue}
+                      onSelectedIsoChange={setSelectedIso}
+                      onPhoneValueChange={(value) => {
+                        setPhoneValue(value);
+                        const detectedIso = matchIsoFromPhone(value);
+                        if (detectedIso) {
+                          setSelectedIso(detectedIso);
+                        }
+                      }}
                       inputClassName="vrm-input"
                     />
                   </div>

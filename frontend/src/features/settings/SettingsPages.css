@@ -316,8 +316,6 @@
   width: 100%;
 }
 
-.settings-phone-editor .auth-phone-country-select {
-  min-width: 16ch;
-  width: 16ch;
-  max-width: 16ch;
+.settings-phone-editor .auth-phone-combo {
+  grid-template-columns: 72px minmax(0, 1fr);
 }

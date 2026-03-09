@@ -53,7 +53,7 @@ const ReenterPasswordModal: React.FC<ReenterPasswordModalProps> = ({
     return () => window.clearInterval(timer);
   }, [cooldownRemaining]);
 
-  const title = useMemo(() => (step === "password" ? "Unlock to edit" : "Enter verification code"), [step]);
+  const title = useMemo(() => (step === "password" ? "Unlock to Edit" : "Enter verification code"), [step]);
 
   const handleClose = () => {
     setPassword("");
