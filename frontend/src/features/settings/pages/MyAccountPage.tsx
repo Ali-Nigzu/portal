@@ -13,6 +13,9 @@ import ReenterPasswordModal from "../components/ReenterPasswordModal";
 import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
 import type { SettingsUser } from "../types";
+import AuthPhoneField from "../../auth/components/AuthPhoneField";
+import { COUNTRY_PHONE_OPTIONS } from "../../auth/countryPhoneData";
+import "../../auth/components/AuthPhoneField.css";
 import "../SettingsPages.css";
 
 type RowId = "name" | "phone" | "password" | null;
@@ -39,6 +42,10 @@ type UnlockSession = {
 
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 const INTERNAL_UNLOCK_SESSION_SECONDS = 300;
+const FALLBACK_COUNTRY_CODE = "+44";
+const SORTED_DIAL_CODES = Array.from(new Set(COUNTRY_PHONE_OPTIONS.map((option) => option.dialCode))).sort(
+  (left, right) => right.length - left.length,
+);
 
 const maskEmail = (email: string) => {
   const [localPart, domain] = email.split("@");
@@ -57,6 +64,35 @@ const maskPhone = (phone: string | null | undefined) => {
   return `${"•".repeat(Math.max(phone.length - 2, 4))}${visible}`;
 };
 
+const composePhoneValue = (countryCode: string, localNumber: string) => {
+  const normalizedLocal = localNumber.trim().replace(/^0+/, "");
+  return normalizedLocal ? `${countryCode}${normalizedLocal}` : "";
+};
+
+const splitPhoneValue = (phone: string | null | undefined) => {
+  const trimmed = (phone ?? "").trim();
+  if (!trimmed) {
+    return { countryCode: FALLBACK_COUNTRY_CODE, localNumber: "" };
+  }
+
+  const normalized = trimmed.startsWith("+")
+    ? `+${trimmed.slice(1).replace(/\D/g, "")}`
+    : `+${trimmed.replace(/\D/g, "")}`;
+
+  const matchedDialCode = SORTED_DIAL_CODES.find((dialCode) => normalized.startsWith(dialCode));
+  if (matchedDialCode) {
+    return {
+      countryCode: matchedDialCode,
+      localNumber: normalized.slice(matchedDialCode.length),
+    };
+  }
+
+  return {
+    countryCode: FALLBACK_COUNTRY_CODE,
+    localNumber: normalized.replace(/^\+/, ""),
+  };
+};
+
 const MyAccountPage: React.FC = () => {
   const [user, setUser] = useState<SettingsUser | null>(null);
   const [loadingError, setLoadingError] = useState<string | null>(null);
@@ -66,6 +102,8 @@ const MyAccountPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [activeEditingRowId, setActiveEditingRowId] = useState<RowId>(null);
   const [errors, setErrors] = useState<FormErrorState>({});
+  const [phoneCountryCode, setPhoneCountryCode] = useState(FALLBACK_COUNTRY_CODE);
+  const [phoneLocalNumber, setPhoneLocalNumber] = useState("");
   const [drafts, setDrafts] = useState<DraftState>({
     name: "",
     phone: "",
@@ -75,12 +113,27 @@ const MyAccountPage: React.FC = () => {
 
   const isUnlocked = useMemo(() => Boolean(unlockSession && Date.now() < unlockSession.expiresAt), [unlockSession]);
 
+  const syncPhoneDrafts = (phone: string | null | undefined) => {
+    const split = splitPhoneValue(phone);
+    setPhoneCountryCode(split.countryCode);
+    setPhoneLocalNumber(split.localNumber);
+    setDrafts((prev) => ({ ...prev, phone: composePhoneValue(split.countryCode, split.localNumber) }));
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
         const me = await getMe();
         setUser(me);
-        setDrafts({ name: me.name, phone: me.phone ?? "", password: "", confirmPassword: "" });
+        const split = splitPhoneValue(me.phone);
+        setPhoneCountryCode(split.countryCode);
+        setPhoneLocalNumber(split.localNumber);
+        setDrafts({
+          name: me.name,
+          phone: composePhoneValue(split.countryCode, split.localNumber),
+          password: "",
+          confirmPassword: "",
+        });
       } catch (error) {
         setLoadingError(error instanceof Error ? error.message : "Unable to load account");
       }
@@ -103,7 +156,15 @@ const MyAccountPage: React.FC = () => {
   }, [unlockSession]);
 
   const resetDrafts = (nextUser: SettingsUser) => {
-    setDrafts({ name: nextUser.name, phone: nextUser.phone ?? "", password: "", confirmPassword: "" });
+    const split = splitPhoneValue(nextUser.phone);
+    setPhoneCountryCode(split.countryCode);
+    setPhoneLocalNumber(split.localNumber);
+    setDrafts({
+      name: nextUser.name,
+      phone: composePhoneValue(split.countryCode, split.localNumber),
+      password: "",
+      confirmPassword: "",
+    });
   };
 
   const relock = (nextUser?: SettingsUser) => {
@@ -129,6 +190,9 @@ const MyAccountPage: React.FC = () => {
     if (rowId === "password") {
       setDrafts((prev) => ({ ...prev, password: "", confirmPassword: "" }));
     }
+    if (rowId === "phone") {
+      syncPhoneDrafts(user?.phone);
+    }
   };
 
   const handleSave = async (rowId: Exclude<RowId, null>) => {
@@ -151,11 +215,11 @@ const MyAccountPage: React.FC = () => {
     }
 
     if (rowId === "phone") {
-      const trimmedPhone = drafts.phone.trim();
-      if (trimmedPhone && !PHONE_RE.test(trimmedPhone)) {
+      const composedPhone = composePhoneValue(phoneCountryCode, phoneLocalNumber);
+      if (composedPhone && !PHONE_RE.test(composedPhone)) {
         nextErrors.phone = "Phone must be in international format (e.g. +447700900123)";
       } else {
-        payload.phone = trimmedPhone;
+        payload.phone = composedPhone;
       }
     }
 
@@ -187,44 +251,46 @@ const MyAccountPage: React.FC = () => {
       setSaveMessage("Account updated successfully.");
       setActiveEditingRowId(null);
       setErrors({});
-      setDrafts({
-        name: updatedUser.name,
-        phone: updatedUser.phone ?? "",
-        password: "",
-        confirmPassword: "",
-      });
+      resetDrafts(updatedUser);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save";
       if (message.toLowerCase().includes("unlock")) {
         relock();
+        setErrors({ form: "Unlock session expired. Please unlock again." });
+      } else {
+        setErrors({ form: message });
       }
-      setErrors((prev) => ({ ...prev, form: message }));
     } finally {
       setSaving(false);
     }
   };
 
   if (loadingError) {
-    return <SettingsFrame><SettingsPageHeader title="My Account" /><div className="vrm-card"><div className="vrm-card-body">{loadingError}</div></div></SettingsFrame>;
+    return (
+      <SettingsFrame>
+        <div className="settings-form-error">{loadingError}</div>
+      </SettingsFrame>
+    );
   }
 
   if (!user) {
-    return <SettingsFrame><SettingsPageHeader title="My Account" /><div className="vrm-card"><div className="vrm-card-body">Loading account…</div></div></SettingsFrame>;
+    return null;
   }
 
   return (
     <SettingsFrame>
       <SettingsPageHeader
         title="My Account"
-        action={(
+        action={
           <div className="settings-account-header-actions">
+            {isUnlocked ? <span className="settings-unlock-chip">Unlocked</span> : null}
             {!isUnlocked ? (
               <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>Unlock to edit</button>
             ) : (
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => relock()}>Cancel / Lock</button>
             )}
           </div>
-        )}
+        }
       />
       <div className="vrm-card">
         <div className="vrm-card-body settings-account-card-body">
@@ -254,22 +320,54 @@ const MyAccountPage: React.FC = () => {
             <div className="settings-field-actions" aria-hidden="true" />
           </div>
 
-          <EditableFieldRow
-            label="Phone"
-            displayValue={maskPhone(user.phone)}
-            value={drafts.phone}
-            isEditing={activeEditingRowId === "phone"}
-            isSaving={saving}
-            error={errors.phone}
-            onEdit={() => requestEdit("phone")}
-            onCancel={() => {
-              setDrafts((prev) => ({ ...prev, phone: user.phone ?? "" }));
-              setActiveEditingRowId(null);
-              setErrors({});
-            }}
-            onSave={() => handleSave("phone")}
-            onChange={(value) => setDrafts((prev) => ({ ...prev, phone: value }))}
-          />
+          <div className={`settings-field-row ${activeEditingRowId !== "phone" ? "settings-field-row--readonly" : ""}`}>
+            <div className="settings-field-label">Phone</div>
+            <div className="settings-field-main">
+              {activeEditingRowId !== "phone" ? (
+                <div className="settings-field-value">{maskPhone(user.phone)}</div>
+              ) : (
+                <div className="settings-phone-editor">
+                  <AuthPhoneField
+                    idPrefix="account-phone"
+                    countryCode={phoneCountryCode}
+                    localNumber={phoneLocalNumber}
+                    onCountryCodeChange={(value) => {
+                      setPhoneCountryCode(value);
+                      setDrafts((prev) => ({ ...prev, phone: composePhoneValue(value, phoneLocalNumber) }));
+                      if (errors.phone) {
+                        setErrors((prev) => ({ ...prev, phone: undefined }));
+                      }
+                    }}
+                    onLocalNumberChange={(value) => {
+                      setPhoneLocalNumber(value);
+                      setDrafts((prev) => ({ ...prev, phone: composePhoneValue(phoneCountryCode, value) }));
+                      if (errors.phone) {
+                        setErrors((prev) => ({ ...prev, phone: undefined }));
+                      }
+                    }}
+                    inputClassName="settings-input"
+                  />
+                </div>
+              )}
+              {errors.phone ? <div className="settings-inline-error">{errors.phone}</div> : null}
+            </div>
+            <div className="settings-field-actions">
+              {activeEditingRowId !== "phone" ? (
+                <button className="settings-edit-icon-btn" onClick={() => requestEdit("phone")} aria-label="Edit phone">
+                  <PenLine size={14} aria-hidden="true" />
+                </button>
+              ) : (
+                <>
+                  <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => {
+                    syncPhoneDrafts(user.phone);
+                    setActiveEditingRowId(null);
+                    setErrors({});
+                  }} disabled={saving}>Cancel</button>
+                  <button className="vrm-btn vrm-btn-sm" onClick={() => handleSave("phone")} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
+                </>
+              )}
+            </div>
+          </div>
 
           <div className={`settings-field-row ${activeEditingRowId !== "password" ? "settings-field-row--readonly" : ""}`}>
             <div className="settings-field-label">Password</div>

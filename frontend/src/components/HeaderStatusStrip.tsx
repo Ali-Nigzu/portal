@@ -65,7 +65,14 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className, isAuth
       <div className="vrm-header-meta-group">
         <span className="vrm-header-chip" title={isAuthenticatedView ? "System status unavailable" : statusCopy[systemStatus]}>
           {isAuthenticatedView ? (
-            <span style={{ color: "var(--vrm-text-muted)" }}>NA</span>
+            <>
+              <span
+                className="vrm-status-indicator"
+                aria-hidden
+                style={{ backgroundColor: "var(--vrm-text-muted)", opacity: 0.75 }}
+              />{" "}
+              <span style={{ color: "var(--vrm-text-muted)" }}>System status: NA</span>
+            </>
           ) : (
             <>
               <span

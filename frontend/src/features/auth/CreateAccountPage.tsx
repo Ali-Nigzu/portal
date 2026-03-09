@@ -40,7 +40,6 @@ const CreateAccountPage: React.FC = () => {
               <span>Login</span>
             </Link>
 
-            <p className="create-account-title">Create Account</p>
             <h1 className="create-account-hero">Join Us &amp; See More</h1>
 
             {form.formError && (
@@ -49,7 +48,7 @@ const CreateAccountPage: React.FC = () => {
               </div>
             )}
 
-            <form className="create-account-form" onSubmit={form.submit}>
+            <form className="create-account-form" onSubmit={form.submit} noValidate>
               <div className="vrm-field create-account-field">
                 <label className="vrm-label" htmlFor="create-username">Username</label>
                 <input

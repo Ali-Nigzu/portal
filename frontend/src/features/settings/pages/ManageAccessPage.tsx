@@ -116,6 +116,7 @@ const ManageAccessPage: React.FC = () => {
 
       <div className="vrm-card">
         <div className="vrm-card-header settings-users-card-header">
+          <h2 className="vrm-card-title">Users</h2>
           <button
             type="button"
             className={`vrm-btn vrm-btn-sm ${isDirty ? "vrm-btn-primary settings-save-cta--active" : "vrm-btn-secondary settings-save-cta--inactive"}`}
@@ -123,7 +124,6 @@ const ManageAccessPage: React.FC = () => {
           >
             Save
           </button>
-          <h2 className="vrm-card-title">Users</h2>
         </div>
         <div className="vrm-card-body settings-table-card-body">
           <UsersTable
