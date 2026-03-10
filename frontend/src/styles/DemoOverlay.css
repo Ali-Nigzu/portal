@@ -109,3 +109,30 @@
   outline: 2px solid rgba(79, 195, 247, 0.9);
   outline-offset: 2px;
 }
+
+
+/* Keep demo scrolling behavior, but dark-theme scrollbars only within the demo overlay context. */
+.demo-overlay,
+.demo-overlay * {
+  scrollbar-color: #3f4d64 #141b26;
+  scrollbar-width: thin;
+}
+
+.demo-overlay *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.demo-overlay *::-webkit-scrollbar-track {
+  background: #141b26;
+}
+
+.demo-overlay *::-webkit-scrollbar-thumb {
+  background: #3f4d64;
+  border-radius: 999px;
+  border: 2px solid #141b26;
+}
+
+.demo-overlay *::-webkit-scrollbar-thumb:hover {
+  background: #4d5f7c;
+}

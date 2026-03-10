@@ -330,7 +330,7 @@ def send_invite_user_email(*, to_email: str, inviter_username: str, access_level
     payload = {
         "From": config.from_email,
         "To": to_email,
-        "Subject": f"[{inviter_username}] has invited you to camOS",
+        "Subject": f"{inviter_username} has invited you to camOS",
         "TextBody": (
             f"{inviter_username} has invited you to camOS.\n\n"
             f"Role: {access_level}\n"

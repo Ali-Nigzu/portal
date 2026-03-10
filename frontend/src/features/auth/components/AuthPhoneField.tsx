@@ -139,7 +139,6 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
           <input
             ref={searchRef}
             className="vrm-input auth-phone-search"
-            placeholder="Search ISO or country"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
