@@ -323,3 +323,25 @@ def send_password_reset_code_email(*, to_email: str, code: str) -> None:
         from_email=config.from_email,
         to_email=to_email,
     )
+
+
+def send_invite_user_email(*, to_email: str, inviter_username: str, access_level: str, site: str, signup_url: str) -> None:
+    config = _load_config()
+    payload = {
+        "From": config.from_email,
+        "To": to_email,
+        "Subject": f"[{inviter_username}] has invited you to camOS",
+        "TextBody": (
+            f"{inviter_username} has invited you to camOS.\n\n"
+            f"Role: {access_level}\n"
+            f"Site: {site}\n\n"
+            "Create your account here:\n"
+            f"{signup_url}\n"
+        ),
+    }
+    _postmark_send(
+        token=config.server_token,
+        payload=payload,
+        from_email=config.from_email,
+        to_email=to_email,
+    )

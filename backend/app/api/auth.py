@@ -10,6 +10,7 @@ import re
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 
@@ -34,6 +35,8 @@ from backend.app.data.json_store import (
     save_pending_signups,
     save_pending_password_resets,
     load_pending_password_resets,
+    load_pending_invites,
+    save_pending_invites,
     save_users,
 )
 from backend.app.models import (
@@ -60,6 +63,10 @@ from backend.app.models import (
     PasswordResetVerifyResponse,
     PasswordResetSetPasswordRequest,
     PasswordResetSetPasswordResponse,
+    InviteUserRequest,
+    InviteUserResponse,
+    PendingInvitesResponse,
+    PendingInvite,
     SignupResendRequest,
     SignupResendResponse,
     SignupStartResponse,
@@ -76,6 +83,7 @@ from backend.app.services.postmark_email import (
     send_settings_unlock_code_email,
     send_password_reset_code_email,
     send_verification_email,
+    send_invite_user_email,
 )
 
 router = APIRouter()
@@ -553,6 +561,78 @@ async def settings_unlock_verify(
         unlockToken=unlock_token,
         unlockExpiresInSeconds=SETTINGS_UNLOCK_SESSION_SECONDS,
     )
+
+
+@router.get("/api/settings/invites", response_model=PendingInvitesResponse)
+async def get_pending_invites(session_user: tuple[str, dict] = Depends(get_session_user)):
+    _ = session_user
+    pending_invites = load_pending_invites()
+
+    invites: list[PendingInvite] = []
+    for record in pending_invites.values():
+        if not isinstance(record, dict):
+            continue
+        invites.append(
+            PendingInvite(
+                email=str(record.get("email", "")),
+                site=str(record.get("site", "All Sites")),
+                accessLevel=str(record.get("accessLevel", "Viewer")),
+                invitedAt=str(record.get("invitedAt", "")),
+            )
+        )
+
+    invites.sort(key=lambda invite: invite.invitedAt, reverse=True)
+    return PendingInvitesResponse(invites=invites)
+
+
+@router.post("/api/settings/invites", response_model=InviteUserResponse)
+async def create_pending_invite(
+    payload: InviteUserRequest,
+    session_user: tuple[str, dict] = Depends(get_session_user),
+):
+    username, user_data = session_user
+    email = _validate_email(payload.email)
+    site = payload.site.strip() or "All Sites"
+    access_level = payload.accessLevel
+
+    if access_level not in {"Admin", "Viewer"}:
+        raise HTTPException(status_code=422, detail="Invalid access level")
+
+    now = _utc_now()
+    invited_at = _to_iso(now)
+    invite_key = f"{normalize_email(email)}|{site.lower()}"
+
+    pending_invites = load_pending_invites()
+    pending_invites[invite_key] = {
+        "email": email,
+        "site": site,
+        "accessLevel": access_level,
+        "invitedAt": invited_at,
+        "invitedBy": str(user_data.get("name") or username),
+    }
+
+    signup_url = "https://camos.app/createaccount"
+    if site.lower() != "all sites":
+        signup_url = f"{signup_url}?site={quote(site)}"
+
+    try:
+        send_invite_user_email(
+            to_email=email,
+            inviter_username=str(user_data.get("name") or username),
+            access_level=access_level,
+            site=site,
+            signup_url=signup_url,
+        )
+    except Exception as exc:
+        if isinstance(exc, PostmarkConfigurationError):
+            raise HTTPException(status_code=503, detail="Invite email service unavailable") from exc
+        if isinstance(exc, PostmarkDeliveryError):
+            raise HTTPException(status_code=502, detail="Unable to deliver invite email") from exc
+        raise HTTPException(status_code=502, detail="Unable to deliver invite email") from exc
+
+    save_pending_invites(pending_invites)
+    invite = PendingInvite(email=email, site=site, accessLevel=access_level, invitedAt=invited_at)
+    return InviteUserResponse(ok=True, invite=invite)
 
 
 @router.put("/api/me", response_model=AuthUserResponse)

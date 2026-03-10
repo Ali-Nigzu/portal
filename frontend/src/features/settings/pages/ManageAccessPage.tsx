@@ -86,6 +86,8 @@ const ManageAccessPage: React.FC = () => {
   }) => {
     try {
       await inviteUser(payload);
+      const latestInvites = await getPendingInvites();
+      setInvites(latestInvites);
     } catch (error) {
       if (isNotImplementedError(error)) {
         throw new Error("Not implemented yet");

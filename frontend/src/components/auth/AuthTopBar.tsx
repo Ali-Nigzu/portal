@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
-import { companyLogoDataUri } from "../../assets/companyLogo";
+import brandSymbol from "../../assets/Untitled design (4).svg";
 import styles from "./AuthTopBar.module.css";
 
 const buildSafeDemoReturnTo = (pathname: string, search: string, hash: string) => {
@@ -26,7 +26,7 @@ const AuthTopBar: React.FC = () => {
     <header className={styles.topBar}>
       <div className={styles.leftZone}>
         <Link className={styles.brand} to="/" aria-label="camOS landing page">
-          <img src={companyLogoDataUri} alt="camOS" className={styles.logo} />
+          <img src={brandSymbol} alt="camOS" className={styles.logo} />
         </Link>
       </div>
 

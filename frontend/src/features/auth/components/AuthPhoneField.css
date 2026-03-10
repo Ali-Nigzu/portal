@@ -29,7 +29,7 @@
 .auth-phone-dropdown {
   position: absolute;
   left: 0;
-  width: min(440px, 90vw);
+  width: min(360px, 88vw);
   z-index: 1400;
   border: 1px solid rgba(137, 180, 255, 0.35);
   border-radius: 10px;
@@ -37,7 +37,7 @@
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.44);
   padding: 8px;
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .auth-phone-dropdown.down {
@@ -87,7 +87,7 @@
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   cursor: pointer;
 }
 

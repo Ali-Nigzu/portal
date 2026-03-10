@@ -133,14 +133,43 @@ export const updatePassword = async (_password: string): Promise<void> => {
 
 export const getManagedUsers = async (): Promise<ManagedUser[]> => [];
 
-export const getPendingInvites = async (): Promise<PendingInvite[]> => [];
+export const getPendingInvites = async (): Promise<PendingInvite[]> => {
+  const response = await fetch("/api/settings/invites", {
+    credentials: "include",
+  });
 
-export const inviteUser = async (_payload: {
+  if (!response.ok) {
+    throw new Error("Unable to load pending invites");
+  }
+
+  const data = await response.json() as { invites: PendingInvite[] };
+  return data.invites;
+};
+
+export const inviteUser = async (payload: {
   email: string;
   site: string;
   accessLevel: AccessLevel;
 }): Promise<void> => {
-  throw notImplementedError;
+  const response = await fetch("/api/settings/invites", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let message = "Unable to submit invite";
+    try {
+      const data = (await response.json()) as { detail?: string };
+      if (data.detail) {
+        message = data.detail;
+      }
+    } catch {
+      // noop
+    }
+    throw new Error(message);
+  }
 };
 
 export const isNotImplementedError = (error: unknown) =>

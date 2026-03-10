@@ -35,7 +35,29 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return PHONE_OPTIONS;
-    return PHONE_OPTIONS.filter((option) => option.searchText.includes(normalizedQuery));
+
+    const ranked = PHONE_OPTIONS
+      .map((option) => {
+        const iso = option.iso2.toLowerCase();
+        const country = option.countryName.toLowerCase();
+        const search = option.searchText;
+
+        let rank = -1;
+        if (iso.startsWith(normalizedQuery) || country.startsWith(normalizedQuery)) {
+          rank = 3;
+        } else if (search.includes(normalizedQuery)) {
+          rank = 2;
+        }
+
+        return { option, rank };
+      })
+      .filter((entry) => entry.rank > 0)
+      .sort((a, b) => {
+        if (b.rank !== a.rank) return b.rank - a.rank;
+        return a.option.countryName.localeCompare(b.option.countryName);
+      });
+
+    return ranked.map((entry) => entry.option);
   }, [query]);
 
   const recalculateDirection = () => {
