@@ -13,6 +13,9 @@ import ReenterPasswordModal from "../components/ReenterPasswordModal";
 import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
 import type { SettingsUser } from "../types";
+import AuthPhoneField from "../../auth/components/AuthPhoneField";
+import { ensurePhoneHasDialCode, getDefaultPhoneIso, getPhoneOptionByIso, matchIsoFromPhone, normalizeInternationalPhone } from "../../auth/phoneUtils";
+import "../../auth/components/AuthPhoneField.css";
 import "../SettingsPages.css";
 
 type RowId = "name" | "phone" | "password" | null;
@@ -40,14 +43,7 @@ type UnlockSession = {
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 const INTERNAL_UNLOCK_SESSION_SECONDS = 300;
 
-const maskEmail = (email: string) => {
-  const [localPart, domain] = email.split("@");
-  if (!domain) {
-    return "••••";
-  }
-  const visible = Math.min(2, localPart.length);
-  return `${localPart.slice(0, visible)}${"•".repeat(Math.max(localPart.length - visible, 4))}@${domain}`;
-};
+const maskEmail = () => "**************";
 
 const maskPhone = (phone: string | null | undefined) => {
   if (!phone) {
@@ -55,6 +51,15 @@ const maskPhone = (phone: string | null | undefined) => {
   }
   const visible = phone.slice(-2);
   return `${"•".repeat(Math.max(phone.length - 2, 4))}${visible}`;
+};
+
+const splitPhoneValue = (phone: string | null | undefined) => {
+  const normalized = normalizeInternationalPhone(phone ?? "");
+  const matchedIso = matchIsoFromPhone(normalized) ?? getDefaultPhoneIso();
+  return {
+    selectedIso: matchedIso,
+    phoneValue: normalized || ensurePhoneHasDialCode("", matchedIso),
+  };
 };
 
 const MyAccountPage: React.FC = () => {
@@ -66,6 +71,8 @@ const MyAccountPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [activeEditingRowId, setActiveEditingRowId] = useState<RowId>(null);
   const [errors, setErrors] = useState<FormErrorState>({});
+  const [selectedPhoneIso, setSelectedPhoneIso] = useState(getDefaultPhoneIso());
+  const [phoneInputValue, setPhoneInputValue] = useState(() => ensurePhoneHasDialCode("", getDefaultPhoneIso()));
   const [drafts, setDrafts] = useState<DraftState>({
     name: "",
     phone: "",
@@ -75,12 +82,27 @@ const MyAccountPage: React.FC = () => {
 
   const isUnlocked = useMemo(() => Boolean(unlockSession && Date.now() < unlockSession.expiresAt), [unlockSession]);
 
+  const syncPhoneDrafts = (phone: string | null | undefined) => {
+    const split = splitPhoneValue(phone);
+    setSelectedPhoneIso(split.selectedIso);
+    setPhoneInputValue(split.phoneValue);
+    setDrafts((prev) => ({ ...prev, phone: split.phoneValue }));
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
         const me = await getMe();
         setUser(me);
-        setDrafts({ name: me.name, phone: me.phone ?? "", password: "", confirmPassword: "" });
+        const split = splitPhoneValue(me.phone);
+        setSelectedPhoneIso(split.selectedIso);
+        setPhoneInputValue(split.phoneValue);
+        setDrafts({
+          name: me.name,
+          phone: split.phoneValue,
+          password: "",
+          confirmPassword: "",
+        });
       } catch (error) {
         setLoadingError(error instanceof Error ? error.message : "Unable to load account");
       }
@@ -103,7 +125,15 @@ const MyAccountPage: React.FC = () => {
   }, [unlockSession]);
 
   const resetDrafts = (nextUser: SettingsUser) => {
-    setDrafts({ name: nextUser.name, phone: nextUser.phone ?? "", password: "", confirmPassword: "" });
+    const split = splitPhoneValue(nextUser.phone);
+    setSelectedPhoneIso(split.selectedIso);
+    setPhoneInputValue(split.phoneValue);
+    setDrafts({
+      name: nextUser.name,
+      phone: split.phoneValue,
+      password: "",
+      confirmPassword: "",
+    });
   };
 
   const relock = (nextUser?: SettingsUser) => {
@@ -129,6 +159,9 @@ const MyAccountPage: React.FC = () => {
     if (rowId === "password") {
       setDrafts((prev) => ({ ...prev, password: "", confirmPassword: "" }));
     }
+    if (rowId === "phone") {
+      syncPhoneDrafts(user?.phone);
+    }
   };
 
   const handleSave = async (rowId: Exclude<RowId, null>) => {
@@ -151,11 +184,13 @@ const MyAccountPage: React.FC = () => {
     }
 
     if (rowId === "phone") {
-      const trimmedPhone = drafts.phone.trim();
-      if (trimmedPhone && !PHONE_RE.test(trimmedPhone)) {
+      const normalizedPhone = normalizeInternationalPhone(phoneInputValue);
+      const selectedDialOnly = ensurePhoneHasDialCode("", selectedPhoneIso);
+      const composedPhone = normalizedPhone && normalizedPhone !== selectedDialOnly ? normalizedPhone : "";
+      if (composedPhone && !PHONE_RE.test(composedPhone)) {
         nextErrors.phone = "Phone must be in international format (e.g. +447700900123)";
       } else {
-        payload.phone = trimmedPhone;
+        payload.phone = composedPhone;
       }
     }
 
@@ -187,44 +222,46 @@ const MyAccountPage: React.FC = () => {
       setSaveMessage("Account updated successfully.");
       setActiveEditingRowId(null);
       setErrors({});
-      setDrafts({
-        name: updatedUser.name,
-        phone: updatedUser.phone ?? "",
-        password: "",
-        confirmPassword: "",
-      });
+      resetDrafts(updatedUser);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save";
       if (message.toLowerCase().includes("unlock")) {
         relock();
+        setErrors({ form: "Unlock session expired. Please unlock again." });
+      } else {
+        setErrors({ form: message });
       }
-      setErrors((prev) => ({ ...prev, form: message }));
     } finally {
       setSaving(false);
     }
   };
 
   if (loadingError) {
-    return <SettingsFrame><SettingsPageHeader title="My Account" /><div className="vrm-card"><div className="vrm-card-body">{loadingError}</div></div></SettingsFrame>;
+    return (
+      <SettingsFrame>
+        <div className="settings-form-error">{loadingError}</div>
+      </SettingsFrame>
+    );
   }
 
   if (!user) {
-    return <SettingsFrame><SettingsPageHeader title="My Account" /><div className="vrm-card"><div className="vrm-card-body">Loading account…</div></div></SettingsFrame>;
+    return null;
   }
 
   return (
     <SettingsFrame>
       <SettingsPageHeader
         title="My Account"
-        action={(
+        action={
           <div className="settings-account-header-actions">
+            {isUnlocked ? <span className="settings-unlock-chip">Unlocked</span> : null}
             {!isUnlocked ? (
-              <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>Unlock to edit</button>
+              <button className="vrm-btn vrm-btn-sm" onClick={() => setIsUnlockOpen(true)}>Unlock to Edit</button>
             ) : (
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => relock()}>Cancel / Lock</button>
             )}
           </div>
-        )}
+        }
       />
       <div className="vrm-card">
         <div className="vrm-card-body settings-account-card-body">
@@ -248,28 +285,66 @@ const MyAccountPage: React.FC = () => {
           <div className="settings-field-row settings-field-row--readonly">
             <div className="settings-field-label">Email</div>
             <div className="settings-field-main">
-              <div className="settings-field-value">{maskEmail(user.email)}</div>
+              <div className="settings-field-value">{maskEmail()}</div>
               <div className="settings-field-help">Email cannot be changed from My Account.</div>
             </div>
             <div className="settings-field-actions" aria-hidden="true" />
           </div>
 
-          <EditableFieldRow
-            label="Phone"
-            displayValue={maskPhone(user.phone)}
-            value={drafts.phone}
-            isEditing={activeEditingRowId === "phone"}
-            isSaving={saving}
-            error={errors.phone}
-            onEdit={() => requestEdit("phone")}
-            onCancel={() => {
-              setDrafts((prev) => ({ ...prev, phone: user.phone ?? "" }));
-              setActiveEditingRowId(null);
-              setErrors({});
-            }}
-            onSave={() => handleSave("phone")}
-            onChange={(value) => setDrafts((prev) => ({ ...prev, phone: value }))}
-          />
+          <div className={`settings-field-row ${activeEditingRowId !== "phone" ? "settings-field-row--readonly" : ""}`}>
+            <div className="settings-field-label">Phone</div>
+            <div className="settings-field-main">
+              {activeEditingRowId !== "phone" ? (
+                <div className="settings-field-value">{maskPhone(user.phone)}</div>
+              ) : (
+                <div className="settings-phone-editor">
+                  <AuthPhoneField
+                    idPrefix="account-phone"
+                    selectedIso={selectedPhoneIso}
+                    phoneValue={phoneInputValue}
+                    onSelectedIsoChange={(iso) => {
+                      setSelectedPhoneIso(iso);
+                      const nextValue = ensurePhoneHasDialCode(phoneInputValue, iso);
+                      setPhoneInputValue(nextValue);
+                      setDrafts((prev) => ({ ...prev, phone: nextValue }));
+                      if (errors.phone) {
+                        setErrors((prev) => ({ ...prev, phone: undefined }));
+                      }
+                    }}
+                    onPhoneValueChange={(value) => {
+                      setPhoneInputValue(value);
+                      setDrafts((prev) => ({ ...prev, phone: value }));
+                      const detectedIso = matchIsoFromPhone(value);
+                      if (detectedIso && getPhoneOptionByIso(detectedIso)) {
+                        setSelectedPhoneIso(detectedIso);
+                      }
+                      if (errors.phone) {
+                        setErrors((prev) => ({ ...prev, phone: undefined }));
+                      }
+                    }}
+                    inputClassName="settings-input"
+                  />
+                </div>
+              )}
+              {errors.phone ? <div className="settings-inline-error">{errors.phone}</div> : null}
+            </div>
+            <div className="settings-field-actions">
+              {activeEditingRowId !== "phone" ? (
+                <button className="settings-edit-icon-btn" onClick={() => requestEdit("phone")} aria-label="Edit phone">
+                  <PenLine size={14} aria-hidden="true" />
+                </button>
+              ) : (
+                <>
+                  <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={() => {
+                    syncPhoneDrafts(user.phone);
+                    setActiveEditingRowId(null);
+                    setErrors({});
+                  }} disabled={saving}>Cancel</button>
+                  <button className="vrm-btn vrm-btn-sm" onClick={() => handleSave("phone")} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
+                </>
+              )}
+            </div>
+          </div>
 
           <div className={`settings-field-row ${activeEditingRowId !== "password" ? "settings-field-row--readonly" : ""}`}>
             <div className="settings-field-label">Password</div>

@@ -2,28 +2,12 @@ export type CountryPhoneOption = { iso2: string; dialCode: string };
 
 export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
-    "iso2": "AC",
-    "dialCode": "+247"
-  },
-  {
-    "iso2": "AD",
-    "dialCode": "+376"
-  },
-  {
     "iso2": "AE",
     "dialCode": "+971"
   },
   {
     "iso2": "AF",
     "dialCode": "+93"
-  },
-  {
-    "iso2": "AG",
-    "dialCode": "+1"
-  },
-  {
-    "iso2": "AI",
-    "dialCode": "+1"
   },
   {
     "iso2": "AL",
@@ -42,10 +26,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+54"
   },
   {
-    "iso2": "AS",
-    "dialCode": "+1"
-  },
-  {
     "iso2": "AT",
     "dialCode": "+43"
   },
@@ -54,24 +34,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+61"
   },
   {
-    "iso2": "AW",
-    "dialCode": "+297"
-  },
-  {
-    "iso2": "AX",
-    "dialCode": "+358"
-  },
-  {
     "iso2": "AZ",
     "dialCode": "+994"
   },
   {
     "iso2": "BA",
     "dialCode": "+387"
-  },
-  {
-    "iso2": "BB",
-    "dialCode": "+1"
   },
   {
     "iso2": "BD",
@@ -102,36 +70,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+229"
   },
   {
-    "iso2": "BL",
-    "dialCode": "+590"
-  },
-  {
-    "iso2": "BM",
-    "dialCode": "+1"
-  },
-  {
-    "iso2": "BN",
-    "dialCode": "+673"
-  },
-  {
     "iso2": "BO",
     "dialCode": "+591"
   },
   {
-    "iso2": "BQ",
-    "dialCode": "+599"
-  },
-  {
     "iso2": "BR",
     "dialCode": "+55"
-  },
-  {
-    "iso2": "BS",
-    "dialCode": "+1"
-  },
-  {
-    "iso2": "BT",
-    "dialCode": "+975"
   },
   {
     "iso2": "BW",
@@ -142,16 +86,8 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+375"
   },
   {
-    "iso2": "BZ",
-    "dialCode": "+501"
-  },
-  {
     "iso2": "CA",
     "dialCode": "+1"
-  },
-  {
-    "iso2": "CC",
-    "dialCode": "+61"
   },
   {
     "iso2": "CD",
@@ -172,10 +108,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
     "iso2": "CI",
     "dialCode": "+225"
-  },
-  {
-    "iso2": "CK",
-    "dialCode": "+682"
   },
   {
     "iso2": "CL",
@@ -202,18 +134,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+53"
   },
   {
-    "iso2": "CV",
-    "dialCode": "+238"
-  },
-  {
-    "iso2": "CW",
-    "dialCode": "+599"
-  },
-  {
-    "iso2": "CX",
-    "dialCode": "+61"
-  },
-  {
     "iso2": "CY",
     "dialCode": "+357"
   },
@@ -232,10 +152,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
     "iso2": "DK",
     "dialCode": "+45"
-  },
-  {
-    "iso2": "DM",
-    "dialCode": "+1"
   },
   {
     "iso2": "DO",
@@ -258,10 +174,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+20"
   },
   {
-    "iso2": "EH",
-    "dialCode": "+212"
-  },
-  {
     "iso2": "ER",
     "dialCode": "+291"
   },
@@ -278,22 +190,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+358"
   },
   {
-    "iso2": "FJ",
-    "dialCode": "+679"
-  },
-  {
-    "iso2": "FK",
-    "dialCode": "+500"
-  },
-  {
-    "iso2": "FM",
-    "dialCode": "+691"
-  },
-  {
-    "iso2": "FO",
-    "dialCode": "+298"
-  },
-  {
     "iso2": "FR",
     "dialCode": "+33"
   },
@@ -306,32 +202,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+44"
   },
   {
-    "iso2": "GD",
-    "dialCode": "+1"
-  },
-  {
     "iso2": "GE",
     "dialCode": "+995"
   },
   {
-    "iso2": "GF",
-    "dialCode": "+594"
-  },
-  {
-    "iso2": "GG",
-    "dialCode": "+44"
-  },
-  {
     "iso2": "GH",
     "dialCode": "+233"
-  },
-  {
-    "iso2": "GI",
-    "dialCode": "+350"
-  },
-  {
-    "iso2": "GL",
-    "dialCode": "+299"
   },
   {
     "iso2": "GM",
@@ -340,10 +216,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
     "iso2": "GN",
     "dialCode": "+224"
-  },
-  {
-    "iso2": "GP",
-    "dialCode": "+590"
   },
   {
     "iso2": "GQ",
@@ -358,16 +230,8 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+502"
   },
   {
-    "iso2": "GU",
-    "dialCode": "+1"
-  },
-  {
     "iso2": "GW",
     "dialCode": "+245"
-  },
-  {
-    "iso2": "GY",
-    "dialCode": "+592"
   },
   {
     "iso2": "HK",
@@ -402,16 +266,8 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+972"
   },
   {
-    "iso2": "IM",
-    "dialCode": "+44"
-  },
-  {
     "iso2": "IN",
     "dialCode": "+91"
-  },
-  {
-    "iso2": "IO",
-    "dialCode": "+246"
   },
   {
     "iso2": "IQ",
@@ -422,16 +278,8 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+98"
   },
   {
-    "iso2": "IS",
-    "dialCode": "+354"
-  },
-  {
     "iso2": "IT",
     "dialCode": "+39"
-  },
-  {
-    "iso2": "JE",
-    "dialCode": "+44"
   },
   {
     "iso2": "JM",
@@ -458,18 +306,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+855"
   },
   {
-    "iso2": "KI",
-    "dialCode": "+686"
-  },
-  {
-    "iso2": "KM",
-    "dialCode": "+269"
-  },
-  {
-    "iso2": "KN",
-    "dialCode": "+1"
-  },
-  {
     "iso2": "KP",
     "dialCode": "+850"
   },
@@ -482,10 +318,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+965"
   },
   {
-    "iso2": "KY",
-    "dialCode": "+1"
-  },
-  {
     "iso2": "KZ",
     "dialCode": "+7"
   },
@@ -496,14 +328,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
     "iso2": "LB",
     "dialCode": "+961"
-  },
-  {
-    "iso2": "LC",
-    "dialCode": "+1"
-  },
-  {
-    "iso2": "LI",
-    "dialCode": "+423"
   },
   {
     "iso2": "LK",
@@ -522,10 +346,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+370"
   },
   {
-    "iso2": "LU",
-    "dialCode": "+352"
-  },
-  {
     "iso2": "LV",
     "dialCode": "+371"
   },
@@ -538,28 +358,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+212"
   },
   {
-    "iso2": "MC",
-    "dialCode": "+377"
-  },
-  {
     "iso2": "MD",
     "dialCode": "+373"
   },
   {
-    "iso2": "ME",
-    "dialCode": "+382"
-  },
-  {
-    "iso2": "MF",
-    "dialCode": "+590"
-  },
-  {
     "iso2": "MG",
     "dialCode": "+261"
-  },
-  {
-    "iso2": "MH",
-    "dialCode": "+692"
   },
   {
     "iso2": "MK",
@@ -578,36 +382,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+976"
   },
   {
-    "iso2": "MO",
-    "dialCode": "+853"
-  },
-  {
-    "iso2": "MP",
-    "dialCode": "+1"
-  },
-  {
-    "iso2": "MQ",
-    "dialCode": "+596"
-  },
-  {
     "iso2": "MR",
     "dialCode": "+222"
   },
   {
-    "iso2": "MS",
-    "dialCode": "+1"
-  },
-  {
-    "iso2": "MT",
-    "dialCode": "+356"
-  },
-  {
     "iso2": "MU",
     "dialCode": "+230"
-  },
-  {
-    "iso2": "MV",
-    "dialCode": "+960"
   },
   {
     "iso2": "MW",
@@ -630,16 +410,8 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+264"
   },
   {
-    "iso2": "NC",
-    "dialCode": "+687"
-  },
-  {
     "iso2": "NE",
     "dialCode": "+227"
-  },
-  {
-    "iso2": "NF",
-    "dialCode": "+672"
   },
   {
     "iso2": "NG",
@@ -662,14 +434,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+977"
   },
   {
-    "iso2": "NR",
-    "dialCode": "+674"
-  },
-  {
-    "iso2": "NU",
-    "dialCode": "+683"
-  },
-  {
     "iso2": "NZ",
     "dialCode": "+64"
   },
@@ -684,10 +448,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
     "iso2": "PE",
     "dialCode": "+51"
-  },
-  {
-    "iso2": "PF",
-    "dialCode": "+689"
   },
   {
     "iso2": "PG",
@@ -706,10 +466,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+48"
   },
   {
-    "iso2": "PM",
-    "dialCode": "+508"
-  },
-  {
     "iso2": "PR",
     "dialCode": "+1"
   },
@@ -722,20 +478,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+351"
   },
   {
-    "iso2": "PW",
-    "dialCode": "+680"
-  },
-  {
     "iso2": "PY",
     "dialCode": "+595"
   },
   {
     "iso2": "QA",
     "dialCode": "+974"
-  },
-  {
-    "iso2": "RE",
-    "dialCode": "+262"
   },
   {
     "iso2": "RO",
@@ -758,14 +506,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+966"
   },
   {
-    "iso2": "SB",
-    "dialCode": "+677"
-  },
-  {
-    "iso2": "SC",
-    "dialCode": "+248"
-  },
-  {
     "iso2": "SD",
     "dialCode": "+249"
   },
@@ -778,16 +518,8 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+65"
   },
   {
-    "iso2": "SH",
-    "dialCode": "+290"
-  },
-  {
     "iso2": "SI",
     "dialCode": "+386"
-  },
-  {
-    "iso2": "SJ",
-    "dialCode": "+47"
   },
   {
     "iso2": "SK",
@@ -798,10 +530,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+232"
   },
   {
-    "iso2": "SM",
-    "dialCode": "+378"
-  },
-  {
     "iso2": "SN",
     "dialCode": "+221"
   },
@@ -810,24 +538,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+252"
   },
   {
-    "iso2": "SR",
-    "dialCode": "+597"
-  },
-  {
     "iso2": "SS",
     "dialCode": "+211"
   },
   {
-    "iso2": "ST",
-    "dialCode": "+239"
-  },
-  {
     "iso2": "SV",
     "dialCode": "+503"
-  },
-  {
-    "iso2": "SX",
-    "dialCode": "+1"
   },
   {
     "iso2": "SY",
@@ -836,14 +552,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
     "iso2": "SZ",
     "dialCode": "+268"
-  },
-  {
-    "iso2": "TA",
-    "dialCode": "+290"
-  },
-  {
-    "iso2": "TC",
-    "dialCode": "+1"
   },
   {
     "iso2": "TD",
@@ -862,10 +570,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+992"
   },
   {
-    "iso2": "TK",
-    "dialCode": "+690"
-  },
-  {
     "iso2": "TL",
     "dialCode": "+670"
   },
@@ -878,20 +582,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+216"
   },
   {
-    "iso2": "TO",
-    "dialCode": "+676"
-  },
-  {
     "iso2": "TR",
     "dialCode": "+90"
   },
   {
     "iso2": "TT",
     "dialCode": "+1"
-  },
-  {
-    "iso2": "TV",
-    "dialCode": "+688"
   },
   {
     "iso2": "TW",
@@ -922,40 +618,12 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "dialCode": "+998"
   },
   {
-    "iso2": "VA",
-    "dialCode": "+39"
-  },
-  {
-    "iso2": "VC",
-    "dialCode": "+1"
-  },
-  {
     "iso2": "VE",
     "dialCode": "+58"
   },
   {
-    "iso2": "VG",
-    "dialCode": "+1"
-  },
-  {
-    "iso2": "VI",
-    "dialCode": "+1"
-  },
-  {
     "iso2": "VN",
     "dialCode": "+84"
-  },
-  {
-    "iso2": "VU",
-    "dialCode": "+678"
-  },
-  {
-    "iso2": "WF",
-    "dialCode": "+681"
-  },
-  {
-    "iso2": "WS",
-    "dialCode": "+685"
   },
   {
     "iso2": "XK",
@@ -964,10 +632,6 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
   {
     "iso2": "YE",
     "dialCode": "+967"
-  },
-  {
-    "iso2": "YT",
-    "dialCode": "+262"
   },
   {
     "iso2": "ZA",
@@ -981,4 +645,4 @@ export const COUNTRY_PHONE_OPTIONS: CountryPhoneOption[] = [
     "iso2": "ZW",
     "dialCode": "+263"
   }
-] as CountryPhoneOption[];
+];

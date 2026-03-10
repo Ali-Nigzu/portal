@@ -1,5 +1,5 @@
 import React from "react";
-import { companyLogoDataUri } from "../../../assets/companyLogo";
+import brandSymbol from "../../../assets/Untitled design (4).svg";
 import { landingCopy } from "../content";
 
 type LandingHeaderProps = {
@@ -13,7 +13,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
     <div className="landing-container landing-header-top">
       <div className="landing-brand" aria-label={landingCopy.brand.shortName}>
         <img
-          src={companyLogoDataUri}
+          src={brandSymbol}
           alt="camOS Logo"
           className="landing-brand-logo"
         />

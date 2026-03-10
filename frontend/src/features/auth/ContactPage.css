@@ -16,20 +16,20 @@
   min-width: 0;
   display: flex;
   justify-content: center;
-  padding: 34px 32px 40px;
+  padding: 30px 32px 40px;
 }
 
 .contact-content {
   width: 100%;
   max-width: 520px;
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  padding-top: 4px;
 }
 
-.contact-title {
-  color: #c9d2e1;
-  font-size: 16px;
-  font-weight: 500;
+.contact-left-form {
+  display: grid;
+  gap: 1px;
 }
 
 .contact-hero {
@@ -37,7 +37,7 @@
   line-height: 1.14;
   letter-spacing: -0.02em;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .contact-field {
@@ -46,7 +46,7 @@
 
 .contact-error-slot {
   min-height: 0;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .contact-error-slot:empty {
@@ -59,7 +59,7 @@
 }
 
 .contact-under-cta {
-  margin-top: 8px;
+  margin-top: 3px;
   color: #aab6c9;
   font-size: 13px;
 }
@@ -80,7 +80,7 @@
   overflow: hidden;
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   background: #151a22;
-  padding: 34px 32px 40px;
+  padding: 30px 32px 40px;
   display: flex;
 }
 
@@ -110,17 +110,58 @@
 
 .contact-attachment-list {
   margin: 8px 0 0;
-  padding-left: 16px;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.contact-attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   color: #c9d2e1;
   font-size: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.contact-attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-attachment-remove {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #d8e2f6;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.contact-attachment-remove:hover,
+.contact-attachment-remove:focus-visible {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
 }
 
 .contact-request-error {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .contact-success {
-  margin-top: 4px;
+  margin-top: 3px;
   color: #8ad9a2;
   font-size: 13px;
 }

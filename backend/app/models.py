@@ -165,6 +165,29 @@ class SettingsUnlockResendResponse(BaseModel):
     resendsRemaining: int
 
 
+
+
+class InviteUserRequest(BaseModel):
+    email: str
+    site: str
+    accessLevel: Literal["Admin", "Viewer"]
+
+
+class PendingInvite(BaseModel):
+    email: str
+    site: str
+    accessLevel: Literal["Admin", "Viewer"]
+    invitedAt: str
+
+
+class PendingInvitesResponse(BaseModel):
+    invites: List[PendingInvite]
+
+
+class InviteUserResponse(BaseModel):
+    ok: bool
+    invite: PendingInvite
+
 class UpdateMeRequest(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None

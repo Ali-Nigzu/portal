@@ -66,7 +66,7 @@ body {
 }
 
 .landing-brand { display: inline-flex; align-items: center; gap: 10px; }
-.landing-brand-logo { width: 30px; height: 30px; object-fit: contain; }
+.landing-brand-logo { width: 30px; height: 30px; object-fit: contain; display: block; }
 .landing-brand-name-wrap { display: flex; align-items: baseline; gap: 10px; }
 .landing-brand-name { font-size: 0.79rem; letter-spacing: 0.01em; color: var(--sys-text-3); font-weight: 500; }
 .landing-brand-short { font-size: 1.04rem; font-weight: 660; letter-spacing: 0.02em; color: var(--sys-text-1); }

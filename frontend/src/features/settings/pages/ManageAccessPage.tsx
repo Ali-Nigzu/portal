@@ -86,6 +86,8 @@ const ManageAccessPage: React.FC = () => {
   }) => {
     try {
       await inviteUser(payload);
+      const latestInvites = await getPendingInvites();
+      setInvites(latestInvites);
     } catch (error) {
       if (isNotImplementedError(error)) {
         throw new Error("Not implemented yet");
@@ -109,13 +111,14 @@ const ManageAccessPage: React.FC = () => {
             className="vrm-btn vrm-btn-primary vrm-btn-sm"
             onClick={() => setIsInviteOpen(true)}
           >
-            Invite user
+            Invite Users
           </button>
         }
       />
 
       <div className="vrm-card">
         <div className="vrm-card-header settings-users-card-header">
+          <h2 className="vrm-card-title">Users</h2>
           <button
             type="button"
             className={`vrm-btn vrm-btn-sm ${isDirty ? "vrm-btn-primary settings-save-cta--active" : "vrm-btn-secondary settings-save-cta--inactive"}`}
@@ -123,7 +126,6 @@ const ManageAccessPage: React.FC = () => {
           >
             Save
           </button>
-          <h2 className="vrm-card-title">Users</h2>
         </div>
         <div className="vrm-card-body settings-table-card-body">
           <UsersTable

@@ -175,7 +175,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               {mediumSeverityAlarms}{" "}
             </div>
             <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              Medium Severity
+              Low Severity
             </p>
           </div>
         </div>

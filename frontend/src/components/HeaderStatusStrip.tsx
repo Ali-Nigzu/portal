@@ -5,9 +5,9 @@ import {
 } from "../context/GlobalControlsContext";
 
 const statusCopy: Record<SystemStatus, string> = {
-  ok: "System status: OK",
-  warning: "System status: Warning",
-  critical: "System status: Attention required",
+  ok: "System Status: OK",
+  warning: "System Status: Warning",
+  critical: "System Status: Attention required",
 };
 
 interface HeaderStatusStripProps {
@@ -54,8 +54,8 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className, isAuth
       aria-live="polite"
     >
       <div className="vrm-header-meta-group">
-        <span className="vrm-header-chip" title="Last updated timestamp">
-          Last updated:{" "}
+        <span className="vrm-header-chip" title="Last Updated timestamp">
+          Last Updated:{" "}
           <span className="vrm-header-chip-highlight">
             {isAuthenticatedView ? <span style={{ color: "var(--vrm-text-muted)" }}>-</span> : <><RealtimeWaveIcon /> Realtime</>}
           </span>
@@ -63,9 +63,16 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className, isAuth
       </div>
       <span className="vrm-header-meta-divider" aria-hidden="true" />
       <div className="vrm-header-meta-group">
-        <span className="vrm-header-chip" title={isAuthenticatedView ? "System status unavailable" : statusCopy[systemStatus]}>
+        <span className="vrm-header-chip" title={isAuthenticatedView ? "System Status unavailable" : statusCopy[systemStatus]}>
           {isAuthenticatedView ? (
-            <span style={{ color: "var(--vrm-text-muted)" }}>NA</span>
+            <>
+              <span
+                className="vrm-status-indicator"
+                aria-hidden
+                style={{ backgroundColor: "var(--vrm-text-muted)", opacity: 0.75 }}
+              />{" "}
+              <span style={{ color: "var(--vrm-text-muted)" }}>System Status: NA</span>
+            </>
           ) : (
             <>
               <span
@@ -80,7 +87,7 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className, isAuth
       <span className="vrm-header-meta-divider" aria-hidden="true" />
       <div className="vrm-header-meta-group">
         <span className="vrm-header-chip" title="Local site time">
-          Local time: {localTime}
+          Local Time: {localTime}
         </span>
       </div>
     </div>

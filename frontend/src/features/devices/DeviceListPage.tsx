@@ -12,7 +12,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
 }) => {
   const {
     devices,
-    dataSources,
     loading,
     error,
     isAdmin,
@@ -20,7 +19,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
     setSelectedClient,
     clientUsers,
     refreshDevices,
-    downloadDataSource,
   } = useDeviceList(credentials);
 
   if (loading) {
@@ -273,109 +271,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
                         ) : (
                           "-"
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-        </div>
-      </div>
-      <div className="vrm-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Data Sources</h3>
-          <div className="vrm-card-actions">
-            <button
-              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={() => fetchDataSources()}
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
-        <div className="vrm-card-body" style={{ padding: 0 }}>
-          {dataSources.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
-              <table className="vrm-table">
-                <thead>
-                  <tr>
-                    <th>Source Name</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Data URL</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dataSources.map((source) => (
-                    <tr key={source.id}>
-                      <td>
-                        <div>
-                          <div style={{ fontWeight: "600" }}>
-                            {source.title}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "12px",
-                              color: "var(--vrm-text-muted)",
-                            }}
-                          >
-                            {source.id}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`vrm-status ${
-                            source.type === "Camera"
-                              ? "vrm-status-online"
-                              : source.type === "Sensor"
-                                ? "vrm-status-warning"
-                                : "vrm-status-offline"
-                          }`}
-                        >
-                          {source.type}
-                        </span>
-                      </td>
-                      <td>
-                        <div
-                          className={`vrm-status ${
-                            source.active
-                              ? "vrm-status-online"
-                              : "vrm-status-offline"
-                          }`}
-                        >
-                          <div className="vrm-status-dot"></div>
-                          {source.active ? "Active" : "Inactive"}
-                        </div>
-                      </td>
-                      <td
-                        style={{
-                          maxWidth: "300px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <code
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--vrm-text-muted)",
-                          }}
-                        >
-                          {source.url}
-                        </code>
-                      </td>
-                      <td>
-                        <button
-                          className="vrm-btn vrm-btn-primary vrm-btn-sm"
-                          onClick={() =>
-                            downloadDataSource(source.url, source.title)
-                          }
-                        >
-                          Download CSV
-                        </button>
                       </td>
                     </tr>
                   ))}
