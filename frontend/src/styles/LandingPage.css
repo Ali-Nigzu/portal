@@ -27,10 +27,12 @@ body {
 
 .landing-page {
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, var(--surface-page) 0%, var(--surface-canvas) 52%, var(--surface-page) 100%);
-  --cta-create-bg: var(--signal-gold);
-  --cta-create-bg-hover: var(--signal-gold-strong);
+  background: var(--surface-page);
+  --landing-gold: #c8a247;
+  --landing-gold-strong: #b88f32;
+  --landing-gold-edge: #8f6c1f;
+  --cta-create-bg: var(--landing-gold);
+  --cta-create-bg-hover: var(--landing-gold-strong);
   --cta-create-text: var(--text-strong);
   --cta-secondary-bg: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
   --cta-secondary-bg-hover: color-mix(in srgb, var(--surface-panel) 80%, white 20%);
@@ -50,9 +52,9 @@ body {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: color-mix(in srgb, var(--surface-page) 95%, transparent);
-  border-bottom: 0;
-  backdrop-filter: blur(8px);
+  background: var(--surface-page);
+  border-bottom: 1px solid color-mix(in srgb, var(--sys-line-soft) 52%, transparent);
+  backdrop-filter: none;
 }
 
 .landing-header-top {
@@ -99,12 +101,12 @@ body {
 .landing-cta-create {
   color: var(--cta-create-text);
   background: var(--cta-create-bg);
-  border-color: color-mix(in srgb, var(--cta-create-bg) 86%, white 14%);
+  border-color: color-mix(in srgb, var(--landing-gold-edge) 84%, white 16%);
 }
 
 .landing-cta-create:hover:not(:disabled) {
   background: var(--cta-create-bg-hover);
-  border-color: color-mix(in srgb, var(--cta-create-bg-hover) 82%, white 18%);
+  border-color: color-mix(in srgb, var(--landing-gold-edge) 72%, white 18%);
 }
 
 .landing-cta-node-secondary {
@@ -631,7 +633,7 @@ body {
   height: 44px;
   padding: 0 12px;
   color: var(--sys-text-1);
-  background: color-mix(in srgb, var(--sys-bg-2) 80%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 82%, white 18%);
 }
 
 .landing-status { border-radius: var(--sys-radius-sm); border: 1px solid; padding: 12px 14px; }
@@ -676,7 +678,7 @@ body {
   border: 1px solid var(--sys-line);
   border-radius: 50%;
   text-decoration: none;
-  background: color-mix(in srgb, var(--sys-bg-2) 62%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 84%, white 16%);
 }
 .landing-footer-social-link svg { width: 14px; height: 14px; }
 @media (max-width: 1100px) {

@@ -7,10 +7,10 @@
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
   --mid-span: 214px;
-  --preview-alpha-content: 0.94;
-  --preview-accent-sat: 0.78;
-  --preview-number-alpha: 0.9;
-  --preview-line-alpha: 0.6;
+  --preview-alpha-content: 1;
+  --preview-accent-sat: 1;
+  --preview-number-alpha: 1;
+  --preview-line-alpha: 0.72;
   --preview-stroke-bus: 1.58px;
   --preview-stroke-connector: 1.42px;
   --preview-stroke-beam: 1.5px;
@@ -26,8 +26,8 @@
   --preview-zone-tone: transparent;
   --preview-zone-feather-top: none;
   --preview-zone-feather-bottom: none;
-  --preview-veil-fill: rgba(79, 92, 108, 0.05);
-  --preview-gated-filter: blur(0.64px) saturate(0.68) contrast(0.99);
+  --preview-veil-fill: transparent;
+  --preview-gated-filter: none;
   --preview-clear-cta-offset-y: 24px;
   --preview-z-gated: 10;
   --preview-z-veil: 20;
@@ -99,16 +99,12 @@
 .gatedContent {
   position: relative;
   z-index: var(--preview-z-gated);
-  filter: var(--preview-gated-filter);
+  filter: none;
   pointer-events: none;
 }
 
 .veilLayer {
-  position: absolute;
-  inset: 0;
-  z-index: var(--preview-z-veil);
-  background: var(--preview-veil-fill);
-  pointer-events: none;
+  display: none;
 }
 
 .clearLayer {
@@ -208,8 +204,8 @@
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline-region--vrm),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm) {
-  filter: saturate(var(--preview-accent-sat)) brightness(0.86);
-  opacity: var(--preview-alpha-content);
+  filter: none;
+  opacity: 1;
 }
 
 .wireEdgeAnchor {
@@ -269,7 +265,7 @@
 
 .retryButton {
   border: 1px solid var(--sys-line-soft);
-  background: color-mix(in srgb, var(--sys-bg-2) 75%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
   color: var(--sys-text-1);
   font-size: 0.74rem;
   padding: 4px 10px;
@@ -280,7 +276,7 @@
 .capacityTile {
   border-radius: var(--sys-radius-sm);
   border: 1px solid color-mix(in srgb, var(--sys-line-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 54%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
   grid-column: 4;
   grid-row: 2;
   min-height: 44px;
@@ -329,13 +325,13 @@
 .capacityTrack {
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--sys-line-soft) 92%, transparent), color-mix(in srgb, var(--sys-line-soft) 76%, transparent));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sys-line-soft) 84%, white 16%), color-mix(in srgb, var(--sys-line-soft) 70%, white 30%));
   overflow: hidden;
 }
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--signal-gold) 68%, #705316 32%), color-mix(in srgb, var(--signal-gold) 54%, #5d4612 46%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 78%, white 22%), color-mix(in srgb, var(--landing-gold-strong, var(--signal-gold-strong)) 66%, #8f6c1f 34%));
   border-radius: 999px;
 }
 
@@ -392,8 +388,8 @@
   border-radius: 15px;
   border: none;
   outline: none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 92%, white 8%), var(--surface-panel));
-  box-shadow: 0 10px 24px rgba(52, 61, 74, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 88%, white 12%), color-mix(in srgb, var(--surface-panel) 96%, #d8e0e8 4%));
+  box-shadow: 0 6px 14px rgba(52, 61, 74, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(115, 127, 142, 0.22);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
 }
@@ -402,16 +398,13 @@
   content: "";
   position: absolute;
   inset: -40px -70px;
-  background: radial-gradient(ellipse at center, rgba(52, 61, 74, 0.14) 0%, rgba(52, 61, 74, 0.06) 35%, rgba(52, 61, 74, 0) 72%);
-  opacity: 1;
-  pointer-events: none;
-  z-index: -1;
+  display: none;
 }
 
 .node:hover,
 .node:focus-within {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 88%, white 12%), color-mix(in srgb, var(--surface-panel) 96%, #d4dce5 4%));
-  box-shadow: 0 12px 28px rgba(52, 61, 74, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 84%, white 16%), color-mix(in srgb, var(--surface-panel) 96%, #d7dfe8 4%));
+  box-shadow: 0 8px 18px rgba(52, 61, 74, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.54), inset 0 -1px 0 rgba(115, 127, 142, 0.24);
 }
 
 .nodeTitle {
@@ -490,7 +483,7 @@
 .mockTile {
   min-height: 112px;
   border: 1px solid color-mix(in srgb, var(--sys-line-soft) 55%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 54%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
   padding: 14px 12px;
 }
 
@@ -519,21 +512,21 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, var(--signal-gold) 36%, var(--cam-graphite-1) 64%);
+  stroke: color-mix(in srgb, var(--cam-graphite-1) 88%, var(--landing-gold, var(--signal-gold)) 12%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-bus);
   fill: none;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, var(--signal-gold) 28%, var(--cam-graphite-0) 72%);
+  stroke: color-mix(in srgb, var(--cam-graphite-0) 90%, var(--landing-gold, var(--signal-gold)) 10%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
 }
 
 .nodeDropConnector {
-  stroke: color-mix(in srgb, var(--signal-gold) 24%, var(--cam-graphite-0) 76%);
+  stroke: color-mix(in srgb, var(--cam-graphite-0) 92%, var(--landing-gold, var(--signal-gold)) 8%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
