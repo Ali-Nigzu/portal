@@ -40,7 +40,7 @@
 
 .create-account-back-link:hover,
 .create-account-back-link:focus-visible {
-  color: var(--text-strong)fff;
+  color: var(--text-strong);
   text-decoration: underline;
 }
 
@@ -118,7 +118,7 @@
 }
 
 .create-account-error {
-  color: #8b6321;
+  color: #7a3030;
   font-size: 13px;
 }
 
@@ -137,6 +137,17 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+.create-account-submit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--signal-gold) 58%, transparent);
+  outline-offset: 2px;
+}
+
+.create-account-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: saturate(0.72);
 }
 
 .create-account-legal {

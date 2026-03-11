@@ -14,8 +14,8 @@
   --preview-stroke-bus: 1.58px;
   --preview-stroke-connector: 1.42px;
   --preview-stroke-beam: 1.5px;
-  --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, #c7ab74 10%, transparent), inset 0 1px 0 color-mix(in srgb, #e2d3b2 10%, transparent);
-  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #c7ab74 18%, transparent), inset 0 1px 0 color-mix(in srgb, #e2d3b2 18%, transparent);
+  --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, var(--line-soft) 62%, transparent), inset 0 1px 0 color-mix(in srgb, white 20%, transparent);
+  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, var(--signal-gold) 26%, transparent), inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
   --preview-node-cta-stem: 22px;
   --preview-capacity-gap: 4px;
   --preview-top-row-lift: 52px;
@@ -26,7 +26,7 @@
   --preview-zone-tone: transparent;
   --preview-zone-feather-top: none;
   --preview-zone-feather-bottom: none;
-  --preview-veil-fill: rgba(77,70,56,0.06);
+  --preview-veil-fill: rgba(79, 92, 108, 0.05);
   --preview-gated-filter: blur(0.64px) saturate(0.68) contrast(0.99);
   --preview-clear-cta-offset-y: 24px;
   --preview-z-gated: 10;
@@ -335,7 +335,7 @@
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--sys-accent) 48%, #c2a568 52%), color-mix(in srgb, var(--sys-accent) 38%, #9f7c33 62%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--signal-gold) 68%, #705316 32%), color-mix(in srgb, var(--signal-gold) 54%, #5d4612 46%));
   border-radius: 999px;
 }
 
@@ -392,8 +392,8 @@
   border-radius: 15px;
   border: none;
   outline: none;
-  background: color-mix(in srgb, #ddd3be 76%, var(--sys-bg-1) 24%);
-  box-shadow: 0 13px 32px rgba(0, 0, 0, 0.42), 0 0 20px rgba(110, 138, 176, 0.08), inset 0 1px 0 rgba(229, 239, 252, 0.09);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 92%, white 8%), var(--surface-panel));
+  box-shadow: 0 10px 24px rgba(52, 61, 74, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.32);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
 }
@@ -402,7 +402,7 @@
   content: "";
   position: absolute;
   inset: -40px -70px;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.06) 35%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(ellipse at center, rgba(52, 61, 74, 0.14) 0%, rgba(52, 61, 74, 0.06) 35%, rgba(52, 61, 74, 0) 72%);
   opacity: 1;
   pointer-events: none;
   z-index: -1;
@@ -410,8 +410,8 @@
 
 .node:hover,
 .node:focus-within {
-  background: color-mix(in srgb, #d6ccb8 74%, var(--sys-bg-1) 26%);
-  box-shadow: 0 15px 36px rgba(0, 0, 0, 0.45), 0 0 24px rgba(110, 138, 176, 0.09), inset 0 1px 0 rgba(236, 244, 255, 0.1);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 88%, white 12%), color-mix(in srgb, var(--surface-panel) 96%, #d4dce5 4%));
+  box-shadow: 0 12px 28px rgba(52, 61, 74, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 .nodeTitle {
@@ -420,7 +420,7 @@
   line-height: 1.03;
   font-weight: 690;
   letter-spacing: 0.005em;
-  color: color-mix(in srgb, var(--sys-text-1) 96%, #dcc9a3 4%);
+  color: color-mix(in srgb, var(--sys-text-1) 96%, var(--sys-text-2) 4%);
 }
 
 .nodeAnchor {
@@ -519,21 +519,21 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, #a08650 74%, transparent);
+  stroke: color-mix(in srgb, var(--signal-gold) 36%, var(--cam-graphite-1) 64%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-bus);
   fill: none;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, #9e8349 70%, transparent);
+  stroke: color-mix(in srgb, var(--signal-gold) 28%, var(--cam-graphite-0) 72%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
 }
 
 .nodeDropConnector {
-  stroke: color-mix(in srgb, #9f8547 72%, transparent);
+  stroke: color-mix(in srgb, var(--signal-gold) 24%, var(--cam-graphite-0) 76%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;

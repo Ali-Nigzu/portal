@@ -11,7 +11,7 @@
   --sys-text-3: var(--vrm-text-muted);
   --sys-radius-sm: var(--vrm-radii-badge);
   --sys-radius-md: var(--vrm-radii-card);
-  --sys-shadow-soft: 0 14px 30px rgba(0, 0, 0, 0.2);
+  --sys-shadow-soft: 0 10px 24px rgba(52, 61, 74, 0.09);
   --sys-shadow-card: var(--vrm-elevation-card);
   --sys-accent: var(--signal-gold);
 }
@@ -28,14 +28,12 @@ body {
 .landing-page {
   min-height: 100vh;
   background:
-    radial-gradient(120% 80% at 15% 0%, rgba(170, 182, 196, 0.10), transparent 62%),
-    radial-gradient(110% 70% at 100% 8%, rgba(154, 166, 182, 0.10), transparent 65%),
-    linear-gradient(180deg, var(--sys-bg-0) 0%, var(--sys-bg-1) 44%, var(--sys-bg-0) 100%);
+    linear-gradient(180deg, var(--surface-page) 0%, var(--surface-canvas) 52%, var(--surface-page) 100%);
   --cta-create-bg: var(--signal-gold);
   --cta-create-bg-hover: var(--signal-gold-strong);
   --cta-create-text: var(--text-strong);
-  --cta-secondary-bg: color-mix(in srgb, var(--surface-panel) 82%, white);
-  --cta-secondary-bg-hover: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
+  --cta-secondary-bg: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
+  --cta-secondary-bg-hover: color-mix(in srgb, var(--surface-panel) 80%, white 20%);
   --cta-secondary-text: var(--text-strong);
   --cta-radius: var(--sys-radius-sm);
   --cta-height: 40px;
@@ -52,7 +50,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: color-mix(in srgb, var(--sys-bg-0) 92%, transparent);
+  background: color-mix(in srgb, var(--surface-page) 95%, transparent);
   border-bottom: 0;
   backdrop-filter: blur(8px);
 }
@@ -113,13 +111,13 @@ body {
   color: var(--cta-secondary-text);
   border-color: color-mix(in srgb, var(--sys-line) 80%, white 20%);
   background: var(--cta-secondary-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(52, 61, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.34);
 }
 
 .landing-cta-node-secondary:hover:not(:disabled) {
   background: var(--cta-secondary-bg-hover);
   border-color: color-mix(in srgb, var(--sys-line) 84%, white 16%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(241, 247, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(52, 61, 74, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .btn-primary {
@@ -137,12 +135,12 @@ body {
 .btn-tertiary {
   color: var(--sys-text-1);
   border-color: var(--sys-line);
-  background: color-mix(in srgb, var(--sys-bg-2) 72%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 82%, white 18%);
 }
 
 .btn-secondary:hover:not(:disabled),
 .btn-tertiary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--sys-bg-2) 84%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 90%, white 10%);
   border-color: color-mix(in srgb, var(--sys-line) 70%, white 20%);
 }
 
@@ -406,7 +404,7 @@ body {
   z-index: -1;
   border-radius: 12px;
   background: var(--cta-create-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(52, 61, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.34);
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
@@ -417,7 +415,7 @@ body {
 
 .landing-axis-right-action:hover::before {
   background: var(--cta-create-bg-hover);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(241, 247, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(52, 61, 74, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .landing-axis-right-action:focus-visible {
@@ -640,7 +638,7 @@ body {
 .landing-status p { margin: 0; font-size: 0.89rem; }
 .landing-status-success {
   margin-top: 24px;
-  background: color-mix(in srgb, var(--sys-bg-2) 84%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 90%, white 10%);
   border-color: var(--sys-line);
   display: flex;
   align-items: center;
@@ -655,7 +653,7 @@ body {
 
 .landing-footer {
   border-top: 1px solid var(--sys-line-soft);
-  background: color-mix(in srgb, var(--sys-bg-0) 92%, transparent);
+  background: color-mix(in srgb, var(--surface-page) 95%, transparent);
   padding: 8px 0;
 }
 .landing-footer-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px 20px; }

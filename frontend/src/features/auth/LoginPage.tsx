@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import camsvg from "../../assets/camsvg.svg";
+import camOSLogo from "../../assets/Untitled design (4).svg";
 import { useLoginForm } from "./hooks/useLoginForm";
 import { passwordResetStart } from "./transport/passwordResetStart";
 import "./LoginPage.css";
@@ -163,7 +163,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
         <aside className="login-right-pane" aria-label="System visual placeholder">
           <img
-            src={camsvg}
+            src={camOSLogo}
             alt=""
             aria-hidden="true"
             focusable="false"
