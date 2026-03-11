@@ -7,15 +7,15 @@
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
   --mid-span: 214px;
-  --preview-alpha-content: 1;
-  --preview-accent-sat: 1;
-  --preview-number-alpha: 1;
-  --preview-line-alpha: 0.72;
+  --preview-alpha-content: 0.54;
+  --preview-accent-sat: 0.56;
+  --preview-number-alpha: 0.62;
+  --preview-line-alpha: 0.58;
   --preview-stroke-bus: 1.58px;
   --preview-stroke-connector: 1.42px;
   --preview-stroke-beam: 1.5px;
   --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, var(--line-soft) 62%, transparent), inset 0 1px 0 color-mix(in srgb, white 20%, transparent);
-  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, var(--signal-gold) 26%, transparent), inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
+  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 28%, transparent), inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
   --preview-node-cta-stem: 22px;
   --preview-capacity-gap: 4px;
   --preview-top-row-lift: 52px;
@@ -133,6 +133,8 @@
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
   transform: translateY(calc(-1 * var(--preview-top-row-lift)));
   transform-origin: top center;
+  opacity: var(--preview-alpha-content);
+  filter: saturate(var(--preview-accent-sat));
 }
 
 .kpiSlot {
@@ -250,6 +252,8 @@
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
   transform: translateY(calc(-1 * var(--preview-bottom-row-lift)));
   transform-origin: top center;
+  opacity: var(--preview-alpha-content);
+  filter: saturate(var(--preview-accent-sat));
 }
 
 .inlineNotice {
@@ -275,8 +279,8 @@
 
 .capacityTile {
   border-radius: var(--sys-radius-sm);
-  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
+  border: 1px solid color-mix(in srgb, #8f9aa8 42%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #d3dbe4 50%, var(--surface-panel) 50%), color-mix(in srgb, #c6d0db 44%, var(--surface-panel) 56%));
   grid-column: 4;
   grid-row: 2;
   min-height: 44px;
@@ -325,13 +329,13 @@
 .capacityTrack {
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--sys-line-soft) 84%, white 16%), color-mix(in srgb, var(--sys-line-soft) 70%, white 30%));
+  background: linear-gradient(180deg, color-mix(in srgb, #a6b1be 74%, white 26%), color-mix(in srgb, #8997a8 80%, white 20%));
   overflow: hidden;
 }
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 78%, white 22%), color-mix(in srgb, var(--landing-gold-strong, var(--signal-gold-strong)) 66%, #8f6c1f 34%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 80%, white 20%), color-mix(in srgb, var(--landing-gold-strong, var(--signal-gold-strong)) 76%, var(--landing-gold-edge, #9c7624) 24%));
   border-radius: 999px;
 }
 
@@ -388,8 +392,8 @@
   border-radius: 15px;
   border: none;
   outline: none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 88%, white 12%), color-mix(in srgb, var(--surface-panel) 96%, #d8e0e8 4%));
-  box-shadow: 0 6px 14px rgba(52, 61, 74, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(115, 127, 142, 0.22);
+  background: linear-gradient(180deg, color-mix(in srgb, #e2e8ef 56%, var(--surface-panel) 44%), color-mix(in srgb, #cad4df 40%, var(--surface-panel) 60%));
+  box-shadow: 0 8px 18px rgba(52, 61, 74, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.62), inset 0 -1px 0 rgba(104, 117, 133, 0.32);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
 }
@@ -403,8 +407,8 @@
 
 .node:hover,
 .node:focus-within {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 84%, white 16%), color-mix(in srgb, var(--surface-panel) 96%, #d7dfe8 4%));
-  box-shadow: 0 8px 18px rgba(52, 61, 74, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.54), inset 0 -1px 0 rgba(115, 127, 142, 0.24);
+  background: linear-gradient(180deg, color-mix(in srgb, #e8edf4 58%, var(--surface-panel) 42%), color-mix(in srgb, #d0d9e3 42%, var(--surface-panel) 58%));
+  box-shadow: 0 10px 22px rgba(52, 61, 74, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.68), inset 0 -1px 0 rgba(104, 117, 133, 0.36);
 }
 
 .nodeTitle {
@@ -426,7 +430,7 @@
   appearance: none;
   border: none;
   background: transparent;
-  color: color-mix(in srgb, var(--sys-text-2) 88%, var(--sys-text-3) 12%);
+  color: color-mix(in srgb, var(--landing-gold-strong, var(--signal-gold-strong)) 62%, var(--sys-text-2) 38%);
   font-size: 0.62rem;
   font-weight: 530;
   letter-spacing: 0.08em;
@@ -440,7 +444,7 @@
 }
 
 .previewNodeCta:hover {
-  color: color-mix(in srgb, var(--sys-text-1) 84%, var(--sys-text-2) 16%);
+  color: color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 70%, var(--sys-text-1) 30%);
   opacity: 1;
 }
 
@@ -479,11 +483,10 @@
   max-width: 196px;
 }
 
-
 .mockTile {
   min-height: 112px;
-  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 55%, transparent);
-  background: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
+  border: 1px solid color-mix(in srgb, #8f9aa8 38%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #d4dce5 48%, var(--surface-panel) 52%), color-mix(in srgb, #c6d0db 42%, var(--surface-panel) 58%));
   padding: 14px 12px;
 }
 
@@ -512,21 +515,21 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, var(--cam-graphite-1) 88%, var(--landing-gold, var(--signal-gold)) 12%);
+  stroke: color-mix(in srgb, #7f8e9f 78%, #d8e1ea 22%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-bus);
   fill: none;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, var(--cam-graphite-0) 90%, var(--landing-gold, var(--signal-gold)) 10%);
+  stroke: color-mix(in srgb, #6f7f93 80%, #d8e1ea 20%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
 }
 
 .nodeDropConnector {
-  stroke: color-mix(in srgb, var(--cam-graphite-0) 92%, var(--landing-gold, var(--signal-gold)) 8%);
+  stroke: color-mix(in srgb, #74849a 82%, #dce4ec 18%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;

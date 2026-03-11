@@ -51,11 +51,14 @@ const KpiTile: React.FC<KpiTileProps> = ({
   } else if (state.status === "error") {
     content = renderError(state.error ?? `Failed to load ${title}`);
   } else {
+    const rendererClassName = isPreview
+      ? "dashboard-v2__kpi-renderer dashboard-v2__kpi-renderer--preview"
+      : "dashboard-v2__kpi-renderer";
     content = (
       <ChartRenderer
         result={renderedResult!}
         height={kpiHeight}
-        className="dashboard-v2__kpi-renderer"
+        className={rendererClassName}
         widgetId={widgetId}
       />
     );

@@ -28,9 +28,9 @@ body {
 .landing-page {
   min-height: 100vh;
   background: var(--surface-page);
-  --landing-gold: #c8a247;
-  --landing-gold-strong: #b88f32;
-  --landing-gold-edge: #8f6c1f;
+  --landing-gold: #d6b45a;
+  --landing-gold-strong: #c8a044;
+  --landing-gold-edge: #9c7624;
   --cta-create-bg: var(--landing-gold);
   --cta-create-bg-hover: var(--landing-gold-strong);
   --cta-create-text: var(--text-strong);
