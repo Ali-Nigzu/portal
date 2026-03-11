@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
-import camOSLogo from "../assets/brand/camOS-logo.png";
+import camOSLogo from "../assets/Untitled design (4).svg";
 import {
   SITE_OPTIONS,
   findSiteById,

@@ -65,7 +65,7 @@
 }
 
 .contact-inline-link {
-  color: var(--signal-gold);
+  color: var(--text-default);
   text-decoration: none;
   text-underline-offset: 2px;
 }
@@ -230,6 +230,6 @@
 
 .contact-success-close:hover,
 .contact-success-close:focus-visible {
-  border-color: var(--signal-gold);
-  color: var(--signal-gold);
+  border-color: var(--text-default);
+  color: var(--text-default);
 }

@@ -17,7 +17,7 @@
 .demo-overlay__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(79,72,60,0.32);
+  background: rgba(40, 52, 70, 0.28);
   backdrop-filter: blur(2px);
   opacity: 0;
   transition: opacity 180ms ease;
@@ -92,7 +92,7 @@
   height: 40px;
   border-radius: 999px;
   border: 1px solid var(--line-default);
-  background: rgba(15, 18, 28, 0.9);
+  background: color-mix(in srgb, var(--surface-panel) 82%, #e9edf3);
   color: var(--text-strong);
   font-size: 24px;
   line-height: 1;

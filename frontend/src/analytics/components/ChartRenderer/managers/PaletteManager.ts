@@ -1,23 +1,23 @@
 const RESERVED_SERIES_COLORS: Record<string, string> = {
-  occupancy: "var(--chart-signal, #b88a2f)",
-  entrances: "var(--chart-series-2, #6f7464)",
-  exits: "var(--chart-series-3, #8e7c5f)",
+  occupancy: "var(--chart-signal, #a77a21)",
+  entrances: "var(--chart-series-2, #647080)",
+  exits: "var(--chart-series-3, #7b8796)",
   throughput: "var(--chart-series-4, #8b887d)",
   dwell_mean: "var(--chart-series-5, #9f8a61)",
   dwell_p90: "var(--chart-series-6, #b49d74)",
 };
 
 const DEFAULT_PALETTE = [
-  "var(--chart-signal, #b88a2f)",
-  "var(--chart-series-2, #6f7464)",
-  "var(--chart-series-3, #8e7c5f)",
-  "var(--chart-series-4, #8b887d)",
-  "var(--chart-series-5, #9f8a61)",
-  "var(--chart-series-6, #b49d74)",
-  "var(--chart-series-7, #9f9a8c)",
-  "var(--chart-series-8, #7d7a6f)",
-  "var(--chart-series-9, #c0b497)",
-  "var(--chart-series-10, #a7a093)",
+  "var(--chart-series-2, #647080)",
+  "var(--chart-series-3, #7b8796)",
+  "var(--chart-series-4, #8f9aaa)",
+  "var(--chart-series-5, #6f7c8d)",
+  "var(--chart-series-6, #9ba5b2)",
+  "var(--chart-series-7, #7a8798)",
+  "var(--chart-series-8, #a9b3bf)",
+  "var(--chart-series-9, #8793a3)",
+  "var(--chart-series-10, #b5bdc7)",
+  "var(--chart-signal, #a77a21)",
 ];
 
 export class PaletteManager {

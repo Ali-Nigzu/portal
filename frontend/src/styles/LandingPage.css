@@ -28,14 +28,14 @@ body {
 .landing-page {
   min-height: 100vh;
   background:
-    radial-gradient(120% 80% at 15% 0%, rgba(184,138,47,0.10), transparent 62%),
-    radial-gradient(110% 70% at 100% 8%, rgba(120,112,96,0.14), transparent 65%),
+    radial-gradient(120% 80% at 15% 0%, rgba(170, 182, 196, 0.10), transparent 62%),
+    radial-gradient(110% 70% at 100% 8%, rgba(154, 166, 182, 0.10), transparent 65%),
     linear-gradient(180deg, var(--sys-bg-0) 0%, var(--sys-bg-1) 44%, var(--sys-bg-0) 100%);
   --cta-create-bg: var(--signal-gold);
   --cta-create-bg-hover: var(--signal-gold-strong);
   --cta-create-text: var(--text-strong);
   --cta-secondary-bg: color-mix(in srgb, var(--surface-panel) 82%, white);
-  --cta-secondary-bg-hover: color-mix(in srgb, var(--surface-panel) 74%, var(--signal-gold) 8%);
+  --cta-secondary-bg-hover: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
   --cta-secondary-text: var(--text-strong);
   --cta-radius: var(--sys-radius-sm);
   --cta-height: 40px;
@@ -111,25 +111,25 @@ body {
 
 .landing-cta-node-secondary {
   color: var(--cta-secondary-text);
-  border-color: color-mix(in srgb, var(--sys-line) 68%, #bfa575 18%);
+  border-color: color-mix(in srgb, var(--sys-line) 80%, white 20%);
   background: var(--cta-secondary-bg);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
 }
 
 .landing-cta-node-secondary:hover:not(:disabled) {
   background: var(--cta-secondary-bg-hover);
-  border-color: color-mix(in srgb, var(--sys-line) 72%, #bfa575 26%);
+  border-color: color-mix(in srgb, var(--sys-line) 84%, white 16%);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(241, 247, 255, 0.12);
 }
 
 .btn-primary {
   color: var(--text-strong);
-  background: linear-gradient(180deg, rgba(184,138,47,0.18), rgba(184,138,47,0.06)), var(--sys-accent);
+  background: var(--sys-accent);
   border-color: color-mix(in srgb, var(--sys-accent) 60%, white 16%);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(184,138,47,0.14), rgba(184,138,47,0.05)), var(--sys-accent);
+  background: color-mix(in srgb, var(--sys-accent) 92%, white 8%);
   border-color: color-mix(in srgb, var(--sys-accent) 54%, white 14%);
 }
 

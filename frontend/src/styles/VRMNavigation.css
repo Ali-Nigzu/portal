@@ -3,8 +3,8 @@
   --vrm-nav-row-padding-x: 16px;
   --vrm-nav-row-radius: 12px;
   --vrm-nav-row-gap: 12px;
-  --vrm-nav-row-hover-bg: color-mix(in srgb, var(--surface-panel) 75%, var(--signal-gold) 10%);
-  --vrm-nav-row-active-bg: color-mix(in srgb, var(--signal-gold) 24%, var(--surface-elevated));
+  --vrm-nav-row-hover-bg: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
+  --vrm-nav-row-active-bg: color-mix(in srgb, var(--signal-gold) 14%, var(--surface-elevated));
   --vrm-nav-row-active-text: var(--text-strong);
   --vrm-nav-row-text: var(--vrm-text-secondary);
   --vrm-nav-divider-color: var(--line-soft);
@@ -133,7 +133,7 @@ button.vrm-nav-row {
 }
 
 .vrm-nav-row:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--signal-gold) 65%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--signal-gold) 50%, transparent);
   outline-offset: 2px;
 }
 
@@ -284,7 +284,7 @@ button.vrm-nav-row {
 .vrm-secondary-search input:focus {
   outline: none;
   border-color: var(--vrm-color-focus);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal-gold) 58%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal-gold) 45%, transparent);
 }
 
 .vrm-secondary-search:hover,

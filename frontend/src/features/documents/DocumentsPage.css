@@ -81,7 +81,7 @@
   align-items: center;
   gap: var(--vrm-spacing-2);
   border-radius: var(--sys-radius-sm, var(--vrm-radii-badge));
-  border: 1px solid var(--sys-line-soft, rgba(255, 255, 255, 0.18));
+  border: 1px solid var(--sys-line-soft, var(--line-soft));
   padding: var(--vrm-spacing-1) var(--vrm-spacing-2);
   color: var(--sys-text-2, var(--vrm-text-secondary));
   font-size: var(--vrm-typography-font-size-caption);
@@ -160,7 +160,7 @@
 .documents-page__modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(79,72,60,0.3);
+  background: rgba(40, 52, 70, 0.26);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,7 +171,7 @@
 .documents-page__modal {
   width: min(100%, 560px);
   background: color-mix(in srgb, var(--sys-bg-2, var(--vrm-bg-panel)) 94%, black 6%);
-  border: 1px solid var(--sys-line-soft, rgba(255, 255, 255, 0.18));
+  border: 1px solid var(--sys-line-soft, var(--line-soft));
   border-radius: var(--sys-radius-md, var(--vrm-radii-card));
   box-shadow: var(--sys-shadow-card, var(--vrm-elevation-card));
   padding: var(--vrm-spacing-4);
@@ -203,8 +203,8 @@
 .documents-page__dropzone {
   min-height: 128px;
   border-radius: var(--sys-radius-md, var(--vrm-radii-card));
-  border: 1px dashed var(--sys-line-soft, rgba(255, 255, 255, 0.24));
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--sys-line-soft, var(--line-soft));
+  background: color-mix(in srgb, var(--surface-panel) 42%, white 58%);
   color: var(--sys-text-2, var(--vrm-text-secondary));
   display: flex;
   flex-direction: column;

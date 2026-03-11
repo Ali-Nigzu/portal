@@ -68,7 +68,7 @@
 .link:hover,
 .link:focus-visible,
 .link[aria-current="page"] {
-  color: var(--text-strong)fff;
+  color: var(--text-strong);
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--signal-gold) 68%, transparent);
 }
