@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "./countryPhoneData";
 import { Link } from "react-router-dom";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { submitContact } from "./transport/contact";
@@ -23,8 +24,8 @@ const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", "
 const ContactPage: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phoneCountryCode, setPhoneCountryCode] = useState("+44");
-  const [phoneLocal, setPhoneLocal] = useState("");
+  const [phoneSelectedIso, setPhoneSelectedIso] = useState("GB");
+  const [phoneText, setPhoneText] = useState("+44");
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -54,7 +55,7 @@ const ContactPage: React.FC = () => {
       nextErrors.email = "Not a valid email address";
     }
 
-    const phoneValue = phoneLocal.trim() ? `${phoneCountryCode}${phoneLocal.trim().replace(/^0+/, "")}` : "";
+    const phoneValue = sanitizePhoneText(phoneText);
     if (phoneValue && !PHONE_RE.test(phoneValue)) {
       nextErrors.phone = "Not a valid phone number";
     }
@@ -107,7 +108,7 @@ const ContactPage: React.FC = () => {
       const result = await submitContact({
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        phone: phoneLocal.trim() ? `${phoneCountryCode}${phoneLocal.trim().replace(/^0+/, "")}` : "",
+        phone: sanitizePhoneText(phoneText),
         message: message.trim(),
         attachments,
       });
@@ -120,8 +121,8 @@ const ContactPage: React.FC = () => {
       setSubmitSuccess("Message sent");
       setName("");
       setEmail("");
-      setPhoneCountryCode("+44");
-      setPhoneLocal("");
+      setPhoneSelectedIso("GB");
+      setPhoneText("+44");
       setMessage("");
       setAttachments([]);
       setErrors({});
@@ -190,14 +191,24 @@ const ContactPage: React.FC = () => {
               <label className="vrm-label" htmlFor="contact-country">Phone (optional)</label>
               <AuthPhoneField
                 idPrefix="contact"
-                countryCode={phoneCountryCode}
-                localNumber={phoneLocal}
-                onCountryCodeChange={(value) => {
-                  setPhoneCountryCode(value);
+                selectedIso={phoneSelectedIso}
+                phoneText={phoneText}
+                onSelectedIsoChange={(value) => {
+                  const option = PHONE_OPTION_BY_ISO.get(value);
+                  if (!option) {
+                    return;
+                  }
+                  setPhoneSelectedIso(value);
+                  setPhoneText((prev) => replaceDialCodeInPhoneText(prev, option.dialCode));
                   if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
                 }}
-                onLocalNumberChange={(value) => {
-                  setPhoneLocal(value);
+                onPhoneTextChange={(value) => {
+                  const normalized = sanitizePhoneText(value);
+                  setPhoneText(normalized);
+                  const inferredIso = inferIsoFromPhoneText(normalized);
+                  if (inferredIso) {
+                    setPhoneSelectedIso(inferredIso);
+                  }
                   if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
                 }}
                 inputClassName="vrm-input"

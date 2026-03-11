@@ -1,5 +1,6 @@
 import { type FormEvent, useMemo, useState } from 'react';
 import { signupStart } from '../transport/signupStart';
+import { inferIsoFromPhoneText, PHONE_OPTION_BY_ISO, replaceDialCodeInPhoneText, sanitizePhoneText } from '../countryPhoneData';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
@@ -9,8 +10,8 @@ type FieldName = 'username' | 'email' | 'phone' | 'password' | 'confirmPassword'
 export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [countryCode, setCountryCode] = useState('+44');
-  const [phoneLocal, setPhoneLocal] = useState('');
+  const [selectedIso, setSelectedIso] = useState('GB');
+  const [phoneText, setPhoneText] = useState('+44');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +25,7 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
     confirmPassword: false,
   });
 
-  const phone = phoneLocal.trim() ? `${countryCode}${phoneLocal.trim().replace(/^0+/, '')}` : '';
+  const phone = sanitizePhoneText(phoneText);
 
   const validate = () => {
     const errors: Record<FieldName, string | undefined> = {
@@ -107,11 +108,31 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
     }
   };
 
+
+  const handleSelectedIsoChange = (iso2: string) => {
+    const option = PHONE_OPTION_BY_ISO.get(iso2);
+    if (!option) {
+      return;
+    }
+    setSelectedIso(iso2);
+    setPhoneText((prev) => replaceDialCodeInPhoneText(prev, option.dialCode));
+  };
+
+  const handlePhoneTextChange = (value: string) => {
+    const normalized = sanitizePhoneText(value);
+    setPhoneText(normalized);
+
+    const inferredIso = inferIsoFromPhoneText(normalized);
+    if (inferredIso) {
+      setSelectedIso(inferredIso);
+    }
+  };
+
   return {
     username,
     email,
-    countryCode,
-    phoneLocal,
+    selectedIso,
+    phoneText,
     password,
     confirmPassword,
     submitting,
@@ -120,8 +141,8 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
     canSubmit,
     setUsername,
     setEmail,
-    setCountryCode,
-    setPhoneLocal,
+    setSelectedIso: handleSelectedIsoChange,
+    setPhoneText: handlePhoneTextChange,
     setPassword,
     setConfirmPassword,
     markTouched,
