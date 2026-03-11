@@ -1,28 +1,31 @@
 const RESERVED_SERIES_COLORS: Record<string, string> = {
-  occupancy: "#2685FF",
-  entrances: "#47C96F",
-  exits: "#FF5964",
-  throughput: "#8A5BE8",
-  dwell_mean: "#F6A609",
-  dwell_p90: "#F2C94C",
+  occupancy: "var(--chart-signal, #b88a2f)",
+  entrances: "var(--chart-series-2, #6f7464)",
+  exits: "var(--chart-series-3, #8e7c5f)",
+  throughput: "var(--chart-series-4, #8b887d)",
+  dwell_mean: "var(--chart-series-5, #9f8a61)",
+  dwell_p90: "var(--chart-series-6, #b49d74)",
 };
+
 const DEFAULT_PALETTE = [
-  "#2685FF",
-  "#47C96F",
-  "#FF5964",
-  "#8A5BE8",
-  "#F6A609",
-  "#56CCF2",
-  "#BB6BD9",
-  "#6FCF97",
-  "#F2C94C",
-  "#BDBDBD",
+  "var(--chart-signal, #b88a2f)",
+  "var(--chart-series-2, #6f7464)",
+  "var(--chart-series-3, #8e7c5f)",
+  "var(--chart-series-4, #8b887d)",
+  "var(--chart-series-5, #9f8a61)",
+  "var(--chart-series-6, #b49d74)",
+  "var(--chart-series-7, #9f9a8c)",
+  "var(--chart-series-8, #7d7a6f)",
+  "var(--chart-series-9, #c0b497)",
+  "var(--chart-series-10, #a7a093)",
 ];
+
 export class PaletteManager {
   private palette: string[];
   private reserved: Record<string, string>;
   private assignments = new Map<string, string>();
   private paletteIndex = 0;
+
   constructor(
     palette: string[] = DEFAULT_PALETTE,
     reserved: Record<string, string> = RESERVED_SERIES_COLORS,
@@ -30,20 +33,24 @@ export class PaletteManager {
     this.palette = palette;
     this.reserved = reserved;
   }
+
   getColor(seriesId: string): string {
     if (this.assignments.has(seriesId)) {
       return this.assignments.get(seriesId)!;
     }
+
     const reservedMatch = this.getReservedColor(seriesId);
     if (reservedMatch) {
       this.assignments.set(seriesId, reservedMatch);
       return reservedMatch;
     }
+
     const color = this.palette[this.paletteIndex % this.palette.length];
     this.assignments.set(seriesId, color);
     this.paletteIndex += 1;
     return color;
   }
+
   private getReservedColor(seriesId: string): string | undefined {
     const normalized = seriesId.toLowerCase();
     const direct = this.reserved[normalized];

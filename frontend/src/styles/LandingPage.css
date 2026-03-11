@@ -13,7 +13,7 @@
   --sys-radius-md: var(--vrm-radii-card);
   --sys-shadow-soft: 0 14px 30px rgba(0, 0, 0, 0.2);
   --sys-shadow-card: var(--vrm-elevation-card);
-  --sys-accent: var(--vrm-color-accent-occupancy);
+  --sys-accent: var(--signal-gold);
 }
 
 * { box-sizing: border-box; }
@@ -28,15 +28,15 @@ body {
 .landing-page {
   min-height: 100vh;
   background:
-    radial-gradient(120% 80% at 15% 0%, rgba(58, 94, 138, 0.2), transparent 62%),
-    radial-gradient(110% 70% at 100% 8%, rgba(37, 67, 102, 0.2), transparent 65%),
+    radial-gradient(120% 80% at 15% 0%, rgba(184,138,47,0.10), transparent 62%),
+    radial-gradient(110% 70% at 100% 8%, rgba(120,112,96,0.14), transparent 65%),
     linear-gradient(180deg, var(--sys-bg-0) 0%, var(--sys-bg-1) 44%, var(--sys-bg-0) 100%);
-  --cta-create-bg: #3a7fd4;
-  --cta-create-bg-hover: #2f6fbe;
-  --cta-create-text: #f4f8ff;
-  --cta-secondary-bg: color-mix(in srgb, #152942 76%, var(--sys-bg-1) 24%);
-  --cta-secondary-bg-hover: color-mix(in srgb, #1a304b 74%, var(--sys-bg-1) 26%);
-  --cta-secondary-text: color-mix(in srgb, var(--sys-text-1) 94%, #dbe8fb 6%);
+  --cta-create-bg: var(--signal-gold);
+  --cta-create-bg-hover: var(--signal-gold-strong);
+  --cta-create-text: var(--text-strong);
+  --cta-secondary-bg: color-mix(in srgb, var(--surface-panel) 82%, white);
+  --cta-secondary-bg-hover: color-mix(in srgb, var(--surface-panel) 74%, var(--signal-gold) 8%);
+  --cta-secondary-text: var(--text-strong);
   --cta-radius: var(--sys-radius-sm);
   --cta-height: 40px;
   --cta-padding-x: 14px;
@@ -111,25 +111,25 @@ body {
 
 .landing-cta-node-secondary {
   color: var(--cta-secondary-text);
-  border-color: color-mix(in srgb, var(--sys-line) 68%, #9fb9dc 18%);
+  border-color: color-mix(in srgb, var(--sys-line) 68%, #bfa575 18%);
   background: var(--cta-secondary-bg);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(236, 244, 255, 0.1);
 }
 
 .landing-cta-node-secondary:hover:not(:disabled) {
   background: var(--cta-secondary-bg-hover);
-  border-color: color-mix(in srgb, var(--sys-line) 72%, #a8c0df 26%);
+  border-color: color-mix(in srgb, var(--sys-line) 72%, #bfa575 26%);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(241, 247, 255, 0.12);
 }
 
 .btn-primary {
-  color: #f6f9ff;
-  background: linear-gradient(180deg, rgba(153, 191, 234, 0.2), rgba(153, 191, 234, 0.05)), var(--sys-accent);
+  color: var(--text-strong);
+  background: linear-gradient(180deg, rgba(184,138,47,0.18), rgba(184,138,47,0.06)), var(--sys-accent);
   border-color: color-mix(in srgb, var(--sys-accent) 60%, white 16%);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(153, 191, 234, 0.16), rgba(153, 191, 234, 0.04)), var(--sys-accent);
+  background: linear-gradient(180deg, rgba(184,138,47,0.14), rgba(184,138,47,0.05)), var(--sys-accent);
   border-color: color-mix(in srgb, var(--sys-accent) 54%, white 14%);
 }
 
@@ -208,7 +208,7 @@ body {
 }
 
 .landing-hero-initial {
-  color: color-mix(in srgb, var(--sys-text-1) 97%, #d6e6fb 3%);
+  color: color-mix(in srgb, var(--sys-text-1) 97%, #d9c7a0 3%);
   font-weight: var(--hero-title-weight-os);
   letter-spacing: -0.022em;
 }

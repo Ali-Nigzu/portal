@@ -24,7 +24,7 @@
   justify-content: space-between;
   gap: var(--vrm-spacing-4);
   background: color-mix(in srgb, var(--sys-bg-2, var(--vrm-bg-panel)) 85%, transparent);
-  border: 1px solid var(--sys-line-soft, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--sys-line-soft, rgba(120,112,96,0.12));
   box-shadow: var(--sys-shadow-soft, var(--vrm-elevation-card));
   border-radius: var(--sys-radius-md, var(--vrm-radii-card));
   padding: var(--vrm-spacing-4) var(--vrm-spacing-5);
@@ -39,16 +39,16 @@
 }
 
 .dashboard-v2__error-banner {
-  background: rgba(220, 38, 38, 0.1);
-  color: #f5b2b2;
-  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: rgba(139,58,47,0.1);
+  color: #8b3a2f;
+  border: 1px solid rgba(139,58,47,0.32);
   padding: 10px 12px;
   border-radius: var(--sys-radius-sm, 8px);
 }
 
 .dashboard-v2__error-banner--preview {
   background: transparent;
-  border-color: var(--sys-line-soft, rgba(255, 255, 255, 0.14));
+  border-color: var(--sys-line-soft, var(--line-soft));
   color: var(--sys-text-3, var(--vrm-text-muted));
 }
 
@@ -131,8 +131,8 @@
   padding: 4px 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: rgba(220, 38, 38, 0.12);
-  color: #f5b2b2;
+  background: rgba(139,58,47,0.16);
+  color: #8b3a2f;
   cursor: pointer;
 }
 
@@ -157,14 +157,14 @@
 .dashboard-v2__chart-card {
   min-height: 360px;
   background: color-mix(in srgb, var(--sys-bg-2, var(--vrm-bg-panel)) 75%, transparent);
-  border: 1px solid var(--sys-line-soft, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--sys-line-soft, rgba(120,112,96,0.12));
   box-shadow: var(--sys-shadow-soft, 0 28px 60px rgba(0, 0, 0, 0.55));
   border-radius: var(--sys-radius-md, var(--vrm-radii-card));
 }
 
 .dashboard-v2__chart-card .analytics-card__actions { display: none; }
 
-.dashboard-v2__error { color: #f5b2b2; font-weight: 600; }
+.dashboard-v2__error { color: #8b3a2f; font-weight: 600; }
 
 .dashboard-v2__skeleton {
   display: flex;
@@ -179,7 +179,7 @@
 .dashboard-v2__skeleton-line {
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(90deg, rgba(120,112,96,0.1), rgba(255, 255, 255, 0.13), rgba(120,112,96,0.1));
 }
 
 .dashboard-v2__skeleton-line--short { width: 58%; }

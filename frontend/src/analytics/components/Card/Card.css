@@ -7,7 +7,7 @@
   border-radius: var(--sys-radius-md, var(--vrm-radii-card, 12px));
   padding: var(--vrm-spacing-5, 20px);
   box-shadow: var(--sys-shadow-soft, 0 26px 56px rgba(0, 0, 0, 0.52));
-  border: 1px solid var(--sys-line-soft, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--sys-line-soft, rgba(120,112,96,0.12));
   font-family: var(--vrm-typography-font-family-base, 'Inter', sans-serif);
 }
 
@@ -21,7 +21,7 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--vrm-spacing-4, 16px);
-  border-bottom: 1px solid var(--sys-line-soft, rgba(255, 255, 255, 0.06));
+  border-bottom: 1px solid var(--sys-line-soft, rgba(120,112,96,0.1));
   padding-bottom: var(--vrm-spacing-3, 12px);
 }
 .analytics-card__title-group h3 { font-size: var(--vrm-typography-font-size-title, 18px); margin: 0; font-weight: 600; color: var(--sys-text-1, var(--vrm-text-primary, #ffffff)); }

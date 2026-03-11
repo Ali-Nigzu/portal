@@ -14,8 +14,8 @@
   --preview-stroke-bus: 1.58px;
   --preview-stroke-connector: 1.42px;
   --preview-stroke-beam: 1.5px;
-  --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, #9dc4ff 10%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 10%, transparent);
-  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #9dc4ff 18%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 18%, transparent);
+  --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, #c7ab74 10%, transparent), inset 0 1px 0 color-mix(in srgb, #e2d3b2 10%, transparent);
+  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #c7ab74 18%, transparent), inset 0 1px 0 color-mix(in srgb, #e2d3b2 18%, transparent);
   --preview-node-cta-stem: 22px;
   --preview-capacity-gap: 4px;
   --preview-top-row-lift: 52px;
@@ -26,7 +26,7 @@
   --preview-zone-tone: transparent;
   --preview-zone-feather-top: none;
   --preview-zone-feather-bottom: none;
-  --preview-veil-fill: rgba(9, 14, 24, 0.038);
+  --preview-veil-fill: rgba(77,70,56,0.06);
   --preview-gated-filter: blur(0.64px) saturate(0.68) contrast(0.99);
   --preview-clear-cta-offset-y: 24px;
   --preview-z-gated: 10;
@@ -335,7 +335,7 @@
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--sys-accent) 48%, #8dbdff 52%), color-mix(in srgb, var(--sys-accent) 38%, #5f98dc 62%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--sys-accent) 48%, #c2a568 52%), color-mix(in srgb, var(--sys-accent) 38%, #9f7c33 62%));
   border-radius: 999px;
 }
 
@@ -392,7 +392,7 @@
   border-radius: 15px;
   border: none;
   outline: none;
-  background: color-mix(in srgb, #152942 76%, var(--sys-bg-1) 24%);
+  background: color-mix(in srgb, #ddd3be 76%, var(--sys-bg-1) 24%);
   box-shadow: 0 13px 32px rgba(0, 0, 0, 0.42), 0 0 20px rgba(110, 138, 176, 0.08), inset 0 1px 0 rgba(229, 239, 252, 0.09);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
@@ -410,7 +410,7 @@
 
 .node:hover,
 .node:focus-within {
-  background: color-mix(in srgb, #1a304b 74%, var(--sys-bg-1) 26%);
+  background: color-mix(in srgb, #d6ccb8 74%, var(--sys-bg-1) 26%);
   box-shadow: 0 15px 36px rgba(0, 0, 0, 0.45), 0 0 24px rgba(110, 138, 176, 0.09), inset 0 1px 0 rgba(236, 244, 255, 0.1);
 }
 
@@ -420,7 +420,7 @@
   line-height: 1.03;
   font-weight: 690;
   letter-spacing: 0.005em;
-  color: color-mix(in srgb, var(--sys-text-1) 96%, #dbe8fb 4%);
+  color: color-mix(in srgb, var(--sys-text-1) 96%, #dcc9a3 4%);
 }
 
 .nodeAnchor {
@@ -519,21 +519,21 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, #3e5e8f 74%, transparent);
+  stroke: color-mix(in srgb, #a08650 74%, transparent);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-bus);
   fill: none;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, #446a99 70%, transparent);
+  stroke: color-mix(in srgb, #9e8349 70%, transparent);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
 }
 
 .nodeDropConnector {
-  stroke: color-mix(in srgb, #4f75a4 72%, transparent);
+  stroke: color-mix(in srgb, #9f8547 72%, transparent);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;

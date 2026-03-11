@@ -535,19 +535,19 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                       <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2}>
                         {isToNode ? (
                           <>
-                            <stop offset="0%" stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
-                            <stop offset={`${inboundWindowStartPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
-                            <stop offset={`${inboundShoulderPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_LIFT})`} />
-                            <stop offset={`${inboundCorePct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_TRANSITION})`} />
-                            <stop offset="100%" stopColor={`rgba(136, 188, 252, ${ALPHA_EDGE})`} />
+                            <stop offset="0%" stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
+                            <stop offset={`${inboundWindowStartPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
+                            <stop offset={`${inboundShoulderPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_LIFT})`} />
+                            <stop offset={`${inboundCorePct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_TRANSITION})`} />
+                            <stop offset="100%" stopColor={`rgba(184, 138, 47, ${ALPHA_EDGE})`} />
                           </>
                         ) : (
                           <>
-                            <stop offset="0%" stopColor={`rgba(136, 188, 252, ${ALPHA_EDGE})`} />
-                            <stop offset={`${corePct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_TRANSITION})`} />
-                            <stop offset={`${shoulderPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_LIFT})`} />
-                            <stop offset={`${windowPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
-                            <stop offset="100%" stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
+                            <stop offset="0%" stopColor={`rgba(184, 138, 47, ${ALPHA_EDGE})`} />
+                            <stop offset={`${corePct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_TRANSITION})`} />
+                            <stop offset={`${shoulderPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_LIFT})`} />
+                            <stop offset={`${windowPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
+                            <stop offset="100%" stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
                           </>
                         )}
                       </linearGradient>

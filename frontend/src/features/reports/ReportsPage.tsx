@@ -742,7 +742,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
             <div
               style={{
                 marginTop: "12px",
-                color: "var(--vrm-accent-red)",
+                color: "#8b3a2f",
                 fontSize: "12px",
               }}
             >
@@ -778,7 +778,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                   padding: "20px",
                   backgroundColor:
                     reportType === template.id
-                      ? "rgba(33, 150, 243, 0.1)"
+                      ? "color-mix(in srgb, var(--signal-gold) 18%, transparent)"
                       : "var(--vrm-bg-tertiary)",
                   borderRadius: "8px",
                   border: `1px solid ${reportType === template.id ? "var(--vrm-accent-blue)" : "var(--vrm-border)"}`,

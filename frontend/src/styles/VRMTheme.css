@@ -37,3 +37,103 @@
   --sys-shadow-card: var(--vrm-elevation-card);
   --sys-accent: var(--vrm-color-accent-occupancy);
 }
+
+/* camOS ivory/silver/gold overhaul overrides */
+:root {
+  --cam-ivory-0: #f4f1e8;
+  --cam-ivory-1: #f8f5ec;
+  --cam-silver-0: #ece7db;
+  --cam-silver-1: #dfd8c9;
+  --cam-silver-2: #c8c0b0;
+  --cam-gold-0: #b88a2f;
+  --cam-gold-1: #8f6a24;
+  --surface-page: var(--cam-ivory-1);
+  --surface-canvas: var(--cam-ivory-0);
+  --surface-panel: var(--cam-silver-0);
+  --surface-elevated: #fdfbf6;
+  --line-default: var(--cam-silver-2);
+  --line-soft: rgba(120, 112, 96, 0.28);
+  --text-strong: #201f1a;
+  --text-default: #38362f;
+  --text-muted: #757269;
+  --signal-gold: var(--cam-gold-0);
+  --signal-gold-strong: var(--cam-gold-1);
+
+  --vrm-bg-primary: var(--surface-page);
+  --vrm-bg-secondary: var(--surface-panel);
+  --vrm-bg-tertiary: var(--cam-silver-1);
+  --vrm-bg-panel: var(--surface-panel);
+  --vrm-bg-panel-strong: var(--surface-elevated);
+  --vrm-border: var(--line-default);
+  --vrm-border-subtle: var(--line-soft);
+  --vrm-surface-secondary: var(--surface-elevated);
+  --vrm-text-primary: var(--text-strong);
+  --vrm-text-secondary: var(--text-default);
+  --vrm-text-muted: var(--text-muted);
+  --vrm-color-focus: var(--signal-gold);
+  --vrm-accent-blue: var(--signal-gold);
+}
+
+body,
+.vrm-layout,
+.vrm-main,
+.vrm-content {
+  background: var(--surface-page);
+  color: var(--text-strong);
+}
+
+.vrm-sidebar-shell,
+.vrm-primary-rail,
+.vrm-extended-panel,
+.vrm-sidebar,
+.vrm-sidebar-header,
+.vrm-header,
+.vrm-toolbar,
+.vrm-card,
+.vrm-panel,
+.vrm-content-shell {
+  background: var(--surface-panel);
+  border-color: var(--line-default);
+  color: var(--text-strong);
+}
+
+.vrm-card,
+.vrm-panel,
+.analytics-card,
+.dashboard-v2__chart-card {
+  background: var(--surface-elevated) !important;
+  border: 1px solid var(--line-soft) !important;
+  box-shadow: 0 10px 24px rgba(57, 51, 37, 0.08) !important;
+}
+
+.vrm-btn-primary,
+.vrm-nav-item.active,
+.vrm-status-chip--active,
+.vrm-select:focus,
+.vrm-input:focus,
+.vrm-textarea:focus {
+  background: color-mix(in srgb, var(--signal-gold) 18%, var(--surface-elevated)) !important;
+  border-color: var(--signal-gold) !important;
+  color: var(--text-strong) !important;
+}
+
+.vrm-btn,
+.vrm-btn-secondary,
+.vrm-btn-sm,
+.vrm-input,
+.vrm-select,
+.vrm-textarea {
+  background: var(--surface-elevated);
+  color: var(--text-strong);
+  border: 1px solid var(--line-soft);
+}
+
+.vrm-btn:hover,
+.vrm-btn-secondary:hover,
+.vrm-nav-item:hover {
+  background: color-mix(in srgb, var(--surface-panel) 70%, var(--surface-elevated));
+}
+
+.vrm-status-warning { color: #7f5f1a; }
+.vrm-status-offline { color: #8b3a2f; }
+.vrm-status-online { color: #44644b; }
