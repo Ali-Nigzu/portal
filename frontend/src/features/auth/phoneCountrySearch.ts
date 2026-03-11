@@ -4,16 +4,20 @@ const normalize = (value: string) => value.trim().toLowerCase();
 
 const isDialCodeQuery = (query: string) => /^\+?\d+$/.test(query);
 
+const startsWithAnyName = (option: CountryPhoneOption, query: string) => {
+  const names = [option.displayName, option.countryName];
+  return names.some((name) => name.toLowerCase().startsWith(query));
+};
+
 const scoreOption = (option: CountryPhoneOption, query: string): number | null => {
   const iso = option.iso2.toLowerCase();
-  const name = option.countryName.toLowerCase();
   const dial = option.dialCode;
 
   if (iso.startsWith(query)) {
     return 0;
   }
 
-  if (name.startsWith(query)) {
+  if (startsWithAnyName(option, query)) {
     return 1;
   }
 
@@ -41,7 +45,7 @@ export const filterPhoneCountries = (options: CountryPhoneOption[], rawQuery: st
       if (a.score !== b.score) {
         return a.score - b.score;
       }
-      return a.option.countryName.localeCompare(b.option.countryName) || a.option.iso2.localeCompare(b.option.iso2);
+      return a.option.displayName.localeCompare(b.option.displayName) || a.option.iso2.localeCompare(b.option.iso2);
     })
     .map((entry) => entry.option);
 };
