@@ -7,10 +7,10 @@
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
   --mid-span: 214px;
-  --preview-alpha-content: 0.88;
-  --preview-accent-sat: 0.9;
-  --preview-number-alpha: 0.86;
-  --preview-line-alpha: 0.8;
+  --preview-alpha-content: 0.9;
+  --preview-accent-sat: 0.94;
+  --preview-number-alpha: 0.9;
+  --preview-line-alpha: 0.86;
   --preview-stroke-bus: 1.58px;
   --preview-stroke-connector: 1.42px;
   --preview-stroke-beam: 1.5px;
@@ -172,7 +172,7 @@
 .preview :global(.dashboard-v2__kpi-tile),
 .preview :global(.dashboard-v2__kpi-content) {
   opacity: var(--preview-alpha-content);
-  filter: saturate(var(--preview-accent-sat));
+  filter: saturate(var(--preview-accent-sat)) contrast(0.97);
 }
 
 .preview :global(.dashboard-v2__kpi-renderer .kpi-panel) {
@@ -285,9 +285,9 @@
 
 .capacityTile {
   border-radius: var(--sys-radius-sm);
-  border: 1px solid color-mix(in srgb, #7b8898 62%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, #d8e0e8 62%, var(--surface-panel) 38%), color-mix(in srgb, #b7c2cf 52%, var(--surface-panel) 48%));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56), inset 0 -1px 0 rgba(97, 111, 128, 0.28);
+  border: 1px solid color-mix(in srgb, #74859a 54%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #d9e1e9 58%, white 42%), color-mix(in srgb, #bcc7d3 58%, white 42%));
+  box-shadow: 0 2px 8px rgba(62, 72, 88, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.68), inset 0 -1px 0 rgba(97, 111, 128, 0.24);
   grid-column: 4;
   grid-row: 2;
   min-height: 44px;
@@ -336,7 +336,7 @@
 .capacityTrack {
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, #a9b5c3 66%, white 34%), color-mix(in srgb, #7f8ea2 86%, white 14%));
+  background: linear-gradient(180deg, color-mix(in srgb, #afbbc9 64%, white 36%), color-mix(in srgb, #7d8ca1 88%, white 12%));
   overflow: hidden;
 }
 
@@ -399,9 +399,9 @@
   border-radius: 15px;
   border: none;
   outline: none;
-  border: 1px solid color-mix(in srgb, var(--landing-gold-edge, #9c7624) 58%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, #f0dca7 62%, var(--landing-gold, var(--signal-gold)) 38%), color-mix(in srgb, #dfc06d 58%, var(--landing-gold-strong, var(--signal-gold-strong)) 42%));
-  box-shadow: 0 10px 22px rgba(62, 56, 34, 0.24), inset 0 1px 0 rgba(255, 245, 219, 0.74), inset 0 -1px 0 rgba(128, 96, 27, 0.36);
+  border: 1px solid color-mix(in srgb, var(--landing-gold-edge, #9c7624) 62%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #f4e4b8 62%, var(--landing-gold, var(--signal-gold)) 38%), color-mix(in srgb, #e2c271 64%, var(--landing-gold-strong, var(--signal-gold-strong)) 36%));
+  box-shadow: 0 10px 20px rgba(62, 56, 34, 0.22), inset 0 1px 0 rgba(255, 248, 226, 0.82), inset 0 -1px 0 rgba(128, 96, 27, 0.34);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
 }
@@ -415,8 +415,8 @@
 
 .node:hover,
 .node:focus-within {
-  background: linear-gradient(180deg, color-mix(in srgb, #f5e6bd 66%, var(--landing-gold, var(--signal-gold)) 34%), color-mix(in srgb, #e4c979 62%, var(--landing-gold-strong, var(--signal-gold-strong)) 38%));
-  box-shadow: 0 12px 24px rgba(62, 56, 34, 0.28), inset 0 1px 0 rgba(255, 248, 226, 0.8), inset 0 -1px 0 rgba(128, 96, 27, 0.42);
+  background: linear-gradient(180deg, color-mix(in srgb, #f8ebc8 66%, var(--landing-gold, var(--signal-gold)) 34%), color-mix(in srgb, #e8ce83 64%, var(--landing-gold-strong, var(--signal-gold-strong)) 36%));
+  box-shadow: 0 13px 24px rgba(62, 56, 34, 0.26), inset 0 1px 0 rgba(255, 250, 232, 0.84), inset 0 -1px 0 rgba(128, 96, 27, 0.4);
 }
 
 .nodeTitle {
@@ -493,9 +493,9 @@
 
 .mockTile {
   min-height: 112px;
-  border: 1px solid color-mix(in srgb, #7b8898 56%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, #d7dfe7 58%, var(--surface-panel) 42%), color-mix(in srgb, #b8c2cf 50%, var(--surface-panel) 50%));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52), inset 0 -1px 0 rgba(98, 111, 128, 0.24);
+  border: 1px solid color-mix(in srgb, #73849a 52%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #d9e1e9 56%, white 44%), color-mix(in srgb, #bcc7d3 56%, white 44%));
+  box-shadow: 0 2px 8px rgba(62, 72, 88, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.66), inset 0 -1px 0 rgba(98, 111, 128, 0.22);
   padding: 14px 12px;
 }
 
@@ -587,21 +587,21 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, #66778c 78%, #dce4ec 22%);
+  stroke: color-mix(in srgb, #5f7188 80%, #dbe4ed 20%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-bus);
   fill: none;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, #627388 82%, #d4deea 18%);
+  stroke: color-mix(in srgb, #5c6f87 84%, #d5dfeb 16%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
 }
 
 .nodeDropConnector {
-  stroke: color-mix(in srgb, #5f7188 82%, #d9e1eb 18%);
+  stroke: color-mix(in srgb, #596d86 84%, #d9e2ec 16%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
