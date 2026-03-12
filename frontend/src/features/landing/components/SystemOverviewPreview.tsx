@@ -62,6 +62,7 @@ const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
 ];
 
 const CAPACITY_PERCENT = 68;
+
 const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
@@ -163,6 +164,21 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
   const trafficUnavailable = !forceMockTopology && (!trafficWidget || trafficWidget.status === "error");
+
+  const renderMockTrafficSplit = () => (
+    <article className={`${styles.mockTile} ${styles.mockTrafficTile}`}>
+      <p>Traffic Split</p>
+      <div className={styles.mockTrafficContent}>
+        <div className={styles.mockTrafficDonut} aria-hidden="true" />
+        <div className={styles.mockTrafficLegend}>
+          <span><i className={styles.mockTrafficSwatchA} />Cam 1 <strong>48%</strong></span>
+          <span><i className={styles.mockTrafficSwatchB} />Cam 2 <strong>32%</strong></span>
+          <span><i className={styles.mockTrafficSwatchC} />Cam 3 <strong>20%</strong></span>
+        </div>
+      </div>
+    </article>
+  );
+
 
   useLayoutEffect(() => {
     const getSurfaceRect = (dockHost: HTMLElement | null): DOMRect | null => {
@@ -620,7 +636,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                   <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
                     <div className={styles.dockSurface} ref={trafficDockRef}>
                       {forceMockTopology
-                        ? renderMockTile("Traffic Split", "48 / 32 / 20")
+                        ? renderMockTrafficSplit()
                         : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
                     </div>
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" />
