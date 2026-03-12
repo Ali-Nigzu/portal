@@ -119,6 +119,13 @@ body {
   box-shadow: none;
 }
 
+.landing-login-cta {
+  min-height: 33px;
+  padding: 0 11px;
+  font-size: 0.82rem;
+  border-radius: var(--sys-radius-sm);
+}
+
 .landing-cta-create {
   color: var(--cta-create-text);
   background: var(--cta-create-bg);
@@ -279,9 +286,9 @@ body {
   min-height: 0;
   border: none;
   outline: none;
-  background: linear-gradient(180deg, color-mix(in srgb, white 84%, #e5ebf1 16%), color-mix(in srgb, white 94%, #e8edf3 6%));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
-  border-radius: 18px;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .landing-system-surface::before {

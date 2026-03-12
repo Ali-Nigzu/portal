@@ -23,7 +23,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
       </div>
 
       <div className="landing-header-actions">
-        <button type="button" className="btn btn-tertiary btn-sm" onClick={onLogin}>
+        <button type="button" className="btn landing-cta-btn landing-cta-node-secondary landing-login-cta" onClick={onLogin}>
           {landingCopy.nav.actions.login}
         </button>
       </div>

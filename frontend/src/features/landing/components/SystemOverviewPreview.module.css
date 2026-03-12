@@ -286,8 +286,8 @@
 .capacityTile {
   border-radius: var(--sys-radius-sm);
   border: none;
-  background: linear-gradient(180deg, color-mix(in srgb, white 96%, #eef2f6 4%), color-mix(in srgb, white 92%, #e9eef3 8%));
-  box-shadow: 0 2px 8px rgba(62, 72, 88, 0.08), inset 0 10px 16px rgba(255, 255, 255, 0.34);
+  background: transparent;
+  box-shadow: none;
   grid-column: 4;
   grid-row: 2;
   min-height: 44px;
