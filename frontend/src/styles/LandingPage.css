@@ -429,7 +429,6 @@ body {
   display: inline-flex;
   align-items: baseline;
   transform: translateY(calc(-1 * var(--axis-action-shell-offset-y)));
-  padding-left: 8px;
 }
 
 .landing-axis-right-action::before {
@@ -450,15 +449,24 @@ body {
 }
 
 .landing-axis-right-action-highlight {
+  position: relative;
+  z-index: 0;
   display: inline-block;
-  padding: 2px 8px;
-  margin-left: -8px;
-  border-radius: 8px;
+  padding: 0;
+  margin-left: 0;
   color: var(--cta-create-text);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
-  box-shadow: 0 1px 4px rgba(62, 56, 34, 0.12), inset 0 4px 8px rgba(255, 249, 231, 0.2);
   font-weight: 560;
   line-height: 1.16;
+}
+
+.landing-axis-right-action-highlight::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -2px -8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
+  box-shadow: 0 1px 4px rgba(62, 56, 34, 0.12), inset 0 4px 8px rgba(255, 249, 231, 0.2);
 }
 
 .landing-axis-right-action-tail {
