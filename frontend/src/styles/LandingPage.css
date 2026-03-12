@@ -30,12 +30,12 @@ body {
   background:
     radial-gradient(1200px 520px at 50% -140px, color-mix(in srgb, white 84%, #e8edf3 16%) 0%, color-mix(in srgb, white 94%, #e9edf2 6%) 58%, color-mix(in srgb, white 98%, #f0f3f6 2%) 100%),
     linear-gradient(180deg, color-mix(in srgb, white 97%, #edf1f5 3%), color-mix(in srgb, white 95%, #e7edf3 5%));
-  --landing-gold: #e3be64;
-  --landing-gold-strong: #d4aa4e;
-  --landing-gold-edge: #866117;
-  --cta-create-bg: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 84%, #f6dfa4 16%), color-mix(in srgb, var(--landing-gold-strong) 88%, #b88e37 12%));
-  --cta-create-bg-hover: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 74%, #f7e3b1 26%), color-mix(in srgb, var(--landing-gold-strong) 90%, #ac7f29 10%));
-  --cta-create-text: color-mix(in srgb, #3f3110 86%, #000 14%);
+  --landing-gold: #eccf82;
+  --landing-gold-strong: #ddb55a;
+  --landing-gold-edge: #9b7420;
+  --cta-create-bg: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 86%, #f9e8bd 14%), color-mix(in srgb, var(--landing-gold-strong) 84%, #e8c774 16%));
+  --cta-create-bg-hover: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 78%, #f9ebc8 22%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e3c16a 18%));
+  --cta-create-text: color-mix(in srgb, #44340f 84%, #000 16%);
   --cta-secondary-bg: linear-gradient(180deg, color-mix(in srgb, #dce4ec 56%, white 44%), color-mix(in srgb, #c5d0dc 64%, white 36%));
   --cta-secondary-bg-hover: linear-gradient(180deg, color-mix(in srgb, #e2e9f0 62%, white 38%), color-mix(in srgb, #cad4df 68%, white 32%));
   --cta-secondary-text: color-mix(in srgb, #1e2732 88%, #000 12%);
@@ -260,6 +260,12 @@ body {
   gap: 12px;
 }
 
+.landing-hero-actions .landing-cta-btn,
+.landing-header-actions .landing-login-cta {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 
 .landing-spec-sheet {
   padding: 0 0 48px;
@@ -405,13 +411,13 @@ body {
   border: 0;
   outline: none;
   background: transparent;
-  color: var(--cta-create-text);
+  color: color-mix(in srgb, var(--sys-text-1) 88%, var(--sys-text-2) 12%);
   min-height: 33px;
   padding: 0;
   margin: 0;
-  font-size: 0.96rem;
-  font-weight: 580;
-  line-height: 1.28;
+  font-size: 0.86rem;
+  font-weight: 450;
+  line-height: 1.2;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -425,29 +431,12 @@ body {
 }
 
 .landing-axis-right-action::before {
-  content: "";
-  position: absolute;
-  left: -8px;
-  right: -12px;
-  top: 50%;
-  height: 34px;
-  transform: translateY(calc(-50% - var(--axis-action-shell-offset-y)));
-  pointer-events: none;
-  z-index: -1;
-  border-radius: 12px;
-  background: var(--cta-create-bg);
-  box-shadow: 0 3px 9px rgba(62, 56, 34, 0.14), 0 1px 1px rgba(62, 56, 34, 0.08), inset 0 8px 14px rgba(255, 245, 220, 0.22);
-  transition: background-color 140ms ease, box-shadow 140ms ease;
+  content: none;
 }
 
 .landing-axis-right-action:hover {
-  color: var(--cta-create-text);
+  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
   text-decoration: none;
-}
-
-.landing-axis-right-action:hover::before {
-  background: var(--cta-create-bg-hover);
-  box-shadow: 0 5px 14px rgba(62, 56, 34, 0.2), 0 1px 1px rgba(62, 56, 34, 0.1), inset 0 9px 16px rgba(255, 248, 226, 0.24);
 }
 
 .landing-axis-right-action:focus-visible {
@@ -455,7 +444,23 @@ body {
 }
 
 .landing-axis-right-action:focus-visible::before {
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sys-accent) 12%, transparent), 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(229, 239, 252, 0.08);
+  box-shadow: none;
+}
+
+.landing-axis-right-action-highlight {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  color: var(--cta-create-text);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
+  box-shadow: 0 1px 4px rgba(62, 56, 34, 0.12), inset 0 4px 8px rgba(255, 249, 231, 0.2);
+  font-weight: 560;
+  line-height: 1.16;
+}
+
+.landing-axis-right-action-tail {
+  color: color-mix(in srgb, var(--sys-text-1) 88%, var(--sys-text-2) 12%);
+  font-weight: 450;
 }
 
 .landing-preview {

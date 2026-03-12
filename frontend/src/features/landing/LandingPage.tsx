@@ -196,7 +196,10 @@ const LandingPage: React.FC = () => {
                           className="landing-axis-right-action"
                           onClick={goToCreateAccount}
                         >
-                          <span className="landing-axis-right-action-label">{deploymentAxisItems[index]}</span>
+                          <span className="landing-axis-right-action-label">
+                            <span className="landing-axis-right-action-highlight">Create Account</span>
+                            <span className="landing-axis-right-action-tail"> at No Cost</span>
+                          </span>
                         </button>
                       </span>
                     ) : (

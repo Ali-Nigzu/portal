@@ -7,6 +7,7 @@ import { useDashboardManifest } from "../../dashboard/hooks/useDashboardManifest
 import { useDashboardWidgets } from "../../dashboard/hooks/useDashboardWidgets";
 import { VRM_KPI_IDS } from "../../dashboard/utils/applyVRMOverrides";
 import DashboardKpiSection from "../../dashboard/components/DashboardKpiSection";
+import camOSLogo from "../../../assets/Untitled design (4).svg";
 import "../../dashboard/styles/DashboardPage.css";
 import styles from "./SystemOverviewPreview.module.css";
 
@@ -672,7 +673,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           </div>
           <div className={styles.nodeStack}>
             <div className={styles.node}>
-              <span className={styles.nodeTitle}>camOS</span>
+              <img src={camOSLogo} alt="camOS Logo" className={styles.nodeLogo} />
               <button
                 type="button"
                 className={styles.previewNodeCta}
