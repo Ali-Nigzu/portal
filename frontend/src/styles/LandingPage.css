@@ -426,8 +426,10 @@ body {
 }
 
 .landing-axis-right-action-label {
-  display: block;
+  display: inline-flex;
+  align-items: baseline;
   transform: translateY(calc(-1 * var(--axis-action-shell-offset-y)));
+  padding-left: 8px;
 }
 
 .landing-axis-right-action::before {
@@ -450,6 +452,7 @@ body {
 .landing-axis-right-action-highlight {
   display: inline-block;
   padding: 2px 8px;
+  margin-left: -8px;
   border-radius: 8px;
   color: var(--cta-create-text);
   background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
@@ -556,7 +559,7 @@ body {
 
 .assurance-col-tree {
   --tree-line-opacity: 0.66;
-  --tree-stroke: 1.2px;
+  --tree-stroke: 1.45px;
   --tree-branch-row-1: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 0.5));
   --tree-branch-row-2: calc(var(--assurance-row-gap-top) + (var(--assurance-row-h) * 1.5));
   --tree-trunk-y2: var(--tree-branch-row-2);
@@ -578,8 +581,8 @@ body {
 }
 
 .assurance-tree-line {
-  stroke: color-mix(in srgb, #5f7084 64%, #d7e0e8 36%);
-  opacity: 0.7;
+  stroke: color-mix(in srgb, #9aabbe 38%, #eff4f9 62%);
+  opacity: 0.86;
   stroke-width: var(--tree-stroke);
   stroke-linecap: round;
 }

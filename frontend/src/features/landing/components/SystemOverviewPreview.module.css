@@ -217,6 +217,24 @@
   opacity: 1;
 }
 
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-label),
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-title),
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-metric-title) {
+  color: color-mix(in srgb, #6f7f93 72%, #cad4df 28%) !important;
+}
+
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-value) {
+  color: color-mix(in srgb, #566273 78%, #b7c2cf 22%) !important;
+}
+
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm path),
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot path),
+.topCluster :global(.dashboard-v2__kpi-renderer .recharts-line path),
+.topCluster :global(.dashboard-v2__kpi-renderer .recharts-area path) {
+  stroke: color-mix(in srgb, #8898ac 58%, #cfd8e3 42%) !important;
+  fill: color-mix(in srgb, #a9b7c8 20%, transparent) !important;
+}
+
 .wireEdgeAnchor {
   position: absolute;
   left: 50%;
@@ -424,8 +442,8 @@
   width: 30px;
   height: 30px;
   object-fit: contain;
-  opacity: 0.94;
-  filter: saturate(0) brightness(0.32) contrast(1.05);
+  opacity: 1;
+  filter: none;
 }
 
 .nodeAnchor {
@@ -575,7 +593,7 @@
 
 .mockTile p {
   margin: 0;
-  color: var(--sys-text-3);
+  color: color-mix(in srgb, #75859a 72%, #c8d2dd 28%);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -584,7 +602,7 @@
 .mockTile strong {
   display: block;
   margin-top: 8px;
-  color: var(--sys-text-1);
+  color: color-mix(in srgb, #546171 76%, #bcc6d2 24%);
   font-size: 1.25rem;
 }
 
