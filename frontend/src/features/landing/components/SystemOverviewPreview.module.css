@@ -342,7 +342,7 @@
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 86%, #f6e1ab 14%), color-mix(in srgb, var(--landing-gold-strong, var(--signal-gold-strong)) 84%, var(--landing-gold-edge, #9c7624) 16%));
+  background: linear-gradient(90deg, #d2dae4, #aebac9);
   border-radius: 999px;
 }
 
@@ -399,9 +399,8 @@
   border-radius: 15px;
   border: none;
   outline: none;
-  border: 1px solid color-mix(in srgb, var(--landing-gold-edge, #9c7624) 62%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, #f4e4b8 62%, var(--landing-gold, var(--signal-gold)) 38%), color-mix(in srgb, #e2c271 64%, var(--landing-gold-strong, var(--signal-gold-strong)) 36%));
-  box-shadow: 0 10px 20px rgba(62, 56, 34, 0.22), inset 0 1px 0 rgba(255, 248, 226, 0.82), inset 0 -1px 0 rgba(128, 96, 27, 0.34);
+  box-shadow: 0 10px 20px rgba(62, 56, 34, 0.22), inset 0 1px 0 rgba(255, 248, 226, 0.82), inset 0 -1px 0 rgba(128, 96, 27, 0.3), 0 0 0 1px color-mix(in srgb, var(--landing-gold-edge, #9c7624) 26%, transparent);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
 }
@@ -416,7 +415,7 @@
 .node:hover,
 .node:focus-within {
   background: linear-gradient(180deg, color-mix(in srgb, #f8ebc8 66%, var(--landing-gold, var(--signal-gold)) 34%), color-mix(in srgb, #e8ce83 64%, var(--landing-gold-strong, var(--signal-gold-strong)) 36%));
-  box-shadow: 0 13px 24px rgba(62, 56, 34, 0.26), inset 0 1px 0 rgba(255, 250, 232, 0.84), inset 0 -1px 0 rgba(128, 96, 27, 0.4);
+  box-shadow: 0 13px 24px rgba(62, 56, 34, 0.26), inset 0 1px 0 rgba(255, 250, 232, 0.84), inset 0 -1px 0 rgba(128, 96, 27, 0.34), 0 0 0 1px color-mix(in srgb, var(--landing-gold-edge, #9c7624) 22%, transparent);
 }
 
 .nodeTitle {
@@ -512,13 +511,13 @@
 }
 
 .mockTrafficDonut {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background: conic-gradient(
-    #dce3eb 0 48%,
-    #aebac9 48% 80%,
-    #738297 80% 100%
+    #cfd8e2 0 48%,
+    #afbbc9 48% 80%,
+    #8f9db0 80% 100%
   );
   position: relative;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56), 0 2px 6px rgba(62, 72, 88, 0.14);
@@ -527,7 +526,7 @@
 .mockTrafficDonut::after {
   content: "";
   position: absolute;
-  inset: 15px;
+  inset: 16px;
   border-radius: 50%;
   background: color-mix(in srgb, var(--surface-page) 82%, white 18%);
 }
@@ -558,9 +557,20 @@
   display: inline-block;
 }
 
-.mockTrafficSwatchA { background: #dce3eb; }
-.mockTrafficSwatchB { background: #aebac9; }
-.mockTrafficSwatchC { background: #738297; }
+.mockTrafficSwatchA { background: #cfd8e2; }
+.mockTrafficSwatchB { background: #afbbc9; }
+.mockTrafficSwatchC { background: #8f9db0; }
+
+
+.trafficTile .mockTrafficDonut,
+.trafficTile .mockTrafficLegend,
+.trafficTile :global(.dashboard-v2__kpi-renderer svg),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-line),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-area) {
+  opacity: 1;
+  filter: saturate(0.92) contrast(1.08);
+}
 
 .mockTile p {
   margin: 0;

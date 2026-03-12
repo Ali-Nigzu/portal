@@ -688,7 +688,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
 
       </div>
-      {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
+      {!forceMockTopology && (manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
         <p className={styles.errorNote}>Preview unavailable.</p>
       ) : null}
     </section>
