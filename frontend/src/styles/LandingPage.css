@@ -113,34 +113,36 @@ body {
   min-height: var(--cta-height);
   padding: 0 var(--cta-padding-x);
   border-radius: var(--cta-radius);
+  border: none;
   white-space: nowrap;
   width: auto;
+  box-shadow: none;
 }
 
 .landing-cta-create {
   color: var(--cta-create-text);
   background: var(--cta-create-bg);
-  border-color: transparent;
-  box-shadow: 0 3px 10px rgba(62, 56, 34, 0.18), inset 0 1px 0 rgba(255, 244, 214, 0.72), inset 0 -1px 0 rgba(122, 90, 25, 0.30);
+  border: none;
+  box-shadow: 0 3px 10px rgba(62, 56, 34, 0.17), 0 1px 1px rgba(62, 56, 34, 0.08), inset 0 8px 14px rgba(255, 246, 221, 0.22);
 }
 
 .landing-cta-create:hover:not(:disabled) {
   background: var(--cta-create-bg-hover);
-  border-color: transparent;
-  box-shadow: 0 5px 13px rgba(62, 56, 34, 0.22), inset 0 1px 0 rgba(255, 248, 225, 0.8), inset 0 -1px 0 rgba(122, 90, 25, 0.34);
+  border: none;
+  box-shadow: 0 5px 13px rgba(62, 56, 34, 0.2), 0 1px 1px rgba(62, 56, 34, 0.1), inset 0 9px 16px rgba(255, 248, 228, 0.24);
 }
 
 .landing-cta-node-secondary {
   color: var(--cta-secondary-text);
-  border-color: transparent;
+  border: none;
   background: var(--cta-secondary-bg);
-  box-shadow: 0 3px 9px rgba(52, 61, 74, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.66), inset 0 -1px 0 rgba(95, 110, 127, 0.22);
+  box-shadow: 0 3px 9px rgba(52, 61, 74, 0.12), 0 1px 1px rgba(52, 61, 74, 0.08), inset 0 8px 12px rgba(255, 255, 255, 0.28);
 }
 
 .landing-cta-node-secondary:hover:not(:disabled) {
   background: var(--cta-secondary-bg-hover);
-  border-color: transparent;
-  box-shadow: 0 5px 14px rgba(52, 61, 74, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 -1px 0 rgba(95, 110, 127, 0.24);
+  border: none;
+  box-shadow: 0 5px 14px rgba(52, 61, 74, 0.16), 0 1px 1px rgba(52, 61, 74, 0.1), inset 0 9px 14px rgba(255, 255, 255, 0.3);
 }
 
 .btn-primary {
@@ -427,7 +429,7 @@ body {
   z-index: -1;
   border-radius: 12px;
   background: var(--cta-create-bg);
-  box-shadow: 0 3px 9px rgba(62, 56, 34, 0.14), inset 0 1px 0 rgba(255, 245, 220, 0.66), inset 0 -1px 0 rgba(122, 90, 25, 0.26);
+  box-shadow: 0 3px 9px rgba(62, 56, 34, 0.14), 0 1px 1px rgba(62, 56, 34, 0.08), inset 0 8px 14px rgba(255, 245, 220, 0.22);
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
@@ -438,7 +440,7 @@ body {
 
 .landing-axis-right-action:hover::before {
   background: var(--cta-create-bg-hover);
-  box-shadow: 0 5px 14px rgba(62, 56, 34, 0.2), inset 0 1px 0 rgba(255, 248, 226, 0.74), inset 0 -1px 0 rgba(122, 90, 25, 0.3);
+  box-shadow: 0 5px 14px rgba(62, 56, 34, 0.2), 0 1px 1px rgba(62, 56, 34, 0.1), inset 0 9px 16px rgba(255, 248, 226, 0.24);
 }
 
 .landing-axis-right-action:focus-visible {
