@@ -235,6 +235,26 @@
   fill: color-mix(in srgb, #a9b7c8 20%, transparent) !important;
 }
 
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-label),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-title),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-metric-title),
+.trafficTile :global(.traffic-distribution__title) {
+  color: color-mix(in srgb, #6f7f93 72%, #cad4df 28%) !important;
+}
+
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-value) {
+  color: color-mix(in srgb, #566273 78%, #b7c2cf 22%) !important;
+}
+
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm path),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot path),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-line path),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-area path),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector) {
+  stroke: color-mix(in srgb, #8898ac 58%, #cfd8e3 42%) !important;
+  fill: color-mix(in srgb, #a9b7c8 20%, transparent) !important;
+}
+
 .wireEdgeAnchor {
   position: absolute;
   left: 50%;
@@ -331,7 +351,7 @@
   line-height: 1;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--sys-text-3);
+  color: color-mix(in srgb, #6f7f93 72%, #cad4df 28%);
 }
 
 .capacityHeaderRow {
@@ -343,25 +363,25 @@
 
 .capacityValue {
   margin: 0;
-  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
+  color: color-mix(in srgb, #566273 78%, #b7c2cf 22%);
   font-size: 0.78rem;
-  opacity: var(--preview-number-alpha);
+  opacity: 0.92;
   line-height: 1;
-  font-weight: 620;
+  font-weight: 580;
 }
 
 
 .capacityTrack {
   height: 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, white 96%, #ebf0f4 4%);
+  background: color-mix(in srgb, #d6dee7 40%, transparent);
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #c8d2dd 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #b9c5d2 24%, transparent);
 }
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, #d7dee7, #a9b5c4);
+  background: linear-gradient(90deg, color-mix(in srgb, #a8b6c7 68%, #d2dbe5 32%), color-mix(in srgb, #8c9caf 72%, #c5d0dc 28%));
   border-radius: 999px;
 }
 
@@ -498,10 +518,9 @@
 .trafficTile :global(.traffic-distribution__title) {
   font-size: 0.86rem;
   line-height: 1.1;
-  font-weight: 400;
+  font-weight: 390;
   letter-spacing: 0;
-  color: var(--sys-text-1);
-  opacity: 1;
+  opacity: 0.92;
 }
 
 .trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel),
@@ -587,8 +606,8 @@
 .trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector),
 .trafficTile :global(.dashboard-v2__kpi-renderer .recharts-line),
 .trafficTile :global(.dashboard-v2__kpi-renderer .recharts-area) {
-  opacity: 1;
-  filter: saturate(0.92) contrast(1.08);
+  opacity: 0.9;
+  filter: saturate(0.88) contrast(0.98);
 }
 
 .mockTile p {
@@ -604,6 +623,7 @@
   margin-top: 8px;
   color: color-mix(in srgb, #546171 76%, #bcc6d2 24%);
   font-size: 1.25rem;
+  font-weight: 580;
 }
 
 .wireSvg {
