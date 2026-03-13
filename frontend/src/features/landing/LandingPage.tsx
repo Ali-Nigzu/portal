@@ -63,6 +63,7 @@ const LandingPage: React.FC = () => {
   } as const;
   const assuranceBranchY1 = assuranceTree.rowOffset + assuranceTree.textOpticalCenterY;
   const assuranceBranchY2 = assuranceBranchY1 + assuranceTree.rowHeight;
+  const assuranceLowerOpticalOffsetY = 1.8;
   const assuranceSvgHeight = assuranceTree.rowOffset + (assuranceTree.rowHeight * 2);
   const [assuranceLayoutById, setAssuranceLayoutById] = useState<Record<string, { trunkX: number; branchY1: number; branchY2: number }>>({});
   const firstLetterRefs = useRef<Record<string, HTMLSpanElement | null>>({});
@@ -107,7 +108,7 @@ const LandingPage: React.FC = () => {
               }
               const itemRect = node.getBoundingClientRect();
               const itemCenterY = itemRect.top + (itemRect.height / 2);
-              return (itemCenterY - treeSvgRect.top) * (viewBoxHeight / treeSvgRect.height);
+              return ((itemCenterY - treeSvgRect.top) * (viewBoxHeight / treeSvgRect.height)) + assuranceLowerOpticalOffsetY;
             });
 
           const normalizedBranchY1 = Number((branchCenters[0] ?? assuranceBranchY1).toFixed(3));

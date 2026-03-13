@@ -459,8 +459,8 @@
 
 .nodeLogo {
   display: block;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   opacity: 1;
   filter: none;
@@ -482,7 +482,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   line-height: 1.1;
-  margin-top: 6px;
+  margin-top: 5px;
   padding: 0;
   cursor: pointer;
   transition: color 140ms ease, opacity 140ms ease;
