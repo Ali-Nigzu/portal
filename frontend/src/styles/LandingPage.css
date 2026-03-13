@@ -97,7 +97,7 @@ body {
   padding: 0 14px;
   border: 1px solid transparent;
   font-size: 0.89rem;
-  line-height: 1;
+  line-height: 1.32;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
@@ -353,9 +353,21 @@ body {
   padding-right: var(--axis-gap);
 }
 
+.landing-axis-cell-left:not(.landing-axis-cell-heading) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .landing-axis-cell-right {
   text-align: left;
   padding-left: var(--axis-gap);
+}
+
+.landing-axis-cell-right:not(.landing-axis-cell-heading) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .landing-axis-cell-axis {
@@ -397,7 +409,7 @@ body {
   font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
   font-size: 0.84rem;
   font-weight: 520;
-  line-height: 1;
+  line-height: 1.32;
   letter-spacing: 0.08em;
   color: color-mix(in srgb, var(--sys-text-3) 90%, transparent);
 }
