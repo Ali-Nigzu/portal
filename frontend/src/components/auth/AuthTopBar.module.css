@@ -5,8 +5,8 @@
   align-items: center;
   gap: 16px;
   padding: 0 32px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: #0f131a;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-page);
 }
 
 .leftZone {
@@ -55,7 +55,7 @@
 }
 
 .link {
-  color: #c9d2e1;
+  color: var(--text-default);
   text-decoration: none;
   font-size: 14px;
   line-height: 1;
@@ -68,9 +68,9 @@
 .link:hover,
 .link:focus-visible,
 .link[aria-current="page"] {
-  color: #ffffff;
+  color: var(--text-strong);
   text-decoration: underline;
-  text-decoration-color: rgba(137, 180, 255, 0.9);
+  text-decoration-color: color-mix(in srgb, var(--signal-gold) 68%, transparent);
 }
 
 @media (max-width: 900px) {

@@ -7,15 +7,15 @@
   --top-anchor-outset: 2px;
   --bottom-anchor-inset: 14px;
   --mid-span: 214px;
-  --preview-alpha-content: 0.94;
-  --preview-accent-sat: 0.78;
+  --preview-alpha-content: 0.9;
+  --preview-accent-sat: 0.94;
   --preview-number-alpha: 0.9;
-  --preview-line-alpha: 0.6;
+  --preview-line-alpha: 0.62;
   --preview-stroke-bus: 1.58px;
   --preview-stroke-connector: 1.42px;
   --preview-stroke-beam: 1.5px;
-  --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, #9dc4ff 10%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 10%, transparent);
-  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, #9dc4ff 18%, transparent), inset 0 1px 0 color-mix(in srgb, #d4e5ff 18%, transparent);
+  --preview-cta-edge-glow: 0 0 0 1px color-mix(in srgb, var(--line-soft) 62%, transparent), inset 0 1px 0 color-mix(in srgb, white 20%, transparent);
+  --preview-cta-edge-glow-hover: 0 0 0 1px color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 28%, transparent), inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
   --preview-node-cta-stem: 22px;
   --preview-capacity-gap: 4px;
   --preview-top-row-lift: 52px;
@@ -26,8 +26,8 @@
   --preview-zone-tone: transparent;
   --preview-zone-feather-top: none;
   --preview-zone-feather-bottom: none;
-  --preview-veil-fill: rgba(9, 14, 24, 0.038);
-  --preview-gated-filter: blur(0.64px) saturate(0.68) contrast(0.99);
+  --preview-veil-fill: transparent;
+  --preview-gated-filter: none;
   --preview-clear-cta-offset-y: 24px;
   --preview-z-gated: 10;
   --preview-z-veil: 20;
@@ -99,16 +99,12 @@
 .gatedContent {
   position: relative;
   z-index: var(--preview-z-gated);
-  filter: var(--preview-gated-filter);
+  filter: none;
   pointer-events: none;
 }
 
 .veilLayer {
-  position: absolute;
-  inset: 0;
-  z-index: var(--preview-z-veil);
-  background: var(--preview-veil-fill);
-  pointer-events: none;
+  display: none;
 }
 
 .clearLayer {
@@ -137,6 +133,7 @@
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
   transform: translateY(calc(-1 * var(--preview-top-row-lift)));
   transform-origin: top center;
+
 }
 
 .kpiSlot {
@@ -168,6 +165,14 @@
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+}
+
+
+.preview :global(.dashboard-v2__kpi-renderer),
+.preview :global(.dashboard-v2__kpi-tile),
+.preview :global(.dashboard-v2__kpi-content) {
+  opacity: var(--preview-alpha-content);
+  filter: saturate(var(--preview-accent-sat)) contrast(0.97);
 }
 
 .preview :global(.dashboard-v2__kpi-renderer .kpi-panel) {
@@ -208,8 +213,46 @@
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline-region--vrm),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot),
 .preview :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm) {
-  filter: saturate(var(--preview-accent-sat)) brightness(0.86);
-  opacity: var(--preview-alpha-content);
+  filter: none;
+  opacity: 1;
+}
+
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-label),
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-title),
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-metric-title) {
+  color: color-mix(in srgb, #6f7f93 72%, #cad4df 28%) !important;
+}
+
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-value) {
+  color: color-mix(in srgb, #566273 78%, #b7c2cf 22%) !important;
+}
+
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm path),
+.topCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot path),
+.topCluster :global(.dashboard-v2__kpi-renderer .recharts-line path),
+.topCluster :global(.dashboard-v2__kpi-renderer .recharts-area path) {
+  stroke: color-mix(in srgb, #8898ac 58%, #cfd8e3 42%) !important;
+  fill: color-mix(in srgb, #a9b7c8 20%, transparent) !important;
+}
+
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-label),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-title),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-metric-title),
+.trafficTile :global(.traffic-distribution__title) {
+  color: color-mix(in srgb, #6f7f93 72%, #cad4df 28%) !important;
+}
+
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-value) {
+  color: color-mix(in srgb, #566273 78%, #b7c2cf 22%) !important;
+}
+
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm path),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot path),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-line path),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-area path),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector) {
+  stroke: color-mix(in srgb, #8898ac 58%, #cfd8e3 42%) !important;
+  fill: color-mix(in srgb, #a9b7c8 20%, transparent) !important;
 }
 
 .wireEdgeAnchor {
@@ -254,6 +297,7 @@
   min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
   transform: translateY(calc(-1 * var(--preview-bottom-row-lift)));
   transform-origin: top center;
+
 }
 
 .inlineNotice {
@@ -269,7 +313,7 @@
 
 .retryButton {
   border: 1px solid var(--sys-line-soft);
-  background: color-mix(in srgb, var(--sys-bg-2) 75%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
   color: var(--sys-text-1);
   font-size: 0.74rem;
   padding: 4px 10px;
@@ -279,8 +323,9 @@
 
 .capacityTile {
   border-radius: var(--sys-radius-sm);
-  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 54%, transparent);
+  border: none;
+  background: transparent;
+  box-shadow: none;
   grid-column: 4;
   grid-row: 2;
   min-height: 44px;
@@ -306,7 +351,7 @@
   line-height: 1;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--sys-text-3);
+  color: color-mix(in srgb, #6f7f93 72%, #cad4df 28%);
 }
 
 .capacityHeaderRow {
@@ -318,24 +363,25 @@
 
 .capacityValue {
   margin: 0;
-  color: color-mix(in srgb, var(--sys-text-1) 92%, var(--sys-text-2) 8%);
+  color: color-mix(in srgb, #566273 78%, #b7c2cf 22%);
   font-size: 0.78rem;
-  opacity: var(--preview-number-alpha);
+  opacity: 0.92;
   line-height: 1;
-  font-weight: 620;
+  font-weight: 580;
 }
 
 
 .capacityTrack {
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--sys-line-soft) 92%, transparent), color-mix(in srgb, var(--sys-line-soft) 76%, transparent));
+  background: color-mix(in srgb, #d6dee7 40%, transparent);
   overflow: hidden;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #b9c5d2 24%, transparent);
 }
 
 .capacityFill {
   height: 100%;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--sys-accent) 48%, #8dbdff 52%), color-mix(in srgb, var(--sys-accent) 38%, #5f98dc 62%));
+  background: linear-gradient(90deg, color-mix(in srgb, #a8b6c7 68%, #d2dbe5 32%), color-mix(in srgb, #8c9caf 72%, #c5d0dc 28%));
   border-radius: 999px;
 }
 
@@ -392,8 +438,8 @@
   border-radius: 15px;
   border: none;
   outline: none;
-  background: color-mix(in srgb, #152942 76%, var(--sys-bg-1) 24%);
-  box-shadow: 0 13px 32px rgba(0, 0, 0, 0.42), 0 0 20px rgba(110, 138, 176, 0.08), inset 0 1px 0 rgba(229, 239, 252, 0.09);
+  background: linear-gradient(180deg, color-mix(in srgb, #f8ebc8 64%, var(--landing-gold, var(--signal-gold)) 36%), color-mix(in srgb, #edd48a 62%, var(--landing-gold-strong, var(--signal-gold-strong)) 38%));
+  box-shadow: 0 10px 20px rgba(62, 56, 34, 0.22), 0 1px 1px rgba(62, 56, 34, 0.08), inset 0 9px 14px rgba(255, 248, 226, 0.26);
   transition: background-color 160ms ease, box-shadow 160ms ease;
   filter: none;
 }
@@ -402,25 +448,22 @@
   content: "";
   position: absolute;
   inset: -40px -70px;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.06) 35%, rgba(0, 0, 0, 0) 70%);
-  opacity: 1;
-  pointer-events: none;
-  z-index: -1;
+  display: none;
 }
 
 .node:hover,
 .node:focus-within {
-  background: color-mix(in srgb, #1a304b 74%, var(--sys-bg-1) 26%);
-  box-shadow: 0 15px 36px rgba(0, 0, 0, 0.45), 0 0 24px rgba(110, 138, 176, 0.09), inset 0 1px 0 rgba(236, 244, 255, 0.1);
+  background: linear-gradient(180deg, color-mix(in srgb, #fbf0d4 68%, var(--landing-gold, var(--signal-gold)) 32%), color-mix(in srgb, #f0da95 62%, var(--landing-gold-strong, var(--signal-gold-strong)) 38%));
+  box-shadow: 0 13px 24px rgba(62, 56, 34, 0.26), 0 1px 1px rgba(62, 56, 34, 0.1), inset 0 10px 16px rgba(255, 250, 232, 0.28);
 }
 
-.nodeTitle {
+.nodeLogo {
   display: block;
-  font-size: 17px;
-  line-height: 1.03;
-  font-weight: 690;
-  letter-spacing: 0.005em;
-  color: color-mix(in srgb, var(--sys-text-1) 96%, #dbe8fb 4%);
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  opacity: 1;
+  filter: none;
 }
 
 .nodeAnchor {
@@ -433,7 +476,7 @@
   appearance: none;
   border: none;
   background: transparent;
-  color: color-mix(in srgb, var(--sys-text-2) 88%, var(--sys-text-3) 12%);
+  color: color-mix(in srgb, var(--landing-gold-edge, #9c7624) 72%, var(--sys-text-1) 28%);
   font-size: 0.62rem;
   font-weight: 530;
   letter-spacing: 0.08em;
@@ -447,7 +490,7 @@
 }
 
 .previewNodeCta:hover {
-  color: color-mix(in srgb, var(--sys-text-1) 84%, var(--sys-text-2) 16%);
+  color: color-mix(in srgb, var(--landing-gold, var(--signal-gold)) 82%, var(--landing-gold-edge, #9c7624) 18%);
   opacity: 1;
 }
 
@@ -475,10 +518,9 @@
 .trafficTile :global(.traffic-distribution__title) {
   font-size: 0.86rem;
   line-height: 1.1;
-  font-weight: 400;
+  font-weight: 390;
   letter-spacing: 0;
-  color: var(--sys-text-1);
-  opacity: 1;
+  opacity: 0.92;
 }
 
 .trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel),
@@ -486,17 +528,91 @@
   max-width: 196px;
 }
 
-
 .mockTile {
   min-height: 112px;
-  border: 1px solid color-mix(in srgb, var(--sys-line-soft) 55%, transparent);
-  background: color-mix(in srgb, var(--sys-bg-2) 54%, transparent);
+  border: 1px solid color-mix(in srgb, #73849a 52%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #d9e1e9 56%, white 44%), color-mix(in srgb, #bcc7d3 56%, white 44%));
+  box-shadow: 0 2px 8px rgba(62, 72, 88, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.66), inset 0 -1px 0 rgba(98, 111, 128, 0.22);
   padding: 14px 12px;
+}
+
+
+.mockTrafficTile {
+  min-height: 154px;
+}
+
+.mockTrafficContent {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mockTrafficDonut {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #cfd8e2 0 48%,
+    #afbbc9 48% 80%,
+    #8f9db0 80% 100%
+  );
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56), 0 2px 6px rgba(62, 72, 88, 0.14);
+}
+
+.mockTrafficDonut::after {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface-page) 82%, white 18%);
+}
+
+.mockTrafficLegend {
+  display: grid;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--sys-text-2);
+}
+
+.mockTrafficLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mockTrafficLegend strong {
+  margin-left: 2px;
+  font-size: 0.72rem;
+  color: var(--sys-text-1);
+}
+
+.mockTrafficLegend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mockTrafficSwatchA { background: #cfd8e2; }
+.mockTrafficSwatchB { background: #afbbc9; }
+.mockTrafficSwatchC { background: #8f9db0; }
+
+
+.trafficTile .mockTrafficDonut,
+.trafficTile .mockTrafficLegend,
+.trafficTile :global(.dashboard-v2__kpi-renderer svg),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-line),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-area) {
+  opacity: 0.9;
+  filter: saturate(0.88) contrast(0.98);
 }
 
 .mockTile p {
   margin: 0;
-  color: var(--sys-text-3);
+  color: color-mix(in srgb, #75859a 72%, #c8d2dd 28%);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -505,8 +621,9 @@
 .mockTile strong {
   display: block;
   margin-top: 8px;
-  color: var(--sys-text-1);
+  color: color-mix(in srgb, #546171 76%, #bcc6d2 24%);
   font-size: 1.25rem;
+  font-weight: 580;
 }
 
 .wireSvg {
@@ -519,21 +636,21 @@
 }
 
 .busLine {
-  stroke: color-mix(in srgb, #3e5e8f 74%, transparent);
+  stroke: color-mix(in srgb, #90a1b5 46%, #edf2f7 54%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-bus);
   fill: none;
 }
 
 .connectorLine {
-  stroke: color-mix(in srgb, #446a99 70%, transparent);
+  stroke: color-mix(in srgb, #93a5b9 42%, #edf2f7 58%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;
 }
 
 .nodeDropConnector {
-  stroke: color-mix(in srgb, #4f75a4 72%, transparent);
+  stroke: color-mix(in srgb, #94a7bb 44%, #eef3f8 56%);
   stroke-opacity: var(--preview-line-alpha);
   stroke-width: var(--preview-stroke-connector);
   fill: none;

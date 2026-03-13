@@ -42,7 +42,7 @@ export const SeriesLegend = ({
               className="legend-swatch"
               style={{
                 backgroundColor:
-                  item.color ?? "var(--vrm-color-accent-occupancy, #2685ff)",
+                  item.color ?? "var(--vrm-color-accent-occupancy, #9b7420)",
               }}
             />
             <span className="legend-label">{item.label ?? item.id}</span>

@@ -2,8 +2,8 @@
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
-  background: #0f131a;
-  color: #fff;
+  background: var(--surface-page);
+  color: var(--text-strong);
 }
 
 .create-account-shell {
@@ -32,7 +32,7 @@
   gap: 8px;
   justify-self: start;
   margin-bottom: 10px;
-  color: #b9c3d3;
+  color: var(--text-default);
   font-size: 14px;
   text-decoration: none;
   text-underline-offset: 3px;
@@ -40,12 +40,12 @@
 
 .create-account-back-link:hover,
 .create-account-back-link:focus-visible {
-  color: #ffffff;
+  color: var(--text-strong);
   text-decoration: underline;
 }
 
 .create-account-title {
-  color: #c9d2e1;
+  color: var(--text-default);
   font-size: 16px;
   font-weight: 500;
 }
@@ -82,7 +82,7 @@
   transform: translateY(-50%);
   border: 0;
   background: transparent;
-  color: #b9c3d3;
+  color: var(--text-default);
   cursor: pointer;
   line-height: 1;
   width: 24px;
@@ -94,7 +94,7 @@
 
 .create-account-password-toggle:hover,
 .create-account-password-toggle:focus-visible {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .create-account-hint {
@@ -118,7 +118,7 @@
 }
 
 .create-account-error {
-  color: #f4b63d;
+  color: #7a3030;
   font-size: 13px;
 }
 
@@ -139,17 +139,28 @@
   line-height: 1;
 }
 
+.create-account-submit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--signal-gold) 58%, transparent);
+  outline-offset: 2px;
+}
+
+.create-account-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: saturate(0.72);
+}
+
 .create-account-legal {
   display: grid;
   gap: 6px;
   margin-top: 6px;
-  color: #aab6c9;
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.42;
 }
 
 .create-account-legal a {
-  color: #89b4ff;
+  color: var(--text-default);
   text-decoration: none;
   text-underline-offset: 2px;
 }
@@ -162,10 +173,10 @@
 .create-account-right-pane {
   position: relative;
   overflow: hidden;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid var(--line-soft);
   background:
-    radial-gradient(circle at 22% 20%, rgba(105, 145, 215, 0.12), transparent 48%),
-    linear-gradient(145deg, #151a22 0%, #101722 60%, #0e1520 100%);
+    radial-gradient(circle at 22% 20%, rgba(160, 173, 189, 0.10), transparent 48%),
+    linear-gradient(145deg, var(--surface-panel) 0%, #f3f6fa 60%, #edf2f8 100%);
 }
 
 .auth-right-pane-overlay {
@@ -204,6 +215,6 @@
   .create-account-right-pane {
     min-height: 140px;
     border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid var(--line-soft);
   }
 }

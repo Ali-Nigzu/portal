@@ -17,7 +17,7 @@
 .demo-overlay__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(10, 10, 10, 0.5);
+  background: rgba(40, 52, 70, 0.28);
   backdrop-filter: blur(2px);
   opacity: 0;
   transition: opacity 180ms ease;
@@ -29,7 +29,7 @@
   width: min(96vw, 1700px);
   height: min(94vh, 980px);
   border-radius: 20px;
-  background: rgba(15, 18, 28, 0.92);
+  background: color-mix(in srgb, var(--surface-panel) 90%, white);
   border: 1px solid rgba(255, 255, 255, 0.04);
   box-shadow: 0 40px 110px rgba(0, 0, 0, 0.45);
   overflow: hidden;
@@ -91,9 +91,9 @@
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(15, 18, 28, 0.9);
-  color: #fff;
+  border: 1px solid var(--line-default);
+  background: color-mix(in srgb, var(--surface-panel) 82%, #e9edf3);
+  color: var(--text-strong);
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
@@ -102,10 +102,10 @@
 }
 
 .demo-overlay__close:hover {
-  background: rgba(35, 40, 55, 0.95);
+  background: color-mix(in srgb, var(--surface-panel) 70%, var(--signal-gold) 8%);
 }
 
 .demo-overlay__close:focus-visible {
-  outline: 2px solid rgba(79, 195, 247, 0.9);
+  outline: 2px solid color-mix(in srgb, var(--signal-gold) 72%, transparent);
   outline-offset: 2px;
 }

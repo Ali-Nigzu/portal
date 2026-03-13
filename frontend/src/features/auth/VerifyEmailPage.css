@@ -2,8 +2,8 @@
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
-  background: #0f131a;
-  color: #fff;
+  background: var(--surface-page);
+  color: var(--text-strong);
 }
 
 .verify-email-shell {
@@ -27,7 +27,7 @@
 }
 
 .verify-email-title {
-  color: #c9d2e1;
+  color: var(--text-default);
   font-size: 16px;
   font-weight: 500;
 }
@@ -40,7 +40,7 @@
 }
 
 .verify-email-copy {
-  color: #aab6c9;
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 
@@ -50,12 +50,12 @@
 }
 
 .verify-email-error {
-  color: #f4b63d;
+  color: #7a3030;
   font-size: 13px;
 }
 
 .verify-email-message {
-  color: #8ad9a2;
+  color: #44644b;
   font-size: 13px;
 }
 
@@ -72,7 +72,7 @@
 .verify-email-resend {
   border: 0;
   background: transparent;
-  color: #89b4ff;
+  color: var(--text-default);
   padding: 0;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -86,14 +86,14 @@
 }
 
 .verify-email-link {
-  color: #89b4ff;
+  color: var(--text-default);
 }
 
 .verify-email-right-pane {
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid var(--line-soft);
   background:
-    radial-gradient(circle at 22% 20%, rgba(105, 145, 215, 0.12), transparent 48%),
-    linear-gradient(145deg, #151a22 0%, #101722 60%, #0e1520 100%);
+    radial-gradient(circle at 22% 20%, rgba(160, 173, 189, 0.10), transparent 48%),
+    linear-gradient(145deg, var(--surface-panel) 0%, #f3f6fa 60%, #edf2f8 100%);
 }
 
 @media (max-width: 900px) {
@@ -120,6 +120,6 @@
   .verify-email-right-pane {
     min-height: 140px;
     border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid var(--line-soft);
   }
 }

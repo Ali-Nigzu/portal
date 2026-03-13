@@ -1,5 +1,5 @@
 import React from "react";
-import { companyLogoDataUri } from "../../../assets/companyLogo";
+import camOSLogo from "../../../assets/Untitled design (4).svg";
 import { landingCopy } from "../content";
 
 type LandingHeaderProps = {
@@ -13,7 +13,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
     <div className="landing-container landing-header-top">
       <div className="landing-brand" aria-label={landingCopy.brand.shortName}>
         <img
-          src={companyLogoDataUri}
+          src={camOSLogo}
           alt="camOS Logo"
           className="landing-brand-logo"
         />
@@ -23,7 +23,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
       </div>
 
       <div className="landing-header-actions">
-        <button type="button" className="btn btn-tertiary btn-sm" onClick={onLogin}>
+        <button type="button" className="btn landing-cta-btn landing-cta-node-secondary landing-login-cta" onClick={onLogin}>
           {landingCopy.nav.actions.login}
         </button>
       </div>

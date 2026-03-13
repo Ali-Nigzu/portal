@@ -31,18 +31,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ alert, children }) => (
           padding: "12px 16px",
           backgroundColor:
             alert.type === "success"
-              ? "rgba(76, 175, 80, 0.1)"
-              : "rgba(244, 67, 54, 0.1)",
+              ? "rgba(79, 116, 88, 0.12)"
+              : "rgba(139, 58, 47, 0.12)",
           border: `1px solid ${
             alert.type === "success"
-              ? "var(--vrm-accent-green)"
-              : "var(--vrm-accent-red)"
+              ? "#44644b"
+              : "#8b3a2f"
           }`,
           borderRadius: "6px",
           color:
             alert.type === "success"
-              ? "var(--vrm-accent-green)"
-              : "var(--vrm-accent-red)",
+              ? "#44644b"
+              : "#8b3a2f",
         }}
       >
         {alert.message}

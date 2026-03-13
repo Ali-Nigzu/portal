@@ -38,8 +38,8 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
             style={{
               width: "40px",
               height: "40px",
-              border: "4px solid #333",
-              borderTop: "4px solid #1976d2",
+              border: "4px solid var(--line-default)",
+              borderTop: "4px solid var(--signal-gold)",
               borderRadius: "50%",
               animation: "spin 1s linear infinite",
               margin: "0 auto 16px",
@@ -113,7 +113,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
                 display: "flex",
                 alignItems: "center",
                 gap: "12px",
-                color: "var(--vrm-accent-orange)",
+                color: "#8b6321",
               }}
             >
               <span>⚠️</span>
@@ -146,7 +146,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
               style={{
                 fontSize: "36px",
                 fontWeight: "700",
-                color: "var(--vrm-accent-green)",
+                color: "#44644b",
                 marginBottom: "8px",
               }}
             >
@@ -163,7 +163,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
               style={{
                 fontSize: "36px",
                 fontWeight: "700",
-                color: "var(--vrm-accent-orange)",
+                color: "#8b6321",
                 marginBottom: "8px",
               }}
             >

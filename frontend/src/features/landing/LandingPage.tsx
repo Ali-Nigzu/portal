@@ -63,17 +63,17 @@ const LandingPage: React.FC = () => {
   } as const;
   const assuranceBranchY1 = assuranceTree.rowOffset + assuranceTree.textOpticalCenterY;
   const assuranceBranchY2 = assuranceBranchY1 + assuranceTree.rowHeight;
-  const assuranceTrunkY2 = assuranceBranchY2;
   const assuranceSvgHeight = assuranceTree.rowOffset + (assuranceTree.rowHeight * 2);
-  const [assuranceTrunkXById, setAssuranceTrunkXById] = useState<Record<string, number>>({});
+  const [assuranceLayoutById, setAssuranceLayoutById] = useState<Record<string, { trunkX: number; branchY1: number; branchY2: number }>>({});
   const firstLetterRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const treeSvgRefs = useRef<Record<string, SVGSVGElement | null>>({});
+  const assuranceItemTextRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
 
   useLayoutEffect(() => {
     let frameId = 0;
 
     const measureTrunkAnchors = () => {
-      setAssuranceTrunkXById((prev) => {
+      setAssuranceLayoutById((prev) => {
         const next = { ...prev };
         let changed = false;
 
@@ -88,8 +88,9 @@ const LandingPage: React.FC = () => {
           const firstLetterRect = firstLetter.getBoundingClientRect();
           const treeSvgRect = treeSvg.getBoundingClientRect();
           const viewBoxWidth = treeSvg.viewBox.baseVal.width || treeSvgRect.width;
+          const viewBoxHeight = treeSvg.viewBox.baseVal.height || treeSvgRect.height;
 
-          if (!treeSvgRect.width || !viewBoxWidth) {
+          if (!treeSvgRect.width || !treeSvgRect.height || !viewBoxWidth || !viewBoxHeight) {
             return;
           }
 
@@ -97,8 +98,33 @@ const LandingPage: React.FC = () => {
           const trunkX = (firstLetterCenterX - treeSvgRect.left) * (viewBoxWidth / treeSvgRect.width);
           const normalizedTrunkX = Number(trunkX.toFixed(3));
 
-          if (next[id] !== normalizedTrunkX) {
-            next[id] = normalizedTrunkX;
+          const textNodes = assuranceItemTextRefs.current[id] ?? [];
+          const branchCenters = textNodes
+            .slice(0, 2)
+            .map((node) => {
+              if (!node) {
+                return null;
+              }
+              const itemRect = node.getBoundingClientRect();
+              const itemCenterY = itemRect.top + (itemRect.height / 2);
+              return (itemCenterY - treeSvgRect.top) * (viewBoxHeight / treeSvgRect.height);
+            });
+
+          const normalizedBranchY1 = Number((branchCenters[0] ?? assuranceBranchY1).toFixed(3));
+          const normalizedBranchY2 = Number((branchCenters[1] ?? assuranceBranchY2).toFixed(3));
+          const current = next[id];
+
+          if (
+            !current
+            || current.trunkX !== normalizedTrunkX
+            || current.branchY1 !== normalizedBranchY1
+            || current.branchY2 !== normalizedBranchY2
+          ) {
+            next[id] = {
+              trunkX: normalizedTrunkX,
+              branchY1: normalizedBranchY1,
+              branchY2: normalizedBranchY2,
+            };
             changed = true;
           }
         });
@@ -196,7 +222,10 @@ const LandingPage: React.FC = () => {
                           className="landing-axis-right-action"
                           onClick={goToCreateAccount}
                         >
-                          <span className="landing-axis-right-action-label">{deploymentAxisItems[index]}</span>
+                          <span className="landing-axis-right-action-label">
+                            <span className="landing-axis-right-action-highlight">Create Account</span>
+                            <span className="landing-axis-right-action-tail">@ No Cost</span>
+                          </span>
                         </button>
                       </span>
                     ) : (
@@ -231,7 +260,11 @@ const LandingPage: React.FC = () => {
                       {(() => {
                         const firstLetter = column.title.slice(0, 1);
                         const remainder = column.title.slice(1);
-                        const trunkX = assuranceTrunkXById[column.id] ?? 0;
+                        const columnLayout = assuranceLayoutById[column.id];
+                        const trunkX = columnLayout?.trunkX ?? 0;
+                        const branchY1 = columnLayout?.branchY1 ?? assuranceBranchY1;
+                        const branchY2 = columnLayout?.branchY2 ?? assuranceBranchY2;
+                        const trunkY2 = branchY2;
 
                         return (
                           <>
@@ -259,15 +292,25 @@ const LandingPage: React.FC = () => {
                             treeSvgRefs.current[column.id] = node;
                           }}
                         >
-                          <line className="assurance-tree-line assurance-tree-line--trunk" x1={trunkX} y1={assuranceTree.trunkY1} x2={trunkX} y2={assuranceTrunkY2} />
-                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={assuranceBranchY1} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={assuranceBranchY1} />
-                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={assuranceBranchY2} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={assuranceBranchY2} />
+                          <line className="assurance-tree-line assurance-tree-line--trunk" x1={trunkX} y1={assuranceTree.trunkY1} x2={trunkX} y2={trunkY2} />
+                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={branchY1} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={branchY1} />
+                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={branchY2} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={branchY2} />
                         </svg>
                         <ul className="assurance-col-list">
-                          {column.items.map((item) => (
+                          {column.items.map((item, itemIndex) => (
                             <li className="assurance-col-item" key={item}>
                               <span className="assurance-col-item-dock" aria-hidden="true" />
-                              <span className="assurance-col-item-text">{item}</span>
+                              <span
+                                className="assurance-col-item-text"
+                                ref={(node) => {
+                                  if (!assuranceItemTextRefs.current[column.id]) {
+                                    assuranceItemTextRefs.current[column.id] = [];
+                                  }
+                                  assuranceItemTextRefs.current[column.id][itemIndex] = node;
+                                }}
+                              >
+                                {item}
+                              </span>
                             </li>
                           ))}
                         </ul>

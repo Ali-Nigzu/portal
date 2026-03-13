@@ -37,3 +37,140 @@
   --sys-shadow-card: var(--vrm-elevation-card);
   --sys-accent: var(--vrm-color-accent-occupancy);
 }
+
+/* camOS ivory/silver/gold overhaul overrides */
+:root {
+  --cam-ivory-0: #f7f7f3;
+  --cam-ivory-1: #fbfbf8;
+  --cam-silver-0: #e8edf2;
+  --cam-silver-1: #d8dfe7;
+  --cam-silver-2: #c2cbd6;
+  --cam-graphite-0: #3f4854;
+  --cam-graphite-1: #2f3742;
+  --cam-gold-0: #9b7420;
+  --cam-gold-1: #7f5f18;
+
+  --surface-page: var(--cam-ivory-1);
+  --surface-canvas: var(--cam-ivory-0);
+  --surface-panel: var(--cam-silver-0);
+  --surface-elevated: #fdfefd;
+  --surface-elevated-strong: #ffffff;
+  --line-default: var(--cam-silver-2);
+  --line-soft: rgba(118, 130, 146, 0.24);
+  --text-strong: #16181b;
+  --text-default: #39414a;
+  --text-muted: #5e6876;
+  --signal-gold: var(--cam-gold-0);
+  --signal-gold-strong: var(--cam-gold-1);
+
+  --chart-signal: var(--signal-gold);
+  --chart-series-2: #58626e;
+  --chart-series-3: #66707d;
+  --chart-series-4: #4a5460;
+  --chart-series-5: #727c89;
+  --chart-series-6: #515b67;
+  --chart-series-7: #7b8693;
+  --chart-series-8: #616b78;
+  --chart-series-9: #8892a0;
+  --chart-series-10: #6d7785;
+
+  --vrm-bg-primary: var(--surface-page);
+  --vrm-bg-secondary: var(--surface-panel);
+  --vrm-bg-tertiary: var(--cam-silver-1);
+  --vrm-bg-panel: var(--surface-panel);
+  --vrm-bg-panel-strong: var(--surface-elevated-strong);
+  --vrm-border: var(--line-default);
+  --vrm-border-subtle: var(--line-soft);
+  --vrm-surface-secondary: var(--surface-elevated);
+  --vrm-text-primary: var(--text-strong);
+  --vrm-text-secondary: var(--text-default);
+  --vrm-text-muted: var(--text-muted);
+  --vrm-color-focus: var(--signal-gold);
+  --vrm-accent-blue: var(--signal-gold);
+  --vrm-accent-teal: var(--cam-graphite-0);
+}
+
+body,
+.vrm-layout,
+.vrm-main,
+.vrm-content {
+  background: var(--surface-page);
+  color: var(--text-strong);
+}
+
+.vrm-sidebar-shell,
+.vrm-primary-rail,
+.vrm-extended-panel,
+.vrm-sidebar,
+.vrm-sidebar-header,
+.vrm-header,
+.vrm-toolbar,
+.vrm-card,
+.vrm-panel,
+.vrm-content-shell {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 93%, white 7%), var(--surface-panel));
+  border-color: var(--line-default);
+  color: var(--text-strong);
+}
+
+.vrm-card,
+.vrm-panel,
+.analytics-card,
+.dashboard-v2__chart-card {
+  background: var(--surface-elevated) !important;
+  border: 1px solid var(--line-soft) !important;
+  box-shadow: 0 8px 20px rgba(52, 61, 74, 0.09) !important;
+}
+
+.vrm-btn,
+.vrm-btn-secondary,
+.vrm-btn-sm,
+.vrm-input,
+.vrm-select,
+.vrm-textarea {
+  background: var(--surface-elevated-strong);
+  color: var(--text-strong);
+  border: 1px solid var(--line-soft);
+}
+
+.vrm-btn-primary {
+  background: color-mix(in srgb, var(--signal-gold) 92%, white 8%) !important;
+  border-color: color-mix(in srgb, var(--signal-gold) 58%, #5d4611 42%) !important;
+  color: #17130a !important;
+}
+
+.vrm-btn-primary:hover,
+.vrm-btn-primary:focus-visible {
+  background: color-mix(in srgb, var(--signal-gold-strong) 88%, white 12%) !important;
+  border-color: color-mix(in srgb, var(--signal-gold-strong) 72%, #4d390d 28%) !important;
+}
+
+.vrm-btn:disabled,
+.vrm-btn-primary:disabled,
+.vrm-btn-secondary:disabled,
+.vrm-btn-sm:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  border-color: color-mix(in srgb, var(--line-soft) 78%, transparent) !important;
+  background: color-mix(in srgb, var(--surface-panel) 65%, white 35%) !important;
+  color: color-mix(in srgb, var(--text-muted) 82%, transparent) !important;
+}
+
+.vrm-nav-item.active,
+.vrm-status-chip--active,
+.vrm-select:focus,
+.vrm-input:focus,
+.vrm-textarea:focus {
+  border-color: var(--signal-gold) !important;
+  color: var(--text-strong) !important;
+}
+
+.vrm-btn:hover,
+.vrm-btn-secondary:hover,
+.vrm-nav-item:hover {
+  background: color-mix(in srgb, var(--surface-panel) 70%, white 30%);
+}
+
+.vrm-status-warning { color: #735720; }
+.vrm-status-offline { color: #7a3030; }
+.vrm-status-online { color: #45505f; }

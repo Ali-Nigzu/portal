@@ -71,8 +71,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ credentials }) => {
             style={{
               width: "40px",
               height: "40px",
-              border: "4px solid #333",
-              borderTop: "4px solid #1976d2",
+              border: "4px solid var(--line-default)",
+              borderTop: "4px solid var(--signal-gold)",
               borderRadius: "50%",
               animation: "spin 1s linear infinite",
               margin: "0 auto 16px",

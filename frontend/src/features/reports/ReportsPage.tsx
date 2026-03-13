@@ -742,7 +742,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
             <div
               style={{
                 marginTop: "12px",
-                color: "var(--vrm-accent-red)",
+                color: "#8b3a2f",
                 fontSize: "12px",
               }}
             >
@@ -778,8 +778,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                   padding: "20px",
                   backgroundColor:
                     reportType === template.id
-                      ? "rgba(33, 150, 243, 0.1)"
-                      : "var(--vrm-bg-tertiary)",
+                      ? "color-mix(in srgb, var(--signal-gold) 9%, var(--surface-elevated-strong))"
+                      : "color-mix(in srgb, var(--surface-panel) 82%, white 18%)",
                   borderRadius: "8px",
                   border: `1px solid ${reportType === template.id ? "var(--vrm-accent-blue)" : "var(--vrm-border)"}`,
                   transition: "all 0.2s ease",
@@ -792,7 +792,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                 onMouseEnter={(e) => {
                   if (reportType !== template.id) {
                     e.currentTarget.style.borderColor =
-                      "var(--vrm-accent-blue)";
+                      "color-mix(in srgb, var(--signal-gold) 46%, var(--line-default) 54%)";
                     e.currentTarget.style.transform = "translateY(-2px)";
                   }
                 }}

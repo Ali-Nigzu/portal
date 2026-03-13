@@ -7,6 +7,7 @@ import { useDashboardManifest } from "../../dashboard/hooks/useDashboardManifest
 import { useDashboardWidgets } from "../../dashboard/hooks/useDashboardWidgets";
 import { VRM_KPI_IDS } from "../../dashboard/utils/applyVRMOverrides";
 import DashboardKpiSection from "../../dashboard/components/DashboardKpiSection";
+import camOSLogo from "../../../assets/Untitled design (4).svg";
 import "../../dashboard/styles/DashboardPage.css";
 import styles from "./SystemOverviewPreview.module.css";
 
@@ -62,6 +63,7 @@ const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
 ];
 
 const CAPACITY_PERCENT = 68;
+
 const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const TOPOLOGY_MOCK_PARAM = "topologyMock";
@@ -163,6 +165,21 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
   const hasError = manifestStatus === "error" || widgetStatus === "error";
   const trafficUnavailable = !forceMockTopology && (!trafficWidget || trafficWidget.status === "error");
+
+  const renderMockTrafficSplit = () => (
+    <article className={`${styles.mockTile} ${styles.mockTrafficTile}`}>
+      <p>Traffic Split</p>
+      <div className={styles.mockTrafficContent}>
+        <div className={styles.mockTrafficDonut} aria-hidden="true" />
+        <div className={styles.mockTrafficLegend}>
+          <span><i className={styles.mockTrafficSwatchA} />Cam 1 <strong>48%</strong></span>
+          <span><i className={styles.mockTrafficSwatchB} />Cam 2 <strong>32%</strong></span>
+          <span><i className={styles.mockTrafficSwatchC} />Cam 3 <strong>20%</strong></span>
+        </div>
+      </div>
+    </article>
+  );
+
 
   useLayoutEffect(() => {
     const getSurfaceRect = (dockHost: HTMLElement | null): DOMRect | null => {
@@ -535,19 +552,19 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                       <linearGradient key={route.gradientId} id={route.gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2}>
                         {isToNode ? (
                           <>
-                            <stop offset="0%" stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
-                            <stop offset={`${inboundWindowStartPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
-                            <stop offset={`${inboundShoulderPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_LIFT})`} />
-                            <stop offset={`${inboundCorePct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_TRANSITION})`} />
-                            <stop offset="100%" stopColor={`rgba(136, 188, 252, ${ALPHA_EDGE})`} />
+                            <stop offset="0%" stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
+                            <stop offset={`${inboundWindowStartPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
+                            <stop offset={`${inboundShoulderPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_LIFT})`} />
+                            <stop offset={`${inboundCorePct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_TRANSITION})`} />
+                            <stop offset="100%" stopColor={`rgba(184, 138, 47, ${ALPHA_EDGE})`} />
                           </>
                         ) : (
                           <>
-                            <stop offset="0%" stopColor={`rgba(136, 188, 252, ${ALPHA_EDGE})`} />
-                            <stop offset={`${corePct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_TRANSITION})`} />
-                            <stop offset={`${shoulderPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_LIFT})`} />
-                            <stop offset={`${windowPct.toFixed(2)}%`} stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
-                            <stop offset="100%" stopColor={`rgba(136, 188, 252, ${ALPHA_BASE})`} />
+                            <stop offset="0%" stopColor={`rgba(184, 138, 47, ${ALPHA_EDGE})`} />
+                            <stop offset={`${corePct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_TRANSITION})`} />
+                            <stop offset={`${shoulderPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_LIFT})`} />
+                            <stop offset={`${windowPct.toFixed(2)}%`} stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
+                            <stop offset="100%" stopColor={`rgba(184, 138, 47, ${ALPHA_BASE})`} />
                           </>
                         )}
                       </linearGradient>
@@ -620,7 +637,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                   <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
                     <div className={styles.dockSurface} ref={trafficDockRef}>
                       {forceMockTopology
-                        ? renderMockTile("Traffic Split", "48 / 32 / 20")
+                        ? renderMockTrafficSplit()
                         : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
                     </div>
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" />
@@ -656,7 +673,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           </div>
           <div className={styles.nodeStack}>
             <div className={styles.node}>
-              <span className={styles.nodeTitle}>camOS</span>
+              <img src={camOSLogo} alt="camOS Logo" className={styles.nodeLogo} />
               <button
                 type="button"
                 className={styles.previewNodeCta}
@@ -672,7 +689,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
 
       </div>
-      {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
+      {!forceMockTopology && (manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
         <p className={styles.errorNote}>Preview unavailable.</p>
       ) : null}
     </section>

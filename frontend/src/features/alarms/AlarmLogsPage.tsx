@@ -37,8 +37,8 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
             style={{
               width: "40px",
               height: "40px",
-              border: "4px solid #333",
-              borderTop: "4px solid #1976d2",
+              border: "4px solid var(--line-default)",
+              borderTop: "4px solid var(--signal-gold)",
               borderRadius: "50%",
               animation: "spin 1s linear infinite",
               margin: "0 auto 16px",
@@ -55,7 +55,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
           <h3 className="vrm-card-title">Connection Error</h3>
         </div>
         <div className="vrm-card-body">
-          <p style={{ color: "var(--vrm-accent-red)", marginBottom: "16px" }}>
+          <p style={{ color: "#8b3a2f", marginBottom: "16px" }}>
             {error}
           </p>
           <button
@@ -131,7 +131,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               style={{
                 fontSize: "36px",
                 fontWeight: "700",
-                color: "var(--vrm-accent-red)",
+                color: "#8b3a2f",
                 marginBottom: "8px",
               }}
             >
@@ -149,7 +149,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               style={{
                 fontSize: "36px",
                 fontWeight: "700",
-                color: "var(--vrm-accent-red)",
+                color: "#8b3a2f",
                 marginBottom: "8px",
               }}
             >
@@ -167,7 +167,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               style={{
                 fontSize: "36px",
                 fontWeight: "700",
-                color: "var(--vrm-accent-orange)",
+                color: "#8b6321",
                 marginBottom: "8px",
               }}
             >
@@ -185,7 +185,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               style={{
                 fontSize: "36px",
                 fontWeight: "700",
-                color: "var(--vrm-accent-green)",
+                color: "#44644b",
                 marginBottom: "8px",
               }}
             >
@@ -359,11 +359,11 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                       <td>
                         {" "}
                         {alarm.alarmClearedAfter ? (
-                          <span style={{ color: "var(--vrm-accent-green)" }}>
+                          <span style={{ color: "#44644b" }}>
                             {alarm.alarmClearedAfter}
                           </span>
                         ) : (
-                          <span style={{ color: "var(--vrm-accent-red)" }}>
+                          <span style={{ color: "#8b3a2f" }}>
                             Still active
                           </span>
                         )}{" "}

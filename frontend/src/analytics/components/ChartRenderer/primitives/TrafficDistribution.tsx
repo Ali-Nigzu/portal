@@ -12,6 +12,7 @@ const DEFAULT_SLICE_COLORS = [
 ];
 
 const VRM_SLICE_COLORS = ["#7EA6DC", "#3F78C1", "#1F3F73"];
+const PREVIEW_SLICE_COLORS = ["#dce3eb", "#aebac9", "#738297", "#5e6c80"];
 const EMPTY_RING_COLOR = "rgba(96, 122, 165, 0.28)";
 
 export const TrafficDistribution = ({
@@ -49,7 +50,14 @@ export const TrafficDistribution = ({
   const contentClassName = `traffic-distribution__content${
     isVrmTraffic ? " traffic-distribution__content--vrm" : ""
   }`;
-  const palette = isVrmTraffic ? VRM_SLICE_COLORS : DEFAULT_SLICE_COLORS;
+  const isPreviewPalette =
+    typeof className === "string" &&
+    className.includes("dashboard-v2__kpi-renderer--preview");
+  const palette = isPreviewPalette
+    ? PREVIEW_SLICE_COLORS
+    : isVrmTraffic
+      ? VRM_SLICE_COLORS
+      : DEFAULT_SLICE_COLORS;
 
   if (!primary || data.length === 0) {
     return (
