@@ -789,12 +789,13 @@ body {
 
 .landing-footer-legal-link {
   color: inherit;
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 1px;
 }
 
 .landing-footer-legal-link:hover {
   color: var(--sys-text-1);
+  text-decoration: none;
 }
 
 
