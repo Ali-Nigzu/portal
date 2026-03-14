@@ -1,31 +1,24 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { landingCopy } from "../content";
 
-type LandingFooterProps = {
-  onLogin: () => void;
-};
-
-const LandingFooter: React.FC<LandingFooterProps> = ({ onLogin }) => (
+const LandingFooter: React.FC = () => (
   <footer className="landing-footer">
     <div className="landing-container landing-footer-row">
-      <div className="landing-footer-main">
-        <p className="landing-footer-links">
-          <span className="landing-footer-static-link">{landingCopy.footer.links[0]}</span>
-          <span aria-hidden="true"> · </span>
-          <span className="landing-footer-static-link">{landingCopy.footer.links[1]}</span>
-          <span aria-hidden="true"> · </span>
-          <span className="landing-footer-static-link">{landingCopy.footer.links[2]}</span>
-          <span aria-hidden="true"> · </span>
-          <button
-            type="button"
-            onClick={onLogin}
-            className="landing-footer-login-btn"
-          >
-            {landingCopy.footer.links[3]}
-          </button>
-        </p>
-        <p>{landingCopy.footer.legalLine1}</p>
-        <p>{landingCopy.footer.legalLine2}</p>
+      <div className="landing-footer-main" aria-label="Company and legal information">
+        <p className="landing-footer-copyright">{landingCopy.footer.copyright}</p>
+
+        <nav className="landing-footer-links-column" aria-label="Footer links">
+          <a href="#" className="landing-footer-link-item">{landingCopy.footer.links[0]}</a>
+          <a href="#" className="landing-footer-link-item">{landingCopy.footer.links[1]}</a>
+          <Link to="/contact" className="landing-footer-link-item">{landingCopy.footer.links[2]}</Link>
+        </nav>
+
+        <div className="landing-footer-legal-column">
+          {landingCopy.footer.legalLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
       </div>
 
       <div className="landing-footer-social" aria-label="Social links">

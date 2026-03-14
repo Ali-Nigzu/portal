@@ -346,7 +346,7 @@ const LandingPage: React.FC = () => {
         </section>
       </main>
 
-      <LandingFooter onLogin={goToLogin} />
+      <LandingFooter />
     </div>
   );
 };
