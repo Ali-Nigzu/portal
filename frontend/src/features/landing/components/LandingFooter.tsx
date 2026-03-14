@@ -15,9 +15,27 @@ const LandingFooter: React.FC = () => (
         </nav>
 
         <div className="landing-footer-legal-column">
-          {landingCopy.footer.legalLines.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
+          {landingCopy.footer.legalLines.map((line, index) => {
+            if (index === 1) {
+              const [beforeIco, afterIco] = line.split("ICO");
+              return (
+                <p key={line}>
+                  {beforeIco}
+                  <a
+                    href="https://ico.org.uk/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="landing-footer-legal-link"
+                  >
+                    ICO
+                  </a>
+                  {afterIco}
+                </p>
+              );
+            }
+
+            return <p key={line}>{line}</p>;
+          })}
         </div>
       </div>
 

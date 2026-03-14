@@ -787,6 +787,17 @@ body {
   gap: 4px;
 }
 
+.landing-footer-legal-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+}
+
+.landing-footer-legal-link:hover {
+  color: var(--sys-text-1);
+}
+
+
 .landing-footer-social { display: flex; align-items: center; justify-content: flex-end; gap: 8px; align-self: center; transform: translateY(-9px); }
 .landing-footer-social-link {
   width: 28px;
