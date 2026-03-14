@@ -479,7 +479,7 @@ body {
   margin-left: 0;
   color: var(--cta-create-text);
   font-size: inherit;
-  font-weight: 460;
+  font-weight: 530;
   line-height: inherit;
 }
 
@@ -487,14 +487,14 @@ body {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: -2px -3px -1px -5px;
+  inset: -2px -4px -1px -4px;
   border-radius: 8px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
   box-shadow: 0 1px 4px rgba(62, 56, 34, 0.12), inset 0 4px 8px rgba(255, 249, 231, 0.2);
 }
 
 .landing-axis-right-action-tail {
-  margin-left: 4px;
+  margin-left: 5px;
   font-size: inherit;
   color: color-mix(in srgb, var(--sys-text-1) 88%, var(--sys-text-2) 12%);
   font-weight: 400;

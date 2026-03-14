@@ -224,7 +224,7 @@ const LandingPage: React.FC = () => {
                           onClick={goToCreateAccount}
                         >
                           <span className="landing-axis-right-action-label">
-                            <span className="landing-axis-right-action-highlight">Create Account</span>
+                            <span className="landing-axis-right-action-highlight">CREATE ACCOUNT</span>
                             <span className="landing-axis-right-action-tail">@ No Cost</span>
                           </span>
                         </button>
