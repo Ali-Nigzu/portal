@@ -30,7 +30,7 @@ export const landingCopy = {
   deployment: {
     heading: "System Deployment",
     firstStep: "Create Account at No Cost",
-    secondStep: "Register & Connect",
+    secondStep: "Connect & Set Up",
     thirdStep: "System Live",
   },
   assurances: {
