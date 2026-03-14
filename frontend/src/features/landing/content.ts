@@ -54,7 +54,7 @@ export const landingCopy = {
     legalLines: [
       "Camera Operating Systems Limited is registered in England and Wales. Registered Number: 16937639",
       "Camera Operating Systems Limited is registered with the Information Commissioner’s Office as a Data Controller. Registered Number: Z1234567",
-      "Registered Address: 71-75 Shelton Street, Holborn, London, WC2H 9FD, England",
+      "Registered Address: 71-75 Shelton Street, Covent Garden, London, WC2H 9FD, England",
     ],
     socials: {
       youtube: "YouTube",
