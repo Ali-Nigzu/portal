@@ -227,12 +227,14 @@
   color: color-mix(in srgb, #566273 78%, #b7c2cf 22%) !important;
 }
 
-.topCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm path),
-.topCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot path),
-.topCluster :global(.dashboard-v2__kpi-renderer .recharts-line path),
-.topCluster :global(.dashboard-v2__kpi-renderer .recharts-area path) {
+.topCluster :global(.dashboard-v2__kpi-renderer .recharts-area .recharts-area-curve),
+.topCluster :global(.dashboard-v2__kpi-renderer .recharts-line path) {
   stroke: color-mix(in srgb, #8898ac 58%, #cfd8e3 42%) !important;
+}
+
+.topCluster :global(.dashboard-v2__kpi-renderer .recharts-area .recharts-area-area) {
   fill: color-mix(in srgb, #a9b7c8 20%, transparent) !important;
+  stroke: transparent !important;
 }
 
 .bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-label),
@@ -246,13 +248,19 @@
   color: color-mix(in srgb, #566273 78%, #b7c2cf 22%) !important;
 }
 
-.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline--vrm path),
-.bottomCluster :global(.dashboard-v2__kpi-renderer .kpi-sparkline-plot path),
+.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-area .recharts-area-curve),
 .bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-line path),
-.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-area path),
 .trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector) {
   stroke: color-mix(in srgb, #8898ac 58%, #cfd8e3 42%) !important;
+}
+
+.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-area .recharts-area-area),
+.trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector) {
   fill: color-mix(in srgb, #a9b7c8 20%, transparent) !important;
+}
+
+.bottomCluster :global(.dashboard-v2__kpi-renderer .recharts-area .recharts-area-area) {
+  stroke: transparent !important;
 }
 
 .wireEdgeAnchor {
@@ -350,7 +358,7 @@
   font-size: 0.66rem;
   line-height: 1;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
   color: color-mix(in srgb, #6f7f93 72%, #cad4df 28%);
 }
 
@@ -459,8 +467,8 @@
 
 .nodeLogo {
   display: block;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   opacity: 1;
   filter: none;
@@ -482,7 +490,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   line-height: 1.1;
-  margin-top: 6px;
+  margin-top: 5px;
   padding: 0;
   cursor: pointer;
   transition: color 140ms ease, opacity 140ms ease;

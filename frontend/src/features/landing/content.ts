@@ -30,7 +30,7 @@ export const landingCopy = {
   deployment: {
     heading: "System Deployment",
     firstStep: "Create Account at No Cost",
-    secondStep: "Connect Camera",
+    secondStep: "Connect & Set Up",
     thirdStep: "System Live",
   },
   assurances: {
@@ -49,11 +49,13 @@ export const landingCopy = {
     button: "Create Account",
   },
   footer: {
-    legalLine1:
-      "Camera Operating Systems Limited is registered in England and Wales. Registered number: 16937639",
-    legalLine2: "Registered address: 71-75 Shelton St, London WC2H 9JQ, UK",
-    contactEmail: "enquiries@camos.app",
-    links: ["Privacy", "Terms", "Contact", "Login"],
+    copyright: "© 2026 Camera Operating Systems",
+    links: ["Terms & Conditions", "Privacy Policy", "Contact Us"],
+    legalLines: [
+      "Camera Operating Systems Limited is registered in England and Wales. Registered Number: 16937639",
+      "Camera Operating Systems Limited is registered with the ICO as a Data Controller. Registered Number: Z1234567",
+      "Registered Address: 71-75 Shelton Street, Covent Garden, London, WC2H 9FD, England",
+    ],
     socials: {
       youtube: "YouTube",
       linkedin: "LinkedIn",
