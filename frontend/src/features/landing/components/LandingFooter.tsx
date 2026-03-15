@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { landingCopy } from "../content";
 
 type CookieConsentWindow = Window & {
@@ -9,9 +8,7 @@ type CookieConsentWindow = Window & {
 };
 
 const LandingFooter: React.FC = () => {
-  const handleCookiePreferencesClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
-    event.preventDefault();
-
+  const handleCookiePreferencesClick: React.MouseEventHandler<HTMLButtonElement> = () => {
     const cookieConsent = (window as CookieConsentWindow).CookieConsent;
     if (cookieConsent && typeof cookieConsent.renew === "function") {
       cookieConsent.renew();
@@ -20,20 +17,30 @@ const LandingFooter: React.FC = () => {
 
   return (
     <footer className="landing-footer">
-      <div className="landing-container landing-footer-row">
+      <div className="landing-container landing-container--footer landing-footer-row">
         <div className="landing-footer-main" aria-label="Company and legal information">
           <div className="landing-footer-brand-column">
             <p className="landing-footer-copyright">{landingCopy.footer.copyright}</p>
             <nav className="landing-footer-links-column landing-footer-links-column-primary" aria-label="Primary legal links">
-              <a href="#" className="landing-footer-link-item">{landingCopy.footer.primaryLinks[0]}</a>
-              <a href="#" className="landing-footer-link-item">{landingCopy.footer.primaryLinks[1]}</a>
+              <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+                {landingCopy.footer.primaryLinks[0]}
+              </button>
+              <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+                {landingCopy.footer.primaryLinks[1]}
+              </button>
             </nav>
           </div>
 
-          <nav className="landing-footer-links-column" aria-label="Footer links">
-            <a href="#" className="landing-footer-link-item">{landingCopy.footer.secondaryLinks[0]}</a>
-            <a href="#" className="landing-footer-link-item" onClick={handleCookiePreferencesClick}>{landingCopy.footer.secondaryLinks[1]}</a>
-            <Link to="/contact" className="landing-footer-link-item">{landingCopy.footer.secondaryLinks[2]}</Link>
+          <nav className="landing-footer-links-column landing-footer-links-column-secondary" aria-label="Footer links">
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              {landingCopy.footer.secondaryLinks[0]}
+            </button>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button" onClick={handleCookiePreferencesClick}>
+              {landingCopy.footer.secondaryLinks[1]}
+            </button>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              {landingCopy.footer.secondaryLinks[2]}
+            </button>
           </nav>
 
           <div className="landing-footer-legal-column">
