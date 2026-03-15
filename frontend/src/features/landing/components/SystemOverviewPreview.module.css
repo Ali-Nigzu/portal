@@ -763,6 +763,59 @@
   }
 }
 
+@media (max-width: 767px) and (orientation: portrait) {
+  .preview {
+    --preview-top-row-lift: 0px;
+    --preview-bottom-row-lift: 0px;
+    --topo-gap-row: 18px;
+  }
+
+  .canvas {
+    row-gap: 22px;
+  }
+
+  .topCluster,
+  .bottomCluster {
+    transform: none;
+    row-gap: 16px;
+  }
+
+  .inlineNotice {
+    min-height: 94px;
+  }
+
+  .nodeLayer {
+    position: relative;
+    inset: auto;
+    display: flex;
+    justify-content: center;
+    margin: 36px auto 44px;
+    pointer-events: none;
+  }
+
+  .midZone,
+  .nodeMeasureGhost {
+    display: none;
+  }
+
+  .nodeStack {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+  }
+
+  .node {
+    width: min(100%, 184px);
+    min-height: 98px;
+  }
+
+  .previewNodeCta {
+    font-size: 0.66rem;
+    margin-top: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .beamRoute {
     animation: none;

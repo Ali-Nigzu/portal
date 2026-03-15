@@ -991,6 +991,12 @@ body {
     grid-template-columns: 1fr;
     row-gap: 18px;
   }
+
+  .landing-assurances .assurance-col[data-testid="assurance-col-privacy"],
+  .landing-assurances .assurance-col[data-testid="assurance-col-operation"],
+  .landing-assurances .assurance-col[data-testid="assurance-col-system"] {
+    grid-column: auto;
+  }
   .assurance-cta-row { flex-direction: column; align-items: stretch; }
   .landing-assurance-cta { width: 100%; }
   .landing-signup { padding: 46px 0 42px; }
@@ -1007,13 +1013,13 @@ body {
 
 @media (max-width: 767px) and (orientation: portrait) {
   .landing-hero-zone {
-    --hero-title-size: clamp(2.24rem, 11.4vw, 2.9rem);
-    --hero-statement-size: clamp(1.44rem, 6.1vw, 1.78rem);
-    --hero-gap-b: 24px;
-    --hero-gap-c: 44px;
-    --hero-zone-top: 72px;
-    --hero-zone-bottom: 34px;
-    min-height: calc(100svh - 64px);
+    --hero-title-size: clamp(2.3rem, 12vw, 3rem);
+    --hero-statement-size: clamp(1.48rem, 6.3vw, 1.86rem);
+    --hero-gap-b: 26px;
+    --hero-gap-c: 58px;
+    --hero-zone-top: 76px;
+    --hero-zone-bottom: 92px;
+    min-height: calc(100svh - 60px);
   }
 
   .landing-hero-zone-grid {
@@ -1021,42 +1027,97 @@ body {
     align-content: start;
   }
 
+  .landing-hero-actions {
+    gap: 12px;
+  }
+
   .landing-axis-layout {
-    margin-top: 32px;
+    margin-top: clamp(68px, 12vh, 108px);
+    min-height: 82svh;
   }
 
   .landing-axis-matrix {
-    row-gap: 14px;
-    padding-top: 8px;
-    padding-bottom: 24px;
+    row-gap: 16px;
+    padding-top: 14px;
+    padding-bottom: 46px;
   }
 
+
+  .landing-axis-matrix {
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+    grid-template-rows: auto repeat(3, auto);
+  }
+
+  .landing-axis-cell-left,
+  .landing-axis-cell-right,
+  .landing-axis-cell-heading {
+    padding: 0;
+  }
+
+  .landing-axis-cell-left {
+    text-align: right;
+    padding-right: 12px;
+  }
+
+  .landing-axis-cell-right {
+    text-align: left;
+    padding-left: 12px;
+  }
+
+  .landing-axis-cell-left:not(.landing-axis-cell-heading) {
+    justify-content: flex-end;
+  }
+
+  .landing-axis-cell-right:not(.landing-axis-cell-heading) {
+    justify-content: flex-start;
+  }
+
+  .landing-axis-cell-axis,
+  .landing-axis-roman {
+    justify-self: center;
+  }
+
+  .landing-axis-right-action-label {
+    white-space: normal;
+  }
+
+  .landing-axis-right-action-tail {
+    margin-left: 4px;
+  }
   .landing-spec-sheet {
-    padding-top: 26px;
-    padding-bottom: 72px;
+    padding-top: 52px;
+    padding-bottom: 132px;
+    min-height: 132svh;
+  }
+
+  .landing-spec-sheet-inner {
+    display: grid;
+    gap: 72px;
   }
 
   .landing-preview {
     --preview-pad-top: 0;
-    --preview-pad-bottom: 28px;
+    --preview-pad-bottom: 62px;
   }
 
   .landing-assurances {
-    padding: 18px 0 34px;
+    margin-top: 8px;
+    min-height: 96svh;
+    padding: 40px 0 64px;
   }
 
   .landing-assurance-spec {
-    row-gap: 24px;
+    row-gap: 32px;
   }
 
   .assurance-cta-row {
-    margin-top: 36px;
-    gap: 14px;
+    margin-top: 54px;
+    gap: 16px;
   }
 
   .landing-footer {
-    margin-top: 26px;
-    padding: 14px 0;
+    margin-top: 46px;
+    padding: 16px 0;
   }
 }
 
