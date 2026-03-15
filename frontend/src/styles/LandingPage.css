@@ -745,7 +745,7 @@ body {
 .landing-footer-main {
   display: grid;
   grid-template-columns: minmax(0, max-content) minmax(0, max-content) minmax(280px, 1fr);
-  gap: 10px 4px;
+  gap: 10px 16px;
   align-items: start;
 }
 
@@ -789,7 +789,7 @@ body {
 }
 
 .landing-footer-links-column-secondary {
-  margin-left: -16px;
+  margin-left: 0;
 }
 
 .landing-footer-link-item-button {
