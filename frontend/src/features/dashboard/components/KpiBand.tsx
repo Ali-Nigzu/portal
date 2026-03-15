@@ -8,6 +8,7 @@ type KpiBandProps = {
   mode?: "full" | "preview";
   kpiWidgets: DashboardWidgetState[];
   onRemoveWidget: (widgetId: string) => void;
+  rendererClassName?: string;
 };
 
 type KpiTileProps = {
@@ -18,6 +19,7 @@ type KpiTileProps = {
   locked?: boolean;
   onRemove?: () => void;
   widgetId: string;
+  rendererClassName?: string;
 };
 
 const PREVIEW_KPI_HEIGHT = 76;
@@ -30,6 +32,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
   locked,
   onRemove,
   widgetId,
+  rendererClassName,
 }) => {
   const summary = result?.meta?.summary ?? {};
   const headline =
@@ -51,14 +54,15 @@ const KpiTile: React.FC<KpiTileProps> = ({
   } else if (state.status === "error") {
     content = renderError(state.error ?? `Failed to load ${title}`);
   } else {
-    const rendererClassName = isPreview
+    const baseRendererClassName = isPreview
       ? "dashboard-v2__kpi-renderer dashboard-v2__kpi-renderer--preview"
       : "dashboard-v2__kpi-renderer";
+    const mergedRendererClassName = `${baseRendererClassName} ${rendererClassName ?? ""}`.trim();
     content = (
       <ChartRenderer
         result={renderedResult!}
         height={kpiHeight}
-        className={rendererClassName}
+        className={mergedRendererClassName}
         widgetId={widgetId}
       />
     );
@@ -92,7 +96,12 @@ const KpiTile: React.FC<KpiTileProps> = ({
   );
 };
 
-const KpiBand: React.FC<KpiBandProps> = ({ mode = "full", kpiWidgets, onRemoveWidget }) => {
+const KpiBand: React.FC<KpiBandProps> = ({
+  mode = "full",
+  kpiWidgets,
+  onRemoveWidget,
+  rendererClassName,
+}) => {
   if (kpiWidgets.length === 0) {
     return null;
   }
@@ -111,6 +120,7 @@ const KpiBand: React.FC<KpiBandProps> = ({ mode = "full", kpiWidgets, onRemoveWi
           state={state}
           locked={state.widget.locked}
           widgetId={state.widget.id}
+          rendererClassName={rendererClassName}
           onRemove={
             state.widget.locked
               ? undefined

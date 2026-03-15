@@ -7,6 +7,7 @@ type DashboardKpiSectionProps = {
   kpiWidgets: DashboardWidgetState[];
   onRemoveWidget: (widgetId: string) => void;
   className?: string;
+  rendererClassName?: string;
 };
 
 const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
@@ -14,6 +15,7 @@ const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
   kpiWidgets,
   onRemoveWidget,
   className,
+  rendererClassName,
 }) => {
   if (kpiWidgets.length === 0) {
     return null;
@@ -21,7 +23,12 @@ const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
 
   return (
     <div className={className}>
-      <KpiBand mode={mode} kpiWidgets={kpiWidgets} onRemoveWidget={onRemoveWidget} />
+      <KpiBand
+        mode={mode}
+        kpiWidgets={kpiWidgets}
+        onRemoveWidget={onRemoveWidget}
+        rendererClassName={rendererClassName}
+      />
     </div>
   );
 };

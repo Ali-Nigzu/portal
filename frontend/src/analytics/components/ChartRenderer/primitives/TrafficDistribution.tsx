@@ -53,6 +53,9 @@ export const TrafficDistribution = ({
   const isPreviewPalette =
     typeof className === "string" &&
     className.includes("dashboard-v2__kpi-renderer--preview");
+  const isLandingPreviewTraffic =
+    typeof className === "string" &&
+    className.includes("dashboard-v2__kpi-renderer--landing-preview-traffic");
   const palette = isPreviewPalette
     ? PREVIEW_SLICE_COLORS
     : isVrmTraffic
@@ -171,28 +174,36 @@ export const TrafficDistribution = ({
               nameKey={labelKey ?? undefined}
               cx="50%"
               cy="50%"
-              innerRadius={48}
+              innerRadius={isLandingPreviewTraffic ? 0 : 48}
               outerRadius={68}
               paddingAngle={0}
               startAngle={90}
               endAngle={450}
               label={undefined}
               labelLine={false}
-              stroke="none"
+              stroke={isLandingPreviewTraffic ? "rgba(15, 23, 42, 0.2)" : "none"}
+              strokeWidth={isLandingPreviewTraffic ? 1 : 0}
               isAnimationActive={false}
             >
               {pieLegend.map((entry) => (
-                <Cell key={entry.label} fill={entry.color} stroke="none" />
+                <Cell
+                  key={entry.label}
+                  fill={entry.color}
+                  stroke={isLandingPreviewTraffic ? "rgba(15, 23, 42, 0.2)" : "none"}
+                  strokeWidth={isLandingPreviewTraffic ? 1 : 0}
+                />
               ))}
-              <text
-                x="50%"
-                y="50%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="traffic-distribution__center"
-              >
-                {topCameraLabel}
-              </text>
+              {!isLandingPreviewTraffic ? (
+                <text
+                  x="50%"
+                  y="50%"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="traffic-distribution__center"
+                >
+                  {topCameraLabel}
+                </text>
+              ) : null}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
