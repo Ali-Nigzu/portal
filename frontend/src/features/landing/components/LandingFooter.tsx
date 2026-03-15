@@ -20,7 +20,10 @@ const LandingFooter: React.FC = () => {
       <div className="landing-container landing-container--footer landing-footer-row">
         <div className="landing-footer-main" aria-label="Company and legal information">
           <div className="landing-footer-brand-column">
-            <p className="landing-footer-copyright">{landingCopy.footer.copyright}</p>
+            <p className="landing-footer-copyright">
+              <span className="landing-footer-copyright-prefix">© 2026 </span>
+              <span className="landing-footer-copyright-brand">Camera Operating Systems</span>
+            </p>
             <nav className="landing-footer-links-column landing-footer-links-column-primary" aria-label="Primary legal links">
               <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
                 {landingCopy.footer.primaryLinks[0]}
@@ -35,7 +38,11 @@ const LandingFooter: React.FC = () => {
             <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
               {landingCopy.footer.secondaryLinks[0]}
             </button>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button" onClick={handleCookiePreferencesClick}>
+            <button
+              type="button"
+              className="landing-footer-link-item landing-footer-link-item-button landing-footer-link-item-cookie-preferences"
+              onClick={handleCookiePreferencesClick}
+            >
               {landingCopy.footer.secondaryLinks[1]}
             </button>
             <button type="button" className="landing-footer-link-item landing-footer-link-item-button">

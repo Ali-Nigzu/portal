@@ -745,13 +745,22 @@ body {
 .landing-footer-main {
   display: grid;
   grid-template-columns: minmax(0, max-content) minmax(0, max-content) minmax(280px, 1fr);
-  gap: 10px 8px;
+  gap: 10px 4px;
   align-items: start;
 }
 
 .landing-footer-copyright {
   align-self: start;
-  margin-left: -14px;
+  margin-left: -18px;
+  display: inline-flex;
+}
+
+.landing-footer-copyright-prefix {
+  white-space: pre;
+}
+
+.landing-footer-copyright-brand {
+  white-space: nowrap;
 }
 
 .landing-footer-brand-column {
@@ -761,7 +770,8 @@ body {
 }
 
 .landing-footer-links-column-primary {
-  padding-left: 7.4ch;
+  padding-left: 0;
+  margin-left: calc(2ch + 27px);
 }
 
 .landing-footer-copyright,
@@ -779,7 +789,7 @@ body {
 }
 
 .landing-footer-links-column-secondary {
-  margin-left: -10px;
+  margin-left: -16px;
 }
 
 .landing-footer-link-item-button {
@@ -807,6 +817,12 @@ body {
 .landing-footer-social-link:hover {
   color: var(--sys-text-1);
   text-decoration: underline;
+}
+
+.landing-footer-link-item-cookie-preferences,
+.landing-footer-link-item-cookie-preferences:hover,
+.landing-footer-link-item-cookie-preferences:focus-visible {
+  text-decoration: none;
 }
 
 .landing-footer-legal-column {
