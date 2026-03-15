@@ -771,7 +771,7 @@ body {
 
 .landing-footer-links-column-primary {
   padding-left: 0;
-  margin-left: calc(2ch + 27px);
+  margin-left: calc(2ch + 26.6px);
 }
 
 .landing-footer-copyright,
@@ -804,7 +804,7 @@ body {
 
 .landing-footer-link-item,
 .landing-footer-social-link {
-  color: var(--sys-text-2);
+  color: var(--sys-text-3);
 }
 
 .landing-footer-link-item {
@@ -815,7 +815,7 @@ body {
 
 .landing-footer-link-item:hover,
 .landing-footer-social-link:hover {
-  color: var(--sys-text-1);
+  color: var(--sys-text-3);
   text-decoration: underline;
 }
 
