@@ -206,7 +206,7 @@ const LandingPage: React.FC = () => {
               </button>
             </div>
 
-            <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
+            <section className="landing-axis-layout landing-axis-layout--desktop" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
               <div className="landing-axis-matrix" data-align-anchor="axis-matrix">
                 <h2 id="capabilities-title" className="landing-axis-cell landing-axis-cell-left landing-axis-cell-heading">Metrics</h2>
                 <span className="landing-axis-cell landing-axis-cell-axis" aria-hidden="true" />
@@ -236,6 +236,38 @@ const LandingPage: React.FC = () => {
                 ))}
               </div>
             </section>
+          </div>
+        </section>
+
+
+        <section className="landing-axis-layout-mobile" aria-label="Platform capabilities and system deployment">
+          <div className="landing-container landing-axis-mobile-inner">
+            <header className="landing-axis-mobile-headings" aria-hidden="true">
+              <h2>Metrics</h2>
+              <h2>Access</h2>
+            </header>
+            <div className="landing-axis-mobile-list" role="list">
+              {romanAxisLabels.map((label, index) => (
+                <article className="landing-axis-mobile-row" role="listitem" key={`mobile-${label}`}>
+                  <p className="landing-axis-mobile-item-metric">{capabilityAxisItems[index]}</p>
+                  <span className="landing-axis-mobile-item-roman" aria-hidden="true">{label}</span>
+                  {index === 0 ? (
+                    <button
+                      type="button"
+                      className="landing-axis-right-action landing-axis-mobile-item-access landing-axis-mobile-item-access-action"
+                      onClick={goToCreateAccount}
+                    >
+                      <span className="landing-axis-right-action-label">
+                        <span className="landing-axis-right-action-highlight">CREATE ACCOUNT</span>
+                        <span className="landing-axis-right-action-tail">@ No Cost</span>
+                      </span>
+                    </button>
+                  ) : (
+                    <p className="landing-axis-mobile-item-access">{deploymentAxisItems[index]}</p>
+                  )}
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 

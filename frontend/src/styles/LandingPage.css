@@ -321,6 +321,64 @@ body {
   width: 100%;
 }
 
+
+.landing-axis-layout-mobile {
+  display: none;
+}
+
+.landing-axis-mobile-inner {
+  display: grid;
+  gap: 14px;
+}
+
+.landing-axis-mobile-headings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 0;
+}
+
+.landing-axis-mobile-headings h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.landing-axis-mobile-list {
+  display: grid;
+  gap: 12px;
+}
+
+.landing-axis-mobile-row {
+  display: grid;
+  gap: 7px;
+  padding: 14px 14px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #a7b6c8 24%, transparent);
+  background: color-mix(in srgb, #eef3f8 36%, transparent);
+}
+
+.landing-axis-mobile-item-metric,
+.landing-axis-mobile-item-access {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.38;
+  color: var(--sys-text-2);
+}
+
+.landing-axis-mobile-item-roman {
+  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--sys-text-3) 90%, transparent);
+}
+
+.landing-axis-mobile-item-access-action {
+  width: fit-content;
+  min-height: 0;
+}
+
 .landing-capabilities h2,
 .landing-deployment h2,
 .landing-signup-wrap h2,
@@ -1013,12 +1071,12 @@ body {
 
 @media (max-width: 767px) and (orientation: portrait) {
   .landing-hero-zone {
-    --hero-title-size: clamp(2.3rem, 12vw, 3rem);
-    --hero-statement-size: clamp(1.48rem, 6.3vw, 1.86rem);
-    --hero-gap-b: 26px;
-    --hero-gap-c: 58px;
-    --hero-zone-top: 76px;
-    --hero-zone-bottom: 92px;
+    --hero-title-size: clamp(2.22rem, 10.6vw, 2.84rem);
+    --hero-statement-size: clamp(1.4rem, 5.8vw, 1.72rem);
+    --hero-gap-b: 24px;
+    --hero-gap-c: 30px;
+    --hero-zone-top: 66px;
+    --hero-zone-bottom: 42px;
     min-height: calc(100svh - 60px);
   }
 
@@ -1027,97 +1085,62 @@ body {
     align-content: start;
   }
 
-  .landing-hero-actions {
-    gap: 12px;
+  .landing-axis-layout--desktop {
+    display: none;
   }
 
-  .landing-axis-layout {
-    margin-top: clamp(68px, 12vh, 108px);
-    min-height: 82svh;
+  .landing-axis-layout-mobile {
+    display: block;
+    padding: 18px 0 8px;
   }
 
-  .landing-axis-matrix {
-    row-gap: 16px;
-    padding-top: 14px;
-    padding-bottom: 46px;
+  .landing-axis-mobile-inner {
+    gap: 16px;
   }
 
-
-  .landing-axis-matrix {
-    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
-    grid-template-rows: auto repeat(3, auto);
-  }
-
-  .landing-axis-cell-left,
-  .landing-axis-cell-right,
-  .landing-axis-cell-heading {
-    padding: 0;
-  }
-
-  .landing-axis-cell-left {
-    text-align: right;
-    padding-right: 12px;
-  }
-
-  .landing-axis-cell-right {
+  .landing-axis-mobile-headings h2:last-child {
     text-align: left;
-    padding-left: 12px;
   }
 
-  .landing-axis-cell-left:not(.landing-axis-cell-heading) {
-    justify-content: flex-end;
+  .landing-axis-mobile-row {
+    gap: 8px;
   }
 
-  .landing-axis-cell-right:not(.landing-axis-cell-heading) {
-    justify-content: flex-start;
-  }
-
-  .landing-axis-cell-axis,
-  .landing-axis-roman {
-    justify-self: center;
-  }
-
-  .landing-axis-right-action-label {
+  .landing-axis-mobile-item-access-action .landing-axis-right-action-label {
     white-space: normal;
   }
 
-  .landing-axis-right-action-tail {
-    margin-left: 4px;
-  }
   .landing-spec-sheet {
-    padding-top: 52px;
-    padding-bottom: 132px;
-    min-height: 132svh;
+    padding-top: 30px;
+    padding-bottom: 52px;
   }
 
   .landing-spec-sheet-inner {
     display: grid;
-    gap: 72px;
+    gap: 44px;
   }
 
   .landing-preview {
     --preview-pad-top: 0;
-    --preview-pad-bottom: 62px;
+    --preview-pad-bottom: 34px;
   }
 
   .landing-assurances {
-    margin-top: 8px;
-    min-height: 96svh;
-    padding: 40px 0 64px;
+    margin-top: 0;
+    padding: 8px 0 26px;
   }
 
   .landing-assurance-spec {
-    row-gap: 32px;
+    row-gap: 24px;
   }
 
   .assurance-cta-row {
-    margin-top: 54px;
-    gap: 16px;
+    margin-top: 34px;
+    gap: 14px;
   }
 
   .landing-footer {
-    margin-top: 46px;
-    padding: 16px 0;
+    margin-top: 20px;
   }
 }
 
