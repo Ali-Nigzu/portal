@@ -750,6 +750,16 @@ body {
   align-self: center;
 }
 
+.landing-footer-brand-column {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.landing-footer-links-column-primary {
+  padding-left: 52px;
+}
+
 .landing-footer-copyright,
 .landing-footer-legal-column p {
   margin: 0;
@@ -835,6 +845,10 @@ body {
   .landing-footer-main {
     grid-template-columns: 1fr 1fr;
     gap: 10px 12px;
+  }
+
+  .landing-footer-links-column-primary {
+    padding-left: 0;
   }
 
   .landing-footer-legal-column {
@@ -935,6 +949,7 @@ body {
   .landing-status-success { flex-direction: column; align-items: flex-start; }
   .landing-footer-row { grid-template-columns: 1fr; }
   .landing-footer-main { grid-template-columns: 1fr; gap: 12px; }
+  .landing-footer-links-column-primary { padding-left: 0; }
   .landing-footer-social { justify-content: flex-start; }
 }
 

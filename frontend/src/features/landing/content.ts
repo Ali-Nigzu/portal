@@ -50,7 +50,8 @@ export const landingCopy = {
   },
   footer: {
     copyright: "© 2026 Camera Operating Systems",
-    links: ["Terms & Conditions", "Privacy Policy", "Contact Us"],
+    primaryLinks: ["Terms & Conditions", "Privacy Policy"],
+    secondaryLinks: ["Cookie Policy", "Cookie Preferences", "Contact Us"],
     legalLines: [
       "Camera Operating Systems Limited is registered in England and Wales. Registered Number: 16937639",
       "Camera Operating Systems Limited is registered with the ICO as a Data Controller. Registered Number: Z1234567",
