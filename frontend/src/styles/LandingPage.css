@@ -1004,6 +1004,62 @@ body {
   .landing-footer-social { justify-content: flex-start; }
 }
 
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .landing-hero-zone {
+    --hero-title-size: clamp(2.24rem, 11.4vw, 2.9rem);
+    --hero-statement-size: clamp(1.44rem, 6.1vw, 1.78rem);
+    --hero-gap-b: 24px;
+    --hero-gap-c: 44px;
+    --hero-zone-top: 72px;
+    --hero-zone-bottom: 34px;
+    min-height: calc(100svh - 64px);
+  }
+
+  .landing-hero-zone-grid {
+    width: 100%;
+    align-content: start;
+  }
+
+  .landing-axis-layout {
+    margin-top: 32px;
+  }
+
+  .landing-axis-matrix {
+    row-gap: 14px;
+    padding-top: 8px;
+    padding-bottom: 24px;
+  }
+
+  .landing-spec-sheet {
+    padding-top: 26px;
+    padding-bottom: 72px;
+  }
+
+  .landing-preview {
+    --preview-pad-top: 0;
+    --preview-pad-bottom: 28px;
+  }
+
+  .landing-assurances {
+    padding: 18px 0 34px;
+  }
+
+  .landing-assurance-spec {
+    row-gap: 24px;
+  }
+
+  .assurance-cta-row {
+    margin-top: 36px;
+    gap: 14px;
+  }
+
+  .landing-footer {
+    margin-top: 26px;
+    padding: 14px 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
