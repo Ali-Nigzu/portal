@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { landingCopy } from "../content";
 
 type CookieConsentWindow = Window & {
@@ -8,6 +9,8 @@ type CookieConsentWindow = Window & {
 };
 
 const LandingFooter: React.FC = () => {
+  const navigate = useNavigate();
+
   const handleCookiePreferencesClick: React.MouseEventHandler<HTMLButtonElement> = () => {
     const cookieConsent = (window as CookieConsentWindow).CookieConsent;
     if (cookieConsent && typeof cookieConsent.renew === "function") {
@@ -45,7 +48,11 @@ const LandingFooter: React.FC = () => {
             >
               {landingCopy.footer.secondaryLinks[1]}
             </button>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+            <button
+              type="button"
+              className="landing-footer-link-item landing-footer-link-item-button"
+              onClick={() => navigate("/contact")}
+            >
               {landingCopy.footer.secondaryLinks[2]}
             </button>
           </nav>
