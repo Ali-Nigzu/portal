@@ -765,35 +765,41 @@
 
 @media (max-width: 767px) and (orientation: portrait) {
   .preview {
-    --kpi-col: 86px;
-    --topo-gap-col: 8px;
-    --topo-gap-row: 10px;
-    --mid-span: 124px;
-    --preview-top-row-lift: 14px;
-    --preview-bottom-row-lift: -10px;
-    --preview-node-cta-stem: 16px;
+    --kpi-col: 248px;
+    --topo-gap-col: 18px;
+    --topo-gap-row: 14px;
+    --mid-span: 214px;
+    --preview-top-row-lift: 52px;
+    --preview-bottom-row-lift: -32px;
   }
 
   .canvas {
-    min-height: 308px;
+    min-height: 404px;
     row-gap: var(--topo-gap-row);
     grid-template-rows: auto var(--mid-span) auto;
+    padding: 0;
   }
 
-  .topCluster,
-  .bottomCluster {
+  .topCluster {
     grid-template-columns: repeat(4, var(--kpi-col));
     grid-template-rows: auto auto;
     column-gap: var(--topo-gap-col);
-    row-gap: var(--topo-gap-row);
+    row-gap: var(--preview-capacity-gap);
     justify-content: center;
-    min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
     width: max-content;
-    margin-inline: auto;
+    min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+    transform: translateY(calc(-1 * var(--preview-top-row-lift)));
   }
 
   .bottomCluster {
+    grid-template-columns: repeat(4, var(--kpi-col));
     grid-template-rows: auto;
+    column-gap: var(--topo-gap-col);
+    row-gap: var(--topo-gap-row);
+    justify-content: center;
+    width: max-content;
+    min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
+    transform: translateY(calc(-1 * var(--preview-bottom-row-lift)));
   }
 
   .tileT1 { grid-column: 1; grid-row: 1; }
@@ -808,21 +814,20 @@
     display: block;
   }
 
+  .midZone {
+    padding: 0;
+    display: flex;
+  }
+
   .nodeLayer {
     position: absolute;
     inset: 0;
     display: block;
-    margin: 0;
     pointer-events: none;
   }
 
-  .midZone,
   .nodeMeasureGhost {
     display: block;
-  }
-
-  .midZone {
-    display: flex;
   }
 
   .nodeStack {
@@ -832,30 +837,9 @@
     transform: translate(-50%, -50%);
   }
 
-  .node {
-    width: 118px;
-    min-height: 74px;
-    padding: 12px 12px 10px;
-  }
-
-  .nodeLogo {
-    width: 30px;
-    height: 30px;
-  }
-
   .previewNodeCta {
-    font-size: 0.56rem;
-    margin-top: 4px;
-  }
-
-  .inlineNotice {
-    min-height: 58px;
-    font-size: 0.72rem;
-  }
-
-  .trafficTile :global(.dashboard-v2__kpi-renderer .kpi-panel),
-  .trafficTile :global(.dashboard-v2__kpi-renderer .kpi-content) {
-    max-width: 100%;
+    font-size: 0.62rem;
+    margin-top: 5px;
   }
 }
 

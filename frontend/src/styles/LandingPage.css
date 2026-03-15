@@ -1125,6 +1125,25 @@ body {
     --preview-pad-bottom: 34px;
   }
 
+
+  .landing-dashboard-preview {
+    --preview-desktop-width: 1046px;
+    --preview-desktop-height: 404px;
+    --preview-scale: clamp(0.335, calc((100vw - 30px) / var(--preview-desktop-width)), 0.46);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    height: calc((var(--preview-desktop-height) + 24px) * var(--preview-scale));
+    overflow: visible;
+  }
+
+  .landing-dashboard-preview > section {
+    width: var(--preview-desktop-width);
+    max-width: none;
+    transform: scale(var(--preview-scale));
+    transform-origin: top center;
+  }
+
   .landing-assurances {
     margin-top: 0;
     padding: 8px 0 26px;
