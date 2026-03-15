@@ -638,7 +638,14 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                     <div className={styles.dockSurface} ref={trafficDockRef}>
                       {forceMockTopology
                         ? renderMockTrafficSplit()
-                        : <DashboardKpiSection mode="preview" kpiWidgets={[trafficWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                        : (
+                          <DashboardKpiSection
+                            mode="preview"
+                            kpiWidgets={[trafficWidget!]}
+                            onRemoveWidget={NOOP_REMOVE}
+                            rendererClassName="dashboard-v2__kpi-renderer--landing-preview-traffic"
+                          />
+                        )}
                     </div>
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" />
                   </div>
