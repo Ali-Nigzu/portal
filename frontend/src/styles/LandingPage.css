@@ -289,6 +289,7 @@ body {
 
 .landing-system-surface {
   position: relative;
+  min-width: 0;
   min-height: 0;
   border: none;
   outline: none;
@@ -561,6 +562,7 @@ body {
 
 .landing-preview {
   --preview-pad-top: 18px;
+  min-width: 0;
   --preview-pad-bottom: 0px;
   padding: var(--preview-pad-top) 0 var(--preview-pad-bottom);
   border: none;
@@ -1130,14 +1132,17 @@ body {
     --preview-desktop-width: 1046px;
     --preview-desktop-height: 404px;
     --preview-scale: clamp(0.335, calc((100vw - 30px) / var(--preview-desktop-width)), 0.46);
+    width: 100%;
+    max-width: 100%;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     height: calc((var(--preview-desktop-height) + 24px) * var(--preview-scale));
-    overflow: visible;
+    overflow: hidden;
   }
 
   .landing-dashboard-preview > section {
+    flex: 0 0 var(--preview-desktop-width);
     width: var(--preview-desktop-width);
     max-width: none;
     transform: scale(var(--preview-scale));
