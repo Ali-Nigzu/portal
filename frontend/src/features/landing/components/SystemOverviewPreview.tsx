@@ -232,121 +232,166 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
 
-          if (
-            !containerRef.current ||
-            !topClusterRef.current ||
-            !bottomClusterRef.current ||
-            !leftSlotRef.current ||
-            !dwellSlotRef.current ||
-            !nodeShellRef.current ||
-            !capacityTileRef.current
-          ) {
-            return;
-          }
+        if (
+          !containerRef.current ||
+          !topClusterRef.current ||
+          !bottomClusterRef.current ||
+          !nodeShellRef.current ||
+          !capacityTileRef.current
+        ) {
+          return;
+        }
 
-          const connectedTopDocks = CONNECTED_TOP_IDS.map((id) => topDockRefs.current[id]);
-          if (connectedTopDocks.some((dock) => !dock) || !dwellDockRef.current) {
-            return;
-          }
+        const containerEl = containerRef.current;
+        const containerRect = containerEl.getBoundingClientRect();
+        const localWidth = containerEl.clientWidth || containerRect.width;
+        const localHeight = containerEl.clientHeight || containerRect.height;
+        const scaleX = containerRect.width > 0 ? containerRect.width / localWidth : 1;
+        const scaleY = containerRect.height > 0 ? containerRect.height / localHeight : 1;
 
-          const topTileSlots = TOP_TILES.map(({ key }) => topSlotRefs.current[key]);
-          if (topTileSlots.some((slot) => !slot)) {
-            return;
-          }
+        const toLocalRect = (el: Element) => {
+          const rect = el.getBoundingClientRect();
+          return {
+            left: (rect.left - containerRect.left) / scaleX,
+            right: (rect.right - containerRect.left) / scaleX,
+            top: (rect.top - containerRect.top) / scaleY,
+            bottom: (rect.bottom - containerRect.top) / scaleY,
+            width: rect.width / scaleX,
+            height: rect.height / scaleY,
+          };
+        };
 
-          const containerRect = containerRef.current.getBoundingClientRect();
-          const nodeRect = nodeShellRef.current.getBoundingClientRect();
-          const topTileRects = topTileSlots.map((slot) => (slot as HTMLDivElement).getBoundingClientRect());
-          const capacityRect = capacityTileRef.current.getBoundingClientRect();
+        const nodeRect = toLocalRect(nodeShellRef.current);
+        const topTileSlots = TOP_TILES.map(({ key }) => topSlotRefs.current[key]);
+        if (topTileSlots.some((slot) => !slot)) {
+          return;
+        }
 
-          const toCanvasPoint = (screenX: number, screenY: number) => {
-            const svg = wireSvgRef.current;
-            const matrix = svg?.getScreenCTM();
-            if (matrix) {
-              const local = new DOMPoint(screenX, screenY).matrixTransform(matrix.inverse());
-              return { x: local.x, y: local.y };
-            }
+        const topTileRects = topTileSlots.map((slot) => toLocalRect(slot as HTMLDivElement));
+        const capacityRect = toLocalRect(capacityTileRef.current);
+
+        const topBandBottom = Math.max(
+          ...topTileRects.map((rect) => rect.bottom),
+          capacityRect.bottom,
+        );
+        const nodeBandTop = nodeRect.top;
+        const minBusY = topBandBottom + BUS_CORRIDOR_GAP_TOP;
+        const maxBusY = nodeBandTop - BUS_CORRIDOR_GAP_NODE;
+
+        const preferredBusY = Math.min(
+          topBandBottom + BUS_GAP_BELOW_TOP + BUS_CORRIDOR_GAP_TOP,
+          nodeBandTop - BUS_GAP_ABOVE_NODE - BUS_BIAS_FROM_NODE,
+        );
+        const busY = maxBusY <= minBusY
+          ? ((topBandBottom + nodeBandTop) / 2)
+          : Math.max(minBusY, Math.min(preferredBusY, maxBusY));
+
+        const baseWire: Partial<WireLayout> = {
+          width: localWidth,
+          height: localHeight,
+          busY,
+          nodeX: nodeRect.left + (nodeRect.width / 2),
+          nodeRadius: Math.max(0, (Math.min(nodeRect.width, nodeRect.height) / 2) - 1),
+          nodeHalfWidth: nodeRect.width / 2,
+          nodeHalfHeight: nodeRect.height / 2,
+          nodeCornerRadius: Math.max(0, Number.parseFloat(window.getComputedStyle(nodeShellRef.current).borderTopLeftRadius) || 0),
+        };
+
+        const connectedTopDocks = CONNECTED_TOP_IDS.map((id) => topDockRefs.current[id]);
+        const hasRouteDocks = !connectedTopDocks.some((dock) => !dock) && Boolean(dwellDockRef.current);
+
+        if (!hasRouteDocks) {
+          setWire((prev) => ({
+            ...prev,
+            ...baseWire,
+          }));
+          return;
+        }
+
+        const toCanvasPoint = (screenX: number, screenY: number) => {
+          const svg = wireSvgRef.current;
+          const matrix = svg?.getScreenCTM();
+          if (matrix) {
+            const local = new DOMPoint(screenX, screenY).matrixTransform(matrix.inverse());
             return {
-              x: screenX - containerRect.left,
-              y: screenY - containerRect.top,
+              x: local.x / scaleX,
+              y: local.y / scaleY,
             };
+          }
+          return {
+            x: (screenX - containerRect.left) / scaleX,
+            y: (screenY - containerRect.top) / scaleY,
           };
+        };
 
-          const topPoints = connectedTopDocks.map((dock) => {
-            const rect = getSurfaceRect(dock as HTMLDivElement);
-            if (!rect) {
-              return null;
-            }
-            return toCanvasPoint(rect.left + (rect.width / 2), rect.bottom);
-          });
-          if (topPoints.some((point) => !point)) {
-            return;
+        const topPoints = connectedTopDocks.map((dock) => {
+          const rect = getSurfaceRect(dock as HTMLDivElement);
+          if (!rect) {
+            return null;
           }
+          return toCanvasPoint(rect.left + (rect.width / 2), rect.bottom);
+        });
+        if (topPoints.some((point) => !point)) {
+          setWire((prev) => ({
+            ...prev,
+            ...baseWire,
+          }));
+          return;
+        }
 
-          const dwellRect = getSurfaceRect(dwellDockRef.current);
-          if (!dwellRect) {
-            return;
-          }
-          const dwellPoint = toCanvasPoint(dwellRect.left + (dwellRect.width / 2), dwellRect.top);
+        const dwellRect = getSurfaceRect(dwellDockRef.current);
+        if (!dwellRect) {
+          setWire((prev) => ({
+            ...prev,
+            ...baseWire,
+          }));
+          return;
+        }
+        const dwellPoint = toCanvasPoint(dwellRect.left + (dwellRect.width / 2), dwellRect.top);
 
-          const trafficFallbackRect = getSurfaceRect(trafficDockRef.current);
-          const trafficFallbackPoint = trafficFallbackRect
-            ? toCanvasPoint(trafficFallbackRect.left + (trafficFallbackRect.width / 2), trafficFallbackRect.top)
-            : null;
+        const trafficFallbackRect = getSurfaceRect(trafficDockRef.current);
+        const trafficFallbackPoint = trafficFallbackRect
+          ? toCanvasPoint(trafficFallbackRect.left + (trafficFallbackRect.width / 2), trafficFallbackRect.top)
+          : null;
 
-          const donutNorthPoint = getDonutNorthInCanvas(leftSlotRef.current, toCanvasPoint);
-          const trafficPoint = donutNorthPoint ?? trafficFallbackPoint;
-          if (!trafficPoint) {
-            return;
-          }
+        const trafficPoint = leftSlotRef.current
+          ? (getDonutNorthInCanvas(leftSlotRef.current, toCanvasPoint) ?? trafficFallbackPoint)
+          : trafficFallbackPoint;
+        if (!trafficPoint) {
+          setWire((prev) => ({
+            ...prev,
+            ...baseWire,
+          }));
+          return;
+        }
 
-          const taps: Record<RouteId, number> = {
-            entrances: (topPoints[0] as { x: number; y: number }).x,
-            occupancy: (topPoints[1] as { x: number; y: number }).x,
-            exits: (topPoints[2] as { x: number; y: number }).x,
-            traffic: trafficPoint.x,
-            dwell: dwellPoint.x,
-          };
+        const taps: Record<RouteId, number> = {
+          entrances: (topPoints[0] as { x: number; y: number }).x,
+          occupancy: (topPoints[1] as { x: number; y: number }).x,
+          exits: (topPoints[2] as { x: number; y: number }).x,
+          traffic: trafficPoint.x,
+          dwell: dwellPoint.x,
+        };
 
-          const topBandBottom = Math.max(
-            ...topTileRects.map((rect) => rect.bottom - containerRect.top),
-            capacityRect.bottom - containerRect.top,
-          );
-          const nodeBandTop = nodeRect.top - containerRect.top;
-          const minBusY = topBandBottom + BUS_CORRIDOR_GAP_TOP;
-          const maxBusY = nodeBandTop - BUS_CORRIDOR_GAP_NODE;
-
-          const preferredBusY = Math.min(
-            topBandBottom + BUS_GAP_BELOW_TOP + BUS_CORRIDOR_GAP_TOP,
-            nodeBandTop - BUS_GAP_ABOVE_NODE - BUS_BIAS_FROM_NODE,
-          );
-          const busY = maxBusY <= minBusY
-            ? ((topBandBottom + nodeBandTop) / 2)
-            : Math.max(minBusY, Math.min(preferredBusY, maxBusY));
-
-          setWire({
-            width: containerRect.width,
-            height: containerRect.height,
-            busY,
-            busX1: Math.min(...Object.values(taps)),
-            busX2: Math.max(...Object.values(taps)),
-            nodeX: nodeRect.left - containerRect.left + nodeRect.width / 2,
-            nodeRadius: Math.max(0, (Math.min(nodeRect.width, nodeRect.height) / 2) - 1),
-            nodeHalfWidth: nodeRect.width / 2,
-            nodeHalfHeight: nodeRect.height / 2,
-            nodeCornerRadius: Math.max(0, Number.parseFloat(window.getComputedStyle(nodeShellRef.current).borderTopLeftRadius) || 0),
-            taps,
-            endpointsY: {
-              entrances: (topPoints[0] as { x: number; y: number }).y,
-              occupancy: (topPoints[1] as { x: number; y: number }).y,
-              exits: (topPoints[2] as { x: number; y: number }).y,
-              traffic: trafficPoint.y,
-              dwell: dwellPoint.y,
-            },
-            trafficTopY: leftSlotRef.current.getBoundingClientRect().top - containerRect.top,
-            trafficSocketX: trafficPoint.x,
-            trafficSocketY: trafficPoint.y,
-          });
+        setWire((prev) => ({
+          ...prev,
+          ...baseWire,
+          busX1: Math.min(...Object.values(taps)),
+          busX2: Math.max(...Object.values(taps)),
+          taps,
+          endpointsY: {
+            entrances: (topPoints[0] as { x: number; y: number }).y,
+            occupancy: (topPoints[1] as { x: number; y: number }).y,
+            exits: (topPoints[2] as { x: number; y: number }).y,
+            traffic: trafficPoint.y,
+            dwell: dwellPoint.y,
+          },
+          trafficTopY: leftSlotRef.current
+            ? toLocalRect(leftSlotRef.current).top
+            : prev.trafficTopY,
+          trafficSocketX: trafficPoint.x,
+          trafficSocketY: trafficPoint.y,
+        }));
       });
     };
 
