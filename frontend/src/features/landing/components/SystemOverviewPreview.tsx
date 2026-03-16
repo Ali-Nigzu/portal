@@ -314,8 +314,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           if (matrix) {
             const local = new DOMPoint(screenX, screenY).matrixTransform(matrix.inverse());
             return {
-              x: local.x / scaleX,
-              y: local.y / scaleY,
+              x: local.x,
+              y: local.y,
             };
           }
           return {

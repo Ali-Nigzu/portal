@@ -1129,7 +1129,7 @@ body {
 
 
   .landing-dashboard-preview {
-    --preview-desktop-width: 1046px;
+    --preview-desktop-width: 1200px;
     --preview-desktop-height: 404px;
     --preview-scale: clamp(0.335, calc((100vw - 30px) / var(--preview-desktop-width)), 0.46);
     --preview-top-bleed: 52px;
