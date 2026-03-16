@@ -1132,13 +1132,14 @@ body {
     --preview-desktop-width: 1046px;
     --preview-desktop-height: 404px;
     --preview-scale: clamp(0.335, calc((100vw - 30px) / var(--preview-desktop-width)), 0.46);
+    --preview-top-bleed: 52px;
     width: 100%;
     max-width: 100%;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    height: calc((var(--preview-desktop-height) + 24px) * var(--preview-scale));
-    overflow: hidden;
+    height: calc((var(--preview-desktop-height) + 24px + var(--preview-top-bleed)) * var(--preview-scale));
+    overflow: visible;
   }
 
   .landing-dashboard-preview > section {

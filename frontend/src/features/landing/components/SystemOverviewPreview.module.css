@@ -693,7 +693,7 @@
   color: var(--sys-text-3);
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1279px) and (min-width: 768px) {
   .preview {
     width: 100%;
     --kpi-col: 214px;
@@ -710,7 +710,7 @@
 }
 
 
-@media (max-width: 900px) {
+@media (max-width: 900px) and (min-width: 768px) {
   .preview {
     --kpi-col: 206px;
     --topo-gap-col: 12px;
@@ -718,7 +718,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767px) and (orientation: landscape) {
   .preview {
     padding: 0;
   }
@@ -760,86 +760,6 @@
 
   .previewNodeCta {
     font-size: 0.62rem;
-  }
-}
-
-@media (max-width: 767px) and (orientation: portrait) {
-  .preview {
-    --kpi-col: 248px;
-    --topo-gap-col: 18px;
-    --topo-gap-row: 14px;
-    --mid-span: 214px;
-    --preview-top-row-lift: 52px;
-    --preview-bottom-row-lift: -32px;
-  }
-
-  .canvas {
-    min-height: 404px;
-    row-gap: var(--topo-gap-row);
-    grid-template-rows: auto var(--mid-span) auto;
-    padding: 0;
-  }
-
-  .topCluster {
-    grid-template-columns: repeat(4, var(--kpi-col));
-    grid-template-rows: auto auto;
-    column-gap: var(--topo-gap-col);
-    row-gap: var(--preview-capacity-gap);
-    justify-content: center;
-    width: max-content;
-    min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
-    transform: translateY(calc(-1 * var(--preview-top-row-lift)));
-  }
-
-  .bottomCluster {
-    grid-template-columns: repeat(4, var(--kpi-col));
-    grid-template-rows: auto;
-    column-gap: var(--topo-gap-col);
-    row-gap: var(--topo-gap-row);
-    justify-content: center;
-    width: max-content;
-    min-width: calc(var(--kpi-col) * 4 + var(--topo-gap-col) * 3);
-    transform: translateY(calc(-1 * var(--preview-bottom-row-lift)));
-  }
-
-  .tileT1 { grid-column: 1; grid-row: 1; }
-  .tileT2 { grid-column: 2; grid-row: 1; }
-  .tileT3 { grid-column: 3; grid-row: 1; }
-  .tileT4 { grid-column: 4; grid-row: 1; }
-  .tileT5 { grid-column: 4; grid-row: 1; }
-  .trafficTile { grid-column: 1; grid-row: 1; }
-  .capacityTile { grid-column: 4; grid-row: 2; }
-
-  .wireSvg {
-    display: block;
-  }
-
-  .midZone {
-    padding: 0;
-    display: flex;
-  }
-
-  .nodeLayer {
-    position: absolute;
-    inset: 0;
-    display: block;
-    pointer-events: none;
-  }
-
-  .nodeMeasureGhost {
-    display: block;
-  }
-
-  .nodeStack {
-    position: absolute;
-    left: var(--node-anchor-x, 50%);
-    top: var(--node-anchor-y, 50%);
-    transform: translate(-50%, -50%);
-  }
-
-  .previewNodeCta {
-    font-size: 0.62rem;
-    margin-top: 5px;
   }
 }
 
