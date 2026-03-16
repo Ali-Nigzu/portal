@@ -69,6 +69,8 @@ const LandingPage: React.FC = () => {
   const firstLetterRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const treeSvgRefs = useRef<Record<string, SVGSVGElement | null>>({});
   const assuranceItemTextRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
+  const previewFitRef = useRef<HTMLDivElement | null>(null);
+  const [previewFitWidth, setPreviewFitWidth] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     let frameId = 0;
@@ -167,6 +169,32 @@ const LandingPage: React.FC = () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener("resize", scheduleMeasure);
       resizeObserver?.disconnect();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const target = previewFitRef.current;
+    if (!target) {
+      return;
+    }
+
+    const update = () => {
+      const measured = target.clientWidth;
+      if (measured > 0) {
+        setPreviewFitWidth((prev) => (prev === measured ? prev : measured));
+      }
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    const observer = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => update())
+      : null;
+    observer?.observe(target);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      observer?.disconnect();
     };
   }, []);
 
@@ -279,7 +307,11 @@ const LandingPage: React.FC = () => {
                   <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                   <p>{landingCopy.livePreview.description}</p>
                 </div>
-                <div className="landing-dashboard-preview">
+                <div
+                  className="landing-dashboard-preview"
+                  ref={previewFitRef}
+                  style={previewFitWidth ? ({ "--preview-fit-width": `${previewFitWidth}px` } as React.CSSProperties) : undefined}
+                >
                   <SystemOverviewPreview onAccessDemo={goToDemo} />
                 </div>
               </section>
