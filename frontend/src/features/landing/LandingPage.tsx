@@ -5,6 +5,7 @@ import { landingCopy } from "./content";
 import LandingHeader from "./components/LandingHeader";
 import LandingFooter from "./components/LandingFooter";
 import SystemOverviewPreview from "./components/SystemOverviewPreview";
+import camOSLogo from "../../assets/Untitled design (4).svg";
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -209,6 +210,7 @@ const LandingPage: React.FC = () => {
           <div className="landing-container landing-hero-zone-grid">
             <section className="landing-hero" aria-labelledby="landing-hero-title">
               <div className="landing-hero-stack" data-align-anchor="hero-stack">
+                <img src={camOSLogo} alt="camOS mark" className="landing-hero-mobile-logo" />
                 <h1 id="landing-hero-title" aria-label="camOS">
                   <span aria-hidden="true" className="landing-hero-cam">cam</span>
                   <span aria-hidden="true" className="landing-hero-initial">OS</span>
