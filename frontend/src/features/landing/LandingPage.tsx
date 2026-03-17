@@ -37,6 +37,26 @@ const LandingPage: React.FC = () => {
   ];
 
   const romanAxisLabels = ["I", "II", "III"];
+  const mobileAxisRows = [
+    {
+      key: "row-footfall",
+      metric: ["Footfall", "&", "Occupancy"],
+      access: ["Create Account", "@", "No Cost"],
+      action: true,
+    },
+    {
+      key: "row-site-flow",
+      metric: ["Site Flow", "&", "Dwell"],
+      access: ["Connect", "&", "Set Up"],
+      action: false,
+    },
+    {
+      key: "row-visitor",
+      metric: ["Visitor", "Profile"],
+      access: ["System", "Live"],
+      action: false,
+    },
+  ] as const;
   const assuranceColumns = [
     {
       id: "privacy",
@@ -277,23 +297,46 @@ const LandingPage: React.FC = () => {
               <h2>Access</h2>
             </header>
             <div className="landing-axis-mobile-list" role="list">
-              {romanAxisLabels.map((label, index) => (
-                <article className="landing-axis-mobile-row" role="listitem" key={`mobile-${label}`}>
-                  <p className="landing-axis-mobile-item-metric">{capabilityAxisItems[index]}</p>
-                  <span className="landing-axis-mobile-item-roman" aria-hidden="true">{label}</span>
-                  {index === 0 ? (
+              {mobileAxisRows.map((row) => (
+                <article className="landing-axis-mobile-row" role="listitem" key={row.key}>
+                  <div className="landing-axis-mobile-item-metric landing-axis-mobile-stack" aria-label={row.metric.join(" ")}>
+                    {row.metric.map((line) => (
+                      <span
+                        key={`${row.key}-metric-${line}`}
+                        className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                      >
+                        {line}
+                      </span>
+                    ))}
+                  </div>
+
+                  {row.action ? (
                     <button
                       type="button"
-                      className="landing-axis-right-action landing-axis-mobile-item-access landing-axis-mobile-item-access-action"
+                      className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-action"
                       onClick={goToCreateAccount}
+                      aria-label={row.access.join(" ")}
                     >
-                      <span className="landing-axis-right-action-label">
-                        <span className="landing-axis-right-action-highlight">CREATE ACCOUNT</span>
-                        <span className="landing-axis-right-action-tail">@ No Cost</span>
-                      </span>
+                      {row.access.map((line) => (
+                        <span
+                          key={`${row.key}-access-${line}`}
+                          className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                        >
+                          {line}
+                        </span>
+                      ))}
                     </button>
                   ) : (
-                    <p className="landing-axis-mobile-item-access">{deploymentAxisItems[index]}</p>
+                    <div className="landing-axis-mobile-item-access landing-axis-mobile-stack" aria-label={row.access.join(" ")}>
+                      {row.access.map((line) => (
+                        <span
+                          key={`${row.key}-access-${line}`}
+                          className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                        >
+                          {line}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </article>
               ))}

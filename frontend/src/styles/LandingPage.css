@@ -363,55 +363,72 @@ body {
 
 .landing-axis-mobile-inner {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .landing-axis-mobile-headings {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
   margin: 0;
 }
 
 .landing-axis-mobile-headings h2 {
   margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-size: 1.16rem;
+  line-height: 1.24;
+  letter-spacing: 0.02em;
+  text-align: center;
 }
 
 .landing-axis-mobile-list {
   display: grid;
-  gap: 12px;
+  gap: 22px;
 }
 
 .landing-axis-mobile-row {
   display: grid;
-  gap: 7px;
-  padding: 14px 14px 12px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, #a7b6c8 24%, transparent);
-  background: color-mix(in srgb, #eef3f8 36%, transparent);
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  column-gap: 16px;
 }
 
 .landing-axis-mobile-item-metric,
 .landing-axis-mobile-item-access {
   margin: 0;
-  font-size: 0.96rem;
-  line-height: 1.38;
   color: var(--sys-text-2);
 }
 
-.landing-axis-mobile-item-roman {
-  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
-  font-size: 0.74rem;
-  letter-spacing: 0.1em;
-  color: color-mix(in srgb, var(--sys-text-3) 90%, transparent);
+.landing-axis-mobile-stack {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  row-gap: 8px;
+  text-align: center;
+  line-height: 1.28;
 }
 
-.landing-axis-mobile-item-access-action {
-  width: fit-content;
-  min-height: 0;
+.landing-axis-mobile-stack-line {
+  display: block;
+  font-size: 0.98rem;
+  letter-spacing: 0.015em;
+}
+
+.landing-axis-mobile-connector {
+  font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  margin: 3px 0 2px;
+  color: color-mix(in srgb, var(--sys-text-2) 85%, var(--sys-text-3) 15%);
+}
+
+.landing-axis-mobile-stack-action {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .landing-capabilities h2,
@@ -1223,23 +1240,42 @@ body {
 
   .landing-axis-layout-mobile {
     display: block;
-    padding: 18px 0 8px;
+    padding: 40px 0 20px;
   }
 
   .landing-axis-mobile-inner {
-    gap: 16px;
+    gap: 30px;
   }
 
-  .landing-axis-mobile-headings h2:last-child {
-    text-align: left;
+  .landing-axis-mobile-headings {
+    padding: 0 6px;
+  }
+
+  .landing-axis-mobile-headings h2 {
+    font-size: 1.12rem;
+    letter-spacing: 0.06em;
+  }
+
+  .landing-axis-mobile-list {
+    gap: 30px;
   }
 
   .landing-axis-mobile-row {
-    gap: 8px;
+    column-gap: 18px;
+    min-height: 86px;
   }
 
-  .landing-axis-mobile-item-access-action .landing-axis-right-action-label {
-    white-space: normal;
+  .landing-axis-mobile-stack {
+    row-gap: 10px;
+  }
+
+  .landing-axis-mobile-stack-line {
+    font-size: 1rem;
+  }
+
+  .landing-axis-mobile-connector {
+    font-size: 0.86rem;
+    margin: 4px 0;
   }
 
   .landing-spec-sheet {
