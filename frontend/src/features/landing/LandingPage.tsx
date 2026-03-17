@@ -40,18 +40,21 @@ const LandingPage: React.FC = () => {
   const mobileAxisRows = [
     {
       key: "row-footfall",
+      roman: "I",
       metric: ["Footfall", "&", "Occupancy"],
       access: ["Create Account", "@", "No Cost"],
       action: true,
     },
     {
       key: "row-site-flow",
+      roman: "II",
       metric: ["Site Flow", "&", "Dwell"],
       access: ["Connect", "&", "Set Up"],
       action: false,
     },
     {
       key: "row-visitor",
+      roman: "III",
       metric: ["Visitor", "Profile"],
       access: ["System", "Live"],
       action: false,
@@ -299,7 +302,7 @@ const LandingPage: React.FC = () => {
             <div className="landing-axis-mobile-list" role="list">
               {mobileAxisRows.map((row) => (
                 <article className="landing-axis-mobile-row" role="listitem" key={row.key}>
-                  <div className="landing-axis-mobile-item-metric landing-axis-mobile-stack" aria-label={row.metric.join(" ")}>
+                  <div className="landing-axis-mobile-item-metric landing-axis-mobile-stack landing-axis-mobile-stack-metric" aria-label={row.metric.join(" ")}>
                     {row.metric.map((line) => (
                       <span
                         key={`${row.key}-metric-${line}`}
@@ -310,10 +313,12 @@ const LandingPage: React.FC = () => {
                     ))}
                   </div>
 
+                  <span className="landing-axis-mobile-item-roman" aria-hidden="true">{row.roman}</span>
+
                   {row.action ? (
                     <button
                       type="button"
-                      className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-action"
+                      className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access landing-axis-mobile-stack-action"
                       onClick={goToCreateAccount}
                       aria-label={row.access.join(" ")}
                     >
@@ -327,7 +332,7 @@ const LandingPage: React.FC = () => {
                       ))}
                     </button>
                   ) : (
-                    <div className="landing-axis-mobile-item-access landing-axis-mobile-stack" aria-label={row.access.join(" ")}>
+                    <div className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access" aria-label={row.access.join(" ")}>
                       {row.access.map((line) => (
                         <span
                           key={`${row.key}-access-${line}`}
