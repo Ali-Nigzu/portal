@@ -97,7 +97,8 @@ const LandingPage: React.FC = () => {
   const [previewFitWidth, setPreviewFitWidth] = useState<number | null>(null);
   const [mobileAxisRomanShiftByKey, setMobileAxisRomanShiftByKey] = useState<Record<string, number>>({});
   const mobileAxisRowRefs = useRef<Record<string, HTMLElement | null>>({});
-  const mobileAxisConnectorRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const mobileAxisMetricConnectorRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const mobileAxisAccessConnectorRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const mobileAxisMetricLineRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
 
   useLayoutEffect(() => {
@@ -240,7 +241,8 @@ const LandingPage: React.FC = () => {
 
         mobileAxisRows.forEach((row) => {
           const rowEl = mobileAxisRowRefs.current[row.key];
-          const connectorEl = mobileAxisConnectorRefs.current[row.key];
+          const metricConnectorEl = mobileAxisMetricConnectorRefs.current[row.key];
+          const accessConnectorEl = mobileAxisAccessConnectorRefs.current[row.key];
           const metricLines = mobileAxisMetricLineRefs.current[row.key] ?? [];
 
           if (!rowEl) {
@@ -252,9 +254,16 @@ const LandingPage: React.FC = () => {
 
           let anchorCenterY: number | null = null;
 
-          if (connectorEl) {
-            const connectorRect = connectorEl.getBoundingClientRect();
-            anchorCenterY = connectorRect.top + (connectorRect.height / 2);
+          const connectorCenters = [metricConnectorEl, accessConnectorEl]
+            .filter((node): node is HTMLSpanElement => Boolean(node))
+            .map((node) => {
+              const connectorRect = node.getBoundingClientRect();
+              return connectorRect.top + (connectorRect.height / 2);
+            });
+
+          if (connectorCenters.length > 0) {
+            const total = connectorCenters.reduce((acc, val) => acc + val, 0);
+            anchorCenterY = total / connectorCenters.length;
           } else if (metricLines[0] && metricLines[1]) {
             const lineA = metricLines[0].getBoundingClientRect();
             const lineB = metricLines[1].getBoundingClientRect();
@@ -405,7 +414,7 @@ const LandingPage: React.FC = () => {
                           list[index] = node;
                           mobileAxisMetricLineRefs.current[row.key] = list;
                           if (line === "&" || line === "@") {
-                            mobileAxisConnectorRefs.current[row.key] = node;
+                            mobileAxisMetricConnectorRefs.current[row.key] = node;
                           }
                         }}
                       >
@@ -435,7 +444,7 @@ const LandingPage: React.FC = () => {
                           className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
                           ref={(node) => {
                             if (line === "&" || line === "@") {
-                              mobileAxisConnectorRefs.current[row.key] = node;
+                              mobileAxisAccessConnectorRefs.current[row.key] = node;
                             }
                           }}
                         >
@@ -451,7 +460,7 @@ const LandingPage: React.FC = () => {
                           className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
                           ref={(node) => {
                             if (line === "&" || line === "@") {
-                              mobileAxisConnectorRefs.current[row.key] = node;
+                              mobileAxisAccessConnectorRefs.current[row.key] = node;
                             }
                           }}
                         >
