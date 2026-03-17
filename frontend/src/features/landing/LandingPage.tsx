@@ -95,6 +95,10 @@ const LandingPage: React.FC = () => {
   const assuranceItemTextRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
   const previewFitRef = useRef<HTMLDivElement | null>(null);
   const [previewFitWidth, setPreviewFitWidth] = useState<number | null>(null);
+  const [mobileAxisRomanShiftByKey, setMobileAxisRomanShiftByKey] = useState<Record<string, number>>({});
+  const mobileAxisRowRefs = useRef<Record<string, HTMLElement | null>>({});
+  const mobileAxisConnectorRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const mobileAxisMetricLineRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
 
   useLayoutEffect(() => {
     let frameId = 0;
@@ -222,6 +226,88 @@ const LandingPage: React.FC = () => {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    let frameId = 0;
+
+    const measureAxisRomanAnchors = () => {
+      if (!window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches) {
+        return;
+      }
+
+      setMobileAxisRomanShiftByKey((prev) => {
+        const next = { ...prev };
+        let changed = false;
+
+        mobileAxisRows.forEach((row) => {
+          const rowEl = mobileAxisRowRefs.current[row.key];
+          const connectorEl = mobileAxisConnectorRefs.current[row.key];
+          const metricLines = mobileAxisMetricLineRefs.current[row.key] ?? [];
+
+          if (!rowEl) {
+            return;
+          }
+
+          const rowRect = rowEl.getBoundingClientRect();
+          const rowCenterY = rowRect.top + (rowRect.height / 2);
+
+          let anchorCenterY: number | null = null;
+
+          if (connectorEl) {
+            const connectorRect = connectorEl.getBoundingClientRect();
+            anchorCenterY = connectorRect.top + (connectorRect.height / 2);
+          } else if (metricLines[0] && metricLines[1]) {
+            const lineA = metricLines[0].getBoundingClientRect();
+            const lineB = metricLines[1].getBoundingClientRect();
+            const lineACenter = lineA.top + (lineA.height / 2);
+            const lineBCenter = lineB.top + (lineB.height / 2);
+            anchorCenterY = (lineACenter + lineBCenter) / 2;
+          }
+
+          if (anchorCenterY == null) {
+            return;
+          }
+
+          const shift = Number((anchorCenterY - rowCenterY).toFixed(3));
+          if (next[row.key] !== shift) {
+            next[row.key] = shift;
+            changed = true;
+          }
+        });
+
+        return changed ? next : prev;
+      });
+    };
+
+    const scheduleMeasure = () => {
+      cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(measureAxisRomanAnchors);
+    };
+
+    scheduleMeasure();
+    window.addEventListener("resize", scheduleMeasure);
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(scheduleMeasure).catch(() => undefined);
+    }
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(scheduleMeasure)
+      : null;
+
+    mobileAxisRows.forEach((row) => {
+      const rowEl = mobileAxisRowRefs.current[row.key];
+      if (rowEl && resizeObserver) {
+        resizeObserver.observe(rowEl);
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", scheduleMeasure);
+      resizeObserver?.disconnect();
+    };
+  }, []);
+
   return (
     <div className="landing-page">
       <LandingHeader
@@ -301,19 +387,40 @@ const LandingPage: React.FC = () => {
             </header>
             <div className="landing-axis-mobile-list" role="list">
               {mobileAxisRows.map((row) => (
-                <article className="landing-axis-mobile-row" role="listitem" key={row.key}>
+                <article
+                  className="landing-axis-mobile-row"
+                  role="listitem"
+                  key={row.key}
+                  ref={(node) => {
+                    mobileAxisRowRefs.current[row.key] = node;
+                  }}
+                >
                   <div className="landing-axis-mobile-item-metric landing-axis-mobile-stack landing-axis-mobile-stack-metric" aria-label={row.metric.join(" ")}>
-                    {row.metric.map((line) => (
+                    {row.metric.map((line, index) => (
                       <span
                         key={`${row.key}-metric-${line}`}
                         className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                        ref={(node) => {
+                          const list = mobileAxisMetricLineRefs.current[row.key] ?? [];
+                          list[index] = node;
+                          mobileAxisMetricLineRefs.current[row.key] = list;
+                          if (line === "&" || line === "@") {
+                            mobileAxisConnectorRefs.current[row.key] = node;
+                          }
+                        }}
                       >
                         {line}
                       </span>
                     ))}
                   </div>
 
-                  <span className="landing-axis-mobile-item-roman" aria-hidden="true">{row.roman}</span>
+                  <span
+                    className="landing-axis-mobile-item-roman"
+                    aria-hidden="true"
+                    style={{ "--roman-shift-y": `${mobileAxisRomanShiftByKey[row.key] ?? 0}px` } as React.CSSProperties}
+                  >
+                    {row.roman}
+                  </span>
 
                   {row.action ? (
                     <button
@@ -326,6 +433,11 @@ const LandingPage: React.FC = () => {
                         <span
                           key={`${row.key}-access-${line}`}
                           className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                          ref={(node) => {
+                            if (line === "&" || line === "@") {
+                              mobileAxisConnectorRefs.current[row.key] = node;
+                            }
+                          }}
                         >
                           {line}
                         </span>
@@ -337,6 +449,11 @@ const LandingPage: React.FC = () => {
                         <span
                           key={`${row.key}-access-${line}`}
                           className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                          ref={(node) => {
+                            if (line === "&" || line === "@") {
+                              mobileAxisConnectorRefs.current[row.key] = node;
+                            }
+                          }}
                         >
                           {line}
                         </span>

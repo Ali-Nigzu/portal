@@ -415,6 +415,7 @@ body {
   font-size: 0.78rem;
   letter-spacing: 0.14em;
   color: color-mix(in srgb, var(--sys-text-3) 92%, transparent);
+  transform: translateY(var(--roman-shift-y, 0px));
 }
 
 .landing-axis-mobile-stack {
