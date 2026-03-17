@@ -1108,17 +1108,24 @@ body {
 @media (max-width: 767px) and (orientation: portrait) {
   .landing-hero-zone {
     --hero-title-size: clamp(2.22rem, 10.6vw, 2.84rem);
-    --hero-statement-size: clamp(1.4rem, 5.8vw, 1.72rem);
-    --hero-gap-b: 24px;
+    --hero-statement-size: clamp(1.26rem, 5.5vw, 1.58rem);
+    --hero-stack-gap-1: 18px;
+    --hero-gap-b: clamp(56px, 10.8vh, 92px);
     --hero-gap-c: 30px;
-    --hero-zone-top: 66px;
-    --hero-zone-bottom: 42px;
-    min-height: calc(100svh - 60px);
+    --hero-zone-top: clamp(54px, 8.8vh, 88px);
+    --hero-zone-bottom: clamp(52px, 10.6vh, 88px);
+    min-height: max(calc(100svh - 62px), calc(100dvh - 62px));
   }
 
   .landing-hero-zone-grid {
     width: 100%;
-    align-content: start;
+    min-height: calc(100% - (var(--hero-zone-top) + var(--hero-zone-bottom)));
+    grid-template-rows: 1fr auto;
+    align-content: stretch;
+  }
+
+  .landing-hero {
+    align-self: end;
   }
 
   .landing-header {
@@ -1161,16 +1168,6 @@ body {
     gap: 12px;
   }
 
-  .landing-hero-zone {
-    --hero-title-size: clamp(2.32rem, 11.2vw, 2.98rem);
-    --hero-statement-size: clamp(1.28rem, 5.4vw, 1.62rem);
-    --hero-gap-b: 52px;
-    --hero-gap-c: 30px;
-    --hero-zone-top: 40px;
-    --hero-zone-bottom: 48px;
-    min-height: calc(100svh - 60px);
-  }
-
   .landing-hero {
     width: 100%;
   }
@@ -1179,21 +1176,25 @@ body {
     width: 100%;
     max-width: 340px;
     margin-inline: auto;
-    gap: 14px;
+    gap: var(--hero-stack-gap-1);
   }
 
   .landing-hero-mobile-logo {
     display: block;
-    width: 58px;
-    height: 58px;
-    margin: 0 auto 2px;
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 8px;
     object-fit: contain;
     filter: drop-shadow(0 6px 16px rgba(57, 67, 82, 0.16));
   }
 
+  .landing-hero h1 {
+    margin-top: 4px;
+  }
+
   .landing-hero p {
     font-size: var(--hero-statement-size);
-    line-height: 1.32;
+    line-height: 1.36;
     max-width: 24ch;
     opacity: 0.9;
   }
@@ -1203,6 +1204,7 @@ body {
     max-width: 340px;
     margin: 0 auto;
     margin-top: var(--hero-gap-b);
+    align-self: end;
     gap: 14px;
   }
 
