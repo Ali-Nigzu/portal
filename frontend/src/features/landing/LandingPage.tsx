@@ -26,6 +26,47 @@ const LandingPage: React.FC = () => {
     navigate("/contact");
   };
 
+
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [mobileSearchQuery, setMobileSearchQuery] = useState("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const goToFooterLegal = () => {
+    const footer = document.querySelector(".landing-footer");
+    footer?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const mobileQuickActions = [
+    { key: "demo", label: "Demo", run: goToDemo },
+    { key: "create-account", label: "Create Account", run: goToCreateAccount },
+    { key: "login", label: "Login", run: goToLogin },
+    { key: "contact-us", label: "Contact Us", run: goToContact },
+    { key: "terms", label: "Terms & Conditions", run: goToFooterLegal },
+    { key: "privacy", label: "Privacy Policy", run: goToFooterLegal },
+    { key: "cookies", label: "Cookies Policy", run: goToFooterLegal },
+  ] as const;
+
+  const openSearch = () => {
+    setIsMobileMenuOpen(false);
+    setIsMobileSearchOpen((prev) => !prev);
+  };
+
+  const openMenu = () => {
+    setIsMobileSearchOpen(false);
+    setIsMobileMenuOpen((prev) => !prev);
+  };
+
+  const handleMobileAction = (run: () => void) => {
+    setIsMobileSearchOpen(false);
+    setIsMobileMenuOpen(false);
+    run();
+  };
+
+  const normalizedQuery = mobileSearchQuery.trim().toLowerCase();
+  const filteredMobileQuickActions = normalizedQuery.length === 0
+    ? mobileQuickActions
+    : mobileQuickActions.filter((item) => normalizedQuery.split("").some((char) => item.label.toLowerCase().includes(char)));
+
   const capabilityAxisItems = landingCopy.capabilities.items
     .filter((item) => item !== "Dwell time")
     .slice(0, 3);
@@ -228,6 +269,20 @@ const LandingPage: React.FC = () => {
   }, []);
 
   useLayoutEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileMenuOpen(false);
+        setIsMobileSearchOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
     let frameId = 0;
 
     const measureAxisRomanAnchors = () => {
@@ -321,7 +376,57 @@ const LandingPage: React.FC = () => {
     <div className="landing-page">
       <LandingHeader
         onLogin={goToLogin}
+        onSearchToggle={openSearch}
+        onMenuToggle={openMenu}
+        isSearchOpen={isMobileSearchOpen}
+        isMenuOpen={isMobileMenuOpen}
       />
+
+      <div className="landing-mobile-header-overlays" aria-live="polite">
+        {isMobileSearchOpen && (
+          <div className="landing-mobile-search-panel" id="landing-mobile-search-panel" role="dialog" aria-label="Quick navigation search">
+            <label className="landing-mobile-search-label" htmlFor="landing-mobile-search-input">Quick search</label>
+            <input
+              id="landing-mobile-search-input"
+              type="search"
+              value={mobileSearchQuery}
+              onChange={(event) => setMobileSearchQuery(event.target.value)}
+              placeholder="Search actions"
+              autoFocus
+            />
+            <div className="landing-mobile-search-results" role="listbox" aria-label="Search results">
+              {filteredMobileQuickActions.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className="landing-mobile-search-result"
+                  onClick={() => handleMobileAction(item.run)}
+                >
+                  {item.label}
+                </button>
+              ))}
+              {filteredMobileQuickActions.length === 0 && (
+                <p className="landing-mobile-search-empty">No matches</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isMobileMenuOpen && <button type="button" className="landing-mobile-drawer-backdrop" aria-label="Close menu" onClick={() => setIsMobileMenuOpen(false)} />}
+        <aside className={`landing-mobile-drawer${isMobileMenuOpen ? " is-open" : ""}`} id="landing-mobile-drawer" aria-label="Mobile menu" role="dialog" aria-modal={isMobileMenuOpen}>
+          <div className="landing-mobile-drawer-head">
+            <span>Menu</span>
+            <button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">×</button>
+          </div>
+          <nav className="landing-mobile-drawer-list" aria-label="Mobile quick links">
+            {mobileQuickActions.map((item) => (
+              <button key={`drawer-${item.key}`} type="button" onClick={() => handleMobileAction(item.run)}>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+      </div>
 
       <main>
         <section className="landing-hero-zone" aria-label="Hero zone">
@@ -434,7 +539,7 @@ const LandingPage: React.FC = () => {
                   {row.action ? (
                     <button
                       type="button"
-                      className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access landing-axis-mobile-stack-action"
+                      className="landing-axis-right-action landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access landing-axis-mobile-stack-action landing-axis-mobile-item-access-pill"
                       onClick={goToCreateAccount}
                       aria-label={row.access.join(" ")}
                     >
