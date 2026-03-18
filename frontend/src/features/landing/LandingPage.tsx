@@ -5,6 +5,7 @@ import { landingCopy } from "./content";
 import LandingHeader from "./components/LandingHeader";
 import LandingFooter from "./components/LandingFooter";
 import SystemOverviewPreview from "./components/SystemOverviewPreview";
+import camOSLogo from "../../assets/Untitled design (4).svg";
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +26,47 @@ const LandingPage: React.FC = () => {
     navigate("/contact");
   };
 
+
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [mobileSearchQuery, setMobileSearchQuery] = useState("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const goToFooterLegal = () => {
+    const footer = document.querySelector(".landing-footer");
+    footer?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const mobileQuickActions = [
+    { key: "demo", label: "Demo", run: goToDemo },
+    { key: "create-account", label: "Create Account", run: goToCreateAccount },
+    { key: "login", label: "Login", run: goToLogin },
+    { key: "contact-us", label: "Contact Us", run: goToContact },
+    { key: "terms", label: "Terms & Conditions", run: goToFooterLegal },
+    { key: "privacy", label: "Privacy Policy", run: goToFooterLegal },
+    { key: "cookies", label: "Cookies Policy", run: goToFooterLegal },
+  ] as const;
+
+  const openSearch = () => {
+    setIsMobileMenuOpen(false);
+    setIsMobileSearchOpen((prev) => !prev);
+  };
+
+  const openMenu = () => {
+    setIsMobileSearchOpen(false);
+    setIsMobileMenuOpen((prev) => !prev);
+  };
+
+  const handleMobileAction = (run: () => void) => {
+    setIsMobileSearchOpen(false);
+    setIsMobileMenuOpen(false);
+    run();
+  };
+
+  const normalizedQuery = mobileSearchQuery.trim().toLowerCase();
+  const filteredMobileQuickActions = normalizedQuery.length === 0
+    ? mobileQuickActions
+    : mobileQuickActions.filter((item) => normalizedQuery.split("").some((char) => item.label.toLowerCase().includes(char)));
+
   const capabilityAxisItems = landingCopy.capabilities.items
     .filter((item) => item !== "Dwell time")
     .slice(0, 3);
@@ -36,6 +78,29 @@ const LandingPage: React.FC = () => {
   ];
 
   const romanAxisLabels = ["I", "II", "III"];
+  const mobileAxisRows = [
+    {
+      key: "row-footfall",
+      roman: "I",
+      metric: ["Footfall", "&", "Occupancy"],
+      access: ["Create Account", "@", "No Cost"],
+      action: true,
+    },
+    {
+      key: "row-site-flow",
+      roman: "II",
+      metric: ["Site Flow", "&", "Dwell"],
+      access: ["Connect", "&", "Set Up"],
+      action: false,
+    },
+    {
+      key: "row-visitor",
+      roman: "III",
+      metric: ["Visitor", "Profile"],
+      access: ["System", "Live"],
+      action: false,
+    },
+  ] as const;
   const assuranceColumns = [
     {
       id: "privacy",
@@ -69,6 +134,13 @@ const LandingPage: React.FC = () => {
   const firstLetterRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const treeSvgRefs = useRef<Record<string, SVGSVGElement | null>>({});
   const assuranceItemTextRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
+  const previewFitRef = useRef<HTMLDivElement | null>(null);
+  const [previewFitWidth, setPreviewFitWidth] = useState<number | null>(null);
+  const [mobileAxisRomanShiftByKey, setMobileAxisRomanShiftByKey] = useState<Record<string, number>>({});
+  const mobileAxisRowRefs = useRef<Record<string, HTMLElement | null>>({});
+  const mobileAxisMetricConnectorRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const mobileAxisAccessConnectorRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const mobileAxisMetricLineRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
 
   useLayoutEffect(() => {
     let frameId = 0;
@@ -170,17 +242,198 @@ const LandingPage: React.FC = () => {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    const target = previewFitRef.current;
+    if (!target) {
+      return;
+    }
+
+    const update = () => {
+      const measured = target.clientWidth;
+      if (measured > 0) {
+        setPreviewFitWidth((prev) => (prev === measured ? prev : measured));
+      }
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    const observer = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => update())
+      : null;
+    observer?.observe(target);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      observer?.disconnect();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileMenuOpen(false);
+        setIsMobileSearchOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    let frameId = 0;
+
+    const measureAxisRomanAnchors = () => {
+      if (!window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches) {
+        return;
+      }
+
+      setMobileAxisRomanShiftByKey((prev) => {
+        const next = { ...prev };
+        let changed = false;
+
+        mobileAxisRows.forEach((row) => {
+          const rowEl = mobileAxisRowRefs.current[row.key];
+          const metricConnectorEl = mobileAxisMetricConnectorRefs.current[row.key];
+          const accessConnectorEl = mobileAxisAccessConnectorRefs.current[row.key];
+          const metricLines = mobileAxisMetricLineRefs.current[row.key] ?? [];
+
+          if (!rowEl) {
+            return;
+          }
+
+          const rowRect = rowEl.getBoundingClientRect();
+          const rowCenterY = rowRect.top + (rowRect.height / 2);
+
+          let anchorCenterY: number | null = null;
+
+          const connectorCenters = [metricConnectorEl, accessConnectorEl]
+            .filter((node): node is HTMLSpanElement => Boolean(node))
+            .map((node) => {
+              const connectorRect = node.getBoundingClientRect();
+              return connectorRect.top + (connectorRect.height / 2);
+            });
+
+          if (connectorCenters.length > 0) {
+            const total = connectorCenters.reduce((acc, val) => acc + val, 0);
+            anchorCenterY = total / connectorCenters.length;
+          } else if (metricLines[0] && metricLines[1]) {
+            const lineA = metricLines[0].getBoundingClientRect();
+            const lineB = metricLines[1].getBoundingClientRect();
+            const lineACenter = lineA.top + (lineA.height / 2);
+            const lineBCenter = lineB.top + (lineB.height / 2);
+            anchorCenterY = (lineACenter + lineBCenter) / 2;
+          }
+
+          if (anchorCenterY == null) {
+            return;
+          }
+
+          const shift = Number((anchorCenterY - rowCenterY).toFixed(3));
+          if (next[row.key] !== shift) {
+            next[row.key] = shift;
+            changed = true;
+          }
+        });
+
+        return changed ? next : prev;
+      });
+    };
+
+    const scheduleMeasure = () => {
+      cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(measureAxisRomanAnchors);
+    };
+
+    scheduleMeasure();
+    window.addEventListener("resize", scheduleMeasure);
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(scheduleMeasure).catch(() => undefined);
+    }
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(scheduleMeasure)
+      : null;
+
+    mobileAxisRows.forEach((row) => {
+      const rowEl = mobileAxisRowRefs.current[row.key];
+      if (rowEl && resizeObserver) {
+        resizeObserver.observe(rowEl);
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", scheduleMeasure);
+      resizeObserver?.disconnect();
+    };
+  }, []);
+
   return (
     <div className="landing-page">
       <LandingHeader
         onLogin={goToLogin}
+        onSearchToggle={openSearch}
+        onMenuToggle={openMenu}
+        isSearchOpen={isMobileSearchOpen}
+        isMenuOpen={isMobileMenuOpen}
       />
+
+      <div className="landing-mobile-header-overlays" aria-live="polite">
+        {isMobileSearchOpen && (
+          <div className="landing-mobile-search-panel" id="landing-mobile-search-panel" role="dialog" aria-label="Quick navigation search">
+            <label className="landing-mobile-search-label" htmlFor="landing-mobile-search-input">Quick search</label>
+            <input
+              id="landing-mobile-search-input"
+              type="search"
+              value={mobileSearchQuery}
+              onChange={(event) => setMobileSearchQuery(event.target.value)}
+              placeholder="Search actions"
+              autoFocus
+            />
+            <div className="landing-mobile-search-results" role="listbox" aria-label="Search results">
+              {filteredMobileQuickActions.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className="landing-mobile-search-result"
+                  onClick={() => handleMobileAction(item.run)}
+                >
+                  {item.label}
+                </button>
+              ))}
+              {filteredMobileQuickActions.length === 0 && (
+                <p className="landing-mobile-search-empty">No matches</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isMobileMenuOpen && <button type="button" className="landing-mobile-drawer-backdrop" aria-label="Close menu" onClick={() => setIsMobileMenuOpen(false)} />}
+        <aside className={`landing-mobile-drawer${isMobileMenuOpen ? " is-open" : ""}`} id="landing-mobile-drawer" aria-label="Mobile menu" role="dialog" aria-modal={isMobileMenuOpen}>
+          <div className="landing-mobile-drawer-head">
+            <span>Menu</span>
+            <button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">×</button>
+          </div>
+          <nav className="landing-mobile-drawer-list" aria-label="Mobile quick links">
+            {mobileQuickActions.map((item) => (
+              <button key={`drawer-${item.key}`} type="button" onClick={() => handleMobileAction(item.run)}>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+      </div>
 
       <main>
         <section className="landing-hero-zone" aria-label="Hero zone">
           <div className="landing-container landing-hero-zone-grid">
             <section className="landing-hero" aria-labelledby="landing-hero-title">
               <div className="landing-hero-stack" data-align-anchor="hero-stack">
+                <img src={camOSLogo} alt="camOS mark" className="landing-hero-mobile-logo" />
                 <h1 id="landing-hero-title" aria-label="camOS">
                   <span aria-hidden="true" className="landing-hero-cam">cam</span>
                   <span aria-hidden="true" className="landing-hero-initial">OS</span>
@@ -206,7 +459,7 @@ const LandingPage: React.FC = () => {
               </button>
             </div>
 
-            <section className="landing-axis-layout" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
+            <section className="landing-axis-layout landing-axis-layout--desktop" aria-label="Platform capabilities and system deployment" data-align-anchor="axis-layout">
               <div className="landing-axis-matrix" data-align-anchor="axis-matrix">
                 <h2 id="capabilities-title" className="landing-axis-cell landing-axis-cell-left landing-axis-cell-heading">Metrics</h2>
                 <span className="landing-axis-cell landing-axis-cell-axis" aria-hidden="true" />
@@ -239,6 +492,94 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
+
+        <section className="landing-axis-layout-mobile" aria-label="Platform capabilities and system deployment">
+          <div className="landing-container landing-axis-mobile-inner">
+            <header className="landing-axis-mobile-headings" aria-hidden="true">
+              <h2>Metrics</h2>
+              <h2>Access</h2>
+            </header>
+            <div className="landing-axis-mobile-list" role="list">
+              {mobileAxisRows.map((row) => (
+                <article
+                  className="landing-axis-mobile-row"
+                  role="listitem"
+                  key={row.key}
+                  ref={(node) => {
+                    mobileAxisRowRefs.current[row.key] = node;
+                  }}
+                >
+                  <div className="landing-axis-mobile-item-metric landing-axis-mobile-stack landing-axis-mobile-stack-metric" aria-label={row.metric.join(" ")}>
+                    {row.metric.map((line, index) => (
+                      <span
+                        key={`${row.key}-metric-${line}`}
+                        className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                        ref={(node) => {
+                          const list = mobileAxisMetricLineRefs.current[row.key] ?? [];
+                          list[index] = node;
+                          mobileAxisMetricLineRefs.current[row.key] = list;
+                          if (line === "&" || line === "@") {
+                            mobileAxisMetricConnectorRefs.current[row.key] = node;
+                          }
+                        }}
+                      >
+                        {line}
+                      </span>
+                    ))}
+                  </div>
+
+                  <span
+                    className="landing-axis-mobile-item-roman"
+                    aria-hidden="true"
+                    style={{ "--roman-shift-y": `${mobileAxisRomanShiftByKey[row.key] ?? 0}px` } as React.CSSProperties}
+                  >
+                    {row.roman}
+                  </span>
+
+                  {row.action ? (
+                    <button
+                      type="button"
+                      className="landing-axis-right-action landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access landing-axis-mobile-stack-action landing-axis-mobile-item-access-pill"
+                      onClick={goToCreateAccount}
+                      aria-label={row.access.join(" ")}
+                    >
+                      {row.access.map((line) => (
+                        <span
+                          key={`${row.key}-access-${line}`}
+                          className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                          ref={(node) => {
+                            if (line === "&" || line === "@") {
+                              mobileAxisAccessConnectorRefs.current[row.key] = node;
+                            }
+                          }}
+                        >
+                          {line}
+                        </span>
+                      ))}
+                    </button>
+                  ) : (
+                    <div className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access" aria-label={row.access.join(" ")}>
+                      {row.access.map((line) => (
+                        <span
+                          key={`${row.key}-access-${line}`}
+                          className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                          ref={(node) => {
+                            if (line === "&" || line === "@") {
+                              mobileAxisAccessConnectorRefs.current[row.key] = node;
+                            }
+                          }}
+                        >
+                          {line}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="landing-spec-sheet" aria-label="Operational spec sheet">
           <div className="landing-container landing-spec-sheet-inner">
             <div className="landing-system-surface">
@@ -247,7 +588,11 @@ const LandingPage: React.FC = () => {
                   <h2 id="live-preview-title">{landingCopy.livePreview.heading}</h2>
                   <p>{landingCopy.livePreview.description}</p>
                 </div>
-                <div className="landing-dashboard-preview">
+                <div
+                  className="landing-dashboard-preview"
+                  ref={previewFitRef}
+                  style={previewFitWidth ? ({ "--preview-fit-width": `${previewFitWidth}px` } as React.CSSProperties) : undefined}
+                >
                   <SystemOverviewPreview onAccessDemo={goToDemo} />
                 </div>
               </section>

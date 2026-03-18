@@ -693,7 +693,7 @@
   color: var(--sys-text-3);
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1279px) and (min-width: 768px) {
   .preview {
     width: 100%;
     --kpi-col: 214px;
@@ -710,7 +710,7 @@
 }
 
 
-@media (max-width: 900px) {
+@media (max-width: 900px) and (min-width: 768px) {
   .preview {
     --kpi-col: 206px;
     --topo-gap-col: 12px;
@@ -718,7 +718,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767px) and (orientation: landscape) {
   .preview {
     padding: 0;
   }
