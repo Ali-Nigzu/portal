@@ -130,19 +130,6 @@ body {
   display: none;
 }
 
-.landing-axis-mobile-item-access-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: fit-content;
-  min-height: 0;
-  border-radius: 11px;
-  border: 1px solid color-mix(in srgb, var(--sys-line) 68%, white 18%);
-  background: color-mix(in srgb, var(--surface-panel) 85%, white 15%);
-  box-shadow: 0 2px 8px rgba(52, 61, 74, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.54);
-  padding: 10px 12px;
-}
-
 .btn {
   border-radius: var(--sys-radius-sm);
   min-height: 40px;
@@ -461,6 +448,27 @@ body {
   letter-spacing: 0.012em;
 }
 
+.landing-axis-mobile-stack-line-cta {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: var(--cta-create-text);
+  font-weight: 560;
+}
+
+.landing-axis-mobile-stack-line-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
+  box-shadow: 0 2px 8px rgba(62, 56, 34, 0.14), inset 0 5px 9px rgba(255, 249, 231, 0.24);
+}
+
 .landing-axis-mobile-connector {
   font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
   font-size: 0.79rem;
@@ -476,6 +484,9 @@ body {
   padding: 0;
   cursor: pointer;
   font: inherit;
+  appearance: none;
+  justify-items: start;
+  text-align: left;
 }
 
 .landing-capabilities h2,
@@ -1177,7 +1188,7 @@ body {
     --hero-gap-b: clamp(44px, 8.8vh, 78px);
     --hero-gap-c: 30px;
     --hero-zone-top: clamp(54px, 8.8vh, 88px);
-    --hero-zone-bottom: clamp(14px, 3.2vh, 26px);
+    --hero-zone-bottom: clamp(8px, 1.8vh, 16px);
     min-height: max(calc(100svh - 104px), calc(100dvh - 104px));
   }
 
@@ -1287,11 +1298,11 @@ body {
 
   .landing-axis-layout-mobile {
     display: block;
-    padding: 14px 0 20px;
+    padding: 6px 0 20px;
   }
 
   .landing-axis-mobile-inner {
-    gap: 26px;
+    gap: 36px;
   }
 
   .landing-axis-mobile-headings {
@@ -1304,10 +1315,10 @@ body {
   }
 
   .landing-axis-mobile-headings h2 {
-    font-size: 1.24rem;
-    font-weight: 670;
-    line-height: 1.16;
-    letter-spacing: 0.048em;
+    font-size: 1.44rem;
+    font-weight: 760;
+    line-height: 1.08;
+    letter-spacing: 0.04em;
     color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
   }
 
@@ -1335,6 +1346,15 @@ body {
     line-height: 1.23;
     letter-spacing: 0.01em;
     color: color-mix(in srgb, var(--sys-text-1) 84%, var(--sys-text-2) 16%);
+  }
+
+  .landing-axis-mobile-stack-line-cta {
+    padding: 7px 12px;
+    border-radius: 11px;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.16;
+    letter-spacing: 0.024em;
   }
 
   .landing-axis-mobile-connector {

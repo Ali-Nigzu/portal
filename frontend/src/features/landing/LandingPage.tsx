@@ -539,14 +539,20 @@ const LandingPage: React.FC = () => {
                   {row.action ? (
                     <button
                       type="button"
-                      className="landing-axis-right-action landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access landing-axis-mobile-stack-action landing-axis-mobile-item-access-pill"
+                      className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access landing-axis-mobile-stack-action"
                       onClick={goToCreateAccount}
                       aria-label={row.access.join(" ")}
                     >
-                      {row.access.map((line) => (
+                      {row.access.map((line, index) => (
                         <span
                           key={`${row.key}-access-${line}`}
-                          className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                          className={
+                            line === "&" || line === "@"
+                              ? "landing-axis-mobile-stack-line landing-axis-mobile-connector"
+                              : index === 0
+                                ? "landing-axis-mobile-stack-line landing-axis-mobile-stack-line-cta"
+                                : "landing-axis-mobile-stack-line"
+                          }
                           ref={(node) => {
                             if (line === "&" || line === "@") {
                               mobileAxisAccessConnectorRefs.current[row.key] = node;
