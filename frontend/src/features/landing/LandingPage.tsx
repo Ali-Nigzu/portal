@@ -111,16 +111,19 @@ const LandingPage: React.FC = () => {
     {
       id: "privacy",
       title: "PRIVACY",
+      anchor: "start",
       items: ["No Personal Data", "Anonymous & Aggregated"],
     },
     {
       id: "operation",
       title: "OPERATION",
+      anchor: "end",
       items: ["Live Reporting", "99.9% Uptime"],
     },
     {
       id: "system",
       title: "SYSTEM",
+      anchor: "start",
       items: ["Plug & Play", "<1% Error"],
     },
   ] as const;
@@ -137,7 +140,8 @@ const LandingPage: React.FC = () => {
   const assuranceLowerOpticalOffsetY = 1.8;
   const assuranceSvgHeight = assuranceTree.rowOffset + (assuranceTree.rowHeight * 2);
   const [assuranceLayoutById, setAssuranceLayoutById] = useState<Record<string, { trunkX: number; branchY1: number; branchY2: number }>>({});
-  const firstLetterRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const [isMobileAssuranceLayout, setIsMobileAssuranceLayout] = useState(false);
+  const assuranceAnchorRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const treeSvgRefs = useRef<Record<string, SVGSVGElement | null>>({});
   const assuranceItemTextRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
   const previewFitRef = useRef<HTMLDivElement | null>(null);
@@ -149,6 +153,20 @@ const LandingPage: React.FC = () => {
   const mobileAxisMetricLineRefs = useRef<Record<string, Array<HTMLSpanElement | null>>>({});
 
   useLayoutEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const syncIsMobile = () => {
+      setIsMobileAssuranceLayout(mediaQuery.matches);
+    };
+
+    syncIsMobile();
+    mediaQuery.addEventListener("change", syncIsMobile);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncIsMobile);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
     let frameId = 0;
 
     const measureTrunkAnchors = () => {
@@ -156,15 +174,16 @@ const LandingPage: React.FC = () => {
         const next = { ...prev };
         let changed = false;
 
-        assuranceColumns.forEach(({ id }) => {
-          const firstLetter = firstLetterRefs.current[id];
+        assuranceColumns.forEach(({ id, anchor }) => {
+          const activeAnchor = isMobileAssuranceLayout ? anchor : "start";
+          const titleAnchor = assuranceAnchorRefs.current[id];
           const treeSvg = treeSvgRefs.current[id];
 
-          if (!firstLetter || !treeSvg) {
+          if (!titleAnchor || !treeSvg) {
             return;
           }
 
-          const firstLetterRect = firstLetter.getBoundingClientRect();
+          const titleAnchorRect = titleAnchor.getBoundingClientRect();
           const treeSvgRect = treeSvg.getBoundingClientRect();
           const viewBoxWidth = treeSvg.viewBox.baseVal.width || treeSvgRect.width;
           const viewBoxHeight = treeSvg.viewBox.baseVal.height || treeSvgRect.height;
@@ -173,8 +192,11 @@ const LandingPage: React.FC = () => {
             return;
           }
 
-          const firstLetterCenterX = firstLetterRect.left + (firstLetterRect.width / 2);
-          const trunkX = (firstLetterCenterX - treeSvgRect.left) * (viewBoxWidth / treeSvgRect.width);
+          const anchorCenterX = titleAnchorRect.left + (titleAnchorRect.width / 2);
+          const measuredTrunkX = (anchorCenterX - treeSvgRect.left) * (viewBoxWidth / treeSvgRect.width);
+          const trunkX = activeAnchor === "end"
+            ? Math.min(viewBoxWidth, Math.max(0, measuredTrunkX))
+            : Math.min(viewBoxWidth, Math.max(0, measuredTrunkX));
           const normalizedTrunkX = Number(trunkX.toFixed(3));
 
           const textNodes = assuranceItemTextRefs.current[id] ?? [];
@@ -228,15 +250,15 @@ const LandingPage: React.FC = () => {
       ? new ResizeObserver(scheduleMeasure)
       : null;
 
-    assuranceColumns.forEach(({ id }) => {
-      const firstLetter = firstLetterRefs.current[id];
-      const treeSvg = treeSvgRefs.current[id];
+        assuranceColumns.forEach(({ id }) => {
+          const titleAnchor = assuranceAnchorRefs.current[id];
+          const treeSvg = treeSvgRefs.current[id];
 
-      if (firstLetter && resizeObserver) {
-        resizeObserver.observe(firstLetter);
-      }
+          if (titleAnchor && resizeObserver) {
+            resizeObserver.observe(titleAnchor);
+          }
 
-      if (treeSvg && resizeObserver) {
+          if (treeSvg && resizeObserver) {
         resizeObserver.observe(treeSvg);
       }
     });
@@ -246,7 +268,7 @@ const LandingPage: React.FC = () => {
       window.removeEventListener("resize", scheduleMeasure);
       resizeObserver?.disconnect();
     };
-  }, []);
+  }, [assuranceBranchY1, assuranceBranchY2, assuranceColumns, assuranceLowerOpticalOffsetY, isMobileAssuranceLayout]);
 
   useLayoutEffect(() => {
     const target = previewFitRef.current;
@@ -632,29 +654,48 @@ const LandingPage: React.FC = () => {
                     <div className="assurance-col-body">
                       {(() => {
                         const firstLetter = column.title.slice(0, 1);
-                        const remainder = column.title.slice(1);
+                        const middle = column.title.slice(1, -1);
+                        const lastLetter = column.title.slice(-1);
                         const columnLayout = assuranceLayoutById[column.id];
                         const trunkX = columnLayout?.trunkX ?? 0;
                         const branchY1 = columnLayout?.branchY1 ?? assuranceBranchY1;
                         const branchY2 = columnLayout?.branchY2 ?? assuranceBranchY2;
                         const trunkY2 = branchY2;
+                        const isEndAnchored = isMobileAssuranceLayout && column.anchor === "end";
+                        const dockX = assuranceTree.dockX - assuranceTree.dockGap;
 
                         return (
                           <>
                       <h3 className="assurance-col-title">
                         <span className="assurance-col-title-text">
-                          <span
-                            className="assurance-col-title-first-letter"
-                            ref={(node) => {
-                              firstLetterRefs.current[column.id] = node;
-                            }}
-                          >
-                            {firstLetter}
-                          </span>
-                          <span>{remainder}</span>
+                          {isEndAnchored ? (
+                            <>
+                              <span>{firstLetter}{middle}</span>
+                              <span
+                                className="assurance-col-title-anchor assurance-col-title-last-letter"
+                                ref={(node) => {
+                                  assuranceAnchorRefs.current[column.id] = node;
+                                }}
+                              >
+                                {lastLetter}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span
+                                className="assurance-col-title-anchor assurance-col-title-first-letter"
+                                ref={(node) => {
+                                  assuranceAnchorRefs.current[column.id] = node;
+                                }}
+                              >
+                                {firstLetter}
+                              </span>
+                              <span>{column.title.slice(1)}</span>
+                            </>
+                          )}
                         </span>
                       </h3>
-                      <div className="assurance-col-tree">
+                      <div className="assurance-col-tree" data-anchor={isEndAnchored ? "end" : "start"}>
                         <svg
                           className="assurance-tree-svg"
                           aria-hidden="true"
@@ -666,8 +707,20 @@ const LandingPage: React.FC = () => {
                           }}
                         >
                           <line className="assurance-tree-line assurance-tree-line--trunk" x1={trunkX} y1={assuranceTree.trunkY1} x2={trunkX} y2={trunkY2} />
-                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={branchY1} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={branchY1} />
-                          <line className="assurance-tree-line assurance-tree-line--branch" x1={trunkX} y1={branchY2} x2={assuranceTree.dockX - assuranceTree.dockGap} y2={branchY2} />
+                          <line
+                            className="assurance-tree-line assurance-tree-line--branch"
+                            x1={isEndAnchored ? dockX : trunkX}
+                            y1={branchY1}
+                            x2={isEndAnchored ? trunkX : dockX}
+                            y2={branchY1}
+                          />
+                          <line
+                            className="assurance-tree-line assurance-tree-line--branch"
+                            x1={isEndAnchored ? dockX : trunkX}
+                            y1={branchY2}
+                            x2={isEndAnchored ? trunkX : dockX}
+                            y2={branchY2}
+                          />
                         </svg>
                         <ul className="assurance-col-list">
                           {column.items.map((item, itemIndex) => (
