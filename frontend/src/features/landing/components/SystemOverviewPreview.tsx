@@ -261,6 +261,13 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           };
         };
 
+        const isMobilePortrait = window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches;
+        const busGapBelowTop = isMobilePortrait ? 20 : BUS_GAP_BELOW_TOP;
+        const busGapAboveNode = isMobilePortrait ? 56 : BUS_GAP_ABOVE_NODE;
+        const busCorridorGapTop = isMobilePortrait ? 26 : BUS_CORRIDOR_GAP_TOP;
+        const busCorridorGapNode = isMobilePortrait ? 104 : BUS_CORRIDOR_GAP_NODE;
+        const busBiasFromNode = isMobilePortrait ? 14 : BUS_BIAS_FROM_NODE;
+
         const nodeRect = toLocalRect(nodeShellRef.current);
         const topTileSlots = TOP_TILES.map(({ key }) => topSlotRefs.current[key]);
         if (topTileSlots.some((slot) => !slot)) {
@@ -275,12 +282,12 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           capacityRect.bottom,
         );
         const nodeBandTop = nodeRect.top;
-        const minBusY = topBandBottom + BUS_CORRIDOR_GAP_TOP;
-        const maxBusY = nodeBandTop - BUS_CORRIDOR_GAP_NODE;
+        const minBusY = topBandBottom + busCorridorGapTop;
+        const maxBusY = nodeBandTop - busCorridorGapNode;
 
         const preferredBusY = Math.min(
-          topBandBottom + BUS_GAP_BELOW_TOP + BUS_CORRIDOR_GAP_TOP,
-          nodeBandTop - BUS_GAP_ABOVE_NODE - BUS_BIAS_FROM_NODE,
+          topBandBottom + busGapBelowTop + busCorridorGapTop,
+          nodeBandTop - busGapAboveNode - busBiasFromNode,
         );
         const busY = maxBusY <= minBusY
           ? ((topBandBottom + nodeBandTop) / 2)

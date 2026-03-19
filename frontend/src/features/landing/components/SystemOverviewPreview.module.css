@@ -766,10 +766,11 @@
 @media (max-width: 767px) and (orientation: portrait) {
   .preview {
     --mid-span: 392px;
+    --preview-top-row-lift: 68px;
   }
 
   .canvas {
-    min-height: 582px;
+    min-height: 646px;
   }
 
   .nodeMeasureGhost {
