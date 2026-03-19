@@ -454,7 +454,7 @@ body {
   display: inline-block;
   width: fit-content;
   padding: 0;
-  border-radius: 9px;
+  border-radius: 8px;
   color: var(--cta-create-text);
   font-weight: 560;
 }
@@ -462,11 +462,11 @@ body {
 .landing-axis-mobile-stack-line-cta::before {
   content: "";
   position: absolute;
-  inset: -4px -8px -4px -9px;
+  inset: -3px -6px -3px -7px;
   z-index: -1;
   border-radius: inherit;
   background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
-  box-shadow: 0 1px 5px rgba(62, 56, 34, 0.12), inset 0 4px 8px rgba(255, 249, 231, 0.22);
+  box-shadow: 0 1px 4px rgba(62, 56, 34, 0.1), inset 0 3px 7px rgba(255, 249, 231, 0.2);
 }
 
 .landing-axis-mobile-connector {
@@ -1302,7 +1302,7 @@ body {
   }
 
   .landing-axis-mobile-inner {
-    gap: 48px;
+    gap: 58px;
   }
 
   .landing-axis-mobile-headings {
@@ -1316,10 +1316,11 @@ body {
 
   .landing-axis-mobile-headings h2 {
     font-size: 1.58rem;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: 0.03em;
-    color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
+    font-weight: 740;
+    line-height: 0.98;
+    letter-spacing: 0.05em;
+    color: color-mix(in srgb, var(--sys-text-1) 93%, var(--sys-text-2) 7%);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .landing-axis-mobile-list {
@@ -1349,7 +1350,7 @@ body {
   }
 
   .landing-axis-mobile-stack-line-cta {
-    border-radius: 10px;
+    border-radius: 9px;
     font-size: 1rem;
     font-weight: 620;
     line-height: 1.14;
@@ -1357,7 +1358,7 @@ body {
   }
 
   .landing-axis-mobile-stack-line-cta::before {
-    inset: -5px -9px -5px -10px;
+    inset: -4px -7px -4px -8px;
   }
 
   .landing-axis-mobile-connector {
