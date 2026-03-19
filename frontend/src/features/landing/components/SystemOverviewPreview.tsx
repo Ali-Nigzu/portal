@@ -22,6 +22,7 @@ type WireLayout = {
   busX1: number;
   busX2: number;
   nodeX: number;
+  nodeY: number;
   nodeRadius: number;
   nodeHalfWidth: number;
   nodeHalfHeight: number;
@@ -88,6 +89,7 @@ const initialWireLayout: WireLayout = {
   busX1: 0,
   busX2: 0,
   nodeX: 0,
+  nodeY: 0,
   nodeRadius: 0,
   nodeHalfWidth: 0,
   nodeHalfHeight: 0,
@@ -262,6 +264,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         };
 
         const isMobilePortrait = window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches;
+        const nodeBusIntersectionRatio = isMobilePortrait ? 0.85 : 0.5;
         const busGapBelowTop = isMobilePortrait ? 20 : BUS_GAP_BELOW_TOP;
         const busGapAboveNode = isMobilePortrait ? 56 : BUS_GAP_ABOVE_NODE;
         const busCorridorGapTop = isMobilePortrait ? 26 : BUS_CORRIDOR_GAP_TOP;
@@ -292,12 +295,14 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const busY = maxBusY <= minBusY
           ? ((topBandBottom + nodeBandTop) / 2)
           : Math.max(minBusY, Math.min(preferredBusY, maxBusY));
+        const nodeCenterY = busY + ((nodeBusIntersectionRatio - 0.5) * nodeRect.height);
 
         const baseWire: Partial<WireLayout> = {
           width: localWidth,
           height: localHeight,
           busY,
           nodeX: nodeRect.left + (nodeRect.width / 2),
+          nodeY: nodeCenterY,
           nodeRadius: Math.max(0, (Math.min(nodeRect.width, nodeRect.height) / 2) - 1),
           nodeHalfWidth: nodeRect.width / 2,
           nodeHalfHeight: nodeRect.height / 2,
@@ -462,19 +467,20 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
   const nodeLayerStyle = {
     "--node-anchor-x": wire.nodeX > 0 ? `${wire.nodeX}px` : "50%",
-    "--node-anchor-y": wire.busY > 0 ? `${wire.busY}px` : "50%",
+    "--node-anchor-y": wire.nodeY > 0 ? `${wire.nodeY}px` : "50%",
   } as React.CSSProperties;
 
   const nodeX = wire.nodeX || (wire.busX1 + (wire.busX2 - wire.busX1) / 2);
+  const nodeY = wire.nodeY || wire.busY;
   const nodeRadius = wire.nodeRadius || 0;
   const flowRoutes = useMemo(
     () => {
       const projectToNodeBoundary = (towardX: number, towardY: number) => {
         const dx = towardX - nodeX;
-        const dy = towardY - wire.busY;
+        const dy = towardY - nodeY;
         const len = Math.hypot(dx, dy);
         if (len <= 0) {
-          return { x: nodeX, y: wire.busY };
+          return { x: nodeX, y: nodeY };
         }
 
         const ux = dx / len;
@@ -487,7 +493,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         if (halfWidth <= 0 || halfHeight <= 0 || cornerRadius <= 0) {
           return {
             x: nodeX + ux * nodeRadius,
-            y: wire.busY + uy * nodeRadius,
+            y: nodeY + uy * nodeRadius,
           };
         }
 
@@ -498,7 +504,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         const rectY = uy * rectScale;
 
         if (Math.abs(rectX) <= coreHalfWidth || Math.abs(rectY) <= coreHalfHeight) {
-          return { x: nodeX + rectX, y: wire.busY + rectY };
+          return { x: nodeX + rectX, y: nodeY + rectY };
         }
 
         const cornerCenterX = (rectX >= 0 ? 1 : -1) * coreHalfWidth;
@@ -510,7 +516,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
         return {
           x: nodeX + ux * arcDistance,
-          y: wire.busY + uy * arcDistance,
+          y: nodeY + uy * arcDistance,
         };
       };
 
@@ -550,7 +556,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         };
       });
     },
-    [nodeRadius, nodeX, wire],
+    [nodeRadius, nodeX, nodeY, wire],
   );
 
   const renderMockTile = (label: string, value: string) => (
