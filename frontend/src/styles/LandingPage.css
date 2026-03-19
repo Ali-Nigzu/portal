@@ -130,19 +130,6 @@ body {
   display: none;
 }
 
-.landing-axis-mobile-item-access-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: fit-content;
-  min-height: 0;
-  border-radius: 11px;
-  border: 1px solid color-mix(in srgb, var(--sys-line) 68%, white 18%);
-  background: color-mix(in srgb, var(--surface-panel) 85%, white 15%);
-  box-shadow: 0 2px 8px rgba(52, 61, 74, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.54);
-  padding: 10px 12px;
-}
-
 .btn {
   border-radius: var(--sys-radius-sm);
   min-height: 40px;
@@ -461,6 +448,27 @@ body {
   letter-spacing: 0.012em;
 }
 
+.landing-axis-mobile-stack-line-cta {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  width: fit-content;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--cta-create-text);
+  font-weight: 560;
+}
+
+.landing-axis-mobile-stack-line-cta::before {
+  content: "";
+  position: absolute;
+  inset: -3px -6px -3px -7px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--landing-gold) 88%, #f8e9c0 12%), color-mix(in srgb, var(--landing-gold-strong) 82%, #e5c56e 18%));
+  box-shadow: 0 1px 4px rgba(62, 56, 34, 0.1), inset 0 3px 7px rgba(255, 249, 231, 0.2);
+}
+
 .landing-axis-mobile-connector {
   font-family: "Roboto Mono", ui-monospace, Menlo, monospace;
   font-size: 0.79rem;
@@ -476,6 +484,21 @@ body {
   padding: 0;
   cursor: pointer;
   font: inherit;
+  appearance: none;
+  justify-items: start;
+  text-align: left;
+}
+
+.landing-axis-mobile-stack-action-line {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  justify-self: start;
+  cursor: pointer;
 }
 
 .landing-capabilities h2,
@@ -1174,11 +1197,11 @@ body {
     --hero-title-size: clamp(2.22rem, 10.6vw, 2.84rem);
     --hero-statement-size: clamp(1.26rem, 5.5vw, 1.58rem);
     --hero-stack-gap-1: 18px;
-    --hero-gap-b: clamp(44px, 8.8vh, 78px);
+    --hero-gap-b: clamp(28px, 5.2vh, 46px);
     --hero-gap-c: 30px;
     --hero-zone-top: clamp(54px, 8.8vh, 88px);
-    --hero-zone-bottom: clamp(14px, 3.2vh, 26px);
-    min-height: max(calc(100svh - 104px), calc(100dvh - 104px));
+    --hero-zone-bottom: 0px;
+    min-height: calc(84lvh - 104px);
   }
 
   .landing-hero-zone-grid {
@@ -1287,11 +1310,11 @@ body {
 
   .landing-axis-layout-mobile {
     display: block;
-    padding: 14px 0 20px;
+    padding: 2px 0 20px;
   }
 
   .landing-axis-mobile-inner {
-    gap: 26px;
+    gap: 58px;
   }
 
   .landing-axis-mobile-headings {
@@ -1304,11 +1327,12 @@ body {
   }
 
   .landing-axis-mobile-headings h2 {
-    font-size: 1.24rem;
-    font-weight: 670;
-    line-height: 1.16;
-    letter-spacing: 0.048em;
-    color: color-mix(in srgb, var(--sys-text-1) 90%, var(--sys-text-2) 10%);
+    font-size: 1.58rem;
+    font-weight: 740;
+    line-height: 0.98;
+    letter-spacing: 0.05em;
+    color: color-mix(in srgb, var(--sys-text-1) 93%, var(--sys-text-2) 7%);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
   .landing-axis-mobile-list {
@@ -1331,10 +1355,22 @@ body {
 
   .landing-axis-mobile-stack-line {
     font-size: 1.04rem;
-    font-weight: 535;
+    font-weight: 520;
     line-height: 1.23;
     letter-spacing: 0.01em;
     color: color-mix(in srgb, var(--sys-text-1) 84%, var(--sys-text-2) 16%);
+  }
+
+  .landing-axis-mobile-stack-line-cta {
+    border-radius: 9px;
+    font-size: 1rem;
+    font-weight: 620;
+    line-height: 1.14;
+    letter-spacing: 0.018em;
+  }
+
+  .landing-axis-mobile-stack-line-cta::before {
+    inset: -4px -7px -4px -8px;
   }
 
   .landing-axis-mobile-connector {
@@ -1362,13 +1398,24 @@ body {
     box-shadow: 0 12px 26px rgba(32, 41, 55, 0.19);
   }
 
-  .landing-mobile-search-label {
-    display: block;
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
-    margin-bottom: 6px;
-    color: var(--sys-text-3);
-    text-transform: uppercase;
+  .landing-mobile-search-backdrop {
+    position: fixed;
+    inset: 0;
+    border: none;
+    background: rgba(15, 20, 27, 0.22);
+    padding: 0;
+  }
+
+  .landing-mobile-search-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: none;
+    background: transparent;
+    color: var(--sys-text-2);
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 4px 8px;
   }
 
   .landing-mobile-search-panel input {
@@ -1376,7 +1423,7 @@ body {
     min-height: 40px;
     border-radius: 10px;
     border: 1px solid color-mix(in srgb, var(--sys-line) 70%, white 20%);
-    padding: 0 10px;
+    padding: 0 42px 0 10px;
     background: white;
     color: var(--sys-text-1);
   }
