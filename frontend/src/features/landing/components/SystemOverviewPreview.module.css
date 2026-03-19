@@ -763,6 +763,39 @@
   }
 }
 
+@media (max-width: 767px) and (orientation: portrait) {
+  .preview {
+    --mid-span: 392px;
+  }
+
+  .canvas {
+    min-height: 582px;
+  }
+
+  .nodeMeasureGhost {
+    width: 298px;
+    min-height: 214px;
+  }
+
+  .node {
+    width: 332px;
+    min-height: 246px;
+    padding: 24px 24px 22px;
+    border-radius: 24px;
+  }
+
+  .nodeLogo {
+    width: 88px;
+    height: 88px;
+  }
+
+  .previewNodeCta {
+    font-size: 0.86rem;
+    margin-top: 14px;
+    letter-spacing: 0.1em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .beamRoute {
     animation: none;

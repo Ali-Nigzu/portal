@@ -382,9 +382,7 @@ const LandingPage: React.FC = () => {
     <div className="landing-page">
       <LandingHeader
         onLogin={goToLogin}
-        onSearchToggle={openSearch}
         onMenuToggle={openMenu}
-        isSearchOpen={isMobileSearchOpen}
         isMenuOpen={isMobileMenuOpen}
       />
 
