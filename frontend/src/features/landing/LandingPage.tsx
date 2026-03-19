@@ -48,23 +48,29 @@ const LandingPage: React.FC = () => {
 
   const openSearch = () => {
     setIsMobileMenuOpen(false);
+    setMobileSearchQuery("");
     setIsMobileSearchOpen((prev) => !prev);
   };
 
-  const openMenu = () => {
+  const closeSearch = () => {
+    setMobileSearchQuery("");
     setIsMobileSearchOpen(false);
+  };
+
+  const openMenu = () => {
+    closeSearch();
     setIsMobileMenuOpen((prev) => !prev);
   };
 
   const handleMobileAction = (run: () => void) => {
-    setIsMobileSearchOpen(false);
+    closeSearch();
     setIsMobileMenuOpen(false);
     run();
   };
 
   const normalizedQuery = mobileSearchQuery.trim().toLowerCase();
   const filteredMobileQuickActions = normalizedQuery.length === 0
-    ? mobileQuickActions
+    ? []
     : mobileQuickActions.filter((item) => normalizedQuery.split("").some((char) => item.label.toLowerCase().includes(char)));
 
   const capabilityAxisItems = landingCopy.capabilities.items
@@ -384,32 +390,42 @@ const LandingPage: React.FC = () => {
 
       <div className="landing-mobile-header-overlays" aria-live="polite">
         {isMobileSearchOpen && (
-          <div className="landing-mobile-search-panel" id="landing-mobile-search-panel" role="dialog" aria-label="Quick navigation search">
-            <label className="landing-mobile-search-label" htmlFor="landing-mobile-search-input">Quick search</label>
-            <input
-              id="landing-mobile-search-input"
-              type="search"
-              value={mobileSearchQuery}
-              onChange={(event) => setMobileSearchQuery(event.target.value)}
-              placeholder="Search actions"
-              autoFocus
+          <>
+            <button
+              type="button"
+              className="landing-mobile-search-backdrop"
+              aria-label="Close search"
+              onClick={closeSearch}
             />
-            <div className="landing-mobile-search-results" role="listbox" aria-label="Search results">
-              {filteredMobileQuickActions.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  className="landing-mobile-search-result"
-                  onClick={() => handleMobileAction(item.run)}
-                >
-                  {item.label}
-                </button>
-              ))}
-              {filteredMobileQuickActions.length === 0 && (
-                <p className="landing-mobile-search-empty">No matches</p>
+            <div className="landing-mobile-search-panel" id="landing-mobile-search-panel" role="dialog" aria-label="Mobile search">
+              <button type="button" className="landing-mobile-search-close" onClick={closeSearch} aria-label="Close search">×</button>
+              <input
+                id="landing-mobile-search-input"
+                type="search"
+                value={mobileSearchQuery}
+                onChange={(event) => setMobileSearchQuery(event.target.value)}
+                placeholder="Search actions"
+                autoFocus
+              />
+              {normalizedQuery.length > 0 && (
+                <div className="landing-mobile-search-results" role="listbox" aria-label="Search results">
+                  {filteredMobileQuickActions.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      className="landing-mobile-search-result"
+                      onClick={() => handleMobileAction(item.run)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  {filteredMobileQuickActions.length === 0 && (
+                    <p className="landing-mobile-search-empty">No matches</p>
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          </>
         )}
 
         {isMobileMenuOpen && <button type="button" className="landing-mobile-drawer-backdrop" aria-label="Close menu" onClick={() => setIsMobileMenuOpen(false)} />}
@@ -537,32 +553,39 @@ const LandingPage: React.FC = () => {
                   </span>
 
                   {row.action ? (
-                    <button
-                      type="button"
-                      className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access landing-axis-mobile-stack-action"
-                      onClick={goToCreateAccount}
-                      aria-label={row.access.join(" ")}
-                    >
-                      {row.access.map((line, index) => (
-                        <span
-                          key={`${row.key}-access-${line}`}
-                          className={
-                            line === "&" || line === "@"
-                              ? "landing-axis-mobile-stack-line landing-axis-mobile-connector"
-                              : index === 0
-                                ? "landing-axis-mobile-stack-line landing-axis-mobile-stack-line-cta"
-                                : "landing-axis-mobile-stack-line"
-                          }
-                          ref={(node) => {
-                            if (line === "&" || line === "@") {
-                              mobileAxisAccessConnectorRefs.current[row.key] = node;
-                            }
-                          }}
-                        >
-                          {line}
-                        </span>
-                      ))}
-                    </button>
+                    <div className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access" aria-label={row.access.join(" ")}>
+                      {row.access.map((line, index) => {
+                        const lineClassName = line === "&" || line === "@"
+                          ? "landing-axis-mobile-stack-line landing-axis-mobile-connector"
+                          : index === 0
+                            ? "landing-axis-mobile-stack-line landing-axis-mobile-stack-line-cta"
+                            : "landing-axis-mobile-stack-line";
+
+                        return index === 0 ? (
+                          <button
+                            key={`${row.key}-access-${line}`}
+                            type="button"
+                            className="landing-axis-mobile-stack-action-line"
+                            onClick={goToCreateAccount}
+                            aria-label="Create Account"
+                          >
+                            <span className={lineClassName}>{line}</span>
+                          </button>
+                        ) : (
+                          <span
+                            key={`${row.key}-access-${line}`}
+                            className={lineClassName}
+                            ref={(node) => {
+                              if (line === "&" || line === "@") {
+                                mobileAxisAccessConnectorRefs.current[row.key] = node;
+                              }
+                            }}
+                          >
+                            {line}
+                          </span>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <div className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access" aria-label={row.access.join(" ")}>
                       {row.access.map((line) => (
