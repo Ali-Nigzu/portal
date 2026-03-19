@@ -109,16 +109,16 @@ const LandingPage: React.FC = () => {
   ] as const;
   const assuranceColumns = [
     {
-      id: "privacy",
-      title: "PRIVACY",
+      id: "operate",
+      title: "OPERATE",
       anchor: "start",
-      items: ["No Personal Data", "Anonymous & Aggregated"],
+      items: ["Live Reporting", "99.9% Uptime"],
     },
     {
-      id: "operation",
-      title: "OPERATION",
+      id: "private",
+      title: "PRIVATE",
       anchor: "end",
-      items: ["Live Reporting", "99.9% Uptime"],
+      items: ["No Personal Data", "Anonymous & Aggregated"],
     },
     {
       id: "system",
@@ -132,7 +132,8 @@ const LandingPage: React.FC = () => {
     rowHeight: 29,
     rowOffset: 4,
     textOpticalCenterY: 13,
-    dockX: 28,
+    dockXStart: 24,
+    dockXEnd: 4,
     dockGap: 4,
   } as const;
   const assuranceBranchY1 = assuranceTree.rowOffset + assuranceTree.textOpticalCenterY;
@@ -662,7 +663,9 @@ const LandingPage: React.FC = () => {
                         const branchY2 = columnLayout?.branchY2 ?? assuranceBranchY2;
                         const trunkY2 = branchY2;
                         const isEndAnchored = isMobileAssuranceLayout && column.anchor === "end";
-                        const dockX = assuranceTree.dockX - assuranceTree.dockGap;
+                        const dockX = isEndAnchored
+                          ? assuranceTree.dockXEnd
+                          : assuranceTree.dockXStart;
 
                         return (
                           <>
@@ -700,7 +703,7 @@ const LandingPage: React.FC = () => {
                           className="assurance-tree-svg"
                           aria-hidden="true"
                           focusable="false"
-                          viewBox={`0 0 ${assuranceTree.dockX} ${assuranceSvgHeight}`}
+                          viewBox={`0 0 ${assuranceTree.dockXStart + assuranceTree.dockGap} ${assuranceSvgHeight}`}
                           preserveAspectRatio="none"
                           ref={(node) => {
                             treeSvgRefs.current[column.id] = node;
@@ -709,16 +712,16 @@ const LandingPage: React.FC = () => {
                           <line className="assurance-tree-line assurance-tree-line--trunk" x1={trunkX} y1={assuranceTree.trunkY1} x2={trunkX} y2={trunkY2} />
                           <line
                             className="assurance-tree-line assurance-tree-line--branch"
-                            x1={isEndAnchored ? dockX : trunkX}
+                            x1={trunkX}
                             y1={branchY1}
-                            x2={isEndAnchored ? trunkX : dockX}
+                            x2={dockX}
                             y2={branchY1}
                           />
                           <line
                             className="assurance-tree-line assurance-tree-line--branch"
-                            x1={isEndAnchored ? dockX : trunkX}
+                            x1={trunkX}
                             y1={branchY2}
-                            x2={isEndAnchored ? trunkX : dockX}
+                            x2={dockX}
                             y2={branchY2}
                           />
                         </svg>

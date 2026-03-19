@@ -869,11 +869,11 @@ body {
   margin-top: 0;
 }
 
-.landing-assurances .assurance-col[data-testid="assurance-col-privacy"] {
+.landing-assurances .assurance-col[data-testid="assurance-col-operate"] {
   grid-column: 1;
 }
 
-.landing-assurances .assurance-col[data-testid="assurance-col-operation"] {
+.landing-assurances .assurance-col[data-testid="assurance-col-private"] {
   grid-column: 2;
 }
 
@@ -1200,8 +1200,8 @@ body {
     row-gap: 18px;
   }
 
-  .landing-assurances .assurance-col[data-testid="assurance-col-privacy"],
-  .landing-assurances .assurance-col[data-testid="assurance-col-operation"],
+  .landing-assurances .assurance-col[data-testid="assurance-col-operate"],
+  .landing-assurances .assurance-col[data-testid="assurance-col-private"],
   .landing-assurances .assurance-col[data-testid="assurance-col-system"] {
     grid-column: auto;
   }
@@ -1398,7 +1398,7 @@ body {
   }
 
   .landing-assurance-spec {
-    row-gap: 22px;
+    row-gap: 25px;
   }
 
   .assurance-col-body {
@@ -1414,11 +1414,11 @@ body {
   }
 
   .assurance-col-tree[data-anchor="end"],
-  .landing-assurances .assurance-col[data-testid="assurance-col-operation"] .assurance-col-title {
+  .landing-assurances .assurance-col[data-testid="assurance-col-private"] .assurance-col-title {
     justify-self: end;
   }
 
-  .landing-assurances .assurance-col[data-testid="assurance-col-operation"] .assurance-col-title {
+  .landing-assurances .assurance-col[data-testid="assurance-col-private"] .assurance-col-title {
     text-align: right;
   }
 
@@ -1624,7 +1624,7 @@ body {
   }
 
   .landing-assurance-spec {
-    row-gap: 24px;
+    row-gap: 28px;
   }
 
   .assurance-cta-row {
