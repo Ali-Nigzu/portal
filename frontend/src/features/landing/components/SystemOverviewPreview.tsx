@@ -533,9 +533,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           : isToNode
             ? nodeBoundaryPoint.y
             : endpointY;
-        const segmentA = Math.hypot(tapX - sourceX, wire.busY - sourceY);
-        const segmentB = Math.hypot(targetX - tapX, targetY - wire.busY);
-        const totalLength = segmentA + segmentB;
+        const verticalToBusLength = Math.abs(wire.busY - sourceY);
+        const horizontalBusLength = Math.abs(targetX - sourceX);
+        const verticalFromBusLength = Math.abs(targetY - wire.busY);
+        const totalLength = verticalToBusLength + horizontalBusLength + verticalFromBusLength;
         const windowPxTarget = Math.max(
           NODE_WINDOW_MIN_PX,
           Math.min(NODE_WINDOW_MAX_PX, totalLength * 0.3),
@@ -548,7 +549,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
           : NODE_WINDOW_RATIO_MAX;
         return {
           ...route,
-          d: `M ${sourceX} ${sourceY} L ${tapX} ${wire.busY} L ${targetX} ${targetY}`,
+          d: `M ${sourceX} ${sourceY} L ${sourceX} ${wire.busY} L ${targetX} ${wire.busY} L ${targetX} ${targetY}`,
           gradientId: `topology-gradient-${route.id}`,
           nodeBoundaryX: nodeBoundaryPoint.x,
           nodeBoundaryY: nodeBoundaryPoint.y,
