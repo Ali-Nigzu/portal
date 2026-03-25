@@ -1197,7 +1197,7 @@ body {
   }
   .landing-assurance-spec {
     grid-template-columns: 1fr;
-    row-gap: 18px;
+    row-gap: 21px;
   }
 
   .landing-assurances .assurance-col[data-testid="assurance-col-operate"],
@@ -1397,14 +1397,10 @@ body {
     color: color-mix(in srgb, var(--sys-text-1) 84%, var(--sys-text-2) 16%);
   }
 
-  .landing-assurance-spec {
-    row-gap: 25px;
-  }
-
   .assurance-col-body {
     --assurance-dock-indent: 30px;
-    --assurance-row-h: 31px;
-    --assurance-row-gap-top: 6px;
+    --assurance-row-h: 34px;
+    --assurance-row-gap-top: 6.6px;
     width: 100%;
   }
 
@@ -1627,13 +1623,13 @@ body {
   .landing-assurance-spec {
     width: 100%;
     max-width: none;
-    row-gap: 28px;
+    row-gap: 32px;
   }
 
   .assurance-cta-row {
     width: 100%;
     max-width: 340px;
-    margin: 45px auto 0;
+    margin: 59px auto 0;
     gap: 14px;
   }
 
