@@ -10,6 +10,8 @@ type CookieConsentWindow = Window & {
 
 const LandingFooter: React.FC = () => {
   const navigate = useNavigate();
+  const [termsAndConditions, privacyPolicy] = landingCopy.footer.primaryLinks;
+  const [cookiePolicy, cookiePreferences, contactUs] = landingCopy.footer.secondaryLinks;
 
   const handleCookiePreferencesClick: React.MouseEventHandler<HTMLButtonElement> = () => {
     const cookieConsent = (window as CookieConsentWindow).CookieConsent;
@@ -29,33 +31,61 @@ const LandingFooter: React.FC = () => {
             </p>
             <nav className="landing-footer-links-column landing-footer-links-column-primary" aria-label="Primary legal links">
               <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
-                {landingCopy.footer.primaryLinks[0]}
+                {termsAndConditions}
               </button>
               <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
-                {landingCopy.footer.primaryLinks[1]}
+                {privacyPolicy}
               </button>
             </nav>
           </div>
 
           <nav className="landing-footer-links-column landing-footer-links-column-secondary" aria-label="Footer links">
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
-              {landingCopy.footer.secondaryLinks[0]}
-            </button>
             <button
               type="button"
               className="landing-footer-link-item landing-footer-link-item-button landing-footer-link-item-cookie-preferences"
               onClick={handleCookiePreferencesClick}
             >
-              {landingCopy.footer.secondaryLinks[1]}
+              {cookiePreferences}
+            </button>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              {cookiePolicy}
             </button>
             <button
               type="button"
               className="landing-footer-link-item landing-footer-link-item-button"
               onClick={() => navigate("/contact")}
             >
-              {landingCopy.footer.secondaryLinks[2]}
+              {contactUs}
             </button>
           </nav>
+
+          <div className="landing-footer-mobile-top-links" aria-label="Mobile legal links">
+            <span className="landing-footer-mobile-top-item landing-footer-mobile-top-item-year">© 2026</span>
+            <span className="landing-footer-mobile-top-item landing-footer-mobile-top-item-brand">Camera Operating Systems</span>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-policy">
+              {cookiePolicy}
+            </button>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-terms">
+              {termsAndConditions}
+            </button>
+            <button
+              type="button"
+              className="landing-footer-link-item landing-footer-link-item-button landing-footer-link-item-cookie-preferences landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-preferences"
+              onClick={handleCookiePreferencesClick}
+            >
+              {cookiePreferences}
+            </button>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-privacy">
+              {privacyPolicy}
+            </button>
+            <button
+              type="button"
+              className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-contact"
+              onClick={() => navigate("/contact")}
+            >
+              {contactUs}
+            </button>
+          </div>
 
           <div className="landing-footer-legal-column">
             {landingCopy.footer.legalLines.map((line, index) => {
