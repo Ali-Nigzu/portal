@@ -1660,7 +1660,7 @@ body {
   }
 
   .landing-footer-mobile-top-links {
-    --footer-top-row-size: clamp(0.62rem, 1.95vw, 0.69rem);
+    --footer-top-row-size: clamp(0.60rem, 1.85vw, 0.66rem);
     display: grid;
     grid-template-columns: max-content max-content max-content;
     justify-content: start;
@@ -1692,7 +1692,7 @@ body {
 
   .landing-footer-mobile-top-link-cookie-policy {
     grid-column: 3;
-    grid-row: 1;
+    grid-row: 2;
   }
 
   .landing-footer-mobile-top-link-terms {
@@ -1702,7 +1702,7 @@ body {
 
   .landing-footer-mobile-top-link-cookie-preferences {
     grid-column: 3;
-    grid-row: 2;
+    grid-row: 1;
   }
 
   .landing-footer-mobile-top-link-privacy {

@@ -40,15 +40,15 @@ const LandingFooter: React.FC = () => {
           </div>
 
           <nav className="landing-footer-links-column landing-footer-links-column-secondary" aria-label="Footer links">
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
-              {cookiePolicy}
-            </button>
             <button
               type="button"
               className="landing-footer-link-item landing-footer-link-item-button landing-footer-link-item-cookie-preferences"
               onClick={handleCookiePreferencesClick}
             >
               {cookiePreferences}
+            </button>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              {cookiePolicy}
             </button>
             <button
               type="button"
@@ -62,9 +62,6 @@ const LandingFooter: React.FC = () => {
           <div className="landing-footer-mobile-top-links" aria-label="Mobile legal links">
             <span className="landing-footer-mobile-top-item landing-footer-mobile-top-item-year">© 2026</span>
             <span className="landing-footer-mobile-top-item landing-footer-mobile-top-item-brand">Camera Operating Systems</span>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-policy">
-              {cookiePolicy}
-            </button>
             <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-terms">
               {termsAndConditions}
             </button>
@@ -74,6 +71,9 @@ const LandingFooter: React.FC = () => {
               onClick={handleCookiePreferencesClick}
             >
               {cookiePreferences}
+            </button>
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-policy">
+              {cookiePolicy}
             </button>
             <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-privacy">
               {privacyPolicy}
