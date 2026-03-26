@@ -1661,12 +1661,13 @@ body {
 
   .landing-footer-mobile-top-links {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    column-gap: 10px;
-    row-gap: 6px;
+    grid-template-columns: max-content max-content max-content;
+    justify-content: space-between;
+    column-gap: 7px;
+    row-gap: 4px;
     align-items: baseline;
-    font-size: 0.72rem;
-    line-height: 1.28;
+    font-size: 0.685rem;
+    line-height: 1.2;
   }
 
   .landing-footer-mobile-top-item,
@@ -1675,6 +1676,7 @@ body {
     line-height: inherit;
     color: var(--sys-text-3);
     white-space: nowrap;
+    letter-spacing: -0.003em;
   }
 
   .landing-footer-mobile-top-item-year {
@@ -1714,6 +1716,14 @@ body {
 
   .landing-footer-legal-column {
     margin-top: 8px;
+    gap: 3px;
+  }
+
+  .landing-footer-legal-column p {
+    font-size: 0.44rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    letter-spacing: -0.005em;
   }
 
   .landing-footer-social {
@@ -1723,7 +1733,7 @@ body {
     z-index: 3;
     align-self: auto;
     justify-content: flex-end;
-    transform: translateY(-50%);
+    transform: translateY(-92%);
   }
 }
 

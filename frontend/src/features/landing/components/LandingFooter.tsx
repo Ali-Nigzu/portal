@@ -40,15 +40,15 @@ const LandingFooter: React.FC = () => {
           </div>
 
           <nav className="landing-footer-links-column landing-footer-links-column-secondary" aria-label="Footer links">
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              {cookiePolicy}
+            </button>
             <button
               type="button"
               className="landing-footer-link-item landing-footer-link-item-button landing-footer-link-item-cookie-preferences"
               onClick={handleCookiePreferencesClick}
             >
               {cookiePreferences}
-            </button>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
-              {cookiePolicy}
             </button>
             <button
               type="button"
@@ -88,27 +88,7 @@ const LandingFooter: React.FC = () => {
           </div>
 
           <div className="landing-footer-legal-column">
-            {landingCopy.footer.legalLines.map((line, index) => {
-              if (index === 1) {
-                const [beforeIco, afterIco] = line.split("ICO");
-                return (
-                  <p key={line}>
-                    {beforeIco}
-                    <a
-                      href="https://ico.org.uk/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="landing-footer-legal-link"
-                    >
-                      ICO
-                    </a>
-                    {afterIco}
-                  </p>
-                );
-              }
-
-              return <p key={line}>{line}</p>;
-            })}
+            {landingCopy.footer.legalLines.map((line) => <p key={line}>{line}</p>)}
           </div>
         </div>
 
