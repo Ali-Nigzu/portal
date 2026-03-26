@@ -1660,13 +1660,14 @@ body {
   }
 
   .landing-footer-mobile-top-links {
+    --footer-top-row-size: clamp(0.62rem, 1.95vw, 0.69rem);
     display: grid;
     grid-template-columns: max-content max-content max-content;
     justify-content: start;
     column-gap: 6px;
     row-gap: 3px;
     align-items: baseline;
-    font-size: 0.685rem;
+    font-size: var(--footer-top-row-size);
     line-height: 1.2;
   }
 
@@ -1728,7 +1729,7 @@ body {
 
   .landing-footer-social {
     position: absolute;
-    top: -14px;
+    top: -20px;
     right: 15px;
     z-index: 3;
     align-self: auto;
