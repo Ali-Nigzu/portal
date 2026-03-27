@@ -1666,10 +1666,10 @@ body {
     display: grid;
     width: 100%;
     max-width: 100%;
-    grid-template-columns: minmax(max-content, auto) minmax(max-content, 1fr) minmax(max-content, auto);
-    justify-content: stretch;
+    grid-template-columns: max-content max-content max-content;
+    justify-content: center;
     justify-items: start;
-    column-gap: 10px;
+    column-gap: 6px;
     row-gap: 3px;
     align-items: baseline;
     font-size: var(--footer-top-row-size);
