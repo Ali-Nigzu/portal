@@ -1663,15 +1663,18 @@ body {
 
   .landing-footer-mobile-top-links {
     --footer-top-row-size: clamp(0.60rem, 1.85vw, 0.66rem);
-    --footer-top-links-span: clamp(248px, 86vw, 332px);
+    --footer-top-links-span: clamp(282px, 92vw, 344px);
     display: grid;
     width: min(var(--footer-top-links-span), 100%);
     max-width: 100%;
     margin-inline: auto;
-    grid-template-columns: max-content minmax(max-content, 1fr) max-content;
-    justify-content: stretch;
+    grid-template-columns:
+      clamp(34px, 12vw, 44px)
+      clamp(110px, 36vw, 150px)
+      clamp(92px, 31vw, 126px);
+    justify-content: space-between;
     justify-items: start;
-    column-gap: 8px;
+    column-gap: 7px;
     row-gap: 3px;
     align-items: baseline;
     font-size: var(--footer-top-row-size);
