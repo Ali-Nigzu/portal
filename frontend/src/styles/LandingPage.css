@@ -1649,8 +1649,10 @@ body {
   }
 
   .landing-footer {
+    --landing-footer-social-size: 28px;
+    --landing-footer-social-gap: 8px;
     position: relative;
-    margin-top: 20px;
+    margin-top: calc(20px + var(--landing-footer-social-size) + var(--landing-footer-social-gap));
     padding-top: 18px;
   }
 
@@ -1662,9 +1664,12 @@ body {
   .landing-footer-mobile-top-links {
     --footer-top-row-size: clamp(0.60rem, 1.85vw, 0.66rem);
     display: grid;
-    grid-template-columns: max-content max-content max-content;
-    justify-content: start;
-    column-gap: 6px;
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: minmax(max-content, auto) minmax(max-content, 1fr) minmax(max-content, auto);
+    justify-content: stretch;
+    justify-items: start;
+    column-gap: 10px;
     row-gap: 3px;
     align-items: baseline;
     font-size: var(--footer-top-row-size);
@@ -1729,7 +1734,8 @@ body {
 
   .landing-footer-social {
     position: absolute;
-    top: -20px;
+    top: auto;
+    bottom: calc(100% + var(--landing-footer-social-gap));
     right: 15px;
     z-index: 3;
     align-self: auto;
