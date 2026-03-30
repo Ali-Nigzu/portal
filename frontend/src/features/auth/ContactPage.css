@@ -227,6 +227,7 @@
   .contact-right-pane {
     border-left: none;
     border-top: none;
+    background: var(--surface-page);
   }
 }
 
