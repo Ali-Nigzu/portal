@@ -64,6 +64,10 @@
   font-size: 13px;
 }
 
+.contact-under-cta--phone {
+  display: none;
+}
+
 .contact-inline-link {
   color: var(--text-default);
   text-decoration: none;
@@ -218,6 +222,15 @@
   .contact-right-content {
     min-height: auto;
     grid-template-rows: auto;
+  }
+
+  .contact-under-cta--desktop {
+    display: none;
+  }
+
+  .contact-under-cta--phone {
+    display: block;
+    margin-top: 10px;
   }
 
   .contact-hero {

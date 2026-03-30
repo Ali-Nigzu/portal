@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
+import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import { signupResend } from "./transport/signupResend";
 import { signupVerify } from "./transport/signupVerify";
 import "./VerifyEmailPage.css";
 
 const VerifyEmailPage: React.FC = () => {
+  const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const email = useMemo(() => searchParams.get("email")?.trim().toLowerCase() ?? "", [searchParams]);
@@ -100,7 +104,7 @@ const VerifyEmailPage: React.FC = () => {
 
   return (
     <div className="verify-email-page">
-      <AuthTopBar />
+      {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
 
       <div className="verify-email-shell">
         <section className="verify-email-left-pane" aria-label="Email verification panel">
@@ -173,6 +177,8 @@ const VerifyEmailPage: React.FC = () => {
 
         <aside className="verify-email-right-pane" aria-hidden="true" />
       </div>
+
+      {isPhoneLayout ? <AuthBottomNav /> : null}
     </div>
   );
 };

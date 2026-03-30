@@ -221,7 +221,7 @@ const ContactPage: React.FC = () => {
               </div>
             </div>
 
-            <p className="contact-under-cta">
+            <p className="contact-under-cta contact-under-cta--desktop">
               Why not create an account? <Link to="/create-account" className="contact-inline-link">Create Account</Link>
             </p>
           </div>
@@ -293,6 +293,10 @@ const ContactPage: React.FC = () => {
                 {submitting ? "Sending…" : "Send"}
               </button>
             </div>
+
+            <p className="contact-under-cta contact-under-cta--phone">
+              Why not create an account? <Link to="/create-account" className="contact-inline-link">Create Account</Link>
+            </p>
           </div>
         </section>
       </form>

@@ -98,7 +98,9 @@
 
 @media (max-width: 900px) {
   .verify-email-page {
+    --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
     grid-template-rows: auto auto;
+    padding-bottom: var(--auth-footer-offset);
   }
 
   .verify-email-shell {

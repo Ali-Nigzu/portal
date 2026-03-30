@@ -38,13 +38,17 @@ const LandingPage: React.FC = () => {
 
   const mobileQuickActions = [
     { key: "login", label: "Login", run: goToLogin },
+    { key: "contact-us", label: "Contact Us", run: goToContact },
     { key: "terms", label: "Terms & Conditions", run: goToFooterLegal },
     { key: "privacy", label: "Privacy Policy", run: goToFooterLegal },
     { key: "cookies", label: "Cookies Policy", run: goToFooterLegal },
-    { key: "contact-us", label: "Contact Us", run: goToContact },
   ] as const;
-  const mobilePrimaryActions = mobileQuickActions.filter((item) => item.key !== "contact-us");
-  const mobileBottomAction = mobileQuickActions.find((item) => item.key === "contact-us");
+  const mobilePrimaryActions = mobileQuickActions.filter(
+    (item) => item.key === "login" || item.key === "contact-us",
+  );
+  const mobileLegalActions = mobileQuickActions.filter(
+    (item) => item.key === "terms" || item.key === "privacy" || item.key === "cookies",
+  );
 
   const openSearch = () => {
     setIsMobileMenuOpen(false);
@@ -461,11 +465,13 @@ const LandingPage: React.FC = () => {
               </button>
             ))}
           </nav>
-          {mobileBottomAction ? (
-            <nav className="landing-mobile-drawer-list landing-mobile-drawer-list--footer" aria-label="Mobile contact link">
-              <button type="button" onClick={() => handleMobileAction(mobileBottomAction.run)}>
-                {mobileBottomAction.label}
-              </button>
+          {mobileLegalActions.length ? (
+            <nav className="landing-mobile-drawer-list landing-mobile-drawer-list--footer" aria-label="Mobile legal links">
+              {mobileLegalActions.map((item) => (
+                <button key={`drawer-legal-${item.key}`} type="button" onClick={() => handleMobileAction(item.run)}>
+                  {item.label}
+                </button>
+              ))}
             </nav>
           ) : null}
         </aside>
