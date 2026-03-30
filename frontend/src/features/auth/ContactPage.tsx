@@ -145,7 +145,6 @@ const ContactPage: React.FC = () => {
       <form className="contact-shell" onSubmit={handleSubmit}>
         <section className="contact-left-pane" aria-label="Contact details panel">
           <div className="contact-content">
-            <p className="contact-title">Contact</p>
             <h1 className="contact-hero">Get in Touch</h1>
 
             <div className="vrm-field contact-field">

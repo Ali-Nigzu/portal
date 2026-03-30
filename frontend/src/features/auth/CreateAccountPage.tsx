@@ -40,7 +40,6 @@ const CreateAccountPage: React.FC = () => {
               <span>Login</span>
             </Link>
 
-            <p className="create-account-title">Create Account</p>
             <h1 className="create-account-hero">Join Us &amp; See More</h1>
 
             {form.formError && (
