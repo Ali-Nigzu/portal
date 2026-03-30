@@ -3,6 +3,8 @@ import { PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText,
 import { Link } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import AuthTopBar from "../../components/auth/AuthTopBar";
+import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import { submitContact } from "./transport/contact";
 import AuthPhoneField from "./components/AuthPhoneField";
 import "./ContactPage.css";
@@ -23,6 +25,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".jpeg"];
 
 const ContactPage: React.FC = () => {
+  const isPhoneLayout = useIsPhoneLayout();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneSelectedIso, setPhoneSelectedIso] = useState("GB");
@@ -141,7 +144,7 @@ const ContactPage: React.FC = () => {
   return (
     <>
       <div className="contact-page">
-      <AuthLogoHeader />
+      {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
 
       <form className="contact-shell" onSubmit={handleSubmit}>
         <section className="contact-left-pane" aria-label="Contact details panel">
@@ -293,7 +296,7 @@ const ContactPage: React.FC = () => {
           </div>
         </section>
       </form>
-      <AuthBottomNav />
+      {isPhoneLayout ? <AuthBottomNav /> : null}
       </div>
       {showSuccessModal ? (
         <div className="contact-success-modal-backdrop" role="presentation">

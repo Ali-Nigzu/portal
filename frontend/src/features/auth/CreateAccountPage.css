@@ -1,11 +1,9 @@
 .create-account-page {
-  --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
   background: var(--surface-page);
   color: var(--text-strong);
-  padding-bottom: var(--auth-footer-offset);
 }
 
 .create-account-shell {
@@ -175,7 +173,10 @@
 .create-account-right-pane {
   position: relative;
   overflow: hidden;
-  background: var(--surface-page);
+  border-left: 1px solid var(--line-soft);
+  background:
+    radial-gradient(circle at 22% 20%, rgba(160, 173, 189, 0.10), transparent 48%),
+    linear-gradient(145deg, var(--surface-panel) 0%, #f3f6fa 60%, #edf2f8 100%);
 }
 
 .auth-right-pane-overlay {
@@ -192,7 +193,9 @@
 
 @media (max-width: 900px) {
   .create-account-page {
+    --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
     grid-template-rows: auto auto;
+    padding-bottom: var(--auth-footer-offset);
   }
 
   .create-account-shell {
@@ -213,6 +216,7 @@
 
   .create-account-right-pane {
     min-height: 140px;
+    border-left: none;
     border-top: none;
   }
 }

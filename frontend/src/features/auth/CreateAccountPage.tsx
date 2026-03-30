@@ -3,8 +3,10 @@ import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import AuthTopBar from "../../components/auth/AuthTopBar";
 import camOSLogo from '../../assets/Untitled design (4).svg';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
+import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import AuthPhoneField from './components/AuthPhoneField';
 import './CreateAccountPage.css';
 import './components/AuthPhoneField.css';
@@ -14,6 +16,7 @@ const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
 };
 
 const CreateAccountPage: React.FC = () => {
+  const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
   const form = useCreateAccountForm((email) => {
     navigate(`/verify-email?email=${encodeURIComponent(email)}`);
@@ -31,7 +34,7 @@ const CreateAccountPage: React.FC = () => {
 
   return (
     <div className="create-account-page">
-      <AuthLogoHeader />
+      {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
 
       <div className="create-account-shell">
         <section className="create-account-left-pane" aria-label="Create account form panel">
@@ -221,7 +224,7 @@ const CreateAccountPage: React.FC = () => {
         </aside>
       </div>
 
-      <AuthBottomNav />
+      {isPhoneLayout ? <AuthBottomNav /> : null}
     </div>
   );
 };

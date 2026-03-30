@@ -23,5 +23,6 @@
   .header {
     min-height: 64px;
     padding: 12px 20px;
+    justify-content: center;
   }
 }
