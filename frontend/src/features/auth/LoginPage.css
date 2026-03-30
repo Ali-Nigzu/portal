@@ -173,9 +173,6 @@
   }
 
   .login-right-pane {
-    min-height: 140px;
-    border-left: none;
-    border-top: none;
-    background: var(--surface-page);
+    display: none;
   }
 }

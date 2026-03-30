@@ -37,14 +37,14 @@ const LandingPage: React.FC = () => {
   };
 
   const mobileQuickActions = [
-    { key: "demo", label: "Demo", run: goToDemo },
-    { key: "create-account", label: "Create Account", run: goToCreateAccount },
     { key: "login", label: "Login", run: goToLogin },
-    { key: "contact-us", label: "Contact Us", run: goToContact },
     { key: "terms", label: "Terms & Conditions", run: goToFooterLegal },
     { key: "privacy", label: "Privacy Policy", run: goToFooterLegal },
     { key: "cookies", label: "Cookies Policy", run: goToFooterLegal },
+    { key: "contact-us", label: "Contact Us", run: goToContact },
   ] as const;
+  const mobilePrimaryActions = mobileQuickActions.filter((item) => item.key !== "contact-us");
+  const mobileBottomAction = mobileQuickActions.find((item) => item.key === "contact-us");
 
   const openSearch = () => {
     setIsMobileMenuOpen(false);
@@ -452,16 +452,22 @@ const LandingPage: React.FC = () => {
         {isMobileMenuOpen && <button type="button" className="landing-mobile-drawer-backdrop" aria-label="Close menu" onClick={() => setIsMobileMenuOpen(false)} />}
         <aside className={`landing-mobile-drawer${isMobileMenuOpen ? " is-open" : ""}`} id="landing-mobile-drawer" aria-label="Mobile menu" role="dialog" aria-modal={isMobileMenuOpen}>
           <div className="landing-mobile-drawer-head">
-            <span>Menu</span>
             <button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">×</button>
           </div>
           <nav className="landing-mobile-drawer-list" aria-label="Mobile quick links">
-            {mobileQuickActions.map((item) => (
+            {mobilePrimaryActions.map((item) => (
               <button key={`drawer-${item.key}`} type="button" onClick={() => handleMobileAction(item.run)}>
                 {item.label}
               </button>
             ))}
           </nav>
+          {mobileBottomAction ? (
+            <nav className="landing-mobile-drawer-list landing-mobile-drawer-list--footer" aria-label="Mobile contact link">
+              <button type="button" onClick={() => handleMobileAction(mobileBottomAction.run)}>
+                {mobileBottomAction.label}
+              </button>
+            </nav>
+          ) : null}
         </aside>
       </div>
 
