@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import AuthTopBar from "../../components/auth/AuthTopBar";
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import camOSLogo from "../../assets/Untitled design (4).svg";
 import { useLoginForm } from "./hooks/useLoginForm";
 import { passwordResetStart } from "./transport/passwordResetStart";
@@ -78,7 +79,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   return (
     <div className="login-page">
-      <AuthTopBar />
+      <AuthLogoHeader />
 
       <div className="login-shell">
         <section className="login-left-pane" aria-label="Login form panel">
@@ -171,6 +172,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           />
         </aside>
       </div>
+
+      <AuthBottomNav />
     </div>
   );
 };

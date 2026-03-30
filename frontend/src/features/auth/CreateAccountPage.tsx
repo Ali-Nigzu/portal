@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import AuthTopBar from '../../components/auth/AuthTopBar';
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import camOSLogo from '../../assets/Untitled design (4).svg';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
 import AuthPhoneField from './components/AuthPhoneField';
@@ -30,7 +31,7 @@ const CreateAccountPage: React.FC = () => {
 
   return (
     <div className="create-account-page">
-      <AuthTopBar />
+      <AuthLogoHeader />
 
       <div className="create-account-shell">
         <section className="create-account-left-pane" aria-label="Create account form panel">
@@ -219,6 +220,8 @@ const CreateAccountPage: React.FC = () => {
           />
         </aside>
       </div>
+
+      <AuthBottomNav />
     </div>
   );
 };

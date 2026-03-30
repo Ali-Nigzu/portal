@@ -1,7 +1,8 @@
 import React, { useMemo, useRef, useState } from "react";
 import { PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "./countryPhoneData";
 import { Link } from "react-router-dom";
-import AuthTopBar from "../../components/auth/AuthTopBar";
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import { submitContact } from "./transport/contact";
 import AuthPhoneField from "./components/AuthPhoneField";
 import "./ContactPage.css";
@@ -140,7 +141,7 @@ const ContactPage: React.FC = () => {
   return (
     <>
       <div className="contact-page">
-      <AuthTopBar />
+      <AuthLogoHeader />
 
       <form className="contact-shell" onSubmit={handleSubmit}>
         <section className="contact-left-pane" aria-label="Contact details panel">
@@ -292,6 +293,7 @@ const ContactPage: React.FC = () => {
           </div>
         </section>
       </form>
+      <AuthBottomNav />
       </div>
       {showSuccessModal ? (
         <div className="contact-success-modal-backdrop" role="presentation">

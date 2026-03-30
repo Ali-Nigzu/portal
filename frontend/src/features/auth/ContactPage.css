@@ -1,9 +1,11 @@
 .contact-page {
+  --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
   background: var(--surface-page);
   color: var(--text-strong);
+  padding-bottom: var(--auth-footer-offset);
 }
 
 .contact-shell {
@@ -78,8 +80,7 @@
 .contact-right-pane {
   position: relative;
   overflow: hidden;
-  border-left: 1px solid var(--line-soft);
-  background: var(--surface-panel);
+  background: var(--surface-page);
   padding: 34px 32px 40px;
   display: flex;
 }
@@ -223,8 +224,7 @@
   }
 
   .contact-right-pane {
-    border-left: none;
-    border-top: 1px solid var(--line-soft);
+    border-top: none;
   }
 }
 
