@@ -94,7 +94,7 @@ const LandingFooter: React.FC = () => {
 
         <div className="landing-footer-social" aria-label="Social links">
           <a
-            href="https://www.youtube.com"
+            href="https://www.youtube.com/@CameraOperatingSystems"
             target="_blank"
             rel="noreferrer"
             aria-label={landingCopy.footer.socials.youtube}
@@ -108,7 +108,7 @@ const LandingFooter: React.FC = () => {
             </svg>
           </a>
           <a
-            href="https://www.linkedin.com"
+            href="https://www.linkedin.com/company/camera-operating-systems"
             target="_blank"
             rel="noreferrer"
             aria-label={landingCopy.footer.socials.linkedin}
@@ -122,7 +122,7 @@ const LandingFooter: React.FC = () => {
             </svg>
           </a>
           <a
-            href="https://x.com"
+            href="https://x.com/cam_O_S"
             target="_blank"
             rel="noreferrer"
             aria-label={landingCopy.footer.socials.x}

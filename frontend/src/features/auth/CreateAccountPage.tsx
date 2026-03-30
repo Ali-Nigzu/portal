@@ -192,11 +192,11 @@ const CreateAccountPage: React.FC = () => {
               <div className="create-account-legal" aria-label="Legal disclaimers">
                 <p>
                   This site is protected by{' '}
-                  <a href="#" onClick={stopNavigation}>reCAPTCHA</a>{' '}
+                  reCAPTCHA{' '}
                   and the Google{' '}
-                  <a href="#" onClick={stopNavigation}>Privacy Policy</a>{' '}
+                  <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>{' '}
                   and{' '}
-                  <a href="#" onClick={stopNavigation}>Terms of Service</a>{' '}
+                  <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a>{' '}
                   apply.
                 </p>
                 <p>
