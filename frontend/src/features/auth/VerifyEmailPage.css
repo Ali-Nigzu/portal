@@ -62,6 +62,10 @@
 .verify-email-submit {
   width: 100%;
   min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .verify-email-resend-row,
