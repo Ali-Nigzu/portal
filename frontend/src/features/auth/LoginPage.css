@@ -151,7 +151,9 @@
 
 @media (max-width: 900px) {
   .login-page {
+    --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
     grid-template-rows: auto auto;
+    padding-bottom: var(--auth-footer-offset);
   }
 
   .login-shell {
@@ -171,8 +173,6 @@
   }
 
   .login-right-pane {
-    min-height: 140px;
-    border-left: none;
-    border-top: 1px solid var(--line-soft);
+    display: none;
   }
 }

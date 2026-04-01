@@ -1,7 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import camOSLogo from "../../assets/Untitled design (4).svg";
+import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import { useLoginForm } from "./hooks/useLoginForm";
 import { passwordResetStart } from "./transport/passwordResetStart";
 import "./LoginPage.css";
@@ -15,6 +18,7 @@ type LoginStep = "email" | "password";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+  const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
   const {
     email,
@@ -78,7 +82,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   return (
     <div className="login-page">
-      <AuthTopBar />
+      {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
 
       <div className="login-shell">
         <section className="login-left-pane" aria-label="Login form panel">
@@ -171,6 +175,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           />
         </aside>
       </div>
+
+      {isPhoneLayout ? <AuthBottomNav /> : null}
     </div>
   );
 };

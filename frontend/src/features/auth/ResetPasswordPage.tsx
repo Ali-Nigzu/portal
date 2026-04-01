@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
+import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import { passwordResetResend } from "./transport/passwordResetResend";
 import { passwordResetSetPassword } from "./transport/passwordResetSetPassword";
 import { passwordResetVerifyCode } from "./transport/passwordResetVerifyCode";
@@ -10,6 +13,7 @@ import "./VerifyEmailPage.css";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const ResetPasswordPage: React.FC = () => {
+  const isPhoneLayout = useIsPhoneLayout();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,7 +110,7 @@ const ResetPasswordPage: React.FC = () => {
 
   return (
     <div className="verify-email-page">
-      <AuthTopBar />
+      {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
       <div className="verify-email-shell">
         <section className="verify-email-left-pane" aria-label="Password reset panel">
           <div className="verify-email-content">
@@ -167,6 +171,8 @@ const ResetPasswordPage: React.FC = () => {
         </section>
         <aside className="verify-email-right-pane" aria-hidden="true" />
       </div>
+
+      {isPhoneLayout ? <AuthBottomNav /> : null}
     </div>
   );
 };

@@ -21,7 +21,7 @@ type AuthPhoneFieldProps = {
 
 type PopoverPlacement = "up" | "down";
 
-const DEFAULT_POPOVER_WIDTH = 276;
+const DEFAULT_POPOVER_WIDTH = 240;
 const POPOVER_GAP = 6;
 const VIEWPORT_MARGIN = 8;
 const ESTIMATED_POPOVER_HEIGHT = 320;
@@ -47,6 +47,7 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
 
   const selectedCountry = useMemo(
     () => PHONE_OPTION_BY_ISO.get(selectedIso) ?? COUNTRY_PHONE_OPTIONS[0],
@@ -83,8 +84,16 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [query, isOpen]);
+    if (!isOpen) {
+      return;
+    }
+    if (query.trim()) {
+      setActiveIndex(0);
+      return;
+    }
+    const selectedIndex = filteredOptions.findIndex((option) => option.iso2 === selectedCountry.iso2);
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [filteredOptions, isOpen, query, selectedCountry.iso2]);
 
   const updatePopoverPosition = () => {
     const trigger = triggerRef.current;
@@ -101,7 +110,7 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
     const spaceAbove = triggerRect.top - VIEWPORT_MARGIN;
     const openUp = spaceBelow < Math.min(popoverHeight, ESTIMATED_POPOVER_HEIGHT) && spaceAbove > spaceBelow;
 
-    const desiredWidth = Math.max(Math.round(triggerRect.width + 160), DEFAULT_POPOVER_WIDTH);
+    const desiredWidth = Math.max(Math.round(triggerRect.width + 120), DEFAULT_POPOVER_WIDTH);
     const clampedWidth = Math.min(desiredWidth, viewportWidth - (VIEWPORT_MARGIN * 2));
     const maxLeft = viewportWidth - clampedWidth - VIEWPORT_MARGIN;
     const left = Math.min(Math.max(triggerRect.left, VIEWPORT_MARGIN), Math.max(maxLeft, VIEWPORT_MARGIN));
@@ -131,6 +140,21 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
     };
   }, [isOpen, query]);
 
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const listNode = listRef.current;
+    if (!listNode) {
+      return;
+    }
+    const target = (
+      listNode.querySelector('[data-selected="true"]') ??
+      listNode.querySelector('[data-active="true"]')
+    ) as HTMLElement | null;
+    target?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, filteredOptions.length, isOpen]);
+
   const selectOption = (iso2: string) => {
     const option = PHONE_OPTION_BY_ISO.get(iso2);
     if (!option) {
@@ -149,43 +173,57 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
       className={`auth-phone-country-popover auth-phone-country-popover--${placement}`}
       style={{ left: `${popoverStyle.left}px`, top: `${popoverStyle.top}px`, width: `${popoverStyle.width}px` }}
     >
-      <input
-        className="vrm-input auth-phone-country-search"
-        placeholder="Search country or ISO"
-        value={query}
-        autoFocus
-        onChange={(event) => setQuery(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            setActiveIndex((index) => Math.min(index + 1, Math.max(filteredOptions.length - 1, 0)));
-          } else if (event.key === "ArrowUp") {
-            event.preventDefault();
-            setActiveIndex((index) => Math.max(index - 1, 0));
-          } else if (event.key === "Enter") {
-            event.preventDefault();
-            const activeOption = filteredOptions[activeIndex];
-            if (activeOption) {
-              selectOption(activeOption.iso2);
+      <div className="auth-phone-country-search-row">
+        <span className="auth-phone-country-search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path
+              d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16a6.47 6.47 0 0 0 4.23-1.57l.27.28v.79L19 20.49 20.49 19l-4.99-5Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+        <input
+          className="vrm-input auth-phone-country-search"
+          placeholder=""
+          aria-label="Search countries"
+          value={query}
+          autoFocus
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setActiveIndex((index) => Math.min(index + 1, Math.max(filteredOptions.length - 1, 0)));
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setActiveIndex((index) => Math.max(index - 1, 0));
+            } else if (event.key === "Enter") {
+              event.preventDefault();
+              const activeOption = filteredOptions[activeIndex];
+              if (activeOption) {
+                selectOption(activeOption.iso2);
+              }
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setIsOpen(false);
+              setQuery("");
             }
-          } else if (event.key === "Escape") {
-            event.preventDefault();
-            setIsOpen(false);
-            setQuery("");
-          }
-        }}
-      />
+          }}
+        />
+      </div>
 
-      <ul className="auth-phone-country-options" role="listbox">
+      <ul ref={listRef} className="auth-phone-country-options" role="listbox">
         {filteredOptions.map((option, index) => {
           const isActive = index === activeIndex;
+          const isSelected = option.iso2 === selectedCountry.iso2;
           return (
             <li key={`${option.iso2}-${option.displayName}`}>
               <button
                 type="button"
-                className={`auth-phone-country-option ${isActive ? "auth-phone-country-option--active" : ""}`}
+                className={`auth-phone-country-option ${isActive ? "auth-phone-country-option--active" : ""} ${isSelected ? "auth-phone-country-option--selected" : ""}`}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectOption(option.iso2)}
+                data-active={isActive ? "true" : undefined}
+                data-selected={isSelected ? "true" : undefined}
               >
                 <span className="auth-phone-country-option-iso">{option.iso2}</span>
                 <span className="auth-phone-country-option-name">{option.displayName}</span>

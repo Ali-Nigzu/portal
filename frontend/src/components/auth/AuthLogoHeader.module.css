@@ -1,0 +1,28 @@
+.header {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-page);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .header {
+    min-height: 64px;
+    padding: 12px 20px;
+    justify-content: center;
+  }
+}

@@ -738,13 +738,28 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
             <div className={styles.nodeMeasureGhost} ref={nodeShellRef} aria-hidden="true" />
           </div>
           <div className={styles.nodeStack}>
-            <div className={styles.node}>
+            <div
+              className={styles.node}
+              role="button"
+              tabIndex={0}
+              aria-label="Open demo view"
+              onClick={onAccessDemo}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onAccessDemo();
+                }
+              }}
+            >
               <img src={camOSLogo} alt="camOS Logo" className={styles.nodeLogo} />
               <button
                 type="button"
                 className={styles.previewNodeCta}
                 data-testid="preview-enter-demo-cta"
-                onClick={onAccessDemo}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onAccessDemo();
+                }}
               >
                 View Demo
               </button>

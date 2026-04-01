@@ -1,7 +1,7 @@
 export type ContactPayload = {
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   message: string;
   attachments: File[];
 };
@@ -14,7 +14,9 @@ export const submitContact = async (payload: ContactPayload): Promise<ContactRes
   const formData = new FormData();
   formData.append("name", payload.name);
   formData.append("email", payload.email);
-  formData.append("phone", payload.phone);
+  if (payload.phone?.trim()) {
+    formData.append("phone", payload.phone.trim());
+  }
   formData.append("message", payload.message);
   payload.attachments.forEach((file) => formData.append("attachments", file));
 

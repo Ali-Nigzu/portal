@@ -64,6 +64,10 @@
   font-size: 13px;
 }
 
+.contact-under-cta--phone {
+  display: none;
+}
+
 .contact-inline-link {
   color: var(--text-default);
   text-decoration: none;
@@ -196,7 +200,9 @@
 
 @media (max-width: 900px) {
   .contact-page {
+    --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
     grid-template-rows: auto auto;
+    padding-bottom: var(--auth-footer-offset);
   }
 
   .contact-shell {
@@ -218,13 +224,23 @@
     grid-template-rows: auto;
   }
 
+  .contact-under-cta--desktop {
+    display: none;
+  }
+
+  .contact-under-cta--phone {
+    display: block;
+    margin-top: 10px;
+  }
+
   .contact-hero {
     font-size: 34px;
   }
 
   .contact-right-pane {
     border-left: none;
-    border-top: 1px solid var(--line-soft);
+    border-top: none;
+    background: var(--surface-page);
   }
 }
 

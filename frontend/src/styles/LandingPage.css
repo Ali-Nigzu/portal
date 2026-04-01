@@ -24,6 +24,10 @@ body {
   color: var(--sys-text-1);
 }
 
+body.landing-mobile-drawer-lock {
+  overflow: hidden;
+}
+
 
 .landing-page {
   min-height: 100vh;
@@ -1534,13 +1538,15 @@ body {
     right: 0;
     width: min(320px, calc(100% - 34px));
     height: 100svh;
-    background: color-mix(in srgb, var(--surface-panel) 92%, white 8%);
-    border-left: 1px solid color-mix(in srgb, var(--sys-line) 66%, white 16%);
-    box-shadow: -10px 0 24px rgba(22, 30, 41, 0.22);
+    display: flex;
+    flex-direction: column;
+    background: color-mix(in srgb, var(--surface-page) 95%, white 5%);
+    border-left: 1px solid color-mix(in srgb, var(--sys-line) 38%, white 36%);
+    box-shadow: -8px 0 18px rgba(22, 30, 41, 0.14);
     transform: translateX(105%);
     transition: transform 180ms ease;
     z-index: 45;
-    padding: 14px;
+    padding: 12px 14px 16px;
   }
 
   .landing-mobile-drawer.is-open {
@@ -1549,11 +1555,9 @@ body {
 
   .landing-mobile-drawer-head {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
-    margin-bottom: 12px;
-    color: var(--sys-text-1);
-    font-weight: 620;
+    margin-bottom: 10px;
   }
 
   .landing-mobile-drawer-head button {
@@ -1567,17 +1571,29 @@ body {
 
   .landing-mobile-drawer-list {
     display: grid;
-    gap: 8px;
+    gap: 4px;
   }
 
   .landing-mobile-drawer-list button {
     min-height: 40px;
-    border: 1px solid color-mix(in srgb, var(--sys-line) 66%, white 20%);
-    border-radius: 10px;
+    border: none;
+    border-radius: 8px;
     text-align: left;
-    padding: 0 10px;
+    padding: 0 8px;
     color: var(--sys-text-1);
-    background: color-mix(in srgb, var(--surface-panel) 86%, white 14%);
+    background: transparent;
+    font-weight: 520;
+  }
+
+  .landing-mobile-drawer-list button:hover,
+  .landing-mobile-drawer-list button:focus-visible {
+    background: color-mix(in srgb, var(--surface-panel) 35%, transparent);
+    outline: none;
+  }
+
+  .landing-mobile-drawer-list--footer {
+    margin-top: auto;
+    padding-top: 10px;
   }
 
   .landing-spec-sheet {

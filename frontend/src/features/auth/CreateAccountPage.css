@@ -193,7 +193,9 @@
 
 @media (max-width: 900px) {
   .create-account-page {
+    --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
     grid-template-rows: auto auto;
+    padding-bottom: var(--auth-footer-offset);
   }
 
   .create-account-shell {
@@ -213,8 +215,6 @@
   }
 
   .create-account-right-pane {
-    min-height: 140px;
-    border-left: none;
-    border-top: 1px solid var(--line-soft);
+    display: none;
   }
 }

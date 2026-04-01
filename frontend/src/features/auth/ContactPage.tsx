@@ -1,7 +1,10 @@
 import React, { useMemo, useRef, useState } from "react";
-import { PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "./countryPhoneData";
+import { classifyOptionalPhoneInput, PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "./countryPhoneData";
 import { Link } from "react-router-dom";
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
+import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import { submitContact } from "./transport/contact";
 import AuthPhoneField from "./components/AuthPhoneField";
 import "./ContactPage.css";
@@ -22,6 +25,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".jpeg"];
 
 const ContactPage: React.FC = () => {
+  const isPhoneLayout = useIsPhoneLayout();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneSelectedIso, setPhoneSelectedIso] = useState("GB");
@@ -55,8 +59,8 @@ const ContactPage: React.FC = () => {
       nextErrors.email = "Not a valid email address";
     }
 
-    const phoneValue = sanitizePhoneText(phoneText);
-    if (phoneValue && !PHONE_RE.test(phoneValue)) {
+    const phoneState = classifyOptionalPhoneInput(phoneText, phoneSelectedIso);
+    if (!phoneState.isEffectivelyEmpty && !PHONE_RE.test(phoneState.effectivePhone)) {
       nextErrors.phone = "Not a valid phone number";
     }
 
@@ -105,10 +109,11 @@ const ContactPage: React.FC = () => {
 
     setSubmitting(true);
     try {
+      const phoneState = classifyOptionalPhoneInput(phoneText, phoneSelectedIso);
       const result = await submitContact({
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        phone: sanitizePhoneText(phoneText),
+        phone: phoneState.effectivePhone || undefined,
         message: message.trim(),
         attachments,
       });
@@ -140,12 +145,11 @@ const ContactPage: React.FC = () => {
   return (
     <>
       <div className="contact-page">
-      <AuthTopBar />
+      {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
 
       <form className="contact-shell" onSubmit={handleSubmit}>
         <section className="contact-left-pane" aria-label="Contact details panel">
           <div className="contact-content">
-            <p className="contact-title">Contact</p>
             <h1 className="contact-hero">Get in Touch</h1>
 
             <div className="vrm-field contact-field">
@@ -218,7 +222,7 @@ const ContactPage: React.FC = () => {
               </div>
             </div>
 
-            <p className="contact-under-cta">
+            <p className="contact-under-cta contact-under-cta--desktop">
               Why not create an account? <Link to="/create-account" className="contact-inline-link">Create Account</Link>
             </p>
           </div>
@@ -290,9 +294,14 @@ const ContactPage: React.FC = () => {
                 {submitting ? "Sending…" : "Send"}
               </button>
             </div>
+
+            <p className="contact-under-cta contact-under-cta--phone">
+              Why not create an account? <Link to="/create-account" className="contact-inline-link">Create Account</Link>
+            </p>
           </div>
         </section>
       </form>
+      {isPhoneLayout ? <AuthBottomNav /> : null}
       </div>
       {showSuccessModal ? (
         <div className="contact-success-modal-backdrop" role="presentation">
