@@ -24,6 +24,10 @@ body {
   color: var(--sys-text-1);
 }
 
+body.landing-mobile-drawer-lock {
+  overflow: hidden;
+}
+
 
 .landing-page {
   min-height: 100vh;

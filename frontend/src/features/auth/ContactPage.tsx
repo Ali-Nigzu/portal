@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "./countryPhoneData";
+import { classifyOptionalPhoneInput, PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "./countryPhoneData";
 import { Link } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
@@ -59,8 +59,8 @@ const ContactPage: React.FC = () => {
       nextErrors.email = "Not a valid email address";
     }
 
-    const phoneValue = sanitizePhoneText(phoneText);
-    if (phoneValue && !PHONE_RE.test(phoneValue)) {
+    const phoneState = classifyOptionalPhoneInput(phoneText, phoneSelectedIso);
+    if (!phoneState.isEffectivelyEmpty && !PHONE_RE.test(phoneState.effectivePhone)) {
       nextErrors.phone = "Not a valid phone number";
     }
 
@@ -109,10 +109,11 @@ const ContactPage: React.FC = () => {
 
     setSubmitting(true);
     try {
+      const phoneState = classifyOptionalPhoneInput(phoneText, phoneSelectedIso);
       const result = await submitContact({
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        phone: sanitizePhoneText(phoneText),
+        phone: phoneState.effectivePhone || undefined,
         message: message.trim(),
         attachments,
       });

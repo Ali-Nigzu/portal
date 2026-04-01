@@ -316,6 +316,22 @@ const LandingPage: React.FC = () => {
   }, []);
 
   useLayoutEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const syncBodyScrollLock = () => {
+      const shouldLock = isMobileMenuOpen && mediaQuery.matches;
+      document.body.classList.toggle("landing-mobile-drawer-lock", shouldLock);
+    };
+
+    syncBodyScrollLock();
+    mediaQuery.addEventListener("change", syncBodyScrollLock);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncBodyScrollLock);
+      document.body.classList.remove("landing-mobile-drawer-lock");
+    };
+  }, [isMobileMenuOpen]);
+
+  useLayoutEffect(() => {
     let frameId = 0;
 
     const measureAxisRomanAnchors = () => {

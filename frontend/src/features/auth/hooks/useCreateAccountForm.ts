@@ -1,6 +1,6 @@
 import { type FormEvent, useMemo, useState } from 'react';
 import { signupStart } from '../transport/signupStart';
-import { inferIsoFromPhoneText, PHONE_OPTION_BY_ISO, replaceDialCodeInPhoneText, sanitizePhoneText } from '../countryPhoneData';
+import { classifyOptionalPhoneInput, inferIsoFromPhoneText, PHONE_OPTION_BY_ISO, replaceDialCodeInPhoneText, sanitizePhoneText } from '../countryPhoneData';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
@@ -25,7 +25,8 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
     confirmPassword: false,
   });
 
-  const phone = sanitizePhoneText(phoneText);
+  const phoneState = useMemo(() => classifyOptionalPhoneInput(phoneText, selectedIso), [phoneText, selectedIso]);
+  const phone = phoneState.effectivePhone;
 
   const validate = () => {
     const errors: Record<FieldName, string | undefined> = {
@@ -42,7 +43,7 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
     if (!normalizedEmail) errors.email = 'This field is required';
     else if (!EMAIL_RE.test(normalizedEmail)) errors.email = 'Not a valid email address';
 
-    if (phone && !PHONE_RE.test(phone)) errors.phone = 'Not a valid phone number';
+    if (!phoneState.isEffectivelyEmpty && !PHONE_RE.test(phone)) errors.phone = 'Not a valid phone number';
 
     if (!password) errors.password = 'This field is required';
     else if (password.length < 8) errors.password = 'Password must be at least 8 characters';
@@ -55,7 +56,7 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
 
   const errors = useMemo(
     () => validate(),
-    [username, email, phone, password, confirmPassword],
+    [username, email, phone, password, confirmPassword, phoneState.isEffectivelyEmpty],
   );
 
   const visibleErrors = useMemo(() => {

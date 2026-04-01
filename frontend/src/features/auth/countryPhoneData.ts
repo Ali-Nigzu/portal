@@ -113,3 +113,46 @@ export const replaceDialCodeInPhoneText = (phoneText: string, nextDialCode: stri
   const tail = normalized.slice(currentDialCode.length);
   return `${nextDialCode}${tail}`;
 };
+
+export type OptionalPhoneClassification = {
+  normalized: string;
+  effectivePhone: string;
+  isEffectivelyEmpty: boolean;
+  hasSubscriberInput: boolean;
+  selectedDialCode: string | null;
+};
+
+export const classifyOptionalPhoneInput = (phoneText: string, selectedIso: string): OptionalPhoneClassification => {
+  const normalized = sanitizePhoneText(phoneText);
+  const selectedDialCode = PHONE_OPTION_BY_ISO.get(selectedIso)?.dialCode ?? null;
+
+  if (!normalized || normalized === "+") {
+    return {
+      normalized,
+      effectivePhone: "",
+      isEffectivelyEmpty: true,
+      hasSubscriberInput: false,
+      selectedDialCode,
+    };
+  }
+
+  if (selectedDialCode && normalized.startsWith(selectedDialCode)) {
+    const subscriberTail = normalized.slice(selectedDialCode.length);
+    const hasSubscriberInput = /\d/.test(subscriberTail);
+    return {
+      normalized,
+      effectivePhone: hasSubscriberInput ? normalized : "",
+      isEffectivelyEmpty: !hasSubscriberInput,
+      hasSubscriberInput,
+      selectedDialCode,
+    };
+  }
+
+  return {
+    normalized,
+    effectivePhone: normalized,
+    isEffectivelyEmpty: false,
+    hasSubscriberInput: true,
+    selectedDialCode,
+  };
+};
