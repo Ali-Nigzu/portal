@@ -36,10 +36,14 @@ const LandingPage: React.FC = () => {
     footer?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const goToTermsAndConditions = () => {
+    navigate("/terms-and-conditions");
+  };
+
   const mobileQuickActions = [
     { key: "login", label: "Login", run: goToLogin },
     { key: "contact-us", label: "Contact Us", run: goToContact },
-    { key: "terms", label: "Terms & Conditions", run: goToFooterLegal },
+    { key: "terms", label: "Terms & Conditions", run: goToTermsAndConditions },
     { key: "privacy", label: "Privacy Policy", run: goToFooterLegal },
     { key: "cookies", label: "Cookies Policy", run: goToFooterLegal },
   ] as const;

@@ -33,6 +33,7 @@ const VerifyEmailPage = React.lazy(() => import("../pages/VerifyEmailPage"));
 const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"));
 const ContactPage = React.lazy(() => import("../pages/ContactPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
+const TermsAndConditionsPage = React.lazy(() => import("../pages/TermsAndConditionsPage"));
 
 const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -266,6 +267,16 @@ const AppRoutes: React.FC = () => {
         element={
           !isAuthenticatedMode ? (
             lazyRoute(<ContactPage />)
+          ) : (
+            <Navigate to="/home" replace />
+          )
+        }
+      />
+      <Route
+        path="/terms-and-conditions"
+        element={
+          !isAuthenticatedMode ? (
+            lazyRoute(<TermsAndConditionsPage />)
           ) : (
             <Navigate to="/home" replace />
           )
