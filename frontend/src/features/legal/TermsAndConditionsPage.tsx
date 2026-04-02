@@ -58,7 +58,7 @@ const TermsAndConditionsPage: React.FC = () => {
       {isPhoneLayout ? (
         <AuthLogoHeader />
       ) : (
-        <LandingHeader onLogin={goToLogin} onMenuToggle={() => undefined} />
+        <LandingHeader onLogin={goToLogin} />
       )}
 
       <main className="terms-page__main" aria-label="Terms and Conditions content">

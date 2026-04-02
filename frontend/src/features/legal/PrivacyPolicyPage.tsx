@@ -45,7 +45,7 @@ const PrivacyPolicyPage: React.FC = () => {
       {isPhoneLayout ? (
         <AuthLogoHeader />
       ) : (
-        <LandingHeader onLogin={goToLogin} onMenuToggle={() => undefined} />
+        <LandingHeader onLogin={goToLogin} />
       )}
 
       <main className="privacy-page__main" aria-label="Privacy Policy content">

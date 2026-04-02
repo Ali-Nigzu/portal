@@ -4,14 +4,10 @@ import { landingCopy } from "../content";
 
 type LandingHeaderProps = {
   onLogin: () => void;
-  onMenuToggle: () => void;
-  isMenuOpen?: boolean;
 };
 
 const LandingHeader: React.FC<LandingHeaderProps> = ({
   onLogin,
-  onMenuToggle,
-  isMenuOpen = false,
 }) => (
   <header className="landing-header">
     <div className="landing-container landing-header-top">
@@ -38,13 +34,6 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <circle cx="12" cy="8" r="3.3" fill="none" stroke="currentColor" strokeWidth="1.8" />
               <path d="M5.5 19.2c1.5-2.8 4-4.2 6.5-4.2s5 1.4 6.5 4.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
-          <button type="button" className="landing-header-icon-btn" aria-label="Menu" onClick={onMenuToggle} aria-expanded={isMenuOpen} aria-controls="landing-mobile-drawer">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
         </div>

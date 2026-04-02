@@ -67,7 +67,7 @@ const SubProcessorRegisterPage: React.FC = () => {
       {isPhoneLayout ? (
         <AuthLogoHeader />
       ) : (
-        <LandingHeader onLogin={goToLogin} onMenuToggle={() => undefined} />
+        <LandingHeader onLogin={goToLogin} />
       )}
 
       <main className="subprocessor-page__main" aria-label="Sub-Processor Register content">
