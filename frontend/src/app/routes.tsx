@@ -34,6 +34,7 @@ const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"))
 const ContactPage = React.lazy(() => import("../pages/ContactPage"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 const TermsAndConditionsPage = React.lazy(() => import("../pages/TermsAndConditionsPage"));
+const PrivacyPolicyPage = React.lazy(() => import("../pages/PrivacyPolicyPage"));
 
 const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -277,6 +278,16 @@ const AppRoutes: React.FC = () => {
         element={
           !isAuthenticatedMode ? (
             lazyRoute(<TermsAndConditionsPage />)
+          ) : (
+            <Navigate to="/home" replace />
+          )
+        }
+      />
+      <Route
+        path="/privacy-policy"
+        element={
+          !isAuthenticatedMode ? (
+            lazyRoute(<PrivacyPolicyPage />)
           ) : (
             <Navigate to="/home" replace />
           )

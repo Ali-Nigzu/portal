@@ -11,10 +11,6 @@ import AuthPhoneField from './components/AuthPhoneField';
 import './CreateAccountPage.css';
 import './components/AuthPhoneField.css';
 
-const stopNavigation: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
-  event.preventDefault();
-};
-
 const CreateAccountPage: React.FC = () => {
   const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
@@ -201,9 +197,9 @@ const CreateAccountPage: React.FC = () => {
                 </p>
                 <p>
                   By creating an account you comply to our{' '}
-                  <a href="#" onClick={stopNavigation}>privacy policy</a>.{' '}
+                  <Link to="/privacy-policy">privacy policy</Link>.{' '}
                   You can find the policy{' '}
-                  <a href="#" onClick={stopNavigation}>here</a>
+                  <Link to="/privacy-policy">here</Link>
                 </p>
                 <p>
                   Already have an Account? <Link to="/login">Login here</Link>

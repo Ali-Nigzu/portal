@@ -37,7 +37,11 @@ const LandingFooter: React.FC = () => {
               >
                 {termsAndConditions}
               </button>
-              <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              <button
+                type="button"
+                className="landing-footer-link-item landing-footer-link-item-button"
+                onClick={() => navigate("/privacy-policy")}
+              >
                 {privacyPolicy}
               </button>
             </nav>
@@ -83,7 +87,11 @@ const LandingFooter: React.FC = () => {
             <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-policy">
               {cookiePolicy}
             </button>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-privacy">
+            <button
+              type="button"
+              className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-privacy"
+              onClick={() => navigate("/privacy-policy")}
+            >
               {privacyPolicy}
             </button>
             <button
