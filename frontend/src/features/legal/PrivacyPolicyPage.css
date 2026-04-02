@@ -57,6 +57,16 @@
   margin-top: 16px;
 }
 
+.privacy-page__body a {
+  color: var(--text-strong);
+  text-underline-offset: 3px;
+}
+
+.privacy-page__body a:hover,
+.privacy-page__body a:focus-visible {
+  text-decoration-thickness: 2px;
+}
+
 .privacy-page__meta {
   margin: 22px 0 0;
   font-size: 0.88rem;
