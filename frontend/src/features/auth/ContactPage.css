@@ -172,10 +172,16 @@
   right: 10px;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--line-default);
+  border: none;
   border-radius: 999px;
-  background: var(--surface-page);
-  color: var(--text-default);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #dce4ec 56%, white 44%),
+    color-mix(in srgb, #c5d0dc 64%, white 36%)
+  );
+  color: color-mix(in srgb, #1e2732 88%, #000 12%);
+  box-shadow: 0 3px 9px rgba(52, 61, 74, 0.12), 0 1px 1px rgba(52, 61, 74, 0.08),
+    inset 0 8px 12px rgba(255, 255, 255, 0.28);
   cursor: pointer;
   font-size: 20px;
   line-height: 1;
@@ -246,6 +252,10 @@
 
 .contact-success-close:hover,
 .contact-success-close:focus-visible {
-  border-color: var(--text-default);
-  color: var(--text-default);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #e2e9f0 62%, white 38%),
+    color-mix(in srgb, #cad4df 68%, white 32%)
+  );
+  color: color-mix(in srgb, #1e2732 92%, #000 8%);
 }
