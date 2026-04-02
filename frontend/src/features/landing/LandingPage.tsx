@@ -29,29 +29,24 @@ const LandingPage: React.FC = () => {
 
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const goToFooterLegal = () => {
     const footer = document.querySelector(".landing-footer");
     footer?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const goToTermsAndConditions = () => {
+    navigate("/terms-and-conditions");
+  };
+
   const mobileQuickActions = [
     { key: "login", label: "Login", run: goToLogin },
     { key: "contact-us", label: "Contact Us", run: goToContact },
-    { key: "terms", label: "Terms & Conditions", run: goToFooterLegal },
+    { key: "terms", label: "Terms & Conditions", run: goToTermsAndConditions },
     { key: "privacy", label: "Privacy Policy", run: goToFooterLegal },
     { key: "cookies", label: "Cookies Policy", run: goToFooterLegal },
   ] as const;
-  const mobilePrimaryActions = mobileQuickActions.filter(
-    (item) => item.key === "login" || item.key === "contact-us",
-  );
-  const mobileLegalActions = mobileQuickActions.filter(
-    (item) => item.key === "terms" || item.key === "privacy" || item.key === "cookies",
-  );
-
   const openSearch = () => {
-    setIsMobileMenuOpen(false);
     setMobileSearchQuery("");
     setIsMobileSearchOpen((prev) => !prev);
   };
@@ -61,14 +56,8 @@ const LandingPage: React.FC = () => {
     setIsMobileSearchOpen(false);
   };
 
-  const openMenu = () => {
-    closeSearch();
-    setIsMobileMenuOpen((prev) => !prev);
-  };
-
   const handleMobileAction = (run: () => void) => {
     closeSearch();
-    setIsMobileMenuOpen(false);
     run();
   };
 
@@ -304,7 +293,6 @@ const LandingPage: React.FC = () => {
   useLayoutEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsMobileMenuOpen(false);
         setIsMobileSearchOpen(false);
       }
     };
@@ -314,22 +302,6 @@ const LandingPage: React.FC = () => {
       window.removeEventListener("keydown", handleEscape);
     };
   }, []);
-
-  useLayoutEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const syncBodyScrollLock = () => {
-      const shouldLock = isMobileMenuOpen && mediaQuery.matches;
-      document.body.classList.toggle("landing-mobile-drawer-lock", shouldLock);
-    };
-
-    syncBodyScrollLock();
-    mediaQuery.addEventListener("change", syncBodyScrollLock);
-
-    return () => {
-      mediaQuery.removeEventListener("change", syncBodyScrollLock);
-      document.body.classList.remove("landing-mobile-drawer-lock");
-    };
-  }, [isMobileMenuOpen]);
 
   useLayoutEffect(() => {
     let frameId = 0;
@@ -423,11 +395,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="landing-page">
-      <LandingHeader
-        onLogin={goToLogin}
-        onMenuToggle={openMenu}
-        isMenuOpen={isMobileMenuOpen}
-      />
+      <LandingHeader onLogin={goToLogin} />
 
       <div className="landing-mobile-header-overlays" aria-live="polite">
         {isMobileSearchOpen && (
@@ -468,29 +436,6 @@ const LandingPage: React.FC = () => {
             </div>
           </>
         )}
-
-        {isMobileMenuOpen && <button type="button" className="landing-mobile-drawer-backdrop" aria-label="Close menu" onClick={() => setIsMobileMenuOpen(false)} />}
-        <aside className={`landing-mobile-drawer${isMobileMenuOpen ? " is-open" : ""}`} id="landing-mobile-drawer" aria-label="Mobile menu" role="dialog" aria-modal={isMobileMenuOpen}>
-          <div className="landing-mobile-drawer-head">
-            <button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">×</button>
-          </div>
-          <nav className="landing-mobile-drawer-list" aria-label="Mobile quick links">
-            {mobilePrimaryActions.map((item) => (
-              <button key={`drawer-${item.key}`} type="button" onClick={() => handleMobileAction(item.run)}>
-                {item.label}
-              </button>
-            ))}
-          </nav>
-          {mobileLegalActions.length ? (
-            <nav className="landing-mobile-drawer-list landing-mobile-drawer-list--footer" aria-label="Mobile legal links">
-              {mobileLegalActions.map((item) => (
-                <button key={`drawer-legal-${item.key}`} type="button" onClick={() => handleMobileAction(item.run)}>
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-          ) : null}
-        </aside>
       </div>
 
       <main>

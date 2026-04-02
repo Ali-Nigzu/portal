@@ -30,10 +30,18 @@ const LandingFooter: React.FC = () => {
               <span className="landing-footer-copyright-brand">Camera Operating Systems</span>
             </p>
             <nav className="landing-footer-links-column landing-footer-links-column-primary" aria-label="Primary legal links">
-              <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              <button
+                type="button"
+                className="landing-footer-link-item landing-footer-link-item-button"
+                onClick={() => navigate("/terms-and-conditions")}
+              >
                 {termsAndConditions}
               </button>
-              <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+              <button
+                type="button"
+                className="landing-footer-link-item landing-footer-link-item-button"
+                onClick={() => navigate("/privacy-policy")}
+              >
                 {privacyPolicy}
               </button>
             </nav>
@@ -62,7 +70,11 @@ const LandingFooter: React.FC = () => {
           <div className="landing-footer-mobile-top-links" aria-label="Mobile legal links">
             <span className="landing-footer-mobile-top-item landing-footer-mobile-top-item-year">© 2026</span>
             <span className="landing-footer-mobile-top-item landing-footer-mobile-top-item-brand">Camera Operating Systems</span>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-terms">
+            <button
+              type="button"
+              className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-terms"
+              onClick={() => navigate("/terms-and-conditions")}
+            >
               {termsAndConditions}
             </button>
             <button
@@ -75,7 +87,11 @@ const LandingFooter: React.FC = () => {
             <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-policy">
               {cookiePolicy}
             </button>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-privacy">
+            <button
+              type="button"
+              className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-privacy"
+              onClick={() => navigate("/privacy-policy")}
+            >
               {privacyPolicy}
             </button>
             <button
