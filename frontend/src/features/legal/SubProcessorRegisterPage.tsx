@@ -89,14 +89,16 @@ const SubProcessorRegisterPage: React.FC = () => {
             <h2 className="subprocessor-page__subtitle">Sub-Processors</h2>
 
             {isPhoneLayout ? (
-              <article className="subprocessor-page__mobile-record" aria-label="Sub-Processor Register entry">
-                {MOBILE_FIELDS.map((field) => (
-                  <div className="subprocessor-page__mobile-field" key={field.label}>
-                    <p className="subprocessor-page__mobile-label">{field.label}</p>
-                    <p className="subprocessor-page__mobile-value">{field.value}</p>
-                  </div>
-                ))}
-              </article>
+              <table className="subprocessor-page__mobile-table" aria-label="Sub-Processor Register entry">
+                <tbody>
+                  {MOBILE_FIELDS.map((field) => (
+                    <tr key={field.label}>
+                      <th scope="row">{field.label}</th>
+                      <td>{field.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : (
               <table className="subprocessor-page__table">
                 <thead>
