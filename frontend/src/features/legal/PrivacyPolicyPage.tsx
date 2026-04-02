@@ -4,8 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../auth/hooks/useIsPhoneLayout";
-import LandingHeader from "../landing/components/LandingHeader";
 import "./PrivacyPolicyPage.css";
 
 const PRIVACY_POLICY_PARAGRAPHS = [
@@ -27,10 +27,6 @@ const PrivacyPolicyPage: React.FC = () => {
   const navigate = useNavigate();
   const isPhoneLayout = useIsPhoneLayout();
 
-  const goToLogin = () => {
-    navigate("/login");
-  };
-
   const handleGoBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       navigate(-1);
@@ -45,7 +41,7 @@ const PrivacyPolicyPage: React.FC = () => {
       {isPhoneLayout ? (
         <AuthLogoHeader />
       ) : (
-        <LandingHeader onLogin={goToLogin} />
+        <AuthTopBar />
       )}
 
       <main className="privacy-page__main" aria-label="Privacy Policy content">

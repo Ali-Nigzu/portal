@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../auth/hooks/useIsPhoneLayout";
-import LandingHeader from "../landing/components/LandingHeader";
 import "./SubProcessorRegisterPage.css";
 
 const REGISTER_INTRO_PARAGRAPHS = [
@@ -49,10 +49,6 @@ const SubProcessorRegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const isPhoneLayout = useIsPhoneLayout();
 
-  const goToLogin = () => {
-    navigate("/login");
-  };
-
   const handleGoBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       navigate(-1);
@@ -67,7 +63,7 @@ const SubProcessorRegisterPage: React.FC = () => {
       {isPhoneLayout ? (
         <AuthLogoHeader />
       ) : (
-        <LandingHeader onLogin={goToLogin} />
+        <AuthTopBar />
       )}
 
       <main className="subprocessor-page__main" aria-label="Sub-Processor Register content">

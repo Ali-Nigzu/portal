@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../auth/hooks/useIsPhoneLayout";
-import LandingHeader from "../landing/components/LandingHeader";
 import "./TermsAndConditionsPage.css";
 
 const TERMS_PARAGRAPHS_BEFORE_RESPONSIBILITIES = [
@@ -40,10 +40,6 @@ const TermsAndConditionsPage: React.FC = () => {
   const navigate = useNavigate();
   const isPhoneLayout = useIsPhoneLayout();
 
-  const goToLogin = () => {
-    navigate("/login");
-  };
-
   const handleGoBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       navigate(-1);
@@ -58,7 +54,7 @@ const TermsAndConditionsPage: React.FC = () => {
       {isPhoneLayout ? (
         <AuthLogoHeader />
       ) : (
-        <LandingHeader onLogin={goToLogin} />
+        <AuthTopBar />
       )}
 
       <main className="terms-page__main" aria-label="Terms and Conditions content">
