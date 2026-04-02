@@ -61,6 +61,7 @@
 
 .dashboard-v2__kpi-tile { display: flex; flex-direction: column; align-self: start; }
 .dashboard-v2__kpi-tile.vrm-kpi-tile--panel,
+.dashboard-v2__kpi-renderer.kpi-tile,
 .dashboard-v2__kpi-renderer .kpi-tile,
 .dashboard-v2__kpi-renderer .kpi-content {
   box-shadow: none !important;
