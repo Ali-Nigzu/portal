@@ -46,7 +46,7 @@ The Company may update the services or these Terms from time to time. Continued 
 
 These Terms are governed by the laws of England and Wales. Any disputes shall be subject to the jurisdiction of the courts of England and Wales.
 
-Enquiries may be sent to [compliance@camos.app](mailto:compliance@camos.app).`;
+Enquiries may be sent to compliance@camos.app.`;
 
 const TermsAndConditionsPage: React.FC = () => {
   const navigate = useNavigate();

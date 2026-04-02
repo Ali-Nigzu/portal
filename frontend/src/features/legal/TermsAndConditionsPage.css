@@ -12,11 +12,7 @@
 
 .terms-page__document {
   width: min(100%, 860px);
-  background: color-mix(in srgb, var(--surface-page) 92%, white 8%);
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 8px 24px rgba(52, 61, 74, 0.08);
+  padding: 0;
 }
 
 .terms-page__back {
@@ -61,8 +57,6 @@
   }
 
   .terms-page__document {
-    border-radius: 10px;
-    padding: 18px;
-    box-shadow: 0 6px 18px rgba(52, 61, 74, 0.08);
+    padding: 0;
   }
 }
