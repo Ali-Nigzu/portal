@@ -15,6 +15,41 @@ const VRM_SLICE_COLORS = ["#7EA6DC", "#3F78C1", "#1F3F73"];
 const PREVIEW_SLICE_COLORS = ["#dce3eb", "#aebac9", "#738297", "#5e6c80"];
 const EMPTY_RING_COLOR = "rgba(96, 122, 165, 0.28)";
 
+const DonutHoverText = ({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: { label?: string; displayValue?: number; value?: number } }>;
+}) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+  const first = payload[0]?.payload;
+  if (!first) {
+    return null;
+  }
+  const displayValue = typeof first.displayValue === "number"
+    ? first.displayValue
+    : (typeof first.value === "number" ? first.value : 0);
+  const value = Number.isFinite(displayValue) ? displayValue : 0;
+  return (
+    <div
+      style={{
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
+        padding: 0,
+        color: "var(--text-strong, #16181b)",
+        fontWeight: 600,
+        fontSize: "12px",
+      }}
+    >
+      {`${first.label ?? ""} ${formatNumeric(Math.max(0, value))}%`.trim()}
+    </div>
+  );
+};
+
 export const TrafficDistribution = ({
   result,
   series,
@@ -153,20 +188,9 @@ export const TrafficDistribution = ({
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
             <Tooltip
-              formatter={(value, _name, props) => {
-                const payload = (props?.payload ?? {}) as {
-                  displayValue?: number;
-                };
-                const displayValue =
-                  typeof payload.displayValue === "number"
-                    ? payload.displayValue
-                    : (value as number);
-                const safeValue = Number.isFinite(displayValue)
-                  ? displayValue
-                  : 0;
-                return `${formatNumeric(Math.max(0, safeValue))}%`;
-              }}
-              labelFormatter={() => ""}
+              cursor={false}
+              content={<DonutHoverText />}
+              wrapperStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
             />
             <Pie
               dataKey="value"

@@ -167,6 +167,10 @@
 
 .dashboard-v2__error { color: #8b3a2f; font-weight: 600; }
 
+.dashboard-v2__header .vrm-header-chip .vrm-status-indicator.ok {
+  background-color: #22c55e;
+}
+
 .dashboard-v2__skeleton {
   display: flex;
   flex-direction: column;

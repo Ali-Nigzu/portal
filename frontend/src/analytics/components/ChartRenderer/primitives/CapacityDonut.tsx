@@ -1,7 +1,51 @@
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 
-const capacityColors = ["#2d6cdf", "#f97066", "#2f3b52"];
+const capacityColors = [
+  "#2d6cdf",
+  "#f97066",
+  "var(--vrm-bg-panel, var(--surface-panel, #e8edf2))",
+];
+
+const CapacityHoverText = ({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: { label?: string; value?: number; displayValue?: number } }>;
+}) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+  const first = payload[0]?.payload;
+  if (!first) {
+    return null;
+  }
+  const label = first.label ?? "";
+  if (label === "Remaining") {
+    return null;
+  }
+  const value = typeof first.displayValue === "number"
+    ? first.displayValue
+    : (typeof first.value === "number" ? first.value : 0);
+  const rounded = Math.max(0, Math.round(value));
+  const valueLabel = label === "Peak extra" ? `Peak ${rounded}%` : `Current ${rounded}%`;
+  return (
+    <div
+      style={{
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
+        padding: 0,
+        color: "var(--text-strong, #16181b)",
+        fontWeight: 600,
+        fontSize: "12px",
+      }}
+    >
+      {valueLabel}
+    </div>
+  );
+};
 
 const extractNumeric = (value: unknown): number => {
   if (typeof value === "number") {
@@ -58,22 +102,14 @@ export const CapacityDonut = ({
     renderData.reduce((sum, entry) => sum + entry.value, 0) || 1;
   const normalizedData = renderData.map((entry) => ({
     ...entry,
-    share: (entry.value / renderTotal) * 100,
+    value: (entry.value / renderTotal) * 100,
+    displayValue: entry.label === "Peak extra"
+      ? peakTotalValue
+      : entry.label === "Usage"
+        ? usageValue
+        : entry.value,
   }));
   const centerDisplay = `${Math.round(centerValue)}%`;
-  const tooltipFormatter = (_value: any, _name: string, props: any) => {
-    const label = (props?.payload as { label?: string })?.label ?? "";
-    if (label === "Remaining") {
-      return null;
-    }
-    if (label === "Peak extra") {
-      return [`${Math.max(0, Math.round(peakTotalValue))}%`, "Peak"] as const;
-    }
-    if (label === "Usage") {
-      return [`${Math.max(0, Math.round(usageValue))}%`, "Current"] as const;
-    }
-    return null;
-  };
   return (
     <div
       className={`capacity-usage kpi-tile ${className ?? ""}`}
@@ -84,9 +120,9 @@ export const CapacityDonut = ({
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
             <Tooltip
-              formatter={tooltipFormatter}
-              labelFormatter={() => ""}
-              filterNull
+              cursor={false}
+              content={<CapacityHoverText />}
+              wrapperStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
             />
             <Pie
               dataKey="value"
