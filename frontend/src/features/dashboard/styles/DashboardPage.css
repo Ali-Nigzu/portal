@@ -171,6 +171,13 @@
   background-color: #22c55e;
 }
 
+.dashboard-v2 .traffic-distribution .recharts-wrapper:focus,
+.dashboard-v2 .traffic-distribution .recharts-sector:focus,
+.dashboard-v2 .capacity-usage .recharts-wrapper:focus,
+.dashboard-v2 .capacity-usage .recharts-sector:focus {
+  outline: none;
+}
+
 .dashboard-v2__skeleton {
   display: flex;
   flex-direction: column;

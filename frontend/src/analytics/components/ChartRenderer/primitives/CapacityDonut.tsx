@@ -1,4 +1,5 @@
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { useMemo, useState } from "react";
+import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 
 const capacityColors = [
@@ -6,46 +7,6 @@ const capacityColors = [
   "#f97066",
   "var(--vrm-bg-panel, var(--surface-panel, #e8edf2))",
 ];
-
-const CapacityHoverText = ({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload?: { label?: string; value?: number; displayValue?: number } }>;
-}) => {
-  if (!active || !payload?.length) {
-    return null;
-  }
-  const first = payload[0]?.payload;
-  if (!first) {
-    return null;
-  }
-  const label = first.label ?? "";
-  if (label === "Remaining") {
-    return null;
-  }
-  const value = typeof first.displayValue === "number"
-    ? first.displayValue
-    : (typeof first.value === "number" ? first.value : 0);
-  const rounded = Math.max(0, Math.round(value));
-  const valueLabel = label === "Peak extra" ? `Peak ${rounded}%` : `Current ${rounded}%`;
-  return (
-    <div
-      style={{
-        background: "transparent",
-        border: "none",
-        boxShadow: "none",
-        padding: 0,
-        color: "var(--text-strong, #16181b)",
-        fontWeight: 600,
-        fontSize: "12px",
-      }}
-    >
-      {valueLabel}
-    </div>
-  );
-};
 
 const extractNumeric = (value: unknown): number => {
   if (typeof value === "number") {
@@ -110,6 +71,19 @@ export const CapacityDonut = ({
         : entry.value,
   }));
   const centerDisplay = `${Math.round(centerValue)}%`;
+  const [hoveredSliceIndex, setHoveredSliceIndex] = useState<number | null>(null);
+  const hoveredSliceLabel = useMemo(() => {
+    if (hoveredSliceIndex === null || hoveredSliceIndex < 0) {
+      return "";
+    }
+    const hovered = normalizedData[hoveredSliceIndex];
+    if (!hovered || hovered.label === "Remaining") {
+      return "";
+    }
+    const value = typeof hovered.displayValue === "number" ? hovered.displayValue : hovered.value;
+    const rounded = Math.max(0, Math.round(value));
+    return hovered.label === "Peak extra" ? `Peak ${rounded}%` : `Current ${rounded}%`;
+  }, [hoveredSliceIndex, normalizedData]);
   return (
     <div
       className={`capacity-usage kpi-tile ${className ?? ""}`}
@@ -117,13 +91,21 @@ export const CapacityDonut = ({
     >
       <div className="capacity-usage__title">{title}</div>
       <div className="capacity-usage__content">
+        <div
+          aria-live="polite"
+          style={{
+            minHeight: "18px",
+            width: "100%",
+            textAlign: "right",
+            fontSize: "12px",
+            fontWeight: 600,
+            color: "var(--text-strong, #16181b)",
+          }}
+        >
+          {hoveredSliceLabel}
+        </div>
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
-            <Tooltip
-              cursor={false}
-              content={<CapacityHoverText />}
-              wrapperStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
-            />
             <Pie
               dataKey="value"
               data={normalizedData}
@@ -135,6 +117,14 @@ export const CapacityDonut = ({
               startAngle={90}
               endAngle={450}
               stroke="none"
+              rootTabIndex={-1}
+              onMouseEnter={(_, index) => {
+                setHoveredSliceIndex(index);
+              }}
+              onMouseLeave={() => {
+                setHoveredSliceIndex(null);
+              }}
+              style={{ cursor: "default" }}
             >
               {normalizedData.map((entry) => (
                 <Cell
@@ -143,8 +133,8 @@ export const CapacityDonut = ({
                   stroke="none"
                   style={
                     entry.label === "Remaining"
-                      ? { pointerEvents: "none" }
-                      : undefined
+                      ? { pointerEvents: "none", cursor: "default" }
+                      : { cursor: "default" }
                   }
                 />
               ))}
