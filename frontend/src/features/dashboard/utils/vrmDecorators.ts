@@ -74,9 +74,9 @@ type OccupancyPoint = {
   value?: number | null;
 };
 const applySiteFlow = (result: ChartResult): ChartResult => {
-  const entranceColor = "var(--vrm-color-accent-entrances, #47c96f)";
-  const exitColor = "var(--vrm-color-accent-exits, #ff5964)";
-  const occupancyColor = "var(--vrm-color-accent-occupancy, #2685ff)";
+  const entranceColor = "var(--vrm-kpi-accent-entrances, #5f7f6c)";
+  const exitColor = "var(--vrm-kpi-accent-exits, #8a6267)";
+  const occupancyColor = "var(--vrm-kpi-accent-occupancy, #5f7694)";
   const occupancySeries =
     result.series.find((series) => series.id === "occupancy") ??
     result.series.find((series) =>
