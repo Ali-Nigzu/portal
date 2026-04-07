@@ -189,7 +189,13 @@ export const useSiteFlow = ({
         const normalizedResult = dataMode === "authenticated"
           ? sanitizeChartResultForAuthenticated(result)
           : result;
-        const decorated = decorateResult(widget.id, normalizedResult, clientContextId);
+        const siteFlowDecoratorId =
+          widget.chartSpecId === "dashboard.live_flow" ? "live-flow" : widget.id;
+        const decorated = decorateResult(
+          siteFlowDecoratorId,
+          normalizedResult,
+          clientContextId,
+        );
         decorated.meta = decorated.meta ?? { timezone: "UTC" };
         decorated.meta.summary = {
           ...(decorated.meta.summary ?? {}),
