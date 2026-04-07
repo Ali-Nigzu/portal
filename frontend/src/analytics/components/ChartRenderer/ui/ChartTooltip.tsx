@@ -44,14 +44,24 @@ export const ChartTooltip = ({
       {};
     const occupancyMin = occupancyPayload.occupancy_min ?? null;
     const occupancyMax = occupancyPayload.occupancy_max ?? null;
-    const entranceColor = "var(--vrm-color-accent-entrances, #58626e)";
-    const exitColor = "var(--vrm-color-accent-exits, #66707d)";
-    const occupancyColor = "var(--vrm-color-accent-occupancy, #9b7420)";
+    const entranceColor =
+      entrancesEntry?.color ??
+      seriesMap.get("entrances")?.color ??
+      "var(--vrm-color-accent-entrances, #47c96f)";
+    const exitColor =
+      exitsEntry?.color ??
+      seriesMap.get("exits")?.color ??
+      "var(--vrm-color-accent-exits, #ff5964)";
+    const occupancyColor =
+      occupancyEntry?.color ??
+      seriesMap.get("occupancy")?.color ??
+      "var(--vrm-color-accent-occupancy, #2685ff)";
     const rows: Array<JSX.Element> = [];
     if (entrancesEntry) {
       rows.push(
         <li key="entrances" className="tooltip-row">
           <span className="series-label" style={{ color: entranceColor }}>
+            <span className="swatch" style={{ backgroundColor: entranceColor }} />
             Entrances
           </span>
           <span className="series-value" style={{ color: entranceColor }}>
@@ -64,6 +74,7 @@ export const ChartTooltip = ({
       rows.push(
         <li key="exits" className="tooltip-row">
           <span className="series-label" style={{ color: exitColor }}>
+            <span className="swatch" style={{ backgroundColor: exitColor }} />
             Exits
           </span>
           <span className="series-value" style={{ color: exitColor }}>
@@ -79,6 +90,7 @@ export const ChartTooltip = ({
       rows.push(
         <li key="occupancy" className="tooltip-row">
           <span className="series-label" style={{ color: occupancyColor }}>
+            <span className="swatch" style={{ backgroundColor: occupancyColor }} />
             Occupancy
           </span>
           <span className="series-value" style={{ color: occupancyColor }}>
