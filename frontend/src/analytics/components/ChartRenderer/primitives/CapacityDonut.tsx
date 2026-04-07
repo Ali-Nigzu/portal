@@ -1,7 +1,12 @@
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { useMemo, useRef, useState } from "react";
+import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 
-const capacityColors = ["#2d6cdf", "#f97066", "#2f3b52"];
+const capacityColors = [
+  "#2d6cdf",
+  "#f97066",
+  "var(--vrm-bg-panel, var(--surface-panel, #e8edf2))",
+];
 
 const extractNumeric = (value: unknown): number => {
   if (typeof value === "number") {
@@ -20,6 +25,8 @@ export const CapacityDonut = ({
   height,
   className,
 }: ChartPrimitiveProps) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const hoverLabelRef = useRef<HTMLDivElement | null>(null);
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary =
@@ -58,21 +65,77 @@ export const CapacityDonut = ({
     renderData.reduce((sum, entry) => sum + entry.value, 0) || 1;
   const normalizedData = renderData.map((entry) => ({
     ...entry,
-    share: (entry.value / renderTotal) * 100,
+    value: (entry.value / renderTotal) * 100,
+    displayValue: entry.label === "Peak extra"
+      ? peakTotalValue
+      : entry.label === "Usage"
+        ? usageValue
+        : entry.value,
   }));
   const centerDisplay = `${Math.round(centerValue)}%`;
-  const tooltipFormatter = (_value: any, _name: string, props: any) => {
-    const label = (props?.payload as { label?: string })?.label ?? "";
-    if (label === "Remaining") {
-      return null;
+  const [hoverLabel, setHoverLabel] = useState<{
+    text: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const hoverLabelText = useMemo(() => {
+    if (!hoverLabel) {
+      return "";
     }
-    if (label === "Peak extra") {
-      return [`${Math.max(0, Math.round(peakTotalValue))}%`, "Peak"] as const;
+    return hoverLabel.text;
+  }, [hoverLabel]);
+  const placeHoverLabel = (
+    entryIndex: number,
+    shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
+  ) => {
+    const hovered = normalizedData[entryIndex];
+    if (!hovered || hovered.label === "Remaining") {
+      setHoverLabel(null);
+      return;
     }
-    if (label === "Usage") {
-      return [`${Math.max(0, Math.round(usageValue))}%`, "Current"] as const;
+    const value = typeof hovered.displayValue === "number" ? hovered.displayValue : hovered.value;
+    const rounded = Math.max(0, Math.round(value));
+    const text = hovered.label === "Peak extra" ? `Peak ${rounded}%` : `Current ${rounded}%`;
+    const container = containerRef.current;
+    if (!container) {
+      setHoverLabel({ text, x: 0, y: 0 });
+      return;
     }
-    return null;
+    const cx = typeof shape.cx === "number" ? shape.cx : container.clientWidth / 2;
+    const cy = typeof shape.cy === "number" ? shape.cy : 70;
+    const outerRadius = typeof shape.outerRadius === "number" ? shape.outerRadius : 68;
+    const midAngle = typeof shape.midAngle === "number" ? shape.midAngle : 0;
+    const theta = (-midAngle * Math.PI) / 180;
+    const anchorRadius = outerRadius + 14;
+    const anchorX = cx + Math.cos(theta) * anchorRadius;
+    const anchorY = cy + Math.sin(theta) * anchorRadius;
+    const labelRect = hoverLabelRef.current?.getBoundingClientRect();
+    const labelWidth = labelRect?.width ?? 96;
+    const labelHeight = labelRect?.height ?? 18;
+    const edgePadding = 4;
+    let nextX = anchorX - labelWidth / 2;
+    let nextY = anchorY - labelHeight / 2;
+    const maxX = Math.max(edgePadding, container.clientWidth - labelWidth - edgePadding);
+    const maxY = Math.max(edgePadding, container.clientHeight - labelHeight - edgePadding);
+    nextX = Math.min(maxX, Math.max(edgePadding, nextX));
+    nextY = Math.min(maxY, Math.max(edgePadding, nextY));
+    const labelCenterX = nextX + labelWidth / 2;
+    const labelCenterY = nextY + labelHeight / 2;
+    const minRadius = outerRadius + 4;
+    const distance = Math.hypot(labelCenterX - cx, labelCenterY - cy);
+    if (distance < minRadius) {
+      const safeDistance = distance || 1;
+      const push = minRadius - safeDistance;
+      const unitX = (labelCenterX - cx) / safeDistance;
+      const unitY = (labelCenterY - cy) / safeDistance;
+      const adjustedCenterX = labelCenterX + unitX * push;
+      const adjustedCenterY = labelCenterY + unitY * push;
+      nextX = adjustedCenterX - labelWidth / 2;
+      nextY = adjustedCenterY - labelHeight / 2;
+      nextX = Math.min(maxX, Math.max(edgePadding, nextX));
+      nextY = Math.min(maxY, Math.max(edgePadding, nextY));
+    }
+    setHoverLabel({ text, x: nextX, y: nextY });
   };
   return (
     <div
@@ -80,14 +143,32 @@ export const CapacityDonut = ({
       style={{ minHeight: height }}
     >
       <div className="capacity-usage__title">{title}</div>
-      <div className="capacity-usage__content">
+      <div
+        className="capacity-usage__content"
+        ref={containerRef}
+        style={{ position: "relative" }}
+      >
+        {hoverLabelText ? (
+          <div
+            ref={hoverLabelRef}
+            aria-live="polite"
+            style={{
+              position: "absolute",
+              left: `${hoverLabel?.x ?? 0}px`,
+              top: `${hoverLabel?.y ?? 0}px`,
+              pointerEvents: "none",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "var(--text-strong, #16181b)",
+              zIndex: 2,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {hoverLabelText}
+          </div>
+        ) : null}
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
-            <Tooltip
-              formatter={tooltipFormatter}
-              labelFormatter={() => ""}
-              filterNull
-            />
             <Pie
               dataKey="value"
               data={normalizedData}
@@ -99,6 +180,17 @@ export const CapacityDonut = ({
               startAngle={90}
               endAngle={450}
               stroke="none"
+              rootTabIndex={-1}
+              onMouseEnter={(shape, index) => {
+                placeHoverLabel(index, shape ?? {});
+              }}
+              onMouseMove={(shape, index) => {
+                placeHoverLabel(index, shape ?? {});
+              }}
+              onMouseLeave={() => {
+                setHoverLabel(null);
+              }}
+              style={{ cursor: "default" }}
             >
               {normalizedData.map((entry) => (
                 <Cell
@@ -107,8 +199,8 @@ export const CapacityDonut = ({
                   stroke="none"
                   style={
                     entry.label === "Remaining"
-                      ? { pointerEvents: "none" }
-                      : undefined
+                      ? { pointerEvents: "none", cursor: "default" }
+                      : { cursor: "default" }
                   }
                 />
               ))}

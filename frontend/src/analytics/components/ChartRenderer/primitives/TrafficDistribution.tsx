@@ -1,4 +1,5 @@
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import { useMemo, useRef, useState } from "react";
+import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { formatNumeric } from "../utils/format";
 
@@ -24,6 +25,8 @@ export const TrafficDistribution = ({
   useRawLabels = false,
   labelKey,
 }: ChartPrimitiveProps) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const hoverLabelRef = useRef<HTMLDivElement | null>(null);
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary =
@@ -142,6 +145,70 @@ export const TrafficDistribution = ({
         : String(renderTopSlice.camId)
     )
     : "—";
+  const [hoverLabel, setHoverLabel] = useState<{
+    text: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const hoverLabelText = useMemo(() => {
+    if (!hoverLabel) {
+      return "";
+    }
+    return hoverLabel.text;
+  }, [hoverLabel]);
+  const placeHoverLabel = (
+    entryIndex: number,
+    shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
+  ) => {
+    const hovered = pieLegend[entryIndex];
+    if (!hovered) {
+      setHoverLabel(null);
+      return;
+    }
+    const value = typeof hovered.displayValue === "number" ? hovered.displayValue : hovered.value;
+    const safeValue = Number.isFinite(value) ? value : 0;
+    const text = `${hovered.label} ${formatNumeric(Math.max(0, safeValue))}%`.trim();
+    const container = containerRef.current;
+    if (!container) {
+      setHoverLabel({ text, x: 0, y: 0 });
+      return;
+    }
+    const cx = typeof shape.cx === "number" ? shape.cx : container.clientWidth / 2;
+    const cy = typeof shape.cy === "number" ? shape.cy : 70;
+    const outerRadius = typeof shape.outerRadius === "number" ? shape.outerRadius : 68;
+    const midAngle = typeof shape.midAngle === "number" ? shape.midAngle : 0;
+    const theta = (-midAngle * Math.PI) / 180;
+    const anchorRadius = outerRadius + 14;
+    const anchorX = cx + Math.cos(theta) * anchorRadius;
+    const anchorY = cy + Math.sin(theta) * anchorRadius;
+    const labelRect = hoverLabelRef.current?.getBoundingClientRect();
+    const labelWidth = labelRect?.width ?? 120;
+    const labelHeight = labelRect?.height ?? 18;
+    const edgePadding = 4;
+    let nextX = anchorX - labelWidth / 2;
+    let nextY = anchorY - labelHeight / 2;
+    const maxX = Math.max(edgePadding, container.clientWidth - labelWidth - edgePadding);
+    const maxY = Math.max(edgePadding, container.clientHeight - labelHeight - edgePadding);
+    nextX = Math.min(maxX, Math.max(edgePadding, nextX));
+    nextY = Math.min(maxY, Math.max(edgePadding, nextY));
+    const labelCenterX = nextX + labelWidth / 2;
+    const labelCenterY = nextY + labelHeight / 2;
+    const minRadius = outerRadius + 4;
+    const distance = Math.hypot(labelCenterX - cx, labelCenterY - cy);
+    if (distance < minRadius) {
+      const safeDistance = distance || 1;
+      const push = (minRadius - safeDistance);
+      const unitX = (labelCenterX - cx) / safeDistance;
+      const unitY = (labelCenterY - cy) / safeDistance;
+      const adjustedCenterX = labelCenterX + unitX * push;
+      const adjustedCenterY = labelCenterY + unitY * push;
+      nextX = adjustedCenterX - labelWidth / 2;
+      nextY = adjustedCenterY - labelHeight / 2;
+      nextX = Math.min(maxX, Math.max(edgePadding, nextX));
+      nextY = Math.min(maxY, Math.max(edgePadding, nextY));
+    }
+    setHoverLabel({ text, x: nextX, y: nextY });
+  };
 
   return (
     <div
@@ -149,25 +216,28 @@ export const TrafficDistribution = ({
       style={{ minHeight: height }}
     >
       <div className="traffic-distribution__title">{title}</div>
-      <div className={contentClassName}>
+      <div className={contentClassName} ref={containerRef} style={{ position: "relative" }}>
+        {hoverLabelText ? (
+          <div
+            ref={hoverLabelRef}
+            aria-live="polite"
+            style={{
+              position: "absolute",
+              left: `${hoverLabel?.x ?? 0}px`,
+              top: `${hoverLabel?.y ?? 0}px`,
+              pointerEvents: "none",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "var(--text-strong, #16181b)",
+              zIndex: 2,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {hoverLabelText}
+          </div>
+        ) : null}
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>
-            <Tooltip
-              formatter={(value, _name, props) => {
-                const payload = (props?.payload ?? {}) as {
-                  displayValue?: number;
-                };
-                const displayValue =
-                  typeof payload.displayValue === "number"
-                    ? payload.displayValue
-                    : (value as number);
-                const safeValue = Number.isFinite(displayValue)
-                  ? displayValue
-                  : 0;
-                return `${formatNumeric(Math.max(0, safeValue))}%`;
-              }}
-              labelFormatter={() => ""}
-            />
             <Pie
               dataKey="value"
               data={pieLegend}
@@ -184,6 +254,17 @@ export const TrafficDistribution = ({
               stroke={isLandingPreviewTraffic ? "rgba(15, 23, 42, 0.2)" : "none"}
               strokeWidth={isLandingPreviewTraffic ? 1 : 0}
               isAnimationActive={false}
+              rootTabIndex={-1}
+              onMouseEnter={(shape, index) => {
+                placeHoverLabel(index, shape ?? {});
+              }}
+              onMouseMove={(shape, index) => {
+                placeHoverLabel(index, shape ?? {});
+              }}
+              onMouseLeave={() => {
+                setHoverLabel(null);
+              }}
+              style={{ cursor: "default" }}
             >
               {pieLegend.map((entry) => (
                 <Cell
@@ -191,6 +272,7 @@ export const TrafficDistribution = ({
                   fill={entry.color}
                   stroke={isLandingPreviewTraffic ? "rgba(15, 23, 42, 0.2)" : "none"}
                   strokeWidth={isLandingPreviewTraffic ? 1 : 0}
+                  style={{ cursor: "default" }}
                 />
               ))}
               {!isLandingPreviewTraffic ? (

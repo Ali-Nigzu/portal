@@ -61,6 +61,7 @@
 
 .dashboard-v2__kpi-tile { display: flex; flex-direction: column; align-self: start; }
 .dashboard-v2__kpi-tile.vrm-kpi-tile--panel,
+.dashboard-v2__kpi-renderer.kpi-tile,
 .dashboard-v2__kpi-renderer .kpi-tile,
 .dashboard-v2__kpi-renderer .kpi-content {
   box-shadow: none !important;
@@ -165,6 +166,17 @@
 .dashboard-v2__chart-card .analytics-card__actions { display: none; }
 
 .dashboard-v2__error { color: #8b3a2f; font-weight: 600; }
+
+.dashboard-v2__header .vrm-header-chip .vrm-status-indicator.ok {
+  background-color: #22c55e;
+}
+
+.dashboard-v2 .traffic-distribution .recharts-wrapper:focus,
+.dashboard-v2 .traffic-distribution .recharts-sector:focus,
+.dashboard-v2 .capacity-usage .recharts-wrapper:focus,
+.dashboard-v2 .capacity-usage .recharts-sector:focus {
+  outline: none;
+}
 
 .dashboard-v2__skeleton {
   display: flex;

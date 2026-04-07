@@ -4,6 +4,19 @@ import type {
   DataPoint,
 } from "../../../analytics/schemas/charting";
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
+
+const VRM_TOP_KPI_SPARKLINE_COLORS: Partial<Record<string, string>> = {
+  [VRM_KPI_IDS.entrances]:
+    "var(--vrm-kpi-accent-entrances, #5f7f6c)",
+  [VRM_KPI_IDS.occupancy]:
+    "var(--vrm-kpi-accent-occupancy, #5f7694)",
+  [VRM_KPI_IDS.exits]:
+    "var(--vrm-kpi-accent-exits, #8a6267)",
+  [VRM_KPI_IDS.footfall]:
+    "var(--vrm-kpi-accent-footfall, var(--signal-gold, #9b7420))",
+  [VRM_KPI_IDS.dwell]:
+    "var(--vrm-kpi-accent-dwell, #6f6483)",
+};
 const CAPACITY_BY_CLIENT: Record<string, number> = { client1: 5, client2: 750 };
 const TABLE_TO_UI_CLIENT: Record<string, string> = {
   client0: "client1",
@@ -61,9 +74,9 @@ type OccupancyPoint = {
   value?: number | null;
 };
 const applySiteFlow = (result: ChartResult): ChartResult => {
-  const entranceColor = "var(--vrm-color-accent-entrances, #58626e)";
-  const exitColor = "var(--vrm-color-accent-exits, #66707d)";
-  const occupancyColor = "var(--vrm-color-accent-occupancy, #9b7420)";
+  const entranceColor = "var(--vrm-color-accent-entrances, #47c96f)";
+  const exitColor = "var(--vrm-color-accent-exits, #ff5964)";
+  const occupancyColor = "var(--vrm-color-accent-occupancy, #2685ff)";
   const occupancySeries =
     result.series.find((series) => series.id === "occupancy") ??
     result.series.find((series) =>
@@ -422,6 +435,21 @@ const applyDwellHeadline = (result: ChartResult) => {
   }
   return next;
 };
+
+const applyTopKpiSparklineColor = (
+  widgetId: string,
+  result: ChartResult,
+): ChartResult => {
+  const color = VRM_TOP_KPI_SPARKLINE_COLORS[widgetId];
+  if (!color || !result.series.length) {
+    return result;
+  }
+  const next = cloneResult(result);
+  next.series = next.series.map((series, index) =>
+    index === 0 ? { ...series, color } : series,
+  );
+  return next;
+};
 export const decorateResult = (
   widgetId: string,
   result: ChartResult,
@@ -435,23 +463,30 @@ export const decorateResult = (
     return result;
   }
   markCompact(result);
+  let decoratedResult: ChartResult;
   if (widgetId === VRM_KPI_IDS.traffic) {
-    return applyTrafficDistributionShare(result);
+    decoratedResult = applyTrafficDistributionShare(result);
+    return decoratedResult;
   }
   if (widgetId === VRM_KPI_IDS.capacity) {
-    return applyCapacityUsage(result, orgId);
+    decoratedResult = applyCapacityUsage(result, orgId);
+    return decoratedResult;
   }
   if (widgetId === VRM_KPI_IDS.footfall) {
-    return applyFootfallTotal(result);
+    decoratedResult = applyFootfallTotal(result);
+    return applyTopKpiSparklineColor(widgetId, decoratedResult);
   }
   if (widgetId === VRM_KPI_IDS.occupancy) {
-    return applyOccupancyDelta(result);
+    decoratedResult = applyOccupancyDelta(result);
+    return applyTopKpiSparklineColor(widgetId, decoratedResult);
   }
   if (widgetId === VRM_KPI_IDS.dwell) {
-    return applyDwellHeadline(result);
+    decoratedResult = applyDwellHeadline(result);
+    return applyTopKpiSparklineColor(widgetId, decoratedResult);
   }
   if (widgetId === VRM_KPI_IDS.entrances || widgetId === VRM_KPI_IDS.exits) {
-    return applyVrmTotalChip(widgetId, result);
+    decoratedResult = applyVrmTotalChip(widgetId, result);
+    return applyTopKpiSparklineColor(widgetId, decoratedResult);
   }
   return result;
 };
