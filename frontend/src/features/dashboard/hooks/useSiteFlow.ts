@@ -166,7 +166,10 @@ export const useSiteFlow = ({
       });
       return () => controller.abort();
     }
-    const spec = JSON.parse(
+          widget.chartSpecId === "dashboard.live_flow" ||
+            widget.chartSpecId === "dashboard.site_flow.activity"
+            ? "live-flow"
+            : widget.id;
       JSON.stringify(siteFlowWidget.inlineSpec),
     ) as ChartSpec;
     spec.timeWindow = {
