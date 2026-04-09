@@ -23,7 +23,8 @@ import { loadWidgetResult } from "../transport/loadWidgetResult";
 import { isSnapshotOrg } from "../utils/snapshotMode";
 import {
   consumeDemoSiteFlowModeOverride,
-  consumeDemoSiteFlowTimeframeOverride,
+  getDemoSiteFlowTimeframe,
+  setDemoSiteFlowTimeframe,
 } from "../../../lib/demoSession";
 import { sanitizeChartResultForAuthenticated } from "../transport/loadEmptyWidgetResult";
 
@@ -60,6 +61,17 @@ type UseSiteFlowResult = {
   };
 };
 
+const isValidSiteFlowTimeframe = (
+  value: string | null,
+): value is SiteFlowTimeframe =>
+  value === "today" ||
+  value === "yesterday" ||
+  value === "last_week" ||
+  value === "last_month" ||
+  value === "last_quarter" ||
+  value === "last_year" ||
+  value === "all_time";
+
 export const useSiteFlow = ({
   manifest,
   orgId,
@@ -70,9 +82,7 @@ export const useSiteFlow = ({
 }: UseSiteFlowParams): UseSiteFlowResult => {
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
   const demoSiteFlowModeRef = useRef(consumeDemoSiteFlowModeOverride());
-  const demoSiteFlowTimeframeRef = useRef(
-    consumeDemoSiteFlowTimeframeOverride(),
-  );
+  const demoSiteFlowTimeframeRef = useRef(getDemoSiteFlowTimeframe());
   const siteFlowWidget = useMemo(
     () => manifest?.widgets.find((widget) => isSiteFlowWidget(widget)) ?? null,
     [manifest],
@@ -88,10 +98,10 @@ export const useSiteFlow = ({
   const [siteFlowTimeframe, setSiteFlowTimeframe] = useState<SiteFlowTimeframe>(
     () => {
       const demoOverride = demoSiteFlowTimeframeRef.current;
-      if (demoOverride === "today" || demoOverride === "all_time") {
+      if (isValidSiteFlowTimeframe(demoOverride)) {
         return demoOverride;
       }
-      return isSnapshotMode ? "today" : "all_time";
+      return isSnapshotMode || dataMode === "demo" ? "today" : "all_time";
     },
   );
   const [siteFlowActivity, setSiteFlowActivity] = useState<{
@@ -109,18 +119,18 @@ export const useSiteFlow = ({
     (next: SiteFlowTimeframe) => {
       hasUserSetSiteFlowTimeframe.current = true;
       setSiteFlowTimeframe(next);
+      if (dataMode === "demo") {
+        setDemoSiteFlowTimeframe(next);
+      }
     },
-    [],
+    [dataMode],
   );
 
   useEffect(() => {
-    if (demoSiteFlowTimeframeRef.current) {
+    if (isValidSiteFlowTimeframe(demoSiteFlowTimeframeRef.current)) {
       hasUserSetSiteFlowTimeframe.current = true;
-      demoSiteFlowTimeframeRef.current = null;
     }
-  }, []);
-
-  useEffect(() => {
+    const spec: ChartSpec = JSON.parse(JSON.stringify(siteFlowWidget.inlineSpec));
     if (isSnapshotMode && !hasUserSetSiteFlowTimeframe.current) {
       setSiteFlowTimeframe("today");
     }
@@ -154,7 +164,10 @@ export const useSiteFlow = ({
       });
       return () => controller.abort();
     }
-    const spec = JSON.parse(
+          widget.chartSpecId === "dashboard.live_flow" ||
+            widget.chartSpecId === "dashboard.site_flow.activity"
+            ? "live-flow"
+            : widget.id;
       JSON.stringify(siteFlowWidget.inlineSpec),
     ) as ChartSpec;
     spec.timeWindow = {

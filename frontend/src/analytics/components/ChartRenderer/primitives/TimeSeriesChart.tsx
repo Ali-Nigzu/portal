@@ -70,6 +70,7 @@ export const TimeSeriesChart = ({
         <ComposedChart
           data={dataset.data}
           margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
+          accessibilityLayer={!isSiteFlowActivity}
         >
           <XAxis
             dataKey="x"
@@ -219,6 +220,7 @@ export const TimeSeriesChart = ({
             <span className="analytics-brush-caption">Start</span>
             <span className="analytics-brush-value analytics-brush-value--full">
               {" "}
+        siteFlowActivity={isSiteFlowActivity}
               {startLabel}{" "}
             </span>
             <span className="analytics-brush-value analytics-brush-value--compact">

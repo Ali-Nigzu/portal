@@ -74,9 +74,10 @@ type OccupancyPoint = {
   value?: number | null;
 };
 const applySiteFlow = (result: ChartResult): ChartResult => {
-  const entranceColor = "var(--vrm-color-accent-entrances, #47c96f)";
-  const exitColor = "var(--vrm-color-accent-exits, #ff5964)";
-  const occupancyColor = "var(--vrm-color-accent-occupancy, #2685ff)";
+  // Keep Site Flow colors explicit so runtime token overrides cannot mute them.
+  const entranceColor = "#47c96f";
+  const exitColor = "#ff5964";
+  const occupancyColor = "#2685ff";
   const occupancySeries =
     result.series.find((series) => series.id === "occupancy") ??
     result.series.find((series) =>
