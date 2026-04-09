@@ -1,5 +1,11 @@
 import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesVisibilityMap } from "../managers";
+
+const SITE_FLOW_ACTIVITY_COLORS: Record<string, string> = {
+  entrances: "#47c96f",
+  exits: "#ff5964",
+  occupancy: "#2685ff",
+};
 interface SeriesLegendProps {
   series: ChartSeries[];
   visibility: SeriesVisibilityMap;
@@ -31,7 +37,10 @@ export const SeriesLegend = ({
       {" "}
       {visibleSeries.map((item) => {
         const active = visibility[item.id] ?? true;
-        const swatchColor = item.color ?? "#2685ff";
+        const swatchColor =
+          siteFlowActivity && SITE_FLOW_ACTIVITY_COLORS[item.id]
+            ? SITE_FLOW_ACTIVITY_COLORS[item.id]
+            : (item.color ?? "#2685ff");
         const itemStyle = siteFlowActivity
           ? {
               borderColor: active ? swatchColor : "var(--line-default)",

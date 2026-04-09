@@ -13,6 +13,12 @@ import { ChartErrorState } from "./ui/ChartErrorState";
 import { ChartEmptyState } from "./ui/ChartEmptyState";
 import { validateChartResult } from "./validation";
 import "./styles.css";
+
+const SITE_FLOW_ACTIVITY_COLORS: Record<string, string> = {
+  entrances: "#47c96f",
+  exits: "#ff5964",
+  occupancy: "#2685ff",
+};
 export interface ChartRendererProps {
   result: ChartResult;
   height?: number;
@@ -79,13 +85,37 @@ export const ChartRenderer = ({
   useEffect(() => {
     paletteRef.current = new PaletteManager();
   }, [paletteKey]);
+  const summary = result.meta?.summary as
+    | { presentation?: string; chartStyle?: string; chartSubType?: string }
+    | undefined;
+  const summaryRecord = summary as Record<string, unknown> | undefined;
+  const summaryTitle =
+    typeof summaryRecord?.title === "string"
+      ? (summaryRecord.title as string)
+      : undefined;
+  const siteFlowTimeframe =
+    typeof summaryRecord?.siteFlowTimeframe === "string"
+      ? (summaryRecord.siteFlowTimeframe as string)
+      : undefined;
+  const summaryTitleNormalized = summaryTitle?.toLowerCase().trim();
+  const isSiteFlowActivity =
+    widgetId === "live-flow" ||
+    widgetId === "site-flow" ||
+    widgetId === "dashboard.site_flow.activity" ||
+    summaryTitleNormalized === "site flow";
   const palette = paletteRef.current;
   const decoratedSeries = useMemo(() => {
-    return result.series.map((series) => ({
-      ...series,
-      color: series.color ?? palette.getColor(series.id),
-    }));
-  }, [palette, result.series]);
+    return result.series.map((series) => {
+      const siteFlowColor = SITE_FLOW_ACTIVITY_COLORS[series.id];
+      if (isSiteFlowActivity && siteFlowColor) {
+        return { ...series, color: siteFlowColor };
+      }
+      return {
+        ...series,
+        color: series.color ?? palette.getColor(series.id),
+      };
+    });
+  }, [isSiteFlowActivity, palette, result.series]);
   const seriesManager = useMemo(
     () => new SeriesManager(decoratedSeries, visibility),
     [decoratedSeries, visibility],
@@ -113,24 +143,6 @@ export const ChartRenderer = ({
       return next;
     });
   };
-  const summary = result.meta?.summary as
-    | { presentation?: string; chartStyle?: string; chartSubType?: string }
-    | undefined;
-  const summaryRecord = summary as Record<string, unknown> | undefined;
-  const summaryTitle =
-    typeof summaryRecord?.title === "string"
-      ? (summaryRecord.title as string)
-      : undefined;
-  const siteFlowTimeframe =
-    typeof summaryRecord?.siteFlowTimeframe === "string"
-      ? (summaryRecord.siteFlowTimeframe as string)
-      : undefined;
-  const summaryTitleNormalized = summaryTitle?.toLowerCase().trim();
-  const isSiteFlowActivity =
-    widgetId === "live-flow" ||
-    widgetId === "site-flow" ||
-    widgetId === "dashboard.site_flow.activity" ||
-    summaryTitleNormalized === "site flow";
   const chartProps = {
     result,
     series: decoratedSeries,

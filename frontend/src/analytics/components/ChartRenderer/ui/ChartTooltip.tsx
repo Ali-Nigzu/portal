@@ -8,6 +8,12 @@ import {
   shouldShowRawCount,
 } from "../utils/format";
 import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
+
+const SITE_FLOW_ACTIVITY_COLORS: Record<string, string> = {
+  entrances: "#47c96f",
+  exits: "#ff5964",
+  occupancy: "#2685ff",
+};
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;
@@ -44,18 +50,9 @@ export const ChartTooltip = ({
       {};
     const occupancyMin = occupancyPayload.occupancy_min ?? null;
     const occupancyMax = occupancyPayload.occupancy_max ?? null;
-    const entranceColor =
-      entrancesEntry?.color ??
-      seriesMap.get("entrances")?.color ??
-      "#47c96f";
-    const exitColor =
-      exitsEntry?.color ??
-      seriesMap.get("exits")?.color ??
-      "#ff5964";
-    const occupancyColor =
-      occupancyEntry?.color ??
-      seriesMap.get("occupancy")?.color ??
-      "#2685ff";
+    const entranceColor = SITE_FLOW_ACTIVITY_COLORS.entrances;
+    const exitColor = SITE_FLOW_ACTIVITY_COLORS.exits;
+    const occupancyColor = SITE_FLOW_ACTIVITY_COLORS.occupancy;
     const rows: Array<JSX.Element> = [];
     if (entrancesEntry) {
       rows.push(
