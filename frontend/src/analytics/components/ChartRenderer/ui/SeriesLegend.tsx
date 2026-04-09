@@ -1,11 +1,6 @@
 import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesVisibilityMap } from "../managers";
-
-const SITE_FLOW_ACTIVITY_COLORS: Record<string, string> = {
-  entrances: "#47c96f",
-  exits: "#ff5964",
-  occupancy: "#2685ff",
-};
+import { SITE_FLOW_ACTIVITY_COLORS } from "../../../../lib/siteFlowActivityColors";
 interface SeriesLegendProps {
   series: ChartSeries[];
   visibility: SeriesVisibilityMap;

@@ -65,7 +65,9 @@ const vrmWidgets: DashboardWidget[] = [
 const KPI_ORDER = vrmWidgets.map((widget) => widget.id);
 const maybeApplySiteFlow = (widget: DashboardWidget): DashboardWidget => {
   const isSiteFlow =
-    widget.chartSpecId === "dashboard.live_flow" || widget.id === "live-flow";
+    widget.chartSpecId === "dashboard.live_flow" ||
+    widget.chartSpecId === "dashboard.site_flow.activity" ||
+    widget.id === "live-flow";
   if (!isSiteFlow) {
     return widget;
   }

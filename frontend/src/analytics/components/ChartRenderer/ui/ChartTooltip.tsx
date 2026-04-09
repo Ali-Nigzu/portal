@@ -8,12 +8,7 @@ import {
   shouldShowRawCount,
 } from "../utils/format";
 import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
-
-const SITE_FLOW_ACTIVITY_COLORS: Record<string, string> = {
-  entrances: "#47c96f",
-  exits: "#ff5964",
-  occupancy: "#2685ff",
-};
+import { SITE_FLOW_ACTIVITY_COLORS } from "../../../../lib/siteFlowActivityColors";
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;

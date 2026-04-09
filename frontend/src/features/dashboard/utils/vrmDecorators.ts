@@ -4,6 +4,7 @@ import type {
   DataPoint,
 } from "../../../analytics/schemas/charting";
 import { VRM_KPI_IDS } from "./applyVRMOverrides";
+import { SITE_FLOW_ACTIVITY_COLORS } from "../../../lib/siteFlowActivityColors";
 
 const VRM_TOP_KPI_SPARKLINE_COLORS: Partial<Record<string, string>> = {
   [VRM_KPI_IDS.entrances]:
@@ -75,9 +76,9 @@ type OccupancyPoint = {
 };
 const applySiteFlow = (result: ChartResult): ChartResult => {
   // Keep Site Flow colors explicit so runtime token overrides cannot mute them.
-  const entranceColor = "#47c96f";
-  const exitColor = "#ff5964";
-  const occupancyColor = "#2685ff";
+  const entranceColor = SITE_FLOW_ACTIVITY_COLORS.entrances;
+  const exitColor = SITE_FLOW_ACTIVITY_COLORS.exits;
+  const occupancyColor = SITE_FLOW_ACTIVITY_COLORS.occupancy;
   const occupancySeries =
     result.series.find((series) => series.id === "occupancy") ??
     result.series.find((series) =>
