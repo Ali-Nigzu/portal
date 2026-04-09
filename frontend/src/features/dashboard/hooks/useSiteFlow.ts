@@ -35,9 +35,6 @@ type WidgetResultLoader = typeof loadWidgetResult;
 type WidgetResult = Awaited<ReturnType<typeof loadWidgetResult>>;
 
 type UseSiteFlowParams = {
-const cloneChartSpec = (spec: ChartSpec): ChartSpec =>
-  JSON.parse(JSON.stringify(spec)) as ChartSpec;
-
   manifest: DashboardManifest | null;
   orgId: string | undefined;
   viewToken: string | null;
@@ -133,7 +130,7 @@ export const useSiteFlow = ({
     if (isValidSiteFlowTimeframe(demoSiteFlowTimeframeRef.current)) {
       hasUserSetSiteFlowTimeframe.current = true;
     }
-    const spec = cloneChartSpec(siteFlowWidget.inlineSpec as ChartSpec);
+    const spec: ChartSpec = JSON.parse(JSON.stringify(siteFlowWidget.inlineSpec));
     if (isSnapshotMode && !hasUserSetSiteFlowTimeframe.current) {
       setSiteFlowTimeframe("today");
     }
