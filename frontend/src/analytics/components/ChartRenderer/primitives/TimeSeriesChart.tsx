@@ -220,6 +220,7 @@ export const TimeSeriesChart = ({
             <span className="analytics-brush-caption">Start</span>
             <span className="analytics-brush-value analytics-brush-value--full">
               {" "}
+        siteFlowActivity={isSiteFlowActivity}
               {startLabel}{" "}
             </span>
             <span className="analytics-brush-value analytics-brush-value--compact">

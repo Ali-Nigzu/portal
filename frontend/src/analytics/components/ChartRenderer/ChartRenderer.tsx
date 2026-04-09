@@ -125,8 +125,12 @@ export const ChartRenderer = ({
     typeof summaryRecord?.siteFlowTimeframe === "string"
       ? (summaryRecord.siteFlowTimeframe as string)
       : undefined;
+  const summaryTitleNormalized = summaryTitle?.toLowerCase().trim();
   const isSiteFlowActivity =
-    widgetId === "live-flow" || widgetId === "site-flow";
+    widgetId === "live-flow" ||
+    widgetId === "site-flow" ||
+    widgetId === "dashboard.site_flow.activity" ||
+    summaryTitleNormalized === "site flow";
   const chartProps = {
     result,
     series: decoratedSeries,
@@ -147,7 +151,6 @@ export const ChartRenderer = ({
   const chartSubType =
     summary?.chartSubType ||
     (result as unknown as { chartSubType?: string }).chartSubType;
-  const summaryTitleNormalized = summaryTitle?.toLowerCase().trim();
   const isVrmTrafficByTitle =
     summary?.presentation === "vrm" &&
     summaryTitleNormalized === "traffic by camera";

@@ -47,15 +47,15 @@ export const ChartTooltip = ({
     const entranceColor =
       entrancesEntry?.color ??
       seriesMap.get("entrances")?.color ??
-      "var(--vrm-color-accent-entrances, #47c96f)";
+      "#47c96f";
     const exitColor =
       exitsEntry?.color ??
       seriesMap.get("exits")?.color ??
-      "var(--vrm-color-accent-exits, #ff5964)";
+      "#ff5964";
     const occupancyColor =
       occupancyEntry?.color ??
       seriesMap.get("occupancy")?.color ??
-      "var(--vrm-color-accent-occupancy, #2685ff)";
+      "#2685ff";
     const rows: Array<JSX.Element> = [];
     if (entrancesEntry) {
       rows.push(

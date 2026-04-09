@@ -5,12 +5,14 @@ interface SeriesLegendProps {
   visibility: SeriesVisibilityMap;
   onToggleSeries?: (seriesId: string) => void;
   hideInactive?: boolean;
+  siteFlowActivity?: boolean;
 }
 export const SeriesLegend = ({
   series,
   visibility,
   onToggleSeries,
   hideInactive = false,
+  siteFlowActivity = false,
 }: SeriesLegendProps) => {
   if (!onToggleSeries) {
     return null;
@@ -29,6 +31,15 @@ export const SeriesLegend = ({
       {" "}
       {visibleSeries.map((item) => {
         const active = visibility[item.id] ?? true;
+        const swatchColor = item.color ?? "#2685ff";
+        const itemStyle = siteFlowActivity
+          ? {
+              borderColor: active ? swatchColor : "var(--line-default)",
+              background: active
+                ? `color-mix(in srgb, ${swatchColor} 18%, transparent)`
+                : undefined,
+            }
+          : undefined;
         return (
           <button
             key={item.id}
@@ -37,12 +48,12 @@ export const SeriesLegend = ({
             onClick={() => onToggleSeries(item.id)}
             aria-pressed={active}
             title={active ? "Hide series" : "Show series"}
+            style={itemStyle}
           >
             <span
               className="legend-swatch"
               style={{
-                backgroundColor:
-                  item.color ?? "var(--vrm-color-accent-occupancy, #9b7420)",
+                backgroundColor: swatchColor,
               }}
             />
             <span className="legend-label">{item.label ?? item.id}</span>
