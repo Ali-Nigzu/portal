@@ -100,13 +100,17 @@ export const TrafficDistribution = ({
           : 0;
     const numericValue = Number(rawValue);
     const value = Number.isFinite(numericValue) ? numericValue : 0;
+    const pointColor =
+      typeof (point as unknown as Record<string, unknown>).color === "string"
+        ? ((point as unknown as Record<string, unknown>).color as string)
+        : null;
     const label = useRawLabels || labelKey ? rawLabel : `Cam ${cameraId}`;
     const cleanCamId = normalizedCameraId.replace(/^\D+/, "");
     return {
       label,
       camId: useRawLabels || labelKey ? rawLabel : cleanCamId || cameraId,
       value,
-      color: palette[index % palette.length],
+      color: pointColor ?? palette[index % palette.length],
     };
   });
 

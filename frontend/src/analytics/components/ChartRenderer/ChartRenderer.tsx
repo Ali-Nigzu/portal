@@ -12,13 +12,8 @@ import {
 import { ChartErrorState } from "./ui/ChartErrorState";
 import { ChartEmptyState } from "./ui/ChartEmptyState";
 import { validateChartResult } from "./validation";
+import { SITE_FLOW_ACTIVITY_COLORS } from "../../../lib/siteFlowActivityColors";
 import "./styles.css";
-
-const SITE_FLOW_ACTIVITY_COLORS: Record<string, string> = {
-  entrances: "#47c96f",
-  exits: "#ff5964",
-  occupancy: "#2685ff",
-};
 export interface ChartRendererProps {
   result: ChartResult;
   height?: number;
@@ -156,6 +151,7 @@ export const ChartRenderer = ({
     tooltipVariant: isSiteFlowActivity ? "site_flow_activity" : undefined,
     siteFlowTimeframe,
     hideInactiveLegend: false,
+    siteFlowActivity: isSiteFlowActivity,
   };
   const chartStyle =
     summary?.chartStyle ||

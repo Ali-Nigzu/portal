@@ -130,7 +130,6 @@ export const useSiteFlow = ({
     if (isValidSiteFlowTimeframe(demoSiteFlowTimeframeRef.current)) {
       hasUserSetSiteFlowTimeframe.current = true;
     }
-    const spec: ChartSpec = JSON.parse(JSON.stringify(siteFlowWidget.inlineSpec));
     if (isSnapshotMode && !hasUserSetSiteFlowTimeframe.current) {
       setSiteFlowTimeframe("today");
     }
@@ -164,10 +163,7 @@ export const useSiteFlow = ({
       });
       return () => controller.abort();
     }
-          widget.chartSpecId === "dashboard.live_flow" ||
-            widget.chartSpecId === "dashboard.site_flow.activity"
-            ? "live-flow"
-            : widget.id;
+    const spec = JSON.parse(
       JSON.stringify(siteFlowWidget.inlineSpec),
     ) as ChartSpec;
     spec.timeWindow = {
@@ -203,7 +199,10 @@ export const useSiteFlow = ({
           ? sanitizeChartResultForAuthenticated(result)
           : result;
         const siteFlowDecoratorId =
-          widget.chartSpecId === "dashboard.live_flow" ? "live-flow" : widget.id;
+          widget.chartSpecId === "dashboard.live_flow" ||
+            widget.chartSpecId === "dashboard.site_flow.activity"
+            ? "live-flow"
+            : widget.id;
         const decorated = decorateResult(
           siteFlowDecoratorId,
           normalizedResult,

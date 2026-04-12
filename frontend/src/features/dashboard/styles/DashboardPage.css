@@ -146,6 +146,12 @@
   gap: var(--vrm-spacing-4);
 }
 
+.site-flow-demographics .site-flow-demographics__chart.traffic-distribution.kpi-tile {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
 .site-flow-card__controls {
   display: flex;
   flex-wrap: wrap;
