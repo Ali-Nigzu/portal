@@ -31,6 +31,7 @@ export const TimeSeriesChart = ({
   siteFlowTimeframe,
   result,
   hideInactiveLegend,
+  siteFlowActivity = false,
 }: ChartPrimitiveProps) => {
   const dataset = useMemo(() => buildCartesianDataset(series), [series]);
   const [brushRange, setBrushRange] = useState({ startIndex: 0, endIndex: 0 });
@@ -70,6 +71,7 @@ export const TimeSeriesChart = ({
         <ComposedChart
           data={dataset.data}
           margin={{ top: 16, right: 24, left: 0, bottom: 8 }}
+          accessibilityLayer={!isSiteFlowActivity}
         >
           <XAxis
             dataKey="x"
@@ -218,32 +220,29 @@ export const TimeSeriesChart = ({
           <div className="analytics-brush-label">
             <span className="analytics-brush-caption">Start</span>
             <span className="analytics-brush-value analytics-brush-value--full">
-              {" "}
-              {startLabel}{" "}
+              {startLabel}
             </span>
             <span className="analytics-brush-value analytics-brush-value--compact">
-              {" "}
-              {startLabelCompact}{" "}
+              {startLabelCompact}
             </span>
           </div>
           <div className="analytics-brush-label analytics-brush-label--end">
             <span className="analytics-brush-caption">End</span>
             <span className="analytics-brush-value analytics-brush-value--full">
-              {" "}
-              {endLabel}{" "}
+              {endLabel}
             </span>
             <span className="analytics-brush-value analytics-brush-value--compact">
-              {" "}
-              {endLabelCompact}{" "}
+              {endLabelCompact}
             </span>
           </div>
         </div>
-      ) : null}{" "}
+      ) : null}
       <SeriesLegend
         series={series}
         visibility={visibility}
         onToggleSeries={onToggleSeries}
         hideInactive={hideInactiveLegend}
+        siteFlowActivity={siteFlowActivity}
       />
     </div>
   );

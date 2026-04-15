@@ -1,0 +1,14 @@
+.frame {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .frame {
+    gap: 16px;
+  }
+}

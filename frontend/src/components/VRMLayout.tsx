@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import { logout } from "../features/auth/transport/me";
 import {
   ArrowLeft,
   BarChart3,
@@ -9,6 +10,7 @@ import {
   ClipboardList,
   Cpu,
   FileBarChart2,
+  FileText,
   Home,
   LayoutDashboard,
   MapPin,
@@ -16,11 +18,11 @@ import {
   Settings,
   Shield,
   TrendingUp,
-  Upload,
+  LogOut,
 } from "lucide-react";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
-import camOSLogo from "../assets/brand/camOS-logo.png";
+import camOSLogo from "../assets/Untitled design (4).svg";
 import {
   SITE_OPTIONS,
   findSiteById,
@@ -36,13 +38,18 @@ import {
   SecondarySearch,
 } from "../common/components/navigation";
 import { NavIcon } from "../common/components/icons";
+import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
 
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
+  isAuthenticated?: boolean;
+  onLogout?: () => void;
   children?: React.ReactNode;
 }
 const VRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
+  isAuthenticated = false,
+  onLogout,
   children,
 }) => {
   // Sidebar state and refs
@@ -61,6 +68,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const pointerZoneRef = useRef(pointerZone);
   const [isTouchMode, setIsTouchMode] = useState(false);
   const [sitesIntentOpen, setSitesIntentOpen] = useState(false);
+  const [forcedSitesExpandOnceActive, setForcedSitesExpandOnceActive] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -78,11 +86,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     () => new URLSearchParams(location.search),
     [location.search],
   );
+  const isEmbedMode = searchParams.get("embed") === "1";
   const isSelectorOpen = searchParams.get("panel") === "sites";
+  const isForceExpandIntent = searchParams.get("expand_once") === "1";
+  const isSiteMenuForceExpandIntent =
+    searchParams.get("site_menu_expand_once") === "1";
   const activeSite = findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
+  const siteRoutePrefix = location.pathname.startsWith("/demo/") ? "/demo" : "/sites";
   const allSitesOption =
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
+  const selectorSiteOptions = isAuthenticated
+    ? []
+    : SITE_OPTIONS.filter((site) => site.id !== "all");
   const buildSearch = (overrides?: Record<string, string | undefined>) => {
     const params = new URLSearchParams(location.search);
     if (!overrides || !Object.prototype.hasOwnProperty.call(overrides, "panel")) {
@@ -105,9 +121,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     overrides?: Record<string, string | undefined>,
   ) => `${path}${buildSearch(overrides)}`;
   const openSitesSelector = () => {
+    const isCurrentPathSites = /^\/(?:sites|demo)(?:\/|$)/.test(location.pathname);
+    const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
     navigate(
       {
-        pathname: location.pathname,
+        pathname: isCurrentPathSites
+          ? location.pathname
+          : `${siteRoutePrefix}/${resolvedSiteId}/dashboard`,
         search: buildSearch({ panel: "sites" }),
       },
       { replace: isDemoSession },
@@ -163,22 +183,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const primaryNavigationItems = useMemo(
     () => [
       {
+        path: "/home",
         label: "Home",
         icon: <NavIcon icon={Home} />,
-        placeholder: true,
+        disabled: isDemoSession,
       },
       {
-        path: "/sites",
+        path: `${siteRoutePrefix}`,
         label: "Sites",
         icon: <NavIcon icon={MapPin} />,
       },
     ],
-    [],
+    [isDemoSession, siteRoutePrefix],
   );
   const clientNavigationItems = useMemo(
     () => [
       {
-        path: siteId ? `/sites/${siteId}/dashboard` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/dashboard` : undefined,
         label: "Dashboard",
         icon: <NavIcon icon={LayoutDashboard} />,
       },
@@ -197,27 +218,27 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         statusLabel: "Coming Soon",
       },
       {
-        path: siteId ? `/sites/${siteId}/event-logs` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/event-logs` : undefined,
         label: "Event Logs",
         icon: <NavIcon icon={ClipboardList} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/alarm-logs` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/alarm-logs` : undefined,
         label: "Alarm Logs",
         icon: <NavIcon icon={Bell} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/device-list` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/device-list` : undefined,
         label: "Device List",
         icon: <NavIcon icon={Cpu} />,
       },
       {
-        path: siteId ? `/sites/${siteId}/reports` : undefined,
+        path: siteId ? `${siteRoutePrefix}/${siteId}/reports` : undefined,
         label: "Reports",
         icon: <NavIcon icon={FileBarChart2} />,
       },
     ],
-    [siteId],
+    [siteId, siteRoutePrefix],
   );
   const adminNavigationItems = useMemo(
     () => [
@@ -241,31 +262,47 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isSiteSelection = isSelectorOpen;
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
+  const isHomeRoute = location.pathname === "/home";
+  const isDocumentsRoute =
+    location.pathname === "/documents" || location.pathname.startsWith("/documents/");
+  const isSitesRoute = /^\/(?:sites|demo)(?:\/|$)/.test(location.pathname);
+  const isSettingsRoute = location.pathname.startsWith("/settings");
+  const shouldRenderSecondaryPanel =
+    isSettingsRoute || (!isDocumentsRoute && (!isHomeRoute || isSelectorOpen));
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
+  const showLogout = isAuthenticated;
+  const handleLogoutClick = async () => {
+    await logout();
+    onLogout?.();
+    navigate("/login", { replace: true });
+  };
   const focusZone = isSecondaryFocused
     ? "SECONDARY"
     : isPrimaryFocused
       ? "PRIMARY"
       : "OUTSIDE";
+  const primarySitesIntentOpen = sitesIntentOpen;
+  const secondarySitesIntentOpen = sitesIntentOpen || isSelectorOpen;
   const shouldForceCollapse =
     !keepMenuExpanded &&
     pointerZone === "OUTSIDE" &&
     focusZone === "OUTSIDE" &&
-    !sitesIntentOpen;
+    !secondarySitesIntentOpen;
   const isPrimaryExpanded =
     keepMenuExpanded ||
     pointerZone === "PRIMARY" ||
     pointerZone === "SITES_ROW" ||
     focusZone === "PRIMARY" ||
-    sitesIntentOpen;
-  const isSecondaryExpanded =
-    !shouldForceCollapse &&
-    (keepMenuExpanded ||
-      pointerZone === "SITES_ROW" ||
-      pointerZone === "SECONDARY" ||
-      focusZone === "SECONDARY" ||
-      sitesIntentOpen);
+    primarySitesIntentOpen;
+  const isSecondaryExpanded = forcedSitesExpandOnceActive
+    ? true
+    : !shouldForceCollapse &&
+      (keepMenuExpanded ||
+        pointerZone === "SITES_ROW" ||
+        pointerZone === "SECONDARY" ||
+        focusZone === "SECONDARY" ||
+        secondarySitesIntentOpen);
   const toggleLabel = keepMenuExpanded ? "Collapse Sidebar" : "Keep Expanded";
   const toggleIcon = keepMenuExpanded ? (
     <NavIcon icon={ChevronLeft} className="vrm-nav-chevron" />
@@ -298,6 +335,104 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     const isFocused = secondaryPanel?.matches(":focus-within") ?? false;
     setIsSecondaryFocused(isFocused);
   }, [keepMenuExpanded, location.pathname, siteId]);
+  useEffect(() => {
+    if ((!isSelectorOpen && !forcedSitesExpandOnceActive) || typeof window === "undefined") {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      const isInsideSecondary =
+        Boolean(secondaryPanelRef.current) &&
+        secondaryPanelRef.current.contains(target);
+      const isInsideSitesToggle =
+        Boolean(sitesRowRef.current) && sitesRowRef.current.contains(target);
+      if (isInsideSecondary || isInsideSitesToggle) {
+        return;
+      }
+
+      if (forcedSitesExpandOnceActive) {
+        setForcedSitesExpandOnceActive(false);
+        return;
+      }
+
+      navigate(
+        {
+          pathname: location.pathname,
+          search: buildSearch({ panel: undefined }),
+        },
+        { replace: true },
+      );
+    };
+
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+    };
+  }, [
+    buildSearch,
+    forcedSitesExpandOnceActive,
+    isSelectorOpen,
+    location.pathname,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    if (!isSitesRoute) {
+      setForcedSitesExpandOnceActive(false);
+      return;
+    }
+
+    if (!isSelectorOpen || !isForceExpandIntent) {
+      return;
+    }
+
+    setForcedSitesExpandOnceActive(true);
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ panel: "sites", expand_once: undefined }),
+      },
+      { replace: true },
+    );
+  }, [
+    buildSearch,
+    isForceExpandIntent,
+    isSelectorOpen,
+    isSitesRoute,
+    location.pathname,
+    navigate,
+  ]);
+  useEffect(() => {
+    if (!isSitesRoute || isSelectorOpen) {
+      return;
+    }
+
+    if (!isSiteMenuForceExpandIntent) {
+      return;
+    }
+
+    setForcedSitesExpandOnceActive(true);
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildSearch({ site_menu_expand_once: undefined }),
+      },
+      { replace: true },
+    );
+  }, [
+    buildSearch,
+    isSelectorOpen,
+    isSiteMenuForceExpandIntent,
+    isSitesRoute,
+    location.pathname,
+    navigate,
+  ]);
   useEffect(() => {
     if (keepMenuExpanded || isTouchMode || typeof window === "undefined") {
       return;
@@ -412,6 +547,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       if (!keepMenuExpanded && outsideShell) {
         cancelSitesLeaveTimer();
         setSitesIntentOpen(false);
+        setForcedSitesExpandOnceActive(false);
         setPointerZone("OUTSIDE");
         setIsSecondaryFocused(false);
       }
@@ -512,6 +648,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       }
     }, 180);
   };
+
+  if (isEmbedMode) {
+    return (
+      <div className="vrm-layout vrm-layout--embed">
+        <main className="vrm-main vrm-main--embed">
+          <div className="vrm-content vrm-content--embed">{children || <Outlet />}</div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="vrm-layout">
       <div
@@ -534,6 +681,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           !keepMenuExpanded && isSecondaryExpanded
             ? "vrm-sidebar-shell--secondary-expanded"
             : ""
+        } ${
+          !shouldRenderSecondaryPanel ? "vrm-sidebar-shell--no-secondary" : ""
         }`}
         aria-label="Primary"
       >
@@ -551,11 +700,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               </div>
               <div className="vrm-brand-text">
                 <div className="vrm-brand-title">camOS</div>
-                <div className="vrm-brand-subrow">
-                  <span className="vrm-brand-badge" aria-label="Demo">
-                    DEMO
-                  </span>
-                </div>
+                {isDemoSession && (
+                  <div className="vrm-brand-subrow">
+                    <span className="vrm-brand-badge" aria-label="Demo">
+                      DEMO
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -566,27 +717,25 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 <NavRow
                   key={item.path ?? item.label}
                   to={
-                    item.path && item.path !== "/sites"
-                      ? getNavigationPath(item.path)
-                      : undefined
+                    item.disabled || !item.path || item.path === siteRoutePrefix
+                      ? undefined
+                      : getNavigationPath(item.path)
                   }
                   replace={Boolean(item.path) && isDemoSession}
-                  onClick={item.path === "/sites" ? handleSitesClick : undefined}
+                  onClick={item.disabled ? undefined : item.path === siteRoutePrefix ? handleSitesClick : undefined}
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
-                  className={
-                    item.placeholder ? "vrm-nav-row--placeholder" : undefined
-                  }
+                  disabled={item.disabled}
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
-                    item.path === "/sites" ? (
+                    item.path === siteRoutePrefix ? (
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
                   }
                 />
               );
-              if (item.path !== "/sites") {
+              if (item.path !== siteRoutePrefix) {
                 return navRow;
               }
               return (
@@ -602,10 +751,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               );
             })}
             <NavRow
-              leftIcon={<NavIcon icon={Upload} />}
-              label="Upload"
-              className="vrm-nav-row--placeholder"
-              ariaLabel={!isPrimaryExpanded ? "Upload" : undefined}
+              to={isAuthenticated ? getNavigationPath("/documents") : undefined}
+              leftIcon={<NavIcon icon={FileText} />}
+              label="Documents"
+              disabled={!isAuthenticated || isDemoSession}
+              className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
+              ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
             />
             <NavRow
               leftIcon={toggleIcon}
@@ -616,14 +767,26 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
             />
             <NavRow
+              to={isAuthenticated ? getNavigationPath("/settings/account") : undefined}
               leftIcon={<NavIcon icon={Settings} />}
               label="Settings"
-              className="vrm-nav-row--placeholder"
+              disabled={!isAuthenticated || isDemoSession}
+              className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
             />
+            {showLogout && (
+              <NavRow
+                onClick={handleLogoutClick}
+                leftIcon={<NavIcon icon={LogOut} />}
+                label="Logout"
+                className="vrm-nav-row--interactive"
+                ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+              />
+            )}
           </NavList>
         </nav>
-        <nav
+        {shouldRenderSecondaryPanel && (
+          <nav
           className="vrm-extended-panel"
           aria-label="Secondary"
           ref={secondaryPanelRef}
@@ -632,12 +795,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onPointerEnter={cancelSitesLeaveTimer}
           onPointerLeave={handleSitesRowLeave}
         >
+          {isSettingsRoute ? (
+            <SettingsSecondaryNav />
+          ) : (
+            <>
           <div className="vrm-secondary-header">
             <SecondarySearch />
             {!showSiteMenu && (
               <SecondaryPinnedRow
                 to={getNavigationPath(
-                  `/sites/${allSitesOption.id}/dashboard`,
+                  `${siteRoutePrefix}/${allSitesOption.id}/dashboard`,
                   { panel: undefined },
                 )}
                 replace={isDemoSession}
@@ -664,16 +831,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           </div>
           {!showSiteMenu && (
             <NavList className="vrm-secondary-list">
-              {SITE_OPTIONS.filter((site) => site.id !== "all").map((site) => {
+              {selectorSiteOptions.map((site) => {
                 const siteSubPath = (() => {
-                  const match = location.pathname.match(/^\/sites\/[^/]+(\/.*)?$/);
+                  const match = location.pathname.match(/^\/(?:sites|demo)\/[^/]+(\/.*)?$/);
                   const trailing = match?.[1];
                   if (!trailing || trailing === "/") {
                     return "/dashboard";
                   }
                   return trailing;
                 })();
-                const siteTargetPath = `/sites/${site.id}${siteSubPath}`;
+                const siteTargetPath = `${siteRoutePrefix}/${site.id}${siteSubPath}`;
                 const isActive =
                   isSiteSelection && site.id === selectedSiteForList;
                 return (
@@ -755,7 +922,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ))}
             </NavList>
           )}
-        </nav>
+            </>
+          )}
+          </nav>
+        )}
       </div>
       <main className="vrm-main">
         <div className="vrm-content">{children || <Outlet />}</div>

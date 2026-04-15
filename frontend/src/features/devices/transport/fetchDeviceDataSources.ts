@@ -10,6 +10,9 @@ export const fetchDeviceDataSources = async (
   credentials: Credentials,
   clientId: string,
 ): Promise<DataSource[]> => {
+  if (!credentials.username || !credentials.password) {
+    return [];
+  }
   const auth = btoa(`${credentials.username}:${credentials.password}`);
   const response = await fetch(
     `${API_BASE_URL}/api/admin/data-sources/${clientId}`,

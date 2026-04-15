@@ -6,8 +6,9 @@ import type {
   DashboardWidgetState,
 } from "../types";
 import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
-import { loadWidgetResult, isAbortError } from "../transport/loadWidgetResult";
+import { loadWidgetResult, isAbortError, type DashboardDataMode } from "../transport/loadWidgetResult";
 import { unpinDashboardWidget } from "../transport/mutateDashboardManifest";
+import { sanitizeChartResultForAuthenticated } from "../transport/loadEmptyWidgetResult";
 import { decorateResult } from "../utils/vrmDecorators";
 import { logError, logInfo } from "../../../common/utils/logger";
 import { VRM_KPI_IDS } from "../utils/applyVRMOverrides";
@@ -33,6 +34,7 @@ type UseDashboardWidgetsParams = {
   unpinWidget?: UnpinMutator;
   resolvedDashboardId: string;
   setManifest: (manifest: DashboardManifest | null) => void;
+  dataMode: DashboardDataMode;
 };
 
 type ChartWidgetsEntry = {
@@ -63,6 +65,7 @@ export const useDashboardWidgets = ({
   unpinWidget,
   resolvedDashboardId,
   setManifest,
+  dataMode,
 }: UseDashboardWidgetsParams): UseDashboardWidgetsResult => {
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
   const unpinWidgetImpl = unpinWidget ?? unpinDashboardWidget;
@@ -116,7 +119,6 @@ export const useDashboardWidgets = ({
           next[widget.id] = {
             widget,
             status: "loading",
-            result: prior?.result,
           };
         }
       });
@@ -134,13 +136,17 @@ export const useDashboardWidgets = ({
               timezone,
               orgId,
               viewToken,
+              dataMode,
             });
             if (controller.signal.aborted) {
               return;
             }
+            const normalizedResult = dataMode === "authenticated"
+              ? sanitizeChartResultForAuthenticated(result)
+              : result;
             const decorated = decorateResult(
               widget.id,
-              result,
+              normalizedResult,
               clientContextId,
             );
             setWidgetState((previous) => ({
@@ -220,6 +226,7 @@ export const useDashboardWidgets = ({
     orgId,
     viewToken,
     clientContextId,
+    dataMode,
   ]);
 
   const kpiWidgets = useMemo(() => {

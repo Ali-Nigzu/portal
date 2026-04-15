@@ -17,6 +17,29 @@ class LoginResponse(BaseModel):
     message: str
 
 
+class AuthUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: Optional[str] = None
+
+
+class CreateAccountRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    password: str
+
+
+class EmailLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthUserResponse(BaseModel):
+    user: AuthUser
+
+
 class CreateUserRequest(BaseModel):
     username: str
     password: str
@@ -46,6 +69,112 @@ class ViewTokenResponse(BaseModel):
     client_id: str
 
 
+class SignupStartResponse(BaseModel):
+    ok: bool
+    email: str
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+
+
+class SignupVerifyRequest(BaseModel):
+    email: str
+    code: str
+
+
+class SignupResendRequest(BaseModel):
+    email: str
+
+
+class SignupResendResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+    resendsRemaining: int
+
+
+class PasswordResetStartRequest(BaseModel):
+    email: str
+
+
+class PasswordResetStartResponse(BaseModel):
+    ok: bool
+    email: str
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+
+
+class PasswordResetResendRequest(BaseModel):
+    email: str
+
+
+class PasswordResetResendResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+    resendsRemaining: int
+
+
+class PasswordResetVerifyRequest(BaseModel):
+    email: str
+    code: str
+
+
+class PasswordResetVerifyResponse(BaseModel):
+    ok: bool
+    resetToken: str
+    resetExpiresInSeconds: int
+
+
+class PasswordResetSetPasswordRequest(BaseModel):
+    email: str
+    reset_token: str
+    password: str
+    confirm_password: str
+
+
+class PasswordResetSetPasswordResponse(BaseModel):
+    ok: bool
+
+
+
+
+class SettingsUnlockStartRequest(BaseModel):
+    current_password: str
+
+
+class SettingsUnlockStartResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+
+
+class SettingsUnlockVerifyRequest(BaseModel):
+    code: str
+
+
+class SettingsUnlockVerifyResponse(BaseModel):
+    ok: bool
+    unlockToken: str
+    unlockExpiresInSeconds: int
+
+
+class SettingsUnlockResendResponse(BaseModel):
+    ok: bool
+    expiresInSeconds: int
+    resendCooldownSeconds: int
+    resendsRemaining: int
+
+
+class UpdateMeRequest(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    password: Optional[str] = None
+    confirm_password: Optional[str] = None
+    unlock_token: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RegisterInterestRequest(BaseModel):
     name: str
     email: str
@@ -58,6 +187,10 @@ class RegisterInterestRequest(BaseModel):
 class RegisterInterestResponse(BaseModel):
     message: str
     submission_id: str
+
+
+class ContactResponse(BaseModel):
+    message: str
 
 
 class CreateAlarmRequest(BaseModel):

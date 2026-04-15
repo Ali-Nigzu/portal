@@ -16,6 +16,7 @@ import {
 } from "./utils/reportUtils";
 import { buildSiteFlowBucketLabels } from "../../lib/siteFlowBuckets";
 import { startOfYear } from "../../lib/timeWindows";
+import { isDemoSessionActive } from "../../lib/demoSession";
 interface ReportsPageProps {
   credentials?: Credentials;
   fetchSnapshotFn?: typeof fetchLatestSnapshot;
@@ -30,6 +31,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
   const [snapshot, setSnapshot] = useState<SnapshotResponse | null>(null);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloadBlockedMessage, setDownloadBlockedMessage] = useState<string | null>(null);
+  const isDemoMode = isDemoSessionActive();
   const fetchSnapshot = useCallback(async () => {
     try {
       setLoading(true);
@@ -47,6 +50,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
   useEffect(() => {
     fetchSnapshot();
   }, [fetchSnapshot]);
+
+  useEffect(() => {
+    if (downloadBlockedMessage && isDemoMode) {
+      setDownloadBlockedMessage(null);
+    }
+  }, [downloadBlockedMessage, isDemoMode]);
   const reportTemplates = [
     {
       id: "site-activity",
@@ -619,6 +628,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
     }
   };
   const handleGenerateReport = () => {
+    if (!isDemoMode) {
+      setDownloadBlockedMessage("No Sites Connected");
+      return;
+    }
+    setDownloadBlockedMessage(null);
     generatePDFReport();
   };
   return (
@@ -728,7 +742,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
             <div
               style={{
                 marginTop: "12px",
-                color: "var(--vrm-accent-red)",
+                color: "#8b3a2f",
                 fontSize: "12px",
               }}
             >
@@ -736,6 +750,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
               {snapshotError}{" "}
             </div>
           )}{" "}
+          {downloadBlockedMessage && (
+            <div
+              style={{
+                marginTop: "12px",
+                color: "var(--vrm-text-secondary)",
+                fontSize: "12px",
+              }}
+            >
+              {downloadBlockedMessage}
+            </div>
+          )}
         </div>
       </div>{" "}
       {}{" "}
@@ -753,8 +778,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                   padding: "20px",
                   backgroundColor:
                     reportType === template.id
-                      ? "rgba(33, 150, 243, 0.1)"
-                      : "var(--vrm-bg-tertiary)",
+                      ? "color-mix(in srgb, var(--signal-gold) 9%, var(--surface-elevated-strong))"
+                      : "color-mix(in srgb, var(--surface-panel) 82%, white 18%)",
                   borderRadius: "8px",
                   border: `1px solid ${reportType === template.id ? "var(--vrm-accent-blue)" : "var(--vrm-border)"}`,
                   transition: "all 0.2s ease",
@@ -767,7 +792,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                 onMouseEnter={(e) => {
                   if (reportType !== template.id) {
                     e.currentTarget.style.borderColor =
-                      "var(--vrm-accent-blue)";
+                      "color-mix(in srgb, var(--signal-gold) 46%, var(--line-default) 54%)";
                     e.currentTarget.style.transform = "translateY(-2px)";
                   }
                 }}

@@ -124,7 +124,9 @@ export const resolveDemographicsTimeWindowFromRange = (
   ...(timezone ? { timezone } : {}),
 });
 export const isSiteFlowWidget = (widget: DashboardWidget): boolean =>
-  widget.id === "live-flow" || widget.chartSpecId === "dashboard.live_flow";
+  widget.id === "live-flow" ||
+  widget.chartSpecId === "dashboard.live_flow" ||
+  widget.chartSpecId === "dashboard.site_flow.activity";
 export interface DemographicSlice {
   code: string | number | null;
   label: string;

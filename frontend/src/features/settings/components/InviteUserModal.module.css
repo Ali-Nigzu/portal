@@ -1,0 +1,25 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.modal {
+  width: min(560px, 92vw);
+}
+
+
+.select {
+  background: var(--vrm-surface-secondary);
+  color: var(--vrm-text-primary);
+  border-color: var(--vrm-border-subtle);
+}
+
+.select:focus {
+  outline: 1px solid var(--vrm-accent-blue);
+  outline-offset: 0;
+}

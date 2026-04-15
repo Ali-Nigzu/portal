@@ -110,6 +110,20 @@ export const consumeDemoSiteFlowTimeframeOverride = (): string | null => {
   return value;
 };
 
+export const getDemoSiteFlowTimeframe = (): string | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return window.sessionStorage.getItem(DEMO_SITEFLOW_TIMEFRAME_KEY);
+};
+
+export const setDemoSiteFlowTimeframe = (value: string): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(DEMO_SITEFLOW_TIMEFRAME_KEY, value);
+};
+
 export const consumeDemoSiteFlowModeOverride = (): string | null => {
   if (typeof window === "undefined") {
     return null;

@@ -21,3 +21,206 @@
 .demo-overlay-active .demo-overlay__content .vrm-main {
   min-height: 0;
 }
+
+:root {
+  --sys-bg-0: var(--vrm-color-surface-0);
+  --sys-bg-1: var(--vrm-bg-primary);
+  --sys-bg-2: var(--vrm-bg-panel);
+  --sys-line: color-mix(in srgb, var(--vrm-border) 75%, transparent);
+  --sys-line-soft: color-mix(in srgb, var(--vrm-border) 45%, transparent);
+  --sys-text-1: var(--vrm-text-primary);
+  --sys-text-2: var(--vrm-text-secondary);
+  --sys-text-3: var(--vrm-text-muted);
+  --sys-radius-sm: var(--vrm-radii-badge);
+  --sys-radius-md: var(--vrm-radii-card);
+  --sys-shadow-soft: var(--vrm-elevation-card);
+  --sys-shadow-card: var(--vrm-elevation-card);
+  --sys-accent: var(--vrm-color-accent-occupancy);
+}
+
+/* camOS ivory/silver/gold overhaul overrides */
+:root {
+  --cam-ivory-0: #f7f7f3;
+  --cam-ivory-1: #fbfbf8;
+  --cam-silver-0: #e8edf2;
+  --cam-silver-1: #d8dfe7;
+  --cam-silver-2: #c2cbd6;
+  --cam-graphite-0: #3f4854;
+  --cam-graphite-1: #2f3742;
+  --cam-gold-0: #9b7420;
+  --cam-gold-1: #7f5f18;
+
+  --surface-page: var(--cam-ivory-1);
+  --surface-canvas: var(--cam-ivory-0);
+  --surface-panel: var(--cam-silver-0);
+  --surface-elevated: #fdfefd;
+  --surface-elevated-strong: #ffffff;
+  --line-default: var(--cam-silver-2);
+  --line-soft: rgba(118, 130, 146, 0.24);
+  --text-strong: #16181b;
+  --text-default: #39414a;
+  --text-muted: #5e6876;
+  --signal-gold: var(--cam-gold-0);
+  --signal-gold-strong: var(--cam-gold-1);
+  --landing-gold: #eccf82;
+  --landing-gold-strong: #ddb55a;
+  --cta-create-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--landing-gold) 86%, #f9e8bd 14%),
+    color-mix(in srgb, var(--landing-gold-strong) 84%, #e8c774 16%)
+  );
+  --cta-create-bg-hover: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--landing-gold) 78%, #f9ebc8 22%),
+    color-mix(in srgb, var(--landing-gold-strong) 82%, #e3c16a 18%)
+  );
+  --cta-create-text: color-mix(in srgb, #44340f 84%, #000 16%);
+  --cta-secondary-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, #dce4ec 56%, white 44%),
+    color-mix(in srgb, #c5d0dc 64%, white 36%)
+  );
+  --cta-secondary-bg-hover: linear-gradient(
+    180deg,
+    color-mix(in srgb, #e2e9f0 62%, white 38%),
+    color-mix(in srgb, #cad4df 68%, white 32%)
+  );
+  --cta-secondary-text: color-mix(in srgb, #1e2732 88%, #000 12%);
+
+  --chart-signal: var(--signal-gold);
+  --chart-series-2: #58626e;
+  --chart-series-3: #66707d;
+  --chart-series-4: #4a5460;
+  --chart-series-5: #727c89;
+  --chart-series-6: #515b67;
+  --chart-series-7: #7b8693;
+  --chart-series-8: #616b78;
+  --chart-series-9: #8892a0;
+  --chart-series-10: #6d7785;
+
+  --vrm-bg-primary: var(--surface-page);
+  --vrm-bg-secondary: var(--surface-panel);
+  --vrm-bg-tertiary: var(--cam-silver-1);
+  --vrm-bg-panel: var(--surface-panel);
+  --vrm-bg-panel-strong: var(--surface-elevated-strong);
+  --vrm-border: var(--line-default);
+  --vrm-border-subtle: var(--line-soft);
+  --vrm-surface-secondary: var(--surface-elevated);
+  --vrm-text-primary: var(--text-strong);
+  --vrm-text-secondary: var(--text-default);
+  --vrm-text-muted: var(--text-muted);
+  --vrm-color-focus: var(--signal-gold);
+  --vrm-accent-blue: var(--signal-gold);
+  --vrm-accent-teal: var(--cam-graphite-0);
+}
+
+body,
+.vrm-layout,
+.vrm-main,
+.vrm-content {
+  background: var(--surface-page);
+  color: var(--text-strong);
+}
+
+.vrm-sidebar-shell,
+.vrm-primary-rail,
+.vrm-extended-panel,
+.vrm-sidebar,
+.vrm-sidebar-header,
+.vrm-header,
+.vrm-toolbar,
+.vrm-card,
+.vrm-panel,
+.vrm-content-shell {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 93%, white 7%), var(--surface-panel));
+  border-color: var(--line-default);
+  color: var(--text-strong);
+}
+
+.vrm-card,
+.vrm-panel,
+.analytics-card,
+.dashboard-v2__chart-card {
+  background: var(--surface-elevated) !important;
+  border: 1px solid var(--line-soft) !important;
+  box-shadow: 0 8px 20px rgba(52, 61, 74, 0.09) !important;
+}
+
+.vrm-btn,
+.vrm-btn-secondary,
+.vrm-btn-sm,
+.vrm-input,
+.vrm-select,
+.vrm-textarea {
+  background: var(--surface-elevated-strong);
+  color: var(--text-strong);
+  border: 1px solid var(--line-soft);
+}
+
+.vrm-btn {
+  border: none;
+  border-radius: var(--sys-radius-sm);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+.vrm-btn-primary {
+  color: var(--cta-create-text) !important;
+  background: var(--cta-create-bg) !important;
+  border: none !important;
+  box-shadow: 0 3px 10px rgba(62, 56, 34, 0.17), 0 1px 1px rgba(62, 56, 34, 0.08),
+    inset 0 8px 14px rgba(255, 246, 221, 0.22) !important;
+}
+
+.vrm-btn-primary:hover,
+.vrm-btn-primary:focus-visible {
+  background: var(--cta-create-bg-hover) !important;
+  border: none !important;
+  box-shadow: 0 5px 13px rgba(62, 56, 34, 0.2), 0 1px 1px rgba(62, 56, 34, 0.1),
+    inset 0 9px 16px rgba(255, 248, 228, 0.24) !important;
+}
+
+.vrm-btn-secondary {
+  color: var(--cta-secondary-text) !important;
+  border: none !important;
+  background: var(--cta-secondary-bg) !important;
+  box-shadow: 0 3px 9px rgba(52, 61, 74, 0.12), 0 1px 1px rgba(52, 61, 74, 0.08),
+    inset 0 8px 12px rgba(255, 255, 255, 0.28) !important;
+}
+
+.vrm-btn-secondary:hover,
+.vrm-btn-secondary:focus-visible {
+  background: var(--cta-secondary-bg-hover) !important;
+  border: none !important;
+  box-shadow: 0 5px 14px rgba(52, 61, 74, 0.16), 0 1px 1px rgba(52, 61, 74, 0.1),
+    inset 0 9px 14px rgba(255, 255, 255, 0.3) !important;
+}
+
+.vrm-btn:disabled,
+.vrm-btn-primary:disabled,
+.vrm-btn-secondary:disabled,
+.vrm-btn-sm:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  border: none !important;
+  background: color-mix(in srgb, var(--surface-panel) 65%, white 35%) !important;
+  box-shadow: none !important;
+  color: color-mix(in srgb, var(--text-muted) 82%, transparent) !important;
+}
+
+.vrm-nav-item.active,
+.vrm-status-chip--active,
+.vrm-select:focus,
+.vrm-input:focus,
+.vrm-textarea:focus {
+  border-color: var(--signal-gold) !important;
+  color: var(--text-strong) !important;
+}
+
+.vrm-btn:not(.vrm-btn-primary):not(.vrm-btn-secondary):hover,
+.vrm-nav-item:hover {
+  background: color-mix(in srgb, var(--surface-panel) 70%, white 30%);
+}
+
+.vrm-status-warning { color: #735720; }
+.vrm-status-offline { color: #7a3030; }
+.vrm-status-online { color: #45505f; }

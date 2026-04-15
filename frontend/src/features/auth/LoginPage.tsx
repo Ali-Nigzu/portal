@@ -1,99 +1,182 @@
-import React from "react";
-
-import { companyLogoDataUri } from "../../assets/companyLogo";
-import { Credentials } from "../../types/credentials";
+import React, { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import AuthTopBar from "../../components/auth/AuthTopBar";
+import camOSLogo from "../../assets/Untitled design (4).svg";
+import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import { useLoginForm } from "./hooks/useLoginForm";
+import { passwordResetStart } from "./transport/passwordResetStart";
+import "./LoginPage.css";
 
 interface LoginPageProps {
-  onLogin: (credentials: Credentials) => void;
+  onLogin: () => void;
 }
 
+type LoginStep = "email" | "password";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+  const isPhoneLayout = useIsPhoneLayout();
+  const navigate = useNavigate();
   const {
-    username,
+    email,
     password,
     error,
     loading,
-    setUsername,
+    setEmail,
     setPassword,
     handleSubmit,
   } = useLoginForm(onLogin);
 
+  const [step, setStep] = useState<LoginStep>("email");
+  const [emailStepError, setEmailStepError] = useState<string | null>(null);
+  const [staySignedIn, setStaySignedIn] = useState(true);
+
+  const emailValid = useMemo(() => EMAIL_RE.test(email.trim().toLowerCase()), [email]);
+
+  const onPrimaryAction = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (step === "email") {
+      if (!email.trim()) {
+        setEmailStepError("This field is required");
+        return;
+      }
+      if (!emailValid) {
+        setEmailStepError("Not a valid email address");
+        return;
+      }
+      setEmailStepError(null);
+      setStep("password");
+      return;
+    }
+
+    await handleSubmit(event);
+  };
+
+  const handleResetPasswordClick: React.MouseEventHandler<HTMLAnchorElement> = async (event) => {
+    event.preventDefault();
+    if (!email.trim()) {
+      setEmailStepError("Enter your email before resetting your password");
+      if (step !== "email") {
+        setStep("email");
+      }
+      return;
+    }
+    if (!emailValid) {
+      setEmailStepError("Not a valid email address");
+      if (step !== "email") {
+        setStep("email");
+      }
+      return;
+    }
+    try {
+      await passwordResetStart(email.trim().toLowerCase());
+      navigate(`/reset-password/code?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+    } catch (resetError) {
+      setEmailStepError(resetError instanceof Error ? resetError.message : "Unable to start password reset.");
+    }
+  };
+
   return (
-    <div className="vrm-auth-shell">
-      <div
-        className="vrm-auth-card"
-        role="dialog"
-        aria-labelledby="camOS-login-title"
-      >
-        <div>
-          <div className="vrm-auth-logo">
-            <img src={companyLogoDataUri} alt="Company Logo" />
+    <div className="login-page">
+      {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
+
+      <div className="login-shell">
+        <section className="login-left-pane" aria-label="Login form panel">
+          <div className="login-content">
+            <h1 className="login-hero">Welcome Back</h1>
+
+            <form className="login-form" onSubmit={onPrimaryAction}>
+              <div className="vrm-field login-field">
+                <label className="vrm-label" htmlFor="login-email">Email</label>
+                <input
+                  id="login-email"
+                  className="vrm-input"
+                  type="email"
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    if (emailStepError) {
+                      setEmailStepError(null);
+                    }
+                  }}
+                  placeholder="Enter email"
+                  autoComplete="email"
+                  aria-invalid={Boolean(emailStepError)}
+                  aria-describedby={emailStepError ? "login-email-error" : undefined}
+                />
+                <div className="login-error-slot" aria-live="polite">
+                  {emailStepError && <div id="login-email-error" className="login-error">{emailStepError}</div>}
+                </div>
+              </div>
+
+              {step === "password" && (
+                <div className="vrm-field login-field">
+                  <label className="vrm-label" htmlFor="login-password">Password</label>
+                  <input
+                    id="login-password"
+                    className="vrm-input"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Enter password"
+                    autoComplete="current-password"
+                  />
+                </div>
+              )}
+
+              {error && step === "password" && (
+                <div className="vrm-status vrm-status-warning login-request-error" role="alert" aria-live="assertive">
+                  {error}
+                </div>
+              )}
+
+              <div className="login-actions">
+                <button type="submit" className="vrm-btn vrm-btn-primary login-submit" disabled={loading}>
+                  {step === "email" ? "Continue" : loading ? "Signing in…" : "Login"}
+                </button>
+              </div>
+
+              <div className="login-under-cta">
+                <label className="login-utility-row login-checkbox-row" htmlFor="login-stay-signed-in">
+                  <input
+                    id="login-stay-signed-in"
+                    type="checkbox"
+                    checked={staySignedIn}
+                    onChange={(event) => setStaySignedIn(event.target.checked)}
+                  />
+                  <span>Stay signed-in</span>
+                </label>
+
+                <p className="login-utility-row login-muted-row">
+                  Don’t have an account yet? <Link to="/create-account" className="login-inline-link">Sign up</Link>
+                </p>
+
+                {step === "password" && (
+                  <p className="login-utility-row login-muted-row">
+                    Forgot your password? <a href="#" onClick={handleResetPasswordClick} className="login-inline-link">Reset password</a>
+                  </p>
+                )}
+              </div>
+            </form>
           </div>
-          <h2 id="camOS-login-title" className="vrm-auth-title">
-            camOS
-          </h2>
-          <p className="vrm-auth-subtitle">Sign in to monitor your sites</p>
-        </div>
-        <form onSubmit={handleSubmit} className="vrm-auth-form">
-          <div className="vrm-field">
-            <label className="vrm-label" htmlFor="login-username">
-              Username
-            </label>
-            <input
-              id="login-username"
-              className="vrm-input"
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Enter username"
-              autoComplete="username"
-              required
-            />
-          </div>
-          <div className="vrm-field">
-            <label className="vrm-label" htmlFor="login-password">
-              Password
-            </label>
-            <input
-              id="login-password"
-              className="vrm-input"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Enter password"
-              autoComplete="current-password"
-              required
-            />
-          </div>
-          {error && (
-            <div
-              className="vrm-status vrm-status-warning vrm-auth-error"
-              role="alert"
-              aria-live="assertive"
-            >
-              {error}
-            </div>
-          )}
-          <div className="vrm-auth-actions">
-            <button
-              type="submit"
-              className="vrm-btn vrm-btn-primary"
-              style={{ width: "100%" }}
-              disabled={loading}
-            >
-              {loading ? "Signing in…" : "Login"}
-            </button>
-          </div>
-        </form>
-        <div className="vrm-auth-hint">
-          <strong>Demo credentials</strong>
-          <br />
-          Client: client1 / client123
-          <br />
-          Admin: admin / admin123
-        </div>
+        </section>
+
+        <aside className="login-right-pane" aria-label="System visual placeholder">
+          <img
+            src={camOSLogo}
+            alt=""
+            aria-hidden="true"
+            focusable="false"
+            className="auth-right-pane-overlay"
+          />
+        </aside>
       </div>
+
+      {isPhoneLayout ? <AuthBottomNav /> : null}
     </div>
   );
 };

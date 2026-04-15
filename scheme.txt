@@ -1,0 +1,1024 @@
+{
+  ts: TIMESTAMP,
+
+  entrances_96: [96],
+  occupancy_96: [96],
+  exits_96: [96],
+  footfall_96: [96],
+  dwell_time_96: [96],
+
+  traffic_split: [X],
+  capacity: [2],
+
+  today: {
+    entrances: [24],
+    occupancy: [24] * 3 [Avg,Min,Max],
+    exits: [24],
+    age_pct: [6],
+    sex_pct: [2],
+    race_pct: [3]
+  },
+
+  yesterday: {
+    entrances: [24],
+    occupancy: [24] * 3 [Avg,Min,Max],
+    exits: [24],
+    age_pct: [6],
+    sex_pct: [2],
+    race_pct: [3]
+  },
+
+  week: {
+    entrances: [7],
+    occupancy: [7] * 3 [Avg,Min,Max],
+    exits: [7],
+    age_pct: [6],
+    sex_pct: [2],
+    race_pct: [3]
+  },
+
+  month: {
+    entrances: [4],
+    occupancy: [4] * 3 [Avg,Min,Max],
+    exits: [4],
+    age_pct: [6],
+    sex_pct: [2],
+    race_pct: [3]
+  },
+
+  quarter: {
+    entrances: [12],
+    occupancy: [12] * 3 [Avg,Min,Max],
+    exits: [12],
+    age_pct: [6],
+    sex_pct: [2],
+    race_pct: [3]
+  },
+
+  year: {
+    entrances: [12],
+    occupancy: [12] * 3 [Avg,Min,Max],
+    exits: [12],
+    age_pct: [6],
+    sex_pct: [2],
+    race_pct: [3]
+  },
+
+  all_time: {
+    entrances: [Y],
+    occupancy: [Y] * 3 [Avg,Min,Max],
+    exits: [Y],
+    age_pct: [6],
+    sex_pct: [2],
+    race_pct: [3]
+  }
+}
+
+Below is a deep technical brief that explains both the **raw logs** and the **snapshot** formats, how they relate, how each field should be interpreted, and what must stay true if anyone changes the dataset or generation scripts later.
+
+---
+
+# Technical Brief: Raw Logs and Snapshot Data Model
+
+This brief explains the full data model used for the demo analytics system.
+
+It covers:
+
+* what the raw logs represent
+* what the snapshots represent
+* how snapshots are derived from raw logs
+* what every field means
+* ordering rules
+* aggregation rules
+* occupancy and dwell semantics
+* demographic percentage semantics
+* single-site vs combined-site behavior
+* what must remain invariant if the system is modified later
+
+The goal is that someone reading this can safely modify or regenerate the dataset in future without misunderstanding the structure.
+
+---
+
+# 1. Conceptual model
+
+There are two layers of data:
+
+## A. Raw logs
+
+These are the low-level event records.
+
+Each row is one event observed by the system:
+
+* an entrance event
+* or an exit event
+
+Raw logs are the source of truth.
+
+They represent the finest-grained analytics input.
+
+## B. Snapshots
+
+These are precomputed dashboard payloads.
+
+Each snapshot row is keyed by a timestamp `ts` and contains all the rolled-up metrics the dashboard needs at that exact minute.
+
+A snapshot is not a raw event.
+It is a computed state of the dashboard at one moment in time.
+
+The dashboard reads:
+
+* one snapshot row at a time
+
+That is why snapshots are precomputed and compact.
+
+---
+
+# 2. Raw logs structure
+
+## Raw logs schema
+
+Each raw log row uses this schema:
+
+```text id="30693"
+site_id
+cam_id
+track_id
+event
+timestamp
+sex
+age_bucket
+race
+```
+
+### `site_id`
+
+Integer.
+
+Represents which site/business the event belongs to.
+
+Examples:
+
+* `0` = Ali’s Barber
+* `1` = Toki’s Takeout
+
+In single-site datasets:
+
+* only one site_id appears
+
+In combined datasets:
+
+* multiple site_ids appear
+
+### `cam_id`
+
+Integer.
+
+Represents which camera observed the event.
+
+This is local event-source identity, not a dashboard rollup period.
+
+For example:
+
+* in the barber dataset, you may have only cams `0` and `1`
+* in the takeout dataset, you may have `0`, `1`, and `2`
+
+### `track_id`
+
+String.
+
+An identifier attached to the event row.
+
+Important:
+
+* the snapshot-generation logic does **not** use `track_id` to calculate occupancy, dwell, rollups, or demographics
+* it is preserved in the logs for traceability and direct lookup
+* duplicate track_ids are acceptable in combined logs as long as the generation logic is not using them for pairing
+
+In the current pipeline:
+
+* `track_id` is not used in snapshot math
+
+### `event`
+
+Integer.
+
+Encodes the event type:
+
+* `1` = entrance
+* `0` = exit
+
+### `timestamp`
+
+Timestamp string in canonical UTC text form, for example:
+
+```text id="72450"
+2024-08-11 17:46:15 UTC
+```
+
+This is the event time.
+
+Raw logs are ordered by timestamp for processing.
+
+### `sex`
+
+Integer.
+
+Encodes demographic sex:
+
+* `0` = male
+* `1` = female
+
+### `age_bucket`
+
+Integer.
+
+Encodes age band:
+
+* `0` = 0–4
+* `1` = 5–13
+* `2` = 14–25
+* `3` = 26–45
+* `4` = 46–65
+* `5` = 66+
+
+### `race`
+
+Integer.
+
+Encodes race bucket:
+
+* `0` = light
+* `1` = mixed
+* `2` = dark
+
+---
+
+# 3. What one raw log row means
+
+A raw log row is a single observed entrance or exit.
+
+Examples:
+
+## Entrance row
+
+```text id="43624"
+site_id=0
+cam_id=0
+track_id=ABC123
+event=1
+timestamp=2025-10-27 13:28:21 UTC
+sex=1
+age_bucket=5
+race=0
+```
+
+This means:
+
+* site 0
+* cam 0
+* entrance event
+* at that timestamp
+* attributed demographic values attached to the event
+
+## Exit row
+
+```text id="12089"
+site_id=0
+cam_id=1
+track_id=NA
+event=0
+timestamp=2025-10-27 14:15:02 UTC
+sex=1
+age_bucket=5
+race=0
+```
+
+This means:
+
+* site 0
+* cam 1
+* exit event
+* same demographic-type encoding attached
+
+Important:
+
+* snapshot generation does not require entrance and exit rows to share `track_id`
+* occupancy/dwell are derived by FIFO ordering logic, not by track_id equality
+
+---
+
+# 4. How snapshots relate to raw logs
+
+A snapshot row is keyed by a minute timestamp `ts`.
+
+For a given snapshot timestamp:
+
+[
+use\ only\ raw\ log\ rows\ where\ timestamp < ts
+]
+
+That is the core rule.
+
+Everything inside a snapshot is computed relative to that `ts`.
+
+So a snapshot answers:
+
+> “If the dashboard were loaded at exactly this minute, what should every chart, card, rollup, percentage, and split show based on all data up to this point?”
+
+---
+
+# 5. Snapshot storage format
+
+Snapshots are stored in a SQLite DB.
+
+The DB contains one main table:
+
+```sql id="65696"
+CREATE TABLE snapshots (
+    ts TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+) WITHOUT ROWID;
+```
+
+## Meaning
+
+### `ts`
+
+The snapshot key.
+
+This is the exact minute timestamp for the dashboard state.
+
+### `payload`
+
+A compact minified JSON array.
+
+The payload is positional to reduce storage overhead and read-time parsing overhead.
+
+The key idea:
+
+* `ts` is the lookup key
+* `payload` contains the dashboard state body
+
+The payload does **not** repeat field names inside every row.
+
+That is intentional for speed and compactness.
+
+---
+
+# 6. Top-level snapshot payload structure
+
+The payload is a positional array with 14 slots:
+
+```text id="36960"
+0  = entrances_96
+1  = occupancy_96
+2  = exits_96
+3  = footfall_96
+4  = dwell_time_96
+5  = traffic_split
+6  = capacity
+7  = today
+8  = yesterday
+9  = week
+10 = month
+11 = quarter
+12 = year
+13 = all_time
+```
+
+---
+
+# 7. Meaning of top-level snapshot fields
+
+## `entrances_96`
+
+Length 96.
+
+Represents the trailing 24 hours split into 96 buckets of 15 minutes each.
+
+Ordered:
+
+* oldest bucket first
+* newest bucket last
+
+So:
+
+* `entrances_96[0]` = oldest trailing 15-minute bucket
+* `entrances_96[-1]` = latest trailing 15-minute bucket before `ts`
+
+Mathematically, if the trailing 24 hours is:
+
+[
+[ts-24h,\ ts)
+]
+
+and bucket (B_i) is the i-th 15-minute segment in that window, then:
+
+[
+entrances_96[i] = #{entrance\ events\ in\ B_i}
+]
+
+## `exits_96`
+
+Same structure as `entrances_96`.
+
+[
+exits_96[i] = #{exit\ events\ in\ B_i}
+]
+
+## `footfall_96`
+
+Length 96.
+
+For every bucket:
+
+[
+footfall_96[i] = entrances_96[i] + exits_96[i]
+]
+
+This invariant must always hold.
+
+## `dwell_time_96`
+
+Length 96.
+
+Represents integer average dwell time for visits whose **exit** occurred in that bucket.
+
+Dwell is derived using FIFO entrance→exit pairing, not track_id matching.
+
+If no paired exits occur in that bucket:
+
+[
+dwell_time_96[i] = 0
+]
+
+## `occupancy_96`
+
+Length 96.
+
+Represents active-time-only average occupancy in each trailing 15-minute bucket.
+
+This is critical.
+
+It does **not** average over dead empty time.
+
+Only time within the bucket where occupancy > 0 counts toward the average.
+
+If:
+
+* 5 minutes occupancy = 6
+* 10 minutes occupancy = 0
+
+then:
+
+[
+occupancy_96 = 6
+]
+
+not:
+
+[
+2
+]
+
+If no active occupancy occurs in the bucket:
+
+[
+occupancy_96[i] = 0
+]
+
+---
+
+# 8. `traffic_split`
+
+This field differs between single-site and combined-site snapshots.
+
+## Single-site mode
+
+Length 3.
+
+Represents the latest trailing 15-minute traffic split by camera:
+
+```text id="55020"
+[cam0_pct, cam1_pct, cam2_pct]
+```
+
+Even if a site only uses two cameras, length remains 3.
+Unused positions are allowed to be zero.
+
+## Combined mode
+
+Length 2.
+
+Represents the latest trailing 15-minute traffic split by site:
+
+```text id="15877"
+[site0_pct, site1_pct]
+```
+
+## Time basis
+
+This field is based only on the latest trailing 15-minute window:
+
+[
+[ts-15m,\ ts)
+]
+
+## Rules
+
+Values are:
+
+* whole integers
+* sum exactly to `100`
+* or are all zero if there was no traffic in that latest trailing 15-minute window
+
+So:
+
+* single-site: `[0,0,0]` or sum 100
+* combined: `[0,0]` or sum 100
+
+---
+
+# 9. `capacity`
+
+Length 2.
+
+```text id="59007"
+[current_capacity_pct, trailing_24h_peak_capacity_pct]
+```
+
+## First value: current capacity %
+
+Computed from current occupancy at `ts`:
+
+[
+current =
+100 \cdot \frac{occupancy(ts)}{MAX_CAPACITY}
+]
+
+rounded to an integer.
+
+## Second value: trailing-24h peak capacity %
+
+Computed from the highest occupancy seen in the trailing 24 hours:
+
+[
+peak =
+100 \cdot \frac{\max_{t \in [ts-24h,\ ts)} O(t)}{MAX_CAPACITY}
+]
+
+rounded to an integer.
+
+## Important
+
+If the wrong `MAX_CAPACITY` is used in generation or QA, all capacity checks will mismatch even if the rest of the snapshot is correct.
+
+That happened in testing and was resolved by using the correct capacity denominator.
+
+---
+
+# 10. Rollup structure
+
+The rollup sections are:
+
+* `today`
+* `yesterday`
+* `week`
+* `month`
+* `quarter`
+* `year`
+* `all_time`
+
+Each rollup is also a positional array:
+
+```text id="30634"
+0 = entrances
+1 = occupancy
+2 = exits
+3 = age_pct
+4 = sex_pct
+5 = race_pct
+```
+
+---
+
+# 11. Rollup field meanings
+
+## `entrances`
+
+Array of bucketed entrance counts.
+
+## `exits`
+
+Array of bucketed exit counts.
+
+## `occupancy`
+
+Array of bucketed occupancy triplets:
+
+```text id="95461"
+[avg, min, max]
+```
+
+These are active-time-only occupancy stats.
+
+That means:
+
+* only moments where occupancy > 0 are considered
+* dead empty time does not dilute the average
+* dead empty time does not force min to zero
+
+If a bucket had no active occupancy:
+
+```text id="80668"
+[0,0,0]
+```
+
+If a bucket had active occupancy:
+
+* `min > 0`
+* `min <= avg <= max`
+
+That invariant must always hold.
+
+## `age_pct`
+
+Length 6.
+
+Integer demographic percentages over the rollup period.
+
+Values must:
+
+* sum exactly to `100`
+* or be all zero
+
+## `sex_pct`
+
+Length 2.
+
+Same rule:
+
+* sum exactly to `100`
+* or be all zero
+
+## `race_pct`
+
+Length 3.
+
+Same rule:
+
+* sum exactly to `100`
+* or be all zero
+
+These represent pie-chart proportions.
+
+---
+
+# 12. Time basis for rollups
+
+## `today`
+
+24 hourly buckets for the current calendar day.
+
+The latest/current hour is partial/live up to `ts`.
+Future hours remain zero.
+
+The last array position is the latest hour bucket.
+
+## `yesterday`
+
+24 hourly buckets for the previous calendar day.
+
+Fully fixed once the day has passed.
+
+## `week`
+
+7 daily buckets.
+
+The latest/current day bucket is live up to `ts`.
+
+## `month`
+
+4 calendar week buckets.
+
+These are **calendar weeks Monday→Sunday**, not rolling 7-day windows.
+
+The latest/current week bucket is live up to `ts`.
+
+## `quarter`
+
+12 calendar week buckets.
+
+Also Monday→Sunday calendar weeks.
+
+The latest/current week bucket is live up to `ts`.
+
+## `year`
+
+12 calendar month buckets.
+
+Latest/current month bucket is live up to `ts`.
+
+## `all_time`
+
+Yearly buckets from the dataset start year through the current year.
+
+The latest/current year bucket is live up to `ts`.
+
+The number of buckets grows over time as years are added.
+
+---
+
+# 13. Array ordering rule
+
+This rule is fundamental and must not change:
+
+## All time-bucket arrays are ordered oldest → newest
+
+Therefore:
+
+* the **last position** is always the latest time-wise value
+
+Examples:
+
+* `entrances_96[-1]` = latest trailing 15-minute entrance count
+* `today[0][-1]` = latest today hour bucket
+* `week[0][-1]` = latest day in week rollup
+* `month[0][-1]` = latest calendar week in month rollup
+* `year[0][-1]` = latest month in year rollup
+* `all_time[0][-1]` = latest year in all_time rollup
+
+This ordering is assumed by the web app and by the QA logic.
+
+---
+
+# 14. Dwell calculation semantics
+
+Dwell is computed using FIFO.
+
+That means:
+
+* entrances are queued
+* exits consume the earliest unmatched entrance
+* pairing is not done by `track_id`
+
+## In single-site mode
+
+FIFO operates within the site’s event stream.
+
+## In combined mode
+
+FIFO is done per site to avoid cross-site pairing, then occupancy is aggregated across sites.
+
+This is important:
+
+* combined occupancy is total across sites
+* but entrance→exit pairing should not cross sites
+
+Dwell is then computed from paired visit durations.
+
+---
+
+# 15. Occupancy calculation semantics
+
+Occupancy is derived from entrance/exit flow over time.
+
+At any moment, occupancy is the count of currently active visits.
+
+## Active-time-only rule
+
+This is critical.
+
+When calculating occupancy averages or mins/maxes for a bucket:
+
+* only time where occupancy > 0 counts
+
+This prevents overnight or dead periods from diluting occupancy stats.
+
+That rule applies to:
+
+* `occupancy_96`
+* rollup occupancy triplets
+
+---
+
+# 16. Single-site vs combined-site behavior
+
+## Single-site mode
+
+Used for assets like:
+
+* `user0_logs.db`
+* `user0_snapshots.db`
+* `user1_logs.db`
+* `user1_snapshots.db`
+
+Behavior:
+
+* one site only
+* traffic split is by camera
+* `traffic_split` length = 3
+* occupancy/dwell/rollups all reflect that single site only
+
+## Combined mode
+
+Used for assets like:
+
+* `combined_logs.db`
+* `combined_logs_snapshots.db`
+
+Behavior:
+
+* both sites included
+* traffic split is by site
+* `traffic_split` length = 2
+* occupancy is aggregated across all sites
+* entrances/exits/footfall/dwell/demographics are aggregated across all sites
+* FIFO pairing is still kept per site before aggregate occupancy is built
+
+---
+
+# 17. Raw logs DB format
+
+The logs DB is row-based.
+
+It is not compact payload storage like snapshots.
+
+The DB contains one main table:
+
+```sql id="45664"
+CREATE TABLE logs (
+  site_id INTEGER NOT NULL,
+  cam_id INTEGER NOT NULL,
+  track_id TEXT NOT NULL,
+  event INTEGER NOT NULL,
+  timestamp TEXT NOT NULL,
+  sex INTEGER NOT NULL,
+  age_bucket INTEGER NOT NULL,
+  race INTEGER NOT NULL
+) STRICT;
+```
+
+Indexes may be added for:
+
+* timestamp
+* site + timestamp
+* site + cam + timestamp
+* demographics + timestamp
+* track_id
+
+The logs DB is intended for:
+
+* large chunk reads
+* filtering by time/site/cam/demographics/track
+
+The snapshot DB is intended for:
+
+* one exact minute lookup at a time
+
+These are different storage models for different access patterns.
+
+---
+
+# 18. Snapshot DB format
+
+Snapshots use:
+
+* one row per minute
+* one key (`ts`)
+* one payload blob
+
+This is because the web app only ever needs one exact snapshot row in a given load.
+
+That makes the compact snapshot DB the right runtime format.
+
+---
+
+# 19. QA expectations
+
+A correct dataset should pass three layers of QA:
+
+## A. Logs DB validation
+
+* schema correct
+* no blank required fields
+* timestamps parseable
+* category values valid
+
+## B. Snapshot structural validation
+
+* every payload has correct shape
+* correct array lengths
+* correct percentage-vector rules
+* correct occupancy triplet rules
+* `footfall_96[i] == entrances_96[i] + exits_96[i]`
+
+## C. Independent recomputation
+
+For sampled `ts` values:
+
+* recompute payload from raw logs
+* compare exact expected payload to stored snapshot payload
+
+If they match, the pipeline is internally consistent.
+
+This was done successfully for `user0` once the correct `MAX_CAPACITY` was used.
+
+---
+
+# 20. Critical invariants that must not be broken in future changes
+
+If anyone updates scripts later, these rules must remain true unless the whole dashboard contract is intentionally changed.
+
+## Raw logs invariants
+
+* required columns stay the same
+* timestamp stays canonical UTC text
+* event uses `1=entrance`, `0=exit`
+* sex/age/race encodings remain stable
+* no blank required fields
+
+## Snapshot invariants
+
+* snapshot uses only raw logs where `timestamp < ts`
+* top-level payload position order stays fixed
+* rollup inner position order stays fixed
+* latest array element is always latest time-wise bucket
+* percentage vectors sum to `100` or all zero
+* active-time-only occupancy rule remains true
+* `footfall = entrances + exits`
+* capacity stays `[current, peak]`
+* single-site traffic split length = 3
+* combined-site traffic split length = 2
+
+## Mode invariants
+
+* single-site mode uses cam-based split
+* combined mode uses site-based split
+* combined occupancy is aggregate across all sites
+* combined FIFO pairing should still be done per site
+
+---
+
+# 21. Practical guidance for future changes
+
+If someone changes generation logic in future, they should ask:
+
+## Are we changing raw schema?
+
+If yes, every downstream consumer must be reviewed.
+
+## Are we changing payload positions?
+
+If yes, the web app and QA tooling must both be updated.
+
+## Are we changing traffic split meaning?
+
+If yes, mode-specific interpretation must be updated everywhere.
+
+## Are we changing occupancy semantics?
+
+If yes, it affects:
+
+* charts
+* rollups
+* capacity
+* QA expectations
+
+## Are we changing dwell pairing logic?
+
+If yes, check consistency against historical output and QA.
+
+## Are we changing calendar bucket rules?
+
+If yes, month/quarter/year/all_time logic must be reviewed together.
+
+---
+
+# 22. Final summary
+
+The system has two distinct layers:
+
+## Raw logs
+
+One row per entrance/exit event, preserving event-level detail.
+
+## Snapshots
+
+One row per minute, containing the full computed dashboard state as a compact positional payload.
+
+Snapshots are derived strictly from logs with:
+[
+timestamp < ts
+]
+
+They use:
+
+* active-time-only occupancy
+* FIFO-derived dwell
+* exact whole-integer demographic proportions
+* fixed positional structure
+* oldest→newest array ordering
+* mode-dependent traffic split semantics
+
+If those rules are preserved, the dataset and dashboard remain internally consistent.

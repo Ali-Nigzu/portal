@@ -1,0 +1,101 @@
+.topBar {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-page);
+}
+
+.leftZone {
+  justify-self: start;
+}
+
+.centerZone {
+  justify-self: center;
+  width: min(100%, 520px);
+}
+
+.splitNav {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr;
+  align-items: center;
+  column-gap: 20px;
+}
+
+.linkLeft {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.linkRight {
+  grid-column: 3;
+  justify-self: start;
+}
+
+.rightZone {
+  justify-self: end;
+  width: 180px;
+  height: 1px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+.link {
+  color: var(--text-default);
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+  transition: color 160ms ease, text-decoration-color 160ms ease;
+}
+
+.link:hover,
+.link:focus-visible,
+.link[aria-current="page"] {
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--signal-gold) 68%, transparent);
+}
+
+@media (max-width: 900px) {
+  .topBar {
+    min-height: 64px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+  }
+
+  .leftZone,
+  .centerZone,
+  .rightZone {
+    justify-self: center;
+  }
+
+  .splitNav {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .rightZone {
+    display: none;
+  }
+}

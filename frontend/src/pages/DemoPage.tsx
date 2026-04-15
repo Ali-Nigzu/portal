@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   applyDemoDefaultsOnce,
   enableDemoSession,
@@ -7,10 +7,14 @@ import {
 
 const DemoPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    const params = new URLSearchParams(location.search);
+    const isEmbedMode = params.get("embed") === "1";
+
     const startDemo = async () => {
       try {
         await enableDemoSession();
@@ -18,7 +22,12 @@ const DemoPage = () => {
         if (!isMounted) {
           return;
         }
-        navigate("/sites/site-a/dashboard", { replace: true });
+        navigate(
+          isEmbedMode
+            ? "/demo/site-a/dashboard?embed=1"
+            : "/demo/site-a/dashboard",
+          { replace: true },
+        );
       } catch (err) {
         if (!isMounted) {
           return;
@@ -32,7 +41,7 @@ const DemoPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [navigate]);
+  }, [location.search, navigate]);
 
   if (error) {
     return (
@@ -41,7 +50,7 @@ const DemoPage = () => {
           <h3 className="vrm-card-title">Demo Unavailable</h3>
         </div>
         <div className="vrm-card-body">
-          <p style={{ color: "var(--vrm-accent-red)", marginBottom: "16px" }}>
+          <p style={{ color: "#8b3a2f", marginBottom: "16px" }}>
             {error}
           </p>
           <button className="vrm-btn" onClick={() => navigate(0)}>
@@ -66,8 +75,8 @@ const DemoPage = () => {
           style={{
             width: "40px",
             height: "40px",
-            border: "4px solid #333",
-            borderTop: "4px solid #1976d2",
+            border: "4px solid var(--line-default)",
+            borderTop: "4px solid var(--signal-gold)",
             borderRadius: "50%",
             animation: "spin 1s linear infinite",
             margin: "0 auto 16px",

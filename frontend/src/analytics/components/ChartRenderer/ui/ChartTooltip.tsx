@@ -8,6 +8,7 @@ import {
   shouldShowRawCount,
 } from "../utils/format";
 import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
+import { SITE_FLOW_ACTIVITY_COLORS } from "../../../../lib/siteFlowActivityColors";
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;
@@ -44,14 +45,15 @@ export const ChartTooltip = ({
       {};
     const occupancyMin = occupancyPayload.occupancy_min ?? null;
     const occupancyMax = occupancyPayload.occupancy_max ?? null;
-    const entranceColor = "var(--vrm-color-accent-entrances, #47c96f)";
-    const exitColor = "var(--vrm-color-accent-exits, #ff5964)";
-    const occupancyColor = "var(--vrm-color-accent-occupancy, #2685ff)";
+    const entranceColor = SITE_FLOW_ACTIVITY_COLORS.entrances;
+    const exitColor = SITE_FLOW_ACTIVITY_COLORS.exits;
+    const occupancyColor = SITE_FLOW_ACTIVITY_COLORS.occupancy;
     const rows: Array<JSX.Element> = [];
     if (entrancesEntry) {
       rows.push(
         <li key="entrances" className="tooltip-row">
           <span className="series-label" style={{ color: entranceColor }}>
+            <span className="swatch" style={{ backgroundColor: entranceColor }} />
             Entrances
           </span>
           <span className="series-value" style={{ color: entranceColor }}>
@@ -64,6 +66,7 @@ export const ChartTooltip = ({
       rows.push(
         <li key="exits" className="tooltip-row">
           <span className="series-label" style={{ color: exitColor }}>
+            <span className="swatch" style={{ backgroundColor: exitColor }} />
             Exits
           </span>
           <span className="series-value" style={{ color: exitColor }}>
@@ -79,6 +82,7 @@ export const ChartTooltip = ({
       rows.push(
         <li key="occupancy" className="tooltip-row">
           <span className="series-label" style={{ color: occupancyColor }}>
+            <span className="swatch" style={{ backgroundColor: occupancyColor }} />
             Occupancy
           </span>
           <span className="series-value" style={{ color: occupancyColor }}>

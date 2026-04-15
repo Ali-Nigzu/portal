@@ -6,8 +6,6 @@ type RegisterInterestFormState = {
   email: string;
   company: string;
   phone: string;
-  business_type: string;
-  message: string;
 };
 
 const defaultFormState: RegisterInterestFormState = {
@@ -15,8 +13,6 @@ const defaultFormState: RegisterInterestFormState = {
   email: "",
   company: "",
   phone: "",
-  business_type: "",
-  message: "",
 };
 
 type UseRegisterInterestFormResult = {
@@ -26,6 +22,7 @@ type UseRegisterInterestFormResult = {
   submitError: string;
   setFormData: (data: RegisterInterestFormState) => void;
   handleSubmit: (event: React.FormEvent) => Promise<void>;
+  resetSubmissionState: () => void;
 };
 
 export const useRegisterInterestForm = (): UseRegisterInterestFormResult => {
@@ -46,13 +43,13 @@ export const useRegisterInterestForm = (): UseRegisterInterestFormResult => {
         !formData.email.trim() ||
         !formData.company.trim()
       ) {
-        setSubmitError("Please fill in all required fields.");
+        setSubmitError("Please complete all required fields.");
         return;
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        setSubmitError("Please enter a valid email address.");
+      if (!emailRegex.test(formData.email.trim())) {
+        setSubmitError("Please enter a valid work email.");
         return;
       }
 
@@ -63,16 +60,21 @@ export const useRegisterInterestForm = (): UseRegisterInterestFormResult => {
           setSubmitSuccess(true);
           setFormData(defaultFormState);
         } else {
-          setSubmitError("Unable to submit form. Please try again.");
+          setSubmitError("Unable to submit sign-up. Please try again.");
         }
-      } catch (err) {
-        setSubmitError("Connection error. Please try again.");
+      } catch {
+        setSubmitError("Unable to submit sign-up. Please try again.");
       } finally {
         setIsSubmitting(false);
       }
     },
     [formData],
   );
+
+  const resetSubmissionState = useCallback(() => {
+    setSubmitSuccess(false);
+    setSubmitError("");
+  }, []);
 
   return {
     formData,
@@ -81,5 +83,6 @@ export const useRegisterInterestForm = (): UseRegisterInterestFormResult => {
     submitError,
     setFormData,
     handleSubmit,
+    resetSubmissionState,
   };
 };

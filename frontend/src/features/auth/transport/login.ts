@@ -1,9 +1,12 @@
+type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+};
+
 type LoginResponse = {
-  user?: {
-    orgId?: string;
-    org_id?: string;
-    table_name?: string;
-  };
+  user: AuthUser;
 };
 
 type LoginResult =
@@ -11,7 +14,7 @@ type LoginResult =
   | { ok: false; status: number };
 
 export const login = async (
-  username: string,
+  email: string,
   password: string,
 ): Promise<LoginResult> => {
   const response = await fetch("/api/login", {
@@ -19,7 +22,8 @@ export const login = async (
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ username, password }),
+    credentials: "include",
+    body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
   });
 
   if (!response.ok) {

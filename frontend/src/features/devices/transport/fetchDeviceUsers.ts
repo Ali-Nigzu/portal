@@ -9,6 +9,9 @@ type DeviceUsersResponse =
 export const fetchDeviceUsers = async (
   credentials: Credentials,
 ): Promise<Record<string, DeviceUser>> => {
+  if (!credentials.username || !credentials.password) {
+    return {};
+  }
   const auth = btoa(`${credentials.username}:${credentials.password}`);
   const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
     headers: {

@@ -18,13 +18,15 @@ import {
   resolveSiteFlowTimeRange,
   type SiteFlowTimeframe,
 } from "../../../lib/siteFlowTimeframe";
-import type { LoadWidgetOptions } from "../transport/loadWidgetResult";
+import type { DashboardDataMode, LoadWidgetOptions } from "../transport/loadWidgetResult";
 import { loadWidgetResult } from "../transport/loadWidgetResult";
 import { isSnapshotOrg } from "../utils/snapshotMode";
 import {
   consumeDemoSiteFlowModeOverride,
-  consumeDemoSiteFlowTimeframeOverride,
+  getDemoSiteFlowTimeframe,
+  setDemoSiteFlowTimeframe,
 } from "../../../lib/demoSession";
+import { sanitizeChartResultForAuthenticated } from "../transport/loadEmptyWidgetResult";
 
 const TIMESTAMP_DIMENSION_ID = "timestamp";
 
@@ -38,6 +40,7 @@ type UseSiteFlowParams = {
   viewToken: string | null;
   clientContextId: string | undefined;
   widgetResultLoader?: WidgetResultLoader;
+  dataMode: DashboardDataMode;
 };
 
 type UseSiteFlowResult = {
@@ -58,18 +61,28 @@ type UseSiteFlowResult = {
   };
 };
 
+const isValidSiteFlowTimeframe = (
+  value: string | null,
+): value is SiteFlowTimeframe =>
+  value === "today" ||
+  value === "yesterday" ||
+  value === "last_week" ||
+  value === "last_month" ||
+  value === "last_quarter" ||
+  value === "last_year" ||
+  value === "all_time";
+
 export const useSiteFlow = ({
   manifest,
   orgId,
   viewToken,
   clientContextId,
   widgetResultLoader,
+  dataMode,
 }: UseSiteFlowParams): UseSiteFlowResult => {
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
   const demoSiteFlowModeRef = useRef(consumeDemoSiteFlowModeOverride());
-  const demoSiteFlowTimeframeRef = useRef(
-    consumeDemoSiteFlowTimeframeOverride(),
-  );
+  const demoSiteFlowTimeframeRef = useRef(getDemoSiteFlowTimeframe());
   const siteFlowWidget = useMemo(
     () => manifest?.widgets.find((widget) => isSiteFlowWidget(widget)) ?? null,
     [manifest],
@@ -85,10 +98,10 @@ export const useSiteFlow = ({
   const [siteFlowTimeframe, setSiteFlowTimeframe] = useState<SiteFlowTimeframe>(
     () => {
       const demoOverride = demoSiteFlowTimeframeRef.current;
-      if (demoOverride === "today" || demoOverride === "all_time") {
+      if (isValidSiteFlowTimeframe(demoOverride)) {
         return demoOverride;
       }
-      return isSnapshotMode ? "today" : "all_time";
+      return isSnapshotMode || dataMode === "demo" ? "today" : "all_time";
     },
   );
   const [siteFlowActivity, setSiteFlowActivity] = useState<{
@@ -106,22 +119,26 @@ export const useSiteFlow = ({
     (next: SiteFlowTimeframe) => {
       hasUserSetSiteFlowTimeframe.current = true;
       setSiteFlowTimeframe(next);
+      if (dataMode === "demo") {
+        setDemoSiteFlowTimeframe(next);
+      }
     },
-    [],
+    [dataMode],
   );
 
   useEffect(() => {
-    if (demoSiteFlowTimeframeRef.current) {
+    if (isValidSiteFlowTimeframe(demoSiteFlowTimeframeRef.current)) {
       hasUserSetSiteFlowTimeframe.current = true;
-      demoSiteFlowTimeframeRef.current = null;
     }
-  }, []);
-
-  useEffect(() => {
     if (isSnapshotMode && !hasUserSetSiteFlowTimeframe.current) {
       setSiteFlowTimeframe("today");
     }
   }, [isSnapshotMode]);
+
+  useEffect(() => {
+    setSiteFlowActivity({ status: "idle" });
+    setSiteFlowDemographics({ status: "idle" });
+  }, [dataMode]);
 
   useEffect(() => {
     if (!siteFlowWidget || !manifest) {
@@ -172,12 +189,25 @@ export const useSiteFlow = ({
       orgId,
       viewToken,
       snapshotTimeframe: siteFlowTimeframe,
+      dataMode,
     } as LoadWidgetOptions)
       .then((result) => {
         if (controller.signal.aborted) {
           return;
         }
-        const decorated = decorateResult(widget.id, result, clientContextId);
+        const normalizedResult = dataMode === "authenticated"
+          ? sanitizeChartResultForAuthenticated(result)
+          : result;
+        const siteFlowDecoratorId =
+          widget.chartSpecId === "dashboard.live_flow" ||
+            widget.chartSpecId === "dashboard.site_flow.activity"
+            ? "live-flow"
+            : widget.id;
+        const decorated = decorateResult(
+          siteFlowDecoratorId,
+          normalizedResult,
+          clientContextId,
+        );
         decorated.meta = decorated.meta ?? { timezone: "UTC" };
         decorated.meta.summary = {
           ...(decorated.meta.summary ?? {}),
@@ -202,6 +232,7 @@ export const useSiteFlow = ({
     siteFlowWidget,
     viewToken,
     widgetResultLoaderImpl,
+    dataMode,
   ]);
 
   useEffect(() => {
@@ -235,6 +266,7 @@ export const useSiteFlow = ({
         orgId,
         viewToken,
         snapshotTimeframe: siteFlowTimeframe,
+        dataMode,
       } as LoadWidgetOptions);
     Promise.all(kinds.map((kind) => loadDemographic(kind)))
       .then(([ageResult, genderResult, raceResult]) => {
@@ -242,9 +274,9 @@ export const useSiteFlow = ({
           return;
         }
         const data: SiteFlowDemographicsData = mapChartResultsToDemographics({
-          age: ageResult,
-          gender: genderResult,
-          race: raceResult,
+          age: dataMode === "authenticated" ? sanitizeChartResultForAuthenticated(ageResult) : ageResult,
+          gender: dataMode === "authenticated" ? sanitizeChartResultForAuthenticated(genderResult) : genderResult,
+          race: dataMode === "authenticated" ? sanitizeChartResultForAuthenticated(raceResult) : raceResult,
           timezone,
         });
         setSiteFlowDemographics({ status: "ready", data });
@@ -266,6 +298,7 @@ export const useSiteFlow = ({
     siteFlowTimeframe,
     siteFlowMode,
     siteFlowWidget,
+    dataMode,
   ]);
 
   return {

@@ -45,6 +45,12 @@ export const KpiTile = ({
       })) ?? []
     );
   }, [primarySeries]);
+  const sparklineMaxValue = useMemo(() => {
+    return sparklineData.reduce((max, point) => {
+      const next = typeof point.value === "number" ? point.value : 0;
+      return Math.max(max, next);
+    }, 0);
+  }, [sparklineData]);
   const [vrmHover, setVrmHover] = useState<{
     value: number | null;
     label: string;
@@ -380,10 +386,7 @@ export const KpiTile = ({
                         />
                         <YAxis
                           type="number"
-                          domain={[
-                            0,
-                            (dataMax: number) => Math.max(0, dataMax),
-                          ]}
+                          domain={[0, Math.max(1, sparklineMaxValue)]}
                           padding={{ bottom: 0, top: 0 }}
                           allowDataOverflow={false}
                           width={0}

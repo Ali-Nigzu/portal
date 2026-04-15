@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   clearDemoSessionLocal,
@@ -23,7 +29,8 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const closeTimeoutRef = useRef<number | null>(null);
   const closingRef = useRef(false);
   const shellRef = useRef<HTMLDivElement | null>(null);
-  const shouldRender = isActive || isClosing;
+  const suppressOverlay = location.pathname === "/";
+  const shouldRender = (isActive || isClosing) && !suppressOverlay;
   const overlayClassName = useMemo(() => {
     if (isClosing) {
       return "demo-overlay demo-overlay--closing";
@@ -33,6 +40,23 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     }
     return "demo-overlay";
   }, [isClosing, isVisible]);
+
+  useEffect(() => {
+    const handleChange = () => {
+      const nextActive = isDemoSessionActive();
+      setIsActive(nextActive);
+      if (!nextActive) {
+        setIsClosing(false);
+        closingRef.current = false;
+      }
+    };
+
+    const handlePopState = () => {
+      if (!isDemoSessionActive()) {
+        return;
+      }
+      startClose();
+    };
 
     window.addEventListener("demo-session-changed", handleChange);
     window.addEventListener("popstate", handlePopState);
@@ -93,15 +117,37 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     clearDemoSessionServer();
   };
 
+  const resolveReturnPath = () => {
+    const params = new URLSearchParams(location.search);
+    const fromQuery = params.get("returnTo");
+    const fromStorage = sessionStorage.getItem("demo:returnTo");
+    const candidate = fromQuery ?? fromStorage ?? "/";
+
+    let decoded = candidate;
+    try {
+      decoded = decodeURIComponent(candidate);
+    } catch {
+      decoded = candidate;
+    }
+
+    if (!decoded.startsWith("/")) {
+      return "/";
+    }
+
+    return decoded;
+  };
+
   const startClose = () => {
     if (closingRef.current || !shouldRender) {
       return;
     }
+    const targetPath = resolveReturnPath();
     closingRef.current = true;
     setIsClosing(true);
     setIsVisible(false);
     clearDemoSessionLocal();
-    navigate("/", { replace: true, state: { fromDemo: true } });
+    sessionStorage.removeItem("demo:returnTo");
+    navigate(targetPath, { replace: true, state: { fromDemo: true } });
     closeTimeoutRef.current = window.setTimeout(finishClose, 240);
   };
 
