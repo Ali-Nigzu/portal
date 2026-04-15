@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from "../../../config";
 import { isDemoSessionActive } from "../../../lib/demoSession";
 import type { Credentials } from "../../../types/credentials";
+import { resolveSiteViewFromLocation } from "../../../lib/siteView";
 
 export interface SearchEventsResult {
   events?: unknown[];
@@ -20,6 +21,10 @@ export const searchEvents = async ({
   clientId?: string | null;
 }): Promise<SearchEventsResult> => {
   const isDemoSession = isDemoSessionActive();
+  const siteView = resolveSiteViewFromLocation();
+  if (siteView && !searchParams.has("siteView")) {
+    searchParams.append("siteView", siteView);
+  }
   let apiUrl = `${API_ENDPOINTS.SEARCH_EVENTS}?${searchParams.toString()}`;
   const headers: HeadersInit = { "Content-Type": "application/json" };
   if (viewToken) {

@@ -6,6 +6,7 @@ import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildSnapshotWidgetResult } from "../utils/snapshotPayload";
 import type { SnapshotResponse } from "../../../lib/snapshots";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
+import { resolveSiteViewFromLocation } from "../../../lib/siteView";
 
 export type DashboardDataMode = "authenticated" | "demo" | "view_token";
 
@@ -37,8 +38,12 @@ async function loadSnapshotPayload(options: {
   orgId?: string;
   viewToken?: string;
   dataMode: DashboardDataMode;
+  siteView?: string | null;
 }): Promise<SnapshotResponse> {
   const params = new URLSearchParams();
+  if (options.siteView) {
+    params.append("siteView", options.siteView);
+  }
   if (options.viewToken) {
     params.append("viewToken", options.viewToken);
   } else if (options.dataMode !== "demo" && options.orgId) {
@@ -71,6 +76,7 @@ export async function loadWidgetResult(
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
   const { signal, orgId, viewToken, dataMode = "demo" } = options;
+  const siteView = resolveSiteViewFromLocation();
   const snapshotTimeframe = options.snapshotTimeframe ?? "all_time";
   let result: ChartResult;
 
@@ -86,6 +92,7 @@ export async function loadWidgetResult(
       orgId,
       viewToken,
       dataMode,
+      siteView,
     });
     result = buildSnapshotWidgetResult(widget.id, snapshot, snapshotTimeframe);
   } catch (error) {

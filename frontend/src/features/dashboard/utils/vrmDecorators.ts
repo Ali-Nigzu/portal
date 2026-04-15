@@ -277,11 +277,10 @@ export const applyTrafficDistributionShare = (
   if (isSnapshotPct) {
     const baseSeries = seriesList[0];
     const baseData = baseSeries?.data ?? [];
-    const normalized = Array.from({ length: 3 }, (_, index) => {
-      const point = baseData[index];
+    const normalized = (baseData.length > 0 ? baseData : [{ x: "Segment 1", value: 0 }]).map((point, index) => {
       const rawValue = Number(point?.value ?? point?.y ?? 0);
       return {
-        camera: String(point?.x ?? `Camera ${index}`),
+        camera: String(point?.x ?? `Segment ${index + 1}`),
         value: Number.isFinite(rawValue) ? rawValue : 0,
       };
     });

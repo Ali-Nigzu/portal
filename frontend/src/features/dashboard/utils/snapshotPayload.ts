@@ -7,11 +7,13 @@ import type { SnapshotResponse } from "../../../lib/snapshots";
 import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
+
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NAIVE_TIMESTAMP_REGEX =
   /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/;
-const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
+
+const LEGACY_ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
   today: 0,
   yesterday: 1,
   last_week: 2,
@@ -20,21 +22,67 @@ const ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
   last_year: 5,
   all_time: 6,
 };
+
+const TARGET_ROLLUP_SLOT: Record<SiteFlowTimeframe, number> = {
+  today: 7,
+  yesterday: 8,
+  last_week: 9,
+  last_month: 10,
+  last_quarter: 11,
+  last_year: 12,
+  all_time: 13,
+};
+
+interface NormalizedRollup {
+  entrances: number[];
+  exits: number[];
+  occupancyAvg: number[];
+  occupancyMin: number[];
+  occupancyMax: number[];
+  agePct: number[];
+  sexPct: number[];
+  racePct: number[];
+}
+
+interface NormalizedSnapshotPayload {
+  entrances96: number[];
+  occupancy96: number[];
+  exits96: number[];
+  footfall96: number[];
+  dwell96: number[];
+  trafficSplit: number[];
+  capacity: number[];
+  rollups: Record<SiteFlowTimeframe, NormalizedRollup>;
+}
+
+const EMPTY_ROLLUP: NormalizedRollup = {
+  entrances: [],
+  exits: [],
+  occupancyAvg: [],
+  occupancyMin: [],
+  occupancyMax: [],
+  agePct: [],
+  sexPct: [],
+  racePct: [],
+};
+
 const asNumberArray = (value: unknown): number[] =>
   Array.isArray(value)
     ? value.map((item) => (typeof item === "number" ? item : 0))
     : [];
-const getKpiSeries = (payload: unknown[], index: number): number[] =>
-  asNumberArray(Array.isArray(payload) ? payload[index] : []);
+
 const toIso = (value: Date): string => value.toISOString();
+
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
+
 const parseSnapshotTimestamp = (value: string): Date => {
   if (NAIVE_TIMESTAMP_REGEX.test(value)) {
     return new Date(`${value.replace(" ", "T")}Z`);
   }
   return new Date(value);
 };
+
 const buildTimeSeriesPoints = (
   values: number[],
   end: Date,
@@ -45,12 +93,14 @@ const buildTimeSeriesPoints = (
     y: value,
     value,
   }));
+
 const floorToQuarterHour = (value: Date): Date => {
   const timestamp = value.getTime();
   const floored =
     Math.floor(timestamp / FIFTEEN_MINUTES_MS) * FIFTEEN_MINUTES_MS;
   return new Date(floored);
 };
+
 const normalizeSeriesLength = (values: number[], count: number): number[] => {
   const sliced = values.slice(0, count);
   if (sliced.length >= count) {
@@ -58,6 +108,7 @@ const normalizeSeriesLength = (values: number[], count: number): number[] => {
   }
   return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
 };
+
 const normalizeKpiSeriesLength = (values: number[], count: number): number[] => {
   const sliced = values.slice(0, count);
   if (sliced.length >= count) {
@@ -68,6 +119,7 @@ const normalizeKpiSeriesLength = (values: number[], count: number): number[] => 
     ...sliced,
   ];
 };
+
 const buildKpiResult = (
   values: number[],
   snapshotTs: Date,
@@ -110,26 +162,37 @@ const buildKpiResult = (
     },
   };
 };
+
+const resolveTrafficLabels = (count: number): string[] => {
+  if (count === 2) {
+    return ["Site A", "Site B"];
+  }
+  if (count === 3) {
+    return ["Camera 0", "Camera 1", "Camera 2"];
+  }
+  return Array.from({ length: count }, (_, index) => `Segment ${index + 1}`);
+};
+
 const buildTrafficResult = (values: number[]): ChartResult => {
-  const labels = ["Camera 0", "Camera 1", "Camera 2"];
-  const normalized = Array.from({ length: 3 }, (_, index) =>
-    typeof values[index] === "number" ? values[index] : 0,
+  const labels = resolveTrafficLabels(values.length);
+  const normalized = values.map((value) =>
+    typeof value === "number" && Number.isFinite(value) ? value : 0,
   );
   const data = normalized.map((value, index) => ({
-    x: labels[index] ?? `Camera ${index + 1}`,
+    x: labels[index] ?? `Segment ${index + 1}`,
     y: value,
     value,
   }));
   const series: ChartSeries = {
     id: "traffic_share",
-    label: "Traffic by Camera",
+    label: values.length === 2 ? "Traffic by Site" : "Traffic by Camera",
     geometry: "bar",
     unit: "percentage",
     data,
   };
   return {
     chartType: "categorical",
-    xDimension: { id: "camera", type: "category" },
+    xDimension: { id: "traffic_segment", type: "category" },
     series: [series],
     meta: {
       timezone: "UTC",
@@ -143,6 +206,7 @@ const buildTrafficResult = (values: number[]): ChartResult => {
     },
   };
 };
+
 const buildCapacityResult = (values: number[]): ChartResult => {
   const [currentRaw = 0, peakRaw = 0] = values;
   const currentPct = clamp(currentRaw, 0, 100);
@@ -177,26 +241,29 @@ const buildCapacityResult = (values: number[]): ChartResult => {
     },
   };
 };
+
 const buildSiteFlowResult = (
-  rollup: unknown[],
+  rollup: NormalizedRollup,
   snapshotTs: Date,
   timeframe: SiteFlowTimeframe,
 ): ChartResult => {
-  const entrances = asNumberArray(rollup?.[0]);
-  const exits = asNumberArray(rollup?.[1]);
-  const occupancyAvg = asNumberArray(rollup?.[2]);
-  const occupancyMin = asNumberArray(rollup?.[3]);
-  const occupancyMax = asNumberArray(rollup?.[4]);
   const { bucket, timestamps, sliceCount } = buildSiteFlowBucketLabels(
     timeframe,
     snapshotTs,
-    [entrances, exits, occupancyAvg, occupancyMin, occupancyMax],
+    [
+      rollup.entrances,
+      rollup.exits,
+      rollup.occupancyAvg,
+      rollup.occupancyMin,
+      rollup.occupancyMax,
+    ],
   );
-  const normalizedEntrances = normalizeSeriesLength(entrances, sliceCount);
-  const normalizedExits = normalizeSeriesLength(exits, sliceCount);
-  const normalizedOccAvg = normalizeSeriesLength(occupancyAvg, sliceCount);
-  const normalizedOccMin = normalizeSeriesLength(occupancyMin, sliceCount);
-  const normalizedOccMax = normalizeSeriesLength(occupancyMax, sliceCount);
+  const normalizedEntrances = normalizeSeriesLength(rollup.entrances, sliceCount);
+  const normalizedExits = normalizeSeriesLength(rollup.exits, sliceCount);
+  const normalizedOccAvg = normalizeSeriesLength(rollup.occupancyAvg, sliceCount);
+  const normalizedOccMin = normalizeSeriesLength(rollup.occupancyMin, sliceCount);
+  const normalizedOccMax = normalizeSeriesLength(rollup.occupancyMax, sliceCount);
+
   const buildSeries = (id: string, values: number[]): ChartSeries => ({
     id,
     label: id,
@@ -207,6 +274,7 @@ const buildSiteFlowResult = (
       value: values[index] ?? 0,
     })),
   });
+
   const occupancySeries: ChartSeries = {
     id: "occupancy",
     label: "Occupancy",
@@ -220,6 +288,7 @@ const buildSiteFlowResult = (
       y: normalizedOccAvg[index] ?? null,
     })),
   };
+
   return {
     chartType: "composed_time",
     xDimension: { id: "timestamp", type: "time", bucket, timezone: "UTC" },
@@ -238,6 +307,7 @@ const buildSiteFlowResult = (
     },
   };
 };
+
 const buildDemographicResult = (
   values: number[],
   kind: "age" | "gender" | "race",
@@ -258,6 +328,97 @@ const buildDemographicResult = (
   ],
   meta: { timezone: "UTC", summary: { title: kind } },
 });
+
+const isLegacyPayload = (payload: unknown[]): boolean => {
+  const rollups = payload[7];
+  return (
+    Array.isArray(rollups) &&
+    rollups.length > 0 &&
+    Array.isArray(rollups[0]) &&
+    !Array.isArray(payload[8])
+  );
+};
+
+const normalizeLegacyRollup = (rawRollup: unknown[]): NormalizedRollup => ({
+  entrances: asNumberArray(rawRollup?.[0]),
+  exits: asNumberArray(rawRollup?.[1]),
+  occupancyAvg: asNumberArray(rawRollup?.[2]),
+  occupancyMin: asNumberArray(rawRollup?.[3]),
+  occupancyMax: asNumberArray(rawRollup?.[4]),
+  agePct: asNumberArray(rawRollup?.[5]),
+  sexPct: asNumberArray(rawRollup?.[6]),
+  racePct: asNumberArray(rawRollup?.[7]),
+});
+
+const normalizeTargetRollup = (rawRollup: unknown[]): NormalizedRollup => {
+  const occupancyTriplets = Array.isArray(rawRollup?.[1])
+    ? (rawRollup[1] as unknown[])
+    : [];
+
+  return {
+    entrances: asNumberArray(rawRollup?.[0]),
+    exits: asNumberArray(rawRollup?.[2]),
+    occupancyAvg: occupancyTriplets.map((bucket) =>
+      Array.isArray(bucket) && typeof bucket[0] === "number" ? bucket[0] : 0,
+    ),
+    occupancyMin: occupancyTriplets.map((bucket) =>
+      Array.isArray(bucket) && typeof bucket[1] === "number" ? bucket[1] : 0,
+    ),
+    occupancyMax: occupancyTriplets.map((bucket) =>
+      Array.isArray(bucket) && typeof bucket[2] === "number" ? bucket[2] : 0,
+    ),
+    agePct: asNumberArray(rawRollup?.[3]),
+    sexPct: asNumberArray(rawRollup?.[4]),
+    racePct: asNumberArray(rawRollup?.[5]),
+  };
+};
+
+const normalizePayload = (payload: unknown[]): NormalizedSnapshotPayload => {
+  const rollups: Record<SiteFlowTimeframe, NormalizedRollup> = {
+    today: EMPTY_ROLLUP,
+    yesterday: EMPTY_ROLLUP,
+    last_week: EMPTY_ROLLUP,
+    last_month: EMPTY_ROLLUP,
+    last_quarter: EMPTY_ROLLUP,
+    last_year: EMPTY_ROLLUP,
+    all_time: EMPTY_ROLLUP,
+  };
+
+  const legacy = isLegacyPayload(payload);
+
+  (Object.keys(TARGET_ROLLUP_SLOT) as SiteFlowTimeframe[]).forEach((timeframe) => {
+    if (legacy) {
+      const bundle = Array.isArray(payload[7]) ? (payload[7] as unknown[]) : [];
+      const raw = Array.isArray(bundle[LEGACY_ROLLUP_INDEX[timeframe]])
+        ? (bundle[LEGACY_ROLLUP_INDEX[timeframe]] as unknown[])
+        : [];
+      rollups[timeframe] = normalizeLegacyRollup(raw);
+      return;
+    }
+    const slot = TARGET_ROLLUP_SLOT[timeframe];
+    const raw = Array.isArray(payload[slot]) ? (payload[slot] as unknown[]) : [];
+    rollups[timeframe] = normalizeTargetRollup(raw);
+  });
+
+  const trafficSplit = legacy
+    ? asNumberArray(payload[6])
+    : asNumberArray(payload[5]);
+  const capacity = legacy
+    ? asNumberArray(payload[5])
+    : asNumberArray(payload[6]);
+
+  return {
+    entrances96: asNumberArray(payload[0]),
+    occupancy96: asNumberArray(payload[1]),
+    exits96: asNumberArray(payload[2]),
+    footfall96: asNumberArray(payload[3]),
+    dwell96: asNumberArray(payload[4]),
+    trafficSplit,
+    capacity,
+    rollups,
+  };
+};
+
 export const buildSnapshotWidgetResult = (
   widgetId: string,
   snapshot: SnapshotResponse,
@@ -268,63 +429,34 @@ export const buildSnapshotWidgetResult = (
   if (!Array.isArray(payload)) {
     throw new Error("Snapshot payload is not an array");
   }
-  if (!Array.isArray(payload[7])) {
-    throw new Error(
-      "Snapshot payload missing legacy rollup array at payload[7]",
-    );
-  }
+
+  const normalized = normalizePayload(payload);
+  const selectedRollup = normalized.rollups[timeframe] ?? EMPTY_ROLLUP;
+
   switch (widgetId) {
-    case VRM_KPI_IDS.entrances: {
-      const series = getKpiSeries(payload, 0);
-      return buildKpiResult(series, snapshotTs, widgetId);
-    }
+    case VRM_KPI_IDS.entrances:
+      return buildKpiResult(normalized.entrances96, snapshotTs, widgetId);
     case VRM_KPI_IDS.occupancy:
-      return buildKpiResult(getKpiSeries(payload, 1), snapshotTs, widgetId);
-    case VRM_KPI_IDS.exits: {
-      const series = getKpiSeries(payload, 2);
-      return buildKpiResult(series, snapshotTs, widgetId);
-    }
+      return buildKpiResult(normalized.occupancy96, snapshotTs, widgetId);
+    case VRM_KPI_IDS.exits:
+      return buildKpiResult(normalized.exits96, snapshotTs, widgetId);
     case VRM_KPI_IDS.footfall:
-      return buildKpiResult(getKpiSeries(payload, 3), snapshotTs, widgetId);
+      return buildKpiResult(normalized.footfall96, snapshotTs, widgetId);
     case VRM_KPI_IDS.dwell:
-      return buildKpiResult(getKpiSeries(payload, 4), snapshotTs, widgetId);
+      return buildKpiResult(normalized.dwell96, snapshotTs, widgetId);
     case VRM_KPI_IDS.capacity:
-      return buildCapacityResult(asNumberArray(payload[5]));
+      return buildCapacityResult(normalized.capacity);
     case VRM_KPI_IDS.traffic:
-      return buildTrafficResult(asNumberArray(payload[6]));
+      return buildTrafficResult(normalized.trafficSplit);
     case "live-flow":
-    case "site-flow": {
-      const rollups = payload[7];
-      const rollupIndex = ROLLUP_INDEX[timeframe];
-      const rollup = Array.isArray(rollups)
-        ? (rollups[rollupIndex] as unknown[])
-        : [];
-      return buildSiteFlowResult(rollup ?? [], snapshotTs, timeframe);
-    }
-    case "site-flow-demographics-age": {
-      const rollups = payload[7];
-      const rollupIndex = ROLLUP_INDEX[timeframe];
-      const rollup = Array.isArray(rollups)
-        ? (rollups[rollupIndex] as unknown[])
-        : [];
-      return buildDemographicResult(asNumberArray(rollup?.[5]), "age");
-    }
-    case "site-flow-demographics-gender": {
-      const rollups = payload[7];
-      const rollupIndex = ROLLUP_INDEX[timeframe];
-      const rollup = Array.isArray(rollups)
-        ? (rollups[rollupIndex] as unknown[])
-        : [];
-      return buildDemographicResult(asNumberArray(rollup?.[6]), "gender");
-    }
-    case "site-flow-demographics-race": {
-      const rollups = payload[7];
-      const rollupIndex = ROLLUP_INDEX[timeframe];
-      const rollup = Array.isArray(rollups)
-        ? (rollups[rollupIndex] as unknown[])
-        : [];
-      return buildDemographicResult(asNumberArray(rollup?.[7]), "race");
-    }
+    case "site-flow":
+      return buildSiteFlowResult(selectedRollup, snapshotTs, timeframe);
+    case "site-flow-demographics-age":
+      return buildDemographicResult(selectedRollup.agePct, "age");
+    case "site-flow-demographics-gender":
+      return buildDemographicResult(selectedRollup.sexPct, "gender");
+    case "site-flow-demographics-race":
+      return buildDemographicResult(selectedRollup.racePct, "race");
     default:
       throw new Error(
         `Snapshot payload mapping not implemented for widget ${widgetId}`,
