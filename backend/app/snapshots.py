@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -93,6 +94,62 @@ def _format_timestamp(value: Any) -> str:
         return value.isoformat()
     return str(value)
 
+
+
+
+def _sqlite_snapshot_table(conn: sqlite3.Connection) -> str:
+    candidates = [
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        ).fetchall()
+    ]
+    for table in candidates:
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if columns.intersection(_TIMESTAMP_COLUMN_CANDIDATES) and columns.intersection(_PAYLOAD_COLUMN_CANDIDATES):
+            return table
+    raise SnapshotLookupError("No snapshot table with timestamp/payload columns found in SQLite DB")
+
+
+def fetch_latest_snapshot_from_sqlite(
+    db_path: Path,
+    *,
+    org_id: str,
+    as_of: Optional[datetime] = None,
+) -> Optional[SnapshotRow]:
+    normalized = _normalize_org_id(org_id)
+    try:
+        conn = sqlite3.connect(str(db_path))
+    except sqlite3.Error as exc:
+        raise SnapshotLookupError(f"Failed to open local snapshot DB {db_path}: {exc}") from exc
+
+    try:
+        table_name = _sqlite_snapshot_table(conn)
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
+        ts_column = _select_column(columns, _TIMESTAMP_COLUMN_CANDIDATES, "timestamp")
+        payload_column = _select_column(columns, _PAYLOAD_COLUMN_CANDIDATES, "payload")
+        resolved_as_of = (as_of or datetime.now(timezone.utc)).strftime("%Y-%m-%d %H:%M:%S")
+        query = (
+            f"SELECT {ts_column} AS ts, {payload_column} AS payload "
+            f"FROM {table_name} "
+            f"WHERE datetime(replace(CAST({ts_column} AS TEXT), ' UTC', '')) <= datetime(?) "
+            f"ORDER BY datetime(replace(CAST({ts_column} AS TEXT), ' UTC', '')) DESC "
+            "LIMIT 1"
+        )
+        row = conn.execute(query, (resolved_as_of,)).fetchone()
+        if row is None:
+            return None
+        ts_value = row[0]
+        payload_value = row[1]
+        return SnapshotRow(
+            org_id=normalized,
+            ts=_format_timestamp(ts_value),
+            payload=_coerce_payload(payload_value),
+        )
+    except sqlite3.Error as exc:
+        raise SnapshotLookupError(f"SQLite snapshot lookup failed for {db_path}: {exc}") from exc
+    finally:
+        conn.close()
 
 def fetch_latest_snapshot(org_id: str, *, as_of: Optional[datetime] = None) -> Optional[SnapshotRow]:
     normalized = _normalize_org_id(org_id)

@@ -15,6 +15,9 @@ from backend.app.analytics.org_config import (
     resolve_table_for_org,
 )
 from backend.app.services.auth_context import authenticate_chart_data_request
+from backend.app.services.demo_session import resolve_demo_org_id
+from backend.app.services.local_data import combined_logs_db, ensure_local_db_exists, LocalDataError
+from backend.app.local_logs import search_events_from_sqlite
 from backend.app.services.bigquery_client import BigQueryDataFrameError, bigquery_client
 from backend.app.services.time_bounds import resolve_time_bounds
 
@@ -130,13 +133,34 @@ async def search_events(
     per_page: int = 20,
     view_token: Optional[str] = None,
     client_id: Optional[str] = None,
+    site_view: Optional[str] = None,
 ):
     """Search BigQuery event logs with pagination."""
     try:
         org_id = authenticate_chart_data_request(request, view_token, client_id)
-        table_name = _resolve_table_for_org(org_id)
+        is_demo_request = resolve_demo_org_id(request) is not None
 
         logger.debug("Event search params: %s", dict(request.query_params))
+
+        if is_demo_request:
+            local_logs = ensure_local_db_exists(combined_logs_db(), label="combined logs source")
+            bounds = resolve_time_bounds({"start_date": start_date, "end_date": end_date})
+            return search_events_from_sqlite(
+                local_logs,
+                start=bounds["start_ts"],
+                end=bounds["end_ts"],
+                event=event,
+                sex=sex,
+                age=age,
+                race=race,
+                site_id=site_id,
+                camera_id=camera_id,
+                track_id=track_id,
+                page=page,
+                per_page=per_page,
+            )
+
+        table_name = _resolve_table_for_org(org_id)
 
         base_ctx = _resolve_event_search_context(
             org_id=org_id,
@@ -230,6 +254,9 @@ async def search_events(
                 "job_id": exc.job_id,
             },
         ) from exc
+    except LocalDataError as exc:
+        logger.error("Local event search failed: %s", exc)
+        raise HTTPException(status_code=500, detail={"error": "local_logs_lookup_failed", "message": str(exc)}) from exc
     except HTTPException:
         raise
     except Exception as exc:

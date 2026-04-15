@@ -13,7 +13,15 @@ from backend.app.snapshots import (
     SNAPSHOT_ORG_IDS,
     SnapshotLookupError,
     fetch_latest_snapshot,
+    fetch_latest_snapshot_from_sqlite,
     is_snapshot_org,
+)
+from backend.app.services.demo_session import resolve_demo_org_id
+from backend.app.services.local_data import (
+    LocalDataError,
+    ensure_local_db_exists,
+    resolve_site_view,
+    snapshot_db_for_site,
 )
 
 router = APIRouter(prefix="/api")
@@ -26,6 +34,7 @@ async def get_latest_snapshot(
     org: Optional[str] = Query(None, alias="org"),
     ts: Optional[str] = Query(None, alias="ts"),
     view_token: Optional[str] = Query(None, alias="viewToken"),
+    site_view: Optional[str] = Query(None, alias="siteView"),
 ):
     resolved_org = resolve_snapshot_org(org_id=org, view_token=view_token, request=request)
     if not is_snapshot_org(resolved_org):
@@ -47,9 +56,23 @@ async def get_latest_snapshot(
                 detail={"error": "invalid_timestamp", "message": "ts must be ISO-8601"},
             ) from exc
 
+    demo_org = resolve_demo_org_id(request)
+    resolved_site_view = resolve_site_view(site_view)
+
     try:
-        snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
-    except SnapshotLookupError as exc:
+        if demo_org:
+            local_db = ensure_local_db_exists(
+                snapshot_db_for_site(resolved_site_view),
+                label=f"snapshot source for {resolved_site_view}",
+            )
+            snapshot = fetch_latest_snapshot_from_sqlite(
+                local_db,
+                org_id=resolved_org,
+                as_of=resolved_ts,
+            )
+        else:
+            snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
+    except (SnapshotLookupError, LocalDataError) as exc:
         logger.error("Snapshot lookup failed for %s: %s", resolved_org, exc)
         raise HTTPException(
             status_code=500,
