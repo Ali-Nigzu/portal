@@ -163,6 +163,7 @@ export const KpiTile = ({
     typeof result.meta?.timezone === "string"
       ? (result.meta?.timezone as string)
       : "UTC";
+  const resolvedTimeZone = timezone === "DEMO_CLOCK" ? undefined : timezone;
   const parseLabelDate = (label?: string | number) => {
     if (label === null || label === undefined || label === "") {
       return null;
@@ -178,7 +179,7 @@ export const KpiTile = ({
     const parsedDate = parseLabelDate(payloadLabel);
     if (isVrm) {
       if (parsedDate) {
-        return formatTimeOfDay(parsedDate, timezone);
+        return formatTimeOfDay(parsedDate, resolvedTimeZone);
       }
       return "";
     }
@@ -200,11 +201,11 @@ export const KpiTile = ({
       return "";
     }
     const datePart = parsed.toLocaleDateString([], {
-      timeZone: timezone,
+      timeZone: resolvedTimeZone,
       month: "short",
       day: "numeric",
     });
-    const timePart = formatTimeOfDay(parsed, timezone);
+    const timePart = formatTimeOfDay(parsed, resolvedTimeZone);
     return `${datePart} · ${timePart}`;
   };
   const applyHoverIndex = (index: number) => {

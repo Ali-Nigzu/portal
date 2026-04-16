@@ -1,7 +1,5 @@
-const toDate = (value: string): Date | null => {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
+import { parseDemoTimestamp } from "../../../../lib/demoTime";
+const toDate = (value: string): Date | null => parseDemoTimestamp(value);
 const formatHour = (date: Date, withMinutes: boolean): string => {
   const hour = date.getHours().toString().padStart(2, "0");
   return withMinutes ? `${hour}:00` : hour;

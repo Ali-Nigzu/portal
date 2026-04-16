@@ -20,6 +20,7 @@ from backend.app.services.local_data import combined_logs_db, ensure_local_db_ex
 from backend.app.local_logs import search_events_from_sqlite
 from backend.app.services.bigquery_client import BigQueryDataFrameError, bigquery_client
 from backend.app.services.time_bounds import resolve_time_bounds
+from backend.app.services.demo_time import resolve_demo_bounds
 
 router = APIRouter(prefix="/api")
 logger = logging.getLogger(__name__)
@@ -144,11 +145,11 @@ async def search_events(
 
         if is_demo_request:
             local_logs = ensure_local_db_exists(combined_logs_db(), label="combined logs source")
-            bounds = resolve_time_bounds({"start_date": start_date, "end_date": end_date})
+            demo_start, demo_end = resolve_demo_bounds(start_date, end_date)
             return search_events_from_sqlite(
                 local_logs,
-                start=bounds["start_ts"],
-                end=bounds["end_ts"],
+                start=demo_start,
+                end=demo_end,
                 event=event,
                 sex=sex,
                 age=age,

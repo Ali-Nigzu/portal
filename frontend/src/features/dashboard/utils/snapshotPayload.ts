@@ -7,6 +7,7 @@ import type { SnapshotResponse } from "../../../lib/snapshots";
 import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
+import { formatDemoTimestamp, parseDemoTimestamp } from "../../../lib/demoTime";
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -71,14 +72,18 @@ const asNumberArray = (value: unknown): number[] =>
     ? value.map((item) => (typeof item === "number" ? item : 0))
     : [];
 
-const toIso = (value: Date): string => value.toISOString();
+const toIso = (value: Date): string => formatDemoTimestamp(value);
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
 const parseSnapshotTimestamp = (value: string): Date => {
+  const parsed = parseDemoTimestamp(value);
+  if (parsed) {
+    return parsed;
+  }
   if (NAIVE_TIMESTAMP_REGEX.test(value)) {
-    return new Date(`${value.replace(" ", "T")}Z`);
+    return new Date(value.replace(" ", "T"));
   }
   return new Date(value);
 };
@@ -138,7 +143,7 @@ const buildKpiResult = (
       id: "timestamp",
       type: "time",
       bucket: "15_MIN",
-      timezone: "UTC",
+      timezone: "DEMO_CLOCK",
     },
     series: [
       {
@@ -153,7 +158,7 @@ const buildKpiResult = (
       },
     ],
     meta: {
-      timezone: "UTC",
+      timezone: "DEMO_CLOCK",
       summary: {
         widgetId,
         title: VRM_KPI_TITLES[widgetId] ?? widgetId,
@@ -195,7 +200,7 @@ const buildTrafficResult = (values: number[]): ChartResult => {
     xDimension: { id: "traffic_segment", type: "category" },
     series: [series],
     meta: {
-      timezone: "UTC",
+      timezone: "DEMO_CLOCK",
       summary: {
         presentation: "vrm",
         chartStyle: "traffic_distribution",
@@ -227,7 +232,7 @@ const buildCapacityResult = (values: number[]): ChartResult => {
       },
     ],
     meta: {
-      timezone: "UTC",
+      timezone: "DEMO_CLOCK",
       summary: {
         presentation: "vrm",
         chartStyle: "capacity_usage",
@@ -291,14 +296,14 @@ const buildSiteFlowResult = (
 
   return {
     chartType: "composed_time",
-    xDimension: { id: "timestamp", type: "time", bucket, timezone: "UTC" },
+    xDimension: { id: "timestamp", type: "time", bucket, timezone: "DEMO_CLOCK" },
     series: [
       buildSeries("entrances", normalizedEntrances),
       buildSeries("exits", normalizedExits),
       { ...occupancySeries, data: occupancySeries.data.slice(0, sliceCount) },
     ],
     meta: {
-      timezone: "UTC",
+      timezone: "DEMO_CLOCK",
       summary: {
         title: "Site Flow",
         presentation: "vrm",
@@ -326,7 +331,7 @@ const buildDemographicResult = (
       })),
     },
   ],
-  meta: { timezone: "UTC", summary: { title: kind } },
+  meta: { timezone: "DEMO_CLOCK", summary: { title: kind } },
 });
 
 const isLegacyPayload = (payload: unknown[]): boolean => {
