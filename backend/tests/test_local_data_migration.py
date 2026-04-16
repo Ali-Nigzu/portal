@@ -3,7 +3,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from backend.app.local_logs import search_events_from_sqlite
@@ -62,6 +62,34 @@ class LocalSnapshotSQLiteTests(unittest.TestCase):
             self.assertEqual(row.payload[5], [33, 33, 34])
             self.assertEqual(row.payload[6], [25, 40])
 
+
+
+
+    def test_fetch_latest_snapshot_without_ts_ignores_future_rows(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "user0_snapshots.db"
+            conn = sqlite3.connect(str(db_path))
+            conn.execute("CREATE TABLE snapshots (ts TEXT NOT NULL, payload TEXT NOT NULL)")
+
+            now_utc = datetime.now(timezone.utc).replace(microsecond=0)
+            past_ts = (now_utc - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S UTC")
+            future_ts = "2100-01-01 00:00:00 UTC"
+
+            conn.execute(
+                "INSERT INTO snapshots (ts, payload) VALUES (?, ?)",
+                (past_ts, json.dumps([[1] * 96])),
+            )
+            conn.execute(
+                "INSERT INTO snapshots (ts, payload) VALUES (?, ?)",
+                (future_ts, json.dumps([[9] * 96])),
+            )
+            conn.commit()
+            conn.close()
+
+            row = fetch_latest_snapshot_from_sqlite(db_path, org_id="client1", as_of=None)
+            self.assertIsNotNone(row)
+            assert row is not None
+            self.assertEqual(row.ts, past_ts)
 
 class LocalLogsSQLiteTests(unittest.TestCase):
     def test_search_events_from_sqlite_demo_combined(self):
