@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -49,7 +49,8 @@ async def get_latest_snapshot(
     resolved_ts: Optional[datetime] = None
     if ts:
         try:
-            resolved_ts = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+            parsed_ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            resolved_ts = parsed_ts.replace(tzinfo=None) if parsed_ts.tzinfo else parsed_ts
         except ValueError as exc:
             raise HTTPException(
                 status_code=422,

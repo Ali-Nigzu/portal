@@ -4,6 +4,7 @@ import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import type { Credentials } from "../../../types/credentials";
 import { searchEvents } from "../transport/searchEvents";
+import { formatDemoDateKey } from "../../../lib/demoTime";
 import type { EventData } from "../utils/eventTypes";
 
 type EventLogsQueryOverrides = {
@@ -193,10 +194,10 @@ export const useEventLogsQuery = (
         searchParams.append("per_page", eventsPerPage.toString());
       }
       if (appliedStartDate) {
-        searchParams.append("start_date", appliedStartDate.toISOString().split("T")[0]);
+        searchParams.append("start_date", formatDemoDateKey(appliedStartDate));
       }
       if (appliedEndDate) {
-        searchParams.append("end_date", appliedEndDate.toISOString().split("T")[0]);
+        searchParams.append("end_date", formatDemoDateKey(appliedEndDate));
       }
       if (appliedFilters.event) {
         searchParams.append("event", appliedFilters.event);

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from backend.app.services.local_data import LocalDataError
+from backend.app.services.demo_time import format_demo_timestamp
 
 
 def _normalize_optional_int(value: Optional[str]) -> Optional[int]:
@@ -49,8 +50,7 @@ def _resolve_sex_filter(sex: Optional[str]) -> Optional[int]:
 
 
 def _resolve_timestamp(value: datetime) -> str:
-    utc_value = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-    return utc_value.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return format_demo_timestamp(value.replace(tzinfo=None) if value.tzinfo else value)
 
 
 def search_events_from_sqlite(
@@ -73,7 +73,6 @@ def search_events_from_sqlite(
 
     where: List[str] = [
         "datetime(replace(CAST(timestamp AS TEXT), ' UTC', '')) BETWEEN datetime(?) AND datetime(?)",
-        "datetime(replace(CAST(timestamp AS TEXT), ' UTC', '')) <= datetime('now')",
     ]
     params: List[Any] = [_resolve_timestamp(start), _resolve_timestamp(end)]
 

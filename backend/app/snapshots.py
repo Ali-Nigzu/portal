@@ -12,6 +12,7 @@ from typing import Any, Iterable, Optional
 from google.cloud import bigquery
 
 from .services.bigquery_client import bigquery_client
+from .services.demo_time import format_demo_timestamp
 
 
 SNAPSHOT_ORG_IDS = {"client1", "client2"}
@@ -128,7 +129,8 @@ def fetch_latest_snapshot_from_sqlite(
         columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
         ts_column = _select_column(columns, _TIMESTAMP_COLUMN_CANDIDATES, "timestamp")
         payload_column = _select_column(columns, _PAYLOAD_COLUMN_CANDIDATES, "payload")
-        resolved_as_of = (as_of or datetime.now(timezone.utc)).strftime("%Y-%m-%d %H:%M:%S")
+        resolved_as_of_dt = as_of.replace(tzinfo=None) if as_of else datetime.now(timezone.utc).replace(tzinfo=None)
+        resolved_as_of = format_demo_timestamp(resolved_as_of_dt)
         query = (
             f"SELECT {ts_column} AS ts, {payload_column} AS payload "
             f"FROM {table_name} "

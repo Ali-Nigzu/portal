@@ -24,11 +24,18 @@ export function formatTimeOfDay(date: Date | null, timezone?: string): string {
   if (!date) {
     return "";
   }
-  return date.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: timezone ?? undefined,
-  });
+  try {
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: timezone ?? undefined,
+    });
+  } catch {
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 }
 export function formatCoverage(coverage: number | null | undefined): {
   label: string;

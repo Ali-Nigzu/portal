@@ -1,6 +1,7 @@
 import { formatSiteFlowTick } from "../analytics/components/ChartRenderer/utils/formatSiteFlowTick";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
 import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "./timeWindows";
+import { getDemoHour, startOfDemoDay } from "./demoTime";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const addHours = (date: Date, hours: number): Date => {
   const next = new Date(date);
@@ -51,7 +52,7 @@ export const resolveSiteFlowSliceCount = (
     timeframe === "today"
       ? Math.min(
           length > 0 ? length : 24,
-          Math.min(anchor.getHours() + 1, 24),
+          Math.min(getDemoHour(anchor) + 1, 24),
         )
       : timeframe === "yesterday"
         ? 24
@@ -64,7 +65,7 @@ export const resolveSiteFlowSliceCount = (
               : timeframe === "last_year"
                 ? 12
                 : length;
-  const dayStart = startOfDay(anchor);
+  const dayStart = startOfDemoDay(anchor);
   return { length, sliceCount, dayStart };
 };
 export const buildAnchoredTimestamps = (
@@ -78,8 +79,8 @@ export const buildAnchoredTimestamps = (
   if (timeframe === "today" || timeframe === "yesterday") {
     const start =
       timeframe === "today"
-        ? startOfDay(anchor)
-        : startOfDay(new Date(anchor.getTime() - DAY_MS));
+        ? startOfDemoDay(anchor)
+        : startOfDemoDay(new Date(anchor.getTime() - DAY_MS));
     return Array.from({ length }, (_, index) => addHours(start, index));
   }
   if (timeframe === "last_week") {

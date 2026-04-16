@@ -5,6 +5,7 @@ import { Credentials } from "../../types/credentials";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
 import type { searchEvents } from "./transport/searchEvents";
 import type { EventData } from "./utils/eventTypes";
+import { formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
 interface EventLogsPageProps {
   credentials: Credentials;
   searchEventsFn?: typeof searchEvents;
@@ -120,15 +121,11 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
     return "Unknown";
   };
   const formatTimestamp = (timestamp: string) => {
-    try {
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) {
-        return timestamp;
-      }
-      return date.toLocaleString();
-    } catch {
+    const parsed = parseDemoTimestamp(timestamp);
+    if (!parsed) {
       return timestamp;
     }
+    return formatDemoTimestamp(parsed);
   };
   const getEventIcon = (event: string) => {
     switch (event.toLowerCase()) {
