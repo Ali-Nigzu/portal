@@ -1,134 +1,203 @@
-# UTC/BST Timing Debug Report (PR 253 local-SQLite path)
+# PR 253 Local-SQLite Timing: Debug + Fix Planning Brief (Business-Clock Model)
 
-## Scope and method
+## Scope
 
-This report traces timestamp handling end-to-end for:
+This brief is **planning-only** (no runtime code changes). It documents the current timing model on the local SQLite demo path and plans a fix to enforce this contract:
 
-- Dashboard KPI row
-- Dashboard Site Flow
-- Event Logs
-
-It is based on static code-path analysis of the current branch (no runtime patch in this report).
+> For local demo SQLite data, treat stored UTC-labelled timestamps as **fixed demo/business wall-clock time** (naive clock time), not true timezone-converted instants.
 
 ---
 
-## 1) End-to-end timing map
+## Required target rule (explicit)
 
-### A. Snapshot path (KPI + Site Flow)
-
-1. Frontend always calls `GET /api/snapshots/latest` for dashboard widgets in demo/snapshot mode. It does **not** pass a time range or timezone to the backend for this request. The only query params are org/view token and site view.  
-2. Backend local mode selects the latest row from SQLite by ordering parsed timestamp descending, with an `as_of` cutoff in UTC string format (`%Y-%m-%d %H:%M:%S`).  
-3. Backend returns the timestamp string as-is (`snapshot.ts`) and the payload array untouched.  
-4. Frontend parses `snapshot.ts` into a `Date` (`naive -> append Z`, otherwise `new Date(value)`), then builds KPI and Site Flow series from payload arrays.
-
-### B. Event Logs path
-
-1. Frontend builds `/api/search-events` query params from filter state.
-2. Backend local mode resolves bounds via UTC-aware `resolve_time_bounds`, then runs SQLite query using timestamp comparisons and ordering on `datetime(replace(timestamp, ' UTC', ''))` and enforces `<= datetime('now')`.
-3. Backend returns event `timestamp` as raw string from SQLite row (`str(row[4])`).
-4. Frontend displays via `new Date(timestamp).toLocaleString()`, or raw string if parse fails.
+If demo data contains `2026-04-16 13:00:00 UTC`, the app should treat that as **13:00 business time** everywhere (KPI, Site Flow, Event Logs), not as a true UTC instant that gets shifted for BST/browser locale.
 
 ---
 
-## 2) Storage/parsing/display chain by surface
+## Current timing model by surface
 
-### KPI row
+## 1) KPI row (dashboard)
 
-- **Storage**: snapshot rows are expected as text timestamps (tests use `"YYYY-MM-DD HH:MM:SS UTC"`).
-- **Backend parse/query**: latest snapshot selected by SQLite datetime ordering after removing optional `" UTC"` suffix.
-- **Frontend parse**: `parseSnapshotTimestamp` treats naive `YYYY-MM-DD HH:MM:SS` as UTC by appending `Z`; other strings go through `new Date(value)`.
-- **Display basis**: KPI result metadata hard-codes timezone to `UTC`; KPI tooltip/footer formatting uses that timezone.
-- **Effect**: KPI timeline/headline are effectively UTC-framed.
+### Storage/query path
+- Dashboard widgets on demo path always load from `/api/snapshots/latest` via snapshot transport.
+- Backend snapshot local query picks the latest SQLite row `<= as_of` (default `datetime.now(timezone.utc)`), using SQL normalization `datetime(replace(ts, ' UTC', ''))`.
+- Backend returns `snapshot.ts` as raw string.
 
-### Site Flow
+### Parse/display path
+- Frontend snapshot parser treats naive `YYYY-MM-DD HH:MM:SS` as UTC by appending `Z`; otherwise uses `new Date(value)`.
+- KPI chart metadata is hard-coded to `timezone: "UTC"`.
+- KPI tile tooltip/value-time formatting uses `result.meta.timezone` (UTC for snapshot KPI results).
 
-- **Storage**: Site Flow is not queried as raw events on demo snapshot path; it is derived from rollup arrays inside the snapshot payload.
-- **Frontend generation**: `buildSiteFlowResult` maps rollup arrays to hourly points anchored from `snapshotTs` using local-day helpers (`startOfDay`, `getHours`) from `siteFlowBuckets`/`timeWindows`.
-- **Display formatting**: tick formatter uses `getHours()` on `Date` (browser-local), with no explicit timezone override.
-- **Metadata conflict**: chart metadata still says `timezone: "UTC"`.
-- **Effect**: Site Flow point indexing and labeling are generated with local-day arithmetic while the payload semantics are UTC-oriented; in BST this can present as a one-hour lag/shift around "today" cutoffs.
+### What “now” means today (KPI)
+- **Snapshot selection now**: backend UTC now (`datetime.now(timezone.utc)` in Python, formatted to second).
+- **Rendered latest point**: based on selected snapshot timestamp and 24h synthetic series reconstruction.
 
-### Event Logs
-
-- **Storage**: logs timestamps are text (tests show `"... UTC"`; production data may vary).
-- **Backend query basis**: UTC bound normalization + SQLite `datetime('now')` clamp.
-- **Serialization**: raw timestamp string passed through.
-- **Frontend display**:
-  - if timestamp includes timezone and parses, rendered in browser local time.
-  - if timestamp is naive, it is interpreted as local time and will look one hour behind BST if source was intended UTC.
-- **Effect**: latest rows around `12:12` at UK local `13:23` are consistent with raw/UTC-leaning ingestion + pass-through display behavior.
+### Net behavior
+- KPI is effectively UTC-framed today, not fixed business-clock framed.
 
 ---
 
-## 3) Exact source(s) of the ~1 hour mismatch
+## 2) Site Flow (dashboard)
 
-There is **not one single timezone model**; there are multiple overlapping ones:
+### Storage/query path
+- Site Flow on demo snapshot path also uses the same `/api/snapshots/latest` row and in-payload rollups (not a separate live events aggregate query for demo snapshots).
 
-1. **Manifest + KPI metadata declare UTC**.
-2. **Site Flow “today” bucket slicing/labels use local `Date` operations** on top of snapshot rollup arrays that are effectively UTC-positioned.
-3. **Event Logs backend clamps/query-order in UTC-ish SQLite functions**, but frontend display depends on whether timestamp strings are timezone-qualified.
+### Parse/display path
+- Snapshot timestamp parsing same as KPI (`naive -> append Z`, else `new Date`).
+- Site Flow series are generated from rollup arrays with `buildSiteFlowBucketLabels` using local `Date` arithmetic (`startOfDay`, `getHours`, `addHours`).
+- “Today” slice count uses `anchor.getHours() + 1`.
+- Tick labels use `Date#getHours()` in browser local time, without explicit timezone override.
+- Yet result metadata is still set to `timezone: "UTC"`.
 
-The visible "~1 hour behind UK" symptom is introduced by this mixed model:
+### What “now” means today (Site Flow)
+- **Data freshness now**: same snapshot-row selection now as KPI (backend UTC now).
+- **Today-progress now**: anchored to parsed snapshot timestamp with local/browser hour math.
 
-- UTC-basis data (snapshot/logs) + local-day rendering logic (Site Flow), and
-- raw-string timestamp display behavior (Event Logs) when timezone suffix consistency is imperfect.
-
----
-
-## 4) Consistency table
-
-| Surface | Query/selection basis | Parse basis | Display basis | Consistent? |
-|---|---|---|---|---|
-| KPI row | latest snapshot row by SQLite datetime <= UTC `as_of` | snapshot ts parsed as UTC for naive format | explicitly UTC in metadata/formatting | Mostly yes (UTC) |
-| Site Flow | snapshot payload rollup arrays (not live query window on demo snapshot path) | snapshot ts parsed then local-day bucket construction | local tick formatting (`getHours`) but meta says UTC | **No** (mixed UTC + local) |
-| Event Logs | UTC-normalized bounds + SQLite datetime comparisons + `<= now` | none (raw string pass-through) | browser `new Date(...).toLocaleString()` or raw | **No** (depends on string format) |
+### Net behavior
+- Site Flow is mixed: UTC-labelled payload/meta + local browser bucket/tick math. This is internally inconsistent and can produce a visible ~1h lag in BST contexts.
 
 ---
 
-## 5) Decision-ready recommendation (no patch yet)
+## 3) Event Logs (demo)
 
-Pick one canonical timezone contract and apply it to **all three** surfaces.
+### Storage/query path
+- Demo Event Logs route to `/api/search-events` local path.
+- Backend resolves bounds with UTC-aware parser (`resolve_time_bounds`), then SQL-filters with:
+  - `BETWEEN datetime(?) AND datetime(?)`
+  - `<= datetime('now')`
+  - ordering by normalized timestamp (`replace(..., ' UTC', '')`).
+- Backend response returns raw timestamp string from SQLite row (`"timestamp": str(row[4])`).
 
-Most robust option for this demo path:
+### Parse/display path
+- Frontend renders timestamp using `new Date(timestamp).toLocaleString()`.
+- If parse fails, frontend shows raw string unchanged.
+- Date filters are serialized as `toISOString().split('T')[0]`, which can shift calendar day semantics relative to wall-clock expectation.
 
-- **Canonical internal time = UTC** (already true for datasets).
-- **Explicit display policy** (choose one):
-  - A) Display UTC everywhere (labels clearly marked UTC), or
-  - B) Display browser-local everywhere (convert from UTC at render layer consistently).
+### What “now” means today (Event Logs)
+- **Query upper bound now**:
+  1. Python-side `resolve_time_bounds` clamps default end to UTC now.
+  2. SQL adds independent SQLite `datetime('now')` cap.
+- **Visible timestamp now**: depends on browser parsing/formatting behavior of returned string.
 
-Given user expectation in UK local wall-clock, option **B** is likely better UX, but either is valid if applied uniformly.
-
-Minimum contract requirements regardless of A/B:
-
-1. Standardize snapshot/log timestamp serialization to ISO 8601 with explicit offset (e.g. `...Z`).
-2. Remove mixed local-vs-UTC bucket math in Site Flow "today" path.
-3. Make Event Logs parse/format deterministic (do not depend on browser parsing ambiguous timestamp strings).
-4. Align filter date serialization with chosen timezone model.
-
----
-
-## 6) Risk notes for future fix
-
-Changing timezone interpretation can affect:
-
-- KPI sparkline alignment and "latest point" semantics.
-- Site Flow "today" slice count and apparent final bucket.
-- Event Logs day-filter windows (especially date-only filters during DST).
-- Existing fixtures/tests that currently expect `"... UTC"` text timestamps.
-- Any downstream assumptions in `vrmDecorators`/chart tooltip formatting tied to current `meta.timezone` values.
+### Net behavior
+- Event Logs currently follow UTC-ish query cutoffs with format-dependent browser rendering, not fixed business-clock semantics.
 
 ---
 
-## 7) High-confidence findings vs open verification
+## “Now” analysis (required consolidated section)
 
-### High-confidence (from code)
+Current local-demo meaning of `now` is not unified:
 
-- Snapshot and logs local SQLite access are timestamp-text based, with optional `' UTC'` stripping for SQL comparisons.
-- Snapshot API and Event Logs API in demo mode both route through local SQLite helpers.
-- KPI metadata is pinned to UTC.
-- Site Flow uses local date helpers for bucket timestamps while carrying UTC metadata.
+1. **Snapshots/KPI/Site Flow fetch cutoff**: Python UTC now in backend snapshot lookup.
+2. **Site Flow chart progress**: snapshot timestamp interpreted through local browser `Date` hour/day operations.
+3. **Event Logs query window**: UTC now clamp in Python + SQLite `datetime('now')` clamp.
+4. **Event Logs rendered clock**: browser locale/parsing behavior on raw timestamp strings.
 
-### Open verification still useful in runtime
+So the app has multiple `now` definitions simultaneously.
 
-- Confirm whether deployed `.db` rows always include `' UTC'` suffix or sometimes naive strings.
-- Inspect one real snapshot row + one real log row to confirm exact string format and validate the final one-hour manifestation path.
+---
+
+## Exact source of the observed ~1 hour mismatch
+
+The mismatch is introduced by combining incompatible models:
+
+1. **UTC-based selection/cutoffs** in backend snapshot/log lookup.
+2. **Local/browser clock math** for Site Flow bucket progression/labels.
+3. **Raw-string timestamp pass-through + browser parse/display dependence** for Event Logs.
+4. **UTC metadata in KPI/Site Flow results** while some rendering helpers use local `Date` getters.
+
+This mixed model explains reports like:
+- local UK wall clock around 13:23,
+- Site Flow appearing to stop around 12:00,
+- Event Logs latest visible around 12:12.
+
+---
+
+## Proposed target timing contract (for local demo SQLite path)
+
+Use one explicit demo-only contract:
+
+## Contract: “Naive business clock time”
+- Treat stored timestamp text as wall-clock values in a fixed demo clock.
+- Ignore true timezone conversion semantics on demo local-SQLite path.
+- Keep same visible hour semantics across KPI, Site Flow, Event Logs.
+
+Operationally:
+- `2026-04-16 13:00:00 UTC` is interpreted as **13:00 business time**.
+- No browser/BST shift should move it to 14:00 or 12:00.
+
+---
+
+## Surface-by-surface implementation strategy (plan only)
+
+## A) KPI row
+1. Introduce a demo timestamp normalization utility that strips/ignores timezone meaning and outputs a stable "business-clock" datetime object.
+2. Use that utility for snapshot `ts` parsing before KPI sparkline timeline generation.
+3. Ensure KPI tooltip/header formatting uses business-clock labels (no UTC/local conversion).
+4. Keep this behavior gated to local demo SQLite mode (do not alter authenticated/real-time paths).
+
+## B) Site Flow
+1. Treat Site Flow rollup indexing and axis labels in the same business-clock basis as KPI.
+2. Remove mixed UTC-meta vs local-hour generation conflict for demo path.
+3. Define “today progress” from business-clock `now` and business-clock day start.
+4. Ensure `today` always advances to expected wall-clock hour (e.g., 13:00 at real UK 13:00 for demo expectation).
+
+## C) Event Logs
+1. Normalize backend query bounds to business-clock semantics for demo path (including `now` upper bound).
+2. Avoid dual `now` caps that may drift (Python UTC clamp + SQLite `datetime('now')`).
+3. Return timestamps in an unambiguous demo-business format (or include explicit demo-clock metadata).
+4. Render Event Logs timestamps with business-clock formatter, not generic locale conversion of potentially ambiguous strings.
+5. Revisit date-filter serialization to avoid `toISOString().split('T')[0]` day drift under DST/local offsets.
+
+## D) Shared layer
+1. Add one centralized `demoTime` abstraction used by all three surfaces.
+2. Gate by data mode (`demo`) and/or local SQLite source.
+3. Keep existing UTC behavior for non-demo/authenticated flows.
+
+---
+
+## Risks and compatibility notes
+
+Potential impacts of moving to business-clock semantics:
+
+1. **Snapshot latest semantics**: "latest" may no longer align with true UTC instant ordering assumptions in old logic.
+2. **Site Flow today bucket count**: may change at boundary hours and DST transitions.
+3. **Event filter windows**: date-only filters may return different rows after business-clock normalization.
+4. **Tests/fixtures**: current fixtures with `... UTC` strings and expectations may need updates.
+5. **Mixed-mode regressions**: must avoid leaking demo business-clock semantics into authenticated/BQ paths.
+
+---
+
+## Verification plan (prove fix works)
+
+Run these checks in demo/local SQLite mode:
+
+1. **Wall-clock alignment check**
+   - At real UK 13:00 BST, dashboard latest KPI state corresponds to 13:00 business clock.
+2. **Site Flow progression check**
+   - “Today” extends through 13:00 bucket (not capped at 12:00).
+3. **Event Logs recency check**
+   - Latest visible rows are around 13:xx expected business clock, not 12:xx.
+4. **Cross-surface consistency check**
+   - Same timestamp interpreted identically in KPI hover labels, Site Flow axis/tooltip, Event Logs table.
+5. **Boundary checks**
+   - Midnight/day rollover for “today”.
+   - DST dates to confirm no unintended shifting on demo path.
+6. **Non-demo regression check**
+   - Authenticated/BQ behavior unchanged.
+
+---
+
+## Hypotheses outcome (from current code)
+
+- H1 (UTC now vs wall-clock expectation): **supported**.
+- H2 (Site Flow mixed local arithmetic vs UTC-labelled payload): **supported**.
+- H3 (Event Logs pass-through/parse behavior preserves UTC-ish ambiguity): **supported**.
+- H4 (surface inconsistency): **supported**.
+- H5 (best fix is shared naive business-time layer): **supported as planning direction**.
+
+---
+
+## Conclusion
+
+Current PR 253 local-SQLite timing is mixed and inconsistent across KPI, Site Flow, and Event Logs. The fix plan should **not** be “convert UTC to browser local.” It should implement a demo-only unified contract where UTC-labelled stored timestamps are interpreted as fixed business wall-clock time across all three surfaces.
