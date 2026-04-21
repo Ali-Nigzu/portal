@@ -7,7 +7,7 @@ import type { SnapshotResponse } from "../../../lib/snapshots";
 import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
-import { formatDemoTimestamp, parseDemoTimestamp } from "../../../lib/demoTime";
+import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../../lib/demoTime";
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -262,6 +262,7 @@ const buildSiteFlowResult = (
       rollup.occupancyMin,
       rollup.occupancyMax,
     ],
+    demoNow(),
   );
   const normalizedEntrances = normalizeSeriesLength(rollup.entrances, sliceCount);
   const normalizedExits = normalizeSeriesLength(rollup.exits, sliceCount);

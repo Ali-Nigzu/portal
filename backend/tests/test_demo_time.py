@@ -18,6 +18,14 @@ def test_format_demo_timestamp_stable_sql_shape():
 
 
 def test_resolve_demo_bounds_defaults_to_future_end():
-    start, end = resolve_demo_bounds("2026-04-16", None)
+    now = datetime(2026, 4, 16, 19, 56, 0)
+    start, end = resolve_demo_bounds("2026-04-16", None, now=now)
     assert start == datetime(2026, 4, 16, 0, 0, 0)
-    assert end == datetime(2100, 1, 1, 0, 0, 0)
+    assert end == now
+
+
+def test_resolve_demo_bounds_caps_future_end_date_to_now():
+    now = datetime(2026, 4, 16, 19, 56, 0)
+    start, end = resolve_demo_bounds("2026-04-16", "2026-04-16", now=now)
+    assert start == datetime(2026, 4, 16, 0, 0, 0)
+    assert end == now

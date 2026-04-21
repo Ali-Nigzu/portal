@@ -1,7 +1,7 @@
 import { formatSiteFlowTick } from "../analytics/components/ChartRenderer/utils/formatSiteFlowTick";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
 import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "./timeWindows";
-import { getDemoHour, startOfDemoDay } from "./demoTime";
+import { demoNow, formatDemoTimestamp, getDemoHour, isSameDemoDate, startOfDemoDay } from "./demoTime";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const addHours = (date: Date, hours: number): Date => {
   const next = new Date(date);
@@ -42,17 +42,23 @@ export const resolveSiteFlowSliceCount = (
   timeframe: SiteFlowTimeframe,
   anchor: Date,
   seriesList: number[][],
+  now: Date = demoNow(),
 ): {
   length: number;
   sliceCount: number;
   dayStart: Date;
 } => {
   const length = Math.max(...seriesList.map((series) => series.length), 0);
+  const nowHour = getDemoHour(now);
+  const todayHourCap = Math.min(nowHour + 1, 24);
+  const dayStart = timeframe === "today" && isSameDemoDate(anchor, now)
+    ? startOfDemoDay(now)
+    : startOfDemoDay(anchor);
   const sliceCount =
     timeframe === "today"
       ? Math.min(
           length > 0 ? length : 24,
-          Math.min(getDemoHour(anchor) + 1, 24),
+          todayHourCap,
         )
       : timeframe === "yesterday"
         ? 24
@@ -65,7 +71,6 @@ export const resolveSiteFlowSliceCount = (
               : timeframe === "last_year"
                 ? 12
                 : length;
-  const dayStart = startOfDemoDay(anchor);
   return { length, sliceCount, dayStart };
 };
 export const buildAnchoredTimestamps = (
@@ -110,6 +115,7 @@ export const buildSiteFlowBucketLabels = (
   timeframe: SiteFlowTimeframe,
   anchor: Date,
   seriesList: number[][],
+  now: Date = demoNow(),
 ): {
   labels: string[];
   bucket: string;
@@ -120,6 +126,7 @@ export const buildSiteFlowBucketLabels = (
     timeframe,
     anchor,
     seriesList,
+    now,
   );
   const timestamps =
     timeframe === "today"
@@ -129,7 +136,7 @@ export const buildSiteFlowBucketLabels = (
       : buildAnchoredTimestamps(timeframe, anchor, sliceCount);
   const bucket = inferSiteFlowBucket(timeframe, sliceCount);
   const labels = timestamps.map((timestamp) =>
-    formatSiteFlowTick(timeframe, bucket, timestamp.toISOString()),
+    formatSiteFlowTick(timeframe, bucket, formatDemoTimestamp(timestamp)),
   );
   return { labels, bucket, timestamps, sliceCount };
 };

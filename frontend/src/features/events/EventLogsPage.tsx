@@ -5,7 +5,7 @@ import { Credentials } from "../../types/credentials";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
 import type { searchEvents } from "./transport/searchEvents";
 import type { EventData } from "./utils/eventTypes";
-import { formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
+import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
 interface EventLogsPageProps {
   credentials: Credentials;
   searchEventsFn?: typeof searchEvents;
@@ -61,7 +61,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
     { value: "0", label: "Male" },
     { value: "1", label: "Female" },
   ];
-  const today = new Date();
+  const today = demoNow();
   today.setHours(0, 0, 0, 0);
   const clampToToday = (date: Date | null): Date | null => {
     if (!date) {
@@ -234,7 +234,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
         const eventLabel = eventCode === 1 ? "Entrance" : "Exit";
         const timestamp = event.timestamp?.toString().trim()
           ? event.timestamp
-          : new Date().toISOString();
+          : formatDemoTimestamp(demoNow());
         const sexCode = normalizeSex(event.sex);
         const sexLabel = sexCode === 1 ? "Female" : "Male";
         const ageBucketCode = normalizeAgeBucket(
