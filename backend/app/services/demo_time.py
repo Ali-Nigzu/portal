@@ -6,8 +6,10 @@ No timezone conversion is applied.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
+from zoneinfo import ZoneInfo
 
 _TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -36,7 +38,12 @@ def format_demo_timestamp(value: datetime) -> str:
 
 def demo_now() -> datetime:
     """Return demo 'now' in local wall-clock terms (naive datetime)."""
-    return datetime.now()
+    configured_tz = os.getenv("DEMO_NOW_TIMEZONE", "Europe/London")
+    try:
+        tz = ZoneInfo(configured_tz)
+    except Exception:
+        tz = timezone.utc
+    return datetime.now(tz).replace(tzinfo=None)
 
 
 def start_of_day(value: datetime) -> datetime:
@@ -47,8 +54,14 @@ def end_of_day(value: datetime) -> datetime:
     return value.replace(hour=23, minute=59, second=59, microsecond=999999)
 
 
-def resolve_demo_bounds(start_date: Optional[str], end_date: Optional[str]) -> Tuple[datetime, datetime]:
+def resolve_demo_bounds(
+    start_date: Optional[str],
+    end_date: Optional[str],
+    *,
+    now: Optional[datetime] = None,
+) -> Tuple[datetime, datetime]:
     """Resolve date bounds for demo queries without timezone semantics."""
+    resolved_now = (now or demo_now()).replace(microsecond=0)
     start = parse_demo_timestamp(start_date) if start_date else datetime(1970, 1, 1)
 
     if end_date:
@@ -56,8 +69,10 @@ def resolve_demo_bounds(start_date: Optional[str], end_date: Optional[str]) -> T
         if len(end_date.strip()) <= 10:
             end = end_of_day(end)
     else:
-        # Use a far-future bound so demo queries aren't clipped by server timezone.
-        end = datetime(2100, 1, 1)
+        end = resolved_now
+
+    if end > resolved_now:
+        end = resolved_now
 
     if start > end:
         start, end = end, start

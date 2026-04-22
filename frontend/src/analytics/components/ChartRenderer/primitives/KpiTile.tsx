@@ -17,6 +17,7 @@ import {
   formatValue,
   shouldShowRawCount,
 } from "../utils/format";
+import { parseDemoTimestamp } from "../../../../lib/demoTime";
 const formatKpiValue = (value: number | null | undefined, unit?: string) => {
   const numeric = formatNumeric(value);
   if (numeric === "—") {
@@ -167,6 +168,9 @@ export const KpiTile = ({
   const parseLabelDate = (label?: string | number) => {
     if (label === null || label === undefined || label === "") {
       return null;
+    }
+    if (typeof label === "string" && timezone === "DEMO_CLOCK") {
+      return parseDemoTimestamp(label);
     }
     const parsed = new Date(label);
     return Number.isNaN(parsed.valueOf()) ? null : parsed;

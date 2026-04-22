@@ -4,7 +4,7 @@ import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import type { Credentials } from "../../../types/credentials";
 import { searchEvents } from "../transport/searchEvents";
-import { formatDemoDateKey } from "../../../lib/demoTime";
+import { demoNow, formatDemoDateKey, parseDemoTimestamp } from "../../../lib/demoTime";
 import type { EventData } from "../utils/eventTypes";
 
 type EventLogsQueryOverrides = {
@@ -56,7 +56,7 @@ export const useEventLogsQuery = (
         : getViewTokenFromLocation(window.location.search);
   const storageKey = `camOS.eventLogsState:${isDemoSession ? "demo" : "auth"}`;
 
-  const today = new Date();
+  const today = demoNow();
   today.setHours(0, 0, 0, 0);
 
   const applyHardZeroResult = useCallback(() => {
@@ -112,16 +112,16 @@ export const useEventLogsQuery = (
         setAppliedFilters(parsed.appliedFilters);
       }
       if (parsed.draftStartDate) {
-        setDraftStartDate(new Date(parsed.draftStartDate));
+        setDraftStartDate(parseDemoTimestamp(parsed.draftStartDate));
       }
       if (parsed.draftEndDate) {
-        setDraftEndDate(new Date(parsed.draftEndDate));
+        setDraftEndDate(parseDemoTimestamp(parsed.draftEndDate));
       }
       if (parsed.appliedStartDate) {
-        setAppliedStartDate(new Date(parsed.appliedStartDate));
+        setAppliedStartDate(parseDemoTimestamp(parsed.appliedStartDate));
       }
       if (parsed.appliedEndDate) {
-        setAppliedEndDate(new Date(parsed.appliedEndDate));
+        setAppliedEndDate(parseDemoTimestamp(parsed.appliedEndDate));
       }
       if (typeof parsed.searchToken === "number") {
         setSearchToken(parsed.searchToken);
@@ -146,10 +146,10 @@ export const useEventLogsQuery = (
       currentPage,
       draftFilters,
       appliedFilters,
-      draftStartDate: draftStartDate ? draftStartDate.toISOString() : null,
-      draftEndDate: draftEndDate ? draftEndDate.toISOString() : null,
-      appliedStartDate: appliedStartDate ? appliedStartDate.toISOString() : null,
-      appliedEndDate: appliedEndDate ? appliedEndDate.toISOString() : null,
+      draftStartDate: draftStartDate ? formatDemoDateKey(draftStartDate) : null,
+      draftEndDate: draftEndDate ? formatDemoDateKey(draftEndDate) : null,
+      appliedStartDate: appliedStartDate ? formatDemoDateKey(appliedStartDate) : null,
+      appliedEndDate: appliedEndDate ? formatDemoDateKey(appliedEndDate) : null,
       searchToken,
     };
 
