@@ -37,6 +37,7 @@ interface DashboardViewProps {
     result?: ChartResult;
     error?: string;
   };
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({
@@ -56,6 +57,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onSiteFlowTimeframeChange,
   siteFlowDemographics,
   siteFlowActivity,
+  donutTooltipMode = "legacy",
 }) => {
   const isPreview = mode === "preview";
 
@@ -92,6 +94,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           onSiteFlowTimeframeChange={onSiteFlowTimeframeChange}
           siteFlowDemographics={siteFlowDemographics}
           siteFlowActivity={siteFlowActivity}
+          donutTooltipMode={donutTooltipMode}
         />
       </div>
     </div>

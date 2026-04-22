@@ -16,4 +16,5 @@ export interface ChartPrimitiveProps {
   siteFlowTimeframe?: string;
   hideInactiveLegend?: boolean;
   siteFlowActivity?: boolean;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 }

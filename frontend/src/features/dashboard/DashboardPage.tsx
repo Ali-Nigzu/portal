@@ -17,6 +17,7 @@ const DashboardPage = ({
   unpinWidget,
   dashboardId,
   dataMode = "demo",
+  donutTooltipMode = "legacy",
 }: DashboardPageProps) => {
   const {
     manifest,
@@ -98,6 +99,7 @@ const DashboardPage = ({
       onSiteFlowTimeframeChange={handleSiteFlowTimeframeChange}
       siteFlowDemographics={siteFlowDemographics}
       siteFlowActivity={siteFlowActivity}
+      donutTooltipMode={donutTooltipMode}
     />
   );
 };
@@ -123,6 +125,7 @@ interface DashboardPageProps {
   unpinWidget?: UnpinMutator;
   dashboardId?: string;
   dataMode?: DashboardDataMode;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 }
 
 const DashboardPageWithBoundary = (props: DashboardPageProps) => (

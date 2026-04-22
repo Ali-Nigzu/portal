@@ -37,6 +37,7 @@ type ChartGridProps = {
     result?: Parameters<typeof ChartRenderer>[0]["result"];
     error?: string;
   };
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 };
 
 type ChartCardProps = {
@@ -48,6 +49,7 @@ type ChartCardProps = {
   locked?: boolean;
   onRemove?: () => void;
   widgetId: string;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 };
 
 const ChartCard: React.FC<ChartCardProps> = ({
@@ -59,6 +61,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
   locked,
   onRemove,
   widgetId,
+  donutTooltipMode = "legacy",
 }) => {
   let body: ReactNode = null;
   if (state.status === "loading") {
@@ -66,7 +69,14 @@ const ChartCard: React.FC<ChartCardProps> = ({
   } else if (state.status === "error") {
     body = renderError(state.error ?? `Failed to load ${title}`);
   } else {
-    body = <ChartRenderer result={result} height={360} widgetId={widgetId} />;
+    body = (
+      <ChartRenderer
+        result={result}
+        height={360}
+        widgetId={widgetId}
+        donutTooltipMode={donutTooltipMode}
+      />
+    );
   }
   const footer =
     mode === "full" && !locked && onRemove ? (
@@ -103,6 +113,7 @@ const ChartGrid: React.FC<ChartGridProps> = ({
   onSiteFlowTimeframeChange,
   siteFlowDemographics,
   siteFlowActivity,
+  donutTooltipMode = "legacy",
 }) => (
   <section
     className="dashboard-v2__grid vrm-section vrm-section--chart"
@@ -135,6 +146,7 @@ const ChartGrid: React.FC<ChartGridProps> = ({
                 onTimeframeChange={onSiteFlowTimeframeChange}
                 demographics={siteFlowDemographics}
                 activity={siteFlowActivity}
+                donutTooltipMode={donutTooltipMode}
               />
             ) : (
               <ChartCard
@@ -145,6 +157,7 @@ const ChartGrid: React.FC<ChartGridProps> = ({
                 result={state.result}
                 locked={state.widget.locked}
                 widgetId={state.widget.id}
+                donutTooltipMode={donutTooltipMode}
                 onRemove={
                   state.widget.locked || mode === "preview"
                     ? undefined
