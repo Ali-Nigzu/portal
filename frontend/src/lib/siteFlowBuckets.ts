@@ -1,7 +1,7 @@
 import { formatSiteFlowTick } from "../analytics/components/ChartRenderer/utils/formatSiteFlowTick";
 import type { SiteFlowTimeframe } from "./siteFlowTimeframe";
 import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "./timeWindows";
-import { demoNow, formatDemoTimestamp, getDemoHour, isSameDemoDate, startOfDemoDay } from "./demoTime";
+import { formatDemoTimestamp, getDemoHour, startOfDemoDay } from "./demoTime";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const addHours = (date: Date, hours: number): Date => {
   const next = new Date(date);
@@ -42,23 +42,18 @@ export const resolveSiteFlowSliceCount = (
   timeframe: SiteFlowTimeframe,
   anchor: Date,
   seriesList: number[][],
-  now: Date = demoNow(),
 ): {
   length: number;
   sliceCount: number;
   dayStart: Date;
 } => {
   const length = Math.max(...seriesList.map((series) => series.length), 0);
-  const nowHour = getDemoHour(now);
-  const todayHourCap = Math.min(nowHour + 1, 24);
-  const dayStart = timeframe === "today" && isSameDemoDate(anchor, now)
-    ? startOfDemoDay(now)
-    : startOfDemoDay(anchor);
+  const dayStart = startOfDemoDay(anchor);
   const sliceCount =
     timeframe === "today"
       ? Math.min(
           length > 0 ? length : 24,
-          todayHourCap,
+          Math.min(getDemoHour(anchor) + 1, 24),
         )
       : timeframe === "yesterday"
         ? 24
@@ -115,7 +110,6 @@ export const buildSiteFlowBucketLabels = (
   timeframe: SiteFlowTimeframe,
   anchor: Date,
   seriesList: number[][],
-  now: Date = demoNow(),
 ): {
   labels: string[];
   bucket: string;
@@ -126,7 +120,6 @@ export const buildSiteFlowBucketLabels = (
     timeframe,
     anchor,
     seriesList,
-    now,
   );
   const timestamps =
     timeframe === "today"

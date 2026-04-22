@@ -6,8 +6,10 @@ No timezone conversion is applied.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
+from zoneinfo import ZoneInfo
 
 _TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -36,7 +38,12 @@ def format_demo_timestamp(value: datetime) -> str:
 
 def demo_now() -> datetime:
     """Return demo 'now' in local wall-clock terms (naive datetime)."""
-    return datetime.now()
+    configured_tz = os.getenv("DEMO_NOW_TIMEZONE", "Europe/London")
+    try:
+        tz = ZoneInfo(configured_tz)
+    except Exception:
+        tz = timezone.utc
+    return datetime.now(tz).replace(tzinfo=None)
 
 
 def start_of_day(value: datetime) -> datetime:

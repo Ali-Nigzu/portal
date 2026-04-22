@@ -7,13 +7,10 @@ import type { SnapshotResponse } from "../../../lib/snapshots";
 import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
-import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../../lib/demoTime";
+import { formatDemoTimestamp, parseDemoTimestamp } from "../../../lib/demoTime";
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const NAIVE_TIMESTAMP_REGEX =
-  /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/;
-
 const LEGACY_ROLLUP_INDEX: Record<SiteFlowTimeframe, number> = {
   today: 0,
   yesterday: 1,
@@ -82,10 +79,7 @@ const parseSnapshotTimestamp = (value: string): Date => {
   if (parsed) {
     return parsed;
   }
-  if (NAIVE_TIMESTAMP_REGEX.test(value)) {
-    return new Date(value.replace(" ", "T"));
-  }
-  return new Date(value);
+  throw new Error(`Unparseable demo snapshot timestamp: ${value}`);
 };
 
 const buildTimeSeriesPoints = (
@@ -112,6 +106,14 @@ const normalizeSeriesLength = (values: number[], count: number): number[] => {
     return sliced;
   }
   return [...sliced, ...Array.from({ length: count - sliced.length }, () => 0)];
+};
+
+const normalizeSeriesLengthFromTail = (values: number[], count: number): number[] => {
+  const sliced = values.slice(-count);
+  if (sliced.length >= count) {
+    return sliced;
+  }
+  return [...Array.from({ length: count - sliced.length }, () => 0), ...sliced];
 };
 
 const normalizeKpiSeriesLength = (values: number[], count: number): number[] => {
@@ -262,13 +264,15 @@ const buildSiteFlowResult = (
       rollup.occupancyMin,
       rollup.occupancyMax,
     ],
-    demoNow(),
   );
-  const normalizedEntrances = normalizeSeriesLength(rollup.entrances, sliceCount);
-  const normalizedExits = normalizeSeriesLength(rollup.exits, sliceCount);
-  const normalizedOccAvg = normalizeSeriesLength(rollup.occupancyAvg, sliceCount);
-  const normalizedOccMin = normalizeSeriesLength(rollup.occupancyMin, sliceCount);
-  const normalizedOccMax = normalizeSeriesLength(rollup.occupancyMax, sliceCount);
+  const normalizeForFrame = timeframe === "today"
+    ? normalizeSeriesLengthFromTail
+    : normalizeSeriesLength;
+  const normalizedEntrances = normalizeForFrame(rollup.entrances, sliceCount);
+  const normalizedExits = normalizeForFrame(rollup.exits, sliceCount);
+  const normalizedOccAvg = normalizeForFrame(rollup.occupancyAvg, sliceCount);
+  const normalizedOccMin = normalizeForFrame(rollup.occupancyMin, sliceCount);
+  const normalizedOccMax = normalizeForFrame(rollup.occupancyMax, sliceCount);
 
   const buildSeries = (id: string, values: number[]): ChartSeries => ({
     id,
@@ -335,14 +339,28 @@ const buildDemographicResult = (
   meta: { timezone: "DEMO_CLOCK", summary: { title: kind } },
 });
 
-const isLegacyPayload = (payload: unknown[]): boolean => {
-  const rollups = payload[7];
-  return (
-    Array.isArray(rollups) &&
-    rollups.length > 0 &&
-    Array.isArray(rollups[0]) &&
-    !Array.isArray(payload[8])
-  );
+const detectPayloadContract = (payload: unknown[]): "target_v2" | "legacy_v1" => {
+  const hasTargetShape = payload.length >= 14
+    && Array.isArray(payload[7])
+    && Array.isArray(payload[8])
+    && Array.isArray(payload[9])
+    && Array.isArray(payload[10])
+    && Array.isArray(payload[11])
+    && Array.isArray(payload[12])
+    && Array.isArray(payload[13]);
+  if (hasTargetShape) {
+    return "target_v2";
+  }
+
+  const hasLegacyShape = payload.length >= 8
+    && Array.isArray(payload[7])
+    && (payload[7] as unknown[]).length > 0
+    && Array.isArray((payload[7] as unknown[])[0]);
+  if (hasLegacyShape) {
+    return "legacy_v1";
+  }
+
+  throw new Error("Unsupported snapshot payload contract for demo site flow");
 };
 
 const normalizeLegacyRollup = (rawRollup: unknown[]): NormalizedRollup => ({
@@ -357,9 +375,21 @@ const normalizeLegacyRollup = (rawRollup: unknown[]): NormalizedRollup => ({
 });
 
 const normalizeTargetRollup = (rawRollup: unknown[]): NormalizedRollup => {
+  if (rawRollup.length < 6) {
+    throw new Error("Target rollup must contain 6 series slots");
+  }
   const occupancyTriplets = Array.isArray(rawRollup?.[1])
     ? (rawRollup[1] as unknown[])
     : [];
+  if (!Array.isArray(rawRollup[0]) || !Array.isArray(rawRollup[2])) {
+    throw new Error("Target rollup entrances/exits must be arrays");
+  }
+  if (!Array.isArray(rawRollup[3]) || !Array.isArray(rawRollup[4]) || !Array.isArray(rawRollup[5])) {
+    throw new Error("Target rollup demographic slots must be arrays");
+  }
+  if (occupancyTriplets.some((bucket) => !Array.isArray(bucket) || bucket.length < 3)) {
+    throw new Error("Target rollup occupancy series must be triplet arrays");
+  }
 
   return {
     entrances: asNumberArray(rawRollup?.[0]),
@@ -390,10 +420,10 @@ const normalizePayload = (payload: unknown[]): NormalizedSnapshotPayload => {
     all_time: EMPTY_ROLLUP,
   };
 
-  const legacy = isLegacyPayload(payload);
+  const contract = detectPayloadContract(payload);
 
   (Object.keys(TARGET_ROLLUP_SLOT) as SiteFlowTimeframe[]).forEach((timeframe) => {
-    if (legacy) {
+    if (contract === "legacy_v1") {
       const bundle = Array.isArray(payload[7]) ? (payload[7] as unknown[]) : [];
       const raw = Array.isArray(bundle[LEGACY_ROLLUP_INDEX[timeframe]])
         ? (bundle[LEGACY_ROLLUP_INDEX[timeframe]] as unknown[])
@@ -406,10 +436,10 @@ const normalizePayload = (payload: unknown[]): NormalizedSnapshotPayload => {
     rollups[timeframe] = normalizeTargetRollup(raw);
   });
 
-  const trafficSplit = legacy
+  const trafficSplit = contract === "legacy_v1"
     ? asNumberArray(payload[6])
     : asNumberArray(payload[5]);
-  const capacity = legacy
+  const capacity = contract === "legacy_v1"
     ? asNumberArray(payload[5])
     : asNumberArray(payload[6]);
 
