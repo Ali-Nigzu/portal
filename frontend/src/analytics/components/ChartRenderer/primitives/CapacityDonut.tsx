@@ -204,7 +204,12 @@ export const CapacityDonut = ({
       >
         <div
           ref={chartSurfaceRef}
-          style={{ position: "relative", height: donutChartHeight }}
+          style={{
+            position: "relative",
+            height: donutChartHeight,
+            width: donutChartHeight,
+            minWidth: donutChartHeight,
+          }}
           onPointerMove={isDemoCursorHover
             ? (event) => {
               const surface = chartSurfaceRef.current;
