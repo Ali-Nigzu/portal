@@ -129,6 +129,13 @@ export const CapacityDonut = ({
       return hoverController.getTooltipPosition(
         { width: container.clientWidth, height: container.clientHeight },
         { width: tooltipRect?.width ?? 102, height: tooltipRect?.height ?? 20 },
+        { x: 12, y: 12 },
+        4,
+        {
+          centerX: container.clientWidth / 2,
+          centerY: container.clientHeight / 2,
+          radius: donutOuterRadius + 10,
+        },
       );
     }
     return legacyHoverLabel

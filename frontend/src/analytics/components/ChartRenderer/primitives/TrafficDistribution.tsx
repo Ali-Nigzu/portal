@@ -208,6 +208,13 @@ export const TrafficDistribution = ({
           width: tooltipRect?.width ?? 132,
           height: tooltipRect?.height ?? 20,
         },
+        { x: 12, y: 12 },
+        4,
+        {
+          centerX: container.clientWidth / 2,
+          centerY: (container.clientHeight || donutChartHeight) / 2,
+          radius: donutOuterRadius + 10,
+        },
       );
     }
     return legacyHoverLabel
@@ -366,7 +373,7 @@ export const TrafficDistribution = ({
                   style={{ cursor: "default" }}
                 />
               ))}
-              {!isLandingPreviewTraffic ? (
+              {!isLandingPreviewTraffic && !isDemoCursorHover ? (
                 <text
                   x="50%"
                   y="50%"

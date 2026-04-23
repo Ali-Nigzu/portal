@@ -183,6 +183,7 @@ export const useDonutHoverController = ({
     tooltipSize: { width: number; height: number },
     offset: { x: number; y: number } = { x: 12, y: 12 },
     edgePadding = 4,
+    outsideDonut?: { centerX: number; centerY: number; radius: number },
   ) => {
     if (!pointer) {
       return null;
@@ -191,9 +192,41 @@ export const useDonutHoverController = ({
     const maxX = Math.max(edgePadding, bounds.width - tooltipSize.width - edgePadding);
     const maxY = Math.max(edgePadding, bounds.height - tooltipSize.height - edgePadding);
 
+    let nextX = clamp(pointer.x + offset.x, edgePadding, maxX);
+    let nextY = clamp(pointer.y + offset.y, edgePadding, maxY);
+
+    if (outsideDonut) {
+      const popupCenterX = nextX + tooltipSize.width / 2;
+      const popupCenterY = nextY + tooltipSize.height / 2;
+      const dx = popupCenterX - outsideDonut.centerX;
+      const dy = popupCenterY - outsideDonut.centerY;
+      const distance = Math.hypot(dx, dy);
+
+      if (distance < outsideDonut.radius) {
+        const fallbackDx = pointer.x - outsideDonut.centerX;
+        const fallbackDy = pointer.y - outsideDonut.centerY;
+        const fallbackDistance = Math.hypot(fallbackDx, fallbackDy);
+        const unitX = distance > 0
+          ? dx / distance
+          : fallbackDistance > 0
+            ? fallbackDx / fallbackDistance
+            : 1;
+        const unitY = distance > 0
+          ? dy / distance
+          : fallbackDistance > 0
+            ? fallbackDy / fallbackDistance
+            : 0;
+        const push = outsideDonut.radius - distance + edgePadding;
+        const adjustedCenterX = popupCenterX + unitX * push;
+        const adjustedCenterY = popupCenterY + unitY * push;
+        nextX = clamp(adjustedCenterX - tooltipSize.width / 2, edgePadding, maxX);
+        nextY = clamp(adjustedCenterY - tooltipSize.height / 2, edgePadding, maxY);
+      }
+    }
+
     return {
-      x: clamp(pointer.x + offset.x, edgePadding, maxX),
-      y: clamp(pointer.y + offset.y, edgePadding, maxY),
+      x: nextX,
+      y: nextY,
     };
   };
 
