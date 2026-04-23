@@ -8,6 +8,7 @@ type DashboardKpiSectionProps = {
   onRemoveWidget: (widgetId: string) => void;
   className?: string;
   rendererClassName?: string;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 };
 
 const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
@@ -16,6 +17,7 @@ const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
   onRemoveWidget,
   className,
   rendererClassName,
+  donutTooltipMode = "legacy",
 }) => {
   if (kpiWidgets.length === 0) {
     return null;
@@ -28,6 +30,7 @@ const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
         kpiWidgets={kpiWidgets}
         onRemoveWidget={onRemoveWidget}
         rendererClassName={rendererClassName}
+        donutTooltipMode={donutTooltipMode}
       />
     </div>
   );

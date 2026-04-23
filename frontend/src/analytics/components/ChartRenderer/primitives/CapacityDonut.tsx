@@ -29,6 +29,7 @@ export const CapacityDonut = ({
 }: ChartPrimitiveProps) => {
   const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
   const hoverLabelRef = useRef<HTMLDivElement | null>(null);
   const primary = series[0];
   const data = primary?.data ?? [];
@@ -76,18 +77,34 @@ export const CapacityDonut = ({
         : entry.value,
   }));
   const centerDisplay = `${Math.round(centerValue)}%`;
+  const donutInnerRadius = 48;
+  const donutOuterRadius = 68;
+  const donutChartHeight = 140;
   const [legacyHoverLabel, setLegacyHoverLabel] = useState<{
     text: string;
     x: number;
     y: number;
   } | null>(null);
-  const hoverController = useDonutHoverController();
+  const hoverController = useDonutHoverController({
+    enabled: isDemoCursorHover,
+    geometry: {
+      innerRadius: donutInnerRadius,
+      outerRadius: donutOuterRadius,
+      startAngle: 90,
+      endAngle: 450,
+    },
+    segments: normalizedData.map((entry) => ({
+      id: entry.label,
+      value: entry.value,
+      interactive: entry.label !== "Remaining",
+    })),
+  });
   const hoveredSlice = normalizedData.find(
-    (entry) => entry.label === hoverController.hoveredSegmentId,
+    (entry) => entry.label === hoverController.activeSegmentId,
   );
   const hoverLabelText = useMemo(() => {
     if (isDemoCursorHover) {
-      if (!hoverController.isActive || !hoveredSlice || hoveredSlice.label === "Remaining") {
+      if (!hoverController.isTooltipVisible || !hoveredSlice || hoveredSlice.label === "Remaining") {
         return "";
       }
       const value =
@@ -101,9 +118,9 @@ export const CapacityDonut = ({
       return "";
     }
     return legacyHoverLabel.text;
-  }, [hoverController.isActive, hoveredSlice, isDemoCursorHover, legacyHoverLabel]);
+  }, [hoverController.isTooltipVisible, hoveredSlice, isDemoCursorHover, legacyHoverLabel]);
   const tooltipPosition = useMemo(() => {
-    const container = containerRef.current;
+    const container = chartSurfaceRef.current;
     const tooltipRect = hoverLabelRef.current?.getBoundingClientRect();
     if (!container) {
       return null;
@@ -184,72 +201,70 @@ export const CapacityDonut = ({
         className="capacity-usage__content"
         ref={containerRef}
         style={{ position: "relative" }}
-        onPointerLeave={isDemoCursorHover ? hoverController.clearHover : undefined}
-        onMouseLeave={isDemoCursorHover ? hoverController.clearHover : undefined}
-        onPointerCancel={isDemoCursorHover ? hoverController.clearHover : undefined}
-        onBlur={isDemoCursorHover ? hoverController.clearHover : undefined}
       >
-        {hoverLabelText ? (
-          <div
-            ref={hoverLabelRef}
-            aria-live="polite"
-            style={{
-              position: "absolute",
-              left: `${tooltipPosition?.x ?? 0}px`,
-              top: `${tooltipPosition?.y ?? 0}px`,
-              pointerEvents: "none",
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "var(--text-strong, #16181b)",
-              zIndex: 2,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {hoverLabelText}
-          </div>
-        ) : null}
-        <ResponsiveContainer width="100%" height={140}>
-          <PieChart>
-            <Pie
+        <div
+          ref={chartSurfaceRef}
+          style={{ position: "relative", height: donutChartHeight }}
+          onPointerMove={isDemoCursorHover
+            ? (event) => {
+              const surface = chartSurfaceRef.current;
+              if (!surface) {
+                return;
+              }
+              hoverController.updateFromPointerEvent(event, {
+                width: surface.clientWidth,
+                height: surface.clientHeight || donutChartHeight,
+              });
+            }
+            : undefined}
+          onPointerLeave={isDemoCursorHover ? hoverController.clearHover : undefined}
+          onMouseLeave={isDemoCursorHover ? hoverController.clearHover : undefined}
+          onPointerCancel={isDemoCursorHover ? hoverController.clearHover : undefined}
+          onBlur={isDemoCursorHover ? hoverController.clearHover : undefined}
+          onClick={isDemoCursorHover ? hoverController.clearHover : undefined}
+        >
+          {hoverLabelText ? (
+            <div
+              ref={hoverLabelRef}
+              aria-live="polite"
+              style={{
+                position: "absolute",
+                left: `${tooltipPosition?.x ?? 0}px`,
+                top: `${tooltipPosition?.y ?? 0}px`,
+                pointerEvents: "none",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--text-strong, #16181b)",
+                zIndex: 2,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {hoverLabelText}
+            </div>
+          ) : null}
+          <ResponsiveContainer width="100%" height={donutChartHeight}>
+            <PieChart>
+              <Pie
               dataKey="value"
               data={normalizedData}
               cx="50%"
               cy="50%"
-              innerRadius={48}
-              outerRadius={68}
+              innerRadius={donutInnerRadius}
+              outerRadius={donutOuterRadius}
               paddingAngle={0}
               startAngle={90}
               endAngle={450}
               stroke="none"
               rootTabIndex={-1}
-              onMouseEnter={(shape, index, event) => {
-                if (isDemoCursorHover) {
-                  const entry = normalizedData[index];
-                  const segmentId = entry?.label === "Remaining" ? null : entry?.label ?? null;
-                  const containerRect = containerRef.current?.getBoundingClientRect();
-                  hoverController.updateHover(segmentId, event, containerRect);
-                  return;
-                }
+              onMouseEnter={(shape, index) => {
                 placeHoverLabel(index, shape ?? {});
               }}
-              onMouseMove={(shape, index, event) => {
-                if (isDemoCursorHover) {
-                  const entry = normalizedData[index];
-                  const segmentId = entry?.label === "Remaining" ? null : entry?.label ?? null;
-                  const containerRect = containerRef.current?.getBoundingClientRect();
-                  hoverController.updateHover(segmentId, event, containerRect);
-                  return;
-                }
+              onMouseMove={(shape, index) => {
                 placeHoverLabel(index, shape ?? {});
               }}
               onMouseLeave={() => {
-                if (isDemoCursorHover) {
-                  hoverController.clearHover();
-                  return;
-                }
                 setLegacyHoverLabel(null);
               }}
-              onClick={isDemoCursorHover ? hoverController.clearHover : undefined}
               style={{ cursor: "default" }}
             >
               {normalizedData.map((entry) => (
@@ -264,8 +279,8 @@ export const CapacityDonut = ({
                   }
                 />
               ))}
-            </Pie>
-            <text
+              </Pie>
+              <text
               x="50%"
               y="50%"
               textAnchor="middle"
@@ -273,9 +288,10 @@ export const CapacityDonut = ({
               className="capacity-usage__center"
             >
               {centerDisplay}
-            </text>
-          </PieChart>
-        </ResponsiveContainer>
+              </text>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ type KpiBandProps = {
   kpiWidgets: DashboardWidgetState[];
   onRemoveWidget: (widgetId: string) => void;
   rendererClassName?: string;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 };
 
 type KpiTileProps = {
@@ -20,6 +21,7 @@ type KpiTileProps = {
   onRemove?: () => void;
   widgetId: string;
   rendererClassName?: string;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 };
 
 const PREVIEW_KPI_HEIGHT = 76;
@@ -33,6 +35,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
   onRemove,
   widgetId,
   rendererClassName,
+  donutTooltipMode = "legacy",
 }) => {
   const summary = result?.meta?.summary ?? {};
   const headline =
@@ -64,6 +67,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
         height={kpiHeight}
         className={mergedRendererClassName}
         widgetId={widgetId}
+        donutTooltipMode={donutTooltipMode}
       />
     );
   }
@@ -101,6 +105,7 @@ const KpiBand: React.FC<KpiBandProps> = ({
   kpiWidgets,
   onRemoveWidget,
   rendererClassName,
+  donutTooltipMode = "legacy",
 }) => {
   if (kpiWidgets.length === 0) {
     return null;
@@ -121,6 +126,7 @@ const KpiBand: React.FC<KpiBandProps> = ({
           locked={state.widget.locked}
           widgetId={state.widget.id}
           rendererClassName={rendererClassName}
+          donutTooltipMode={donutTooltipMode}
           onRemove={
             state.widget.locked
               ? undefined

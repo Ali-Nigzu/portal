@@ -82,6 +82,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           mode={mode}
           kpiWidgets={kpiWidgets}
           onRemoveWidget={onRemoveWidget}
+          donutTooltipMode={donutTooltipMode}
         />
         <ChartGrid
           mode={mode}
