@@ -3,6 +3,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { formatNumeric } from "../utils/format";
 import { useDonutHoverController } from "./useDonutHoverController";
+import { DonutTooltipCard, type DonutTooltipRow } from "./DonutTooltipCard";
 
 const DEFAULT_SLICE_COLORS = [
   "#2d6cdf",
@@ -176,6 +177,19 @@ export const TrafficDistribution = ({
     y: number;
   } | null>(null);
   const hoveredSlice = pieLegend.find((entry) => entry.label === hoverController.activeSegmentId);
+  const tooltipRows = useMemo<DonutTooltipRow[]>(() => {
+    if (!isDemoCursorHover || !hasPositiveTraffic) {
+      return [];
+    }
+    return pieLegend.map((entry) => ({
+      id: entry.label,
+      label: entry.label,
+      valueText: `${formatNumeric(Math.max(0, Number(entry.displayValue ?? entry.value) || 0))}%`,
+      color: entry.color,
+      isActive: hoverController.activeSegmentId === entry.label,
+      interactive: true,
+    }));
+  }, [hasPositiveTraffic, hoverController.activeSegmentId, isDemoCursorHover, pieLegend]);
   const hoverLabelText = useMemo(() => {
     if (isDemoCursorHover) {
       if (!hoverController.isTooltipVisible || !hoveredSlice) {
@@ -315,7 +329,23 @@ export const TrafficDistribution = ({
           onBlur={isDemoCursorHover ? hoverController.clearHover : undefined}
           onClick={isDemoCursorHover ? hoverController.clearHover : undefined}
         >
-          {hoverLabelText ? (
+          {isDemoCursorHover ? (
+            hoverController.isTooltipVisible && hoveredSlice && tooltipRows.length > 0 ? (
+              <div
+                ref={hoverLabelRef}
+                style={{
+                  position: "absolute",
+                  left: `${tooltipPosition?.x ?? 0}px`,
+                  top: `${tooltipPosition?.y ?? 0}px`,
+                  pointerEvents: "none",
+                  zIndex: 2,
+                  minWidth: "180px",
+                }}
+              >
+                <DonutTooltipCard rows={tooltipRows} />
+              </div>
+            ) : null
+          ) : hoverLabelText ? (
             <div
               ref={hoverLabelRef}
               aria-live="polite"
