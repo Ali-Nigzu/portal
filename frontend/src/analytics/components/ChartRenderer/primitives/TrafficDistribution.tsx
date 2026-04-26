@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { formatNumeric } from "../utils/format";
 import { useDonutHoverController } from "./useDonutHoverController";
 import { DonutTooltipCard, type DonutTooltipRow } from "./DonutTooltipCard";
+import { useDemoDonutTooltipOwner } from "./DemoDonutTooltipOwnerContext";
 
 const DEFAULT_SLICE_COLORS = [
   "#2d6cdf",
@@ -27,11 +28,13 @@ export const TrafficDistribution = ({
   useRawLabels = false,
   labelKey,
   donutTooltipMode = "legacy",
+  donutTooltipOwnerId,
 }: ChartPrimitiveProps) => {
   const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
   const hoverLabelRef = useRef<HTMLDivElement | null>(null);
+  const donutTooltipOwner = useDemoDonutTooltipOwner();
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary =
@@ -206,6 +209,32 @@ export const TrafficDistribution = ({
     }
     return legacyHoverLabel.text;
   }, [hoverController.isTooltipVisible, hoveredSlice, isDemoCursorHover, legacyHoverLabel]);
+  const localTooltipVisible = isDemoCursorHover &&
+    hoverController.isTooltipVisible &&
+    hoveredSlice !== undefined &&
+    tooltipRows.length > 0;
+  const isOwnedTooltip = !donutTooltipOwnerId || !donutTooltipOwner
+    ? true
+    : donutTooltipOwner.activeOwnerId === donutTooltipOwnerId;
+  const isDemoTooltipVisible = localTooltipVisible && isOwnedTooltip;
+
+  useEffect(() => {
+    if (!isDemoCursorHover || !donutTooltipOwner || !donutTooltipOwnerId) {
+      return;
+    }
+    if (localTooltipVisible) {
+      donutTooltipOwner.claim(donutTooltipOwnerId);
+      return;
+    }
+    donutTooltipOwner.release(donutTooltipOwnerId);
+  }, [donutTooltipOwner, donutTooltipOwnerId, isDemoCursorHover, localTooltipVisible]);
+
+  const clearDemoHover = () => {
+    hoverController.clearHover();
+    if (donutTooltipOwner && donutTooltipOwnerId) {
+      donutTooltipOwner.release(donutTooltipOwnerId);
+    }
+  };
   const tooltipPosition = useMemo(() => {
     const container = chartSurfaceRef.current;
     const tooltipRect = hoverLabelRef.current?.getBoundingClientRect();
@@ -323,23 +352,24 @@ export const TrafficDistribution = ({
               });
             }
             : undefined}
-          onPointerLeave={isDemoCursorHover ? hoverController.clearHover : undefined}
-          onMouseLeave={isDemoCursorHover ? hoverController.clearHover : undefined}
-          onPointerCancel={isDemoCursorHover ? hoverController.clearHover : undefined}
-          onBlur={isDemoCursorHover ? hoverController.clearHover : undefined}
-          onClick={isDemoCursorHover ? hoverController.clearHover : undefined}
+          onPointerLeave={isDemoCursorHover ? clearDemoHover : undefined}
+          onMouseLeave={isDemoCursorHover ? clearDemoHover : undefined}
+          onPointerCancel={isDemoCursorHover ? clearDemoHover : undefined}
+          onBlur={isDemoCursorHover ? clearDemoHover : undefined}
+          onClick={isDemoCursorHover ? clearDemoHover : undefined}
         >
           {isDemoCursorHover ? (
-            hoverController.isTooltipVisible && hoveredSlice && tooltipRows.length > 0 ? (
+            isDemoTooltipVisible ? (
               <div
                 ref={hoverLabelRef}
                 style={{
                   position: "absolute",
                   left: `${tooltipPosition?.x ?? 0}px`,
                   top: `${tooltipPosition?.y ?? 0}px`,
+                  transform: "translate3d(0, 0, 0)",
+                  transition: "transform 80ms linear, left 80ms linear, top 80ms linear",
                   pointerEvents: "none",
                   zIndex: 2,
-                  minWidth: "180px",
                 }}
               >
                 <DonutTooltipCard rows={tooltipRows} />
@@ -403,7 +433,7 @@ export const TrafficDistribution = ({
                   style={{ cursor: "default" }}
                 />
               ))}
-              {!isLandingPreviewTraffic && !isDemoCursorHover ? (
+              {!isLandingPreviewTraffic ? (
                 <text
                   x="50%"
                   y="50%"

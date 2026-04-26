@@ -128,6 +128,7 @@ export const SiteFlowDemographicsView = ({
             height={220}
             className="site-flow-demographics__chart"
             widgetId={`site-flow-${title.toLowerCase()}`}
+            donutTooltipOwnerId={`site-flow-${title.toLowerCase()}`}
             useRawLabels
             labelKey="label"
             donutTooltipMode={donutTooltipMode}

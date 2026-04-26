@@ -21,7 +21,7 @@ export const DonutTooltipCard = ({
   }
 
   return (
-    <div className="analytics-chart-tooltip" role="status" aria-live="polite">
+    <div className="analytics-chart-tooltip analytics-chart-tooltip--donut" role="status" aria-live="polite">
       {header ? <div className="tooltip-header">{header}</div> : null}
       <ul>
         {rows.map((row) => (

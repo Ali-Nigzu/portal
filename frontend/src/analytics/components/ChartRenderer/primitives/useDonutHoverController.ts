@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 
 type PointerPosition = { x: number; y: number };
@@ -137,6 +137,7 @@ export const useDonutHoverController = ({
 }: ControllerOptions) => {
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
   const [pointer, setPointer] = useState<PointerPosition | null>(null);
+  const horizontalSideRef = useRef<"left" | "right">("right");
 
   const clearHover = () => {
     setActiveSegmentId(null);
@@ -189,10 +190,23 @@ export const useDonutHoverController = ({
       return null;
     }
 
+    const centerX = bounds.width / 2;
+    const hysteresisBand = 18;
+    let side = horizontalSideRef.current;
+    if (pointer.x < centerX - hysteresisBand) {
+      side = "right";
+    } else if (pointer.x > centerX + hysteresisBand) {
+      side = "left";
+    }
+    horizontalSideRef.current = side;
+
     const maxX = Math.max(edgePadding, bounds.width - tooltipSize.width - edgePadding);
     const maxY = Math.max(edgePadding, bounds.height - tooltipSize.height - edgePadding);
 
-    let nextX = clamp(pointer.x + offset.x, edgePadding, maxX);
+    const rawX = side === "right"
+      ? pointer.x + offset.x
+      : pointer.x - tooltipSize.width - offset.x;
+    let nextX = clamp(rawX, edgePadding, maxX);
     let nextY = clamp(pointer.y + offset.y, edgePadding, maxY);
 
     if (outsideDonut) {

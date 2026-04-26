@@ -17,4 +17,5 @@ export interface ChartPrimitiveProps {
   hideInactiveLegend?: boolean;
   siteFlowActivity?: boolean;
   donutTooltipMode?: "legacy" | "demo_cursor_hover";
+  donutTooltipOwnerId?: string;
 }
