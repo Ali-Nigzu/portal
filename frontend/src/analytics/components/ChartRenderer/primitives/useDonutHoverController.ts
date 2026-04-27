@@ -27,6 +27,11 @@ type HoverBounds = {
   height: number;
 };
 
+type HoverResolution = {
+  pointer: PointerPosition | null;
+  segmentId: string | null;
+};
+
 const clamp = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));
 };
@@ -144,6 +149,56 @@ export const useDonutHoverController = ({
     setPointer(null);
   };
 
+  const setHoverState = (nextPointer: PointerPosition | null, nextSegmentId: string | null) => {
+    setPointer(nextPointer);
+    setActiveSegmentId(nextSegmentId);
+  };
+
+  const resolveFromViewportPoint = (
+    clientX: number,
+    clientY: number,
+    element: HTMLElement,
+    bounds: HoverBounds,
+  ): HoverResolution => {
+    const rect = element.getBoundingClientRect();
+    const nextPointer = {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+
+    if (
+      nextPointer.x < 0 ||
+      nextPointer.y < 0 ||
+      nextPointer.x > bounds.width ||
+      nextPointer.y > bounds.height
+    ) {
+      return { pointer: null, segmentId: null };
+    }
+
+    const boundedPointer = {
+      x: clamp(nextPointer.x, 0, bounds.width),
+      y: clamp(nextPointer.y, 0, bounds.height),
+    };
+    const hitSegmentId = resolveSegmentAtPointer(
+      boundedPointer,
+      bounds,
+      geometry,
+      segments,
+    );
+    return { pointer: boundedPointer, segmentId: hitSegmentId };
+  };
+
+  const syncFromViewportPoint = (
+    clientX: number,
+    clientY: number,
+    element: HTMLElement,
+    bounds: HoverBounds,
+  ): HoverResolution => {
+    const resolution = resolveFromViewportPoint(clientX, clientY, element, bounds);
+    setHoverState(resolution.pointer, resolution.segmentId);
+    return resolution;
+  };
+
   const updateFromPointerEvent = (
     event: PointerEvent<HTMLElement>,
     bounds: HoverBounds,
@@ -152,26 +207,15 @@ export const useDonutHoverController = ({
       return;
     }
 
-    const rect = event.currentTarget.getBoundingClientRect();
-    const nextPointer = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
-
-    const boundedPointer = {
-      x: clamp(nextPointer.x, 0, bounds.width),
-      y: clamp(nextPointer.y, 0, bounds.height),
-    };
-
-    setPointer(boundedPointer);
-
-    const hitSegmentId = resolveSegmentAtPointer(
-      boundedPointer,
+    const resolution = syncFromViewportPoint(
+      event.clientX,
+      event.clientY,
+      event.currentTarget,
       bounds,
-      geometry,
-      segments,
     );
-    setActiveSegmentId(hitSegmentId);
+    if (!resolution.pointer) {
+      clearHover();
+    }
   };
 
   const isTooltipVisible = useMemo(
@@ -249,6 +293,9 @@ export const useDonutHoverController = ({
     pointer,
     isTooltipVisible,
     updateFromPointerEvent,
+    resolveFromViewportPoint,
+    syncFromViewportPoint,
+    setHoverState,
     clearHover,
     getTooltipPosition,
   };

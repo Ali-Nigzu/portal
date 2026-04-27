@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { useDonutHoverController } from "./useDonutHoverController";
@@ -143,6 +143,19 @@ export const CapacityDonut = ({
     }
     return legacyHoverLabel.text;
   }, [hoverController.isTooltipVisible, hoveredSlice, isDemoCursorHover, legacyHoverLabel]);
+  const getHoverBounds = useCallback(() => {
+    const surface = chartSurfaceRef.current;
+    if (!surface) {
+      return null;
+    }
+    return {
+      element: surface,
+      bounds: {
+        width: surface.clientWidth,
+        height: surface.clientHeight || donutChartHeight,
+      },
+    };
+  }, [donutChartHeight]);
   const localTooltipVisible = isDemoCursorHover &&
     hoverController.isTooltipVisible &&
     hoveredSlice !== undefined &&
@@ -163,12 +176,83 @@ export const CapacityDonut = ({
     donutTooltipOwner.release(donutTooltipOwnerId);
   }, [donutTooltipOwner, donutTooltipOwnerId, isDemoCursorHover, localTooltipVisible]);
 
-  const clearDemoHover = () => {
+  const invalidateHoverAndRelease = useCallback(() => {
     hoverController.clearHover();
     if (donutTooltipOwner && donutTooltipOwnerId) {
       donutTooltipOwner.release(donutTooltipOwnerId);
     }
-  };
+  }, [donutTooltipOwner, donutTooltipOwnerId, hoverController]);
+
+  useEffect(() => {
+    if (
+      !isDemoCursorHover ||
+      !donutTooltipOwner ||
+      !donutTooltipOwnerId ||
+      donutTooltipOwner.activeOwnerId !== donutTooltipOwnerId
+    ) {
+      return;
+    }
+
+    const validateViewportPoint = (clientX: number, clientY: number) => {
+      const hoverBounds = getHoverBounds();
+      if (!hoverBounds) {
+        invalidateHoverAndRelease();
+        return;
+      }
+      const resolution = hoverController.syncFromViewportPoint(
+        clientX,
+        clientY,
+        hoverBounds.element,
+        hoverBounds.bounds,
+      );
+      if (!resolution.pointer || !resolution.segmentId) {
+        invalidateHoverAndRelease();
+      }
+    };
+
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      validateViewportPoint(event.clientX, event.clientY);
+    };
+    const handleWindowPointerUp = (event: PointerEvent) => {
+      validateViewportPoint(event.clientX, event.clientY);
+    };
+    const handleWindowPointerCancel = () => {
+      invalidateHoverAndRelease();
+    };
+    const handleWindowMouseLeave = () => {
+      invalidateHoverAndRelease();
+    };
+    const handleWindowBlur = () => {
+      invalidateHoverAndRelease();
+    };
+
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerCancel);
+    window.addEventListener("mouseleave", handleWindowMouseLeave);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerCancel);
+      window.removeEventListener("mouseleave", handleWindowMouseLeave);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [
+    donutTooltipOwner,
+    donutTooltipOwnerId,
+    getHoverBounds,
+    hoverController,
+    invalidateHoverAndRelease,
+    isDemoCursorHover,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      invalidateHoverAndRelease();
+    };
+  }, [invalidateHoverAndRelease]);
   const tooltipPosition = useMemo(() => {
     const container = chartSurfaceRef.current;
     const tooltipRect = hoverLabelRef.current?.getBoundingClientRect();
@@ -279,11 +363,11 @@ export const CapacityDonut = ({
               });
             }
             : undefined}
-          onPointerLeave={isDemoCursorHover ? clearDemoHover : undefined}
-          onMouseLeave={isDemoCursorHover ? clearDemoHover : undefined}
-          onPointerCancel={isDemoCursorHover ? clearDemoHover : undefined}
-          onBlur={isDemoCursorHover ? clearDemoHover : undefined}
-          onClick={isDemoCursorHover ? clearDemoHover : undefined}
+          onPointerLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onMouseLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onPointerCancel={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onBlur={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onClick={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
         >
           {isDemoCursorHover ? (
             isDemoTooltipVisible ? (
