@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import ErrorBoundary from "../../common/components/ErrorBoundary";
 import type { DashboardManifest } from "./types";
 import { Credentials } from "../../types/credentials";
@@ -9,6 +10,7 @@ import { useSiteFlow } from "./hooks/useSiteFlow";
 import type { FetchDashboardManifestOptions } from "./transport/fetchDashboardManifest";
 import type { DashboardDataMode, loadWidgetResult } from "./transport/loadWidgetResult";
 import DashboardView from "./components/DashboardView";
+import { resolveSiteViewOrDefault } from "../../lib/siteView";
 
 const DashboardPage = ({
   credentials,
@@ -19,6 +21,11 @@ const DashboardPage = ({
   dataMode = "demo",
   donutTooltipMode = "legacy",
 }: DashboardPageProps) => {
+  const location = useLocation();
+  const siteView = useMemo(
+    () => resolveSiteViewOrDefault(location.pathname),
+    [location.pathname],
+  );
   const {
     manifest,
     setManifest,
@@ -48,6 +55,7 @@ const DashboardPage = ({
     resolvedDashboardId,
     setManifest,
     dataMode,
+    siteView,
   });
 
   const {
@@ -64,6 +72,7 @@ const DashboardPage = ({
     clientContextId: resolvedUiClient,
     widgetResultLoader,
     dataMode,
+    siteView,
   });
 
   const status = useMemo(() => {

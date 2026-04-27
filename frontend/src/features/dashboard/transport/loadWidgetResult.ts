@@ -6,7 +6,7 @@ import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildSnapshotWidgetResult } from "../utils/snapshotPayload";
 import type { SnapshotResponse } from "../../../lib/snapshots";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
-import { resolveSiteViewFromLocation } from "../../../lib/siteView";
+import type { SiteView } from "../../../lib/siteView";
 
 export type DashboardDataMode = "authenticated" | "demo" | "view_token";
 
@@ -18,6 +18,7 @@ export interface LoadWidgetOptions {
   viewToken?: string;
   snapshotTimeframe?: SiteFlowTimeframe;
   dataMode?: DashboardDataMode;
+  siteView?: SiteView;
 }
 
 const SNAPSHOT_ENDPOINT = "/api/snapshots/latest";
@@ -75,8 +76,7 @@ export async function loadWidgetResult(
   widget: DashboardWidget,
   options: LoadWidgetOptions = {},
 ): Promise<ChartResult> {
-  const { signal, orgId, viewToken, dataMode = "demo" } = options;
-  const siteView = resolveSiteViewFromLocation();
+  const { signal, orgId, viewToken, dataMode = "demo", siteView } = options;
   const snapshotTimeframe = options.snapshotTimeframe ?? "all_time";
   let result: ChartResult;
 

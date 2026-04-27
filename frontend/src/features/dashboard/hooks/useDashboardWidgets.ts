@@ -13,6 +13,7 @@ import { decorateResult } from "../utils/vrmDecorators";
 import { logError, logInfo } from "../../../common/utils/logger";
 import { VRM_KPI_IDS } from "../utils/applyVRMOverrides";
 import { isSiteFlowWidget } from "../utils/siteFlowDemographics";
+import type { SiteView } from "../../../lib/siteView";
 
 const WIDGET_STATUS_DEFAULT: DashboardWidgetState["status"] = "idle";
 
@@ -35,6 +36,7 @@ type UseDashboardWidgetsParams = {
   resolvedDashboardId: string;
   setManifest: (manifest: DashboardManifest | null) => void;
   dataMode: DashboardDataMode;
+  siteView: SiteView;
 };
 
 type ChartWidgetsEntry = {
@@ -66,6 +68,7 @@ export const useDashboardWidgets = ({
   resolvedDashboardId,
   setManifest,
   dataMode,
+  siteView,
 }: UseDashboardWidgetsParams): UseDashboardWidgetsResult => {
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
   const unpinWidgetImpl = unpinWidget ?? unpinDashboardWidget;
@@ -137,6 +140,7 @@ export const useDashboardWidgets = ({
               orgId,
               viewToken,
               dataMode,
+              siteView,
             });
             if (controller.signal.aborted) {
               return;
@@ -227,6 +231,7 @@ export const useDashboardWidgets = ({
     viewToken,
     clientContextId,
     dataMode,
+    siteView,
   ]);
 
   const kpiWidgets = useMemo(() => {
