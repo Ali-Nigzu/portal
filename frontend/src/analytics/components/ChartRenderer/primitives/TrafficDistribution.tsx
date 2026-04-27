@@ -34,6 +34,7 @@ export const TrafficDistribution = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
   const hoverLabelRef = useRef<HTMLDivElement | null>(null);
+  const invalidateOnUnmountRef = useRef<() => void>(() => {});
   const donutTooltipOwner = useDemoDonutTooltipOwner();
   const primary = series[0];
   const data = primary?.data ?? [];
@@ -165,6 +166,14 @@ export const TrafficDistribution = ({
       interactive: hasPositiveTraffic,
     })),
   });
+  const {
+    activeSegmentId,
+    isTooltipVisible,
+    updateFromPointerEvent,
+    syncFromViewportPoint,
+    clearHover,
+    getTooltipPosition,
+  } = hoverController;
   const topCameraLabel = hasPositiveTraffic
     ? (
       renderTopSlice.camId === null ||
@@ -179,7 +188,7 @@ export const TrafficDistribution = ({
     x: number;
     y: number;
   } | null>(null);
-  const hoveredSlice = pieLegend.find((entry) => entry.label === hoverController.activeSegmentId);
+  const hoveredSlice = pieLegend.find((entry) => entry.label === activeSegmentId);
   const tooltipRows = useMemo<DonutTooltipRow[]>(() => {
     if (!isDemoCursorHover || !hasPositiveTraffic) {
       return [];
@@ -189,13 +198,13 @@ export const TrafficDistribution = ({
       label: entry.label,
       valueText: `${formatNumeric(Math.max(0, Number(entry.displayValue ?? entry.value) || 0))}%`,
       color: entry.color,
-      isActive: hoverController.activeSegmentId === entry.label,
+      isActive: activeSegmentId === entry.label,
       interactive: true,
     }));
-  }, [hasPositiveTraffic, hoverController.activeSegmentId, isDemoCursorHover, pieLegend]);
+  }, [activeSegmentId, hasPositiveTraffic, isDemoCursorHover, pieLegend]);
   const hoverLabelText = useMemo(() => {
     if (isDemoCursorHover) {
-      if (!hoverController.isTooltipVisible || !hoveredSlice) {
+      if (!isTooltipVisible || !hoveredSlice) {
         return "";
       }
       const value =
@@ -208,7 +217,7 @@ export const TrafficDistribution = ({
       return "";
     }
     return legacyHoverLabel.text;
-  }, [hoverController.isTooltipVisible, hoveredSlice, isDemoCursorHover, legacyHoverLabel]);
+  }, [hoveredSlice, isDemoCursorHover, isTooltipVisible, legacyHoverLabel]);
   const getHoverBounds = useCallback(() => {
     const surface = chartSurfaceRef.current;
     if (!surface) {
@@ -223,7 +232,7 @@ export const TrafficDistribution = ({
     };
   }, [donutChartHeight]);
   const localTooltipVisible = isDemoCursorHover &&
-    hoverController.isTooltipVisible &&
+    isTooltipVisible &&
     hoveredSlice !== undefined &&
     tooltipRows.length > 0;
   const isOwnedTooltip = !donutTooltipOwnerId || !donutTooltipOwner
@@ -243,11 +252,15 @@ export const TrafficDistribution = ({
   }, [donutTooltipOwner, donutTooltipOwnerId, isDemoCursorHover, localTooltipVisible]);
 
   const invalidateHoverAndRelease = useCallback(() => {
-    hoverController.clearHover();
+    clearHover();
     if (donutTooltipOwner && donutTooltipOwnerId) {
       donutTooltipOwner.release(donutTooltipOwnerId);
     }
-  }, [donutTooltipOwner, donutTooltipOwnerId, hoverController]);
+  }, [clearHover, donutTooltipOwner, donutTooltipOwnerId]);
+
+  useEffect(() => {
+    invalidateOnUnmountRef.current = invalidateHoverAndRelease;
+  }, [invalidateHoverAndRelease]);
 
   useEffect(() => {
     if (
@@ -265,7 +278,7 @@ export const TrafficDistribution = ({
         invalidateHoverAndRelease();
         return;
       }
-      const resolution = hoverController.syncFromViewportPoint(
+      const resolution = syncFromViewportPoint(
         clientX,
         clientY,
         hoverBounds.element,
@@ -309,16 +322,16 @@ export const TrafficDistribution = ({
     donutTooltipOwner,
     donutTooltipOwnerId,
     getHoverBounds,
-    hoverController,
     invalidateHoverAndRelease,
     isDemoCursorHover,
+    syncFromViewportPoint,
   ]);
 
   useEffect(() => {
     return () => {
-      invalidateHoverAndRelease();
+      invalidateOnUnmountRef.current();
     };
-  }, [invalidateHoverAndRelease]);
+  }, []);
   const tooltipPosition = useMemo(() => {
     const container = chartSurfaceRef.current;
     const tooltipRect = hoverLabelRef.current?.getBoundingClientRect();
@@ -326,7 +339,7 @@ export const TrafficDistribution = ({
       return null;
     }
     if (isDemoCursorHover) {
-      return hoverController.getTooltipPosition(
+      return getTooltipPosition(
         {
           width: container.clientWidth,
           height: container.clientHeight || donutChartHeight,
@@ -347,7 +360,7 @@ export const TrafficDistribution = ({
     return legacyHoverLabel
       ? { x: legacyHoverLabel.x, y: legacyHoverLabel.y }
       : null;
-  }, [hoverController, isDemoCursorHover, legacyHoverLabel]);
+  }, [getTooltipPosition, isDemoCursorHover, legacyHoverLabel]);
   const placeHoverLabel = (
     entryIndex: number,
     shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
@@ -430,7 +443,7 @@ export const TrafficDistribution = ({
               if (!surface) {
                 return;
               }
-              hoverController.updateFromPointerEvent(event, {
+              updateFromPointerEvent(event, {
                 width: surface.clientWidth,
                 height: surface.clientHeight || donutChartHeight,
               });

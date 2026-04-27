@@ -34,6 +34,7 @@ export const CapacityDonut = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
   const hoverLabelRef = useRef<HTMLDivElement | null>(null);
+  const invalidateOnUnmountRef = useRef<() => void>(() => {});
   const donutTooltipOwner = useDemoDonutTooltipOwner();
   const primary = series[0];
   const data = primary?.data ?? [];
@@ -103,8 +104,16 @@ export const CapacityDonut = ({
       interactive: entry.label !== "Remaining",
     })),
   });
+  const {
+    activeSegmentId,
+    isTooltipVisible,
+    updateFromPointerEvent,
+    syncFromViewportPoint,
+    clearHover,
+    getTooltipPosition,
+  } = hoverController;
   const hoveredSlice = normalizedData.find(
-    (entry) => entry.label === hoverController.activeSegmentId,
+    (entry) => entry.label === activeSegmentId,
   );
   const tooltipRows = useMemo<DonutTooltipRow[]>(() => {
     if (!isDemoCursorHover) {
@@ -120,15 +129,15 @@ export const CapacityDonut = ({
           label: entry.label === "Usage" ? "Current" : "Peak",
           valueText: `${Math.max(0, Math.round(value))}%`,
           color: entry.color,
-          isActive: hoverController.activeSegmentId === entry.label,
+          isActive: activeSegmentId === entry.label,
           interactive: true,
         };
       })
       .filter((entry) => entry.valueText !== "0%");
-  }, [hoverController.activeSegmentId, isDemoCursorHover, normalizedData]);
+  }, [activeSegmentId, isDemoCursorHover, normalizedData]);
   const hoverLabelText = useMemo(() => {
     if (isDemoCursorHover) {
-      if (!hoverController.isTooltipVisible || !hoveredSlice || hoveredSlice.label === "Remaining") {
+      if (!isTooltipVisible || !hoveredSlice || hoveredSlice.label === "Remaining") {
         return "";
       }
       const value =
@@ -142,7 +151,7 @@ export const CapacityDonut = ({
       return "";
     }
     return legacyHoverLabel.text;
-  }, [hoverController.isTooltipVisible, hoveredSlice, isDemoCursorHover, legacyHoverLabel]);
+  }, [hoveredSlice, isDemoCursorHover, isTooltipVisible, legacyHoverLabel]);
   const getHoverBounds = useCallback(() => {
     const surface = chartSurfaceRef.current;
     if (!surface) {
@@ -157,7 +166,7 @@ export const CapacityDonut = ({
     };
   }, [donutChartHeight]);
   const localTooltipVisible = isDemoCursorHover &&
-    hoverController.isTooltipVisible &&
+    isTooltipVisible &&
     hoveredSlice !== undefined &&
     tooltipRows.length > 0;
   const isOwnedTooltip = !donutTooltipOwnerId || !donutTooltipOwner
@@ -177,11 +186,15 @@ export const CapacityDonut = ({
   }, [donutTooltipOwner, donutTooltipOwnerId, isDemoCursorHover, localTooltipVisible]);
 
   const invalidateHoverAndRelease = useCallback(() => {
-    hoverController.clearHover();
+    clearHover();
     if (donutTooltipOwner && donutTooltipOwnerId) {
       donutTooltipOwner.release(donutTooltipOwnerId);
     }
-  }, [donutTooltipOwner, donutTooltipOwnerId, hoverController]);
+  }, [clearHover, donutTooltipOwner, donutTooltipOwnerId]);
+
+  useEffect(() => {
+    invalidateOnUnmountRef.current = invalidateHoverAndRelease;
+  }, [invalidateHoverAndRelease]);
 
   useEffect(() => {
     if (
@@ -199,7 +212,7 @@ export const CapacityDonut = ({
         invalidateHoverAndRelease();
         return;
       }
-      const resolution = hoverController.syncFromViewportPoint(
+      const resolution = syncFromViewportPoint(
         clientX,
         clientY,
         hoverBounds.element,
@@ -243,16 +256,16 @@ export const CapacityDonut = ({
     donutTooltipOwner,
     donutTooltipOwnerId,
     getHoverBounds,
-    hoverController,
     invalidateHoverAndRelease,
     isDemoCursorHover,
+    syncFromViewportPoint,
   ]);
 
   useEffect(() => {
     return () => {
-      invalidateHoverAndRelease();
+      invalidateOnUnmountRef.current();
     };
-  }, [invalidateHoverAndRelease]);
+  }, []);
   const tooltipPosition = useMemo(() => {
     const container = chartSurfaceRef.current;
     const tooltipRect = hoverLabelRef.current?.getBoundingClientRect();
@@ -260,7 +273,7 @@ export const CapacityDonut = ({
       return null;
     }
     if (isDemoCursorHover) {
-      return hoverController.getTooltipPosition(
+      return getTooltipPosition(
         { width: container.clientWidth, height: container.clientHeight },
         { width: tooltipRect?.width ?? 102, height: tooltipRect?.height ?? 20 },
         { x: 12, y: 12 },
@@ -275,7 +288,7 @@ export const CapacityDonut = ({
     return legacyHoverLabel
       ? { x: legacyHoverLabel.x, y: legacyHoverLabel.y }
       : null;
-  }, [hoverController, isDemoCursorHover, legacyHoverLabel]);
+  }, [getTooltipPosition, isDemoCursorHover, legacyHoverLabel]);
   const placeHoverLabel = (
     entryIndex: number,
     shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
@@ -357,7 +370,7 @@ export const CapacityDonut = ({
               if (!surface) {
                 return;
               }
-              hoverController.updateFromPointerEvent(event, {
+              updateFromPointerEvent(event, {
                 width: surface.clientWidth,
                 height: surface.clientHeight || donutChartHeight,
               });

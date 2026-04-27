@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 
 type PointerPosition = { x: number; y: number };
@@ -144,17 +144,17 @@ export const useDonutHoverController = ({
   const [pointer, setPointer] = useState<PointerPosition | null>(null);
   const horizontalSideRef = useRef<"left" | "right">("right");
 
-  const clearHover = () => {
+  const clearHover = useCallback(() => {
     setActiveSegmentId(null);
     setPointer(null);
-  };
+  }, []);
 
-  const setHoverState = (nextPointer: PointerPosition | null, nextSegmentId: string | null) => {
+  const setHoverState = useCallback((nextPointer: PointerPosition | null, nextSegmentId: string | null) => {
     setPointer(nextPointer);
     setActiveSegmentId(nextSegmentId);
-  };
+  }, []);
 
-  const resolveFromViewportPoint = (
+  const resolveFromViewportPoint = useCallback((
     clientX: number,
     clientY: number,
     element: HTMLElement,
@@ -186,9 +186,9 @@ export const useDonutHoverController = ({
       segments,
     );
     return { pointer: boundedPointer, segmentId: hitSegmentId };
-  };
+  }, [geometry, segments]);
 
-  const syncFromViewportPoint = (
+  const syncFromViewportPoint = useCallback((
     clientX: number,
     clientY: number,
     element: HTMLElement,
@@ -197,9 +197,9 @@ export const useDonutHoverController = ({
     const resolution = resolveFromViewportPoint(clientX, clientY, element, bounds);
     setHoverState(resolution.pointer, resolution.segmentId);
     return resolution;
-  };
+  }, [resolveFromViewportPoint, setHoverState]);
 
-  const updateFromPointerEvent = (
+  const updateFromPointerEvent = useCallback((
     event: PointerEvent<HTMLElement>,
     bounds: HoverBounds,
   ) => {
@@ -216,14 +216,14 @@ export const useDonutHoverController = ({
     if (!resolution.pointer) {
       clearHover();
     }
-  };
+  }, [clearHover, enabled, syncFromViewportPoint]);
 
   const isTooltipVisible = useMemo(
     () => enabled && activeSegmentId !== null && pointer !== null,
     [activeSegmentId, enabled, pointer],
   );
 
-  const getTooltipPosition = (
+  const getTooltipPosition = useCallback((
     bounds: HoverBounds,
     tooltipSize: { width: number; height: number },
     offset: { x: number; y: number } = { x: 12, y: 12 },
@@ -286,9 +286,9 @@ export const useDonutHoverController = ({
       x: nextX,
       y: nextY,
     };
-  };
+  }, [pointer]);
 
-  return {
+  return useMemo(() => ({
     activeSegmentId,
     pointer,
     isTooltipVisible,
@@ -298,5 +298,15 @@ export const useDonutHoverController = ({
     setHoverState,
     clearHover,
     getTooltipPosition,
-  };
+  }), [
+    activeSegmentId,
+    clearHover,
+    getTooltipPosition,
+    isTooltipVisible,
+    pointer,
+    resolveFromViewportPoint,
+    setHoverState,
+    syncFromViewportPoint,
+    updateFromPointerEvent,
+  ]);
 };
