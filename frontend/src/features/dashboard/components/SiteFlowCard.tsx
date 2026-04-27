@@ -47,6 +47,7 @@ type SiteFlowCardProps = {
     result?: Parameters<typeof ChartRenderer>[0]["result"];
     error?: string;
   };
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 };
 
 const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
@@ -60,6 +61,7 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
   onTimeframeChange,
   demographics,
   activity,
+  donutTooltipMode = "legacy",
 }) => {
   const renderSiteFlowBody = () => {
     if (modeState === "demographics") {
@@ -70,9 +72,19 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
         return renderError(demographics.error ?? "Failed to load demographics");
       }
       if (demographics.status === "ready" && demographics.data) {
-        return <SiteFlowDemographicsView data={demographics.data} />;
+        return (
+          <SiteFlowDemographicsView
+            data={demographics.data}
+            donutTooltipMode={donutTooltipMode}
+          />
+        );
       }
-      return <SiteFlowDemographicsView data={EMPTY_DEMOGRAPHICS} />;
+      return (
+        <SiteFlowDemographicsView
+          data={EMPTY_DEMOGRAPHICS}
+          donutTooltipMode={donutTooltipMode}
+        />
+      );
     }
     if (activity.status === "loading") {
       return null;
@@ -81,7 +93,12 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
       return renderError(activity.error ?? "Failed to load Site Flow");
     }
     return (
-      <ChartRenderer result={activity.result ?? EMPTY_ACTIVITY_RESULT} height={360} widgetId={widgetId} />
+      <ChartRenderer
+        result={activity.result ?? EMPTY_ACTIVITY_RESULT}
+        height={360}
+        widgetId={widgetId}
+        donutTooltipMode={donutTooltipMode}
+      />
     );
   };
 

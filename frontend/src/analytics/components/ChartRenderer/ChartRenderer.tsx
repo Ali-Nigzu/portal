@@ -20,6 +20,8 @@ export interface ChartRendererProps {
   className?: string;
   onVisibilityChange?: (visibility: SeriesVisibilityMap) => void;
   widgetId?: string;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
+  donutTooltipOwnerId?: string;
 }
 function buildInitialVisibility(series: ChartSeries[]): SeriesVisibilityMap {
   return series.reduce<SeriesVisibilityMap>((acc, series) => {
@@ -33,6 +35,8 @@ export const ChartRenderer = ({
   className,
   onVisibilityChange,
   widgetId,
+  donutTooltipMode = "legacy",
+  donutTooltipOwnerId,
 }: ChartRendererProps) => {
   const [visibility, setVisibility] = useState<SeriesVisibilityMap>(() =>
     buildInitialVisibility(result.series),
@@ -152,6 +156,8 @@ export const ChartRenderer = ({
     siteFlowTimeframe,
     hideInactiveLegend: false,
     siteFlowActivity: isSiteFlowActivity,
+    donutTooltipMode,
+    donutTooltipOwnerId,
   };
   const chartStyle =
     summary?.chartStyle ||

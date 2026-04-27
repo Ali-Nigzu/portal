@@ -6,6 +6,10 @@ import DashboardHeader from "./DashboardHeader";
 import DashboardKpiSection from "./DashboardKpiSection";
 import ChartGrid from "./ChartGrid";
 import type { ChartResult } from "../../../analytics/schemas/charting";
+import {
+  DemoDonutTooltipBoundary,
+  DemoDonutTooltipProvider,
+} from "../../../analytics/components/ChartRenderer/primitives/DemoDonutTooltipOwnerContext";
 
 type ChartWidgetsEntry = {
   state: DashboardWidgetState;
@@ -37,6 +41,7 @@ interface DashboardViewProps {
     result?: ChartResult;
     error?: string;
   };
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({
@@ -56,8 +61,34 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onSiteFlowTimeframeChange,
   siteFlowDemographics,
   siteFlowActivity,
+  donutTooltipMode = "legacy",
 }) => {
   const isPreview = mode === "preview";
+  const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
+
+  const content = (
+    <>
+      <DashboardKpiSection
+        mode={mode}
+        kpiWidgets={kpiWidgets}
+        onRemoveWidget={onRemoveWidget}
+        donutTooltipMode={donutTooltipMode}
+      />
+      <ChartGrid
+        mode={mode}
+        chartWidgets={chartWidgets}
+        gridColumns={gridColumns}
+        onRemoveWidget={onRemoveWidget}
+        siteFlowMode={siteFlowMode}
+        onSiteFlowModeChange={onSiteFlowModeChange}
+        siteFlowTimeframe={siteFlowTimeframe}
+        onSiteFlowTimeframeChange={onSiteFlowTimeframeChange}
+        siteFlowDemographics={siteFlowDemographics}
+        siteFlowActivity={siteFlowActivity}
+        donutTooltipMode={donutTooltipMode}
+      />
+    </>
+  );
 
   return (
     <div
@@ -76,23 +107,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             {isPreview ? "Preview temporarily unavailable." : error}
           </div>
         ) : null}
-        <DashboardKpiSection
-          mode={mode}
-          kpiWidgets={kpiWidgets}
-          onRemoveWidget={onRemoveWidget}
-        />
-        <ChartGrid
-          mode={mode}
-          chartWidgets={chartWidgets}
-          gridColumns={gridColumns}
-          onRemoveWidget={onRemoveWidget}
-          siteFlowMode={siteFlowMode}
-          onSiteFlowModeChange={onSiteFlowModeChange}
-          siteFlowTimeframe={siteFlowTimeframe}
-          onSiteFlowTimeframeChange={onSiteFlowTimeframeChange}
-          siteFlowDemographics={siteFlowDemographics}
-          siteFlowActivity={siteFlowActivity}
-        />
+        {isDemoCursorHover ? (
+          <DemoDonutTooltipProvider>
+            <DemoDonutTooltipBoundary>{content}</DemoDonutTooltipBoundary>
+          </DemoDonutTooltipProvider>
+        ) : content}
       </div>
     </div>
   );

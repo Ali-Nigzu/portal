@@ -99,8 +99,10 @@ const toTrafficDistributionProps = (
 
 export const SiteFlowDemographicsView = ({
   data,
+  donutTooltipMode = "legacy",
 }: {
   data: SiteFlowDemographicsData;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 }) => {
   const charts = [
     { title: "Age", slices: data.age },
@@ -126,8 +128,10 @@ export const SiteFlowDemographicsView = ({
             height={220}
             className="site-flow-demographics__chart"
             widgetId={`site-flow-${title.toLowerCase()}`}
+            donutTooltipOwnerId={`site-flow-${title.toLowerCase()}`}
             useRawLabels
             labelKey="label"
+            donutTooltipMode={donutTooltipMode}
           />
         );
       })}

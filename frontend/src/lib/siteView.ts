@@ -24,3 +24,10 @@ export const resolveSiteViewFromLocation = (): SiteView | null => {
   }
   return resolveSiteViewFromPathname(window.location.pathname);
 };
+
+export const resolveSiteViewOrDefault = (
+  pathname: string | null | undefined,
+  fallback: SiteView = "site-a",
+): SiteView => {
+  return resolveSiteViewFromPathname(pathname) ?? fallback;
+};

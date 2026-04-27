@@ -339,6 +339,7 @@ const AppRoutes: React.FC = () => {
                     <DashboardPage
                       credentials={credentials}
                       dataMode={dashboardDataMode}
+                      donutTooltipMode="demo_cursor_hover"
                       widgetResultLoader={
                         isAuthenticatedMode ? loadEmptyWidgetResult : undefined
                       }
@@ -468,6 +469,7 @@ const AppRoutes: React.FC = () => {
                 <DashboardPage
                   credentials={credentials}
                   dataMode={dashboardDataMode}
+                  donutTooltipMode="legacy"
                   widgetResultLoader={
                     isAuthenticatedMode ? loadEmptyWidgetResult : undefined
                   }

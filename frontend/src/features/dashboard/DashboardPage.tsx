@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import ErrorBoundary from "../../common/components/ErrorBoundary";
 import type { DashboardManifest } from "./types";
 import { Credentials } from "../../types/credentials";
@@ -9,6 +10,7 @@ import { useSiteFlow } from "./hooks/useSiteFlow";
 import type { FetchDashboardManifestOptions } from "./transport/fetchDashboardManifest";
 import type { DashboardDataMode, loadWidgetResult } from "./transport/loadWidgetResult";
 import DashboardView from "./components/DashboardView";
+import { resolveSiteViewOrDefault } from "../../lib/siteView";
 
 const DashboardPage = ({
   credentials,
@@ -17,7 +19,13 @@ const DashboardPage = ({
   unpinWidget,
   dashboardId,
   dataMode = "demo",
+  donutTooltipMode = "legacy",
 }: DashboardPageProps) => {
+  const location = useLocation();
+  const siteView = useMemo(
+    () => resolveSiteViewOrDefault(location.pathname),
+    [location.pathname],
+  );
   const {
     manifest,
     setManifest,
@@ -47,6 +55,7 @@ const DashboardPage = ({
     resolvedDashboardId,
     setManifest,
     dataMode,
+    siteView,
   });
 
   const {
@@ -63,6 +72,7 @@ const DashboardPage = ({
     clientContextId: resolvedUiClient,
     widgetResultLoader,
     dataMode,
+    siteView,
   });
 
   const status = useMemo(() => {
@@ -98,6 +108,7 @@ const DashboardPage = ({
       onSiteFlowTimeframeChange={handleSiteFlowTimeframeChange}
       siteFlowDemographics={siteFlowDemographics}
       siteFlowActivity={siteFlowActivity}
+      donutTooltipMode={donutTooltipMode}
     />
   );
 };
@@ -123,6 +134,7 @@ interface DashboardPageProps {
   unpinWidget?: UnpinMutator;
   dashboardId?: string;
   dataMode?: DashboardDataMode;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 }
 
 const DashboardPageWithBoundary = (props: DashboardPageProps) => (

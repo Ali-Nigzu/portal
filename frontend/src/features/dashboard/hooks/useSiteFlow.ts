@@ -27,6 +27,7 @@ import {
   setDemoSiteFlowTimeframe,
 } from "../../../lib/demoSession";
 import { sanitizeChartResultForAuthenticated } from "../transport/loadEmptyWidgetResult";
+import type { SiteView } from "../../../lib/siteView";
 
 const TIMESTAMP_DIMENSION_ID = "timestamp";
 
@@ -41,6 +42,7 @@ type UseSiteFlowParams = {
   clientContextId: string | undefined;
   widgetResultLoader?: WidgetResultLoader;
   dataMode: DashboardDataMode;
+  siteView: SiteView;
 };
 
 type UseSiteFlowResult = {
@@ -79,6 +81,7 @@ export const useSiteFlow = ({
   clientContextId,
   widgetResultLoader,
   dataMode,
+  siteView,
 }: UseSiteFlowParams): UseSiteFlowResult => {
   const widgetResultLoaderImpl = widgetResultLoader ?? loadWidgetResult;
   const demoSiteFlowModeRef = useRef(consumeDemoSiteFlowModeOverride());
@@ -190,6 +193,7 @@ export const useSiteFlow = ({
       viewToken,
       snapshotTimeframe: siteFlowTimeframe,
       dataMode,
+      siteView,
     } as LoadWidgetOptions)
       .then((result) => {
         if (controller.signal.aborted) {
@@ -233,6 +237,7 @@ export const useSiteFlow = ({
     viewToken,
     widgetResultLoaderImpl,
     dataMode,
+    siteView,
   ]);
 
   useEffect(() => {
@@ -267,6 +272,7 @@ export const useSiteFlow = ({
         viewToken,
         snapshotTimeframe: siteFlowTimeframe,
         dataMode,
+        siteView,
       } as LoadWidgetOptions);
     Promise.all(kinds.map((kind) => loadDemographic(kind)))
       .then(([ageResult, genderResult, raceResult]) => {
@@ -299,6 +305,7 @@ export const useSiteFlow = ({
     siteFlowMode,
     siteFlowWidget,
     dataMode,
+    siteView,
   ]);
 
   return {

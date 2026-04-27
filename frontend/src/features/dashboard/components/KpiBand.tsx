@@ -9,6 +9,7 @@ type KpiBandProps = {
   kpiWidgets: DashboardWidgetState[];
   onRemoveWidget: (widgetId: string) => void;
   rendererClassName?: string;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
 };
 
 type KpiTileProps = {
@@ -20,6 +21,8 @@ type KpiTileProps = {
   onRemove?: () => void;
   widgetId: string;
   rendererClassName?: string;
+  donutTooltipMode?: "legacy" | "demo_cursor_hover";
+  donutTooltipOwnerId?: string;
 };
 
 const PREVIEW_KPI_HEIGHT = 76;
@@ -33,6 +36,8 @@ const KpiTile: React.FC<KpiTileProps> = ({
   onRemove,
   widgetId,
   rendererClassName,
+  donutTooltipMode = "legacy",
+  donutTooltipOwnerId,
 }) => {
   const summary = result?.meta?.summary ?? {};
   const headline =
@@ -64,6 +69,8 @@ const KpiTile: React.FC<KpiTileProps> = ({
         height={kpiHeight}
         className={mergedRendererClassName}
         widgetId={widgetId}
+        donutTooltipMode={donutTooltipMode}
+        donutTooltipOwnerId={donutTooltipOwnerId}
       />
     );
   }
@@ -96,11 +103,34 @@ const KpiTile: React.FC<KpiTileProps> = ({
   );
 };
 
+const resolveDonutTooltipOwnerId = (
+  widgetId: string,
+  result?: Parameters<typeof ChartRenderer>[0]["result"],
+): string | undefined => {
+  const summary = result?.meta?.summary as
+    | { chartStyle?: string; chartSubType?: string }
+    | undefined;
+  const chartStyle =
+    summary?.chartStyle ||
+    (result as unknown as { chartStyle?: string } | undefined)?.chartStyle;
+  const chartSubType =
+    summary?.chartSubType ||
+    (result as unknown as { chartSubType?: string } | undefined)?.chartSubType;
+  if (chartStyle === "capacity_usage" || chartSubType === "capacity_usage") {
+    return "capacity";
+  }
+  if (chartStyle === "traffic_distribution" || chartSubType === "traffic_distribution") {
+    return widgetId.startsWith("site-flow-") ? widgetId : "traffic-split";
+  }
+  return undefined;
+};
+
 const KpiBand: React.FC<KpiBandProps> = ({
   mode = "full",
   kpiWidgets,
   onRemoveWidget,
   rendererClassName,
+  donutTooltipMode = "legacy",
 }) => {
   if (kpiWidgets.length === 0) {
     return null;
@@ -121,6 +151,8 @@ const KpiBand: React.FC<KpiBandProps> = ({
           locked={state.widget.locked}
           widgetId={state.widget.id}
           rendererClassName={rendererClassName}
+          donutTooltipMode={donutTooltipMode}
+          donutTooltipOwnerId={resolveDonutTooltipOwnerId(state.widget.id, state.result)}
           onRemove={
             state.widget.locked
               ? undefined

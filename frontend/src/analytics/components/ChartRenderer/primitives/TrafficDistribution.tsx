@@ -1,7 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { formatNumeric } from "../utils/format";
+import { useDonutHoverController } from "./useDonutHoverController";
+import { DonutTooltipCard, type DonutTooltipRow } from "./DonutTooltipCard";
+import { useDemoDonutTooltipOwner } from "./DemoDonutTooltipOwnerContext";
 
 const DEFAULT_SLICE_COLORS = [
   "#2d6cdf",
@@ -24,9 +27,15 @@ export const TrafficDistribution = ({
   widgetId,
   useRawLabels = false,
   labelKey,
+  donutTooltipMode = "legacy",
+  donutTooltipOwnerId,
 }: ChartPrimitiveProps) => {
+  const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
   const hoverLabelRef = useRef<HTMLDivElement | null>(null);
+  const invalidateOnUnmountRef = useRef<() => void>(() => {});
+  const donutTooltipOwner = useDemoDonutTooltipOwner();
   const primary = series[0];
   const data = primary?.data ?? [];
   const summary =
@@ -116,6 +125,9 @@ export const TrafficDistribution = ({
 
   const totalValue = legend.reduce((total, slice) => total + slice.value, 0);
   const hasPositiveTraffic = totalValue > 0;
+  const donutInnerRadius = isLandingPreviewTraffic ? 0 : 48;
+  const donutOuterRadius = 68;
+  const donutChartHeight = 140;
 
   const renderLegend = hasPositiveTraffic
     ? legend.map((entry) => ({
@@ -140,6 +152,28 @@ export const TrafficDistribution = ({
     ...entry,
     value: entry.renderValue,
   }));
+  const hoverController = useDonutHoverController({
+    enabled: isDemoCursorHover,
+    geometry: {
+      innerRadius: donutInnerRadius,
+      outerRadius: donutOuterRadius,
+      startAngle: 90,
+      endAngle: 450,
+    },
+    segments: pieLegend.map((entry) => ({
+      id: entry.label,
+      value: entry.value,
+      interactive: hasPositiveTraffic,
+    })),
+  });
+  const {
+    activeSegmentId,
+    isTooltipVisible,
+    updateFromPointerEvent,
+    syncFromViewportPoint,
+    clearHover,
+    getTooltipPosition,
+  } = hoverController;
   const topCameraLabel = hasPositiveTraffic
     ? (
       renderTopSlice.camId === null ||
@@ -149,24 +183,194 @@ export const TrafficDistribution = ({
         : String(renderTopSlice.camId)
     )
     : "—";
-  const [hoverLabel, setHoverLabel] = useState<{
+  const [legacyHoverLabel, setLegacyHoverLabel] = useState<{
     text: string;
     x: number;
     y: number;
   } | null>(null);
+  const hoveredSlice = pieLegend.find((entry) => entry.label === activeSegmentId);
+  const tooltipRows = useMemo<DonutTooltipRow[]>(() => {
+    if (!isDemoCursorHover || !hasPositiveTraffic) {
+      return [];
+    }
+    return pieLegend.map((entry) => ({
+      id: entry.label,
+      label: entry.label,
+      valueText: `${formatNumeric(Math.max(0, Number(entry.displayValue ?? entry.value) || 0))}%`,
+      color: entry.color,
+      isActive: activeSegmentId === entry.label,
+      interactive: true,
+    }));
+  }, [activeSegmentId, hasPositiveTraffic, isDemoCursorHover, pieLegend]);
   const hoverLabelText = useMemo(() => {
-    if (!hoverLabel) {
+    if (isDemoCursorHover) {
+      if (!isTooltipVisible || !hoveredSlice) {
+        return "";
+      }
+      const value =
+        typeof hoveredSlice.displayValue === "number"
+          ? hoveredSlice.displayValue
+          : hoveredSlice.value;
+      return `${hoveredSlice.label} ${formatNumeric(Math.max(0, Number(value) || 0))}%`.trim();
+    }
+    if (!legacyHoverLabel) {
       return "";
     }
-    return hoverLabel.text;
-  }, [hoverLabel]);
+    return legacyHoverLabel.text;
+  }, [hoveredSlice, isDemoCursorHover, isTooltipVisible, legacyHoverLabel]);
+  const getHoverBounds = useCallback(() => {
+    const surface = chartSurfaceRef.current;
+    if (!surface) {
+      return null;
+    }
+    return {
+      element: surface,
+      bounds: {
+        width: surface.clientWidth,
+        height: surface.clientHeight || donutChartHeight,
+      },
+    };
+  }, [donutChartHeight]);
+  const localTooltipVisible = isDemoCursorHover &&
+    isTooltipVisible &&
+    hoveredSlice !== undefined &&
+    tooltipRows.length > 0;
+  const isOwnedTooltip = !donutTooltipOwnerId || !donutTooltipOwner
+    ? true
+    : donutTooltipOwner.activeOwnerId === donutTooltipOwnerId;
+  const isDemoTooltipVisible = localTooltipVisible && isOwnedTooltip;
+
+  useEffect(() => {
+    if (!isDemoCursorHover || !donutTooltipOwner || !donutTooltipOwnerId) {
+      return;
+    }
+    if (localTooltipVisible) {
+      donutTooltipOwner.claim(donutTooltipOwnerId);
+      return;
+    }
+    donutTooltipOwner.release(donutTooltipOwnerId);
+  }, [donutTooltipOwner, donutTooltipOwnerId, isDemoCursorHover, localTooltipVisible]);
+
+  const invalidateHoverAndRelease = useCallback(() => {
+    clearHover();
+    if (donutTooltipOwner && donutTooltipOwnerId) {
+      donutTooltipOwner.release(donutTooltipOwnerId);
+    }
+  }, [clearHover, donutTooltipOwner, donutTooltipOwnerId]);
+
+  useEffect(() => {
+    invalidateOnUnmountRef.current = invalidateHoverAndRelease;
+  }, [invalidateHoverAndRelease]);
+
+  useEffect(() => {
+    if (
+      !isDemoCursorHover ||
+      !donutTooltipOwner ||
+      !donutTooltipOwnerId ||
+      donutTooltipOwner.activeOwnerId !== donutTooltipOwnerId
+    ) {
+      return;
+    }
+
+    const validateViewportPoint = (clientX: number, clientY: number) => {
+      const hoverBounds = getHoverBounds();
+      if (!hoverBounds) {
+        invalidateHoverAndRelease();
+        return;
+      }
+      const resolution = syncFromViewportPoint(
+        clientX,
+        clientY,
+        hoverBounds.element,
+        hoverBounds.bounds,
+      );
+      if (!resolution.pointer || !resolution.segmentId) {
+        invalidateHoverAndRelease();
+      }
+    };
+
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      validateViewportPoint(event.clientX, event.clientY);
+    };
+    const handleWindowPointerUp = (event: PointerEvent) => {
+      validateViewportPoint(event.clientX, event.clientY);
+    };
+    const handleWindowPointerCancel = () => {
+      invalidateHoverAndRelease();
+    };
+    const handleWindowMouseLeave = () => {
+      invalidateHoverAndRelease();
+    };
+    const handleWindowBlur = () => {
+      invalidateHoverAndRelease();
+    };
+
+    window.addEventListener("pointermove", handleWindowPointerMove);
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerCancel);
+    window.addEventListener("mouseleave", handleWindowMouseLeave);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerCancel);
+      window.removeEventListener("mouseleave", handleWindowMouseLeave);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [
+    donutTooltipOwner,
+    donutTooltipOwnerId,
+    getHoverBounds,
+    invalidateHoverAndRelease,
+    isDemoCursorHover,
+    syncFromViewportPoint,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      invalidateOnUnmountRef.current();
+    };
+  }, []);
+  const tooltipPosition = useMemo(() => {
+    const container = chartSurfaceRef.current;
+    const tooltipRect = hoverLabelRef.current?.getBoundingClientRect();
+    if (!container) {
+      return null;
+    }
+    if (isDemoCursorHover) {
+      return getTooltipPosition(
+        {
+          width: container.clientWidth,
+          height: container.clientHeight || donutChartHeight,
+        },
+        {
+          width: tooltipRect?.width ?? 132,
+          height: tooltipRect?.height ?? 20,
+        },
+        { x: 12, y: 12 },
+        4,
+        {
+          centerX: container.clientWidth / 2,
+          centerY: (container.clientHeight || donutChartHeight) / 2,
+          radius: donutOuterRadius + 10,
+        },
+      );
+    }
+    return legacyHoverLabel
+      ? { x: legacyHoverLabel.x, y: legacyHoverLabel.y }
+      : null;
+  }, [getTooltipPosition, isDemoCursorHover, legacyHoverLabel]);
   const placeHoverLabel = (
     entryIndex: number,
     shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
   ) => {
+    if (isDemoCursorHover) {
+      return;
+    }
     const hovered = pieLegend[entryIndex];
     if (!hovered) {
-      setHoverLabel(null);
+      setLegacyHoverLabel(null);
       return;
     }
     const value = typeof hovered.displayValue === "number" ? hovered.displayValue : hovered.value;
@@ -174,7 +378,7 @@ export const TrafficDistribution = ({
     const text = `${hovered.label} ${formatNumeric(Math.max(0, safeValue))}%`.trim();
     const container = containerRef.current;
     if (!container) {
-      setHoverLabel({ text, x: 0, y: 0 });
+      setLegacyHoverLabel({ text, x: 0, y: 0 });
       return;
     }
     const cx = typeof shape.cx === "number" ? shape.cx : container.clientWidth / 2;
@@ -211,7 +415,7 @@ export const TrafficDistribution = ({
       nextX = Math.min(maxX, Math.max(edgePadding, nextX));
       nextY = Math.min(maxY, Math.max(edgePadding, nextY));
     }
-    setHoverLabel({ text, x: nextX, y: nextY });
+    setLegacyHoverLabel({ text, x: nextX, y: nextY });
   };
 
   return (
@@ -220,36 +424,83 @@ export const TrafficDistribution = ({
       style={{ minHeight: height }}
     >
       <div className="traffic-distribution__title">{title}</div>
-      <div className={contentClassName} ref={containerRef} style={{ position: "relative" }}>
-        {hoverLabelText ? (
-          <div
-            ref={hoverLabelRef}
-            aria-live="polite"
-            style={{
-              position: "absolute",
-              left: `${hoverLabel?.x ?? 0}px`,
-              top: `${hoverLabel?.y ?? 0}px`,
-              pointerEvents: "none",
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "var(--text-strong, #16181b)",
-              zIndex: 2,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {hoverLabelText}
-          </div>
-        ) : null}
-        <ResponsiveContainer width="100%" height={140}>
-          <PieChart>
-            <Pie
+      <div
+        className={contentClassName}
+        ref={containerRef}
+        style={{ position: "relative" }}
+      >
+        <div
+          ref={chartSurfaceRef}
+          style={{
+            position: "relative",
+            height: donutChartHeight,
+            width: donutChartHeight,
+            minWidth: donutChartHeight,
+          }}
+          onPointerMove={isDemoCursorHover
+            ? (event) => {
+              const surface = chartSurfaceRef.current;
+              if (!surface) {
+                return;
+              }
+              updateFromPointerEvent(event, {
+                width: surface.clientWidth,
+                height: surface.clientHeight || donutChartHeight,
+              });
+            }
+            : undefined}
+          onPointerLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onMouseLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onPointerCancel={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onBlur={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onClick={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+        >
+          {isDemoCursorHover ? (
+            isDemoTooltipVisible ? (
+              <div
+                ref={hoverLabelRef}
+                style={{
+                  position: "absolute",
+                  left: `${tooltipPosition?.x ?? 0}px`,
+                  top: `${tooltipPosition?.y ?? 0}px`,
+                  transform: "translate3d(0, 0, 0)",
+                  transition: "transform 80ms linear, left 80ms linear, top 80ms linear",
+                  pointerEvents: "none",
+                  zIndex: 2,
+                }}
+              >
+                <DonutTooltipCard rows={tooltipRows} />
+              </div>
+            ) : null
+          ) : hoverLabelText ? (
+            <div
+              ref={hoverLabelRef}
+              aria-live="polite"
+              style={{
+                position: "absolute",
+                left: `${tooltipPosition?.x ?? 0}px`,
+                top: `${tooltipPosition?.y ?? 0}px`,
+                pointerEvents: "none",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--text-strong, #16181b)",
+                zIndex: 2,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {hoverLabelText}
+            </div>
+          ) : null}
+          <ResponsiveContainer width="100%" height={donutChartHeight}>
+            <PieChart>
+              <Pie
               dataKey="value"
               data={pieLegend}
               nameKey={labelKey ?? undefined}
               cx="50%"
               cy="50%"
-              innerRadius={isLandingPreviewTraffic ? 0 : 48}
-              outerRadius={68}
+              innerRadius={donutInnerRadius}
+              outerRadius={donutOuterRadius}
               paddingAngle={0}
               startAngle={90}
               endAngle={450}
@@ -266,7 +517,7 @@ export const TrafficDistribution = ({
                 placeHoverLabel(index, shape ?? {});
               }}
               onMouseLeave={() => {
-                setHoverLabel(null);
+                setLegacyHoverLabel(null);
               }}
               style={{ cursor: "default" }}
             >
@@ -290,9 +541,10 @@ export const TrafficDistribution = ({
                   {topCameraLabel}
                 </text>
               ) : null}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
         {!isVrmTraffic && hasPositiveTraffic ? (
           <div
             className="traffic-distribution__annotations"
