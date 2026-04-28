@@ -211,3 +211,24 @@
 .dashboard-v2--preview .dashboard-v2__chart-card {
   box-shadow: none;
 }
+
+@media (max-width: 768px) {
+  .dashboard-v2 {
+    padding: var(--vrm-spacing-4) var(--vrm-spacing-3) var(--vrm-spacing-5);
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dashboard-v2__content,
+  .dashboard-v2__grid,
+  .dashboard-v2__grid-item {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dashboard-v2__kpi-band,
+  .site-flow-demographics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

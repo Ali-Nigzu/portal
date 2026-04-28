@@ -701,6 +701,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       setMobileSidebarOpen(null);
     }
   };
+  const handleRailPointerDownCapture =
+    (targetSidebar: Exclude<MobileSidebarOpen, null>) =>
+    (event: React.PointerEvent<HTMLElement>) => {
+      if (!isMobileViewport || mobileSidebarOpen === targetSidebar) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      setMobileSidebarOpen(targetSidebar);
+    };
 
   useEffect(() => {
     if (!isMobileViewport || mobileSidebarOpen === null) {
@@ -790,6 +800,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           ref={primaryRailRef}
           onFocusCapture={() => setIsPrimaryFocused(true)}
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
+          onPointerDownCapture={handleRailPointerDownCapture("primary")}
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
@@ -902,6 +913,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
           onPointerEnter={cancelSitesLeaveTimer}
           onPointerLeave={handleSitesRowLeave}
+          onPointerDownCapture={handleRailPointerDownCapture("site")}
         >
           {isSettingsRoute ? (
             <SettingsSecondaryNav />

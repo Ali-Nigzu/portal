@@ -464,6 +464,14 @@ button.vrm-nav-row {
 
   .vrm-layout--mobile .vrm-main {
     min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .vrm-layout--mobile .vrm-content {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail {
@@ -494,7 +502,10 @@ button.vrm-nav-row {
 
   .vrm-layout--mobile .vrm-sidebar-mobile-backdrop {
     position: fixed;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 104px;
     z-index: 120;
     border: 0;
     background: rgba(20, 24, 30, 0.28);
