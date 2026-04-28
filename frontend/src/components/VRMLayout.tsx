@@ -139,8 +139,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     );
   };
   const handleSitesClick = () => {
-    if (isMobileViewport) {
+    if (isMobileViewport && mobileSidebarOpen !== "site") {
       setMobileSidebarOpen("site");
+      return;
     }
     setSitesIntentOpen(true);
     openSitesSelector();
@@ -667,23 +668,38 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       sitesHoverTimeout.current = null;
     }
   };
-  const openMobilePrimary = () => {
-    if (!isMobileViewport) {
-      return;
-    }
-    setMobileSidebarOpen("primary");
-  };
-  const openMobileSite = () => {
-    if (!isMobileViewport) {
-      return;
-    }
-    setMobileSidebarOpen("site");
-  };
   const closeMobileSidebar = () => {
     if (!isMobileViewport) {
       return;
     }
     setMobileSidebarOpen(null);
+  };
+  const handleMobileSidebarIntent = (
+    event: React.MouseEvent<HTMLElement>,
+    targetSidebar: Exclude<MobileSidebarOpen, null>,
+  ) => {
+    if (!isMobileViewport) {
+      return false;
+    }
+    if (mobileSidebarOpen !== targetSidebar) {
+      event.preventDefault();
+      event.stopPropagation();
+      setMobileSidebarOpen(targetSidebar);
+      return true;
+    }
+    return false;
+  };
+  const handlePrimaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
+    const blocked = handleMobileSidebarIntent(event, "primary");
+    if (!blocked && isMobileViewport) {
+      setMobileSidebarOpen(null);
+    }
+  };
+  const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
+    const blocked = handleMobileSidebarIntent(event, "site");
+    if (!blocked && isMobileViewport) {
+      setMobileSidebarOpen(null);
+    }
   };
 
   useEffect(() => {
@@ -774,23 +790,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           ref={primaryRailRef}
           onFocusCapture={() => setIsPrimaryFocused(true)}
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
-          onPointerDownCapture={openMobilePrimary}
-          onClickCapture={(event) => {
-            if (!isMobileViewport) {
-              return;
-            }
-            const target = event.target as HTMLElement | null;
-            const navRow = target?.closest(".vrm-nav-row");
-            if (!navRow) {
-              return;
-            }
-            const isSitesRow = Boolean(navRow.closest(".vrm-sites-row-wrapper"));
-            if (isSitesRow) {
-              setMobileSidebarOpen("site");
-              return;
-            }
-            setMobileSidebarOpen(null);
-          }}
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
@@ -826,7 +825,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                         ? undefined
                         : item.path === siteRoutePrefix
                           ? handleSitesClick
-                          : undefined
+                          : handlePrimaryNavClick
                     }
                   leftIcon={item.icon}
                   label={item.label}
@@ -862,6 +861,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               disabled={!isAuthenticated || isDemoSession}
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
+              onClick={handlePrimaryNavClick}
             />
             <NavRow
               leftIcon={toggleIcon}
@@ -878,6 +878,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               disabled={!isAuthenticated || isDemoSession}
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
+              onClick={handlePrimaryNavClick}
             />
             {showLogout && (
               <NavRow
@@ -901,19 +902,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
           onPointerEnter={cancelSitesLeaveTimer}
           onPointerLeave={handleSitesRowLeave}
-          onPointerDownCapture={openMobileSite}
-          onClickCapture={(event) => {
-            if (!isMobileViewport) {
-              return;
-            }
-            const target = event.target as HTMLElement | null;
-            if (target?.closest(".vrm-nav-row--disabled, .vrm-nav-row--inert")) {
-              return;
-            }
-            if (target?.closest(".vrm-nav-row")) {
-              setMobileSidebarOpen(null);
-            }
-          }}
         >
           {isSettingsRoute ? (
             <SettingsSecondaryNav />
@@ -933,11 +921,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 active={
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
+                onClick={handleSecondaryNavClick}
               />
             )}
             {showSiteMenu && (
               <SecondaryPinnedRow
-                onClick={openSitesSelector}
                 leftIcon={
                   <span className="vrm-nav-row__icon-stack">
                     <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
@@ -945,6 +933,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   </span>
                 }
                 label={activeSite?.label ?? "Site"}
+                onClick={(event) => {
+                  const blocked = handleMobileSidebarIntent(event, "site");
+                  if (!blocked) {
+                    openSitesSelector();
+                  }
+                }}
               />
             )}
             <SecondaryDivider />
@@ -972,6 +966,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     label={site.label}
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? site.label : undefined}
+                    onClick={handleSecondaryNavClick}
                   />
                 );
               })}
@@ -1022,6 +1017,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     label={navLabel}
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    onClick={handleSecondaryNavClick}
                   />
                 );
               })}
@@ -1038,6 +1034,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   label={item.label}
                   active={item.path ? isActiveRoute(item.path) : false}
                   ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                  onClick={handleSecondaryNavClick}
                 />
               ))}
             </NavList>

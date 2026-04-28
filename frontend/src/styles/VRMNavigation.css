@@ -447,11 +447,14 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile .vrm-sidebar-shell {
-    position: fixed;
-    left: 0;
+    position: sticky;
     top: 0;
     height: 100vh;
-    z-index: 120;
+    width: 104px;
+    min-width: 104px;
+    flex-shrink: 0;
+    overflow: visible;
+    z-index: 20;
   }
 
   .vrm-layout--mobile .vrm-primary-rail,
@@ -459,8 +462,17 @@ button.vrm-nav-row {
     width: 52px;
   }
 
+  .vrm-layout--mobile .vrm-main {
+    min-width: 0;
+  }
+
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail {
     width: var(--vrm-primary-rail-width);
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 130;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel {
@@ -473,12 +485,17 @@ button.vrm-nav-row {
 
   .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-extended-panel {
     width: min(var(--vrm-extended-panel-width), calc(100vw - 52px));
+    position: absolute;
+    left: 52px;
+    top: 0;
+    height: 100vh;
+    z-index: 130;
   }
 
   .vrm-layout--mobile .vrm-sidebar-mobile-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 110;
+    z-index: 120;
     border: 0;
     background: rgba(20, 24, 30, 0.28);
     padding: 0;
