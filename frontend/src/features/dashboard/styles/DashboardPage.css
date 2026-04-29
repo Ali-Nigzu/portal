@@ -38,6 +38,14 @@
   width: 100%;
 }
 
+.vrm-dashboard-header--desktop {
+  display: flex;
+}
+
+.vrm-dashboard-header-mobile {
+  display: none;
+}
+
 .dashboard-v2__error-banner {
   background: rgba(139,58,47,0.1);
   color: #8b3a2f;
@@ -210,4 +218,90 @@
 .dashboard-v2--preview .dashboard-v2__header,
 .dashboard-v2--preview .dashboard-v2__chart-card {
   box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .dashboard-v2__header {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .dashboard-v2 {
+    padding: var(--vrm-spacing-4) var(--vrm-spacing-3) var(--vrm-spacing-5);
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dashboard-v2__content,
+  .dashboard-v2__grid,
+  .dashboard-v2__grid-item {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dashboard-v2__kpi-band,
+  .site-flow-demographics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vrm-dashboard-header--desktop {
+    display: none;
+  }
+
+  .vrm-dashboard-header-mobile {
+    display: grid;
+    grid-template-columns: minmax(88px, 1fr) 1px minmax(0, 2fr);
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    background: color-mix(in srgb, var(--sys-bg-2, var(--vrm-bg-panel)) 85%, transparent);
+    border: 1px solid var(--sys-line-soft, rgba(120, 112, 96, 0.12));
+    border-radius: var(--sys-radius-md, var(--vrm-radii-card));
+    box-shadow: var(--sys-shadow-soft, var(--vrm-elevation-card));
+    overflow: hidden;
+  }
+
+  .vrm-dashboard-header-mobile__site {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--vrm-spacing-4) var(--vrm-spacing-3);
+    font-weight: 700;
+    min-width: 0;
+  }
+
+  .vrm-dashboard-header-mobile__divider {
+    width: 1px;
+    background: var(--sys-line-soft, rgba(120, 112, 96, 0.24));
+  }
+
+  .vrm-dashboard-header-mobile__status {
+    min-width: 0;
+    padding: var(--vrm-spacing-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .vrm-header-meta-mobile {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .vrm-header-meta-mobile__row {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: var(--sys-text-2, var(--vrm-text-secondary));
+    font-size: var(--vrm-typography-font-size-caption);
+  }
 }

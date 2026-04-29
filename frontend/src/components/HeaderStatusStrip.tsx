@@ -13,9 +13,14 @@ const statusCopy: Record<SystemStatus, string> = {
 interface HeaderStatusStripProps {
   className?: string;
   isAuthenticatedView?: boolean;
+  layout?: "desktop" | "mobile";
 }
 
-const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className, isAuthenticatedView = false }) => {
+const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
+  className,
+  isAuthenticatedView = false,
+  layout = "desktop",
+}) => {
   const { systemStatus, localTime } = useGlobalControls();
   const RealtimeWaveIcon = () => (
     <svg
@@ -46,6 +51,38 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({ className, isAuth
       </g>
     </svg>
   );
+
+  if (layout === "mobile") {
+    return (
+      <div className={`vrm-header-meta-mobile ${className ?? ""}`.trim()} role="status" aria-live="polite">
+        <div className="vrm-header-meta-mobile__row">
+          Last updated:{" "}
+          <span className="vrm-header-chip-highlight">
+            {isAuthenticatedView ? (
+              <span style={{ color: "var(--vrm-text-muted)" }}>-</span>
+            ) : (
+              <>
+                <RealtimeWaveIcon /> Realtime
+              </>
+            )}
+          </span>
+        </div>
+        <div className="vrm-header-meta-mobile__row">
+          {isAuthenticatedView ? (
+            <>
+              System status: <span style={{ color: "var(--vrm-text-muted)" }}>NA</span>
+            </>
+          ) : (
+            <>
+              <span className={`vrm-status-indicator ${systemStatus}`} aria-hidden />{" "}
+              {statusCopy[systemStatus]}
+            </>
+          )}
+        </div>
+        <div className="vrm-header-meta-mobile__row">Local time: {localTime}</div>
+      </div>
+    );
+  }
 
   return (
     <div
