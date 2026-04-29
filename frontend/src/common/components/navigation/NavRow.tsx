@@ -15,6 +15,8 @@ export type NavRowProps = {
   className?: string;
   ariaLabel?: string;
   role?: string;
+  mobileSidebarAction?: "primary" | "page" | "site";
+  mobileSidebarDisabled?: boolean;
 };
 
 const NavRow: React.FC<NavRowProps> = ({
@@ -31,6 +33,8 @@ const NavRow: React.FC<NavRowProps> = ({
   className,
   ariaLabel,
   role,
+  mobileSidebarAction,
+  mobileSidebarDisabled,
 }) => {
   const baseClass = [
     "vrm-nav-row",
@@ -58,6 +62,8 @@ const NavRow: React.FC<NavRowProps> = ({
         role={role ?? "listitem"}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
+        data-mobile-sidebar-row="true"
+        data-mobile-sidebar-disabled={mobileSidebarDisabled ? "true" : undefined}
       >
         {content}
       </div>
@@ -74,6 +80,9 @@ const NavRow: React.FC<NavRowProps> = ({
         onClick={onClick as React.MouseEventHandler<HTMLAnchorElement> | undefined}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
+        data-mobile-sidebar-row="true"
+        data-mobile-sidebar-action={mobileSidebarAction}
+        data-mobile-sidebar-disabled={mobileSidebarDisabled ? "true" : undefined}
       >
         {content}
       </Link>
@@ -89,6 +98,9 @@ const NavRow: React.FC<NavRowProps> = ({
         aria-label={ariaLabel}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
+        data-mobile-sidebar-row="true"
+        data-mobile-sidebar-action={mobileSidebarAction}
+        data-mobile-sidebar-disabled={mobileSidebarDisabled ? "true" : undefined}
       >
         {content}
       </button>
@@ -102,6 +114,8 @@ const NavRow: React.FC<NavRowProps> = ({
       role={role ?? "listitem"}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      data-mobile-sidebar-row="true"
+      data-mobile-sidebar-disabled={mobileSidebarDisabled ? "true" : undefined}
     >
       {content}
     </div>

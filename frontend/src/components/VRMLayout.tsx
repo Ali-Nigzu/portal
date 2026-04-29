@@ -703,24 +703,45 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       setMobileSidebarOpen(null);
     }
   };
-  const handleRailPointerDownCapture =
-    (targetSidebar: Exclude<MobileSidebarOpen, null>) =>
-    (event: React.PointerEvent<HTMLElement>) => {
-      if (!isMobileViewport) {
+  const handleMobilePanelClick = (
+    event: React.MouseEvent<HTMLElement>,
+    panel: Exclude<MobileSidebarOpen, null>,
+  ) => {
+    if (!isMobileViewport) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    const row = target?.closest("[data-mobile-sidebar-row='true']") as HTMLElement | null;
+    const action = row?.getAttribute("data-mobile-sidebar-action");
+    const isDisabled = row?.getAttribute("data-mobile-sidebar-disabled") === "true";
+
+    if (action) {
+      if (mobileSidebarOpen !== panel) {
+        event.preventDefault();
+        setMobileSidebarOpen(panel);
         return;
       }
-      const target = event.target as HTMLElement | null;
-      const isNavRowTarget = Boolean(target?.closest(".vrm-nav-row"));
-      if (mobileSidebarOpen === targetSidebar) {
-        if (!isNavRowTarget) {
-          setMobileSidebarOpen(null);
-        }
-        return;
+      setMobileSidebarOpen(null);
+      return;
+    }
+
+    if (row) {
+      if (mobileSidebarOpen !== panel) {
+        event.preventDefault();
+        setMobileSidebarOpen(panel);
       }
-      event.preventDefault();
-      event.stopPropagation();
-      setMobileSidebarOpen(targetSidebar);
-    };
+      if (isDisabled) {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    if (mobileSidebarOpen === panel) {
+      setMobileSidebarOpen(null);
+      return;
+    }
+    setMobileSidebarOpen(panel);
+  };
 
   useEffect(() => {
     if (!isMobileViewport || mobileSidebarOpen === null) {
@@ -810,7 +831,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           ref={primaryRailRef}
           onFocusCapture={() => setIsPrimaryFocused(true)}
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
-          onPointerDownCapture={handleRailPointerDownCapture("primary")}
+          onClick={(event) => handleMobilePanelClick(event, "primary")}
+          data-mobile-sidebar-panel="primary"
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
@@ -841,13 +863,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       : getNavigationPath(item.path)
                   }
                   replace={Boolean(item.path) && isDemoSession}
-                    onClick={
-                      item.disabled
-                        ? undefined
-                        : item.path === siteRoutePrefix
-                          ? handleSitesClick
-                          : handlePrimaryNavClick
-                    }
+                  onClick={
+                    item.disabled
+                      ? undefined
+                      : item.path === siteRoutePrefix
+                        ? handleSitesClick
+                        : handlePrimaryNavClick
+                  }
+                  mobileSidebarAction={item.disabled ? undefined : "primary"}
+                  mobileSidebarDisabled={Boolean(item.disabled)}
                   leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
@@ -880,9 +904,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               leftIcon={<NavIcon icon={FileText} />}
               label="Documents"
               disabled={!isAuthenticated || isDemoSession}
+              mobileSidebarDisabled={!isAuthenticated || isDemoSession}
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
               onClick={handlePrimaryNavClick}
+              mobileSidebarAction="primary"
             />
             <NavRow
               leftIcon={toggleIcon}
@@ -897,9 +923,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               leftIcon={<NavIcon icon={Settings} />}
               label="Settings"
               disabled={!isAuthenticated || isDemoSession}
+              mobileSidebarDisabled={!isAuthenticated || isDemoSession}
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
               onClick={handlePrimaryNavClick}
+              mobileSidebarAction="primary"
             />
             {showLogout && (
               <NavRow
@@ -923,7 +951,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
           onPointerEnter={cancelSitesLeaveTimer}
           onPointerLeave={handleSitesRowLeave}
-          onPointerDownCapture={handleRailPointerDownCapture("site")}
+          onClick={(event) => handleMobilePanelClick(event, "site")}
+          data-mobile-sidebar-panel="site"
+          data-mobile-sidebar-blank="true"
         >
           {isSettingsRoute ? (
             <SettingsSecondaryNav />
@@ -944,6 +974,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
                 onClick={handleSecondaryNavClick}
+                mobileSidebarAction="site"
               />
             )}
             {showSiteMenu && (
@@ -989,6 +1020,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? site.label : undefined}
                     onClick={handleSecondaryNavClick}
+                    mobileSidebarAction="site"
                   />
                 );
               })}
@@ -1023,6 +1055,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       leftIcon={item.icon}
                       label={navLabel}
                       disabled
+                      mobileSidebarDisabled
                       ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     />
                   );
@@ -1040,6 +1073,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     onClick={handleSecondaryNavClick}
+                    mobileSidebarAction="site"
                   />
                 );
               })}
@@ -1057,6 +1091,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   active={item.path ? isActiveRoute(item.path) : false}
                   ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                   onClick={handleSecondaryNavClick}
+                  mobileSidebarAction="site"
                 />
               ))}
             </NavList>
