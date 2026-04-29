@@ -711,10 +711,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       return;
     }
     const target = event.target as HTMLElement | null;
-    const row = target?.closest("[data-mobile-sidebar-row='true']") as HTMLElement | null;
-    const action = row?.getAttribute("data-mobile-sidebar-action");
-    const isDisabled = row?.getAttribute("data-mobile-sidebar-disabled") === "true";
-    if (action || row || isDisabled) return;
+    const isActionZone = Boolean(target?.closest("[data-mobile-sidebar-action]"));
+    const isProtectedZone = Boolean(target?.closest("[data-mobile-sidebar-protected='true']"));
+    const isCloseZone = Boolean(target?.closest("[data-mobile-sidebar-close-zone='true']"));
+    if (isActionZone || isProtectedZone) return;
+    if (!isCloseZone) return;
 
     if (mobileSidebarOpen === panel) {
       setMobileSidebarOpen(null);
@@ -722,6 +723,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
     event.preventDefault();
     setMobileSidebarOpen(panel);
+  };
+  const handleMobileActionRowClick = (
+    event: React.MouseEvent<HTMLElement>,
+    targetPath: string,
+  ) => {
+    if (!isMobileViewport) return;
+    event.preventDefault();
+    event.stopPropagation();
+    navigate(targetPath, { replace: isDemoSession });
+    setMobileSidebarOpen(null);
   };
 
   useEffect(() => {
@@ -943,6 +954,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           <div className="vrm-secondary-header">
             <SecondarySearch />
             {!showSiteMenu && (
+              <div data-mobile-sidebar-protected="true">
               <SecondaryPinnedRow
                 to={getNavigationPath(
                   `${siteRoutePrefix}/${allSitesOption.id}/dashboard`,
@@ -954,9 +966,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 active={
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
-                onClick={handleSecondaryNavClick}
+                onClick={(event) =>
+                  handleMobileActionRowClick(
+                    event,
+                    getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                      panel: undefined,
+                    }),
+                  )
+                }
                 mobileSidebarAction="site"
               />
+              </div>
             )}
             {showSiteMenu && (
               <SecondaryPinnedRow
@@ -978,6 +998,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             <SecondaryDivider />
           </div>
           {!showSiteMenu && (
+            <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
               {selectorSiteOptions.map((site) => {
                 const siteSubPath = (() => {
@@ -1000,7 +1021,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     label={site.label}
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? site.label : undefined}
-                    onClick={handleSecondaryNavClick}
+                    onClick={(event) =>
+                      handleMobileActionRowClick(
+                        event,
+                        getNavigationPath(siteTargetPath, { panel: undefined }),
+                      )
+                    }
                     mobileSidebarAction="site"
                   />
                 );
@@ -1012,8 +1038,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
               />
             </NavList>
+            </div>
           )}
           {showSiteMenu && !shouldShowAdminMenu && (
+            <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
               {clientNavigationItems.map((item) => {
                 const isDisabled = Boolean(item.disabled);
@@ -1053,14 +1081,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     label={navLabel}
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
-                    onClick={handleSecondaryNavClick}
+                    onClick={(event) =>
+                      handleMobileActionRowClick(event, getNavigationPath(item.path))
+                    }
                     mobileSidebarAction="site"
                   />
                 );
               })}
             </NavList>
+            </div>
           )}
           {shouldShowAdminMenu && (
+            <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
               {adminNavigationItems.map((item) => (
                 <NavRow
@@ -1071,12 +1103,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   label={item.label}
                   active={item.path ? isActiveRoute(item.path) : false}
                   ariaLabel={!isSecondaryExpanded ? item.label : undefined}
-                  onClick={handleSecondaryNavClick}
+                  onClick={(event) =>
+                    handleMobileActionRowClick(event, getNavigationPath(item.path))
+                  }
                   mobileSidebarAction="site"
                 />
               ))}
             </NavList>
+            </div>
           )}
+          <div className="vrm-extended-panel__mobile-close-zone" data-mobile-sidebar-close-zone="true" />
             </>
           )}
           </nav>
