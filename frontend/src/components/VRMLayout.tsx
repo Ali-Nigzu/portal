@@ -703,8 +703,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       setMobileSidebarOpen(null);
     }
   };
-  const handleMobilePanelClick = (
-    event: React.MouseEvent<HTMLElement>,
+  const handleMobilePanelPointerDown = (
+    event: React.PointerEvent<HTMLElement>,
     panel: Exclude<MobileSidebarOpen, null>,
   ) => {
     if (!isMobileViewport) {
@@ -714,32 +714,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     const row = target?.closest("[data-mobile-sidebar-row='true']") as HTMLElement | null;
     const action = row?.getAttribute("data-mobile-sidebar-action");
     const isDisabled = row?.getAttribute("data-mobile-sidebar-disabled") === "true";
-
-    if (action) {
-      if (mobileSidebarOpen !== panel) {
-        event.preventDefault();
-        setMobileSidebarOpen(panel);
-        return;
-      }
-      setMobileSidebarOpen(null);
-      return;
-    }
-
-    if (row) {
-      if (mobileSidebarOpen !== panel) {
-        event.preventDefault();
-        setMobileSidebarOpen(panel);
-      }
-      if (isDisabled) {
-        event.preventDefault();
-      }
-      return;
-    }
+    if (action || row || isDisabled) return;
 
     if (mobileSidebarOpen === panel) {
       setMobileSidebarOpen(null);
       return;
     }
+    event.preventDefault();
     setMobileSidebarOpen(panel);
   };
 
@@ -831,7 +812,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           ref={primaryRailRef}
           onFocusCapture={() => setIsPrimaryFocused(true)}
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
-          onClick={(event) => handleMobilePanelClick(event, "primary")}
+          onPointerDown={(event) => handleMobilePanelPointerDown(event, "primary")}
           data-mobile-sidebar-panel="primary"
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
@@ -951,7 +932,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
           onPointerEnter={cancelSitesLeaveTimer}
           onPointerLeave={handleSitesRowLeave}
-          onClick={(event) => handleMobilePanelClick(event, "site")}
+          onPointerDown={(event) => handleMobilePanelPointerDown(event, "site")}
           data-mobile-sidebar-panel="site"
           data-mobile-sidebar-blank="true"
         >
