@@ -692,12 +692,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const handlePrimaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
     const blocked = handleMobileSidebarIntent(event, "primary");
     if (!blocked && isMobileViewport) {
+      event.stopPropagation();
       setMobileSidebarOpen(null);
     }
   };
   const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
     const blocked = handleMobileSidebarIntent(event, "site");
     if (!blocked && isMobileViewport) {
+      event.stopPropagation();
       setMobileSidebarOpen(null);
     }
   };
