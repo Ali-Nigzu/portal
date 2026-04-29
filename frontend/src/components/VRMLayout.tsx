@@ -690,10 +690,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     return false;
   };
   const handlePrimaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
-    handleMobileSidebarIntent(event, "primary");
+    const blocked = handleMobileSidebarIntent(event, "primary");
+    if (!blocked && isMobileViewport) {
+      setMobileSidebarOpen(null);
+    }
   };
   const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
-    handleMobileSidebarIntent(event, "site");
+    const blocked = handleMobileSidebarIntent(event, "site");
+    if (!blocked && isMobileViewport) {
+      setMobileSidebarOpen(null);
+    }
   };
   const handleRailPointerDownCapture =
     (targetSidebar: Exclude<MobileSidebarOpen, null>) =>
