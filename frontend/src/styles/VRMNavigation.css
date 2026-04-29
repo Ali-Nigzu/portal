@@ -466,12 +466,21 @@ button.vrm-nav-row {
     min-width: 0;
     max-width: 100%;
     overflow-x: hidden;
+    display: flex;
+    justify-content: center;
   }
 
   .vrm-layout--mobile .vrm-content {
     min-width: 0;
     max-width: 100%;
     overflow-x: hidden;
+    width: 100%;
+  }
+
+  .vrm-layout--mobile .vrm-main--mobile-lane .vrm-content--mobile-lane {
+    width: min(100%, 920px);
+    margin-inline: auto;
+    box-sizing: border-box;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail {
@@ -508,7 +517,7 @@ button.vrm-nav-row {
     left: 104px;
     z-index: 120;
     border: 0;
-    background: rgba(20, 24, 30, 0.28);
+    background: transparent;
     padding: 0;
     margin: 0;
     cursor: default;

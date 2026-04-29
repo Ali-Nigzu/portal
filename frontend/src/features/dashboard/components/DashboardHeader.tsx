@@ -26,7 +26,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
   return (
     <header className="dashboard-v2__header vrm-section vrm-section--header">
-      <div className="vrm-dashboard-header">
+      <div className="vrm-dashboard-header vrm-dashboard-header--desktop">
         <div className="vrm-dashboard-header-left">
           <div className="vrm-dashboard-identity">
             <div className="vrm-dashboard-title">{siteLabel}</div>
@@ -38,6 +38,15 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           </div>
         ) : null}
       </div>
+      {mode === "full" ? (
+        <div className="vrm-dashboard-header-mobile" role="group" aria-label="Site status summary">
+          <div className="vrm-dashboard-header-mobile__site">{siteLabel}</div>
+          <div className="vrm-dashboard-header-mobile__divider" aria-hidden="true" />
+          <div className="vrm-dashboard-header-mobile__status">
+            <HeaderStatusStrip layout="mobile" isAuthenticatedView={isAuthenticatedView} />
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 };

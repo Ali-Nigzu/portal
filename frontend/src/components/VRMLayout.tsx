@@ -690,21 +690,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     return false;
   };
   const handlePrimaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
-    const blocked = handleMobileSidebarIntent(event, "primary");
-    if (!blocked && isMobileViewport) {
-      setMobileSidebarOpen(null);
-    }
+    handleMobileSidebarIntent(event, "primary");
   };
   const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
-    const blocked = handleMobileSidebarIntent(event, "site");
-    if (!blocked && isMobileViewport) {
-      setMobileSidebarOpen(null);
-    }
+    handleMobileSidebarIntent(event, "site");
   };
   const handleRailPointerDownCapture =
     (targetSidebar: Exclude<MobileSidebarOpen, null>) =>
     (event: React.PointerEvent<HTMLElement>) => {
-      if (!isMobileViewport || mobileSidebarOpen === targetSidebar) {
+      if (!isMobileViewport) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const isNavRowTarget = Boolean(target?.closest(".vrm-nav-row"));
+      if (mobileSidebarOpen === targetSidebar) {
+        if (!isNavRowTarget) {
+          setMobileSidebarOpen(null);
+        }
         return;
       }
       event.preventDefault();
@@ -1064,8 +1066,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onPointerDown={closeMobileSidebar}
         />
       )}
-      <main className="vrm-main">
-        <div className="vrm-content">{children || <Outlet />}</div>
+      <main className={`vrm-main ${isMobileViewport ? "vrm-main--mobile-lane" : ""}`}>
+        <div className={`vrm-content ${isMobileViewport ? "vrm-content--mobile-lane" : ""}`}>
+          {children || <Outlet />}
+        </div>
       </main>
     </div>
   );
