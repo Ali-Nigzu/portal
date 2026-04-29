@@ -221,7 +221,7 @@ button.vrm-nav-row {
 .vrm-nav-row--disabled {
   color: var(--vrm-text-muted);
   cursor: default;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .vrm-nav-row--disabled .vrm-nav-row__chip {
@@ -551,6 +551,12 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile .vrm-extended-panel__mobile-close-zone {
+    flex: 1 1 auto;
+    min-height: 48px;
+    width: 100%;
+  }
+
+  .vrm-layout--mobile .vrm-primary-rail__mobile-close-zone {
     flex: 1 1 auto;
     min-height: 48px;
     width: 100%;

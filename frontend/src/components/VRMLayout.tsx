@@ -843,6 +843,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               </div>
             </div>
           </div>
+          <div data-mobile-sidebar-protected="true">
           <NavList className="vrm-primary-nav">
             {primaryNavigationItems.map((item) => {
               const isActive = primaryActivePath === item.path;
@@ -931,6 +932,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               />
             )}
           </NavList>
+          </div>
+          <div className="vrm-primary-rail__mobile-close-zone" data-mobile-sidebar-close-zone="true" />
         </nav>
         {shouldRenderSecondaryPanel && (
           <nav
