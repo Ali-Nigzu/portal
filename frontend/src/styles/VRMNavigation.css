@@ -245,7 +245,7 @@ button.vrm-nav-row {
 
 .vrm-nav-row--inert {
   cursor: default;
-  pointer-events: none;
+  pointer-events: auto;
   color: var(--vrm-text-muted);
 }
 

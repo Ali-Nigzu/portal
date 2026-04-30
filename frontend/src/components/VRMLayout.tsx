@@ -689,13 +689,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
     return false;
   };
-  const handlePrimaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
-    const blocked = handleMobileSidebarIntent(event, "primary");
-    if (!blocked && isMobileViewport) {
-      event.stopPropagation();
-      setMobileSidebarOpen(null);
-    }
-  };
   const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
     const blocked = handleMobileSidebarIntent(event, "site");
     if (!blocked && isMobileViewport) {
@@ -861,7 +854,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       ? undefined
                       : item.path === siteRoutePrefix
                         ? handleSitesClick
-                        : handlePrimaryNavClick
+                        : item.path
+                          ? (event) =>
+                              handleMobileActionRowClick(
+                                event,
+                                getNavigationPath(item.path),
+                              )
+                          : undefined
                   }
                   mobileSidebarAction={item.disabled ? undefined : "primary"}
                   mobileSidebarDisabled={Boolean(item.disabled)}
@@ -900,7 +899,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               mobileSidebarDisabled={!isAuthenticated || isDemoSession}
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
-              onClick={handlePrimaryNavClick}
+              onClick={(event) =>
+                handleMobileActionRowClick(event, getNavigationPath("/documents"))
+              }
               mobileSidebarAction="primary"
             />
             <NavRow
@@ -919,7 +920,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               mobileSidebarDisabled={!isAuthenticated || isDemoSession}
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
-              onClick={handlePrimaryNavClick}
+              onClick={(event) =>
+                handleMobileActionRowClick(event, getNavigationPath("/settings/account"))
+              }
               mobileSidebarAction="primary"
             />
             {showLogout && (
