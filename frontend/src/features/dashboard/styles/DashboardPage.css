@@ -229,7 +229,7 @@
   }
 
   .dashboard-v2 {
-    padding: var(--vrm-spacing-4) var(--vrm-spacing-3) var(--vrm-spacing-5);
+    padding: var(--vrm-spacing-4) 0 var(--vrm-spacing-5);
     min-width: 0;
     max-width: 100%;
     overflow-x: hidden;

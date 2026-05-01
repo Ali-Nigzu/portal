@@ -221,7 +221,7 @@ button.vrm-nav-row {
 .vrm-nav-row--disabled {
   color: var(--vrm-text-muted);
   cursor: default;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .vrm-nav-row--disabled .vrm-nav-row__chip {
@@ -245,7 +245,7 @@ button.vrm-nav-row {
 
 .vrm-nav-row--inert {
   cursor: default;
-  pointer-events: none;
+  pointer-events: auto;
   color: var(--vrm-text-muted);
 }
 
@@ -320,6 +320,10 @@ button.vrm-nav-row {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.vrm-extended-panel [data-mobile-sidebar-protected="true"] {
+  display: contents;
 }
 
 .vrm-secondary-pinned {
@@ -443,15 +447,18 @@ button.vrm-nav-row {
 
 @media (max-width: 768px) {
   .vrm-layout--mobile {
-    position: relative;
+    --vrm-mobile-rails-width: 104px;
+    --vrm-mobile-lane-gutter: var(--vrm-spacing-3);
   }
+
+  .vrm-layout--mobile { position: relative; }
 
   .vrm-layout--mobile .vrm-sidebar-shell {
     position: sticky;
     top: 0;
     height: 100vh;
-    width: 104px;
-    min-width: 104px;
+    width: var(--vrm-mobile-rails-width);
+    min-width: var(--vrm-mobile-rails-width);
     flex-shrink: 0;
     overflow: visible;
     z-index: 20;
@@ -478,10 +485,10 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile .vrm-main--mobile-lane .vrm-content--mobile-lane {
-    width: min(100%, 920px);
+    width: min(100%, calc(100vw - var(--vrm-mobile-rails-width)));
     margin-inline: auto;
     box-sizing: border-box;
-    padding-inline: var(--vrm-spacing-2);
+    padding-inline: var(--vrm-mobile-lane-gutter);
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane > * {
@@ -543,12 +550,24 @@ button.vrm-nav-row {
     z-index: 130;
   }
 
+  .vrm-layout--mobile .vrm-extended-panel__mobile-close-zone {
+    flex: 1 1 auto;
+    min-height: 48px;
+    width: 100%;
+  }
+
+  .vrm-layout--mobile .vrm-primary-rail__mobile-close-zone {
+    flex: 1 1 auto;
+    min-height: 48px;
+    width: 100%;
+  }
+
   .vrm-layout--mobile .vrm-sidebar-mobile-backdrop {
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
-    left: 104px;
+    left: var(--vrm-mobile-rails-width);
     z-index: 120;
     border: 0;
     background: transparent;
