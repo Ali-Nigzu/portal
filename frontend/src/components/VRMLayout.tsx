@@ -41,6 +41,14 @@ import { NavIcon } from "../common/components/icons";
 import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
 
 type MobileSidebarOpen = null | "primary" | "site";
+type MobileSidebarZone =
+  | "action"
+  | "disabled"
+  | "protected"
+  | "close"
+  | "switch-primary"
+  | "switch-site"
+  | "outside";
 
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
@@ -704,11 +712,26 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       return;
     }
     const target = event.target as HTMLElement | null;
-    const isActionZone = Boolean(target?.closest("[data-mobile-sidebar-action]"));
-    const isProtectedZone = Boolean(target?.closest("[data-mobile-sidebar-protected='true']"));
-    const isCloseZone = Boolean(target?.closest("[data-mobile-sidebar-close-zone='true']"));
-    if (isActionZone || isProtectedZone) return;
-    if (!isCloseZone) return;
+    const resolveZone = (element: HTMLElement | null): MobileSidebarZone => {
+      if (element?.closest("[data-mobile-sidebar-switch='primary']")) return "switch-primary";
+      if (element?.closest("[data-mobile-sidebar-switch='site']")) return "switch-site";
+      if (element?.closest("[data-mobile-sidebar-action]")) return "action";
+      if (element?.closest("[data-mobile-sidebar-disabled='true']")) return "disabled";
+      if (element?.closest("[data-mobile-sidebar-protected='true']")) return "protected";
+      if (element?.closest("[data-mobile-sidebar-close-zone='true']")) return "close";
+      return "outside";
+    };
+    const zone = resolveZone(target);
+    if (zone === "action" || zone === "disabled" || zone === "protected") return;
+    if (zone === "switch-primary") {
+      setMobileSidebarOpen("primary");
+      return;
+    }
+    if (zone === "switch-site") {
+      setMobileSidebarOpen("site");
+      return;
+    }
+    if (zone !== "close") return;
 
     if (mobileSidebarOpen === panel) {
       setMobileSidebarOpen(null);
@@ -722,6 +745,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     targetPath: string,
   ) => {
     if (!isMobileViewport) return;
+    const currentPath = `${location.pathname}${location.search}`;
+    if (currentPath === targetPath) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     navigate(targetPath, { replace: isDemoSession });
@@ -818,6 +847,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
           onPointerDown={(event) => handleMobilePanelPointerDown(event, "primary")}
           data-mobile-sidebar-panel="primary"
+          data-mobile-sidebar-switch="primary"
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
@@ -951,6 +981,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onPointerLeave={handleSitesRowLeave}
           onPointerDown={(event) => handleMobilePanelPointerDown(event, "site")}
           data-mobile-sidebar-panel="site"
+          data-mobile-sidebar-switch="site"
           data-mobile-sidebar-blank="true"
         >
           {isSettingsRoute ? (
