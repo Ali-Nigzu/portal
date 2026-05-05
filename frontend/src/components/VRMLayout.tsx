@@ -724,21 +724,27 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     const zone = resolveZone(target);
     if (zone === "action" || zone === "disabled" || zone === "protected") return;
     if (zone === "switch-primary") {
+      event.preventDefault();
       setMobileSidebarOpen("primary");
       return;
     }
     if (zone === "switch-site") {
+      event.preventDefault();
       setMobileSidebarOpen("site");
       return;
     }
-    if (zone !== "close") return;
-
-    if (mobileSidebarOpen === panel) {
+    if (zone === "close") {
+      event.preventDefault();
       setMobileSidebarOpen(null);
       return;
     }
-    event.preventDefault();
-    setMobileSidebarOpen(panel);
+
+    // Mobile contract: inside-panel non-action taps are no-op.
+    // The only state change from non-row taps is opening/switching when tapping a collapsed rail.
+    if (mobileSidebarOpen === null) {
+      event.preventDefault();
+      setMobileSidebarOpen(panel);
+    }
   };
   const handleMobileActionRowClick = (
     event: React.MouseEvent<HTMLElement>,
@@ -934,14 +940,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               }
               mobileSidebarAction="primary"
             />
-            <NavRow
-              leftIcon={toggleIcon}
-              label={toggleLabel}
-              onClick={handleKeepExpandedToggle}
-              active={keepMenuExpanded}
-              className="vrm-nav-row--toggle"
-              ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
-            />
+            {!isMobileViewport && (
+              <NavRow
+                leftIcon={toggleIcon}
+                label={toggleLabel}
+                onClick={handleKeepExpandedToggle}
+                active={keepMenuExpanded}
+                className="vrm-nav-row--toggle"
+                ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
+              />
+            )}
             <NavRow
               to={isAuthenticated ? getNavigationPath("/settings/account") : undefined}
               leftIcon={<NavIcon icon={Settings} />}
