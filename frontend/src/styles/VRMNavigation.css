@@ -546,22 +546,23 @@ button.vrm-nav-row {
     z-index: 130;
   }
 
+
+  .vrm-layout--mobile .vrm-sidebar-mobile-close-button {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: var(--vrm-text-secondary);
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+
   .vrm-layout--mobile .vrm-extended-panel [data-mobile-sidebar-protected="true"] {
     display: block;
     width: 100%;
   }
 
-  .vrm-layout--mobile .vrm-extended-panel__mobile-close-zone {
-    flex: 1 1 auto;
-    min-height: 48px;
-    width: 100%;
-  }
-
-  .vrm-layout--mobile .vrm-primary-rail__mobile-close-zone {
-    flex: 1 1 auto;
-    min-height: 48px;
-    width: 100%;
-  }
 
   .vrm-layout--mobile .vrm-sidebar-mobile-backdrop {
     position: fixed;
