@@ -713,12 +713,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
     const target = event.target as HTMLElement | null;
     const resolveZone = (element: HTMLElement | null): MobileSidebarZone => {
-      if (element?.closest("[data-mobile-sidebar-switch='primary']")) return "switch-primary";
-      if (element?.closest("[data-mobile-sidebar-switch='site']")) return "switch-site";
       if (element?.closest("[data-mobile-sidebar-action]")) return "action";
       if (element?.closest("[data-mobile-sidebar-disabled='true']")) return "disabled";
       if (element?.closest("[data-mobile-sidebar-protected='true']")) return "protected";
       if (element?.closest("[data-mobile-sidebar-close-zone='true']")) return "close";
+      if (element?.closest("[data-mobile-sidebar-switch='primary']")) return "switch-primary";
+      if (element?.closest("[data-mobile-sidebar-switch='site']")) return "switch-site";
       return "outside";
     };
     const zone = resolveZone(target);
@@ -853,7 +853,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
           onPointerDown={(event) => handleMobilePanelPointerDown(event, "primary")}
           data-mobile-sidebar-panel="primary"
-          data-mobile-sidebar-switch="primary"
+          data-mobile-sidebar-switch={
+            isMobileViewport && mobileSidebarOpen !== "primary" ? "primary" : undefined
+          }
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
@@ -989,7 +991,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onPointerLeave={handleSitesRowLeave}
           onPointerDown={(event) => handleMobilePanelPointerDown(event, "site")}
           data-mobile-sidebar-panel="site"
-          data-mobile-sidebar-switch="site"
+          data-mobile-sidebar-switch={
+            isMobileViewport && mobileSidebarOpen !== "site" ? "site" : undefined
+          }
           data-mobile-sidebar-blank="true"
         >
           {isSettingsRoute ? (

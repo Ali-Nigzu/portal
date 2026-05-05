@@ -322,10 +322,6 @@ button.vrm-nav-row {
   overflow-y: auto;
 }
 
-.vrm-extended-panel [data-mobile-sidebar-protected="true"] {
-  display: contents;
-}
-
 .vrm-secondary-pinned {
   padding-left: 14px;
   padding-right: 14px;
@@ -548,6 +544,11 @@ button.vrm-nav-row {
     top: 0;
     height: 100vh;
     z-index: 130;
+  }
+
+  .vrm-layout--mobile .vrm-extended-panel [data-mobile-sidebar-protected="true"] {
+    display: block;
+    width: 100%;
   }
 
   .vrm-layout--mobile .vrm-extended-panel__mobile-close-zone {
