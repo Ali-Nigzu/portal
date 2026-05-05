@@ -737,6 +737,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
     const currentPath = `${location.pathname}${location.search}`;
     if (currentPath === targetPath) {
+      setMobileSidebarOpen(null);
       return;
     }
     navigate(targetPath, { replace: isDemoSession });
