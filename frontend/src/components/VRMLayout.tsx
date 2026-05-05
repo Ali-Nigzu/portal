@@ -713,32 +713,38 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
     const target = event.target as HTMLElement | null;
     const resolveZone = (element: HTMLElement | null): MobileSidebarZone => {
-      if (element?.closest("[data-mobile-sidebar-switch='primary']")) return "switch-primary";
-      if (element?.closest("[data-mobile-sidebar-switch='site']")) return "switch-site";
       if (element?.closest("[data-mobile-sidebar-action]")) return "action";
       if (element?.closest("[data-mobile-sidebar-disabled='true']")) return "disabled";
       if (element?.closest("[data-mobile-sidebar-protected='true']")) return "protected";
       if (element?.closest("[data-mobile-sidebar-close-zone='true']")) return "close";
+      if (element?.closest("[data-mobile-sidebar-switch='primary']")) return "switch-primary";
+      if (element?.closest("[data-mobile-sidebar-switch='site']")) return "switch-site";
       return "outside";
     };
     const zone = resolveZone(target);
     if (zone === "action" || zone === "disabled" || zone === "protected") return;
     if (zone === "switch-primary") {
+      event.preventDefault();
       setMobileSidebarOpen("primary");
       return;
     }
     if (zone === "switch-site") {
+      event.preventDefault();
       setMobileSidebarOpen("site");
       return;
     }
-    if (zone !== "close") return;
-
-    if (mobileSidebarOpen === panel) {
+    if (zone === "close") {
+      event.preventDefault();
       setMobileSidebarOpen(null);
       return;
     }
-    event.preventDefault();
-    setMobileSidebarOpen(panel);
+
+    // Mobile contract: inside-panel non-action taps are no-op.
+    // The only state change from non-row taps is opening/switching when tapping a collapsed rail.
+    if (mobileSidebarOpen === null) {
+      event.preventDefault();
+      setMobileSidebarOpen(panel);
+    }
   };
   const handleMobileActionRowClick = (
     event: React.MouseEvent<HTMLElement>,
@@ -847,7 +853,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onBlurCapture={handleFocusChange(setIsPrimaryFocused)}
           onPointerDown={(event) => handleMobilePanelPointerDown(event, "primary")}
           data-mobile-sidebar-panel="primary"
-          data-mobile-sidebar-switch="primary"
+          data-mobile-sidebar-switch={
+            isMobileViewport && mobileSidebarOpen !== "primary" ? "primary" : undefined
+          }
         >
           <div className="vrm-sidebar-header vrm-sidebar-header--brand">
             <div className="vrm-brand-header">
@@ -934,14 +942,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               }
               mobileSidebarAction="primary"
             />
-            <NavRow
-              leftIcon={toggleIcon}
-              label={toggleLabel}
-              onClick={handleKeepExpandedToggle}
-              active={keepMenuExpanded}
-              className="vrm-nav-row--toggle"
-              ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
-            />
+            {!isMobileViewport && (
+              <NavRow
+                leftIcon={toggleIcon}
+                label={toggleLabel}
+                onClick={handleKeepExpandedToggle}
+                active={keepMenuExpanded}
+                className="vrm-nav-row--toggle"
+                ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
+              />
+            )}
             <NavRow
               to={isAuthenticated ? getNavigationPath("/settings/account") : undefined}
               leftIcon={<NavIcon icon={Settings} />}
@@ -981,7 +991,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           onPointerLeave={handleSitesRowLeave}
           onPointerDown={(event) => handleMobilePanelPointerDown(event, "site")}
           data-mobile-sidebar-panel="site"
-          data-mobile-sidebar-switch="site"
+          data-mobile-sidebar-switch={
+            isMobileViewport && mobileSidebarOpen !== "site" ? "site" : undefined
+          }
           data-mobile-sidebar-blank="true"
         >
           {isSettingsRoute ? (
