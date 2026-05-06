@@ -124,6 +124,26 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     path: string,
     overrides?: Record<string, string | undefined>,
   ) => `${path}${buildSearch(overrides)}`;
+  const isSameMobileRoute = (targetPath: string) => {
+    const [targetPathnameRaw, targetSearchRaw = ""] = targetPath.split("?");
+    const normalizePath = (value: string) => {
+      if (!value) return "/";
+      const trimmed = value.endsWith("/") && value !== "/" ? value.slice(0, -1) : value;
+      return trimmed || "/";
+    };
+    const normalizeSearch = (search: string) => {
+      const params = new URLSearchParams(search);
+      ["panel", "expand_once", "site_menu_expand_once"].forEach((key) => params.delete(key));
+      return Array.from(params.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${k}=${v}`)
+        .join("&");
+    };
+    return (
+      normalizePath(location.pathname) === normalizePath(targetPathnameRaw) &&
+      normalizeSearch(location.search) === normalizeSearch(targetSearchRaw)
+    );
+  };
   const openSitesSelector = () => {
     const isCurrentPathSites = /^\/(?:sites|demo)(?:\/|$)/.test(location.pathname);
     const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
@@ -727,6 +747,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     event: React.MouseEvent<HTMLElement>,
     targetPath: string,
     panel: Exclude<MobileSidebarOpen, null>,
+    isRowActive: boolean,
   ) => {
     if (!isMobileViewport) return;
     event.preventDefault();
@@ -735,8 +756,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       setMobileSidebarOpen(panel);
       return;
     }
-    const currentPath = `${location.pathname}${location.search}`;
-    if (currentPath === targetPath) {
+    const isSameRoute = isSameMobileRoute(targetPath);
+    if (isSameRoute && isRowActive) {
       setMobileSidebarOpen(null);
       return;
     }
@@ -893,6 +914,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                                 event,
                                 getNavigationPath(item.path),
                                 "primary",
+                                isActive,
                               )
                           : undefined
                   }
@@ -934,7 +956,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
               onClick={(event) =>
-                handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary")
+                handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
               }
               mobileSidebarAction="primary"
             />
@@ -957,7 +979,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
               ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
               onClick={(event) =>
-                handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary")
+                handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
               }
               mobileSidebarAction="primary"
             />
@@ -1032,6 +1054,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       panel: undefined,
                     }),
                     "site",
+                    isSiteSelection && allSitesOption.id === selectedSiteForList,
                   )
                 }
                 mobileSidebarAction="site"
@@ -1086,6 +1109,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                         event,
                         getNavigationPath(siteTargetPath, { panel: undefined }),
                         "site",
+                        isActive,
                       )
                     }
                     mobileSidebarAction="site"
@@ -1143,7 +1167,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     onClick={(event) =>
-                      handleMobileActionRowClick(event, getNavigationPath(item.path), "site")
+                      handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
                     }
                     mobileSidebarAction="site"
                   />
@@ -1165,7 +1189,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   active={item.path ? isActiveRoute(item.path) : false}
                   ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                   onClick={(event) =>
-                    handleMobileActionRowClick(event, getNavigationPath(item.path), "site")
+                    handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
                   }
                   mobileSidebarAction="site"
                 />
