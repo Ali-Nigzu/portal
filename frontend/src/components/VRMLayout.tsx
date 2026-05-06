@@ -726,21 +726,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest("[data-mobile-sidebar-explicit-close='true']")) {
-      event.preventDefault();
-      event.stopPropagation();
-      setMobileSidebarOpen(null);
       return;
     }
     if (target.closest("[data-mobile-sidebar-row='true']")) {
       return;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    if (mobileSidebarOpen === null) {
-      setMobileSidebarOpen(panel);
-      return;
-    }
     if (mobileSidebarOpen !== panel) {
+      event.preventDefault();
+      event.stopPropagation();
       setMobileSidebarOpen(panel);
     }
   };
@@ -899,7 +892,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 isMobileViewport ? (
                 <MobileSidebarRow
                   key={item.path ?? item.label}
-                  leftIcon={item.icon}
+                  icon={item.icon}
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}
@@ -908,6 +901,35 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     item.path === siteRoutePrefix ? (
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
+                  }
+                  onTap={
+                    item.disabled
+                      ? (event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }
+                      : item.path === siteRoutePrefix
+                        ? (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (mobileSidebarOpen !== "primary") {
+                              setMobileSidebarOpen("primary");
+                              return;
+                            }
+                            setMobileSidebarOpen("site");
+                          }
+                        : item.path
+                          ? (event) =>
+                              handleMobileActionRowClick(
+                                event,
+                                getNavigationPath(item.path),
+                                "primary",
+                                isActive,
+                              )
+                          : (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }
                   }
                 />
                 ) : (

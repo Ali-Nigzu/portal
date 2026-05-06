@@ -575,6 +575,23 @@ button.vrm-nav-row {
     width: 100%;
   }
 
+  .vrm-layout--mobile .mobile-sidebar-row {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .vrm-layout--mobile .mobile-sidebar-row__icon,
+  .vrm-layout--mobile .mobile-sidebar-row__label,
+  .vrm-layout--mobile .mobile-sidebar-row__right {
+    pointer-events: none;
+  }
+
 
   .vrm-layout--mobile .vrm-sidebar-mobile-backdrop {
     position: fixed;
