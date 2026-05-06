@@ -39,6 +39,7 @@ import {
 } from "../common/components/navigation";
 import { NavIcon } from "../common/components/icons";
 import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
+import MobileSidebarRow from "./MobileSidebarRow";
 
 type MobileSidebarOpen = null | "primary" | "site";
 interface VRMLayoutProps {
@@ -895,6 +896,71 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             {primaryNavigationItems.map((item) => {
               const isActive = primaryActivePath === item.path;
               const navRow = (
+                isMobileViewport ? (
+                <MobileSidebarRow
+                  key={item.path ?? item.label}
+                  to={
+                    item.disabled || !item.path || item.path === siteRoutePrefix
+                      ? undefined
+                      : getNavigationPath(item.path)
+                  }
+                  replace={Boolean(item.path) && isDemoSession}
+                  onClick={
+                    item.disabled
+                      ? undefined
+                      : item.path === siteRoutePrefix
+                        ? handleSitesClick
+                        : item.path
+                          ? (event) =>
+                              handleMobileActionRowClick(
+                                event,
+                                getNavigationPath(item.path),
+                                "primary",
+                                isActive,
+                              )
+                          : undefined
+                  }
+                  icon={item.icon}
+                  label={item.label}
+                  active={isActive}
+                  disabled={item.disabled}
+                  ariaLabel={!isPrimaryExpanded ? item.label : undefined}
+                  rightSlot={
+                    item.path === siteRoutePrefix ? (
+                      <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
+                    ) : undefined
+                  }
+                  onTap={
+                    item.disabled
+                      ? (event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }
+                      : item.path === siteRoutePrefix
+                        ? (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (mobileSidebarOpen !== "primary") {
+                              setMobileSidebarOpen("primary");
+                              return;
+                            }
+                            setMobileSidebarOpen("site");
+                          }
+                        : item.path
+                          ? (event) =>
+                              handleMobileActionRowClick(
+                                event,
+                                getNavigationPath(item.path),
+                                "primary",
+                                isActive,
+                              )
+                          : (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }
+                  }
+                />
+                ) : (
                 <NavRow
                   key={item.path ?? item.label}
                   to={
@@ -918,9 +984,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                               )
                           : undefined
                   }
-                  mobileSidebarAction={item.disabled ? undefined : "primary"}
-                  mobileSidebarDisabled={Boolean(item.disabled)}
-                  leftIcon={item.icon}
+                  icon={item.icon}
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}
@@ -930,7 +994,37 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
                   }
+                  onTap={
+                    item.disabled
+                      ? (event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }
+                      : item.path === siteRoutePrefix
+                        ? (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (mobileSidebarOpen !== "primary") {
+                              setMobileSidebarOpen("primary");
+                              return;
+                            }
+                            setMobileSidebarOpen("site");
+                          }
+                        : item.path
+                          ? (event) =>
+                              handleMobileActionRowClick(
+                                event,
+                                getNavigationPath(item.path),
+                                "primary",
+                                isActive,
+                              )
+                          : (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }
+                  }
                 />
+                )
               );
               if (item.path !== siteRoutePrefix) {
                 return navRow;
