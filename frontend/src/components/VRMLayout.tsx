@@ -899,28 +899,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 isMobileViewport ? (
                 <MobileSidebarRow
                   key={item.path ?? item.label}
-                  to={
-                    item.disabled || !item.path || item.path === siteRoutePrefix
-                      ? undefined
-                      : getNavigationPath(item.path)
-                  }
-                  replace={Boolean(item.path) && isDemoSession}
-                  onClick={
-                    item.disabled
-                      ? undefined
-                      : item.path === siteRoutePrefix
-                        ? handleSitesClick
-                        : item.path
-                          ? (event) =>
-                              handleMobileActionRowClick(
-                                event,
-                                getNavigationPath(item.path),
-                                "primary",
-                                isActive,
-                              )
-                          : undefined
-                  }
-                  icon={item.icon}
+                  leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}
@@ -929,35 +908,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     item.path === siteRoutePrefix ? (
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
-                  }
-                  onTap={
-                    item.disabled
-                      ? (event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                        }
-                      : item.path === siteRoutePrefix
-                        ? (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (mobileSidebarOpen !== "primary") {
-                              setMobileSidebarOpen("primary");
-                              return;
-                            }
-                            setMobileSidebarOpen("site");
-                          }
-                        : item.path
-                          ? (event) =>
-                              handleMobileActionRowClick(
-                                event,
-                                getNavigationPath(item.path),
-                                "primary",
-                                isActive,
-                              )
-                          : (event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            }
                   }
                 />
                 ) : (
@@ -1041,19 +991,32 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 </div>
               );
             })}
-            <NavRow
-              to={isAuthenticated ? getNavigationPath("/documents") : undefined}
-              leftIcon={<NavIcon icon={FileText} />}
-              label="Documents"
-              disabled={!isAuthenticated || isDemoSession}
-              mobileSidebarDisabled={!isAuthenticated || isDemoSession}
-              className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
-              ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
-              onClick={(event) =>
-                handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
-              }
-              mobileSidebarAction="primary"
-            />
+            {isMobileViewport ? (
+              <MobileSidebarRow
+                icon={<NavIcon icon={FileText} />}
+                label="Documents"
+                disabled={!isAuthenticated || isDemoSession}
+                className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
+                ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
+                onTap={(event) =>
+                  handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
+                }
+              />
+            ) : (
+              <NavRow
+                to={isAuthenticated ? getNavigationPath("/documents") : undefined}
+                leftIcon={<NavIcon icon={FileText} />}
+                label="Documents"
+                disabled={!isAuthenticated || isDemoSession}
+                mobileSidebarDisabled={!isAuthenticated || isDemoSession}
+                className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
+                ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
+                onClick={(event) =>
+                  handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
+                }
+                mobileSidebarAction="primary"
+              />
+            )}
             {!isMobileViewport && (
               <NavRow
                 leftIcon={toggleIcon}
@@ -1064,19 +1027,32 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 ariaLabel={!isPrimaryExpanded ? toggleLabel : undefined}
               />
             )}
-            <NavRow
-              to={isAuthenticated ? getNavigationPath("/settings/account") : undefined}
-              leftIcon={<NavIcon icon={Settings} />}
-              label="Settings"
-              disabled={!isAuthenticated || isDemoSession}
-              mobileSidebarDisabled={!isAuthenticated || isDemoSession}
-              className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
-              ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
-              onClick={(event) =>
-                handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
-              }
-              mobileSidebarAction="primary"
-            />
+            {isMobileViewport ? (
+              <MobileSidebarRow
+                icon={<NavIcon icon={Settings} />}
+                label="Settings"
+                disabled={!isAuthenticated || isDemoSession}
+                className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
+                ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
+                onTap={(event) =>
+                  handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
+                }
+              />
+            ) : (
+              <NavRow
+                to={isAuthenticated ? getNavigationPath("/settings/account") : undefined}
+                leftIcon={<NavIcon icon={Settings} />}
+                label="Settings"
+                disabled={!isAuthenticated || isDemoSession}
+                mobileSidebarDisabled={!isAuthenticated || isDemoSession}
+                className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
+                ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
+                onClick={(event) =>
+                  handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
+                }
+                mobileSidebarAction="primary"
+              />
+            )}
             {showLogout && (
               <NavRow
                 onClick={handleLogoutClick}
@@ -1130,6 +1106,25 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             <SecondarySearch />
             {!showSiteMenu && (
               <div data-mobile-sidebar-protected="true">
+              {isMobileViewport ? (
+              <MobileSidebarRow
+                icon={<NavIcon icon={MapPin} />}
+                label={allSitesOption.label}
+                active={
+                  isSiteSelection && allSitesOption.id === selectedSiteForList
+                }
+                onTap={(event) =>
+                  handleMobileActionRowClick(
+                    event,
+                    getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                      panel: undefined,
+                    }),
+                    "site",
+                    isSiteSelection && allSitesOption.id === selectedSiteForList,
+                  )
+                }
+              />
+              ) : (
               <SecondaryPinnedRow
                 to={getNavigationPath(
                   `${siteRoutePrefix}/${allSitesOption.id}/dashboard`,
@@ -1153,6 +1148,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 }
                 mobileSidebarAction="site"
               />
+              )}
               </div>
             )}
             {showSiteMenu && (
@@ -1190,6 +1186,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 const isActive =
                   isSiteSelection && site.id === selectedSiteForList;
                 return (
+                    isMobileViewport ? (
+                  <MobileSidebarRow
+                    key={site.id}
+                    icon={<NavIcon icon={MapPin} />}
+                    label={site.label}
+                    active={isActive}
+                    ariaLabel={!isSecondaryExpanded ? site.label : undefined}
+                    onTap={(event) =>
+                      handleMobileActionRowClick(
+                        event,
+                        getNavigationPath(siteTargetPath, { panel: undefined }),
+                        "site",
+                        isActive,
+                      )
+                    }
+                  />
+                  ) : (
                   <NavRow
                     key={site.id}
                     to={getNavigationPath(siteTargetPath, { panel: undefined })}
@@ -1208,6 +1221,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     }
                     mobileSidebarAction="site"
                   />
+                  )
                 );
               })}
               <NavRow
