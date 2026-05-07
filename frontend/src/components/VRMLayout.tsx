@@ -748,7 +748,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     }
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
-      setMobileSidebarOpen(null);
       return;
     }
     navigate(targetPath, { replace: isDemoSession });
