@@ -9,6 +9,7 @@ type MobileSidebarRowProps = {
   className?: string;
   ariaLabel?: string;
   onTap: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
 };
 
 const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
@@ -20,6 +21,7 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
   className,
   ariaLabel,
   onTap,
+  onPointerDown,
 }) => {
   const classes = [
     "vrm-nav-row",
@@ -31,6 +33,10 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
     .filter(Boolean)
     .join(" ");
 
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onPointerDown?.(event);
+  };
   return (
     <button
       type="button"
@@ -38,6 +44,7 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
       aria-label={ariaLabel}
       aria-disabled={disabled ? "true" : undefined}
       disabled={false}
+      onPointerDown={handlePointerDown}
       onClick={onTap}
       data-mobile-sidebar-row="true"
       data-mobile-sidebar-disabled={disabled ? "true" : undefined}
