@@ -710,11 +710,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     return false;
   };
   const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
-    const blocked = handleMobileSidebarIntent(event, "site");
-    if (!blocked && isMobileViewport) {
-      event.stopPropagation();
-      setMobileSidebarOpen(null);
-    }
+    handleMobileSidebarIntent(event, "site");
   };
   const handleMobilePanelPointerDown = (
     event: React.PointerEvent<HTMLElement>,
@@ -1075,15 +1071,33 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 mobileSidebarAction="primary"
               />
             )}
-            {showLogout && (
-              <NavRow
-                onClick={handleLogoutClick}
-                leftIcon={<NavIcon icon={LogOut} />}
-                label="Logout"
-                className="vrm-nav-row--interactive"
-                ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
-              />
-            )}
+            {showLogout &&
+              (isMobileViewport ? (
+                <MobileSidebarRow
+                  icon={<NavIcon icon={LogOut} />}
+                  label="Logout"
+                  className="vrm-nav-row--interactive"
+                  ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+                  onTap={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (mobileSidebarOpen !== "primary") {
+                      setMobileSidebarOpen("primary");
+                      return;
+                    }
+                    handleLogoutClick();
+                    setMobileSidebarOpen(null);
+                  }}
+                />
+              ) : (
+                <NavRow
+                  onClick={handleLogoutClick}
+                  leftIcon={<NavIcon icon={LogOut} />}
+                  label="Logout"
+                  className="vrm-nav-row--interactive"
+                  ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+                />
+              ))}
           </NavList>
           </div>
         </nav>
@@ -1173,23 +1187,43 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               )}
               </div>
             )}
-            {showSiteMenu && (
-              <SecondaryPinnedRow
-                leftIcon={
-                  <span className="vrm-nav-row__icon-stack">
-                    <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
-                    <NavIcon icon={MapPin} />
-                  </span>
-                }
-                label={activeSite?.label ?? "Site"}
-                onClick={(event) => {
-                  const blocked = handleMobileSidebarIntent(event, "site");
-                  if (!blocked) {
-                    openSitesSelector();
+            {showSiteMenu &&
+              (isMobileViewport ? (
+                <MobileSidebarRow
+                  icon={
+                    <span className="vrm-nav-row__icon-stack">
+                      <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
+                      <NavIcon icon={MapPin} />
+                    </span>
                   }
-                }}
-              />
-            )}
+                  label={activeSite?.label ?? "Site"}
+                  onTap={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (mobileSidebarOpen !== "site") {
+                      setMobileSidebarOpen("site");
+                      return;
+                    }
+                    openSitesSelector();
+                  }}
+                />
+              ) : (
+                <SecondaryPinnedRow
+                  leftIcon={
+                    <span className="vrm-nav-row__icon-stack">
+                      <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
+                      <NavIcon icon={MapPin} />
+                    </span>
+                  }
+                  label={activeSite?.label ?? "Site"}
+                  onClick={(event) => {
+                    const blocked = handleMobileSidebarIntent(event, "site");
+                    if (!blocked) {
+                      openSitesSelector();
+                    }
+                  }}
+                />
+              ))}
             <SecondaryDivider />
           </div>
           {!showSiteMenu && (
@@ -1246,12 +1280,26 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   )
                 );
               })}
-              <NavRow
-                leftIcon={<NavIcon icon={Plus} />}
-                label="Add site"
-                className="vrm-nav-row--inert"
-                ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
-              />
+              {isMobileViewport ? (
+                <MobileSidebarRow
+                  icon={<NavIcon icon={Plus} />}
+                  label="Add site"
+                  className="vrm-nav-row--inert"
+                  disabled
+                  ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+                  onTap={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                />
+              ) : (
+                <NavRow
+                  leftIcon={<NavIcon icon={Plus} />}
+                  label="Add site"
+                  className="vrm-nav-row--inert"
+                  ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+                />
+              )}
             </NavList>
             </div>
           )}
@@ -1273,7 +1321,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   </span>
                 );
                 if (isDisabled) {
-                  return (
+                  return isMobileViewport ? (
+                    <MobileSidebarRow
+                      key={item.id ?? item.label}
+                      icon={item.icon}
+                      label={navLabel}
+                      disabled
+                      ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                      onTap={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                    />
+                  ) : (
                     <NavRow
                       key={item.id ?? item.label}
                       leftIcon={item.icon}
@@ -1287,7 +1347,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 if (!item.path) {
                   return null;
                 }
-                return (
+                return isMobileViewport ? (
+                  <MobileSidebarRow
+                    key={item.path}
+                    icon={item.icon}
+                    label={navLabel}
+                    active={isActive}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    onTap={(event) =>
+                      handleMobileActionRowClick(
+                        event,
+                        getNavigationPath(item.path),
+                        "site",
+                        isActive,
+                      )
+                    }
+                  />
+                ) : (
                   <NavRow
                     key={item.path}
                     to={getNavigationPath(item.path)}
@@ -1309,21 +1385,39 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           {shouldShowAdminMenu && (
             <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
-              {adminNavigationItems.map((item) => (
-                <NavRow
-                  key={item.path}
-                  to={getNavigationPath(item.path)}
-                  replace={isDemoSession}
-                  leftIcon={item.icon}
-                  label={item.label}
-                  active={item.path ? isActiveRoute(item.path) : false}
-                  ariaLabel={!isSecondaryExpanded ? item.label : undefined}
-                  onClick={(event) =>
-                    handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
-                  }
-                  mobileSidebarAction="site"
-                />
-              ))}
+              {adminNavigationItems.map((item) =>
+                isMobileViewport ? (
+                  <MobileSidebarRow
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    active={item.path ? isActiveRoute(item.path) : false}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    onTap={(event) =>
+                      handleMobileActionRowClick(
+                        event,
+                        getNavigationPath(item.path),
+                        "site",
+                        item.path ? isActiveRoute(item.path) : false,
+                      )
+                    }
+                  />
+                ) : (
+                  <NavRow
+                    key={item.path}
+                    to={getNavigationPath(item.path)}
+                    replace={isDemoSession}
+                    leftIcon={item.icon}
+                    label={item.label}
+                    active={item.path ? isActiveRoute(item.path) : false}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    onClick={(event) =>
+                      handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
+                    }
+                    mobileSidebarAction="site"
+                  />
+                ),
+              )}
             </NavList>
             </div>
           )}
