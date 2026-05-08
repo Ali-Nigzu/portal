@@ -244,6 +244,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setMobileDrawer({ kind: "site-menu", siteId: nextSiteId });
     setMobileSidebarOpen("site");
   };
+  const openSecondaryDrawerForCurrentContext = () => {
+    if (siteId) {
+      openSiteMenuDrawer(siteId);
+      return;
+    }
+    openSiteSelectorDrawer();
+  };
   const closeMobileDrawer = () => {
     setMobileDrawer({ kind: "closed" });
     setMobileSidebarOpen(null);
@@ -734,7 +741,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       if (targetSidebar === "primary") {
         openPrimaryDrawer();
       } else {
-        openSiteSelectorDrawer();
+        openSecondaryDrawerForCurrentContext();
       }
       return true;
     }
@@ -764,7 +771,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       if (panel === "primary") {
         openPrimaryDrawer();
       } else {
-        openSiteSelectorDrawer();
+        openSecondaryDrawerForCurrentContext();
       }
     }
   };
@@ -781,7 +788,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       if (panel === "primary") {
         openPrimaryDrawer();
       } else {
-        openSiteSelectorDrawer();
+        openSecondaryDrawerForCurrentContext();
       }
       return;
     }
