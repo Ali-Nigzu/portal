@@ -575,6 +575,23 @@ button.vrm-nav-row {
     width: 100%;
   }
 
+  .vrm-layout--mobile .vrm-nav-list,
+  .vrm-layout--mobile .vrm-primary-nav,
+  .vrm-layout--mobile .vrm-secondary-list {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .vrm-layout--mobile .vrm-primary-nav,
+  .vrm-layout--mobile .vrm-secondary-list {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .vrm-layout--mobile .vrm-extended-panel {
+    overflow-x: hidden;
+  }
+
   .vrm-layout--mobile .mobile-sidebar-row {
     width: 100%;
     min-height: 44px;
@@ -584,6 +601,8 @@ button.vrm-nav-row {
     border: 0;
     text-align: left;
     cursor: pointer;
+    box-sizing: border-box;
+    margin: 0;
   }
 
   .vrm-layout--mobile .mobile-sidebar-row__icon,
