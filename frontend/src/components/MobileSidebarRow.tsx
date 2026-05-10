@@ -24,10 +24,9 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
   onPointerDown,
 }) => {
   const classes = [
-    "vrm-nav-row",
-    "mobile-sidebar-row",
-    active ? "vrm-nav-row--active" : "",
-    disabled ? "vrm-nav-row--disabled" : "vrm-nav-row--interactive",
+    "mobile-expanded-row",
+    active ? "mobile-expanded-row--active" : "",
+    disabled ? "mobile-expanded-row--disabled" : "mobile-expanded-row--interactive",
     className ?? "",
   ]
     .filter(Boolean)
@@ -55,9 +54,9 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
       data-mobile-sidebar-row="true"
       data-mobile-sidebar-disabled={disabled ? "true" : undefined}
     >
-      {icon && <span className="vrm-nav-row__icon mobile-sidebar-row__icon">{icon}</span>}
-      <span className="vrm-nav-row__label mobile-sidebar-row__label">{label}</span>
-      {rightSlot && <span className="vrm-nav-row__right mobile-sidebar-row__right">{rightSlot}</span>}
+      {icon && <span className="mobile-expanded-row__icon">{icon}</span>}
+      <span className="mobile-expanded-row__label">{label}</span>
+      {rightSlot && <span className="mobile-expanded-row__right">{rightSlot}</span>}
     </button>
   );
 };
