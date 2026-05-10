@@ -42,6 +42,11 @@ import SettingsSecondaryNav from "../features/settings/components/SettingsSecond
 import MobileSidebarRow from "./MobileSidebarRow";
 
 type MobileSidebarOpen = null | "primary" | "site";
+type MobileDrawer =
+  | { kind: "closed" }
+  | { kind: "primary" }
+  | { kind: "site-selector" }
+  | { kind: "site-menu"; siteId: string };
 interface VRMLayoutProps {
   userRole?: "client" | "admin";
   isAuthenticated?: boolean;
@@ -72,6 +77,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] =
     useState<MobileSidebarOpen>(null);
+  const [mobileDrawer, setMobileDrawer] = useState<MobileDrawer>({ kind: "closed" });
   const [sitesIntentOpen, setSitesIntentOpen] = useState(false);
   const [forcedSitesExpandOnceActive, setForcedSitesExpandOnceActive] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
@@ -159,7 +165,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     );
   };
   const handleSitesClick = () => {
-    if (isMobileViewport && mobileSidebarOpen !== "site") {
+    if (isMobileViewport) {
+      setMobileDrawer({ kind: "site-selector" });
       setMobileSidebarOpen("site");
       return;
     }
@@ -223,7 +230,31 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   }, []);
   useEffect(() => {
     setMobileSidebarOpen(null);
+    setMobileDrawer({ kind: "closed" });
   }, [isMobileViewport]);
+  const openPrimaryDrawer = () => {
+    setMobileDrawer({ kind: "primary" });
+    setMobileSidebarOpen("primary");
+  };
+  const openSiteSelectorDrawer = () => {
+    setMobileDrawer({ kind: "site-selector" });
+    setMobileSidebarOpen("site");
+  };
+  const openSiteMenuDrawer = (nextSiteId: string) => {
+    setMobileDrawer({ kind: "site-menu", siteId: nextSiteId });
+    setMobileSidebarOpen("site");
+  };
+  const openSecondaryDrawerForCurrentContext = () => {
+    if (siteId) {
+      openSiteMenuDrawer(siteId);
+      return;
+    }
+    openSiteSelectorDrawer();
+  };
+  const closeMobileDrawer = () => {
+    setMobileDrawer({ kind: "closed" });
+    setMobileSidebarOpen(null);
+  };
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -316,6 +347,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isSiteSelection = isSelectorOpen;
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
+  const showSiteMenuMobile =
+    mobileDrawer.kind === "site-menu" ||
+    (mobileDrawer.kind === "site-selector" ? false : showSiteMenu);
   const isHomeRoute = location.pathname === "/home";
   const isDocumentsRoute =
     location.pathname === "/documents" || location.pathname.startsWith("/documents/");
@@ -692,7 +726,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (!isMobileViewport) {
       return;
     }
-    setMobileSidebarOpen(null);
+    closeMobileDrawer();
   };
   const handleMobileSidebarIntent = (
     event: React.MouseEvent<HTMLElement>,
@@ -704,17 +738,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (mobileSidebarOpen !== targetSidebar) {
       event.preventDefault();
       event.stopPropagation();
-      setMobileSidebarOpen(targetSidebar);
+      if (targetSidebar === "primary") {
+        openPrimaryDrawer();
+      } else {
+        openSecondaryDrawerForCurrentContext();
+      }
       return true;
     }
     return false;
   };
   const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
-    const blocked = handleMobileSidebarIntent(event, "site");
-    if (!blocked && isMobileViewport) {
-      event.stopPropagation();
-      setMobileSidebarOpen(null);
-    }
+    handleMobileSidebarIntent(event, "site");
   };
   const handleMobilePanelPointerDown = (
     event: React.PointerEvent<HTMLElement>,
@@ -726,22 +760,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     const target = event.target as HTMLElement | null;
     if (!target) return;
     if (target.closest("[data-mobile-sidebar-explicit-close='true']")) {
-      event.preventDefault();
-      event.stopPropagation();
-      setMobileSidebarOpen(null);
       return;
     }
     if (target.closest("[data-mobile-sidebar-row='true']")) {
       return;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    if (mobileSidebarOpen === null) {
-      setMobileSidebarOpen(panel);
-      return;
-    }
     if (mobileSidebarOpen !== panel) {
-      setMobileSidebarOpen(panel);
+      event.preventDefault();
+      event.stopPropagation();
+      if (panel === "primary") {
+        openPrimaryDrawer();
+      } else {
+        openSecondaryDrawerForCurrentContext();
+      }
     }
   };
   const handleMobileActionRowClick = (
@@ -754,16 +785,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     event.preventDefault();
     event.stopPropagation();
     if (mobileSidebarOpen !== panel) {
-      setMobileSidebarOpen(panel);
+      if (panel === "primary") {
+        openPrimaryDrawer();
+      } else {
+        openSecondaryDrawerForCurrentContext();
+      }
       return;
     }
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
-      setMobileSidebarOpen(null);
       return;
     }
     navigate(targetPath, { replace: isDemoSession });
-    setMobileSidebarOpen(null);
+    closeMobileDrawer();
   };
   useEffect(() => {
     if (!isMobileViewport || mobileSidebarOpen === null) {
@@ -899,7 +933,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 isMobileViewport ? (
                 <MobileSidebarRow
                   key={item.path ?? item.label}
-                  leftIcon={item.icon}
+                  icon={item.icon}
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}
@@ -908,6 +942,35 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     item.path === siteRoutePrefix ? (
                       <NavIcon icon={ChevronRight} className="vrm-nav-chevron" />
                     ) : undefined
+                  }
+                  onTap={
+                    item.disabled
+                      ? (event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }
+                      : item.path === siteRoutePrefix
+                        ? (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (mobileSidebarOpen !== "primary") {
+                              openPrimaryDrawer();
+                              return;
+                            }
+                            openSiteSelectorDrawer();
+                          }
+                        : item.path
+                          ? (event) =>
+                              handleMobileActionRowClick(
+                                event,
+                                getNavigationPath(item.path),
+                                "primary",
+                                isActive,
+                              )
+                          : (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }
                   }
                 />
                 ) : (
@@ -955,10 +1018,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                             event.preventDefault();
                             event.stopPropagation();
                             if (mobileSidebarOpen !== "primary") {
-                              setMobileSidebarOpen("primary");
+                              openPrimaryDrawer();
                               return;
                             }
-                            setMobileSidebarOpen("site");
+                            openSiteSelectorDrawer();
                           }
                         : item.path
                           ? (event) =>
@@ -1053,15 +1116,33 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 mobileSidebarAction="primary"
               />
             )}
-            {showLogout && (
-              <NavRow
-                onClick={handleLogoutClick}
-                leftIcon={<NavIcon icon={LogOut} />}
-                label="Logout"
-                className="vrm-nav-row--interactive"
-                ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
-              />
-            )}
+            {showLogout &&
+              (isMobileViewport ? (
+                <MobileSidebarRow
+                  icon={<NavIcon icon={LogOut} />}
+                  label="Logout"
+                  className="vrm-nav-row--interactive"
+                  ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+                  onTap={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (mobileSidebarOpen !== "primary") {
+                      openPrimaryDrawer();
+                      return;
+                    }
+                    handleLogoutClick();
+                    closeMobileDrawer();
+                  }}
+                />
+              ) : (
+                <NavRow
+                  onClick={handleLogoutClick}
+                  leftIcon={<NavIcon icon={LogOut} />}
+                  label="Logout"
+                  className="vrm-nav-row--interactive"
+                  ariaLabel={!isPrimaryExpanded ? "Logout" : undefined}
+                />
+              ))}
           </NavList>
           </div>
         </nav>
@@ -1104,7 +1185,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               </button>
             )}
             <SecondarySearch />
-            {!showSiteMenu && (
+            {!(isMobileViewport ? showSiteMenuMobile : showSiteMenu) && (
               <div data-mobile-sidebar-protected="true">
               {isMobileViewport ? (
               <MobileSidebarRow
@@ -1151,26 +1232,46 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               )}
               </div>
             )}
-            {showSiteMenu && (
-              <SecondaryPinnedRow
-                leftIcon={
-                  <span className="vrm-nav-row__icon-stack">
-                    <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
-                    <NavIcon icon={MapPin} />
-                  </span>
-                }
-                label={activeSite?.label ?? "Site"}
-                onClick={(event) => {
-                  const blocked = handleMobileSidebarIntent(event, "site");
-                  if (!blocked) {
-                    openSitesSelector();
+            {(isMobileViewport ? showSiteMenuMobile : showSiteMenu) &&
+              (isMobileViewport ? (
+                <MobileSidebarRow
+                  icon={
+                    <span className="vrm-nav-row__icon-stack">
+                      <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
+                      <NavIcon icon={MapPin} />
+                    </span>
                   }
-                }}
-              />
-            )}
+                  label={activeSite?.label ?? "Site"}
+                  onTap={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (mobileSidebarOpen !== "site") {
+                      openSiteSelectorDrawer();
+                      return;
+                    }
+                    openSitesSelector();
+                  }}
+                />
+              ) : (
+                <SecondaryPinnedRow
+                  leftIcon={
+                    <span className="vrm-nav-row__icon-stack">
+                      <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
+                      <NavIcon icon={MapPin} />
+                    </span>
+                  }
+                  label={activeSite?.label ?? "Site"}
+                  onClick={(event) => {
+                    const blocked = handleMobileSidebarIntent(event, "site");
+                    if (!blocked) {
+                      openSitesSelector();
+                    }
+                  }}
+                />
+              ))}
             <SecondaryDivider />
           </div>
-          {!showSiteMenu && (
+          {!(isMobileViewport ? showSiteMenuMobile : showSiteMenu) && (
             <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
               {selectorSiteOptions.map((site) => {
@@ -1224,16 +1325,30 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   )
                 );
               })}
-              <NavRow
-                leftIcon={<NavIcon icon={Plus} />}
-                label="Add site"
-                className="vrm-nav-row--inert"
-                ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
-              />
+              {isMobileViewport ? (
+                <MobileSidebarRow
+                  icon={<NavIcon icon={Plus} />}
+                  label="Add site"
+                  className="vrm-nav-row--inert"
+                  disabled
+                  ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+                  onTap={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                />
+              ) : (
+                <NavRow
+                  leftIcon={<NavIcon icon={Plus} />}
+                  label="Add site"
+                  className="vrm-nav-row--inert"
+                  ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+                />
+              )}
             </NavList>
             </div>
           )}
-          {showSiteMenu && !shouldShowAdminMenu && (
+          {(isMobileViewport ? showSiteMenuMobile : showSiteMenu) && !shouldShowAdminMenu && (
             <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
               {clientNavigationItems.map((item) => {
@@ -1251,7 +1366,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   </span>
                 );
                 if (isDisabled) {
-                  return (
+                  return isMobileViewport ? (
+                    <MobileSidebarRow
+                      key={item.id ?? item.label}
+                      icon={item.icon}
+                      label={navLabel}
+                      disabled
+                      ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                      onTap={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                    />
+                  ) : (
                     <NavRow
                       key={item.id ?? item.label}
                       leftIcon={item.icon}
@@ -1265,7 +1392,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 if (!item.path) {
                   return null;
                 }
-                return (
+                return isMobileViewport ? (
+                  <MobileSidebarRow
+                    key={item.path}
+                    icon={item.icon}
+                    label={navLabel}
+                    active={isActive}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    onTap={(event) =>
+                      handleMobileActionRowClick(
+                        event,
+                        getNavigationPath(item.path),
+                        "site",
+                        isActive,
+                      )
+                    }
+                  />
+                ) : (
                   <NavRow
                     key={item.path}
                     to={getNavigationPath(item.path)}
@@ -1287,21 +1430,39 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           {shouldShowAdminMenu && (
             <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
-              {adminNavigationItems.map((item) => (
-                <NavRow
-                  key={item.path}
-                  to={getNavigationPath(item.path)}
-                  replace={isDemoSession}
-                  leftIcon={item.icon}
-                  label={item.label}
-                  active={item.path ? isActiveRoute(item.path) : false}
-                  ariaLabel={!isSecondaryExpanded ? item.label : undefined}
-                  onClick={(event) =>
-                    handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
-                  }
-                  mobileSidebarAction="site"
-                />
-              ))}
+              {adminNavigationItems.map((item) =>
+                isMobileViewport ? (
+                  <MobileSidebarRow
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    active={item.path ? isActiveRoute(item.path) : false}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    onTap={(event) =>
+                      handleMobileActionRowClick(
+                        event,
+                        getNavigationPath(item.path),
+                        "site",
+                        item.path ? isActiveRoute(item.path) : false,
+                      )
+                    }
+                  />
+                ) : (
+                  <NavRow
+                    key={item.path}
+                    to={getNavigationPath(item.path)}
+                    replace={isDemoSession}
+                    leftIcon={item.icon}
+                    label={item.label}
+                    active={item.path ? isActiveRoute(item.path) : false}
+                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
+                    onClick={(event) =>
+                      handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
+                    }
+                    mobileSidebarAction="site"
+                  />
+                ),
+              )}
             </NavList>
             </div>
           )}

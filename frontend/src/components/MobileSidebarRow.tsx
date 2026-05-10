@@ -9,6 +9,7 @@ type MobileSidebarRowProps = {
   className?: string;
   ariaLabel?: string;
   onTap: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onPointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
 };
 
 const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
@@ -20,17 +21,26 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
   className,
   ariaLabel,
   onTap,
+  onPointerDown,
 }) => {
   const classes = [
-    "vrm-nav-row",
-    "mobile-sidebar-row",
-    active ? "vrm-nav-row--active" : "",
-    disabled ? "vrm-nav-row--disabled" : "vrm-nav-row--interactive",
+    "mobile-expanded-row",
+    active ? "mobile-expanded-row--active" : "",
+    disabled ? "mobile-expanded-row--disabled" : "mobile-expanded-row--interactive",
     className ?? "",
   ]
     .filter(Boolean)
     .join(" ");
 
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onPointerDown?.(event);
+  };
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onTap(event);
+  };
   return (
     <button
       type="button"
@@ -38,13 +48,14 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
       aria-label={ariaLabel}
       aria-disabled={disabled ? "true" : undefined}
       disabled={false}
-      onClick={onTap}
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
       data-mobile-sidebar-row="true"
       data-mobile-sidebar-disabled={disabled ? "true" : undefined}
     >
-      {icon && <span className="vrm-nav-row__icon mobile-sidebar-row__icon">{icon}</span>}
-      <span className="vrm-nav-row__label mobile-sidebar-row__label">{label}</span>
-      {rightSlot && <span className="vrm-nav-row__right mobile-sidebar-row__right">{rightSlot}</span>}
+      {icon && <span className="mobile-expanded-row__icon">{icon}</span>}
+      <span className="mobile-expanded-row__label">{label}</span>
+      {rightSlot && <span className="mobile-expanded-row__right">{rightSlot}</span>}
     </button>
   );
 };
