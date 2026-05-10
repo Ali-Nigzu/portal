@@ -34,8 +34,14 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
     .join(" ");
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
     event.stopPropagation();
     onPointerDown?.(event);
+  };
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onTap(event);
   };
   return (
     <button
@@ -45,7 +51,7 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
       aria-disabled={disabled ? "true" : undefined}
       disabled={false}
       onPointerDown={handlePointerDown}
-      onClick={onTap}
+      onClick={handleClick}
       data-mobile-sidebar-row="true"
       data-mobile-sidebar-disabled={disabled ? "true" : undefined}
     >
