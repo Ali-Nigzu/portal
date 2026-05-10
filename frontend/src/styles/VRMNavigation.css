@@ -592,23 +592,44 @@ button.vrm-nav-row {
     overflow-x: hidden;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row {
+  .vrm-layout--mobile .mobile-expanded-row-shell {
+    position: relative;
     width: 100%;
     min-height: 44px;
     display: flex;
     align-items: center;
     gap: 12px;
-    border: 0;
     border-radius: var(--vrm-nav-row-radius);
     padding: 0 var(--vrm-nav-row-padding-x);
+    border: 0;
     background: transparent;
     text-align: left;
-    cursor: pointer;
+    cursor: default;
     box-sizing: border-box;
     margin: 0;
+    overflow: hidden;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row--interactive:hover {
+  .vrm-layout--mobile .mobile-expanded-row-hitbox {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    border-radius: inherit;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .vrm-layout--mobile .mobile-expanded-row--interactive:hover,
+  .vrm-layout--mobile .mobile-expanded-row-hitbox:hover + .mobile-expanded-row__icon {
+    color: inherit;
+  }
+
+  .vrm-layout--mobile .mobile-expanded-row--interactive:hover,
+  .vrm-layout--mobile .mobile-expanded-row-hitbox:hover {
     background-color: var(--vrm-nav-row-hover-bg);
     color: var(--vrm-text-primary);
   }
@@ -653,6 +674,8 @@ button.vrm-nav-row {
   .vrm-layout--mobile .mobile-expanded-row__icon,
   .vrm-layout--mobile .mobile-expanded-row__label,
   .vrm-layout--mobile .mobile-expanded-row__right {
+    position: relative;
+    z-index: 1;
     pointer-events: none;
   }
 

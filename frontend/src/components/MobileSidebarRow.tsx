@@ -24,7 +24,7 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
   onPointerDown,
 }) => {
   const classes = [
-    "mobile-expanded-row",
+    "mobile-expanded-row-shell",
     active ? "mobile-expanded-row--active" : "",
     disabled ? "mobile-expanded-row--disabled" : "mobile-expanded-row--interactive",
     className ?? "",
@@ -42,21 +42,24 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
     onTap(event);
   };
   return (
-    <button
-      type="button"
+    <div
       className={classes}
-      aria-label={ariaLabel}
-      aria-disabled={disabled ? "true" : undefined}
-      disabled={false}
-      onPointerDown={handlePointerDown}
-      onClick={handleClick}
       data-mobile-sidebar-row="true"
       data-mobile-sidebar-disabled={disabled ? "true" : undefined}
     >
+      <button
+        type="button"
+        className="mobile-expanded-row-hitbox"
+        aria-label={ariaLabel}
+        aria-disabled={disabled ? "true" : undefined}
+        disabled={false}
+        onPointerDown={handlePointerDown}
+        onClick={handleClick}
+      />
       {icon && <span className="mobile-expanded-row__icon">{icon}</span>}
       <span className="mobile-expanded-row__label">{label}</span>
       {rightSlot && <span className="mobile-expanded-row__right">{rightSlot}</span>}
-    </button>
+    </div>
   );
 };
 
