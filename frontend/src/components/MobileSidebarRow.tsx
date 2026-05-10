@@ -33,7 +33,6 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
     .join(" ");
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    event.preventDefault();
     event.stopPropagation();
     onPointerDown?.(event);
   };
