@@ -550,7 +550,7 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-extended-panel {
-    width: min(var(--vrm-extended-panel-width), calc(100vw - 52px));
+    width: calc(100vw - 52px);
     position: absolute;
     left: 52px;
     top: 0;
@@ -670,7 +670,7 @@ button.vrm-nav-row {
     margin: 0;
     cursor: default;
   }
-}
+
   .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row__label,
   .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row__right {
     display: none;
@@ -694,3 +694,4 @@ button.vrm-nav-row {
     display: inline-flex;
     visibility: visible;
   }
+}
