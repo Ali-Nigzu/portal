@@ -842,6 +842,120 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     );
   }
 
+  if (isMobileViewport) {
+    const mobileSiteMenuItems = shouldShowAdminMenu ? adminNavigationItems : clientNavigationItems;
+    const currentMobileSiteId = siteId ?? getStoredSiteId() ?? "all";
+    const openSecondaryDrawerForCurrentContext = () => {
+      if (currentMobileSiteId) {
+        setMobileDrawer({ kind: currentMobileSiteId === "all" ? "site-selector" : "site-menu", ...(currentMobileSiteId === "all" ? {} : { siteId: currentMobileSiteId }) } as MobileDrawer);
+      } else {
+        setMobileDrawer({ kind: "site-selector" });
+      }
+    };
+    const handlePrimaryRailTap = (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setMobileDrawer((prev) => (prev.kind === "primary" ? prev : { kind: "primary" }));
+    };
+    const handleSecondaryRailTap = (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (mobileDrawer.kind === "site-selector" || mobileDrawer.kind === "site-menu") return;
+      openSecondaryDrawerForCurrentContext();
+    };
+    return (
+      <div className="vrm-layout vrm-layout--mobile">
+        <div className="mobile-sidebar-frame">
+          <nav className="mobile-primary-rail" aria-label="Primary rail">
+            <button type="button" className="mobile-rail-button" onClick={handlePrimaryRailTap}>
+              <NavIcon icon={Home} />
+            </button>
+          </nav>
+          <nav className="mobile-secondary-rail" aria-label="Secondary rail">
+            <button type="button" className="mobile-rail-button" onClick={handleSecondaryRailTap}>
+              <NavIcon icon={MapPin} />
+            </button>
+          </nav>
+          {mobileDrawer.kind !== "closed" && (
+            <aside className="mobile-drawer-content" onPointerDown={(e) => e.stopPropagation()}>
+              {mobileDrawer.kind === "primary" && (
+                <div className="mobile-drawer-section">
+                  <button className="mobile-drawer-row" type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMobileDrawer({ kind: "site-selector" }); }}>
+                    <span className="mobile-drawer-row__icon"><NavIcon icon={MapPin} /></span>
+                    <span className="mobile-drawer-row__label">Sites</span>
+                  </button>
+                </div>
+              )}
+              {mobileDrawer.kind === "site-selector" && (
+                <div className="mobile-drawer-section">
+                  {[allSitesOption, ...selectorSiteOptions].map((site) => {
+                    const siteSubPath = (() => {
+                      const match = location.pathname.match(/^\/(?:sites|demo)\/[^/]+(\/.*)?$/);
+                      const trailing = match?.[1];
+                      if (!trailing || trailing === "/") return "/dashboard";
+                      return trailing;
+                    })();
+                    const target = `${siteRoutePrefix}/${site.id}${siteSubPath}`;
+                    const isActive = selectedSiteForList === site.id && isSiteSelection;
+                    return (
+                      <button key={site.id} className={`mobile-drawer-row ${isActive ? "mobile-drawer-row--active" : ""}`} type="button" onClick={(event) => {
+                        event.preventDefault(); event.stopPropagation();
+                        navigate(getNavigationPath(target, { panel: undefined }), { replace: isDemoSession });
+                        setMobileDrawer({ kind: "closed" });
+                      }}>
+                        <span className="mobile-drawer-row__icon"><NavIcon icon={MapPin} /></span>
+                        <span className="mobile-drawer-row__label">{site.label}</span>
+                      </button>
+                    );
+                  })}
+                  <button className="mobile-drawer-row mobile-drawer-row--disabled" type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                    <span className="mobile-drawer-row__icon"><NavIcon icon={Plus} /></span>
+                    <span className="mobile-drawer-row__label">Add site</span>
+                  </button>
+                </div>
+              )}
+              {mobileDrawer.kind === "site-menu" && (
+                <div className="mobile-drawer-section">
+                  <div className="mobile-drawer-header">{findSiteById(mobileDrawer.siteId)?.label ?? "Site"}</div>
+                  {mobileSiteMenuItems.map((item) => {
+                    const isDisabled = Boolean(item.disabled) || !item.path;
+                    const isActive = item.path ? isActiveRoute(item.path) : false;
+                    return (
+                      <button key={item.id ?? item.path ?? item.label} className={`mobile-drawer-row ${isActive ? "mobile-drawer-row--active" : ""} ${isDisabled ? "mobile-drawer-row--disabled" : ""}`} type="button" onClick={(event) => {
+                        event.preventDefault(); event.stopPropagation();
+                        if (isDisabled || !item.path || isActive) return;
+                        navigate(getNavigationPath(item.path), { replace: isDemoSession });
+                        setMobileDrawer({ kind: "closed" });
+                      }}>
+                        <span className="mobile-drawer-row__icon">{item.icon}</span>
+                        <span className="mobile-drawer-row__label">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
+        <main className={`vrm-main ${isMobileViewport ? "vrm-main--mobile-lane" : ""}`}>
+          <div className={`vrm-content-shell ${isMobileViewport ? "vrm-content-shell--mobile-lane" : ""}`}>
+            <div className={`vrm-content ${isMobileViewport ? "vrm-content--mobile-lane" : ""}`}>
+              {children || <Outlet />}
+            </div>
+          </div>
+        </main>
+        {mobileDrawer.kind !== "closed" && (
+          <button
+            type="button"
+            className="mobile-drawer-backdrop"
+            aria-label="Close drawer"
+            onClick={() => setMobileDrawer({ kind: "closed" })}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`vrm-layout ${isMobileViewport ? "vrm-layout--mobile" : ""} ${
