@@ -592,38 +592,43 @@ button.vrm-nav-row {
     overflow-x: hidden;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row {
-    width: 100%;
-    min-height: 44px;
-    display: flex;
+  .vrm-layout--mobile .mobile-sidebar-pill-row {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    border-radius: var(--vrm-nav-row-radius);
-    padding: 0 var(--vrm-nav-row-padding-x);
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 44px;
+    max-width: 100%;
+    width: fit-content;
+    box-sizing: border-box;
+    padding: 0 14px;
     border: 0;
+    border-radius: 999px;
     background: transparent;
+    color: inherit;
     text-align: left;
     cursor: pointer;
-    box-sizing: border-box;
     margin: 0;
+    align-self: flex-start;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row--interactive:hover {
+  .vrm-layout--mobile .mobile-sidebar-pill-row--interactive:hover {
     background-color: var(--vrm-nav-row-hover-bg);
     color: var(--vrm-text-primary);
   }
 
-  .vrm-layout--mobile .mobile-expanded-row--active {
+  .vrm-layout--mobile .mobile-sidebar-pill-row--active {
     background-color: var(--vrm-nav-row-active-bg);
     color: var(--vrm-nav-row-active-text);
   }
 
-  .vrm-layout--mobile .mobile-expanded-row--disabled {
+  .vrm-layout--mobile .mobile-sidebar-pill-row--disabled {
     color: var(--vrm-text-muted);
+    opacity: 0.5;
     cursor: default;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row__icon {
+  .vrm-layout--mobile .mobile-sidebar-pill-row__icon {
     width: var(--vrm-nav-icon-slot);
     height: var(--vrm-nav-icon-slot);
     display: inline-flex;
@@ -632,9 +637,10 @@ button.vrm-nav-row {
     flex-shrink: 0;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row__label {
-    flex: 1;
+  .vrm-layout--mobile .mobile-sidebar-pill-row__label {
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: clamp(96px, 55vw, 220px);
     display: inline-flex;
     align-items: center;
     overflow: hidden;
@@ -642,7 +648,7 @@ button.vrm-nav-row {
     white-space: nowrap;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row__right {
+  .vrm-layout--mobile .mobile-sidebar-pill-row__right {
     margin-left: auto;
     width: var(--vrm-nav-right-slot);
     display: inline-flex;
@@ -650,9 +656,9 @@ button.vrm-nav-row {
     justify-content: flex-end;
   }
 
-  .vrm-layout--mobile .mobile-expanded-row__icon,
-  .vrm-layout--mobile .mobile-expanded-row__label,
-  .vrm-layout--mobile .mobile-expanded-row__right {
+  .vrm-layout--mobile .mobile-sidebar-pill-row__icon,
+  .vrm-layout--mobile .mobile-sidebar-pill-row__label,
+  .vrm-layout--mobile .mobile-sidebar-pill-row__right {
     pointer-events: none;
   }
 
@@ -671,26 +677,26 @@ button.vrm-nav-row {
     cursor: default;
   }
 
-  .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row__label,
-  .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row__right {
+  .vrm-layout--mobile .vrm-primary-rail .mobile-sidebar-pill-row__label,
+  .vrm-layout--mobile .vrm-primary-rail .mobile-sidebar-pill-row__right {
     display: none;
     visibility: hidden;
   }
 
-  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail .mobile-expanded-row__label,
-  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail .mobile-expanded-row__right {
+  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail .mobile-sidebar-pill-row__label,
+  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail .mobile-sidebar-pill-row__right {
     display: inline-flex;
     visibility: visible;
   }
 
-  .vrm-layout--mobile .vrm-extended-panel .mobile-expanded-row__label,
-  .vrm-layout--mobile .vrm-extended-panel .mobile-expanded-row__right {
+  .vrm-layout--mobile .vrm-extended-panel .mobile-sidebar-pill-row__label,
+  .vrm-layout--mobile .vrm-extended-panel .mobile-sidebar-pill-row__right {
     display: none;
     visibility: hidden;
   }
 
-  .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-extended-panel .mobile-expanded-row__label,
-  .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-extended-panel .mobile-expanded-row__right {
+  .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-extended-panel .mobile-sidebar-pill-row__label,
+  .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-extended-panel .mobile-sidebar-pill-row__right {
     display: inline-flex;
     visibility: visible;
   }
