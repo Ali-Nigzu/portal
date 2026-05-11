@@ -24,9 +24,9 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
   onPointerDown,
 }) => {
   const classes = [
-    "mobile-expanded-row",
-    active ? "mobile-expanded-row--active" : "",
-    disabled ? "mobile-expanded-row--disabled" : "mobile-expanded-row--interactive",
+    "mobile-sidebar-pill-row",
+    active ? "mobile-sidebar-pill-row--active" : "",
+    disabled ? "mobile-sidebar-pill-row--disabled" : "mobile-sidebar-pill-row--interactive",
     className ?? "",
   ]
     .filter(Boolean)
@@ -53,9 +53,9 @@ const MobileSidebarRow: React.FC<MobileSidebarRowProps> = ({
       data-mobile-sidebar-row="true"
       data-mobile-sidebar-disabled={disabled ? "true" : undefined}
     >
-      {icon && <span className="mobile-expanded-row__icon">{icon}</span>}
-      <span className="mobile-expanded-row__label">{label}</span>
-      {rightSlot && <span className="mobile-expanded-row__right">{rightSlot}</span>}
+      {icon && <span className="mobile-sidebar-pill-row__icon">{icon}</span>}
+      <span className="mobile-sidebar-pill-row__label">{label}</span>
+      {rightSlot && <span className="mobile-sidebar-pill-row__right">{rightSlot}</span>}
     </button>
   );
 };

@@ -750,6 +750,18 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const handleSecondaryNavClick = (event: React.MouseEvent<HTMLElement>) => {
     handleMobileSidebarIntent(event, "site");
   };
+  const handleMobileCollapsedSidebarTap = (
+    panel: Exclude<MobileSidebarOpen, null>,
+  ) => {
+    if (!isMobileViewport) {
+      return;
+    }
+    if (panel === "primary") {
+      openPrimaryDrawer();
+      return;
+    }
+    openSecondaryDrawerForCurrentContext();
+  };
   const handleMobilePanelPointerDown = (
     event: React.PointerEvent<HTMLElement>,
     panel: Exclude<MobileSidebarOpen, null>,
@@ -768,30 +780,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (mobileSidebarOpen !== panel) {
       event.preventDefault();
       event.stopPropagation();
-      if (panel === "primary") {
-        openPrimaryDrawer();
-      } else {
-        openSecondaryDrawerForCurrentContext();
-      }
+      handleMobileCollapsedSidebarTap(panel);
     }
   };
-  const handleMobileActionRowClick = (
+  const handleMobileExpandedRowTap = (
     event: React.MouseEvent<HTMLElement>,
     targetPath: string,
-    panel: Exclude<MobileSidebarOpen, null>,
     isRowActive: boolean,
   ) => {
     if (!isMobileViewport) return;
     event.preventDefault();
     event.stopPropagation();
-    if (mobileSidebarOpen !== panel) {
-      if (panel === "primary") {
-        openPrimaryDrawer();
-      } else {
-        openSecondaryDrawerForCurrentContext();
-      }
-      return;
-    }
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
       return;
@@ -961,10 +960,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           }
                         : item.path
                           ? (event) =>
-                              handleMobileActionRowClick(
+                              handleMobileExpandedRowTap(
                                 event,
                                 getNavigationPath(item.path),
-                                "primary",
                                 isActive,
                               )
                           : (event) => {
@@ -989,10 +987,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                         ? handleSitesClick
                         : item.path
                           ? (event) =>
-                              handleMobileActionRowClick(
+                              handleMobileExpandedRowTap(
                                 event,
                                 getNavigationPath(item.path),
-                                "primary",
                                 isActive,
                               )
                           : undefined
@@ -1025,10 +1022,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           }
                         : item.path
                           ? (event) =>
-                              handleMobileActionRowClick(
+                              handleMobileExpandedRowTap(
                                 event,
                                 getNavigationPath(item.path),
-                                "primary",
                                 isActive,
                               )
                           : (event) => {
@@ -1062,7 +1058,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
                 onTap={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
+                  handleMobileExpandedRowTap(event, getNavigationPath("/documents"), false)
                 }
               />
             ) : (
@@ -1075,7 +1071,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
                 onClick={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
+                  handleMobileExpandedRowTap(event, getNavigationPath("/documents"), false)
                 }
                 mobileSidebarAction="primary"
               />
@@ -1098,7 +1094,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
                 onTap={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
+                  handleMobileExpandedRowTap(event, getNavigationPath("/settings/account"), false)
                 }
               />
             ) : (
@@ -1111,7 +1107,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
                 onClick={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
+                  handleMobileExpandedRowTap(event, getNavigationPath("/settings/account"), false)
                 }
                 mobileSidebarAction="primary"
               />
@@ -1195,12 +1191,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
                 onTap={(event) =>
-                  handleMobileActionRowClick(
+                  handleMobileExpandedRowTap(
                     event,
                     getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
                       panel: undefined,
                     }),
-                    "site",
                     isSiteSelection && allSitesOption.id === selectedSiteForList,
                   )
                 }
@@ -1218,12 +1213,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
                 onClick={(event) =>
-                  handleMobileActionRowClick(
+                  handleMobileExpandedRowTap(
                     event,
                     getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
                       panel: undefined,
                     }),
-                    "site",
                     isSiteSelection && allSitesOption.id === selectedSiteForList,
                   )
                 }
@@ -1295,10 +1289,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? site.label : undefined}
                     onTap={(event) =>
-                      handleMobileActionRowClick(
+                      handleMobileExpandedRowTap(
                         event,
                         getNavigationPath(siteTargetPath, { panel: undefined }),
-                        "site",
                         isActive,
                       )
                     }
@@ -1313,10 +1306,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? site.label : undefined}
                     onClick={(event) =>
-                      handleMobileActionRowClick(
+                      handleMobileExpandedRowTap(
                         event,
                         getNavigationPath(siteTargetPath, { panel: undefined }),
-                        "site",
                         isActive,
                       )
                     }
@@ -1400,10 +1392,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     onTap={(event) =>
-                      handleMobileActionRowClick(
+                      handleMobileExpandedRowTap(
                         event,
                         getNavigationPath(item.path),
-                        "site",
                         isActive,
                       )
                     }
@@ -1418,7 +1409,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={isActive}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     onClick={(event) =>
-                      handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
+                      handleMobileExpandedRowTap(event, getNavigationPath(item.path), item.path ? isActiveRoute(item.path) : false)
                     }
                     mobileSidebarAction="site"
                   />
@@ -1439,10 +1430,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={item.path ? isActiveRoute(item.path) : false}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     onTap={(event) =>
-                      handleMobileActionRowClick(
+                      handleMobileExpandedRowTap(
                         event,
                         getNavigationPath(item.path),
-                        "site",
                         item.path ? isActiveRoute(item.path) : false,
                       )
                     }
@@ -1457,7 +1447,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     active={item.path ? isActiveRoute(item.path) : false}
                     ariaLabel={!isSecondaryExpanded ? item.label : undefined}
                     onClick={(event) =>
-                      handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
+                      handleMobileExpandedRowTap(event, getNavigationPath(item.path), item.path ? isActiveRoute(item.path) : false)
                     }
                     mobileSidebarAction="site"
                   />
