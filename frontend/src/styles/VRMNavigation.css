@@ -539,7 +539,7 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-primary-rail {
-    width: var(--vrm-primary-rail-width);
+    width: max(var(--vrm-primary-rail-width), 224px);
     position: absolute;
     left: 0;
     top: 0;
@@ -548,12 +548,12 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel {
-    width: var(--vrm-extended-panel-width);
+    width: var(--vrm-extended-panel-width-collapsed);
     position: absolute;
-    left: var(--vrm-primary-rail-width);
+    left: max(var(--vrm-primary-rail-width), 224px);
     top: 0;
     height: 100vh;
-    z-index: 140;
+    z-index: 120;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-primary-rail {
@@ -697,7 +697,7 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-sidebar-mobile-backdrop {
-    left: calc(var(--vrm-primary-rail-width) + var(--vrm-extended-panel-width));
+    left: calc(max(var(--vrm-primary-rail-width), 224px) + var(--vrm-extended-panel-width-collapsed));
   }
 
   .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row__label,
