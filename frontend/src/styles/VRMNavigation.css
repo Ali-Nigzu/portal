@@ -677,6 +677,11 @@ button.vrm-nav-row {
     cursor: default;
   }
 
+  .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-sidebar-mobile-backdrop {
+    left: 100vw;
+    pointer-events: none;
+  }
+
   .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row__label,
   .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row__right {
     display: none;
