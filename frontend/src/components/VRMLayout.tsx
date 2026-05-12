@@ -1147,6 +1147,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ))}
           </NavList>
           </div>
+          {isMobileViewport && mobileSidebarOpen === "primary" && (
+            <button
+              type="button"
+              className="mobile-sidebar-blank-collapse-zone"
+              data-mobile-sidebar-blank-collapse="primary"
+              aria-label="Collapse primary sidebar"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                closeMobileSidebar();
+              }}
+            />
+          )}
         </nav>
         {shouldRenderSecondaryPanel && (
           <nav
@@ -1247,11 +1260,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   onTap={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    if (mobileSidebarOpen !== "site") {
-                      openSiteSelectorDrawer();
-                      return;
-                    }
-                    openSitesSelector();
+                    openSiteSelectorDrawer();
                   }}
                 />
               ) : (
@@ -1469,6 +1478,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             </div>
           )}
             </>
+          )}
+          {isMobileViewport && mobileSidebarOpen === "site" && (
+            <button
+              type="button"
+              className="mobile-sidebar-blank-collapse-zone"
+              data-mobile-sidebar-blank-collapse="site"
+              aria-label="Collapse secondary sidebar"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                closeMobileSidebar();
+              }}
+            />
           )}
           </nav>
         )}

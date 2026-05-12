@@ -586,6 +586,16 @@ button.vrm-nav-row {
     width: 100%;
   }
 
+  .vrm-layout--mobile .mobile-sidebar-blank-collapse-zone {
+    margin-top: auto;
+    width: 100%;
+    flex: 1 1 auto;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: default;
+  }
+
   .vrm-layout--mobile .vrm-nav-list,
   .vrm-layout--mobile .vrm-primary-nav,
   .vrm-layout--mobile .vrm-secondary-list {
