@@ -548,7 +548,12 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel {
-    width: 52px;
+    width: calc(100vw - 52px);
+    position: absolute;
+    left: 52px;
+    top: 0;
+    height: 100vh;
+    z-index: 140;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-primary-rail {
@@ -678,6 +683,11 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-sidebar-mobile-backdrop {
+    left: 100vw;
+    pointer-events: none;
+  }
+
+  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-sidebar-mobile-backdrop {
     left: 100vw;
     pointer-events: none;
   }
