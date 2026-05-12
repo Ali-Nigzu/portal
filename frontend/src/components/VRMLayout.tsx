@@ -785,12 +785,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     event.preventDefault();
     event.stopPropagation();
     if (mobileSidebarOpen !== panel) {
+      // On touch screens a single tap should navigate, even if the panel was
+      // not already expanded. Keeping this as open-only required a second tap
+      // and made row-strip taps appear unresponsive.
       if (panel === "primary") {
         openPrimaryDrawer();
       } else {
         openSecondaryDrawerForCurrentContext();
       }
-      return;
     }
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
