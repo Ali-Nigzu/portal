@@ -78,6 +78,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const [mobileSidebarOpen, setMobileSidebarOpen] =
     useState<MobileSidebarOpen>(null);
   const [mobileDrawer, setMobileDrawer] = useState<MobileDrawer>({ kind: "closed" });
+  const [secondaryModeMemory, setSecondaryModeMemory] = useState<"selector" | "site-menu">("selector");
   const [sitesIntentOpen, setSitesIntentOpen] = useState(false);
   const [forcedSitesExpandOnceActive, setForcedSitesExpandOnceActive] = useState(false);
   const [keepMenuExpanded, setKeepMenuExpanded] = useState(() => {
@@ -237,15 +238,21 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setMobileSidebarOpen("primary");
   };
   const openSiteSelectorDrawer = () => {
+    setSecondaryModeMemory("selector");
     setMobileDrawer({ kind: "site-selector" });
     setMobileSidebarOpen("site");
   };
   const openSiteMenuDrawer = (nextSiteId: string) => {
+    setSecondaryModeMemory("site-menu");
     setMobileDrawer({ kind: "site-menu", siteId: nextSiteId });
     setMobileSidebarOpen("site");
   };
   const openSecondaryDrawerForCurrentContext = () => {
-    if (siteId) {
+    if (secondaryModeMemory === "site-menu" && siteId) {
+      openSiteMenuDrawer(siteId);
+      return;
+    }
+    if (siteId && !isSelectorOpen && secondaryModeMemory !== "selector") {
       openSiteMenuDrawer(siteId);
       return;
     }
@@ -348,8 +355,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const showSiteMenuMobile =
-    mobileDrawer.kind === "site-menu" ||
-    (mobileDrawer.kind === "site-selector" ? false : showSiteMenu);
+    mobileDrawer.kind === "site-menu"
+      ? true
+      : mobileDrawer.kind === "site-selector"
+        ? false
+        : secondaryModeMemory === "site-menu" && showSiteMenu;
   const isHomeRoute = location.pathname === "/home";
   const isDocumentsRoute =
     location.pathname === "/documents" || location.pathname.startsWith("/documents/");
@@ -785,16 +795,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     event.preventDefault();
     event.stopPropagation();
     if (mobileSidebarOpen !== panel) {
+      // On touch screens a single tap should navigate, even if the panel was
+      // not already expanded. Keeping this as open-only required a second tap
+      // and made row-strip taps appear unresponsive.
       if (panel === "primary") {
         openPrimaryDrawer();
       } else {
         openSecondaryDrawerForCurrentContext();
       }
-      return;
     }
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
       return;
+    }
+    if (panel === "site") {
+      if (/\/(sites|demo)\/[^/]+\//.test(targetPath) && !/\/(all)\//.test(targetPath)) {
+        setSecondaryModeMemory("site-menu");
+      }
     }
     navigate(targetPath, { replace: isDemoSession });
     closeMobileDrawer();
@@ -1145,6 +1162,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ))}
           </NavList>
           </div>
+          {isMobileViewport && mobileSidebarOpen === "primary" && (
+            <button
+              type="button"
+              className="mobile-sidebar-blank-collapse-zone"
+              data-mobile-sidebar-blank-collapse="primary"
+              aria-label="Collapse primary sidebar"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                closeMobileSidebar();
+              }}
+            />
+          )}
         </nav>
         {shouldRenderSecondaryPanel && (
           <nav
@@ -1195,14 +1225,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
                 onTap={(event) =>
-                  handleMobileActionRowClick(
-                    event,
-                    getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
-                      panel: undefined,
-                    }),
-                    "site",
-                    isSiteSelection && allSitesOption.id === selectedSiteForList,
-                  )
+                  (() => {
+                    setSecondaryModeMemory("selector");
+                    handleMobileActionRowClick(
+                      event,
+                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                        panel: undefined,
+                      }),
+                      "site",
+                      isSiteSelection && allSitesOption.id === selectedSiteForList,
+                    );
+                  })()
                 }
               />
               ) : (
@@ -1218,14 +1251,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
                 onClick={(event) =>
-                  handleMobileActionRowClick(
-                    event,
-                    getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
-                      panel: undefined,
-                    }),
-                    "site",
-                    isSiteSelection && allSitesOption.id === selectedSiteForList,
-                  )
+                  (() => {
+                    setSecondaryModeMemory("selector");
+                    handleMobileActionRowClick(
+                      event,
+                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                        panel: undefined,
+                      }),
+                      "site",
+                      isSiteSelection && allSitesOption.id === selectedSiteForList,
+                    );
+                  })()
                 }
                 mobileSidebarAction="site"
               />
@@ -1236,7 +1272,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               (isMobileViewport ? (
                 <MobileSidebarRow
                   icon={
-                    <span className="vrm-nav-row__icon-stack">
+                    <span className="vrm-nav-row__icon-stack vrm-nav-row__icon-stack--site-header">
                       <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
                       <NavIcon icon={MapPin} />
                     </span>
@@ -1245,11 +1281,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   onTap={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    if (mobileSidebarOpen !== "site") {
-                      openSiteSelectorDrawer();
-                      return;
-                    }
-                    openSitesSelector();
+                    openSiteSelectorDrawer();
                   }}
                 />
               ) : (
@@ -1467,6 +1499,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             </div>
           )}
             </>
+          )}
+          {isMobileViewport && mobileSidebarOpen === "site" && (
+            <button
+              type="button"
+              className="mobile-sidebar-blank-collapse-zone"
+              data-mobile-sidebar-blank-collapse="site"
+              aria-label="Collapse secondary sidebar"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                closeMobileSidebar();
+              }}
+            />
           )}
           </nav>
         )}
