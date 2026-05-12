@@ -1225,14 +1225,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
                 onTap={(event) =>
-                  handleMobileActionRowClick(
-                    event,
-                    getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
-                      panel: undefined,
-                    }),
-                    "site",
-                    isSiteSelection && allSitesOption.id === selectedSiteForList,
-                  )
+                  (() => {
+                    setSecondaryModeMemory("selector");
+                    handleMobileActionRowClick(
+                      event,
+                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                        panel: undefined,
+                      }),
+                      "site",
+                      isSiteSelection && allSitesOption.id === selectedSiteForList,
+                    );
+                  })()
                 }
               />
               ) : (
@@ -1248,14 +1251,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
                 onClick={(event) =>
-                  handleMobileActionRowClick(
-                    event,
-                    getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
-                      panel: undefined,
-                    }),
-                    "site",
-                    isSiteSelection && allSitesOption.id === selectedSiteForList,
-                  )
+                  (() => {
+                    setSecondaryModeMemory("selector");
+                    handleMobileActionRowClick(
+                      event,
+                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                        panel: undefined,
+                      }),
+                      "site",
+                      isSiteSelection && allSitesOption.id === selectedSiteForList,
+                    );
+                  })()
                 }
                 mobileSidebarAction="site"
               />
@@ -1266,7 +1272,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               (isMobileViewport ? (
                 <MobileSidebarRow
                   icon={
-                    <span className="vrm-nav-row__icon-stack">
+                    <span className="vrm-nav-row__icon-stack vrm-nav-row__icon-stack--site-header">
                       <NavIcon icon={ArrowLeft} className="vrm-nav-back" size={18} />
                       <NavIcon icon={MapPin} />
                     </span>
