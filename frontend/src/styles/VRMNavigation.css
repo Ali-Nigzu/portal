@@ -200,6 +200,12 @@ button.vrm-nav-row {
   color: var(--vrm-text-muted);
 }
 
+.vrm-nav-row__icon,
+.vrm-nav-row__label,
+.vrm-nav-row__right {
+  pointer-events: none;
+}
+
 .vrm-nav-chevron,
 .vrm-nav-back {
   width: 16px;
