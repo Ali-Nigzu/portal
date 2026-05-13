@@ -630,10 +630,16 @@ button.vrm-nav-row {
   .vrm-layout--mobile .vrm-secondary-list {
     padding-left: 0;
     padding-right: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   .vrm-layout--mobile .vrm-extended-panel {
     overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-const PHONE_MEDIA_QUERY = "(max-width: 900px)";
+const PHONE_MEDIA_QUERY =
+  "(max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse))";
 
 const getInitialPhoneState = () => {
   if (typeof window === "undefined") {
@@ -31,4 +32,3 @@ export const useIsPhoneLayout = () => {
 
   return isPhoneLayout;
 };
-
