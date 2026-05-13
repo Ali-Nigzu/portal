@@ -599,6 +599,12 @@ button.vrm-nav-row {
     width: calc(100% + 28px);
   }
 
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open) .vrm-secondary-header [data-mobile-sidebar-protected="true"] {
+    margin-left: -8px;
+    margin-right: -8px;
+    width: calc(100% + 16px);
+  }
+
   .vrm-layout--mobile .mobile-sidebar-blank-collapse-zone {
     margin-top: auto;
     width: 100%;
