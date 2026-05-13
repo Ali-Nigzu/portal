@@ -189,7 +189,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (typeof window === "undefined") {
       return;
     }
-    const mobileQuery = window.matchMedia("(max-width: 768px)");
+    const mobileQuery = window.matchMedia(
+      "(max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse))",
+    );
     const syncMobileViewport = () => {
       setIsMobileViewport(mobileQuery.matches);
     };
