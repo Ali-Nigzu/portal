@@ -455,7 +455,7 @@ button.vrm-nav-row {
 
 @media (max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse)) {
   .vrm-layout--mobile {
-    --vrm-mobile-rails-width: 105px;
+    --vrm-mobile-rails-width: calc(52px + 1px + 52px);
     --vrm-mobile-lane-gutter: var(--vrm-spacing-3);
   }
 
@@ -497,6 +497,7 @@ button.vrm-nav-row {
     margin-inline: auto;
     box-sizing: border-box;
     padding-inline: var(--vrm-mobile-lane-gutter);
+    padding-inline-start: calc(var(--vrm-mobile-lane-gutter) + 1px);
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane > * {
@@ -516,6 +517,12 @@ button.vrm-nav-row {
   .vrm-layout--mobile .vrm-nav-row > .vrm-nav-row__label,
   .vrm-layout--mobile .vrm-nav-row > .vrm-nav-row__right {
     pointer-events: none;
+  }
+
+  .vrm-layout--mobile .vrm-nav-row:focus-visible,
+  .vrm-layout--mobile .mobile-expanded-row:focus-visible {
+    outline: none;
+    box-shadow: none;
   }
 
   .vrm-layout--mobile .vrm-primary-rail .vrm-nav-row__label,
