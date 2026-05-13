@@ -593,7 +593,7 @@ button.vrm-nav-row {
   }
 
 
-  .vrm-layout--mobile .vrm-secondary-header [data-mobile-sidebar-protected="true"] {
+  .vrm-layout--mobile.vrm-layout--mobile-site-open .vrm-secondary-header [data-mobile-sidebar-protected="true"] {
     margin-left: -14px;
     margin-right: -14px;
     width: calc(100% + 28px);
