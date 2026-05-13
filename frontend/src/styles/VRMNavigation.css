@@ -634,7 +634,7 @@ button.vrm-nav-row {
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel,
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel {
-    width: var(--vrm-extended-panel-width-collapsed);
+    width: 52px;
   }
 
   .vrm-layout--mobile .mobile-expanded-row {
