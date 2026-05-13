@@ -638,23 +638,20 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-sidebar-shell {
-    position: relative;
-  }
-
-  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-sidebar-shell::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 52px;
-    width: 1px;
+    display: grid;
+    grid-template-columns: 52px 1px 52px;
     background: var(--vrm-border);
-    pointer-events: none;
-    z-index: 40;
   }
 
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel {
+    grid-column: 3;
+    width: 52px;
     border-left: 0;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-primary-rail {
+    grid-column: 1;
+    width: 52px;
   }
 
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-primary-nav,
