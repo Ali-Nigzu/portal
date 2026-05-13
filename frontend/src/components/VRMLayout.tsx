@@ -1080,26 +1080,22 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <MobileSidebarRow
                 icon={<NavIcon icon={FileText} />}
                 label="Documents"
-                disabled={!isAuthenticated || isDemoSession}
+                disabled
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
-                onTap={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
-                }
+                onTap={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
               />
             ) : (
               <NavRow
-                to={isAuthenticated ? getNavigationPath("/documents") : undefined}
                 leftIcon={<NavIcon icon={FileText} />}
                 label="Documents"
-                disabled={!isAuthenticated || isDemoSession}
-                mobileSidebarDisabled={!isAuthenticated || isDemoSession}
+                disabled
+                mobileSidebarDisabled
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
-                onClick={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/documents"), "primary", false)
-                }
-                mobileSidebarAction="primary"
               />
             )}
             {!isMobileViewport && (
@@ -1116,26 +1112,22 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <MobileSidebarRow
                 icon={<NavIcon icon={Settings} />}
                 label="Settings"
-                disabled={!isAuthenticated || isDemoSession}
+                disabled
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
-                onTap={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
-                }
+                onTap={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
               />
             ) : (
               <NavRow
-                to={isAuthenticated ? getNavigationPath("/settings/account") : undefined}
                 leftIcon={<NavIcon icon={Settings} />}
                 label="Settings"
-                disabled={!isAuthenticated || isDemoSession}
-                mobileSidebarDisabled={!isAuthenticated || isDemoSession}
+                disabled
+                mobileSidebarDisabled
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
-                onClick={(event) =>
-                  handleMobileActionRowClick(event, getNavigationPath("/settings/account"), "primary", false)
-                }
-                mobileSidebarAction="primary"
               />
             )}
             {showLogout &&
