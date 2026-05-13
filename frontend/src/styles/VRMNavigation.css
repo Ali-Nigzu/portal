@@ -637,6 +637,22 @@ button.vrm-nav-row {
     width: 52px;
   }
 
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open) .vrm-extended-panel .vrm-secondary-header,
+  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel .vrm-secondary-header {
+    padding: 10px 0;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open) .vrm-extended-panel .vrm-secondary-list,
+  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel .vrm-secondary-list {
+    padding: 4px 0 16px;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open) .vrm-extended-panel .mobile-expanded-row,
+  .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel .mobile-expanded-row {
+    justify-content: center;
+    padding: 0;
+  }
+
   .vrm-layout--mobile .mobile-expanded-row {
     width: 100%;
     min-height: 44px;
