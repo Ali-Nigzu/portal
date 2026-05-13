@@ -657,6 +657,26 @@ button.vrm-nav-row {
     border-left: 0;
   }
 
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-primary-nav,
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-secondary-list {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-primary-rail .mobile-expanded-row,
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel .mobile-expanded-row {
+    width: 44px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-primary-rail .mobile-expanded-row__icon,
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel .mobile-expanded-row__icon {
+    margin: 0;
+  }
+
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open) .vrm-extended-panel .vrm-secondary-header,
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel .vrm-secondary-header {
     padding: 10px 0;
