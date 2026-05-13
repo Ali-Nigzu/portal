@@ -455,7 +455,7 @@ button.vrm-nav-row {
 
 @media (max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse)) {
   .vrm-layout--mobile {
-    --vrm-mobile-rails-width: 104px;
+    --vrm-mobile-rails-width: 105px;
     --vrm-mobile-lane-gutter: var(--vrm-spacing-3);
   }
 
@@ -613,6 +613,10 @@ button.vrm-nav-row {
     background: transparent;
     padding: 0;
     cursor: default;
+  }
+
+  .vrm-layout--mobile.vrm-layout--mobile-site-open .mobile-sidebar-blank-collapse-zone {
+    display: none;
   }
 
   .vrm-layout--mobile .vrm-nav-list,
