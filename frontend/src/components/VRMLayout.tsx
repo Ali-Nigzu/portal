@@ -259,6 +259,13 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     openSiteSelectorDrawer();
   };
   const closeMobileDrawer = () => {
+    const shouldRestoreSiteMenuMemory =
+      mobileDrawer.kind === "site-selector" &&
+      Boolean(siteId) &&
+      !isSelectorOpen;
+    if (shouldRestoreSiteMenuMemory) {
+      setSecondaryModeMemory("site-menu");
+    }
     setMobileDrawer({ kind: "closed" });
     setMobileSidebarOpen(null);
   };
