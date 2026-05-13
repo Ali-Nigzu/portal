@@ -453,7 +453,7 @@ button.vrm-nav-row {
   background: transparent;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse)) {
   .vrm-layout--mobile {
     --vrm-mobile-rails-width: 104px;
     --vrm-mobile-lane-gutter: var(--vrm-spacing-3);
