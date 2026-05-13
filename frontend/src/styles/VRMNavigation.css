@@ -637,6 +637,26 @@ button.vrm-nav-row {
     width: 52px;
   }
 
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-sidebar-shell {
+    position: relative;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-sidebar-shell::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 52px;
+    width: 1px;
+    background: var(--vrm-border);
+    pointer-events: none;
+    z-index: 40;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel {
+    border-left: 0;
+  }
+
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open) .vrm-extended-panel .vrm-secondary-header,
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel .vrm-secondary-header {
     padding: 10px 0;
