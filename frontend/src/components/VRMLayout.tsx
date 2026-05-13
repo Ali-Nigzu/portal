@@ -808,10 +808,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (isSameRoute && isRowActive) {
       return;
     }
-    if (panel === "site") {
-      if (/\/(sites|demo)\/[^/]+\//.test(targetPath) && !/\/(all)\//.test(targetPath)) {
-        setSecondaryModeMemory("site-menu");
-      }
+    if (panel === "site" && /\/(sites|demo)\/[^/]+\//.test(targetPath)) {
+      setSecondaryModeMemory("site-menu");
     }
     navigate(targetPath, { replace: isDemoSession });
     closeMobileDrawer();
@@ -1226,7 +1224,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 }
                 onTap={(event) =>
                   (() => {
-                    setSecondaryModeMemory("selector");
+                    setSecondaryModeMemory(
+                      isMobileViewport ? "site-menu" : "selector",
+                    );
                     handleMobileActionRowClick(
                       event,
                       getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
@@ -1252,7 +1252,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 }
                 onClick={(event) =>
                   (() => {
-                    setSecondaryModeMemory("selector");
+                    setSecondaryModeMemory(
+                      isMobileViewport ? "site-menu" : "selector",
+                    );
                     handleMobileActionRowClick(
                       event,
                       getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
