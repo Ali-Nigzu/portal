@@ -11,9 +11,10 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 
 from backend.app.auth import (
+    SESSION_COOKIE_NAME,
     clear_auth_cookie,
     create_session_token,
     get_session_user,
@@ -66,6 +67,7 @@ from backend.app.models import (
     SignupVerifyRequest,
 )
 from backend.app.services.auth_context import org_id_for_user_record
+from backend.app.services.demo_session import resolve_demo_org_id
 from backend.app.services.postmark_email import (
     PostmarkConfigurationError,
     PostmarkDeliveryError,
@@ -1099,9 +1101,25 @@ async def login(login_request: LoginRequest | EmailLoginRequest, response: Respo
 
 
 @router.get("/api/me", response_model=AuthUserResponse)
-async def me(session_user: tuple[str, dict] = Depends(get_session_user)):
-    _, user_data = session_user
-    return AuthUserResponse(user=_safe_auth_user(user_data))
+async def me(request: Request):
+    if resolve_demo_org_id(request):
+        return AuthUserResponse(
+            user=AuthUser(
+                id="demo-user",
+                name="Demo User",
+                email="demo@camos.app",
+                phone=None,
+            )
+        )
+    session_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Unauthenticated")
+    token_hash = hash_session_token(session_token)
+    users = load_users()
+    for _, user_data in users.items():
+        if user_data.get("session_token_hash") == token_hash:
+            return AuthUserResponse(user=_safe_auth_user(user_data))
+    raise HTTPException(status_code=401, detail="Unauthenticated")
 
 
 @router.post("/api/logout", status_code=204)

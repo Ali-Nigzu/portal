@@ -496,7 +496,7 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile .vrm-main--mobile-lane .vrm-content--mobile-lane {
-    width: calc(100vw - var(--vrm-mobile-rails-width));
+    width: calc(100% - var(--vrm-mobile-rails-width));
     margin-inline: 0;
     box-sizing: border-box;
     padding-inline: var(--vrm-mobile-lane-gutter);
@@ -646,7 +646,10 @@ button.vrm-nav-row {
 
   .vrm-layout--mobile .vrm-extended-panel {
     overflow-x: hidden;
-    overflow-y: hidden;
+    overflow-y: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel,
@@ -722,6 +725,8 @@ button.vrm-nav-row {
     box-sizing: border-box;
     margin: 0;
     -webkit-tap-highlight-color: transparent;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 
   .vrm-layout--mobile .vrm-nav-row {
@@ -731,6 +736,17 @@ button.vrm-nav-row {
   .vrm-layout--mobile .mobile-expanded-row--interactive:hover {
     background-color: var(--vrm-nav-row-hover-bg);
     color: var(--vrm-text-primary);
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .vrm-layout--mobile .mobile-expanded-row {
+      transition: none;
+    }
+
+    .vrm-layout--mobile .mobile-expanded-row--interactive:hover {
+      background-color: transparent;
+      color: inherit;
+    }
   }
 
   .vrm-layout--mobile .mobile-expanded-row--active {
