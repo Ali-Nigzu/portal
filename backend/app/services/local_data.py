@@ -37,16 +37,16 @@ def resolve_site_view(value: Optional[str]) -> SiteView:
 def local_data_paths() -> LocalDataPaths:
     return LocalDataPaths(
         combined_snapshots=Path(
-            os.getenv("LOCAL_COMBINED_SNAPSHOTS_DB", "combined_logs_snapshots.db")
+            os.getenv("LOCAL_COMBINED_SNAPSHOTS_DB", "runtime_data/dcombined_snapshots.db")
         ),
         site_a_snapshots=Path(
-            os.getenv("LOCAL_SITE_A_SNAPSHOTS_DB", "user0_snapshots.db")
+            os.getenv("LOCAL_SITE_A_SNAPSHOTS_DB", "runtime_data/duser0_snapshots.db")
         ),
         site_b_snapshots=Path(
-            os.getenv("LOCAL_SITE_B_SNAPSHOTS_DB", "user1_snapshots.db")
+            os.getenv("LOCAL_SITE_B_SNAPSHOTS_DB", "runtime_data/duser1_snapshots.db")
         ),
         combined_logs=Path(
-            os.getenv("LOCAL_COMBINED_LOGS_DB", "combined_logs.db")
+            os.getenv("LOCAL_COMBINED_LOGS_DB", "runtime_data/dcombined_logs.db")
         ),
     )
 
