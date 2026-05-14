@@ -455,7 +455,10 @@ button.vrm-nav-row {
 
 @media (max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse)) {
   .vrm-layout--mobile {
-    --vrm-mobile-rails-width: calc(52px + 1px + 52px);
+    --vrm-rail-primary: 52px;
+    --vrm-rail-divider: 1px;
+    --vrm-rail-secondary: 52px;
+    --vrm-mobile-rails-width: calc(var(--vrm-rail-primary) + var(--vrm-rail-divider) + var(--vrm-rail-secondary));
     --vrm-mobile-lane-gutter: var(--vrm-spacing-3);
   }
 
@@ -474,7 +477,7 @@ button.vrm-nav-row {
 
   .vrm-layout--mobile .vrm-primary-rail,
   .vrm-layout--mobile .vrm-extended-panel {
-    width: 52px;
+    width: var(--vrm-rail-primary);
   }
 
   .vrm-layout--mobile .vrm-main {
@@ -643,19 +646,17 @@ button.vrm-nav-row {
 
   .vrm-layout--mobile .vrm-extended-panel {
     overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
+    overflow-y: hidden;
   }
 
   .vrm-layout--mobile.vrm-layout--mobile-primary-open .vrm-extended-panel,
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel {
-    width: 52px;
+    width: var(--vrm-rail-secondary);
   }
 
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-sidebar-shell {
     display: grid;
-    grid-template-columns: 52px 1px 52px;
+    grid-template-columns: var(--vrm-rail-primary) var(--vrm-rail-divider) var(--vrm-rail-secondary);
     background: var(--vrm-border);
   }
 
