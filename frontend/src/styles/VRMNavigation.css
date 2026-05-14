@@ -482,7 +482,7 @@ button.vrm-nav-row {
     max-width: 100%;
     overflow-x: hidden;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .vrm-layout--mobile .vrm-content {
@@ -493,11 +493,10 @@ button.vrm-nav-row {
   }
 
   .vrm-layout--mobile .vrm-main--mobile-lane .vrm-content--mobile-lane {
-    width: min(100%, calc(100vw - var(--vrm-mobile-rails-width)));
-    margin-inline: auto;
+    width: calc(100vw - var(--vrm-mobile-rails-width));
+    margin-inline: 0;
     box-sizing: border-box;
     padding-inline: var(--vrm-mobile-lane-gutter);
-    padding-inline-start: calc(var(--vrm-mobile-lane-gutter) + 1px);
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane > * {
@@ -721,6 +720,11 @@ button.vrm-nav-row {
     cursor: pointer;
     box-sizing: border-box;
     margin: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .vrm-layout--mobile .vrm-nav-row {
+    -webkit-tap-highlight-color: transparent;
   }
 
   .vrm-layout--mobile .mobile-expanded-row--interactive:hover {
