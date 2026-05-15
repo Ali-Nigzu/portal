@@ -474,13 +474,23 @@ button.vrm-nav-row {
     width: var(--vrm-mobile-sidebar-reserved-width);
     min-width: var(--vrm-mobile-sidebar-reserved-width);
     flex-shrink: 0;
-    overflow: visible;
+    overflow-x: clip;
+    overflow-y: visible;
     z-index: 20;
   }
 
   .vrm-layout--mobile .vrm-primary-rail,
   .vrm-layout--mobile .vrm-extended-panel {
     width: var(--vrm-rail-primary);
+  }
+
+  .vrm-layout--mobile .vrm-primary-rail,
+  .vrm-layout--mobile .vrm-extended-panel {
+    transition: none;
+  }
+
+  .vrm-layout--mobile .vrm-primary-rail {
+    contain: paint;
   }
 
   .vrm-layout--mobile .vrm-primary-rail,
