@@ -220,7 +220,7 @@
   box-shadow: none;
 }
 
-@media (max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse)) {
+@media (max-width: 768px) {
   .vrm-layout--mobile .vrm-main--mobile-lane:has(.dashboard-v2) {
     padding-left: 0;
   }
