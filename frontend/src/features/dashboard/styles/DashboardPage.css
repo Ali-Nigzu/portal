@@ -220,7 +220,15 @@
   box-shadow: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), ((max-width: 1024px) and (hover: none) and (pointer: coarse)) {
+  .vrm-layout--mobile .vrm-main--mobile-lane:has(.dashboard-v2) {
+    padding-left: 0;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane:has(.dashboard-v2) {
+    padding-inline: 0;
+  }
+
   .dashboard-v2__header {
     background: transparent;
     border: none;
@@ -233,6 +241,9 @@
     min-width: 0;
     max-width: 100%;
     overflow-x: hidden;
+    margin-left: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .dashboard-v2__content,
