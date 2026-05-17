@@ -457,7 +457,7 @@ button.vrm-nav-row {
   .vrm-layout--mobile {
     --vrm-rail-primary: 56px;
     --vrm-rail-divider: 1px;
-    --vrm-rail-secondary: 48px;
+    --vrm-rail-secondary: 44px;
     --vrm-mobile-rails-width: calc(var(--vrm-rail-primary) + var(--vrm-rail-divider) + var(--vrm-rail-secondary));
     --vrm-mobile-boundary-gutter: var(--vrm-spacing-3);
     --vrm-mobile-lane-gutter: var(--vrm-spacing-3);
@@ -758,9 +758,16 @@ button.vrm-nav-row {
     padding-right: 0;
   }
 
-  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-primary-rail .mobile-expanded-row,
-  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel .mobile-expanded-row {
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-primary-rail .mobile-expanded-row {
     width: 48px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel .mobile-expanded-row {
+    width: var(--vrm-rail-secondary);
     margin-left: auto;
     margin-right: auto;
     padding: 0;
