@@ -6,6 +6,11 @@ import type {
 import type { SnapshotResponse } from "../../../lib/snapshots";
 import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
+import type { SiteView } from "../../../lib/siteView";
+import {
+  getDemoTrafficLabels,
+  getExpectedDemoTrafficLabels,
+} from "../../../lib/demoLabels";
 import { VRM_KPI_IDS, VRM_KPI_TITLES } from "./applyVRMOverrides";
 import { formatDemoTimestamp, parseDemoTimestamp } from "../../../lib/demoTime";
 
@@ -170,21 +175,17 @@ const buildKpiResult = (
   };
 };
 
-const resolveTrafficLabels = (count: number): string[] => {
-  if (count === 2) {
-    return ["Site A", "Site B"];
-  }
-  if (count === 3) {
-    return ["Camera 0", "Camera 1", "Camera 2"];
-  }
-  return Array.from({ length: count }, (_, index) => `Segment ${index + 1}`);
-};
+const resolveTrafficLabels = (count: number, siteView: SiteView): string[] =>
+  getDemoTrafficLabels(siteView, count);
 
-const buildTrafficResult = (values: number[]): ChartResult => {
-  const labels = resolveTrafficLabels(values.length);
-  const normalized = values.map((value) =>
-    typeof value === "number" && Number.isFinite(value) ? value : 0,
-  );
+const buildTrafficResult = (values: number[], siteView: SiteView): ChartResult => {
+  const expectedLabelCount = getExpectedDemoTrafficLabels(siteView).length;
+  const segmentCount = Math.max(values.length, expectedLabelCount);
+  const labels = resolveTrafficLabels(segmentCount, siteView);
+  const normalized = Array.from({ length: segmentCount }, (_, index) => {
+    const value = values[index];
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  });
   const data = normalized.map((value, index) => ({
     x: labels[index] ?? `Segment ${index + 1}`,
     y: value,
@@ -192,7 +193,7 @@ const buildTrafficResult = (values: number[]): ChartResult => {
   }));
   const series: ChartSeries = {
     id: "traffic_share",
-    label: values.length === 2 ? "Traffic by Site" : "Traffic by Camera",
+    label: siteView === "all" ? "Traffic by Site" : "Traffic by Camera",
     geometry: "bar",
     unit: "percentage",
     data,
@@ -459,6 +460,7 @@ export const buildSnapshotWidgetResult = (
   widgetId: string,
   snapshot: SnapshotResponse,
   timeframe: SiteFlowTimeframe,
+  siteView: SiteView = "site-b",
 ): ChartResult => {
   const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
   const payload = snapshot.payload ?? [];
@@ -483,7 +485,7 @@ export const buildSnapshotWidgetResult = (
     case VRM_KPI_IDS.capacity:
       return buildCapacityResult(normalized.capacity);
     case VRM_KPI_IDS.traffic:
-      return buildTrafficResult(normalized.trafficSplit);
+      return buildTrafficResult(normalized.trafficSplit, siteView);
     case "live-flow":
     case "site-flow":
       return buildSiteFlowResult(selectedRollup, snapshotTs, timeframe);

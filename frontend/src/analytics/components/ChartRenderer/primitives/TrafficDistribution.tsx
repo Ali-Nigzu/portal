@@ -119,11 +119,12 @@ export const TrafficDistribution = ({
       typeof (point as unknown as Record<string, unknown>).color === "string"
         ? ((point as unknown as Record<string, unknown>).color as string)
         : null;
-    const label = useRawLabels || labelKey ? rawLabel : `Cam ${cameraId}`;
+    const shouldUseRawLabel = useRawLabels || Boolean(labelKey) || isVrmTraffic;
+    const label = shouldUseRawLabel ? rawLabel : `Cam ${cameraId}`;
     const cleanCamId = normalizedCameraId.replace(/^\D+/, "");
     return {
       label,
-      camId: useRawLabels || labelKey ? rawLabel : cleanCamId || cameraId,
+      camId: shouldUseRawLabel ? rawLabel : cleanCamId || cameraId,
       value,
       color: pointColor ?? palette[index % palette.length],
     };

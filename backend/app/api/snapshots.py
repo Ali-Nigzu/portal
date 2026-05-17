@@ -62,15 +62,23 @@ async def get_latest_snapshot(
 
     try:
         if demo_org:
-            local_db = ensure_local_db_exists(
-                snapshot_db_for_site(resolved_site_view),
-                label=f"snapshot source for {resolved_site_view}",
-            )
-            snapshot = fetch_latest_snapshot_from_sqlite(
-                local_db,
-                org_id=resolved_org,
-                as_of=resolved_ts,
-            )
+            try:
+                local_db = ensure_local_db_exists(
+                    snapshot_db_for_site(resolved_site_view),
+                    label=f"snapshot source for {resolved_site_view}",
+                )
+                snapshot = fetch_latest_snapshot_from_sqlite(
+                    local_db,
+                    org_id=resolved_org,
+                    as_of=resolved_ts,
+                )
+            except LocalDataError as exc:
+                logger.warning(
+                    "Local demo snapshot source unavailable for %s; using fallback fixture: %s",
+                    resolved_site_view,
+                    exc,
+                )
+                snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
         else:
             snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
     except (SnapshotLookupError, LocalDataError) as exc:

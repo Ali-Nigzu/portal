@@ -27,7 +27,7 @@ export const resolveSiteViewFromLocation = (): SiteView | null => {
 
 export const resolveSiteViewOrDefault = (
   pathname: string | null | undefined,
-  fallback: SiteView = "site-a",
+  fallback: SiteView = "site-b",
 ): SiteView => {
   return resolveSiteViewFromPathname(pathname) ?? fallback;
 };

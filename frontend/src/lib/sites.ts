@@ -5,13 +5,15 @@ export type SiteOption = {
 
 export const SITE_OPTIONS: SiteOption[] = [
   { id: "all", label: "All Sites" },
-  { id: "site-a", label: "Site A" },
-  { id: "site-b", label: "Site B" },
+  { id: "site-a", label: "Alis Barber" },
+  { id: "site-b", label: "Tokis Takeout" },
 ];
 
 const STORAGE_KEY = "camOS_selected_site";
 
-export const getDefaultSiteId = (): string => "site-a";
+export const DEFAULT_DEMO_SITE_ID = "site-b";
+
+export const getDefaultSiteId = (): string => DEFAULT_DEMO_SITE_ID;
 
 export const findSiteById = (siteId?: string | null): SiteOption | undefined =>
   SITE_OPTIONS.find((site) => site.id === siteId);
