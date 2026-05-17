@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import {
   ResponsiveContainer,
@@ -19,6 +19,7 @@ import { ChartTooltip } from "../ui/ChartTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
 import { formatBrushTimestamp } from "../utils/formatBrushTimestamp";
 import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
+import { useCoarsePointer } from "./useCoarsePointer";
 export const TimeSeriesChart = ({
   series,
   axisConfig,
@@ -34,6 +35,9 @@ export const TimeSeriesChart = ({
   siteFlowActivity = false,
 }: ChartPrimitiveProps) => {
   const dataset = useMemo(() => buildCartesianDataset(series), [series]);
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const isCoarsePointer = useCoarsePointer();
+  const [touchTooltipIndex, setTouchTooltipIndex] = useState<number | null>(null);
   const [brushRange, setBrushRange] = useState({ startIndex: 0, endIndex: 0 });
   const seriesMap = useMemo(() => {
     return new Map<string, ChartSeries>(series.map((item) => [item.id, item]));
@@ -65,8 +69,53 @@ export const TimeSeriesChart = ({
   const tickFormatter = siteFlowTimeframe
     ? (value: string) => formatSiteFlowTick(siteFlowTimeframe, bucket, value)
     : undefined;
+  const resolveTouchIndex = useCallback((clientX: number) => {
+    const rect = chartRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || dataset.data.length === 0) {
+      return null;
+    }
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return Math.round(ratio * Math.max(0, dataset.data.length - 1));
+  }, [dataset.data.length]);
+  const updateTouchTooltip = useCallback((clientX: number) => {
+    const index = resolveTouchIndex(clientX);
+    if (index !== null) {
+      setTouchTooltipIndex(index);
+    }
+  }, [resolveTouchIndex]);
+
+  useEffect(() => {
+    if (!isCoarsePointer || touchTooltipIndex === null) {
+      return;
+    }
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      if (!chartRef.current?.contains(event.target as Node | null)) {
+        setTouchTooltipIndex(null);
+      }
+    };
+    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+    return () => document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+  }, [isCoarsePointer, touchTooltipIndex]);
+
   return (
-    <div className={className} style={{ height }}>
+    <div
+      className={className}
+      ref={chartRef}
+      style={{ height, touchAction: isCoarsePointer ? "pan-y" : undefined }}
+      onPointerDown={isCoarsePointer ? (event) => {
+        if (event.pointerType === "mouse") return;
+        updateTouchTooltip(event.clientX);
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      } : undefined}
+      onPointerMove={isCoarsePointer ? (event) => {
+        if (event.pointerType === "mouse") return;
+        updateTouchTooltip(event.clientX);
+      } : undefined}
+      onPointerUp={isCoarsePointer ? (event) => {
+        if (event.pointerType === "mouse") return;
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
+      } : undefined}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={dataset.data}
@@ -99,6 +148,8 @@ export const TimeSeriesChart = ({
             />
           ))}{" "}
           <Tooltip
+            active={isCoarsePointer && touchTooltipIndex !== null ? true : undefined}
+            defaultIndex={isCoarsePointer && touchTooltipIndex !== null ? touchTooltipIndex : undefined}
             content={
               <ChartTooltip
                 meta={dataset.meta}

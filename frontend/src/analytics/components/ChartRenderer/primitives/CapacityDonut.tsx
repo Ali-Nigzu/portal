@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { useDonutHoverController } from "./useDonutHoverController";
 import { DonutTooltipCard, type DonutTooltipRow } from "./DonutTooltipCard";
 import { useDemoDonutTooltipOwner } from "./DemoDonutTooltipOwnerContext";
+import { useCoarsePointer } from "./useCoarsePointer";
 
 const capacityColors = [
   "#2d6cdf",
@@ -31,10 +33,14 @@ export const CapacityDonut = ({
   donutTooltipOwnerId,
 }: ChartPrimitiveProps) => {
   const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
+  const isCoarsePointer = useCoarsePointer();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
   const hoverLabelRef = useRef<HTMLDivElement | null>(null);
   const invalidateOnUnmountRef = useRef<() => void>(() => {});
+  const isCoarseDonutActiveRef = useRef(false);
+  const suppressNextClickClearRef = useRef(false);
+  const coarseTapClosedRef = useRef(false);
   const donutTooltipOwner = useDemoDonutTooltipOwner();
   const primary = series[0];
   const data = primary?.data ?? [];
@@ -108,7 +114,9 @@ export const CapacityDonut = ({
     activeSegmentId,
     isTooltipVisible,
     updateFromPointerEvent,
+    resolveFromViewportPoint,
     syncFromViewportPoint,
+    setHoverState,
     clearHover,
     getTooltipPosition,
   } = hoverController;
@@ -186,11 +194,94 @@ export const CapacityDonut = ({
   }, [donutTooltipOwner, donutTooltipOwnerId, isDemoCursorHover, localTooltipVisible]);
 
   const invalidateHoverAndRelease = useCallback(() => {
+    isCoarseDonutActiveRef.current = false;
+    coarseTapClosedRef.current = false;
     clearHover();
     if (donutTooltipOwner && donutTooltipOwnerId) {
       donutTooltipOwner.release(donutTooltipOwnerId);
     }
   }, [clearHover, donutTooltipOwner, donutTooltipOwnerId]);
+  const resolveCoarsePointer = useCallback((clientX: number, clientY: number) => {
+    const surface = chartSurfaceRef.current;
+    if (!surface) {
+      return { pointer: null, segmentId: null };
+    }
+    return resolveFromViewportPoint(clientX, clientY, surface, {
+      width: surface.clientWidth,
+      height: surface.clientHeight || donutChartHeight,
+    });
+  }, [donutChartHeight, resolveFromViewportPoint]);
+  const handleCoarsePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isDemoCursorHover || (!isCoarsePointer && event.pointerType === "mouse")) {
+      return;
+    }
+    const resolution = resolveCoarsePointer(event.clientX, event.clientY);
+    if (!resolution.pointer || !resolution.segmentId) {
+      coarseTapClosedRef.current = false;
+      invalidateHoverAndRelease();
+      return;
+    }
+    event.preventDefault();
+    suppressNextClickClearRef.current = true;
+    if (activeSegmentId === resolution.segmentId && isTooltipVisible) {
+      coarseTapClosedRef.current = true;
+      invalidateHoverAndRelease();
+      return;
+    }
+    coarseTapClosedRef.current = false;
+    isCoarseDonutActiveRef.current = true;
+    setHoverState(resolution.pointer, resolution.segmentId);
+  }, [activeSegmentId, invalidateHoverAndRelease, isCoarsePointer, isDemoCursorHover, isTooltipVisible, resolveCoarsePointer, setHoverState]);
+  const handleCoarsePointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isDemoCursorHover || !isCoarseDonutActiveRef.current || (!isCoarsePointer && event.pointerType === "mouse")) {
+      return;
+    }
+    const resolution = resolveCoarsePointer(event.clientX, event.clientY);
+    if (resolution.pointer && resolution.segmentId) {
+      setHoverState(resolution.pointer, resolution.segmentId);
+    }
+  }, [isCoarsePointer, isDemoCursorHover, resolveCoarsePointer, setHoverState]);
+  const handleCoarsePointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isCoarsePointer && event.pointerType === "mouse") {
+      return;
+    }
+    isCoarseDonutActiveRef.current = false;
+  }, [isCoarsePointer]);
+  const handleCoarseTouchEnd = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDemoCursorHover || !isCoarsePointer) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+    const wasClosedByTap = coarseTapClosedRef.current;
+    window.setTimeout(() => {
+      if (wasClosedByTap) {
+        coarseTapClosedRef.current = false;
+        return;
+      }
+      const resolution = resolveCoarsePointer(touch.clientX, touch.clientY);
+      if (!resolution.pointer || !resolution.segmentId) {
+        invalidateHoverAndRelease();
+        return;
+      }
+      setHoverState(resolution.pointer, resolution.segmentId);
+    }, 0);
+  }, [invalidateHoverAndRelease, isCoarsePointer, isDemoCursorHover, resolveCoarsePointer, setHoverState]);
+
+  useEffect(() => {
+    if (!isDemoCursorHover || !isCoarsePointer || !localTooltipVisible) {
+      return;
+    }
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      if (!chartSurfaceRef.current?.contains(event.target as Node | null)) {
+        invalidateHoverAndRelease();
+      }
+    };
+    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+    return () => document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+  }, [invalidateHoverAndRelease, isCoarsePointer, isDemoCursorHover, localTooltipVisible]);
 
   useEffect(() => {
     invalidateOnUnmountRef.current = invalidateHoverAndRelease;
@@ -199,6 +290,7 @@ export const CapacityDonut = ({
   useEffect(() => {
     if (
       !isDemoCursorHover ||
+      isCoarsePointer ||
       !donutTooltipOwner ||
       !donutTooltipOwnerId ||
       donutTooltipOwner.activeOwnerId !== donutTooltipOwnerId
@@ -257,6 +349,7 @@ export const CapacityDonut = ({
     donutTooltipOwnerId,
     getHoverBounds,
     invalidateHoverAndRelease,
+    isCoarsePointer,
     isDemoCursorHover,
     syncFromViewportPoint,
   ]);
@@ -364,8 +457,15 @@ export const CapacityDonut = ({
             width: donutChartHeight,
             minWidth: donutChartHeight,
           }}
+          onTouchStart={isDemoCursorHover && isCoarsePointer ? (event) => event.preventDefault() : undefined}
+          onTouchEnd={isDemoCursorHover ? handleCoarseTouchEnd : undefined}
+          onPointerDown={isDemoCursorHover ? handleCoarsePointerDown : undefined}
           onPointerMove={isDemoCursorHover
             ? (event) => {
+              if (event.pointerType !== "mouse" || isCoarsePointer) {
+                handleCoarsePointerMove(event);
+                return;
+              }
               const surface = chartSurfaceRef.current;
               if (!surface) {
                 return;
@@ -376,11 +476,47 @@ export const CapacityDonut = ({
               });
             }
             : undefined}
-          onPointerLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onMouseLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onPointerCancel={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onBlur={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onClick={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onPointerUp={isDemoCursorHover ? handleCoarsePointerEnd : undefined}
+          onPointerLeave={isDemoCursorHover ? (event) => {
+            if (event.pointerType === "mouse") {
+              invalidateHoverAndRelease();
+            }
+          } : undefined}
+          onMouseLeave={isDemoCursorHover ? () => {
+            if (!isCoarsePointer) {
+              invalidateHoverAndRelease();
+            }
+          } : undefined}
+          onPointerCancel={isDemoCursorHover ? handleCoarsePointerEnd : undefined}
+          onBlur={isDemoCursorHover ? () => {
+            if (!isCoarsePointer) {
+              invalidateHoverAndRelease();
+            }
+          } : undefined}
+          onClick={isDemoCursorHover ? (event) => {
+            if (isCoarsePointer) {
+              if (suppressNextClickClearRef.current) {
+                suppressNextClickClearRef.current = false;
+                return;
+              }
+              const resolution = resolveCoarsePointer(event.clientX, event.clientY);
+              if (!resolution.pointer || !resolution.segmentId) {
+                invalidateHoverAndRelease();
+                return;
+              }
+              if (activeSegmentId === resolution.segmentId && isTooltipVisible) {
+                invalidateHoverAndRelease();
+                return;
+              }
+              setHoverState(resolution.pointer, resolution.segmentId);
+              return;
+            }
+            if (suppressNextClickClearRef.current) {
+              suppressNextClickClearRef.current = false;
+              return;
+            }
+            invalidateHoverAndRelease();
+          } : undefined}
         >
           {isDemoCursorHover ? (
             isDemoTooltipVisible ? (

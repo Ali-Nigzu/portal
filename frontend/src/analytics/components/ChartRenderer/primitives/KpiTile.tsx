@@ -18,6 +18,7 @@ import {
   shouldShowRawCount,
 } from "../utils/format";
 import { parseDemoTimestamp } from "../../../../lib/demoTime";
+import { useCoarsePointer } from "./useCoarsePointer";
 const formatKpiValue = (value: number | null | undefined, unit?: string) => {
   const numeric = formatNumeric(value);
   if (numeric === "—") {
@@ -34,6 +35,7 @@ export const KpiTile = ({
   result,
 }: ChartPrimitiveProps) => {
   const primarySeries = series[0];
+  const isCoarsePointer = useCoarsePointer();
   const sparklineData = useMemo(() => {
     if (!primarySeries) {
       return [];
@@ -62,6 +64,7 @@ export const KpiTile = ({
   >("hidden");
   const [isFooterMounted, setIsFooterMounted] = useState(false);
   const sparklineRef = useRef<HTMLDivElement | null>(null);
+  const isSparklineTouchActiveRef = useRef(false);
   const footerTimeoutRef = useRef<number | null>(null);
   const footerAnimationRef = useRef<number | null>(null);
   const footerTransitionMs = 200;
@@ -224,18 +227,46 @@ export const KpiTile = ({
       index: clampedIndex,
     });
   };
-  const handleOverlayHover = (event: React.MouseEvent<HTMLDivElement>) => {
+  const applyHoverFromClientX = (clientX: number, target?: HTMLDivElement | null) => {
     if (!isVrm) return;
     const rect =
       sparklineRef.current?.getBoundingClientRect() ??
-      event.currentTarget?.getBoundingClientRect?.();
+      target?.getBoundingClientRect?.();
     if (!rect || rect.width <= 0) return;
     const ratio = Math.max(
       0,
-      Math.min(1, (event.clientX - rect.left) / rect.width),
+      Math.min(1, (clientX - rect.left) / rect.width),
     );
     const index = Math.round(ratio * Math.max(0, sparklineData.length - 1));
     applyHoverIndex(index);
+  };
+  const handleOverlayHover = (event: React.MouseEvent<HTMLDivElement>) => {
+    applyHoverFromClientX(event.clientX, event.currentTarget);
+  };
+  const handleOverlayPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isVrm || (event.pointerType === "mouse" && !isCoarsePointer)) return;
+    isSparklineTouchActiveRef.current = true;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    applyHoverFromClientX(event.clientX, event.currentTarget);
+    if (event.pointerType !== "mouse") {
+      event.preventDefault();
+    }
+  };
+  const handleOverlayPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isVrm || (event.pointerType === "mouse" && !isCoarsePointer)) return;
+    if (!isSparklineTouchActiveRef.current && event.pointerType !== "touch") return;
+    applyHoverFromClientX(event.clientX, event.currentTarget);
+    if (event.pointerType !== "mouse") {
+      event.preventDefault();
+    }
+  };
+  const handleOverlayPointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && !isCoarsePointer) return;
+    isSparklineTouchActiveRef.current = false;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    if (isVrm) {
+      setVrmHover(null);
+    }
   };
   const handleSparklineLeave = () => {
     if (isVrm) {
@@ -441,8 +472,13 @@ export const KpiTile = ({
                       <div
                         className="kpi-sparkline__overlay"
                         data-testid="vrm-sparkline-overlay"
+                        style={isCoarsePointer ? { touchAction: "pan-y" } : undefined}
                         onMouseMove={handleOverlayHover}
                         onMouseEnter={handleOverlayHover}
+                        onPointerDown={handleOverlayPointerDown}
+                        onPointerMove={handleOverlayPointerMove}
+                        onPointerUp={handleOverlayPointerEnd}
+                        onPointerCancel={handleOverlayPointerEnd}
                       />
                     ) : null}{" "}
                   </div>
