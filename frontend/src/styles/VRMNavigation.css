@@ -514,6 +514,8 @@ button.vrm-nav-row {
   .vrm-layout--mobile .vrm-main--mobile-lane {
     padding-left: var(--vrm-mobile-boundary-gutter);
     box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
   }
 
   .vrm-layout--mobile .vrm-content {
@@ -536,6 +538,35 @@ button.vrm-nav-row {
     max-width: 100%;
     margin-inline: auto;
     min-width: 0;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .vrm-dashboard-shell,
+  .vrm-layout--mobile .vrm-content--mobile-lane .vrm-content-shell,
+  .vrm-layout--mobile .vrm-content--mobile-lane .dashboard-content,
+  .vrm-layout--mobile .vrm-content--mobile-lane .vrm-card,
+  .vrm-layout--mobile .vrm-content--mobile-lane .vrm-dashboard-header,
+  .vrm-layout--mobile .vrm-content--mobile-lane .vrm-toolbar,
+  .vrm-layout--mobile .vrm-content--mobile-lane .analytics-grid,
+  .vrm-layout--mobile .vrm-content--mobile-lane .analytics-layout,
+  .vrm-layout--mobile .vrm-content--mobile-lane .analytics-chart-surface {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane table,
+  .vrm-layout--mobile .vrm-content--mobile-lane .vrm-table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane input,
+  .vrm-layout--mobile .vrm-content--mobile-lane select,
+  .vrm-layout--mobile .vrm-content--mobile-lane textarea {
+    min-width: 0;
+    max-width: 100%;
   }
 
 
