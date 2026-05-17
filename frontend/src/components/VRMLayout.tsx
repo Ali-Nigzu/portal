@@ -62,6 +62,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   // Sidebar state and refs
   const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
   const [isSecondaryFocused, setIsSecondaryFocused] = useState(false);
+  const [primaryOutgoingActivePath, setPrimaryOutgoingActivePath] = useState<string | null>(null);
+  const primaryLastActivePathRef = useRef<string | null>(null);
+  const primaryOutgoingActiveTimeoutRef = useRef<number | null>(null);
   const sitesHoverTimeout = useRef<number | null>(null);
   const secondaryFocusRef = useRef(false);
   const primaryRailRef = useRef<HTMLDivElement | null>(null);
@@ -360,6 +363,40 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const primaryActivePath = primaryNavigationItems.find(
     (item) => item.path && isActiveRoute(item.path),
   )?.path;
+  useEffect(() => {
+    if (!isMobileViewport) {
+      primaryLastActivePathRef.current = primaryActivePath ?? null;
+      setPrimaryOutgoingActivePath(null);
+      if (primaryOutgoingActiveTimeoutRef.current !== null) {
+        window.clearTimeout(primaryOutgoingActiveTimeoutRef.current);
+        primaryOutgoingActiveTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    const previousActivePath = primaryLastActivePathRef.current;
+    if (previousActivePath && previousActivePath !== primaryActivePath) {
+      setPrimaryOutgoingActivePath(previousActivePath);
+      if (primaryOutgoingActiveTimeoutRef.current !== null) {
+        window.clearTimeout(primaryOutgoingActiveTimeoutRef.current);
+      }
+      primaryOutgoingActiveTimeoutRef.current = window.setTimeout(() => {
+        setPrimaryOutgoingActivePath(null);
+        primaryOutgoingActiveTimeoutRef.current = null;
+      }, 160);
+    } else if (!primaryActivePath) {
+      setPrimaryOutgoingActivePath(null);
+    }
+    primaryLastActivePathRef.current = primaryActivePath ?? null;
+  }, [isMobileViewport, primaryActivePath]);
+
+  useEffect(() => {
+    return () => {
+      if (primaryOutgoingActiveTimeoutRef.current !== null) {
+        window.clearTimeout(primaryOutgoingActiveTimeoutRef.current);
+      }
+    };
+  }, []);
   const isSiteSelection = isSelectorOpen;
   const selectedSiteForList = getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
@@ -953,6 +990,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
           <NavList className="vrm-primary-nav">
             {primaryNavigationItems.map((item) => {
               const isActive = primaryActivePath === item.path;
+              const isOutgoingActive =
+                isMobileViewport &&
+                Boolean(item.path) &&
+                primaryOutgoingActivePath === item.path &&
+                !isActive;
               const navRow = (
                 isMobileViewport ? (
                 <MobileSidebarRow
@@ -961,6 +1003,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}
+                  className={isOutgoingActive ? "mobile-expanded-row--active-outgoing" : undefined}
                   ariaLabel={!isPrimaryExpanded ? item.label : undefined}
                   rightSlot={
                     item.path === siteRoutePrefix ? (

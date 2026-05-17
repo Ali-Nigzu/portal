@@ -781,6 +781,11 @@ button.vrm-nav-row {
     background-color: var(--vrm-nav-row-active-bg);
     color: var(--vrm-nav-row-active-text);
   }
+  
+  .vrm-layout--mobile .mobile-expanded-row--active-outgoing {
+    background-color: var(--vrm-nav-row-active-bg);
+    color: var(--vrm-nav-row-active-text);
+  }
 
   .vrm-layout--mobile .vrm-primary-rail .mobile-expanded-row {
     background-clip: padding-box;
@@ -872,4 +877,3 @@ button.vrm-nav-row {
     visibility: visible;
   }
 }
-
