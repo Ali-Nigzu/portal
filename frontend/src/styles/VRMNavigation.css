@@ -744,6 +744,8 @@ button.vrm-nav-row {
   .vrm-layout--mobile:not(.vrm-layout--mobile-site-open):not(.vrm-layout--mobile-primary-open) .vrm-extended-panel {
     grid-column: 3;
     width: var(--vrm-rail-secondary);
+    min-width: var(--vrm-rail-secondary);
+    max-width: var(--vrm-rail-secondary);
     border-left: 0;
   }
 
