@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { DEFAULT_DEMO_SITE_ID } from "./sites";
 
 const DEMO_SESSION_KEY = "camOS_demo_session";
 const DEMO_DEFAULTS_APPLIED_KEY = "camOS_demo_defaults_applied";
@@ -80,7 +81,19 @@ export const applyDemoDefaultsOnce = (): void => {
   if (window.sessionStorage.getItem(DEMO_DEFAULTS_APPLIED_KEY) === "true") {
     return;
   }
-  window.sessionStorage.setItem(SELECTED_SITE_KEY, "site-a");
+  window.sessionStorage.setItem(SELECTED_SITE_KEY, DEFAULT_DEMO_SITE_ID);
+  window.localStorage.setItem(KEEP_MENU_EXPANDED_KEY, "false");
+  window.sessionStorage.setItem(DEMO_TIME_RANGE_KEY, "today");
+  window.sessionStorage.setItem(DEMO_SITEFLOW_TIMEFRAME_KEY, "today");
+  window.sessionStorage.setItem(DEMO_SITEFLOW_MODE_KEY, "activity");
+  window.sessionStorage.setItem(DEMO_DEFAULTS_APPLIED_KEY, "true");
+};
+
+export const applyDemoEntryDefaults = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(SELECTED_SITE_KEY, DEFAULT_DEMO_SITE_ID);
   window.localStorage.setItem(KEEP_MENU_EXPANDED_KEY, "false");
   window.sessionStorage.setItem(DEMO_TIME_RANGE_KEY, "today");
   window.sessionStorage.setItem(DEMO_SITEFLOW_TIMEFRAME_KEY, "today");

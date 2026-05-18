@@ -1,0 +1,102 @@
+.event-devices-select {
+  position: relative;
+  width: 100%;
+}
+
+.event-devices-trigger {
+  align-items: center;
+  background: var(--vrm-bg-tertiary);
+  border: 1px solid var(--vrm-border);
+  border-radius: var(--vrm-radii-input);
+  color: var(--vrm-text-primary);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: var(--vrm-spacing-2);
+  justify-content: space-between;
+  padding: 0 var(--vrm-spacing-3);
+  text-align: left;
+}
+
+.event-devices-trigger:focus-visible,
+.event-devices-option:focus-visible {
+  outline: 2px solid var(--vrm-color-focus);
+  outline-offset: 2px;
+}
+
+.event-devices-trigger__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-devices-trigger__chevron {
+  color: var(--vrm-text-secondary);
+  flex: 0 0 auto;
+}
+
+.event-devices-menu {
+  background: var(--vrm-bg-secondary);
+  border: 1px solid var(--vrm-border);
+  border-radius: var(--vrm-radii-card);
+  box-shadow: var(--vrm-elevation-popover);
+  display: grid;
+  gap: var(--vrm-spacing-1);
+  left: 0;
+  margin-top: var(--vrm-spacing-2);
+  max-height: min(320px, calc(100vh - 32px));
+  min-width: 100%;
+  overflow-y: auto;
+  padding: var(--vrm-spacing-2);
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+}
+
+.event-devices-option {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--vrm-radii-input);
+  color: var(--vrm-text-secondary);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: var(--vrm-spacing-2);
+  min-height: 44px;
+  padding: var(--vrm-spacing-2) var(--vrm-spacing-3);
+  text-align: left;
+  width: 100%;
+}
+
+.event-devices-option:hover,
+.event-devices-option--selected {
+  background: var(--vrm-hover);
+  color: var(--vrm-text-primary);
+}
+
+.event-devices-option__check {
+  align-items: center;
+  background: var(--vrm-bg-tertiary);
+  border: 1px solid var(--vrm-border);
+  border-radius: var(--vrm-radii-badge);
+  color: var(--vrm-accent-teal);
+  display: inline-flex;
+  flex: 0 0 20px;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+.event-devices-option__text {
+  min-width: 0;
+  white-space: normal;
+}
+
+@media (max-width: 768px) {
+  .event-devices-menu {
+    max-height: min(300px, calc(100vh - 24px));
+  }
+}

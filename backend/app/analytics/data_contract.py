@@ -62,6 +62,8 @@ class QueryContext(BaseModel):
     table_name: Optional[str] = None
     site_ids: Optional[List[str]] = None
     camera_ids: Optional[List[str]] = None
+    device_gateway_site_ids: Optional[List[str]] = None
+    device_camera_pairs: Optional[List[Tuple[str, str]]] = None
     sexes: Optional[List[str]] = None
     age_buckets: Optional[List[str]] = None
     races: Optional[List[str]] = None
@@ -74,7 +76,7 @@ class QueryContext(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    @field_validator("site_ids", "camera_ids", "sexes", "age_buckets", "races", mode="before")
+    @field_validator("site_ids", "camera_ids", "device_gateway_site_ids", "sexes", "age_buckets", "races", mode="before")
     @classmethod
     def _normalise_sequence(cls, value: Optional[Iterable[str]]) -> Optional[List[str]]:
         if value is None:
@@ -173,6 +175,22 @@ def _render_filters(ctx: QueryContext) -> Tuple[str, Dict[str, object]]:
     if ctx.camera_ids:
         params["camera_ids"] = ctx.camera_ids
         clauses.append("CAST(cam_id AS STRING) IN UNNEST(@camera_ids)")
+    device_clauses: List[str] = []
+    if ctx.device_gateway_site_ids:
+        params["device_gateway_site_ids"] = ctx.device_gateway_site_ids
+        device_clauses.append("CAST(site_id AS STRING) IN UNNEST(@device_gateway_site_ids)")
+    if ctx.device_camera_pairs:
+        for index, (device_site_id, device_camera_id) in enumerate(ctx.device_camera_pairs):
+            site_param = f"device_pair_site_{index}"
+            camera_param = f"device_pair_camera_{index}"
+            params[site_param] = device_site_id
+            params[camera_param] = device_camera_id
+            device_clauses.append(
+                f"(CAST(site_id AS STRING) = @{site_param} "
+                f"AND CAST(cam_id AS STRING) = @{camera_param})"
+            )
+    if device_clauses:
+        clauses.append(f"({' OR '.join(device_clauses)})")
     if ctx.sexes:
         params["sex_filters"] = ctx.sexes
         clauses.append(f"{SEX_EXPRESSION} IN UNNEST(@sex_filters)")

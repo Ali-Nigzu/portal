@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  applyDemoEntryDefaults,
   applyDemoDefaultsOnce,
   enableDemoSession,
 } from "../lib/demoSession";
@@ -19,13 +20,14 @@ const DemoPage = () => {
       try {
         await enableDemoSession();
         applyDemoDefaultsOnce();
+        applyDemoEntryDefaults();
         if (!isMounted) {
           return;
         }
         navigate(
           isEmbedMode
-            ? "/demo/site-a/dashboard?embed=1"
-            : "/demo/site-a/dashboard",
+            ? "/demo/site-b/dashboard?embed=1"
+            : "/demo/site-b/dashboard",
           { replace: true },
         );
       } catch (err) {

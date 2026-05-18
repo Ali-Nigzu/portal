@@ -118,7 +118,7 @@ const SiteFlowCard: React.FC<SiteFlowCardProps> = ({
   return (
     <Card
       title="Site Flow"
-      className="dashboard-v2__chart-card vrm-card vrm-card--chart-panel"
+      className="dashboard-v2__chart-card dashboard-v2__chart-card--site-flow vrm-card vrm-card--chart-panel"
       footer={footer}
       dateSelector={
         <div className="site-flow-card__controls">

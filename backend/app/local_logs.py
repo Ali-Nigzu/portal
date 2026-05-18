@@ -5,8 +5,9 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
+from backend.app.services.event_devices import normalize_device_tokens
 from backend.app.services.local_data import LocalDataError
 from backend.app.services.demo_time import format_demo_timestamp
 
@@ -67,6 +68,7 @@ def search_events_from_sqlite(
     track_id: Optional[str],
     page: int,
     per_page: int,
+    device_tokens: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     if not db_path.exists():
         raise LocalDataError(f"Missing combined logs SQLite database at {db_path}")
@@ -96,15 +98,29 @@ def search_events_from_sqlite(
         where.append("CAST(race AS INTEGER) = ?")
         params.append(race_filter)
 
-    site_filter = _normalize_optional_int(site_id)
-    if site_filter is not None:
-        where.append("CAST(site_id AS INTEGER) = ?")
-        params.append(site_filter)
+    gateway_site_ids, camera_pairs = normalize_device_tokens(device_tokens)
+    if gateway_site_ids or camera_pairs:
+        device_clauses: List[str] = []
+        if gateway_site_ids:
+            placeholders = ", ".join("?" for _ in gateway_site_ids)
+            device_clauses.append(f"CAST(site_id AS INTEGER) IN ({placeholders})")
+            params.extend(gateway_site_ids)
+        for pair_site_id, pair_cam_id in camera_pairs:
+            device_clauses.append(
+                "(CAST(site_id AS INTEGER) = ? AND CAST(cam_id AS INTEGER) = ?)"
+            )
+            params.extend([pair_site_id, pair_cam_id])
+        where.append(f"({' OR '.join(device_clauses)})")
+    else:
+        site_filter = _normalize_optional_int(site_id)
+        if site_filter is not None:
+            where.append("CAST(site_id AS INTEGER) = ?")
+            params.append(site_filter)
 
-    camera_filter = _normalize_optional_int(camera_id)
-    if camera_filter is not None:
-        where.append("CAST(cam_id AS INTEGER) = ?")
-        params.append(camera_filter)
+        camera_filter = _normalize_optional_int(camera_id)
+        if camera_filter is not None:
+            where.append("CAST(cam_id AS INTEGER) = ?")
+            params.append(camera_filter)
 
     if track_id:
         cleaned_track = track_id.strip().lstrip("#").strip().lower()

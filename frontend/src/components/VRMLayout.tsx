@@ -114,6 +114,16 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const selectorSiteOptions = isAuthenticated
     ? []
     : SITE_OPTIONS.filter((site) => site.id !== "all");
+  const isSiteScopedRoute =
+    Boolean(siteId) && /^\/(?:sites|demo)\/[^/]+(?:\/|$)/.test(location.pathname);
+  const shouldUseSiteMenuForClosedMobileSecondary =
+    isMobileViewport &&
+    mobileDrawer.kind === "closed" &&
+    isSiteScopedRoute &&
+    !isSelectorOpen;
+  const effectiveSecondaryMode = shouldUseSiteMenuForClosedMobileSecondary
+    ? "site-menu"
+    : secondaryModeMemory;
   const buildSearch = (overrides?: Record<string, string | undefined>) => {
     const params = new URLSearchParams(location.search);
     if (!overrides || !Object.prototype.hasOwnProperty.call(overrides, "panel")) {
@@ -238,6 +248,12 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setMobileSidebarOpen(null);
     setMobileDrawer({ kind: "closed" });
   }, [isMobileViewport]);
+  useEffect(() => {
+    if (!shouldUseSiteMenuForClosedMobileSecondary) {
+      return;
+    }
+    setSecondaryModeMemory("site-menu");
+  }, [shouldUseSiteMenuForClosedMobileSecondary]);
   const openPrimaryDrawer = () => {
     setMobileDrawer({ kind: "primary" });
     setMobileSidebarOpen("primary");
@@ -253,11 +269,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setMobileSidebarOpen("site");
   };
   const openSecondaryDrawerForCurrentContext = () => {
-    if (secondaryModeMemory === "site-menu" && siteId) {
-      openSiteMenuDrawer(siteId);
-      return;
-    }
-    if (siteId && !isSelectorOpen && secondaryModeMemory !== "selector") {
+    if (siteId && !isSelectorOpen && effectiveSecondaryMode === "site-menu") {
       openSiteMenuDrawer(siteId);
       return;
     }
@@ -405,7 +417,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       ? true
       : mobileDrawer.kind === "site-selector"
         ? false
-        : secondaryModeMemory === "site-menu" && showSiteMenu;
+        : effectiveSecondaryMode === "site-menu" && showSiteMenu;
   const isHomeRoute = location.pathname === "/home";
   const isDocumentsRoute =
     location.pathname === "/documents" || location.pathname.startsWith("/documents/");
@@ -1064,7 +1076,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                               )
                           : undefined
                   }
-                  icon={item.icon}
+                  leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}

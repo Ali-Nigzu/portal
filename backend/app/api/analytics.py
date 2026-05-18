@@ -16,6 +16,7 @@ from backend.app.analytics.org_config import (
 )
 from backend.app.services.auth_context import authenticate_chart_data_request
 from backend.app.services.demo_session import resolve_demo_org_id
+from backend.app.services.event_devices import normalize_device_tokens
 from backend.app.services.local_data import combined_logs_db, ensure_local_db_exists, LocalDataError
 from backend.app.local_logs import search_events_from_sqlite
 from backend.app.services.bigquery_client import BigQueryDataFrameError, bigquery_client
@@ -54,6 +55,7 @@ def _resolve_event_search_context(
     site_id: Optional[str],
     camera_id: Optional[str],
     track_id: Optional[str],
+    device_tokens: Optional[List[str]] = None,
 ) -> QueryContext:
     filters: Dict[str, Optional[str]] = {
         "start_date": start_date,
@@ -103,6 +105,9 @@ def _resolve_event_search_context(
         if cleaned_track:
             resolved_track_like = f"%{cleaned_track.lower()}%"
 
+    gateway_site_ids, camera_pairs = normalize_device_tokens(device_tokens)
+    has_device_filters = bool(gateway_site_ids or camera_pairs)
+
     return QueryContext(
         org_id=org_id,
         table_name=table_name,
@@ -112,8 +117,10 @@ def _resolve_event_search_context(
         sexes=[resolved_sex] if resolved_sex else None,
         age_buckets=[resolved_age] if resolved_age else None,
         races=[resolved_race] if resolved_race else None,
-        site_ids=[site_id] if site_id else None,
-        camera_ids=[camera_id] if camera_id else None,
+        site_ids=[site_id] if site_id and not has_device_filters else None,
+        camera_ids=[camera_id] if camera_id and not has_device_filters else None,
+        device_gateway_site_ids=[str(site) for site in gateway_site_ids] or None,
+        device_camera_pairs=[(str(site), str(camera)) for site, camera in camera_pairs] or None,
         track_id_like=resolved_track_like,
     )
 
@@ -142,6 +149,7 @@ async def search_events(
         is_demo_request = resolve_demo_org_id(request) is not None
 
         logger.debug("Event search params: %s", dict(request.query_params))
+        device_tokens = request.query_params.getlist("device")
 
         if is_demo_request:
             local_logs = ensure_local_db_exists(combined_logs_db(), label="combined logs source")
@@ -159,6 +167,7 @@ async def search_events(
                 track_id=track_id,
                 page=page,
                 per_page=per_page,
+                device_tokens=device_tokens,
             )
 
         table_name = _resolve_table_for_org(org_id)
@@ -175,6 +184,7 @@ async def search_events(
             site_id=site_id,
             camera_id=camera_id,
             track_id=track_id,
+            device_tokens=device_tokens,
         )
 
         logger.debug(
@@ -188,6 +198,8 @@ async def search_events(
                 "race": base_ctx.races,
                 "site_id": base_ctx.site_ids,
                 "camera_id": base_ctx.camera_ids,
+                "device_gateway_site_ids": base_ctx.device_gateway_site_ids,
+                "device_camera_pairs": base_ctx.device_camera_pairs,
                 "track": track_id,
                 "page": page,
                 "per_page": per_page,

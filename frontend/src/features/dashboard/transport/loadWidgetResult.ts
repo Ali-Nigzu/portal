@@ -94,7 +94,12 @@ export async function loadWidgetResult(
       dataMode,
       siteView,
     });
-    result = buildSnapshotWidgetResult(widget.id, snapshot, snapshotTimeframe);
+    result = buildSnapshotWidgetResult(
+      widget.id,
+      snapshot,
+      snapshotTimeframe,
+      siteView ?? "site-b",
+    );
   } catch (error) {
     if (isAbortError(error)) {
       const code = (error as { code?: string }).code;

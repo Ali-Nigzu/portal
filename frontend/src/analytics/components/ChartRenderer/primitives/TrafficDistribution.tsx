@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { ChartPrimitiveProps } from "./types";
 import { formatNumeric } from "../utils/format";
 import { useDonutHoverController } from "./useDonutHoverController";
 import { DonutTooltipCard, type DonutTooltipRow } from "./DonutTooltipCard";
 import { useDemoDonutTooltipOwner } from "./DemoDonutTooltipOwnerContext";
+import { useCoarsePointer } from "./useCoarsePointer";
 
 const DEFAULT_SLICE_COLORS = [
   "#2d6cdf",
@@ -31,10 +33,14 @@ export const TrafficDistribution = ({
   donutTooltipOwnerId,
 }: ChartPrimitiveProps) => {
   const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
+  const isCoarsePointer = useCoarsePointer();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
   const hoverLabelRef = useRef<HTMLDivElement | null>(null);
   const invalidateOnUnmountRef = useRef<() => void>(() => {});
+  const isCoarseDonutActiveRef = useRef(false);
+  const suppressNextClickClearRef = useRef(false);
+  const coarseTapClosedRef = useRef(false);
   const donutTooltipOwner = useDemoDonutTooltipOwner();
   const primary = series[0];
   const data = primary?.data ?? [];
@@ -113,11 +119,12 @@ export const TrafficDistribution = ({
       typeof (point as unknown as Record<string, unknown>).color === "string"
         ? ((point as unknown as Record<string, unknown>).color as string)
         : null;
-    const label = useRawLabels || labelKey ? rawLabel : `Cam ${cameraId}`;
+    const shouldUseRawLabel = useRawLabels || Boolean(labelKey) || isVrmTraffic;
+    const label = shouldUseRawLabel ? rawLabel : `Cam ${cameraId}`;
     const cleanCamId = normalizedCameraId.replace(/^\D+/, "");
     return {
       label,
-      camId: useRawLabels || labelKey ? rawLabel : cleanCamId || cameraId,
+      camId: shouldUseRawLabel ? rawLabel : cleanCamId || cameraId,
       value,
       color: pointColor ?? palette[index % palette.length],
     };
@@ -163,14 +170,16 @@ export const TrafficDistribution = ({
     segments: pieLegend.map((entry) => ({
       id: entry.label,
       value: entry.value,
-      interactive: hasPositiveTraffic,
+      interactive: hasPositiveTraffic || isCoarsePointer,
     })),
   });
   const {
     activeSegmentId,
     isTooltipVisible,
     updateFromPointerEvent,
+    resolveFromViewportPoint,
     syncFromViewportPoint,
+    setHoverState,
     clearHover,
     getTooltipPosition,
   } = hoverController;
@@ -183,6 +192,11 @@ export const TrafficDistribution = ({
         : String(renderTopSlice.camId)
     )
     : "—";
+  const centerLabelWords = topCameraLabel.trim().split(/\s+/).filter(Boolean);
+  const centerLabelLines = centerLabelWords.length > 1
+    ? [centerLabelWords[0], centerLabelWords.slice(1).join(" ")]
+    : [topCameraLabel];
+  const hasMultilineCenterLabel = centerLabelLines.length > 1;
   const [legacyHoverLabel, setLegacyHoverLabel] = useState<{
     text: string;
     x: number;
@@ -190,7 +204,7 @@ export const TrafficDistribution = ({
   } | null>(null);
   const hoveredSlice = pieLegend.find((entry) => entry.label === activeSegmentId);
   const tooltipRows = useMemo<DonutTooltipRow[]>(() => {
-    if (!isDemoCursorHover || !hasPositiveTraffic) {
+    if (!isDemoCursorHover || (!hasPositiveTraffic && !isCoarsePointer)) {
       return [];
     }
     return pieLegend.map((entry) => ({
@@ -201,7 +215,7 @@ export const TrafficDistribution = ({
       isActive: activeSegmentId === entry.label,
       interactive: true,
     }));
-  }, [activeSegmentId, hasPositiveTraffic, isDemoCursorHover, pieLegend]);
+  }, [activeSegmentId, hasPositiveTraffic, isCoarsePointer, isDemoCursorHover, pieLegend]);
   const hoverLabelText = useMemo(() => {
     if (isDemoCursorHover) {
       if (!isTooltipVisible || !hoveredSlice) {
@@ -252,11 +266,94 @@ export const TrafficDistribution = ({
   }, [donutTooltipOwner, donutTooltipOwnerId, isDemoCursorHover, localTooltipVisible]);
 
   const invalidateHoverAndRelease = useCallback(() => {
+    isCoarseDonutActiveRef.current = false;
+    coarseTapClosedRef.current = false;
     clearHover();
     if (donutTooltipOwner && donutTooltipOwnerId) {
       donutTooltipOwner.release(donutTooltipOwnerId);
     }
   }, [clearHover, donutTooltipOwner, donutTooltipOwnerId]);
+  const resolveCoarsePointer = useCallback((clientX: number, clientY: number) => {
+    const surface = chartSurfaceRef.current;
+    if (!surface) {
+      return { pointer: null, segmentId: null };
+    }
+    return resolveFromViewportPoint(clientX, clientY, surface, {
+      width: surface.clientWidth,
+      height: surface.clientHeight || donutChartHeight,
+    });
+  }, [donutChartHeight, resolveFromViewportPoint]);
+  const handleCoarsePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isDemoCursorHover || (!isCoarsePointer && event.pointerType === "mouse")) {
+      return;
+    }
+    const resolution = resolveCoarsePointer(event.clientX, event.clientY);
+    if (!resolution.pointer || !resolution.segmentId) {
+      coarseTapClosedRef.current = false;
+      invalidateHoverAndRelease();
+      return;
+    }
+    event.preventDefault();
+    suppressNextClickClearRef.current = true;
+    if (activeSegmentId === resolution.segmentId && isTooltipVisible) {
+      coarseTapClosedRef.current = true;
+      invalidateHoverAndRelease();
+      return;
+    }
+    coarseTapClosedRef.current = false;
+    isCoarseDonutActiveRef.current = true;
+    setHoverState(resolution.pointer, resolution.segmentId);
+  }, [activeSegmentId, invalidateHoverAndRelease, isCoarsePointer, isDemoCursorHover, isTooltipVisible, resolveCoarsePointer, setHoverState]);
+  const handleCoarsePointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isDemoCursorHover || !isCoarseDonutActiveRef.current || (!isCoarsePointer && event.pointerType === "mouse")) {
+      return;
+    }
+    const resolution = resolveCoarsePointer(event.clientX, event.clientY);
+    if (resolution.pointer && resolution.segmentId) {
+      setHoverState(resolution.pointer, resolution.segmentId);
+    }
+  }, [isCoarsePointer, isDemoCursorHover, resolveCoarsePointer, setHoverState]);
+  const handleCoarsePointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isCoarsePointer && event.pointerType === "mouse") {
+      return;
+    }
+    isCoarseDonutActiveRef.current = false;
+  }, [isCoarsePointer]);
+  const handleCoarseTouchEnd = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDemoCursorHover || !isCoarsePointer) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+    const wasClosedByTap = coarseTapClosedRef.current;
+    window.setTimeout(() => {
+      if (wasClosedByTap) {
+        coarseTapClosedRef.current = false;
+        return;
+      }
+      const resolution = resolveCoarsePointer(touch.clientX, touch.clientY);
+      if (!resolution.pointer || !resolution.segmentId) {
+        invalidateHoverAndRelease();
+        return;
+      }
+      setHoverState(resolution.pointer, resolution.segmentId);
+    }, 0);
+  }, [invalidateHoverAndRelease, isCoarsePointer, isDemoCursorHover, resolveCoarsePointer, setHoverState]);
+
+  useEffect(() => {
+    if (!isDemoCursorHover || !isCoarsePointer || !localTooltipVisible) {
+      return;
+    }
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      if (!chartSurfaceRef.current?.contains(event.target as Node | null)) {
+        invalidateHoverAndRelease();
+      }
+    };
+    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+    return () => document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+  }, [invalidateHoverAndRelease, isCoarsePointer, isDemoCursorHover, localTooltipVisible]);
 
   useEffect(() => {
     invalidateOnUnmountRef.current = invalidateHoverAndRelease;
@@ -265,6 +362,7 @@ export const TrafficDistribution = ({
   useEffect(() => {
     if (
       !isDemoCursorHover ||
+      isCoarsePointer ||
       !donutTooltipOwner ||
       !donutTooltipOwnerId ||
       donutTooltipOwner.activeOwnerId !== donutTooltipOwnerId
@@ -323,6 +421,7 @@ export const TrafficDistribution = ({
     donutTooltipOwnerId,
     getHoverBounds,
     invalidateHoverAndRelease,
+    isCoarsePointer,
     isDemoCursorHover,
     syncFromViewportPoint,
   ]);
@@ -437,8 +536,15 @@ export const TrafficDistribution = ({
             width: donutChartHeight,
             minWidth: donutChartHeight,
           }}
+          onTouchStart={isDemoCursorHover && isCoarsePointer ? (event) => event.preventDefault() : undefined}
+          onTouchEnd={isDemoCursorHover ? handleCoarseTouchEnd : undefined}
+          onPointerDown={isDemoCursorHover ? handleCoarsePointerDown : undefined}
           onPointerMove={isDemoCursorHover
             ? (event) => {
+              if (event.pointerType !== "mouse" || isCoarsePointer) {
+                handleCoarsePointerMove(event);
+                return;
+              }
               const surface = chartSurfaceRef.current;
               if (!surface) {
                 return;
@@ -449,11 +555,47 @@ export const TrafficDistribution = ({
               });
             }
             : undefined}
-          onPointerLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onMouseLeave={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onPointerCancel={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onBlur={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
-          onClick={isDemoCursorHover ? invalidateHoverAndRelease : undefined}
+          onPointerUp={isDemoCursorHover ? handleCoarsePointerEnd : undefined}
+          onPointerLeave={isDemoCursorHover ? (event) => {
+            if (event.pointerType === "mouse") {
+              invalidateHoverAndRelease();
+            }
+          } : undefined}
+          onMouseLeave={isDemoCursorHover ? () => {
+            if (!isCoarsePointer) {
+              invalidateHoverAndRelease();
+            }
+          } : undefined}
+          onPointerCancel={isDemoCursorHover ? handleCoarsePointerEnd : undefined}
+          onBlur={isDemoCursorHover ? () => {
+            if (!isCoarsePointer) {
+              invalidateHoverAndRelease();
+            }
+          } : undefined}
+          onClick={isDemoCursorHover ? (event) => {
+            if (isCoarsePointer) {
+              if (suppressNextClickClearRef.current) {
+                suppressNextClickClearRef.current = false;
+                return;
+              }
+              const resolution = resolveCoarsePointer(event.clientX, event.clientY);
+              if (!resolution.pointer || !resolution.segmentId) {
+                invalidateHoverAndRelease();
+                return;
+              }
+              if (activeSegmentId === resolution.segmentId && isTooltipVisible) {
+                invalidateHoverAndRelease();
+                return;
+              }
+              setHoverState(resolution.pointer, resolution.segmentId);
+              return;
+            }
+            if (suppressNextClickClearRef.current) {
+              suppressNextClickClearRef.current = false;
+              return;
+            }
+            invalidateHoverAndRelease();
+          } : undefined}
         >
           {isDemoCursorHover ? (
             isDemoTooltipVisible ? (
@@ -536,9 +678,26 @@ export const TrafficDistribution = ({
                   y="50%"
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  className="traffic-distribution__center"
+                  aria-label={topCameraLabel}
+                  className={`traffic-distribution__center${
+                    hasMultilineCenterLabel
+                      ? " traffic-distribution__center--multiline"
+                      : ""
+                  }`}
                 >
-                  {topCameraLabel}
+                  {hasMultilineCenterLabel ? (
+                    centerLabelLines.map((line, index) => (
+                      <tspan
+                        key={`${line}-${index}`}
+                        x="50%"
+                        dy={index === 0 ? "-0.35em" : "1.2em"}
+                      >
+                        {line}
+                      </tspan>
+                    ))
+                  ) : (
+                    topCameraLabel
+                  )}
                 </text>
               ) : null}
               </Pie>

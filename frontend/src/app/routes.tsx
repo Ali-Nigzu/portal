@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import {
   Navigate,
   Route,
@@ -8,7 +8,12 @@ import {
 } from "react-router-dom";
 
 import VRMLayout from "../components/VRMLayout";
-import { clearDemoSessionLocal, isDemoSessionActive } from "../lib/demoSession";
+import {
+  applyDemoEntryDefaults,
+  clearDemoSessionLocal,
+  enableDemoSession,
+  isDemoSessionActive,
+} from "../lib/demoSession";
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
 import { fetchMe } from "../features/auth/transport/me";
@@ -49,6 +54,11 @@ const AppRoutes: React.FC = () => {
   const hasViewToken = Boolean(viewToken);
   const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
+  const shouldNormalizeDemoEntryRef = useRef(isDemoRoute && location.pathname !== "/demo");
+  const demoEntryNavigationCompletedRef = useRef(false);
+  const [isDemoEntryReady, setIsDemoEntryReady] = useState(
+    !shouldNormalizeDemoEntryRef.current,
+  );
 
   useEffect(() => {
     if (hasViewToken) {
@@ -171,8 +181,64 @@ const AppRoutes: React.FC = () => {
     );
   };
 
-  if (!isSessionChecked) {
+  useEffect(() => {
+    if (
+      !shouldNormalizeDemoEntryRef.current ||
+      isDemoEntryReady
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    const bootstrapDemoEntry = async () => {
+      try {
+        await enableDemoSession();
+        applyDemoEntryDefaults();
+      } finally {
+        if (!isCancelled) {
+          setIsDemoEntryReady(true);
+        }
+      }
+    };
+
+    bootstrapDemoEntry();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isDemoEntryReady]);
+
+  if (!isSessionChecked || !isDemoEntryReady) {
     return null;
+  }
+
+  if (
+    shouldNormalizeDemoEntryRef.current &&
+    !demoEntryNavigationCompletedRef.current
+  ) {
+    const targetPath = `/demo/${getDefaultSiteId()}/dashboard`;
+    const targetSearchParams = new URLSearchParams(location.search);
+    targetSearchParams.delete("panel");
+    targetSearchParams.delete("expand_once");
+    targetSearchParams.delete("site_menu_expand_once");
+    const targetSearchValue = targetSearchParams.toString();
+    const targetSearch = targetSearchValue ? `?${targetSearchValue}` : "";
+    const isAtTarget =
+      location.pathname === targetPath && location.search === targetSearch;
+
+    if (!isAtTarget) {
+      return (
+        <Navigate
+          to={{
+            pathname: targetPath,
+            search: targetSearch,
+          }}
+          replace
+        />
+      );
+    }
+
+    demoEntryNavigationCompletedRef.current = true;
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
@@ -197,7 +263,7 @@ const AppRoutes: React.FC = () => {
           !isAuthenticatedMode ? (
             lazyRoute(<LandingPage />)
           ) : appMode === "view_token" || appMode === "demo" ? (
-            <Navigate to={appMode === "demo" ? appendParams("/demo/site-a/dashboard") : appendViewToken("/sites/all/dashboard")} replace />
+            <Navigate to={appMode === "demo" ? appendParams(`/demo/${getDefaultSiteId()}/dashboard`) : appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/home" replace />
           )
@@ -519,7 +585,7 @@ const AppRoutes: React.FC = () => {
           !isAuthenticatedMode ? (
             <Navigate to="/" replace />
           ) : appMode === "view_token" || appMode === "demo" ? (
-            <Navigate to={appMode === "demo" ? appendParams("/demo/site-a/dashboard") : appendViewToken("/sites/all/dashboard")} replace />
+            <Navigate to={appMode === "demo" ? appendParams(`/demo/${getDefaultSiteId()}/dashboard`) : appendViewToken("/sites/all/dashboard")} replace />
           ) : (
             <Navigate to="/home" replace />
           )

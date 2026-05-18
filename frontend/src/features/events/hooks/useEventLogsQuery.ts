@@ -6,11 +6,45 @@ import type { Credentials } from "../../../types/credentials";
 import { searchEvents } from "../transport/searchEvents";
 import { demoNow, formatDemoDateKey, parseDemoTimestamp } from "../../../lib/demoTime";
 import type { EventData } from "../utils/eventTypes";
+import { normalizeEventDeviceTokens, type EventDeviceToken } from "../utils/eventDevices";
 
 type EventLogsQueryOverrides = {
   searchEventsFn?: typeof searchEvents;
   viewToken?: string | null;
   clientId?: string | null;
+};
+
+type EventLogsFilters = {
+  event: string;
+  sex: string;
+  age: string;
+  trackId: string;
+  race: string;
+  deviceTokens: EventDeviceToken[];
+};
+
+const createEmptyFilters = (): EventLogsFilters => ({
+  event: "",
+  sex: "",
+  age: "",
+  trackId: "",
+  race: "",
+  deviceTokens: [],
+});
+
+const restoreFilters = (value: unknown): EventLogsFilters => {
+  if (!value || typeof value !== "object") {
+    return createEmptyFilters();
+  }
+  const source = value as Partial<Record<keyof EventLogsFilters, unknown>>;
+  return {
+    event: typeof source.event === "string" ? source.event : "",
+    sex: typeof source.sex === "string" ? source.sex : "",
+    age: typeof source.age === "string" ? source.age : "",
+    trackId: typeof source.trackId === "string" ? source.trackId : "",
+    race: typeof source.race === "string" ? source.race : "",
+    deviceTokens: normalizeEventDeviceTokens(source.deviceTokens),
+  };
 };
 
 export const useEventLogsQuery = (
@@ -20,22 +54,8 @@ export const useEventLogsQuery = (
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draftFilters, setDraftFilters] = useState({
-    event: "",
-    sex: "",
-    age: "",
-    trackId: "",
-    race: "",
-    cameraId: "",
-  });
-  const [appliedFilters, setAppliedFilters] = useState({
-    event: "",
-    sex: "",
-    age: "",
-    trackId: "",
-    race: "",
-    cameraId: "",
-  });
+  const [draftFilters, setDraftFilters] = useState<EventLogsFilters>(() => createEmptyFilters());
+  const [appliedFilters, setAppliedFilters] = useState<EventLogsFilters>(() => createEmptyFilters());
   const [draftStartDate, setDraftStartDate] = useState<Date | null>(null);
   const [draftEndDate, setDraftEndDate] = useState<Date | null>(null);
   const [appliedStartDate, setAppliedStartDate] = useState<Date | null>(null);
@@ -84,8 +104,8 @@ export const useEventLogsQuery = (
         totalPages?: number;
         totalEvents?: number;
         currentPage?: number;
-        draftFilters?: typeof draftFilters;
-        appliedFilters?: typeof appliedFilters;
+        draftFilters?: unknown;
+        appliedFilters?: unknown;
         draftStartDate?: string | null;
         draftEndDate?: string | null;
         appliedStartDate?: string | null;
@@ -106,10 +126,10 @@ export const useEventLogsQuery = (
         setCurrentPage(parsed.currentPage);
       }
       if (parsed.draftFilters) {
-        setDraftFilters(parsed.draftFilters);
+        setDraftFilters(restoreFilters(parsed.draftFilters));
       }
       if (parsed.appliedFilters) {
-        setAppliedFilters(parsed.appliedFilters);
+        setAppliedFilters(restoreFilters(parsed.appliedFilters));
       }
       if (parsed.draftStartDate) {
         setDraftStartDate(parseDemoTimestamp(parsed.draftStartDate));
@@ -215,9 +235,9 @@ export const useEventLogsQuery = (
       if (appliedFilters.race) {
         searchParams.append("race", appliedFilters.race);
       }
-      if (appliedFilters.cameraId) {
-        searchParams.append("camera_id", appliedFilters.cameraId);
-      }
+      appliedFilters.deviceTokens.forEach((deviceToken) => {
+        searchParams.append("device", deviceToken);
+      });
       return searchParams;
     },
     [appliedEndDate, appliedFilters, appliedStartDate, currentPage, eventsPerPage],
