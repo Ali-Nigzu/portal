@@ -1076,7 +1076,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                               )
                           : undefined
                   }
-                  icon={item.icon}
+                  leftIcon={item.icon}
                   label={item.label}
                   active={isActive}
                   disabled={item.disabled}
