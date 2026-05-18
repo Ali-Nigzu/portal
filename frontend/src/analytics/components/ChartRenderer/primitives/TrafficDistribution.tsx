@@ -192,6 +192,11 @@ export const TrafficDistribution = ({
         : String(renderTopSlice.camId)
     )
     : "—";
+  const centerLabelWords = topCameraLabel.trim().split(/\s+/).filter(Boolean);
+  const centerLabelLines = centerLabelWords.length > 1
+    ? [centerLabelWords[0], centerLabelWords.slice(1).join(" ")]
+    : [topCameraLabel];
+  const hasMultilineCenterLabel = centerLabelLines.length > 1;
   const [legacyHoverLabel, setLegacyHoverLabel] = useState<{
     text: string;
     x: number;
@@ -673,9 +678,26 @@ export const TrafficDistribution = ({
                   y="50%"
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  className="traffic-distribution__center"
+                  aria-label={topCameraLabel}
+                  className={`traffic-distribution__center${
+                    hasMultilineCenterLabel
+                      ? " traffic-distribution__center--multiline"
+                      : ""
+                  }`}
                 >
-                  {topCameraLabel}
+                  {hasMultilineCenterLabel ? (
+                    centerLabelLines.map((line, index) => (
+                      <tspan
+                        key={`${line}-${index}`}
+                        x="50%"
+                        dy={index === 0 ? "-0.35em" : "1.2em"}
+                      >
+                        {line}
+                      </tspan>
+                    ))
+                  ) : (
+                    topCameraLabel
+                  )}
                 </text>
               ) : null}
               </Pie>
