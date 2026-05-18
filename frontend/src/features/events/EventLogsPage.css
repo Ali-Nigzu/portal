@@ -43,16 +43,20 @@
   box-shadow: var(--vrm-elevation-popover);
   display: grid;
   gap: var(--vrm-spacing-1);
-  left: 0;
   margin-top: var(--vrm-spacing-2);
   max-height: min(320px, calc(100vh - 32px));
   min-width: 100%;
   overflow-y: auto;
   padding: var(--vrm-spacing-2);
   position: absolute;
-  right: 0;
-  top: 100%;
   z-index: 20;
+}
+
+.event-devices-menu--portal {
+  margin-top: 0;
+  min-width: 0;
+  position: fixed;
+  z-index: 1500;
 }
 
 .event-devices-option {
@@ -98,5 +102,43 @@
 @media (max-width: 768px) {
   .event-devices-menu {
     max-height: min(300px, calc(100vh - 24px));
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table {
+    max-width: none;
+    min-width: 720px;
+    table-layout: auto;
+    width: max-content;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td {
+    white-space: nowrap;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(1),
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(1) {
+    min-width: 96px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(2),
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(2) {
+    min-width: 120px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(3),
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(3) {
+    min-width: 96px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(4),
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(4) {
+    min-width: 180px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(5),
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(5) {
+    min-width: 220px;
+    white-space: normal;
   }
 }
