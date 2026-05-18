@@ -49,14 +49,9 @@
   overflow-y: auto;
   padding: var(--vrm-spacing-2);
   position: absolute;
-  z-index: 20;
-}
-
-.event-devices-menu--portal {
-  margin-top: 0;
-  min-width: 0;
-  position: fixed;
-  z-index: 1500;
+  right: 0;
+  top: 100%;
+  z-index: 30;
 }
 
 .event-devices-option {
@@ -141,4 +136,8 @@
     min-width: 220px;
     white-space: normal;
   }
+}
+
+.event-logs-filters-card {
+  overflow: visible;
 }
