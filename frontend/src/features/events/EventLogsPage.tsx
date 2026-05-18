@@ -4,7 +4,9 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Credentials } from "../../types/credentials";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
 import type { searchEvents } from "./transport/searchEvents";
+import DevicesMultiSelect from "./components/DevicesMultiSelect";
 import type { EventData } from "./utils/eventTypes";
+import "./EventLogsPage.css";
 import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
 interface EventLogsPageProps {
   credentials: Credentials;
@@ -192,7 +194,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
       age: "",
       trackId: "",
       race: "",
-      cameraId: "",
+      deviceTokens: [],
     });
     setDraftStartDate(null);
     setDraftEndDate(null);
@@ -469,22 +471,18 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
               </select>
             </div>
             <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-camera-id">
-                Camera
+              <label className="vrm-label" htmlFor="event-devices-filter">
+                Devices
               </label>
-              <input
-                id="event-camera-id"
-                type="number"
-                value={draftFilters.cameraId}
-                onChange={(e) =>
+              <DevicesMultiSelect
+                id="event-devices-filter"
+                value={draftFilters.deviceTokens}
+                onChange={(deviceTokens) =>
                   setDraftFilters((prev) => ({
                     ...prev,
-                    cameraId: e.target.value,
+                    deviceTokens,
                   }))
                 }
-                placeholder="Filter by camera"
-                className="vrm-input event-logs-filter-control"
-                min="0"
               />
             </div>
           </div>

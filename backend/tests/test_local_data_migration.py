@@ -212,6 +212,127 @@ class LocalLogsSQLiteTests(unittest.TestCase):
             self.assertEqual(result["total"], 1)
             self.assertEqual(result["events"][0]["track_id"], "t-01")
 
+    def test_search_events_from_sqlite_device_gateway_subsumes_child_camera(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "combined_logs.db"
+            conn = sqlite3.connect(str(db_path))
+            conn.execute(
+                """
+                CREATE TABLE logs (
+                    site_id INTEGER NOT NULL,
+                    cam_id INTEGER NOT NULL,
+                    track_id TEXT NOT NULL,
+                    event INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    sex INTEGER NOT NULL,
+                    age_bucket INTEGER NOT NULL,
+                    race INTEGER NOT NULL
+                )
+                """
+            )
+            rows = [
+                (0, 0, "ab-main", 1, "2026-04-14 00:00:00 UTC", 0, 2, 1),
+                (0, 1, "ab-back", 1, "2026-04-14 00:05:00 UTC", 1, 3, 2),
+                (1, 0, "tt-main", 1, "2026-04-14 00:10:00 UTC", 1, 4, 0),
+            ]
+            conn.executemany(
+                "INSERT INTO logs (site_id, cam_id, track_id, event, timestamp, sex, age_bucket, race) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                rows,
+            )
+            conn.commit()
+            conn.close()
+
+            gateway_only = search_events_from_sqlite(
+                db_path,
+                start=datetime(2026, 4, 14, 0, 0, tzinfo=timezone.utc),
+                end=datetime(2026, 4, 14, 1, 0, tzinfo=timezone.utc),
+                event=None,
+                sex=None,
+                age=None,
+                race=None,
+                site_id=None,
+                camera_id=None,
+                track_id=None,
+                page=1,
+                per_page=20,
+                device_tokens=["site-a:gateway"],
+            )
+            gateway_with_child = search_events_from_sqlite(
+                db_path,
+                start=datetime(2026, 4, 14, 0, 0, tzinfo=timezone.utc),
+                end=datetime(2026, 4, 14, 1, 0, tzinfo=timezone.utc),
+                event=None,
+                sex=None,
+                age=None,
+                race=None,
+                site_id=None,
+                camera_id=None,
+                track_id=None,
+                page=1,
+                per_page=20,
+                device_tokens=["site-a:gateway", "site-a:cam-0"],
+            )
+
+            self.assertEqual(gateway_only["total"], 2)
+            self.assertEqual(gateway_with_child["total"], gateway_only["total"])
+            self.assertEqual(
+                {event["track_id"] for event in gateway_with_child["events"]},
+                {"ab-main", "ab-back"},
+            )
+
+    def test_search_events_from_sqlite_device_pairs_do_not_cross_product(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "combined_logs.db"
+            conn = sqlite3.connect(str(db_path))
+            conn.execute(
+                """
+                CREATE TABLE logs (
+                    site_id INTEGER NOT NULL,
+                    cam_id INTEGER NOT NULL,
+                    track_id TEXT NOT NULL,
+                    event INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    sex INTEGER NOT NULL,
+                    age_bucket INTEGER NOT NULL,
+                    race INTEGER NOT NULL
+                )
+                """
+            )
+            rows = [
+                (0, 0, "ab-main", 1, "2026-04-14 00:00:00 UTC", 0, 2, 1),
+                (0, 2, "leak-ab-2", 1, "2026-04-14 00:01:00 UTC", 0, 2, 1),
+                (1, 0, "leak-tt-0", 1, "2026-04-14 00:02:00 UTC", 0, 2, 1),
+                (1, 2, "tt-back", 1, "2026-04-14 00:03:00 UTC", 0, 2, 1),
+            ]
+            conn.executemany(
+                "INSERT INTO logs (site_id, cam_id, track_id, event, timestamp, sex, age_bucket, race) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                rows,
+            )
+            conn.commit()
+            conn.close()
+
+            result = search_events_from_sqlite(
+                db_path,
+                start=datetime(2026, 4, 14, 0, 0, tzinfo=timezone.utc),
+                end=datetime(2026, 4, 14, 1, 0, tzinfo=timezone.utc),
+                event=None,
+                sex=None,
+                age=None,
+                race=None,
+                site_id=None,
+                camera_id=None,
+                track_id=None,
+                page=1,
+                per_page=20,
+                device_tokens=["site-a:cam-0", "site-b:cam-2"],
+            )
+
+            self.assertEqual(result["total"], 2)
+            self.assertEqual(
+                {event["track_id"] for event in result["events"]},
+                {"ab-main", "tt-back"},
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
