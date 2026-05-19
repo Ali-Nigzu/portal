@@ -106,6 +106,7 @@
     max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
+    display: block;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
   }
@@ -117,10 +118,10 @@
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table {
     border-collapse: separate;
     border-spacing: 0;
-    max-width: none;
+    max-width: none !important;
     min-width: 720px;
     table-layout: fixed;
-    width: 960px;
+    width: max-content !important;
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
