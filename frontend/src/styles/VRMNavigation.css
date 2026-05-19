@@ -555,7 +555,7 @@ button.vrm-nav-row {
     box-sizing: border-box;
   }
 
-  .vrm-layout--mobile .vrm-content--mobile-lane table,
+  .vrm-layout--mobile .vrm-content--mobile-lane table:not(.event-logs-results-table),
   .vrm-layout--mobile .vrm-content--mobile-lane .vrm-table {
     width: 100%;
     max-width: 100%;

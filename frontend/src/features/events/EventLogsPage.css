@@ -118,10 +118,10 @@
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table {
     border-collapse: separate;
     border-spacing: 0;
-    max-width: none !important;
+    max-width: none;
     min-width: 720px;
     table-layout: fixed;
-    width: max-content !important;
+    width: max-content;
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
