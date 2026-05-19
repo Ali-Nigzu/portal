@@ -95,6 +95,12 @@
 }
 
 @media (max-width: 768px) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .event-devices-menu {
     max-height: min(300px, calc(100vh - 24px));
   }
@@ -105,7 +111,7 @@
     max-width: none;
     min-width: 720px;
     table-layout: fixed;
-    width: max-content;
+    width: 100%;
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
