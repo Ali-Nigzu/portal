@@ -95,10 +95,18 @@
 }
 
 @media (max-width: 768px) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-page,
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
+    min-width: 0;
+    width: 100%;
+  }
+
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
     max-width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
 
   .event-devices-menu {
@@ -111,7 +119,7 @@
     max-width: none;
     min-width: 720px;
     table-layout: fixed;
-    width: 100%;
+    width: max-content;
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
