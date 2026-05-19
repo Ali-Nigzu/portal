@@ -99,6 +99,7 @@
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
     min-width: 0;
     width: 100%;
+    max-width: 100%;
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
@@ -119,7 +120,7 @@
     max-width: none;
     min-width: 720px;
     table-layout: fixed;
-    width: max-content;
+    width: 960px;
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
