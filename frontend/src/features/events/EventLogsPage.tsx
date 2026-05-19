@@ -507,6 +507,13 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
           {searchToken === 0 ? null : events.length > 0 ? (
             <div className="vrm-table-scroll event-logs-table-scroll">
               <table className="vrm-table event-logs-results-table">
+                <colgroup>
+                  <col className="event-logs-col-event" />
+                  <col className="event-logs-col-track" />
+                  <col className="event-logs-col-camera" />
+                  <col className="event-logs-col-timestamp" />
+                  <col className="event-logs-col-demographics" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Event</th>

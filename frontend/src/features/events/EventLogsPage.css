@@ -100,9 +100,11 @@
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table {
+    border-collapse: separate;
+    border-spacing: 0;
     max-width: none;
     min-width: 720px;
-    table-layout: auto;
+    table-layout: fixed;
     width: max-content;
   }
 
@@ -111,29 +113,32 @@
     white-space: nowrap;
   }
 
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(1),
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(1) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-event {
     min-width: 96px;
+    width: 96px;
   }
 
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(2),
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(2) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-track {
     min-width: 120px;
+    width: 120px;
   }
 
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(3),
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(3) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-camera {
     min-width: 96px;
+    width: 96px;
   }
 
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(4),
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(4) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-timestamp {
     min-width: 180px;
+    width: 180px;
   }
 
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th:nth-child(5),
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(5) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-demographics {
     min-width: 220px;
+    width: 220px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(5) {
     white-space: normal;
   }
 }
