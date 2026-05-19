@@ -43,7 +43,6 @@
   box-shadow: var(--vrm-elevation-popover);
   display: grid;
   gap: var(--vrm-spacing-1);
-  left: 0;
   margin-top: var(--vrm-spacing-2);
   max-height: min(320px, calc(100vh - 32px));
   min-width: 100%;
@@ -52,7 +51,7 @@
   position: absolute;
   right: 0;
   top: 100%;
-  z-index: 20;
+  z-index: 30;
 }
 
 .event-devices-option {
@@ -96,7 +95,60 @@
 }
 
 @media (max-width: 768px) {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .event-devices-menu {
     max-height: min(300px, calc(100vh - 24px));
   }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    max-width: none;
+    min-width: 720px;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td {
+    white-space: nowrap;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-event {
+    min-width: 96px;
+    width: 96px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-track {
+    min-width: 120px;
+    width: 120px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-camera {
+    min-width: 96px;
+    width: 96px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-timestamp {
+    min-width: 180px;
+    width: 180px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-demographics {
+    min-width: 220px;
+    width: 220px;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(5) {
+    white-space: normal;
+  }
+}
+
+.event-logs-filters-card {
+  overflow: visible;
 }
