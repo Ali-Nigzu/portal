@@ -29,6 +29,20 @@
   background-color: var(--vrm-hover);
 }
 
+
+.event-logs-page .vrm-card-body--flush {
+  padding: 0;
+}
+
+.event-logs-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
 .event-devices-select {
   position: relative;
   width: 100%;
@@ -135,11 +149,7 @@
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
     display: block;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
   }
 
   .event-devices-menu {

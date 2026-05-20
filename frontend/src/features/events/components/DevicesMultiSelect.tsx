@@ -31,24 +31,34 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
       return;
     }
     const triggerRect = wrapper.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
+    const viewport = window.visualViewport;
+    const viewportHeight = viewport?.height ?? window.innerHeight;
+    const viewportWidth = viewport?.width ?? window.innerWidth;
+    const viewportOffsetTop = viewport?.offsetTop ?? 0;
+    const viewportOffsetLeft = viewport?.offsetLeft ?? 0;
     const maxMenuHeight = Math.min(320, Math.max(180, viewportHeight - 24));
     const menuHeight = Math.min(maxMenuHeight, menu.scrollHeight || maxMenuHeight);
-    const availableBelow = viewportHeight - triggerRect.bottom - 8;
-    const availableAbove = triggerRect.top - 8;
+    const availableBelow = viewportOffsetTop + viewportHeight - triggerRect.bottom - 8;
+    const availableAbove = triggerRect.top - viewportOffsetTop - 8;
     const shouldOpenUpward = availableBelow < Math.min(180, menuHeight) && availableAbove > availableBelow;
     const top = shouldOpenUpward
-      ? Math.max(8, triggerRect.top - Math.min(menuHeight, availableAbove))
-      : Math.max(8, triggerRect.bottom + 8);
+      ? Math.max(viewportOffsetTop + 8, triggerRect.top - Math.min(menuHeight, availableAbove))
+      : Math.max(viewportOffsetTop + 8, triggerRect.bottom + 8);
+    const maxWidth = Math.max(220, viewportWidth - 16);
+    const width = Math.min(Math.max(triggerRect.width, 220), maxWidth);
+    const left = Math.min(
+      Math.max(viewportOffsetLeft + 8, triggerRect.left),
+      viewportOffsetLeft + viewportWidth - width - 8,
+    );
 
     setMenuStyle({
       position: "fixed",
       top,
-      left: Math.max(8, triggerRect.left),
-      width: Math.max(triggerRect.width, 220),
+      left,
+      width,
       maxHeight: shouldOpenUpward
-        ? Math.max(120, triggerRect.top - 8)
-        : Math.max(120, viewportHeight - triggerRect.bottom - 8),
+        ? Math.max(120, triggerRect.top - viewportOffsetTop - 8)
+        : Math.max(120, viewportOffsetTop + viewportHeight - triggerRect.bottom - 8),
       zIndex: 1400,
     });
   };
@@ -75,12 +85,16 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
     updateMenuPosition();
     window.addEventListener("resize", updateMenuPosition);
     window.addEventListener("scroll", updateMenuPosition, true);
+    window.visualViewport?.addEventListener("resize", updateMenuPosition);
+    window.visualViewport?.addEventListener("scroll", updateMenuPosition);
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleEscape);
 
     return () => {
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
+      window.visualViewport?.removeEventListener("resize", updateMenuPosition);
+      window.visualViewport?.removeEventListener("scroll", updateMenuPosition);
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
