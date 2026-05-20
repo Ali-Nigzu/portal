@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   EVENT_DEVICE_OPTIONS,
@@ -14,12 +15,43 @@ interface DevicesMultiSelectProps {
 
 const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties | undefined>();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const generatedButtonId = useId();
   const buttonId = id ?? generatedButtonId;
   const menuId = useId();
   const selectedTokens = new Set(value);
   const summary = summarizeEventDeviceSelection(value);
+
+  const updateMenuPosition = () => {
+    const wrapper = wrapperRef.current;
+    const menu = menuRef.current;
+    if (!wrapper || !menu) {
+      return;
+    }
+    const triggerRect = wrapper.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const maxMenuHeight = Math.min(320, Math.max(180, viewportHeight - 24));
+    const menuHeight = Math.min(maxMenuHeight, menu.scrollHeight || maxMenuHeight);
+    const availableBelow = viewportHeight - triggerRect.bottom - 8;
+    const availableAbove = triggerRect.top - 8;
+    const shouldOpenUpward = availableBelow < Math.min(180, menuHeight) && availableAbove > availableBelow;
+    const top = shouldOpenUpward
+      ? Math.max(8, triggerRect.top - Math.min(menuHeight, availableAbove))
+      : Math.max(8, triggerRect.bottom + 8);
+
+    setMenuStyle({
+      position: "fixed",
+      top,
+      left: Math.max(8, triggerRect.left),
+      width: Math.max(triggerRect.width, 220),
+      maxHeight: shouldOpenUpward
+        ? Math.max(120, triggerRect.top - 8)
+        : Math.max(120, viewportHeight - triggerRect.bottom - 8),
+      zIndex: 1400,
+    });
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -27,14 +59,30 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
     }
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (wrapperRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         setIsOpen(false);
       }
     };
 
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
     document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
     return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
       document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen]);
 
@@ -46,51 +94,6 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
     onChange([...value, token]);
   };
 
-  const handleButtonKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      setIsOpen(true);
-      window.requestAnimationFrame(() => {
-        wrapperRef.current
-          ?.querySelector<HTMLButtonElement>(".event-devices-option")
-          ?.focus();
-      });
-    }
-  };
-
-  const handleOptionKeyDown = (
-    event: React.KeyboardEvent<HTMLButtonElement>,
-    token: EventDeviceToken,
-  ) => {
-    const options = Array.from(
-      wrapperRef.current?.querySelectorAll<HTMLButtonElement>(".event-devices-option") ?? [],
-    );
-    const currentIndex = options.indexOf(event.currentTarget);
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setIsOpen(false);
-      wrapperRef.current
-        ?.querySelector<HTMLButtonElement>(".event-devices-trigger")
-        ?.focus();
-      return;
-    }
-    if (event.key === " " || event.key === "Enter") {
-      event.preventDefault();
-      toggleToken(token);
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      options[(currentIndex + 1) % options.length]?.focus();
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      options[(currentIndex - 1 + options.length) % options.length]?.focus();
-    }
-  };
-
   return (
     <div className="event-devices-select" ref={wrapperRef}>
       <button
@@ -100,7 +103,6 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
         className="event-devices-trigger event-logs-filter-control"
         id={buttonId}
         onClick={() => setIsOpen((open) => !open)}
-        onKeyDown={handleButtonKeyDown}
         type="button"
       >
         <span className="event-devices-trigger__label">{summary}</span>
@@ -108,35 +110,39 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
           ▾
         </span>
       </button>
-      {isOpen ? (
-        <div
-          aria-labelledby={buttonId}
-          aria-multiselectable="true"
-          className="event-devices-menu"
-          id={menuId}
-          role="listbox"
-        >
-          {EVENT_DEVICE_OPTIONS.map((option) => {
-            const isSelected = selectedTokens.has(option.token);
-            return (
-              <button
-                aria-selected={isSelected}
-                className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
-                key={option.token}
-                onClick={() => toggleToken(option.token)}
-                onKeyDown={(event) => handleOptionKeyDown(event, option.token)}
-                role="option"
-                type="button"
-              >
-                <span aria-hidden="true" className="event-devices-option__check">
-                  {isSelected ? "✓" : ""}
-                </span>
-                <span className="event-devices-option__text">{option.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      {isOpen
+        ? createPortal(
+            <div
+              aria-labelledby={buttonId}
+              aria-multiselectable="true"
+              className="event-devices-menu"
+              id={menuId}
+              ref={menuRef}
+              role="listbox"
+              style={menuStyle}
+            >
+              {EVENT_DEVICE_OPTIONS.map((option) => {
+                const isSelected = selectedTokens.has(option.token);
+                return (
+                  <button
+                    aria-selected={isSelected}
+                    className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
+                    key={option.token}
+                    onClick={() => toggleToken(option.token)}
+                    role="option"
+                    type="button"
+                  >
+                    <span aria-hidden="true" className="event-devices-option__check">
+                      {isSelected ? "✓" : ""}
+                    </span>
+                    <span className="event-devices-option__text">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 };

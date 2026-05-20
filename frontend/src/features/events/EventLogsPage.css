@@ -116,12 +116,12 @@
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table {
-    border-collapse: separate;
+    border-collapse: collapse;
     border-spacing: 0;
     max-width: none;
-    min-width: 720px;
+    min-width: 712px;
+    width: 712px;
     table-layout: fixed;
-    width: max-content;
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
@@ -155,7 +155,7 @@
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(5) {
-    white-space: normal;
+    white-space: nowrap;
   }
 }
 
