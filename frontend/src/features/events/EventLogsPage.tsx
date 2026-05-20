@@ -506,7 +506,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
         <div className="vrm-card-body vrm-card-body--flush">
           {searchToken === 0 ? null : events.length > 0 ? (
             <div className="vrm-table-scroll event-logs-table-scroll">
-              <table className="vrm-table event-logs-results-table">
+              <table className="event-logs-results-table">
                 <colgroup>
                   <col className="event-logs-col-event" />
                   <col className="event-logs-col-track" />

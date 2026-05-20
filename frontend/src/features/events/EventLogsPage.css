@@ -1,3 +1,34 @@
+.event-logs-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--vrm-bg-secondary);
+}
+
+.event-logs-results-table th,
+.event-logs-results-table td {
+  padding: var(--vrm-spacing-3) var(--vrm-spacing-4);
+  text-align: left;
+  border-bottom: 1px solid var(--vrm-border);
+}
+
+.event-logs-results-table th {
+  background-color: var(--vrm-bg-tertiary);
+  color: var(--vrm-text-secondary);
+  font-weight: 600;
+  font-size: var(--vrm-typography-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.event-logs-results-table td {
+  color: var(--vrm-text-primary);
+  font-size: var(--vrm-typography-font-size-body);
+}
+
+.event-logs-results-table tr:hover {
+  background-color: var(--vrm-hover);
+}
+
 .event-devices-select {
   position: relative;
   width: 100%;
