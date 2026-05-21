@@ -37,6 +37,8 @@
 .event-logs-table-scroll {
   width: 100%;
   max-width: 100%;
+  min-width: 0;
+  display: block;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -88,15 +90,15 @@
   box-shadow: var(--vrm-elevation-popover);
   display: grid;
   gap: var(--vrm-spacing-1);
-  margin-top: var(--vrm-spacing-2);
+  margin: 0;
   max-height: min(320px, calc(100vh - 32px));
-  min-width: 100%;
+  min-width: 0;
   overflow-y: auto;
   padding: var(--vrm-spacing-2);
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 30;
+  position: fixed;
+  inset: auto;
+  z-index: 1400;
+  touch-action: pan-y;
 }
 
 .event-devices-option {
@@ -150,6 +152,15 @@
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
     max-width: 100%;
     display: block;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+  }
+
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-page .vrm-card-body--flush {
+    overflow: visible;
+    min-width: 0;
   }
 
   .event-devices-menu {
