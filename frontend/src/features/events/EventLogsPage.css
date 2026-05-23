@@ -38,6 +38,14 @@
   overflow-y: hidden;
 }
 
+.event-logs-page,
+.event-logs-page .vrm-card,
+.event-logs-filters-body,
+.event-logs-filter-grid {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .event-logs-table-scroll {
   width: 100%;
   max-width: 100%;
