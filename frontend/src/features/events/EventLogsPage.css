@@ -32,6 +32,10 @@
 
 .event-logs-page .vrm-card-body--flush {
   padding: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .event-logs-table-scroll {
@@ -159,8 +163,8 @@
   }
 
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-page .vrm-card-body--flush {
-    overflow: visible;
     min-width: 0;
+    max-width: 100%;
   }
 
   .event-devices-menu {
