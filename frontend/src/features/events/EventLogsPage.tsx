@@ -8,6 +8,7 @@ import DevicesMultiSelect from "./components/DevicesMultiSelect";
 import type { EventData } from "./utils/eventTypes";
 import "./EventLogsPage.css";
 import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
+import { evaluateEventLogsRuntimeProof, installEventLogsRuntimeProof } from "./runtimeProof";
 interface EventLogsPageProps {
   credentials: Credentials;
   searchEventsFn?: typeof searchEvents;
@@ -46,6 +47,25 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
     viewToken: viewTokenOverride,
     clientId: clientIdOverride,
   });
+  const [runtimeProof, setRuntimeProof] = React.useState<ReturnType<typeof evaluateEventLogsRuntimeProof> | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    installEventLogsRuntimeProof();
+  }, []);
+
+  React.useEffect(() => {
+    if (searchToken <= 0 || events.length <= 0) {
+      setRuntimeProof(null);
+      return;
+    }
+    const id = window.requestAnimationFrame(() => {
+      setRuntimeProof(evaluateEventLogsRuntimeProof());
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [events.length, searchToken]);
   const ageBuckets = [
     { value: "0", label: "0-4" },
     { value: "1", label: "5-13" },
@@ -494,6 +514,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
           <h3 className="vrm-card-title">
             Activity Events ({totalEvents.toLocaleString()} total)
           </h3>
+          {runtimeProof ? (
+            <div className="vrm-help-text" style={{ marginLeft: "auto", marginRight: 8 }}>
+              Runtime proof: {runtimeProof.status}
+              {runtimeProof.firstInvalidOwner ? ` • invalid owner: ${runtimeProof.firstInvalidOwner}` : ""}
+            </div>
+          ) : null}
           <div className="vrm-card-actions">
             <button
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"
