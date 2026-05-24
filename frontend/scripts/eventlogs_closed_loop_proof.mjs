@@ -82,10 +82,40 @@ async function waitForHttp(url, label, timeoutMs = 120000) {
   throw new Error(`${label} readiness failed @ ${url}`);
 }
 
+
+
+function resolveExistingPath(candidates) {
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
+function verifyRequiredDemoDbs(root) {
+  const required = ['dcombined_logs.db','dcombined_snapshots.db','duser0_logs.db','duser0_snapshots.db','duser1_logs.db','duser1_snapshots.db'];
+  const report = required.map((name) => {
+    const found = resolveExistingPath([
+      path.join(root, name),
+      path.join(root, 'backend', name),
+      path.join(root, 'backend', 'data', name),
+      path.join(root, name.replace(/^d/, '')),
+      path.join(root, 'backend', name.replace(/^d/, '')),
+      path.join(root, 'backend', 'data', name.replace(/^d/, '')),
+    ]);
+    return { name, found };
+  });
+  const missing = report.filter((x) => !x.found).map((x) => x.name);
+  if (missing.length) {
+    throw new Error(`missing required demo DB files: ${missing.join(', ')}`);
+  }
+  fs.writeFileSync(path.join(OUT_DIR, 'db-check.json'), JSON.stringify(report, null, 2));
+}
+
 async function startRuntime() {
   killLingeringRuntime();
   const root = path.resolve(process.cwd(), '..');
   await installRuntimeDependencies(root);
+  verifyRequiredDemoDbs(root);
 
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -118,7 +148,17 @@ async function trace(page, viewDir, tag) {
     pathname: window.location.pathname,
     localStorage: Object.fromEntries(Object.entries(window.localStorage)),
     sessionStorage: Object.fromEntries(Object.entries(window.sessionStorage)),
-    sidebarVisible: !!document.querySelector('.vrm-sidebar-shell, .vrm-sidebar'),
+    sidebarState: {
+      primaryVisible: !!document.querySelector('.vrm-sidebar, .vrm-sidebar-shell'),
+      secondaryVisible: !!document.querySelector('.vrm-secondary-sidebar, .vrm-secondary-list'),
+      collapsed: !!document.querySelector('.vrm-sidebar--collapsed, .vrm-layout--mobile'),
+      drawerOpen: !!document.querySelector('[aria-expanded="true"][aria-controls*="nav" i], .vrm-sidebar--open'),
+    },
+    navCandidates: [...document.querySelectorAll('a,button,[role="link"],[role="menuitem"],[title],[aria-label]')].map((n)=>{
+      const r=n.getBoundingClientRect();
+      const cs=getComputedStyle(n);
+      return {text:(n.textContent||'').trim(), ariaLabel:n.getAttribute('aria-label'), title:n.getAttribute('title'), href:n.getAttribute('href'), visible:r.width>0&&r.height>0&&cs.visibility!=='hidden'&&cs.display!=='none', boundingBox:{x:r.x,y:r.y,width:r.width,height:r.height}, clickable: !n.hasAttribute('disabled')};
+    }).slice(0,200),
     visibleNavItems: [...document.querySelectorAll('a,button')]
       .map((n) => (n.textContent || '').trim())
       .filter(Boolean)
@@ -155,13 +195,31 @@ async function executeViewport(playwright, name, contextOptions) {
     await trace(page, viewDir, '02_dashboard');
     phase.steps.push({ phase: 'dashboard_loaded', pass: true, url: page.url() });
 
-    const menuButton = page.getByRole('button', { name: /menu|navigation|sidebar/i });
-    if (await menuButton.count()) {
-      await menuButton.first().click().catch(() => {});
-    }
+    let navigated = false;
+    for (let attempt = 0; attempt < 8 && !navigated; attempt += 1) {
+      const menuButtons = page.locator('button[aria-label*="menu" i], button[aria-label*="nav" i], button[title*="menu" i], button[title*="nav" i], .vrm-mobile-menu-toggle, .vrm-sidebar-toggle');
+      if (await menuButtons.count()) await menuButtons.first().click().catch(() => {});
+      await page.waitForTimeout(250);
 
-    const eventLogsNav = page.getByRole('link', { name: /Event Logs/i });
-    await eventLogsNav.first().click();
+      const candidates = [
+        page.getByRole('link', { name: /Event Logs/i }),
+        page.getByRole('button', { name: /Event Logs/i }),
+        page.locator('a[href*="event-logs"], button[aria-label*="Event Logs" i], [title*="Event Logs" i]'),
+      ];
+      for (const c of candidates) {
+        if (await c.count()) {
+          await c.first().scrollIntoViewIfNeeded().catch(() => {});
+          await c.first().click({ force: true }).catch(() => {});
+          await page.waitForTimeout(500);
+          if (page.url().includes('event-logs')) { navigated = true; break; }
+        }
+      }
+      if (!navigated) {
+        await page.mouse.move(40, 250).catch(() => {});
+        await page.mouse.wheel(0, 600).catch(() => {});
+      }
+    }
+    if (!navigated) throw new Error('Event Logs not reachable after nav state correction attempts');
     await page.waitForURL(/event-logs/, { timeout: 30000 });
     await page.waitForSelector('.event-logs-page', { timeout: 30000 });
     await page.screenshot({ path: path.join(viewDir, '03_event_logs.png'), fullPage: true });
