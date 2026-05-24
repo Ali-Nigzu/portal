@@ -14,7 +14,7 @@ function killLingeringRuntime() {
 
 const OUT_DIR = '/tmp/eventlogs-proof';
 const FRONTEND_URL = 'http://127.0.0.1:3000';
-const BACKEND_URL = 'http://127.0.0.1:8080';
+const BACKEND_URL = 'http://127.0.0.1:8000';
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const FIXTURE = {
@@ -66,7 +66,7 @@ async function startRuntime() {
   killLingeringRuntime();
   const root = path.resolve(process.cwd(), '..');
   const backend = spawnProcess('backend', 'python3', ['-m', 'backend.fastapi_app'], root, {
-    PORT: '8080',
+    PORT: '8000',
     ANALYTICS_OFFLINE_MODE: '1',
   });
   const frontend = spawnProcess('frontend', 'npm', ['run', 'dev'], path.join(root, 'frontend'));

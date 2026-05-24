@@ -1,12 +1,42 @@
-import { chromium, devices } from 'playwright';
 import fs from 'fs';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
+import { createRequire } from 'module';
 
 const OUT_DIR = '/tmp/eventlogs-closed-loop-proof';
 const FRONTEND_URL = 'http://127.0.0.1:3000';
-const BACKEND_URL = 'http://127.0.0.1:8080';
+import net from 'net';
+const BACKEND_URL = 'http://127.0.0.1:8000';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+
+const require = createRequire(import.meta.url);
+
+function runChecked(cmd, cwd) {
+  execSync(cmd, { cwd, stdio: 'inherit', shell: '/bin/bash' });
+}
+
+function appendRequirementIfMissing(root, pkg) {
+  const reqPath = path.join(root, 'backend', 'requirements.txt');
+  const src = fs.readFileSync(reqPath, 'utf-8');
+  const has = src.split(/\r?\n/).some((line) => line.trim().split(/[<>=!]/)[0] === pkg);
+  if (!has) fs.appendFileSync(reqPath, `\n${pkg}\n`);
+}
+
+function parseMissingPythonPackage(logText) {
+  const m1 = logText.match(/No module named ['\"]([^'\"]+)['\"]/);
+  if (m1) return m1[1];
+  const m2 = logText.match(/requires \"([^\"]+)\" to be installed/);
+  if (m2) return m2[1];
+  return null;
+}
+
+async function installRuntimeDependencies(root) {
+  runChecked('npm i', path.join(root, 'frontend'));
+  runChecked('python3 -m pip install -r backend/requirements.txt', root);
+  runChecked('npx playwright install-deps chromium || true', path.join(root, 'frontend'));
+  runChecked('npx playwright install chromium', path.join(root, 'frontend'));
+}
 
 const FIXTURE = {
   events: Array.from({ length: 16 }).map((_, i) => ({
@@ -36,6 +66,22 @@ function spawnProcess(name, cmd, args, cwd, env = {}) {
   return child;
 }
 
+
+async function waitForTcp(host, port, label, timeoutMs = 120000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const ok = await new Promise((resolve) => {
+      const sock = net.createConnection({ host, port });
+      sock.once('connect', () => { sock.destroy(); resolve(true); });
+      sock.once('error', () => resolve(false));
+      sock.setTimeout(1200, () => { sock.destroy(); resolve(false); });
+    });
+    if (ok) return;
+    await sleep(300);
+  }
+  throw new Error(`${label} tcp readiness failed @ ${host}:${port}`);
+}
+
 async function waitForHttp(url, label, timeoutMs = 120000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -51,11 +97,33 @@ async function waitForHttp(url, label, timeoutMs = 120000) {
 async function startRuntime() {
   killLingeringRuntime();
   const root = path.resolve(process.cwd(), '..');
-  const backend = spawnProcess('backend', 'python3', ['-m', 'backend.fastapi_app'], root, { PORT: '8080', ANALYTICS_OFFLINE_MODE: '1' });
-  const frontend = spawnProcess('frontend', 'npm', ['run', 'dev'], path.join(root, 'frontend'));
-  await waitForHttp(`${BACKEND_URL}/docs`, 'backend');
-  await waitForHttp(`${FRONTEND_URL}/`, 'frontend');
-  return { stop: () => { backend.kill('SIGTERM'); frontend.kill('SIGTERM'); } };
+  await installRuntimeDependencies(root);
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const backendLogs = [];
+    const backend = spawnProcess('backend', 'python3', ['-m', 'backend.fastapi_app'], root, { PORT: '8000', ANALYTICS_OFFLINE_MODE: '1' });
+    backend.stderr.on('data', (d) => backendLogs.push(String(d)));
+    backend.stdout.on('data', (d) => backendLogs.push(String(d)));
+    const frontend = spawnProcess('frontend', 'npm', ['run', 'dev'], path.join(root, 'frontend'));
+    try {
+      await waitForTcp('127.0.0.1', 8000, 'backend', 60000);
+      await waitForHttp(`${FRONTEND_URL}/`, 'frontend', 60000);
+      return { stop: () => { backend.kill('SIGTERM'); frontend.kill('SIGTERM'); } };
+    } catch (error) {
+      lastError = error;
+      backend.kill('SIGTERM');
+      frontend.kill('SIGTERM');
+      const miss = parseMissingPythonPackage(backendLogs.join('\\n'));
+      if (miss) {
+        appendRequirementIfMissing(root, miss);
+        runChecked(`python3 -m pip install ${miss}`, root);
+        continue;
+      }
+      if (attempt < 3) continue;
+    }
+  }
+  throw lastError ?? new Error('runtime bootstrap failed');
 }
 
 async function collectGateState(page) {
@@ -75,7 +143,8 @@ async function collectGateState(page) {
   });
 }
 
-async function executeViewport(name, contextOptions) {
+async function executeViewport(playwright, name, contextOptions) {
+  const { chromium } = playwright;
   const viewDir = path.join(OUT_DIR, name);
   fs.mkdirSync(viewDir, { recursive: true });
 
@@ -135,9 +204,11 @@ async function main() {
   const runtime = await startRuntime();
   const summary = { startedAt: new Date().toISOString(), outDir: OUT_DIR, views: [] };
   try {
-    summary.views.push(await executeViewport('portrait', devices['iPhone 12']));
-    summary.views.push(await executeViewport('landscape', devices['iPhone 12 landscape']));
-    summary.views.push(await executeViewport('desktop', { viewport: { width: 1440, height: 900 } }));
+    const playwright = await import('playwright');
+    const { devices } = playwright;
+    summary.views.push(await executeViewport(playwright, 'portrait', devices['iPhone 12']));
+    summary.views.push(await executeViewport(playwright, 'landscape', devices['iPhone 12 landscape']));
+    summary.views.push(await executeViewport(playwright, 'desktop', { viewport: { width: 1440, height: 900 } }));
     fs.writeFileSync(path.join(OUT_DIR, 'summary.json'), JSON.stringify(summary, null, 2));
 
     const failed = summary.views.some((v) => v.steps.some((s) => s.pass === false));
