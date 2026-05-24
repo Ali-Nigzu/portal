@@ -1,32 +1,21 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
-import { createRequire } from 'module';
+import net from 'net';
 
 const OUT_DIR = '/tmp/eventlogs-closed-loop-proof';
 const FRONTEND_URL = 'http://127.0.0.1:3000';
-import net from 'net';
 const BACKEND_URL = 'http://127.0.0.1:8000';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-
-const require = createRequire(import.meta.url);
 
 function runChecked(cmd, cwd) {
   execSync(cmd, { cwd, stdio: 'inherit', shell: '/bin/bash' });
 }
 
-function appendRequirementIfMissing(root, pkg) {
-  const reqPath = path.join(root, 'backend', 'requirements.txt');
-  const src = fs.readFileSync(reqPath, 'utf-8');
-  const has = src.split(/\r?\n/).some((line) => line.trim().split(/[<>=!]/)[0] === pkg);
-  if (!has) fs.appendFileSync(reqPath, `\n${pkg}\n`);
-}
-
 function parseMissingPythonPackage(logText) {
-  const m1 = logText.match(/No module named ['\"]([^'\"]+)['\"]/);
+  const m1 = logText.match(/No module named ['"]([^'"]+)['"]/);
   if (m1) return m1[1];
-  const m2 = logText.match(/requires \"([^\"]+)\" to be installed/);
+  const m2 = logText.match(/requires "([^"]+)" to be installed/);
   if (m2) return m2[1];
   return null;
 }
@@ -65,7 +54,6 @@ function spawnProcess(name, cmd, args, cwd, env = {}) {
   child.stderr.on('data', (d) => process.stderr.write(`[${name}] ${d}`));
   return child;
 }
-
 
 async function waitForTcp(host, port, label, timeoutMs = 120000) {
   const start = Date.now();
@@ -114,33 +102,29 @@ async function startRuntime() {
       lastError = error;
       backend.kill('SIGTERM');
       frontend.kill('SIGTERM');
-      const miss = parseMissingPythonPackage(backendLogs.join('\\n'));
+      const miss = parseMissingPythonPackage(backendLogs.join('\n'));
       if (miss) {
-        appendRequirementIfMissing(root, miss);
         runChecked(`python3 -m pip install ${miss}`, root);
         continue;
       }
-      if (attempt < 3) continue;
     }
   }
   throw lastError ?? new Error('runtime bootstrap failed');
 }
 
-async function collectGateState(page) {
-  return page.evaluate(() => {
-    const rows = document.querySelectorAll('.event-logs-results-table tbody tr').length;
-    const proofApi = window.__EVENTLOGS_RUNTIME_PROOF__;
-    const pageRoot = document.querySelector('.event-logs-page');
-    return {
-      route: window.location.pathname,
-      hasLayout: !!document.querySelector('.vrm-layout'),
-      hasEventLogsRoot: !!pageRoot,
-      hasSearchButton: !!document.querySelector('button.vrm-btn-primary'),
-      rows,
-      searchToken: Number(pageRoot?.getAttribute('data-search-token') ?? 0),
-      hasProofApi: !!proofApi,
-    };
-  });
+async function trace(page, viewDir, tag) {
+  const snap = await page.evaluate(() => ({
+    url: window.location.href,
+    pathname: window.location.pathname,
+    localStorage: Object.fromEntries(Object.entries(window.localStorage)),
+    sessionStorage: Object.fromEntries(Object.entries(window.sessionStorage)),
+    sidebarVisible: !!document.querySelector('.vrm-sidebar-shell, .vrm-sidebar'),
+    visibleNavItems: [...document.querySelectorAll('a,button')]
+      .map((n) => (n.textContent || '').trim())
+      .filter(Boolean)
+      .slice(0, 80),
+  }));
+  fs.writeFileSync(path.join(viewDir, `${tag}.trace.json`), JSON.stringify(snap, null, 2));
 }
 
 async function executeViewport(playwright, name, contextOptions) {
@@ -150,7 +134,6 @@ async function executeViewport(playwright, name, contextOptions) {
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext(contextOptions);
-  await context.addInitScript(() => window.sessionStorage.setItem('camOS_demo_session', 'true'));
   await context.route('**/api/events/search*', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FIXTURE) });
   });
@@ -159,41 +142,65 @@ async function executeViewport(playwright, name, contextOptions) {
   const phase = { name, steps: [] };
 
   try {
-    await page.goto(`${FRONTEND_URL}/demo/site-b/dashboard`, { waitUntil: 'networkidle' });
+    await page.goto(`${FRONTEND_URL}/`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: path.join(viewDir, '01_landing.png'), fullPage: true });
+    await trace(page, viewDir, '01_landing');
+
+    const viewDemo = page.getByRole('link', { name: /View Demo/i }).or(page.getByRole('button', { name: /View Demo/i }));
+    await viewDemo.first().click();
+    await page.waitForURL(/\/demo\/.+\/dashboard/, { timeout: 40000 });
     await page.waitForSelector('.vrm-layout', { timeout: 30000 });
-    phase.steps.push({ phase: 'dashboard_loaded', pass: true });
+    await page.screenshot({ path: path.join(viewDir, '02_dashboard.png'), fullPage: true });
+    await trace(page, viewDir, '02_dashboard');
+    phase.steps.push({ phase: 'dashboard_loaded', pass: true, url: page.url() });
 
-    const nav = page.getByRole('link', { name: /Event Logs/i });
-    if (await nav.count()) await nav.first().click();
-    await page.waitForURL('**/demo/site-b/event-logs', { timeout: 30000 });
+    const menuButton = page.getByRole('button', { name: /menu|navigation|sidebar/i });
+    if (await menuButton.count()) {
+      await menuButton.first().click().catch(() => {});
+    }
+
+    const eventLogsNav = page.getByRole('link', { name: /Event Logs/i });
+    await eventLogsNav.first().click();
+    await page.waitForURL(/event-logs/, { timeout: 30000 });
     await page.waitForSelector('.event-logs-page', { timeout: 30000 });
-    phase.steps.push({ phase: 'route_event_logs', pass: true, route: page.url() });
+    await page.screenshot({ path: path.join(viewDir, '03_event_logs.png'), fullPage: true });
+    await trace(page, viewDir, '03_event_logs');
 
-    await page.screenshot({ path: path.join(viewDir, 'PRE_SEARCH.png'), fullPage: true });
-
-    const search = page.locator('button:has-text("Search")').first();
+    const search = page.getByRole('button', { name: /Search/i }).first();
     await search.click();
     await page.waitForFunction(() => document.querySelectorAll('.event-logs-results-table tbody tr').length > 0, { timeout: 20000 });
-    await page.screenshot({ path: path.join(viewDir, 'POST_SEARCH_MOUNTED.png'), fullPage: true });
+    await page.screenshot({ path: path.join(viewDir, '04_post_search_mounted.png'), fullPage: true });
 
-    const gate = await collectGateState(page);
-    const mounted = gate.route === '/demo/site-b/event-logs' && gate.hasProofApi && gate.searchToken > 0 && gate.rows > 0;
+    const gate = await page.evaluate(() => {
+      const rows = document.querySelectorAll('.event-logs-results-table tbody tr').length;
+      const pageRoot = document.querySelector('.event-logs-page');
+      return {
+        route: window.location.pathname,
+        hasPage: !!pageRoot,
+        hasSearch: !!document.querySelector('button.vrm-btn-primary'),
+        rows,
+        searchToken: Number(pageRoot?.getAttribute('data-search-token') ?? 0),
+        hasProofApi: !!window.__EVENTLOGS_RUNTIME_PROOF__,
+        hasMountedResults: !!document.querySelector('.event-logs-results-table tbody'),
+      };
+    });
+
+    const mounted = gate.route.includes('event-logs') && gate.hasPage && gate.hasSearch && gate.searchToken > 0 && gate.rows > 0 && gate.hasProofApi && gate.hasMountedResults;
     phase.steps.push({ phase: 'mounted_gate', pass: mounted, gate });
     if (!mounted) throw new Error(`mounted gate failed ${JSON.stringify(gate)}`);
 
     const suite = await page.evaluate(() => window.__EVENTLOGS_RUNTIME_PROOF__.run(Number(document.querySelector('.event-logs-page')?.getAttribute('data-search-token') ?? 1)));
-    await page.evaluate(() => {
-      const el = document.querySelector('.event-logs-table-scroll');
-      if (el) el.scrollLeft = el.scrollWidth;
-    });
-    await page.screenshot({ path: path.join(viewDir, 'POST_HSCROLL_RIGHT.png'), fullPage: true });
-
     fs.writeFileSync(path.join(viewDir, 'runtime-suite.json'), JSON.stringify(suite, null, 2));
+    await trace(page, viewDir, '04_post_search');
     phase.steps.push({ phase: 'suite_executed', pass: true, suiteStatus: suite.status, firstInvalidOwner: suite.firstInvalidOwner, failureClass: suite.failureClass });
+
     await browser.close();
     return phase;
   } catch (err) {
-    phase.steps.push({ phase: 'failure', pass: false, error: String(err) });
+    phase.steps.push({ phase: 'failure', pass: false, error: String(err), url: page.url() });
+    await page.screenshot({ path: path.join(viewDir, 'failure.png'), fullPage: true }).catch(() => {});
+    await trace(page, viewDir, 'failure').catch(() => {});
     await browser.close();
     return phase;
   }
@@ -210,9 +217,7 @@ async function main() {
     summary.views.push(await executeViewport(playwright, 'landscape', devices['iPhone 12 landscape']));
     summary.views.push(await executeViewport(playwright, 'desktop', { viewport: { width: 1440, height: 900 } }));
     fs.writeFileSync(path.join(OUT_DIR, 'summary.json'), JSON.stringify(summary, null, 2));
-
-    const failed = summary.views.some((v) => v.steps.some((s) => s.pass === false));
-    if (failed) process.exitCode = 2;
+    if (summary.views.some((v) => v.steps.some((s) => s.pass === false))) process.exitCode = 2;
   } finally {
     runtime.stop();
   }
