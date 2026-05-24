@@ -332,7 +332,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
     );
   }
   return (
-    <div className="event-logs-page">
+    <div className="event-logs-page" data-search-token={searchToken}>
       {/* Page Header */}
       <div className="vrm-page-header">
         <h1 className="vrm-page-title">Event Logs</h1>
