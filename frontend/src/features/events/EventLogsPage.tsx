@@ -8,7 +8,7 @@ import DevicesMultiSelect from "./components/DevicesMultiSelect";
 import type { EventData } from "./utils/eventTypes";
 import "./EventLogsPage.css";
 import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
-import { evaluateEventLogsRuntimeProof, installEventLogsRuntimeProof } from "./runtimeProof";
+import { installEventLogsRuntimeProof, runEventLogsRuntimeProofSuite, type RuntimeProofSuite } from "./runtimeProof";
 interface EventLogsPageProps {
   credentials: Credentials;
   searchEventsFn?: typeof searchEvents;
@@ -47,7 +47,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
     viewToken: viewTokenOverride,
     clientId: clientIdOverride,
   });
-  const [runtimeProof, setRuntimeProof] = React.useState<ReturnType<typeof evaluateEventLogsRuntimeProof> | null>(null);
+  const [runtimeProof, setRuntimeProof] = React.useState<RuntimeProofSuite | null>(null);
 
   React.useEffect(() => {
     if (typeof window === "undefined") {
@@ -62,7 +62,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
       return;
     }
     const id = window.requestAnimationFrame(() => {
-      setRuntimeProof(evaluateEventLogsRuntimeProof());
+      setRuntimeProof(runEventLogsRuntimeProofSuite(searchToken));
     });
     return () => window.cancelAnimationFrame(id);
   }, [events.length, searchToken]);
