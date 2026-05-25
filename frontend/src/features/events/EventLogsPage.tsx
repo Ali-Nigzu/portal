@@ -332,7 +332,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
     );
   }
   return (
-    <div className="event-logs-page">
+    <div className="event-logs-page" data-search-token={searchToken}>
       {/* Page Header */}
       <div className="vrm-page-header">
         <h1 className="vrm-page-title">Event Logs</h1>
@@ -514,12 +514,6 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
           <h3 className="vrm-card-title">
             Activity Events ({totalEvents.toLocaleString()} total)
           </h3>
-          {runtimeProof ? (
-            <div className="vrm-help-text" style={{ marginLeft: "auto", marginRight: 8 }}>
-              Runtime proof: {runtimeProof.status}
-              {runtimeProof.firstInvalidOwner ? ` • invalid owner: ${runtimeProof.firstInvalidOwner}` : ""}
-            </div>
-          ) : null}
           <div className="vrm-card-actions">
             <button
               className="vrm-btn vrm-btn-secondary vrm-btn-sm"

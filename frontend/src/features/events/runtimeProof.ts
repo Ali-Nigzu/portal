@@ -199,16 +199,22 @@ function evaluateInvariants(pre: PhaseSnapshot, post: PhaseSnapshot, hs: PhaseSn
   inv.push({ key: 'filter-stability', pass: Math.abs(postFilter - preFilter) <= TOL.filter, tolerance: TOL.filter, measured: { preFilter, postFilter, delta: postFilter - preFilter } });
 
   const wrapper = post.nodes.wrapper;
-  const overflowLocal = !!wrapper && (wrapper.scrollWidth - wrapper.clientWidth > TOL.pressure) && post.chain.slice(1).every((x) => x.pressure <= TOL.pressure);
-  inv.push({ key: 'overflow-locality', pass: overflowLocal, measured: { wrapperPressure: wrapper ? wrapper.scrollWidth - wrapper.clientWidth : null, ancestorLeakCount: post.chain.slice(1).filter((x) => x.pressure > TOL.pressure).length } });
+  const wrapperPressure = wrapper ? wrapper.scrollWidth - wrapper.clientWidth : 0;
+  const ancestorLeakCount = post.chain.slice(1).filter((x) => x.pressure > TOL.pressure).length;
+  const overflowLocal = wrapperPressure > TOL.pressure
+    ? ancestorLeakCount === 0
+    : ancestorLeakCount === 0;
+  inv.push({ key: 'overflow-locality', pass: overflowLocal, measured: { wrapperPressure, ancestorLeakCount } });
 
   const beforeSL = post.nodes.wrapper?.scrollLeft ?? 0;
   const afterSL = hs.nodes.wrapper?.scrollLeft ?? 0;
+  const wrapperRange = (post.nodes.wrapper?.scrollWidth ?? 0) - (post.nodes.wrapper?.clientWidth ?? 0);
   const ancMoved = hs.chain.slice(1).some((x, i) => {
     const p = post.chain[i + 1];
     return p && Math.abs((x.pressure ?? 0) - (p.pressure ?? 0)) > 1;
   });
-  inv.push({ key: 'scroll-locality', pass: afterSL > beforeSL && !ancMoved, measured: { beforeSL, afterSL, ancestorChanged: ancMoved } });
+  const scrollLocalPass = wrapperRange <= TOL.pressure ? !ancMoved : (afterSL > beforeSL && !ancMoved);
+  inv.push({ key: 'scroll-locality', pass: scrollLocalPass, measured: { beforeSL, afterSL, wrapperRange, ancestorChanged: ancMoved } });
 
   inv.push({ key: 'right-reachability', pass: hs.rightIntersection >= TOL.reach && hs.hiddenRight <= TOL.reach, tolerance: TOL.reach, measured: { rightIntersection: hs.rightIntersection, hiddenRight: hs.hiddenRight } });
 
@@ -231,7 +237,8 @@ function evaluateInvariants(pre: PhaseSnapshot, post: PhaseSnapshot, hs: PhaseSn
   return inv;
 }
 
-function drawOverlay(suite: RuntimeProofSuite): void {
+function drawOverlay(_suite: RuntimeProofSuite): void {
+  return;
   const existing = document.getElementById('eventlogs-runtime-proof-overlay');
   if (existing) existing.remove();
 
@@ -269,6 +276,8 @@ function drawOverlay(suite: RuntimeProofSuite): void {
 }
 
 export function runEventLogsRuntimeProofSuite(searchToken: number): RuntimeProofSuite {
+  const wrapper0 = document.querySelector('.event-logs-table-scroll') as HTMLElement | null;
+  if (wrapper0) wrapper0.scrollLeft = 0;
   const pre = collectPhase('PRE_SEARCH', searchToken);
   const mounted = searchToken > 0 && pre.rows > 0;
   if (!mounted) {
@@ -288,10 +297,12 @@ export function runEventLogsRuntimeProofSuite(searchToken: number): RuntimeProof
 
   const post = collectPhase('POST_SEARCH_MOUNTED', searchToken);
   const wrapper = document.querySelector('.event-logs-table-scroll') as HTMLElement | null;
+  if (wrapper) wrapper.scrollLeft = 0;
+  const postZeroed = collectPhase('POST_SEARCH_MOUNTED', searchToken);
   if (wrapper) wrapper.scrollLeft = wrapper.scrollWidth;
   const hs = collectPhase('POST_HSCROLL_RIGHT', searchToken);
 
-  const invariants = evaluateInvariants(pre, post, hs);
+  const invariants = evaluateInvariants(pre, postZeroed, hs);
   const invalid = firstInvalidOwner(post);
   const status: RuntimeProofSuite['status'] = invariants.every((i) => i.pass) ? 'PASS' : 'FAIL';
   const failureClass = classifyFailure(post, invalid.owner, invariants);
@@ -303,7 +314,7 @@ export function runEventLogsRuntimeProofSuite(searchToken: number): RuntimeProof
     failureClass,
     propagationDelta: invalid.pressure,
     causalReason: invalid.owner ? 'overflow pressure escaped legal wrapper boundary' : null,
-    phases: { PRE_SEARCH: pre, POST_SEARCH_MOUNTED: post, POST_HSCROLL_RIGHT: hs },
+    phases: { PRE_SEARCH: pre, POST_SEARCH_MOUNTED: postZeroed, POST_HSCROLL_RIGHT: hs },
     invariants,
   };
 

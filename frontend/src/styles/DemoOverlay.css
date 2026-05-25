@@ -45,6 +45,7 @@
 .demo-overlay__content {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
   border-radius: 20px;
   display: flex;
@@ -53,6 +54,7 @@
 .demo-overlay__content > * {
   flex: 1;
   min-height: 0;
+  min-width: 0;
 }
 
 .demo-overlay--open {

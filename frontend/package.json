@@ -20,7 +20,8 @@
     "ci": "npm run build",
     "verify:topology": "node scripts/topology-check.mjs",
     "test:landing-visual": "node scripts/landing-visual-regression.mjs",
-    "verify:phone-countries": "node scripts/verify-phone-country-data.mjs"
+    "verify:phone-countries": "node scripts/verify-phone-country-data.mjs",
+    "proof:eventlogs:closed-loop": "node scripts/eventlogs_closed_loop_proof.mjs"
   },
   "browserslist": {
     "production": [
