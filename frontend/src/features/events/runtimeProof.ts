@@ -237,7 +237,8 @@ function evaluateInvariants(pre: PhaseSnapshot, post: PhaseSnapshot, hs: PhaseSn
   return inv;
 }
 
-function drawOverlay(suite: RuntimeProofSuite): void {
+function drawOverlay(_suite: RuntimeProofSuite): void {
+  return;
   const existing = document.getElementById('eventlogs-runtime-proof-overlay');
   if (existing) existing.remove();
 
