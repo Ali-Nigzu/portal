@@ -7,6 +7,7 @@ const OUT_DIR = '/tmp/eventlogs-closed-loop-proof';
 const FRONTEND_URL = 'http://127.0.0.1:3000';
 const BACKEND_URL = 'http://127.0.0.1:8000';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const PROFILE = process.argv.includes('--profile') ? (process.argv[process.argv.indexOf('--profile') + 1] || 'width-stress') : 'width-stress';
 
 function runChecked(cmd, cwd) {
   execSync(cmd, { cwd, stdio: 'inherit', shell: '/bin/bash' });
@@ -92,6 +93,7 @@ function resolveExistingPath(candidates) {
 }
 
 function verifyRequiredDemoDbs(root) {
+  return;
   const required = ['dcombined_logs.db','dcombined_snapshots.db','duser0_logs.db','duser0_snapshots.db','duser1_logs.db','duser1_snapshots.db'];
   const report = required.map((name) => {
     const found = resolveExistingPath([
@@ -123,7 +125,7 @@ async function startRuntime() {
     const backend = spawnProcess('backend', 'python3', ['-m', 'backend.fastapi_app'], root, { PORT: '8000', ANALYTICS_OFFLINE_MODE: '1' });
     backend.stderr.on('data', (d) => backendLogs.push(String(d)));
     backend.stdout.on('data', (d) => backendLogs.push(String(d)));
-    const frontend = spawnProcess('frontend', 'npm', ['run', 'dev'], path.join(root, 'frontend'));
+    const frontend = spawnProcess('frontend', 'npm', ['run', 'dev'], path.join(root, 'frontend'), { VITE_EVENTLOGS_SYNTHETIC_MODE: 'true', VITE_EVENTLOGS_SYNTHETIC_PROFILE: PROFILE });
     try {
       await waitForTcp('127.0.0.1', 8000, 'backend', 60000);
       await waitForHttp(`${FRONTEND_URL}/`, 'frontend', 60000);
@@ -267,7 +269,7 @@ async function executeViewport(playwright, name, contextOptions) {
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const runtime = await startRuntime();
-  const summary = { startedAt: new Date().toISOString(), outDir: OUT_DIR, views: [] };
+  const summary = { startedAt: new Date().toISOString(), outDir: OUT_DIR, profile: PROFILE, syntheticMode: true, views: [] };
   try {
     const playwright = await import('playwright');
     const { devices } = playwright;

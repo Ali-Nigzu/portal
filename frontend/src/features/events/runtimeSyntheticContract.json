@@ -1,0 +1,12 @@
+{
+  "eventRecordContract": {
+    "required": ["index", "track_number", "event", "timestamp"],
+    "optional": ["site_id", "cam_id", "camera_id", "track_id", "sex", "age_estimate", "age_bucket", "race", "hour", "day_of_week", "date"],
+    "nullable": ["site_id", "cam_id", "camera_id", "track_id", "sex", "age_estimate", "age_bucket", "race"],
+    "fallbackBranches": {
+      "track": ["track_id", "track_number"],
+      "camera": ["cam_id", "camera_id"],
+      "age": ["age_bucket", "age_estimate"]
+    }
+  }
+}
