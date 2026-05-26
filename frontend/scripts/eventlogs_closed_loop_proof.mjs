@@ -255,6 +255,136 @@ async function executeViewport(playwright, name, contextOptions) {
     phase.steps.push({ phase: 'mounted_gate', pass: mounted, gate });
     if (!mounted) throw new Error(`mounted gate failed ${JSON.stringify(gate)}`);
 
+    const runtimeInteraction = await page.evaluate(async () => {
+      const now = () => new Date().toISOString();
+      const snapshots = [];
+      const record = (tag) => {
+        const scroller = document.querySelector('.event-logs-table-scroll');
+        const table = document.querySelector('.event-logs-results-table');
+        const firstHeader = document.querySelector('.event-logs-results-table th');
+        const firstCell = document.querySelector('.event-logs-results-table tbody td');
+        const layoutShell = document.querySelector('.vrm-layout');
+        snapshots.push({
+          tag,
+          ts: now(),
+          wrapperScrollLeft: scroller?.scrollLeft ?? null,
+          wrapperClientWidth: scroller?.clientWidth ?? null,
+          wrapperScrollWidth: scroller?.scrollWidth ?? null,
+          bodyScrollLeft: document.body.scrollLeft,
+          docScrollLeft: document.documentElement.scrollLeft,
+          firstHeaderLeft: firstHeader?.getBoundingClientRect().left ?? null,
+          firstCellLeft: firstCell?.getBoundingClientRect().left ?? null,
+          tableWidth: table?.getBoundingClientRect().width ?? null,
+          shellTransform: layoutShell ? getComputedStyle(layoutShell).transform : null,
+          activeEl: document.activeElement?.tagName ?? null,
+        });
+      };
+
+      record('POST_ROWS_MOUNT');
+      await new Promise((r) => requestAnimationFrame(() => r()));
+      record('POST_LAYOUT_EFFECT');
+      await new Promise((r) => setTimeout(r, 50));
+      record('POST_PAINT');
+      await new Promise((r) => setTimeout(r, 200));
+      record('POST_INTERACTION_IDLE');
+
+      const beforeX = window.scrollX;
+      const beforeY = window.scrollY;
+      window.scrollTo({ top: Math.min(500, document.body.scrollHeight), left: window.scrollX, behavior: 'instant' });
+      const afterVerticalY = window.scrollY;
+
+      const scroller = document.querySelector('.event-logs-table-scroll');
+      const beforeHorizontal = scroller?.scrollLeft ?? null;
+      if (scroller) scroller.scrollLeft = Math.max(0, (scroller.scrollWidth - scroller.clientWidth) * 0.65);
+      const afterHorizontal = scroller?.scrollLeft ?? null;
+      if (scroller) scroller.scrollLeft = 0;
+      const afterResetHorizontal = scroller?.scrollLeft ?? null;
+
+      const trigger = document.querySelector('.event-devices-trigger');
+      const clickTrace = [];
+      const onClickCapture = (event) => {
+        const path = event.composedPath().slice(0, 6).map((n) => (n?.className || n?.nodeName || '').toString());
+        clickTrace.push({ type: event.type, target: event.target?.className || event.target?.nodeName, path });
+      };
+      document.addEventListener('pointerdown', onClickCapture, true);
+      document.addEventListener('click', onClickCapture, true);
+
+      trigger?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 50));
+      const menuAfterOpen = document.querySelector('.event-devices-menu');
+      const option = menuAfterOpen?.querySelector('.event-devices-option');
+      option?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      option?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 50));
+      const menuAfterSelect = document.querySelector('.event-devices-menu');
+      const summaryLabel = document.querySelector('.event-devices-trigger__label')?.textContent || '';
+      document.removeEventListener('pointerdown', onClickCapture, true);
+      document.removeEventListener('click', onClickCapture, true);
+
+      const menuRect = menuAfterOpen?.getBoundingClientRect();
+      const topStack = menuRect
+        ? document.elementsFromPoint(menuRect.left + 12, menuRect.top + 12).slice(0, 6).map((el) => ({
+            tag: el.tagName,
+            cls: el.className,
+            z: getComputedStyle(el).zIndex,
+          }))
+        : [];
+      const firstRowText = (document.querySelector('.event-logs-results-table tbody tr')?.textContent || '').toLowerCase();
+
+      return {
+        snapshots,
+        vertical: { beforeX, beforeY, afterVerticalY },
+        horizontal: { beforeHorizontal, afterHorizontal, afterResetHorizontal },
+        dropdown: {
+          triggerExists: !!trigger,
+          menuOpened: !!menuAfterOpen,
+          menuStillPresentAfterSelect: !!menuAfterSelect,
+          optionSelectedClass: !!option?.className.includes('event-devices-option--selected'),
+          summaryLabel,
+          menuStyles: menuAfterOpen
+            ? {
+                zIndex: getComputedStyle(menuAfterOpen).zIndex,
+                pointerEvents: getComputedStyle(menuAfterOpen).pointerEvents,
+                visibility: getComputedStyle(menuAfterOpen).visibility,
+                display: getComputedStyle(menuAfterOpen).display,
+              }
+            : null,
+          topStack,
+          clickTrace,
+        },
+        syntheticProfileDetected: firstRowText.includes('synthetic_profile_width_stress'),
+      };
+    });
+    fs.writeFileSync(path.join(viewDir, 'interaction.json'), JSON.stringify(runtimeInteraction, null, 2));
+    await page.screenshot({ path: path.join(viewDir, '05_interaction.png'), fullPage: true });
+
+    const snapIdle = runtimeInteraction.snapshots.find((s) => s.tag === 'POST_INTERACTION_IDLE') ?? runtimeInteraction.snapshots[0];
+    const interactionPass = Boolean(
+      runtimeInteraction.syntheticProfileDetected &&
+      snapIdle &&
+      snapIdle.wrapperScrollLeft === 0 &&
+      typeof snapIdle.firstHeaderLeft === 'number' &&
+      typeof snapIdle.firstCellLeft === 'number' &&
+      snapIdle.firstHeaderLeft <= snapIdle.firstCellLeft + 1 &&
+      runtimeInteraction.horizontal.beforeHorizontal === 0 &&
+      typeof runtimeInteraction.horizontal.afterHorizontal === 'number' &&
+      runtimeInteraction.horizontal.afterHorizontal >= 0 &&
+      runtimeInteraction.horizontal.afterResetHorizontal === 0 &&
+      runtimeInteraction.vertical.afterVerticalY >= runtimeInteraction.vertical.beforeY &&
+      runtimeInteraction.dropdown.triggerExists &&
+      runtimeInteraction.dropdown.menuOpened &&
+      runtimeInteraction.dropdown.menuStyles?.display !== 'none' &&
+      runtimeInteraction.dropdown.menuStyles?.visibility !== 'hidden' &&
+      runtimeInteraction.dropdown.menuStyles?.pointerEvents !== 'none' &&
+      runtimeInteraction.dropdown.optionSelectedClass &&
+      runtimeInteraction.dropdown.summaryLabel.toLowerCase() !== 'all devices'
+    );
+    phase.steps.push({ phase: 'interaction_verification', pass: interactionPass, interaction: runtimeInteraction });
+    if (!interactionPass) {
+      throw new Error(`interaction verification failed ${JSON.stringify(runtimeInteraction)}`);
+    }
+
     const suite = await page.evaluate(() => window.__EVENTLOGS_RUNTIME_PROOF__.run(Number(document.querySelector('.event-logs-page')?.getAttribute('data-search-token') ?? 1)));
     fs.writeFileSync(path.join(viewDir, 'runtime-suite.json'), JSON.stringify(suite, null, 2));
     await trace(page, viewDir, '04_post_search');
