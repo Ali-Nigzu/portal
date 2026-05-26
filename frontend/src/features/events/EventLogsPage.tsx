@@ -57,6 +57,17 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
   }, []);
 
   React.useEffect(() => {
+    if (typeof window === "undefined" || searchToken <= 0) {
+      return;
+    }
+    const scroller = document.querySelector<HTMLDivElement>(".event-logs-table-scroll");
+    if (!scroller) {
+      return;
+    }
+    scroller.scrollLeft = 0;
+  }, [searchToken]);
+
+  React.useEffect(() => {
     if (searchToken <= 0 || events.length <= 0) {
       setRuntimeProof(null);
       return;

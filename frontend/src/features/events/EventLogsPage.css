@@ -110,7 +110,7 @@
   padding: var(--vrm-spacing-2);
   position: fixed;
   inset: auto;
-  z-index: 1400;
+  z-index: 2200;
   touch-action: pan-y;
 }
 

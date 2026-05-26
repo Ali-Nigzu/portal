@@ -52,6 +52,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
     );
 
     setMenuStyle({
+      pointerEvents: "auto",
       position: "fixed",
       top,
       left,
@@ -117,6 +118,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
         className="event-devices-trigger event-logs-filter-control"
         id={buttonId}
         onClick={() => setIsOpen((open) => !open)}
+        onPointerDown={(event) => event.stopPropagation()}
         type="button"
       >
         <span className="event-devices-trigger__label">{summary}</span>
@@ -143,6 +145,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
                     className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
                     key={option.token}
                     onClick={() => toggleToken(option.token)}
+                    onPointerDown={(event) => event.stopPropagation()}
                     role="option"
                     type="button"
                   >

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, spawnSync } from 'child_process';
 import net from 'net';
 
 const OUT_DIR = '/tmp/eventlogs-closed-loop-proof';
@@ -10,8 +10,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PROFILE = process.argv.includes('--profile') ? (process.argv[process.argv.indexOf('--profile') + 1] || 'width-stress') : 'width-stress';
 
 function runChecked(cmd, cwd) {
-  execSync(cmd, { cwd, stdio: 'inherit', shell: '/bin/bash' });
+  const parts = cmd.trim().split(/\s+/);
+  const result = spawnSync(parts[0], parts.slice(1), { cwd, stdio: 'inherit' });
+  if (result.status !== 0) {
+    throw new Error(`command failed: ${cmd}`);
+  }
 }
+
 
 function parseMissingPythonPackage(logText) {
   const m1 = logText.match(/No module named ['"]([^'"]+)['"]/);
@@ -24,7 +29,7 @@ function parseMissingPythonPackage(logText) {
 async function installRuntimeDependencies(root) {
   runChecked('npm i', path.join(root, 'frontend'));
   runChecked('python3 -m pip install -r backend/requirements.txt', root);
-  runChecked('npx playwright install-deps chromium || true', path.join(root, 'frontend'));
+  try { runChecked('npx playwright install-deps chromium', path.join(root, 'frontend')); } catch {}
   runChecked('npx playwright install chromium', path.join(root, 'frontend'));
 }
 
@@ -122,7 +127,7 @@ async function startRuntime() {
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const backendLogs = [];
-    const backend = spawnProcess('backend', 'python3', ['-m', 'backend.fastapi_app'], root, { PORT: '8000', ANALYTICS_OFFLINE_MODE: '1' });
+    const backend = spawnProcess('backend', 'python3', ['-m', 'backend.fastapi_app'], root, { PORT: '8000', ANALYTICS_OFFLINE_MODE: 'true' });
     backend.stderr.on('data', (d) => backendLogs.push(String(d)));
     backend.stdout.on('data', (d) => backendLogs.push(String(d)));
     const frontend = spawnProcess('frontend', 'npm', ['run', 'dev'], path.join(root, 'frontend'), { VITE_EVENTLOGS_SYNTHETIC_MODE: 'true', VITE_EVENTLOGS_SYNTHETIC_PROFILE: PROFILE });
