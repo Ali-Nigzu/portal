@@ -52,6 +52,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
     );
 
     setMenuStyle({
+      pointerEvents: "auto",
       position: "fixed",
       top,
       left,
@@ -59,7 +60,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
       maxHeight: shouldOpenUpward
         ? Math.max(120, triggerRect.top - viewportOffsetTop - 8)
         : Math.max(120, viewportOffsetTop + viewportHeight - triggerRect.bottom - 8),
-      zIndex: 1400,
+      zIndex: 2400,
     });
   };
 

@@ -56,6 +56,26 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
     installEventLogsRuntimeProof();
   }, []);
 
+  React.useLayoutEffect(() => {
+    if (typeof window === "undefined" || searchToken <= 0 || events.length <= 0) {
+      return;
+    }
+    const scroller = document.querySelector<HTMLDivElement>(".event-logs-table-scroll");
+    if (!scroller) {
+      return;
+    }
+    const reset = () => {
+      scroller.scrollLeft = 0;
+    };
+    reset();
+    const rafA = window.requestAnimationFrame(reset);
+    const rafB = window.requestAnimationFrame(() => window.requestAnimationFrame(reset));
+    return () => {
+      window.cancelAnimationFrame(rafA);
+      window.cancelAnimationFrame(rafB);
+    };
+  }, [searchToken, events.length]);
+
   React.useEffect(() => {
     if (searchToken <= 0 || events.length <= 0) {
       setRuntimeProof(null);
