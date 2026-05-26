@@ -255,6 +255,28 @@ async function executeViewport(playwright, name, contextOptions) {
     phase.steps.push({ phase: 'mounted_gate', pass: mounted, gate });
     if (!mounted) throw new Error(`mounted gate failed ${JSON.stringify(gate)}`);
 
+    await page.screenshot({ path: path.join(viewDir, '05_dropdown_closed.png'), fullPage: true });
+    const trigger = page.locator('.event-devices-trigger').first();
+    const beforeSummary = ((await trigger.textContent()) || '').trim();
+    await trigger.click({ force: true });
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: path.join(viewDir, '06_dropdown_open.png'), fullPage: true });
+    const menuLocator = page.locator('.event-devices-menu');
+    const menuVisible = (await menuLocator.count()) > 0 && (await menuLocator.first().isVisible());
+    const firstOption = page.locator('.event-devices-menu .event-devices-option').nth(1);
+    if (menuVisible) {
+      await firstOption.click({ force: true });
+    }
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: path.join(viewDir, '07_dropdown_selected.png'), fullPage: true });
+    const afterSummary = ((await trigger.textContent()) || '').trim();
+    await trigger.click({ force: true });
+    await page.waitForTimeout(100);
+    await trigger.click({ force: true });
+    await page.waitForTimeout(100);
+    const persistedSummary = ((await trigger.textContent()) || '').trim();
+    await page.screenshot({ path: path.join(viewDir, '08_dropdown_persisted.png'), fullPage: true });
+
     const runtimeInteraction = await page.evaluate(async () => {
       const now = () => new Date().toISOString();
       const snapshots = [];
@@ -300,7 +322,6 @@ async function executeViewport(playwright, name, contextOptions) {
       if (scroller) scroller.scrollLeft = 0;
       const afterResetHorizontal = scroller?.scrollLeft ?? null;
 
-      const trigger = document.querySelector('.event-devices-trigger');
       const clickTrace = [];
       const onClickCapture = (event) => {
         const path = event.composedPath().slice(0, 6).map((n) => (n?.className || n?.nodeName || '').toString());
@@ -309,14 +330,8 @@ async function executeViewport(playwright, name, contextOptions) {
       document.addEventListener('pointerdown', onClickCapture, true);
       document.addEventListener('click', onClickCapture, true);
 
-      trigger?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-      trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await new Promise((r) => setTimeout(r, 50));
       const menuAfterOpen = document.querySelector('.event-devices-menu');
       const option = menuAfterOpen?.querySelector('.event-devices-option');
-      option?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-      option?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await new Promise((r) => setTimeout(r, 50));
       const menuAfterSelect = document.querySelector('.event-devices-menu');
       const summaryLabel = document.querySelector('.event-devices-trigger__label')?.textContent || '';
       document.removeEventListener('pointerdown', onClickCapture, true);
@@ -337,7 +352,7 @@ async function executeViewport(playwright, name, contextOptions) {
         vertical: { beforeX, beforeY, afterVerticalY },
         horizontal: { beforeHorizontal, afterHorizontal, afterResetHorizontal },
         dropdown: {
-          triggerExists: !!trigger,
+          triggerExists: !!document.querySelector('.event-devices-trigger'),
           menuOpened: !!menuAfterOpen,
           menuStillPresentAfterSelect: !!menuAfterSelect,
           optionSelectedClass: !!option?.className.includes('event-devices-option--selected'),
@@ -356,8 +371,17 @@ async function executeViewport(playwright, name, contextOptions) {
         syntheticProfileDetected: firstRowText.includes('synthetic_profile_width_stress'),
       };
     });
+    const normalized = (text) => text.toLowerCase().replace('▾', '').trim();
+    runtimeInteraction.dropdown.visualFlow = {
+      beforeSummary,
+      afterSummary,
+      persistedSummary,
+      menuVisible,
+      selectedCommitted: normalized(afterSummary) !== 'all devices',
+      selectionPersisted: persistedSummary === afterSummary && normalized(persistedSummary) !== 'all devices',
+    };
     fs.writeFileSync(path.join(viewDir, 'interaction.json'), JSON.stringify(runtimeInteraction, null, 2));
-    await page.screenshot({ path: path.join(viewDir, '05_interaction.png'), fullPage: true });
+    await page.screenshot({ path: path.join(viewDir, '09_interaction.png'), fullPage: true });
 
     const snapIdle = runtimeInteraction.snapshots.find((s) => s.tag === 'POST_INTERACTION_IDLE') ?? runtimeInteraction.snapshots[0];
     const interactionPass = Boolean(
@@ -378,7 +402,10 @@ async function executeViewport(playwright, name, contextOptions) {
       runtimeInteraction.dropdown.menuStyles?.visibility !== 'hidden' &&
       runtimeInteraction.dropdown.menuStyles?.pointerEvents !== 'none' &&
       runtimeInteraction.dropdown.optionSelectedClass &&
-      runtimeInteraction.dropdown.summaryLabel.toLowerCase() !== 'all devices'
+      runtimeInteraction.dropdown.summaryLabel.toLowerCase() !== 'all devices' &&
+      runtimeInteraction.dropdown.visualFlow.menuVisible &&
+      runtimeInteraction.dropdown.visualFlow.selectedCommitted &&
+      runtimeInteraction.dropdown.visualFlow.selectionPersisted
     );
     phase.steps.push({ phase: 'interaction_verification', pass: interactionPass, interaction: runtimeInteraction });
     if (!interactionPass) {
