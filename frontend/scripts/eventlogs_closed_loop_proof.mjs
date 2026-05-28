@@ -134,7 +134,7 @@ async function startRuntime() {
     try {
       await waitForTcp('127.0.0.1', 8000, 'backend', 60000);
       await waitForHttp(`${FRONTEND_URL}/`, 'frontend', 60000);
-      return { stop: () => { backend.kill('SIGTERM'); frontend.kill('SIGTERM'); } };
+      return { stop: () => { backend.kill('SIGTERM'); frontend.kill('SIGTERM'); killLingeringRuntime(); } };
     } catch (error) {
       lastError = error;
       backend.kill('SIGTERM');
@@ -355,7 +355,7 @@ async function executeViewport(playwright, name, contextOptions) {
           triggerExists: !!document.querySelector('.event-devices-trigger'),
           menuOpened: !!menuAfterOpen,
           menuStillPresentAfterSelect: !!menuAfterSelect,
-          optionSelectedClass: !!option?.className.includes('event-devices-option--selected'),
+          optionSelectedClass: !!menuAfterOpen?.querySelector('.event-devices-option--selected'),
           summaryLabel,
           menuStyles: menuAfterOpen
             ? {

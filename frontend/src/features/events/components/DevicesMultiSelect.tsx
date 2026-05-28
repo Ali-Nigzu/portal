@@ -23,6 +23,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
   const menuId = useId();
   const selectedTokens = new Set(value);
   const summary = summarizeEventDeviceSelection(value);
+  const portalTarget = wrapperRef.current?.closest(".demo-overlay") ?? document.body;
 
   const updateMenuPosition = () => {
     const wrapper = wrapperRef.current;
@@ -155,7 +156,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
                 );
               })}
             </div>,
-            document.body,
+            portalTarget,
           )
         : null}
     </div>
