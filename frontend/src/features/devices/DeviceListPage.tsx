@@ -1,15 +1,40 @@
 import React from "react";
 import { Credentials } from "../../types/credentials";
 import { useDeviceList } from "./hooks/useDeviceList";
-import { getStatusClass, getStatusText } from "./utils/statusFormatters";
+import { getStatusText } from "./utils/statusFormatters";
+import "./DeviceListPage.css";
 
 interface DeviceListPageProps {
   credentials: Credentials;
 }
 
-const DeviceListPage: React.FC<DeviceListPageProps> = ({
-  credentials,
-}) => {
+const siteNameForScope = (activeSiteId: string) => {
+  switch (activeSiteId) {
+    case "site-a":
+    case "ab":
+      return "Ali’s Barber";
+    case "site-b":
+    case "tt":
+      return "Tokis Takeout";
+    default:
+      return "All Sites";
+  }
+};
+
+const typeIcon = (type: string) => {
+  switch (type) {
+    case "Gateway":
+      return "▣";
+    case "Door":
+      return "⇄";
+    case "Camera":
+      return "◉";
+    default:
+      return "◇";
+  }
+};
+
+const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const {
     devices,
     dataSources,
@@ -21,19 +46,21 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
     clientUsers,
     refreshDevices,
     downloadDataSource,
+    isDemoSession,
+    activeSiteId,
   } = useDeviceList(credentials);
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "400px",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
+      <div className="device-runtime-page">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "400px",
+          }}
+        >
           <div
             style={{
               width: "40px",
@@ -42,7 +69,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
               borderTop: "4px solid var(--signal-gold)",
               borderRadius: "50%",
               animation: "spin 1s linear infinite",
-              margin: "0 auto 16px",
             }}
           />
         </div>
@@ -50,29 +76,36 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
     );
   }
 
-  const onlineDevices = devices.filter(
-    (device) => device.status === "online",
-  ).length;
-  const offlineDevices = devices.filter(
-    (device) => device.status === "offline",
-  ).length;
+  const onlineDevices = devices.filter((device) => device.status === "online").length;
+  const offlineDevices = devices.filter((device) => device.status === "offline").length;
+  const gatewayCount = devices.filter((device) => device.type === "Gateway").length;
+  const scopeName = siteNameForScope(activeSiteId);
+  const siteGroups = devices.reduce<Record<string, typeof devices>>((groups, device) => {
+    const groupName = device.siteName || scopeName;
+    groups[groupName] = groups[groupName] || [];
+    groups[groupName].push(device);
+    return groups;
+  }, {});
 
   return (
-    <div>
-      <div style={{ marginBottom: "24px" }}>
-        <h1
-          style={{
-            color: "var(--vrm-text-primary)",
-            fontSize: "24px",
-            fontWeight: "600",
-            marginBottom: "8px",
-          }}
-        >
-          Device List
-        </h1>
+    <div className="device-runtime-page">
+      <div className="device-runtime-header">
+        <div>
+          <p className="device-runtime-eyebrow">Runtime inventory</p>
+          <h1 className="device-runtime-title">Device List</h1>
+          <p className="device-runtime-subtitle">
+            Site-aware device inventory with deterministic demo devices, status signals, locations,
+            and ownership context for the active scope.
+          </p>
+        </div>
+        <div className="device-runtime-scope-pill" aria-label={`Current scope: ${scopeName}`}>
+          <span className="device-runtime-scope-dot" />
+          {scopeName}
+        </div>
       </div>
+
       {isAdmin && clientUsers.length > 0 ? (
-        <div style={{ marginBottom: "24px" }}>
+        <div className="vrm-card" style={{ padding: 16 }}>
           <label
             style={{
               display: "block",
@@ -105,198 +138,142 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
           </select>
         </div>
       ) : null}
+
       {error ? (
-        <div className="vrm-card" style={{ marginBottom: "24px" }}>
+        <div className="vrm-card">
           <div className="vrm-card-body">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                color: "#8b6321",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "#8b6321" }}>
               <span>⚠️</span>
               <span>{error}</span>
             </div>
           </div>
         </div>
       ) : null}
-      <div className="vrm-grid vrm-grid-3" style={{ marginBottom: "24px" }}>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "36px",
-                fontWeight: "700",
-                color: "var(--vrm-accent-blue)",
-                marginBottom: "8px",
-              }}
-            >
-              {devices.length}
+
+      <div className="device-runtime-summary-grid">
+        <div className="vrm-card device-runtime-stat">
+          <div className="vrm-card-body">
+            <div>
+              <div className="device-runtime-stat-label">Total Devices</div>
+              <div className="device-runtime-stat-value">{devices.length}</div>
+              <div className="device-runtime-stat-note">Visible in this scope</div>
             </div>
-            <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              Total Devices
-            </p>
+            <div className="device-runtime-stat-icon">▦</div>
           </div>
         </div>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "36px",
-                fontWeight: "700",
-                color: "#44644b",
-                marginBottom: "8px",
-              }}
-            >
-              {onlineDevices}
+        <div className="vrm-card device-runtime-stat">
+          <div className="vrm-card-body">
+            <div>
+              <div className="device-runtime-stat-label">Online</div>
+              <div className="device-runtime-stat-value">{onlineDevices}</div>
+              <div className="device-runtime-stat-note">Reporting normally</div>
             </div>
-            <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              Online
-            </p>
+            <div className="device-runtime-stat-icon">●</div>
           </div>
         </div>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "36px",
-                fontWeight: "700",
-                color: "#8b6321",
-                marginBottom: "8px",
-              }}
-            >
-              {offlineDevices}
+        <div className="vrm-card device-runtime-stat">
+          <div className="vrm-card-body">
+            <div>
+              <div className="device-runtime-stat-label">Offline</div>
+              <div className="device-runtime-stat-value">{offlineDevices}</div>
+              <div className="device-runtime-stat-note">Needs attention</div>
             </div>
-            <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              Offline
-            </p>
+            <div className="device-runtime-stat-icon">○</div>
+          </div>
+        </div>
+        <div className="vrm-card device-runtime-stat">
+          <div className="vrm-card-body">
+            <div>
+              <div className="device-runtime-stat-label">Gateways</div>
+              <div className="device-runtime-stat-value">{gatewayCount}</div>
+              <div className="device-runtime-stat-note">Network anchors</div>
+            </div>
+            <div className="device-runtime-stat-icon">▣</div>
           </div>
         </div>
       </div>
-      <div className="vrm-card" style={{ marginBottom: "24px" }}>
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Devices</h3>
+
+      <div className="vrm-card device-runtime-section">
+        <div className="device-runtime-section-header">
+          <div>
+            <h3 className="device-runtime-section-title">Devices</h3>
+            <p className="device-runtime-section-subtitle">
+              {isDemoSession
+                ? "Demo inventory changes immediately as the selected site scope changes."
+                : "Live inventory for the selected account."}
+            </p>
+          </div>
           <div className="vrm-card-actions">
-            <button
-              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={refreshDevices}
-            >
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={refreshDevices}>
               Refresh
             </button>
           </div>
         </div>
-        <div className="vrm-card-body" style={{ padding: 0 }}>
-          {devices.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
-              <table className="vrm-table">
-                <thead>
-                  <tr>
-                    <th>Device Name</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Location</th>
-                    <th>Last Seen</th>
-                    <th>Records</th>
-                    <th>Data Source</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {devices.map((device) => (
-                    <tr key={device.id}>
-                      <td>
-                        <div>
-                          <div style={{ fontWeight: "600" }}>{device.name}</div>
-                          <div
-                            style={{
-                              fontSize: "12px",
-                              color: "var(--vrm-text-muted)",
-                            }}
-                          >
-                            {device.id}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`vrm-status ${
-                            device.type === "Camera"
-                              ? "vrm-status-online"
-                              : device.type === "Sensor"
-                                ? "vrm-status-warning"
-                                : "vrm-status-offline"
-                          }`}
-                        >
-                          {device.type}
+        <div className="device-runtime-groups">
+          {Object.entries(siteGroups).map(([siteName, siteDevices]) => (
+            <section className="device-runtime-site-group" key={siteName} aria-label={`${siteName} devices`}>
+              <div className="device-runtime-site-heading">
+                <span>{siteName}</span>
+                <span className="device-runtime-site-count">
+                  {siteDevices.length} {siteDevices.length === 1 ? "device" : "devices"}
+                </span>
+              </div>
+              <div className="device-runtime-device-grid">
+                {siteDevices.map((device) => (
+                  <article className="device-runtime-card" key={device.id} tabIndex={0}>
+                    <div className="device-runtime-card-top">
+                      <div className="device-runtime-device-icon" aria-hidden="true">
+                        {typeIcon(device.type)}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <h4 className="device-runtime-device-name">{device.name}</h4>
+                        <div className="device-runtime-device-id">{device.id}</div>
+                      </div>
+                      <span className={`device-runtime-status device-runtime-status--${device.status}`}>
+                        {getStatusText(device.status)}
+                      </span>
+                    </div>
+                    <div className="device-runtime-meta-grid">
+                      <div className="device-runtime-meta">
+                        <span className="device-runtime-meta-label">Type</span>
+                        <span className="device-runtime-meta-value">{device.type}</span>
+                      </div>
+                      <div className="device-runtime-meta">
+                        <span className="device-runtime-meta-label">Location</span>
+                        <span className="device-runtime-meta-value">{device.location || "-"}</span>
+                      </div>
+                      <div className="device-runtime-meta">
+                        <span className="device-runtime-meta-label">Last seen</span>
+                        <span className="device-runtime-meta-value">
+                          {new Date(device.lastSeen).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
-                      </td>
-                      <td>
-                        <div
-                          className={`vrm-status ${getStatusClass(
-                            device.status,
-                          )}`}
-                        >
-                          <div className="vrm-status-dot"></div>
-                          {getStatusText(device.status)}
-                        </div>
-                      </td>
-                      <td>{device.location || "-"}</td>
-                      <td
-                        style={{
-                          fontSize: "13px",
-                          color: "var(--vrm-text-secondary)",
-                        }}
-                      >
-                        {new Date(device.lastSeen).toLocaleString()}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        {device.recordCount || "-"}
-                      </td>
-                      <td
-                        style={{
-                          maxWidth: "200px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {device.dataSource ? (
-                          <code
-                            style={{
-                              fontSize: "11px",
-                              color: "var(--vrm-text-muted)",
-                            }}
-                          >
-                            {device.dataSource}
-                          </code>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
+                      </div>
+                      <div className="device-runtime-meta">
+                        <span className="device-runtime-meta-label">Records</span>
+                        <span className="device-runtime-meta-value">{device.recordCount ?? "-"}</span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       </div>
-      <div className="vrm-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Data Sources</h3>
-          <div className="vrm-card-actions">
-            <button
-              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={() => fetchDataSources()}
-            >
-              Refresh
-            </button>
+
+      {!isDemoSession && dataSources.length > 0 ? (
+        <div className="vrm-card device-runtime-section">
+          <div className="device-runtime-section-header">
+            <div>
+              <h3 className="device-runtime-section-title">Data Sources</h3>
+              <p className="device-runtime-section-subtitle">Configured source feeds for this account.</p>
+            </div>
           </div>
-        </div>
-        <div className="vrm-card-body" style={{ padding: 0 }}>
-          {dataSources.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
+          <div className="vrm-card-body" style={{ padding: 0 }}>
+            <div className="device-runtime-table-wrap">
               <table className="vrm-table">
                 <thead>
                   <tr>
@@ -312,67 +289,26 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
                     <tr key={source.id}>
                       <td>
                         <div>
-                          <div style={{ fontWeight: "600" }}>
-                            {source.title}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "12px",
-                              color: "var(--vrm-text-muted)",
-                            }}
-                          >
-                            {source.id}
-                          </div>
+                          <div style={{ fontWeight: "600" }}>{source.title}</div>
+                          <div style={{ fontSize: "12px", color: "var(--vrm-text-muted)" }}>{source.id}</div>
                         </div>
                       </td>
                       <td>
-                        <span
-                          className={`vrm-status ${
-                            source.type === "Camera"
-                              ? "vrm-status-online"
-                              : source.type === "Sensor"
-                                ? "vrm-status-warning"
-                                : "vrm-status-offline"
-                          }`}
-                        >
-                          {source.type}
-                        </span>
+                        <span className="vrm-status vrm-status-warning">{source.type}</span>
                       </td>
                       <td>
-                        <div
-                          className={`vrm-status ${
-                            source.active
-                              ? "vrm-status-online"
-                              : "vrm-status-offline"
-                          }`}
-                        >
+                        <div className={`vrm-status ${source.active ? "vrm-status-online" : "vrm-status-offline"}`}>
                           <div className="vrm-status-dot"></div>
                           {source.active ? "Active" : "Inactive"}
                         </div>
                       </td>
-                      <td
-                        style={{
-                          maxWidth: "300px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <code
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--vrm-text-muted)",
-                          }}
-                        >
-                          {source.url}
-                        </code>
+                      <td style={{ maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <code style={{ fontSize: "11px", color: "var(--vrm-text-muted)" }}>{source.url}</code>
                       </td>
                       <td>
                         <button
                           className="vrm-btn vrm-btn-primary vrm-btn-sm"
-                          onClick={() =>
-                            downloadDataSource(source.url, source.title)
-                          }
+                          onClick={() => downloadDataSource(source.url, source.title)}
                         >
                           Download CSV
                         </button>
@@ -382,17 +318,14 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({
                 </tbody>
               </table>
             </div>
-          ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
+
       <style>{`
         @keyframes spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
       `}</style>
     </div>
