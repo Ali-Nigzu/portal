@@ -1,4 +1,5 @@
 import React from "react";
+import { Power, RefreshCw, Settings, Unplug } from "lucide-react";
 import { Credentials } from "../../types/credentials";
 import { useDeviceList } from "./hooks/useDeviceList";
 import { getStatusText } from "./utils/statusFormatters";
@@ -146,7 +147,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
               <div className="device-runtime-stat-label">Total Devices</div>
               <div className="device-runtime-stat-value">{devices.length}</div>
             </div>
-            <div className="device-runtime-stat-icon">▦</div>
           </div>
         </div>
         <div className="vrm-card device-runtime-stat">
@@ -155,7 +155,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
               <div className="device-runtime-stat-label">Online</div>
               <div className="device-runtime-stat-value">{onlineDevices}</div>
             </div>
-            <div className="device-runtime-stat-icon">●</div>
           </div>
         </div>
         <div className="vrm-card device-runtime-stat">
@@ -169,7 +168,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                 </div>
               ) : null}
             </div>
-            <div className="device-runtime-stat-icon">○</div>
           </div>
         </div>
         <div className="vrm-card device-runtime-stat">
@@ -178,7 +176,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
               <div className="device-runtime-stat-label">Gateways</div>
               <div className="device-runtime-stat-value">{gatewayCount}</div>
             </div>
-            <div className="device-runtime-stat-icon">▣</div>
           </div>
         </div>
       </div>
@@ -216,7 +213,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <h4 className="device-runtime-device-name">{device.name}</h4>
-                        <div className="device-runtime-device-id">{device.id}</div>
                       </div>
                       <span className={`device-runtime-status device-runtime-status--${device.status}`}>
                         {getStatusText(device.status)}
@@ -228,7 +224,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         className="device-runtime-icon-action"
                         aria-label={`Open settings for ${device.name}`}
                       >
-                        ⚙
+                        <Settings size={14} strokeWidth={2.4} aria-hidden="true" />
                         <span>Settings</span>
                       </button>
                       <button
@@ -237,7 +233,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         aria-label={`Refresh ${device.name}`}
                         onClick={refreshDevices}
                       >
-                        ↻
+                        <RefreshCw size={14} strokeWidth={2.4} aria-hidden="true" />
                         <span>Refresh</span>
                       </button>
                     </div>
@@ -267,9 +263,14 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                     <button
                       type="button"
                       className={`device-runtime-primary-action device-runtime-primary-action--${device.status}`}
-                      aria-label={`${device.status === "online" ? "Disconnect" : "Reconnect"} ${device.name}`}
+                      aria-label={`${device.status === "online" ? "Disconnect" : "Connect"} ${device.name}`}
                     >
-                      {device.status === "online" ? "Disconnect" : "Reconnect"}
+                      {device.status === "online" ? (
+                        <Unplug size={15} strokeWidth={2.5} aria-hidden="true" />
+                      ) : (
+                        <Power size={15} strokeWidth={2.5} aria-hidden="true" />
+                      )}
+                      {device.status === "online" ? "Disconnect" : "Connect"}
                     </button>
                   </article>
                 ))}
