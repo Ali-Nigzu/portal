@@ -53,26 +53,36 @@
 
 .device-runtime-stat .vrm-card-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "note value";
   align-items: center;
-  gap: 6px;
-  min-height: 76px;
+  column-gap: 12px;
+  row-gap: 2px;
+  min-height: 54px;
+  padding: 12px 16px;
 }
 
 .device-runtime-stat-label {
+  grid-area: label;
+  min-width: 0;
   color: var(--vrm-text-secondary);
   font-size: 13px;
   font-weight: 700;
 }
 
 .device-runtime-stat-value {
+  grid-area: value;
   color: var(--vrm-text-primary);
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1;
+  text-align: right;
 }
 
 .device-runtime-stat-note {
-  margin-top: 5px;
+  grid-area: note;
   color: var(--vrm-text-muted);
   font-size: 12px;
   font-weight: 700;
@@ -386,6 +396,15 @@
   .device-runtime-card {
     padding: 14px;
   }
+
+  .device-runtime-stat .vrm-card-body {
+    min-height: 50px;
+    padding: 11px 14px;
+  }
+
+  .device-runtime-stat-value {
+    font-size: 26px;
+  }
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
@@ -399,12 +418,12 @@
   }
 
   .device-runtime-stat .vrm-card-body {
-    min-height: 82px;
-    padding: 12px;
+    min-height: 50px;
+    padding: 10px 12px;
   }
 
   .device-runtime-stat-value {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .device-runtime-device-grid {

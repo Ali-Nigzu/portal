@@ -69,7 +69,9 @@ export const useDeviceList = (
       try {
         setLoading(true);
         if (isDemoSession) {
-          const scopedDevices = getDemoDevicesForScope(siteId).map(toDeviceInfo);
+          const scopedDevices = getDemoDevicesForScope(siteId).map((device) =>
+            toDeviceInfo(device),
+          );
           setDevices(scopedDevices);
           setDataSources([]);
           setError(null);

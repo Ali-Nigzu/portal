@@ -143,39 +143,31 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
       <div className="device-runtime-summary-grid">
         <div className="vrm-card device-runtime-stat">
           <div className="vrm-card-body">
-            <div>
-              <div className="device-runtime-stat-label">Total Devices</div>
-              <div className="device-runtime-stat-value">{devices.length}</div>
-            </div>
+            <div className="device-runtime-stat-label">Total Devices</div>
+            <div className="device-runtime-stat-value">{devices.length}</div>
           </div>
         </div>
         <div className="vrm-card device-runtime-stat">
           <div className="vrm-card-body">
-            <div>
-              <div className="device-runtime-stat-label">Online</div>
-              <div className="device-runtime-stat-value">{onlineDevices}</div>
-            </div>
+            <div className="device-runtime-stat-label">Online</div>
+            <div className="device-runtime-stat-value">{onlineDevices}</div>
           </div>
         </div>
         <div className="vrm-card device-runtime-stat">
           <div className="vrm-card-body">
-            <div>
-              <div className="device-runtime-stat-label">Offline</div>
-              <div className="device-runtime-stat-value">{offlineDevices}</div>
-              {offlineDevices > 0 ? (
-                <div className="device-runtime-stat-note device-runtime-stat-note--alert">
-                  Needs Attention
-                </div>
-              ) : null}
-            </div>
+            <div className="device-runtime-stat-label">Offline</div>
+            <div className="device-runtime-stat-value">{offlineDevices}</div>
+            {offlineDevices > 0 ? (
+              <div className="device-runtime-stat-note device-runtime-stat-note--alert">
+                Needs Attention
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="vrm-card device-runtime-stat">
           <div className="vrm-card-body">
-            <div>
-              <div className="device-runtime-stat-label">Gateways</div>
-              <div className="device-runtime-stat-value">{gatewayCount}</div>
-            </div>
+            <div className="device-runtime-stat-label">Gateways</div>
+            <div className="device-runtime-stat-value">{gatewayCount}</div>
           </div>
         </div>
       </div>
