@@ -90,18 +90,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   return (
     <div className="device-runtime-page">
       <div className="device-runtime-header">
-        <div>
-          <p className="device-runtime-eyebrow">Runtime inventory</p>
-          <h1 className="device-runtime-title">Device List</h1>
-          <p className="device-runtime-subtitle">
-            Site-aware device inventory with deterministic demo devices, status signals, locations,
-            and ownership context for the active scope.
-          </p>
-        </div>
-        <div className="device-runtime-scope-pill" aria-label={`Current scope: ${scopeName}`}>
-          <span className="device-runtime-scope-dot" />
-          {scopeName}
-        </div>
+        <h1 className="device-runtime-title">Device List</h1>
       </div>
 
       {isAdmin && clientUsers.length > 0 ? (
@@ -156,7 +145,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
             <div>
               <div className="device-runtime-stat-label">Total Devices</div>
               <div className="device-runtime-stat-value">{devices.length}</div>
-              <div className="device-runtime-stat-note">Visible in this scope</div>
             </div>
             <div className="device-runtime-stat-icon">▦</div>
           </div>
@@ -166,7 +154,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
             <div>
               <div className="device-runtime-stat-label">Online</div>
               <div className="device-runtime-stat-value">{onlineDevices}</div>
-              <div className="device-runtime-stat-note">Reporting normally</div>
             </div>
             <div className="device-runtime-stat-icon">●</div>
           </div>
@@ -176,7 +163,11 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
             <div>
               <div className="device-runtime-stat-label">Offline</div>
               <div className="device-runtime-stat-value">{offlineDevices}</div>
-              <div className="device-runtime-stat-note">Needs attention</div>
+              {offlineDevices > 0 ? (
+                <div className="device-runtime-stat-note device-runtime-stat-note--alert">
+                  Needs Attention
+                </div>
+              ) : null}
             </div>
             <div className="device-runtime-stat-icon">○</div>
           </div>
@@ -186,7 +177,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
             <div>
               <div className="device-runtime-stat-label">Gateways</div>
               <div className="device-runtime-stat-value">{gatewayCount}</div>
-              <div className="device-runtime-stat-note">Network anchors</div>
             </div>
             <div className="device-runtime-stat-icon">▣</div>
           </div>
@@ -197,15 +187,14 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
         <div className="device-runtime-section-header">
           <div>
             <h3 className="device-runtime-section-title">Devices</h3>
-            <p className="device-runtime-section-subtitle">
-              {isDemoSession
-                ? "Demo inventory changes immediately as the selected site scope changes."
-                : "Live inventory for the selected account."}
-            </p>
           </div>
-          <div className="vrm-card-actions">
+          <div className="device-runtime-section-actions">
+            <div className="device-runtime-scope-pill" aria-label={`Current scope: ${scopeName}`}>
+              <span className="device-runtime-scope-dot" />
+              {scopeName}
+            </div>
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={refreshDevices}>
-              Refresh
+              Refresh All
             </button>
           </div>
         </div>
@@ -233,6 +222,25 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         {getStatusText(device.status)}
                       </span>
                     </div>
+                    <div className="device-runtime-card-controls" aria-label={`${device.name} utility actions`}>
+                      <button
+                        type="button"
+                        className="device-runtime-icon-action"
+                        aria-label={`Open settings for ${device.name}`}
+                      >
+                        ⚙
+                        <span>Settings</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="device-runtime-icon-action"
+                        aria-label={`Refresh ${device.name}`}
+                        onClick={refreshDevices}
+                      >
+                        ↻
+                        <span>Refresh</span>
+                      </button>
+                    </div>
                     <div className="device-runtime-meta-grid">
                       <div className="device-runtime-meta">
                         <span className="device-runtime-meta-label">Type</span>
@@ -256,6 +264,13 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         <span className="device-runtime-meta-value">{device.recordCount ?? "-"}</span>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      className={`device-runtime-primary-action device-runtime-primary-action--${device.status}`}
+                      aria-label={`${device.status === "online" ? "Disconnect" : "Reconnect"} ${device.name}`}
+                    >
+                      {device.status === "online" ? "Disconnect" : "Reconnect"}
+                    </button>
                   </article>
                 ))}
               </div>
@@ -269,7 +284,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
           <div className="device-runtime-section-header">
             <div>
               <h3 className="device-runtime-section-title">Data Sources</h3>
-              <p className="device-runtime-section-subtitle">Configured source feeds for this account.</p>
             </div>
           </div>
           <div className="vrm-card-body" style={{ padding: 0 }}>
