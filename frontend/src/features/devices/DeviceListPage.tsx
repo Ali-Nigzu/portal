@@ -22,19 +22,6 @@ const siteNameForScope = (activeSiteId: string) => {
   }
 };
 
-const typeIcon = (type: string) => {
-  switch (type) {
-    case "Gateway":
-      return "▣";
-    case "Door":
-      return "⇄";
-    case "Camera":
-      return "◉";
-    default:
-      return "◇";
-  }
-};
-
 const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const {
     devices,
@@ -200,15 +187,23 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                 {siteDevices.map((device) => (
                   <article className="device-runtime-card" key={device.id} tabIndex={0}>
                     <div className="device-runtime-card-top">
-                      <div className="device-runtime-device-icon" aria-hidden="true">
-                        {typeIcon(device.type)}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <h4 className="device-runtime-device-name">{device.name}</h4>
-                      </div>
+                      <h4 className="device-runtime-device-name">{device.name}</h4>
                       <span className={`device-runtime-status device-runtime-status--${device.status}`}>
                         {getStatusText(device.status)}
                       </span>
+                    </div>
+                    <div className="device-runtime-records" aria-label={`${device.name} runtime records`}>
+                      <div>
+                        <span className="device-runtime-records-label">Records</span>
+                        <span className="device-runtime-records-value">{device.recordCount ?? "-"}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="device-runtime-see-more"
+                        aria-label={`See more records for ${device.name}`}
+                      >
+                        See More →
+                      </button>
                     </div>
                     <div className="device-runtime-card-controls" aria-label={`${device.name} utility actions`}>
                       <button
@@ -228,29 +223,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         <RefreshCw size={14} strokeWidth={2.4} aria-hidden="true" />
                         <span>Refresh</span>
                       </button>
-                    </div>
-                    <div className="device-runtime-meta-grid">
-                      <div className="device-runtime-meta">
-                        <span className="device-runtime-meta-label">Type</span>
-                        <span className="device-runtime-meta-value">{device.type}</span>
-                      </div>
-                      <div className="device-runtime-meta">
-                        <span className="device-runtime-meta-label">Location</span>
-                        <span className="device-runtime-meta-value">{device.location || "-"}</span>
-                      </div>
-                      <div className="device-runtime-meta">
-                        <span className="device-runtime-meta-label">Last seen</span>
-                        <span className="device-runtime-meta-value">
-                          {new Date(device.lastSeen).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      <div className="device-runtime-meta">
-                        <span className="device-runtime-meta-label">Records</span>
-                        <span className="device-runtime-meta-value">{device.recordCount ?? "-"}</span>
-                      </div>
                     </div>
                     <button
                       type="button"

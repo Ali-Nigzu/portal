@@ -1,11 +1,6 @@
+import { countDemoRuntimeEvents } from "./demoRuntimeEvents";
+import type { DemoEventToken } from "./demoRuntimeEvents";
 import type { DeviceInfo } from "./types";
-
-type DemoEventToken =
-  | "site-a:cam-0"
-  | "site-a:cam-1"
-  | "site-b:cam-0"
-  | "site-b:cam-1"
-  | "site-b:cam-2";
 
 export type DemoDevice = {
   id: string;
@@ -17,17 +12,6 @@ export type DemoDevice = {
   online: boolean;
   eventTokens: DemoEventToken[];
 };
-
-const DEMO_EVENT_RECORD_COUNTS: Record<DemoEventToken, number> = {
-  "site-a:cam-0": 162,
-  "site-a:cam-1": 47,
-  "site-b:cam-0": 184,
-  "site-b:cam-1": 126,
-  "site-b:cam-2": 39,
-};
-
-const getDemoRecordCount = (eventTokens: DemoEventToken[]): number =>
-  eventTokens.reduce((total, token) => total + DEMO_EVENT_RECORD_COUNTS[token], 0);
 
 export const DEMO_DEVICES: DemoDevice[] = [
   {
@@ -147,7 +131,7 @@ export const toDeviceInfo = (device: DemoDevice): DeviceInfo => ({
     ? new Date("2026-05-28T18:24:00Z").toISOString()
     : new Date("2026-05-28T16:48:00Z").toISOString(),
   location: device.location,
-  recordCount: getDemoRecordCount(device.eventTokens),
+  recordCount: countDemoRuntimeEvents(device.eventTokens),
   siteId: device.siteId,
   siteName: device.siteName,
 });

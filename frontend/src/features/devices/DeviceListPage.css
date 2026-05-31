@@ -179,7 +179,7 @@
 
 .device-runtime-card-top {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   min-width: 0;
@@ -263,16 +263,6 @@
   flex: 0 0 auto;
 }
 
-.device-runtime-device-icon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--vrm-accent-blue) 12%, transparent);
-  font-size: 20px;
-}
-
 .device-runtime-device-name {
   margin: 0;
   color: var(--vrm-text-primary);
@@ -319,20 +309,19 @@
   background: #8b6321;
 }
 
-.device-runtime-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.device-runtime-meta {
+.device-runtime-records {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   min-width: 0;
-  padding: 9px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--line-soft) 78%, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface-panel) 76%, white 24%);
 }
 
-.device-runtime-meta-label {
+.device-runtime-records-label {
   display: block;
   color: var(--vrm-text-muted);
   font-size: 11px;
@@ -341,13 +330,33 @@
   text-transform: uppercase;
 }
 
-.device-runtime-meta-value {
+.device-runtime-records-value {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--vrm-text-primary);
-  font-size: 13px;
-  font-weight: 700;
-  overflow-wrap: anywhere;
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.device-runtime-see-more {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--signal-gold) 68%, var(--text-strong));
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.device-runtime-see-more:hover,
+.device-runtime-see-more:focus-visible {
+  color: var(--text-strong);
+  outline: none;
+  transform: translateX(2px);
 }
 
 .device-runtime-table-wrap {
@@ -384,7 +393,6 @@
     grid-template-columns: 1fr;
   }
 
-  .device-runtime-meta-grid,
   .device-runtime-card-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -432,13 +440,25 @@
 }
 
 @media (max-width: 420px) {
+  .device-runtime-card-top,
+  .device-runtime-records {
+    align-items: flex-start;
+  }
+
   .device-runtime-card-top {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .device-runtime-status {
-    grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .device-runtime-records {
+    flex-direction: column;
+  }
+
+  .device-runtime-see-more {
+    align-self: flex-start;
   }
 
   .device-runtime-device-name {
