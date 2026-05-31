@@ -192,18 +192,37 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         {getStatusText(device.status)}
                       </span>
                     </div>
-                    <div className="device-runtime-records" aria-label={`${device.name} runtime records`}>
-                      <div>
-                        <span className="device-runtime-records-label">Records</span>
-                        <span className="device-runtime-records-value">{device.recordCount ?? "-"}</span>
+                    <div className="device-runtime-meta-grid">
+                      <div className="device-runtime-meta">
+                        <span className="device-runtime-meta-label">Last Seen</span>
+                        <span className="device-runtime-meta-value">
+                          {new Date(device.lastSeen).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        className="device-runtime-see-more"
-                        aria-label={`See more records for ${device.name}`}
-                      >
-                        See More →
-                      </button>
+                      <div className="device-runtime-meta">
+                        <span className="device-runtime-meta-label">Type</span>
+                        <span className="device-runtime-meta-value">{device.type}</span>
+                      </div>
+                      <div className="device-runtime-meta">
+                        <span className="device-runtime-meta-label">Location</span>
+                        <span className="device-runtime-meta-value">{device.location || "-"}</span>
+                      </div>
+                      <div className="device-runtime-meta device-runtime-meta--records">
+                        <div>
+                          <span className="device-runtime-meta-label">Records</span>
+                          <span className="device-runtime-meta-value">{device.recordCount ?? "-"}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="device-runtime-see-more"
+                          aria-label={`See more records for ${device.name}`}
+                        >
+                          See More →
+                        </button>
+                      </div>
                     </div>
                     <div className="device-runtime-card-controls" aria-label={`${device.name} utility actions`}>
                       <button
