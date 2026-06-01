@@ -4,6 +4,7 @@ export interface DeviceInfo {
   type: "Camera" | "Sensor" | "Gateway" | "Door";
   status: "online" | "offline" | "maintenance";
   lastSeen: string;
+  lastSeenLabel?: string;
   dataSource?: string;
   location?: string;
   recordCount?: number;

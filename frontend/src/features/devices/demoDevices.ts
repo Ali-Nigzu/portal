@@ -1,4 +1,3 @@
-import { countDemoRuntimeEvents } from "./demoRuntimeEvents";
 import type { DemoEventToken } from "./demoRuntimeEvents";
 import type { DeviceInfo } from "./types";
 
@@ -11,6 +10,21 @@ export type DemoDevice = {
   location: string;
   online: boolean;
   eventTokens: DemoEventToken[];
+};
+
+const DEMO_RECORD_COUNTS: Record<string, number> = {
+  "gateway-ab": 36_836,
+  "main-door-ab": 33_237,
+  "back-door-ab": 3_599,
+  "gateway-tt": 982_639,
+  "main-door-tt": 582_015,
+  "delivery-door-tt": 301_975,
+  "back-door-tt": 98_659,
+};
+
+const DEMO_OFFLINE_LAST_SEEN_LABELS: Record<string, string> = {
+  "back-door-ab": "1 day ago",
+  "back-door-tt": "14:22",
 };
 
 export const DEMO_DEVICES: DemoDevice[] = [
@@ -130,8 +144,11 @@ export const toDeviceInfo = (device: DemoDevice): DeviceInfo => ({
   lastSeen: device.online
     ? new Date("2026-05-28T18:24:00Z").toISOString()
     : new Date("2026-05-28T16:48:00Z").toISOString(),
+  lastSeenLabel: device.online
+    ? undefined
+    : DEMO_OFFLINE_LAST_SEEN_LABELS[device.id],
   location: device.location,
-  recordCount: countDemoRuntimeEvents(device.eventTokens),
+  recordCount: DEMO_RECORD_COUNTS[device.id],
   siteId: device.siteId,
   siteName: device.siteName,
 });

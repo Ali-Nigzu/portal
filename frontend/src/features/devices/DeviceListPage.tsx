@@ -22,6 +22,79 @@ const siteNameForScope = (activeSiteId: string) => {
   }
 };
 
+const DEVICE_LIST_SESSION_STARTED_AT_KEY = "camOS_device_list_session_started_at";
+
+const getDeviceListSessionStartedAt = () => {
+  const now = Date.now();
+
+  if (typeof window === "undefined") {
+    return now;
+  }
+
+  const storedStartedAt = Number(
+    window.sessionStorage.getItem(DEVICE_LIST_SESSION_STARTED_AT_KEY),
+  );
+  if (
+    Number.isFinite(storedStartedAt) &&
+    storedStartedAt > 0 &&
+    storedStartedAt <= now
+  ) {
+    return storedStartedAt;
+  }
+
+  window.sessionStorage.setItem(DEVICE_LIST_SESSION_STARTED_AT_KEY, String(now));
+  return now;
+};
+
+const formatRelativeTime = (elapsedMs: number) => {
+  const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+
+  if (elapsedSeconds < 10) {
+    return "Just now";
+  }
+
+  if (elapsedSeconds < 60) {
+    return `${elapsedSeconds} seconds ago`;
+  }
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return elapsedMinutes === 1 ? "1 minute ago" : `${elapsedMinutes} minutes ago`;
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return elapsedHours === 1 ? "1 hour ago" : `${elapsedHours} hours ago`;
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return elapsedDays === 1 ? "1 day ago" : `${elapsedDays} days ago`;
+};
+
+const formatOfflineLastSeen = (lastSeen: string, now: number) => {
+  const lastSeenTime = new Date(lastSeen).getTime();
+  if (!Number.isFinite(lastSeenTime)) {
+    return "Unknown";
+  }
+
+  return formatRelativeTime(now - lastSeenTime);
+};
+
+const isLiveStatus = (status: string) =>
+  status === "online" || status === "connected";
+
+const formatDeviceLastSeen = (
+  device: { lastSeen: string; lastSeenLabel?: string; status: string },
+  now: number,
+  lastCheckedInAt: number,
+) => {
+  if (isLiveStatus(device.status)) {
+    return formatRelativeTime(now - lastCheckedInAt);
+  }
+
+  return device.lastSeenLabel || formatOfflineLastSeen(device.lastSeen, now);
+};
+
 const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const {
     devices,
@@ -37,6 +110,39 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
     isDemoSession,
     activeSiteId,
   } = useDeviceList(credentials);
+
+  const [sessionStartedAt] = React.useState(getDeviceListSessionStartedAt);
+  const [now, setNow] = React.useState(() => Date.now());
+  const [deviceLastSeenAt, setDeviceLastSeenAt] = React.useState<Record<string, number>>({});
+
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const resetDeviceLastSeen = React.useCallback((deviceId: string) => {
+    const resetAt = Date.now();
+    setNow(resetAt);
+    setDeviceLastSeenAt((current) => ({ ...current, [deviceId]: resetAt }));
+  }, []);
+
+  const resetAllOnlineLastSeen = React.useCallback(() => {
+    const resetAt = Date.now();
+    const resetDevices = devices.reduce<Record<string, number>>((resets, device) => {
+      if (isLiveStatus(device.status)) {
+        resets[device.id] = resetAt;
+      }
+      return resets;
+    }, {});
+
+    setNow(resetAt);
+    setDeviceLastSeenAt((current) => ({ ...current, ...resetDevices }));
+  }, [devices]);
+
+  const handleRefreshAll = React.useCallback(() => {
+    resetAllOnlineLastSeen();
+    refreshDevices();
+  }, [refreshDevices, resetAllOnlineLastSeen]);
 
   if (loading) {
     return (
@@ -169,7 +275,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
               <span className="device-runtime-scope-dot" />
               {scopeName}
             </div>
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={refreshDevices}>
+            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleRefreshAll}>
               Refresh All
             </button>
           </div>
@@ -177,12 +283,6 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
         <div className="device-runtime-groups">
           {Object.entries(siteGroups).map(([siteName, siteDevices]) => (
             <section className="device-runtime-site-group" key={siteName} aria-label={`${siteName} devices`}>
-              <div className="device-runtime-site-heading">
-                <span>{siteName}</span>
-                <span className="device-runtime-site-count">
-                  {siteDevices.length} {siteDevices.length === 1 ? "device" : "devices"}
-                </span>
-              </div>
               <div className="device-runtime-device-grid">
                 {siteDevices.map((device) => (
                   <article className="device-runtime-card" key={device.id} tabIndex={0}>
@@ -196,10 +296,11 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                       <div className="device-runtime-meta">
                         <span className="device-runtime-meta-label">Last Seen</span>
                         <span className="device-runtime-meta-value">
-                          {new Date(device.lastSeen).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatDeviceLastSeen(
+                            device,
+                            now,
+                            deviceLastSeenAt[device.id] ?? sessionStartedAt,
+                          )}
                         </span>
                       </div>
                       <div className="device-runtime-meta">
@@ -212,7 +313,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                       </div>
                       <div className="device-runtime-meta device-runtime-meta--records">
                         <span className="device-runtime-meta-label">Records</span>
-                        <div className="device-runtime-records-value-row">
+                        <div className="device-runtime-records-value-stack">
                           <span className="device-runtime-meta-value">{device.recordCount?.toLocaleString() ?? "-"}</span>
                           <button
                             type="button"
@@ -237,7 +338,12 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         type="button"
                         className="device-runtime-icon-action"
                         aria-label={`Refresh ${device.name}`}
-                        onClick={refreshDevices}
+                        onClick={() => {
+                          if (isLiveStatus(device.status)) {
+                            resetDeviceLastSeen(device.id);
+                          }
+                          refreshDevices();
+                        }}
                       >
                         <RefreshCw size={14} strokeWidth={2.4} aria-hidden="true" />
                         <span>Refresh</span>
