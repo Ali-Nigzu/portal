@@ -22,6 +22,85 @@ const siteNameForScope = (activeSiteId: string) => {
   }
 };
 
+const DEVICE_LIST_SESSION_STARTED_AT_KEY = "camOS_device_list_session_started_at";
+
+const getDeviceListSessionStartedAt = () => {
+  const now = Date.now();
+
+  if (typeof window === "undefined") {
+    return now;
+  }
+
+  const storedStartedAt = Number(
+    window.sessionStorage.getItem(DEVICE_LIST_SESSION_STARTED_AT_KEY),
+  );
+  if (
+    Number.isFinite(storedStartedAt) &&
+    storedStartedAt > 0 &&
+    storedStartedAt <= now
+  ) {
+    return storedStartedAt;
+  }
+
+  window.sessionStorage.setItem(DEVICE_LIST_SESSION_STARTED_AT_KEY, String(now));
+  return now;
+};
+
+const formatSessionRelativeLastSeen = (elapsedMs: number) => {
+  const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+
+  if (elapsedSeconds < 10) {
+    return "Just now";
+  }
+
+  if (elapsedSeconds < 60) {
+    return `${elapsedSeconds}s ago`;
+  }
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return `${elapsedMinutes}m ago`;
+  }
+
+  return `${Math.floor(elapsedMinutes / 60)}h ago`;
+};
+
+const formatOfflineLastSeen = (lastSeen: string, now: number) => {
+  const lastSeenTime = new Date(lastSeen).getTime();
+  if (!Number.isFinite(lastSeenTime)) {
+    return "Unknown";
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((now - lastSeenTime) / 1000));
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return `${Math.max(1, elapsedMinutes)}m ago`;
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `${elapsedHours}h ago`;
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return elapsedDays === 1 ? "Yesterday" : `${elapsedDays}d ago`;
+};
+
+const shouldUseSessionRelativeLastSeen = (status: string) =>
+  status === "online" || status === "connected";
+
+const formatDeviceLastSeen = (
+  device: { lastSeen: string; status: string },
+  now: number,
+  sessionStartedAt: number,
+) => {
+  if (shouldUseSessionRelativeLastSeen(device.status)) {
+    return formatSessionRelativeLastSeen(now - sessionStartedAt);
+  }
+
+  return formatOfflineLastSeen(device.lastSeen, now);
+};
+
 const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
   const {
     devices,
@@ -37,6 +116,14 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
     isDemoSession,
     activeSiteId,
   } = useDeviceList(credentials);
+
+  const [sessionStartedAt] = React.useState(getDeviceListSessionStartedAt);
+  const [now, setNow] = React.useState(() => Date.now());
+
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   if (loading) {
     return (
@@ -196,10 +283,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                       <div className="device-runtime-meta">
                         <span className="device-runtime-meta-label">Last Seen</span>
                         <span className="device-runtime-meta-value">
-                          {new Date(device.lastSeen).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatDeviceLastSeen(device, now, sessionStartedAt)}
                         </span>
                       </div>
                       <div className="device-runtime-meta">
@@ -212,7 +296,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                       </div>
                       <div className="device-runtime-meta device-runtime-meta--records">
                         <span className="device-runtime-meta-label">Records</span>
-                        <div className="device-runtime-records-value-row">
+                        <div className="device-runtime-records-value-stack">
                           <span className="device-runtime-meta-value">{device.recordCount?.toLocaleString() ?? "-"}</span>
                           <button
                             type="button"
