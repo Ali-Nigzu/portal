@@ -322,11 +322,11 @@
   background: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
 }
 
-.device-runtime-records-value-row {
+.device-runtime-card-footer {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  justify-content: flex-end;
   min-width: 0;
+  padding-top: 2px;
 }
 
 .device-runtime-meta-label {
@@ -455,10 +455,6 @@
 
   .device-runtime-status {
     justify-self: start;
-  }
-
-  .device-runtime-records-value-row {
-    flex-wrap: wrap;
   }
 
   .device-runtime-device-name {
