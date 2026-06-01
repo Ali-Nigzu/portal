@@ -327,8 +327,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  border: 1px solid color-mix(in srgb, var(--signal-gold) 22%, var(--line-soft));
-  background: color-mix(in srgb, var(--surface-panel) 78%, var(--signal-gold) 8%);
 }
 
 .device-runtime-meta-label {

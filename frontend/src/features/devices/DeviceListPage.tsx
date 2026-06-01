@@ -213,7 +213,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                       <div className="device-runtime-meta device-runtime-meta--records">
                         <div>
                           <span className="device-runtime-meta-label">Records</span>
-                          <span className="device-runtime-meta-value">{device.recordCount ?? "-"}</span>
+                          <span className="device-runtime-meta-value">{device.recordCount?.toLocaleString() ?? "-"}</span>
                         </div>
                         <button
                           type="button"
