@@ -1,6 +1,7 @@
 export interface AlarmEvent {
   id: string;
   instance: string;
+  site?: string;
   device: string;
   description: string;
   alarmStartedAt: string;
