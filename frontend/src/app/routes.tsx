@@ -53,8 +53,13 @@ const AppRoutes: React.FC = () => {
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
   const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
+  const isDirectDemoDeviceListRoute = /^\/demo\/[^/]+\/device-list\/?$/i.test(
+    location.pathname,
+  );
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
-  const shouldNormalizeDemoEntryRef = useRef(isDemoRoute && location.pathname !== "/demo");
+  const shouldNormalizeDemoEntryRef = useRef(
+    isDemoRoute && location.pathname !== "/demo" && !isDirectDemoDeviceListRoute,
+  );
   const demoEntryNavigationCompletedRef = useRef(false);
   const [isDemoEntryReady, setIsDemoEntryReady] = useState(
     !shouldNormalizeDemoEntryRef.current,

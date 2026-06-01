@@ -1,12 +1,14 @@
 export interface DeviceInfo {
   id: string;
   name: string;
-  type: "Camera" | "Sensor" | "Gateway";
+  type: "Camera" | "Sensor" | "Gateway" | "Door";
   status: "online" | "offline" | "maintenance";
   lastSeen: string;
   dataSource?: string;
   location?: string;
   recordCount?: number;
+  siteId?: string;
+  siteName?: string;
 }
 
 export interface DataSource {

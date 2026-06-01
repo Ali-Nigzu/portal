@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import type { Credentials } from "../../../types/credentials";
 import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
@@ -7,6 +8,7 @@ import { fetchDeviceList } from "../transport/fetchDeviceList";
 import { fetchDeviceUsers } from "../transport/fetchDeviceUsers";
 import { fetchDeviceDataSources } from "../transport/fetchDeviceDataSources";
 import { fetchDataSourceCsv } from "../transport/fetchDataSourceCsv";
+import { getDemoDevicesForScope, toDeviceInfo } from "../demoDevices";
 
 type DeviceUsersMap = Record<string, DeviceUser>;
 
@@ -21,11 +23,14 @@ type DeviceListState = {
   clientUsers: Array<[string, DeviceUser]>;
   refreshDevices: () => void;
   downloadDataSource: (sourceUrl: string, sourceName: string) => void;
+  isDemoSession: boolean;
+  activeSiteId: string;
 };
 
 export const useDeviceList = (
   credentials: Credentials,
 ): DeviceListState => {
+  const { siteId = "all" } = useParams<{ siteId: string }>();
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +40,10 @@ export const useDeviceList = (
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
   const viewToken = getViewTokenFromLocation();
-  const isDemoSession = isDemoSessionActive();
+  const isDemoSession =
+    isDemoSessionActive() ||
+    (typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/demo/"));
 
   const loadUsers = useCallback(async () => {
     try {
@@ -60,6 +68,15 @@ export const useDeviceList = (
     async (clientId?: string) => {
       try {
         setLoading(true);
+        if (isDemoSession) {
+          const scopedDevices = getDemoDevicesForScope(siteId).map((device) =>
+            toDeviceInfo(device),
+          );
+          setDevices(scopedDevices);
+          setDataSources([]);
+          setError(null);
+          return;
+        }
         const result = await fetchDeviceList({
           credentials,
           viewToken,
@@ -79,7 +96,7 @@ export const useDeviceList = (
         setLoading(false);
       }
     },
-    [credentials, isAdmin, viewToken],
+    [credentials, isAdmin, isDemoSession, siteId, viewToken],
   );
 
   const loadDataSources = useCallback(async () => {
@@ -181,5 +198,7 @@ export const useDeviceList = (
     clientUsers,
     refreshDevices,
     downloadDataSource,
+    isDemoSession,
+    activeSiteId: siteId,
   };
 };
