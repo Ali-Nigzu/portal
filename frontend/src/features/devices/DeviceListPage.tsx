@@ -211,17 +211,17 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         <span className="device-runtime-meta-value">{device.location || "-"}</span>
                       </div>
                       <div className="device-runtime-meta device-runtime-meta--records">
-                        <div>
-                          <span className="device-runtime-meta-label">Records</span>
+                        <span className="device-runtime-meta-label">Records</span>
+                        <div className="device-runtime-records-value-row">
                           <span className="device-runtime-meta-value">{device.recordCount?.toLocaleString() ?? "-"}</span>
+                          <button
+                            type="button"
+                            className="device-runtime-see-more"
+                            aria-label={`See more records for ${device.name}`}
+                          >
+                            See More →
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          className="device-runtime-see-more"
-                          aria-label={`See more records for ${device.name}`}
-                        >
-                          See More →
-                        </button>
                       </div>
                     </div>
                     <div className="device-runtime-card-controls" aria-label={`${device.name} utility actions`}>

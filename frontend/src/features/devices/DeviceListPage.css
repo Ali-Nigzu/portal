@@ -322,11 +322,11 @@
   background: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
 }
 
-.device-runtime-meta--records {
+.device-runtime-records-value-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 
 .device-runtime-meta-label {
@@ -457,12 +457,8 @@
     justify-self: start;
   }
 
-  .device-runtime-meta--records {
-    flex-direction: column;
-  }
-
-  .device-runtime-see-more {
-    align-self: flex-start;
+  .device-runtime-records-value-row {
+    flex-wrap: wrap;
   }
 
   .device-runtime-device-name {

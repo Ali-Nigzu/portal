@@ -114,10 +114,12 @@ export const DEMO_RUNTIME_EVENTS: DemoRuntimeEvent[] = DEMO_RUNTIME_EVENT_PROFIL
   generateRuntimeEvents,
 );
 
-export const countDemoRuntimeEvents = (deviceTokens: DemoEventToken[]): number => {
+export const getDemoRuntimeEventsForTokens = (
+  deviceTokens: DemoEventToken[],
+): DemoRuntimeEvent[] => {
   const tokenSet = new Set(deviceTokens);
-  return DEMO_RUNTIME_EVENTS.reduce(
-    (total, event) => total + (tokenSet.has(event.deviceToken) ? 1 : 0),
-    0,
-  );
+  return DEMO_RUNTIME_EVENTS.filter((event) => tokenSet.has(event.deviceToken));
 };
+
+export const countDemoRuntimeEvents = (deviceTokens: DemoEventToken[]): number =>
+  getDemoRuntimeEventsForTokens(deviceTokens).length;
