@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import type { Credentials } from "../../../types/credentials";
 import { isDemoSessionActive } from "../../../lib/demoSession";
 import { getViewTokenFromLocation } from "../../../lib/viewToken";
 import { fetchAlarmLogs } from "../transport/fetchAlarmLogs";
 import { fetchAlarmUsers } from "../transport/fetchAlarmUsers";
 import type { AlarmEvent, AlarmUser } from "../types";
+import { getDemoAlarmLogsForScope } from "../demoAlarmLogs";
 
 type AlarmUsersMap = Record<string, AlarmUser>;
 
@@ -26,6 +28,7 @@ type AlarmLogsState = {
 export const useAlarmLogs = (
   credentials: Credentials,
 ): AlarmLogsState => {
+  const { siteId = "all" } = useParams<{ siteId: string }>();
   const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +37,10 @@ export const useAlarmLogs = (
   const [isAdmin, setIsAdmin] = useState(false);
 
   const viewToken = getViewTokenFromLocation();
-  const isDemoSession = isDemoSessionActive();
+  const isDemoSession =
+    isDemoSessionActive() ||
+    (typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/demo/"));
 
   const loadUsers = useCallback(async () => {
     try {
@@ -59,6 +65,11 @@ export const useAlarmLogs = (
     async (clientId?: string) => {
       try {
         setLoading(true);
+        if (isDemoSession) {
+          setAlarms(getDemoAlarmLogsForScope(siteId));
+          setError(null);
+          return;
+        }
         const result = await fetchAlarmLogs({
           credentials,
           viewToken,
@@ -77,7 +88,7 @@ export const useAlarmLogs = (
         setLoading(false);
       }
     },
-    [credentials, isAdmin, viewToken],
+    [credentials, isAdmin, isDemoSession, siteId, viewToken],
   );
 
   useEffect(() => {

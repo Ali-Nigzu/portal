@@ -211,9 +211,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               </button>
               <button
                 className="vrm-btn vrm-btn-sm"
-                onClick={() =>
-                  fetchAlarmLogs(isAdmin ? selectedClient : undefined)
-                }
+                onClick={refreshAlarms}
               >
                 Refresh
               </button>
@@ -224,10 +222,11 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               <table className="vrm-table">
                 <thead>
                   <tr>
-                    <th>Instance</th>
+                    <th>Site</th>
                     <th>Device</th>
-                    <th>Description</th>
-                    <th>Alarm Started At</th>
+                    <th>Alarm Type</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
                     <th>Severity</th>
                     <th>Actions</th>
                   </tr>
@@ -236,19 +235,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                   {" "}
                   {activeAlarms.map((alarm) => (
                     <tr key={alarm.id}>
-                      <td>
-                        <code
-                          style={{
-                            backgroundColor: "var(--vrm-bg-tertiary)",
-                            padding: "2px 6px",
-                            borderRadius: "3px",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {" "}
-                          {alarm.instance}{" "}
-                        </code>
-                      </td>
+                      <td>{alarm.site || alarm.instance}</td>
                       <td>{alarm.device}</td>
                       <td>
                         <div
@@ -262,6 +249,9 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                         </div>
                       </td>
                       <td>{alarm.alarmStartedAt}</td>
+                      <td>
+                        <span style={{ color: "#8b3a2f" }}>Active</span>
+                      </td>
                       <td>
                         <div
                           className={`vrm-status ${getSeverityClass(alarm.severity)}`}
@@ -303,9 +293,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
             </button>
             <button
               className="vrm-btn vrm-btn-sm"
-              onClick={() =>
-                fetchAlarmLogs(isAdmin ? selectedClient : undefined)
-              }
+              onClick={refreshAlarms}
             >
               Refresh
             </button>
@@ -318,31 +306,28 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               <table className="vrm-table">
                 <thead>
                   <tr>
-                    <th>Instance</th>
-                    <th>Device</th>
-                    <th>Description</th>
-                    <th>Alarm Started At</th>
-                    <th>Alarm Cleared After</th>
+                    <th>Timestamp</th>
                     <th>Severity</th>
+                    <th>Site</th>
+                    <th>Device</th>
+                    <th>Alarm Type</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {" "}
                   {alarms.map((alarm) => (
                     <tr key={alarm.id}>
+                      <td>{alarm.alarmStartedAt}</td>
                       <td>
-                        <code
-                          style={{
-                            backgroundColor: "var(--vrm-bg-tertiary)",
-                            padding: "2px 6px",
-                            borderRadius: "3px",
-                            fontSize: "12px",
-                          }}
+                        <div
+                          className={`vrm-status ${getSeverityClass(alarm.severity)}`}
                         >
-                          {" "}
-                          {alarm.instance}{" "}
-                        </code>
+                          <div className="vrm-status-dot"></div>{" "}
+                          {getSeverityText(alarm.severity)}{" "}
+                        </div>
                       </td>
+                      <td>{alarm.site || alarm.instance}</td>
                       <td>{alarm.device}</td>
                       <td>
                         <div
@@ -355,26 +340,12 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                           <span>{alarm.description}</span>
                         </div>
                       </td>
-                      <td>{alarm.alarmStartedAt}</td>
                       <td>
-                        {" "}
                         {alarm.alarmClearedAfter ? (
-                          <span style={{ color: "#44644b" }}>
-                            {alarm.alarmClearedAfter}
-                          </span>
+                          <span style={{ color: "#44644b" }}>Cleared</span>
                         ) : (
-                          <span style={{ color: "#8b3a2f" }}>
-                            Still active
-                          </span>
-                        )}{" "}
-                      </td>
-                      <td>
-                        <div
-                          className={`vrm-status ${getSeverityClass(alarm.severity)}`}
-                        >
-                          <div className="vrm-status-dot"></div>{" "}
-                          {getSeverityText(alarm.severity)}{" "}
-                        </div>
+                          <span style={{ color: "#8b3a2f" }}>Active</span>
+                        )}
                       </td>
                     </tr>
                   ))}{" "}
