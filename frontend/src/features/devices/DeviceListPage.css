@@ -132,25 +132,6 @@
   min-width: 0;
 }
 
-.device-runtime-site-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--vrm-text-secondary);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.device-runtime-site-count {
-  color: var(--vrm-text-muted);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: none;
-}
-
 .device-runtime-device-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -322,10 +303,10 @@
   background: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
 }
 
-.device-runtime-records-value-row {
+.device-runtime-records-value-stack {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
 }
 
@@ -455,10 +436,6 @@
 
   .device-runtime-status {
     justify-self: start;
-  }
-
-  .device-runtime-records-value-row {
-    flex-wrap: wrap;
   }
 
   .device-runtime-device-name {
