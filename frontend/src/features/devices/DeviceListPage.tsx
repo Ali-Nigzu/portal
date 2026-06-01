@@ -203,7 +203,7 @@ const DeviceListPage: React.FC<DeviceListPageProps> = ({ credentials }) => {
                         </span>
                       </div>
                       <div className="device-runtime-meta">
-                        <span className="device-runtime-meta-label">Type</span>
+                        <span className="device-runtime-meta-label">Device Type</span>
                         <span className="device-runtime-meta-value">{device.type}</span>
                       </div>
                       <div className="device-runtime-meta">
