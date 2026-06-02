@@ -166,9 +166,15 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
       {}{" "}
       {activeAlarms.length > 0 && (
         <div className="vrm-card" style={{ marginBottom: "24px" }}>
-          <div className="vrm-card-header">
-            <h3 className="vrm-card-title">
-              Active Alarms ({activeAlarms.length})
+          <div className="vrm-card-header alarm-logs-section-header">
+            <h3 className="vrm-card-title alarm-logs-section-title">
+              <span className="alarm-logs-section-title-desktop">
+                Active Alarms ({activeAlarms.length})
+              </span>
+              <span className="alarm-logs-section-title-mobile">
+                <span>Active Alarms</span>
+                <span>{activeAlarms.length}</span>
+              </span>
             </h3>
             <div className="vrm-card-actions">
               {isDemoRoute && (
@@ -261,10 +267,15 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
       )}{" "}
       {}{" "}
       <div className="vrm-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">
-            {" "}
-            Alarm History ({alarms.length} total){" "}
+        <div className="vrm-card-header alarm-logs-section-header">
+          <h3 className="vrm-card-title alarm-logs-section-title">
+            <span className="alarm-logs-section-title-desktop">
+              Alarm History ({alarms.length} total)
+            </span>
+            <span className="alarm-logs-section-title-mobile">
+              <span>Alarm History</span>
+              <span>{alarms.length}</span>
+            </span>
           </h3>
           <div className="vrm-card-actions">
             {isDemoRoute ? (
