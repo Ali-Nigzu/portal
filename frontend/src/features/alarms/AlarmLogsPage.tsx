@@ -3,6 +3,7 @@ import { Credentials } from "../../types/credentials";
 import { useAlarmLogs } from "./hooks/useAlarmLogs";
 import { isDemoSessionActive } from "../../lib/demoSession";
 import { getSeverityClass, getSeverityText } from "./utils/severityFormatters";
+import "./AlarmLogsPage.css";
 interface AlarmLogsPageProps {
   credentials: Credentials;
 }
@@ -71,7 +72,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
     );
   }
   return (
-    <div>
+    <div className="alarm-logs-page">
       {" "}
       {}{" "}
       <div style={{ marginBottom: "24px" }}>
@@ -187,8 +188,17 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
             </div>
           </div>
           <div className="vrm-card-body" style={{ padding: 0 }}>
-            <div style={{ overflowX: "auto" }}>
-              <table className="vrm-table">
+            <div className="vrm-table-scroll alarm-logs-table-scroll">
+              <table className="vrm-table alarm-logs-table alarm-logs-active-table">
+                <colgroup>
+                  <col className="alarm-logs-col-site" />
+                  <col className="alarm-logs-col-device" />
+                  <col className="alarm-logs-col-type" />
+                  <col className="alarm-logs-col-timestamp" />
+                  <col className="alarm-logs-col-status" />
+                  <col className="alarm-logs-col-severity" />
+                  <col className="alarm-logs-col-actions" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Site</th>
@@ -282,8 +292,16 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
         <div className="vrm-card-body" style={{ padding: 0 }}>
           {" "}
           {alarms.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
-              <table className="vrm-table">
+            <div className="vrm-table-scroll alarm-logs-table-scroll">
+              <table className="vrm-table alarm-logs-table alarm-logs-history-table">
+                <colgroup>
+                  <col className="alarm-logs-col-timestamp" />
+                  <col className="alarm-logs-col-severity" />
+                  <col className="alarm-logs-col-site" />
+                  <col className="alarm-logs-col-device" />
+                  <col className="alarm-logs-col-type" />
+                  <col className="alarm-logs-col-status" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Timestamp</th>
