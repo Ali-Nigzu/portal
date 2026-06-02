@@ -1,6 +1,7 @@
 import React from "react";
 import { Credentials } from "../../types/credentials";
 import { useAlarmLogs } from "./hooks/useAlarmLogs";
+import { isDemoSessionActive } from "../../lib/demoSession";
 import { getSeverityClass, getSeverityText } from "./utils/severityFormatters";
 interface AlarmLogsPageProps {
   credentials: Credentials;
@@ -20,6 +21,9 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
     clearedAlarms,
     refreshAlarms,
   } = useAlarmLogs(credentials);
+  const isDemoRoute =
+    isDemoSessionActive() ||
+    (typeof window !== "undefined" && window.location.pathname.startsWith("/demo/"));
   if (loading) {
     return (
       <div
@@ -166,6 +170,11 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               Active Alarms ({activeAlarms.length})
             </h3>
             <div className="vrm-card-actions">
+              {isDemoRoute && (
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                  Filter
+                </button>
+              )}
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
                 Clear All
               </button>
@@ -248,9 +257,20 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
             Alarm History ({alarms.length} total){" "}
           </h3>
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
-              Export CSV
-            </button>
+            {isDemoRoute ? (
+              <>
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                  Filter
+                </button>
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                  Clear All
+                </button>
+              </>
+            ) : (
+              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                Export CSV
+              </button>
+            )}
             <button
               className="vrm-btn vrm-btn-sm"
               onClick={refreshAlarms}

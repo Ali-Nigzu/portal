@@ -79,6 +79,18 @@ const formatAlarmDate = (date: Date) => {
 const addMinutes = (date: Date, minutes: number) =>
   new Date(date.getTime() + minutes * 60 * 1000);
 
+const getYesterdayAtUtcTime = (time: string) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  const now = new Date();
+  return new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() - 1,
+    hours,
+    minutes,
+  ));
+};
+
 const resolveAlarmSiteScope = (siteId?: string | null): "site-a" | "site-b" | "all" => {
   switch ((siteId || "all").toLowerCase()) {
     case "ab":
@@ -168,16 +180,15 @@ const buildHistoricalAlarms = () => {
     alarms.push(buildAlarm({ index: index + 1, device, catalogKey, startedAt, clearMinutes }));
   }
 
-  const activeStartedBase = addMinutes(end, -74);
   const activeDefinitions: Array<{
     device: DemoAlarmDevice;
     catalogKey: AlarmCatalogKey;
-    minutesAgo: number;
+    time: string;
   }> = [
-    { device: DEMO_ALARM_DEVICES[1], catalogKey: "videoLost", minutesAgo: 18 },
-    { device: DEMO_ALARM_DEVICES[2], catalogKey: "queueThreshold", minutesAgo: 43 },
-    { device: DEMO_ALARM_DEVICES[5], catalogKey: "occupancyThreshold", minutesAgo: 67 },
-    { device: DEMO_ALARM_DEVICES[6], catalogKey: "cameraOffline", minutesAgo: 96 },
+    { device: DEMO_ALARM_DEVICES[1], catalogKey: "videoLost", time: "11:24" },
+    { device: DEMO_ALARM_DEVICES[2], catalogKey: "queueThreshold", time: "10:59" },
+    { device: DEMO_ALARM_DEVICES[5], catalogKey: "occupancyThreshold", time: "10:35" },
+    { device: DEMO_ALARM_DEVICES[6], catalogKey: "cameraOffline", time: "10:06" },
   ];
 
   activeDefinitions.forEach((definition, activeIndex) => {
@@ -185,7 +196,7 @@ const buildHistoricalAlarms = () => {
       index: totalHistorical + activeIndex + 1,
       device: definition.device,
       catalogKey: definition.catalogKey,
-      startedAt: addMinutes(activeStartedBase, 74 - definition.minutesAgo),
+      startedAt: getYesterdayAtUtcTime(definition.time),
       active: true,
     }));
   });
