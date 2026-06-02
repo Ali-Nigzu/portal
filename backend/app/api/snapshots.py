@@ -35,8 +35,11 @@ async def get_latest_snapshot(
     ts: Optional[str] = Query(None, alias="ts"),
     view_token: Optional[str] = Query(None, alias="viewToken"),
     site_view: Optional[str] = Query(None, alias="siteView"),
+    strict_site_view: bool = Query(False, alias="strictSiteView"),
 ):
-    resolved_org = resolve_snapshot_org(org_id=org, view_token=view_token, request=request)
+    resolved_org = resolve_snapshot_org(
+        org_id=org, view_token=view_token, request=request
+    )
     if not is_snapshot_org(resolved_org):
         raise HTTPException(
             status_code=404,
@@ -50,7 +53,9 @@ async def get_latest_snapshot(
     if ts:
         try:
             parsed_ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-            resolved_ts = parsed_ts.replace(tzinfo=None) if parsed_ts.tzinfo else parsed_ts
+            resolved_ts = (
+                parsed_ts.replace(tzinfo=None) if parsed_ts.tzinfo else parsed_ts
+            )
         except ValueError as exc:
             raise HTTPException(
                 status_code=422,
@@ -58,7 +63,27 @@ async def get_latest_snapshot(
             ) from exc
 
     demo_org = resolve_demo_org_id(request)
+    if strict_site_view and not site_view:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "missing_site_view", "message": "siteView is required"},
+        )
+    normalized_site_view = (site_view or "").strip().lower()
+    if strict_site_view and normalized_site_view not in {
+        "all",
+        "site-a",
+        "site_a",
+        "sitea",
+        "site-b",
+        "site_b",
+        "siteb",
+    }:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "invalid_site_view", "message": "siteView is invalid"},
+        )
     resolved_site_view = resolve_site_view(site_view)
+    fallback_used = False
 
     try:
         if demo_org:
@@ -73,14 +98,28 @@ async def get_latest_snapshot(
                     as_of=resolved_ts,
                 )
             except LocalDataError as exc:
+                if strict_site_view:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "error": "snapshot_source_unavailable",
+                            "message": str(exc),
+                            "siteView": resolved_site_view,
+                        },
+                    ) from exc
+                fallback_used = True
                 logger.warning(
                     "Local demo snapshot source unavailable for %s; using fallback fixture: %s",
                     resolved_site_view,
                     exc,
                 )
-                snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
+                snapshot = fetch_latest_snapshot(
+                    resolved_org, as_of=resolved_ts, allow_fallback=True
+                )
         else:
-            snapshot = fetch_latest_snapshot(resolved_org, as_of=resolved_ts)
+            snapshot = fetch_latest_snapshot(
+                resolved_org, as_of=resolved_ts, allow_fallback=not strict_site_view
+            )
     except (SnapshotLookupError, LocalDataError) as exc:
         logger.error("Snapshot lookup failed for %s: %s", resolved_org, exc)
         raise HTTPException(
@@ -99,4 +138,6 @@ async def get_latest_snapshot(
         "payload": snapshot.payload,
         "mode": "snapshots",
         "orgId": snapshot.org_id,
+        "siteView": resolved_site_view,
+        "fallback": fallback_used,
     }

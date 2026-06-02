@@ -1,4 +1,5 @@
 """Snapshot access helpers for snapshots-only deployments."""
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,6 @@ from google.cloud import bigquery
 
 from .services.bigquery_client import bigquery_client
 from .services.demo_time import demo_now, format_demo_timestamp
-
 
 SNAPSHOT_ORG_IDS = {"client1", "client2"}
 
@@ -45,7 +45,9 @@ def _snapshot_table_name() -> str:
     project = os.getenv("BQ_PROJECT")
     dataset = os.getenv("BQ_DATASET")
     if not project or not dataset:
-        raise SnapshotLookupError("BQ_PROJECT and BQ_DATASET must be set for snapshot access")
+        raise SnapshotLookupError(
+            "BQ_PROJECT and BQ_DATASET must be set for snapshot access"
+        )
     return f"{project}.{dataset}.snapshots"
 
 
@@ -57,11 +59,17 @@ def _fallback_snapshot_row(org_id: str) -> SnapshotRow:
     raw = json.loads(_FALLBACK_SNAPSHOT_PATH.read_text(encoding="utf-8"))
     payload = _coerce_payload(raw.get("payload"))
     ts_raw = raw.get("ts")
-    ts = str(ts_raw) if isinstance(ts_raw, str) and ts_raw else datetime.now(timezone.utc).isoformat()
+    ts = (
+        str(ts_raw)
+        if isinstance(ts_raw, str) and ts_raw
+        else datetime.now(timezone.utc).isoformat()
+    )
     return SnapshotRow(org_id=_normalize_org_id(org_id), ts=ts, payload=payload)
 
 
-def _select_column(columns: Iterable[str], candidates: Iterable[str], label: str) -> str:
+def _select_column(
+    columns: Iterable[str], candidates: Iterable[str], label: str
+) -> str:
     for candidate in candidates:
         if candidate in columns:
             return candidate
@@ -96,8 +104,6 @@ def _format_timestamp(value: Any) -> str:
     return str(value)
 
 
-
-
 def _sqlite_snapshot_table(conn: sqlite3.Connection) -> str:
     candidates = [
         row[0]
@@ -106,10 +112,16 @@ def _sqlite_snapshot_table(conn: sqlite3.Connection) -> str:
         ).fetchall()
     ]
     for table in candidates:
-        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
-        if columns.intersection(_TIMESTAMP_COLUMN_CANDIDATES) and columns.intersection(_PAYLOAD_COLUMN_CANDIDATES):
+        columns = {
+            row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        if columns.intersection(_TIMESTAMP_COLUMN_CANDIDATES) and columns.intersection(
+            _PAYLOAD_COLUMN_CANDIDATES
+        ):
             return table
-    raise SnapshotLookupError("No snapshot table with timestamp/payload columns found in SQLite DB")
+    raise SnapshotLookupError(
+        "No snapshot table with timestamp/payload columns found in SQLite DB"
+    )
 
 
 def fetch_latest_snapshot_from_sqlite(
@@ -122,14 +134,21 @@ def fetch_latest_snapshot_from_sqlite(
     try:
         conn = sqlite3.connect(str(db_path))
     except sqlite3.Error as exc:
-        raise SnapshotLookupError(f"Failed to open local snapshot DB {db_path}: {exc}") from exc
+        raise SnapshotLookupError(
+            f"Failed to open local snapshot DB {db_path}: {exc}"
+        ) from exc
 
     try:
         table_name = _sqlite_snapshot_table(conn)
-        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
+        columns = {
+            row[1]
+            for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+        }
         ts_column = _select_column(columns, _TIMESTAMP_COLUMN_CANDIDATES, "timestamp")
         payload_column = _select_column(columns, _PAYLOAD_COLUMN_CANDIDATES, "payload")
-        resolved_as_of_dt = as_of.replace(tzinfo=None) if as_of else demo_now().replace(tzinfo=None)
+        resolved_as_of_dt = (
+            as_of.replace(tzinfo=None) if as_of else demo_now().replace(tzinfo=None)
+        )
         resolved_as_of = format_demo_timestamp(resolved_as_of_dt)
         query = (
             f"SELECT {ts_column} AS ts, {payload_column} AS payload "
@@ -149,13 +168,25 @@ def fetch_latest_snapshot_from_sqlite(
             payload=_coerce_payload(payload_value),
         )
     except sqlite3.Error as exc:
-        raise SnapshotLookupError(f"SQLite snapshot lookup failed for {db_path}: {exc}") from exc
+        raise SnapshotLookupError(
+            f"SQLite snapshot lookup failed for {db_path}: {exc}"
+        ) from exc
     finally:
         conn.close()
 
-def fetch_latest_snapshot(org_id: str, *, as_of: Optional[datetime] = None) -> Optional[SnapshotRow]:
+
+def fetch_latest_snapshot(
+    org_id: str,
+    *,
+    as_of: Optional[datetime] = None,
+    allow_fallback: bool = True,
+) -> Optional[SnapshotRow]:
     normalized = _normalize_org_id(org_id)
     if not os.getenv("BQ_PROJECT") or not os.getenv("BQ_DATASET"):
+        if not allow_fallback:
+            raise SnapshotLookupError(
+                "Snapshot fallback fixture is disabled for this request"
+            )
         return _fallback_snapshot_row(normalized)
 
     table_name = _snapshot_table_name()
@@ -170,10 +201,14 @@ def fetch_latest_snapshot(org_id: str, *, as_of: Optional[datetime] = None) -> O
         f"LIMIT 1"
     )
     job_config = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("as_of", "TIMESTAMP", resolved_as_of)]
+        query_parameters=[
+            bigquery.ScalarQueryParameter("as_of", "TIMESTAMP", resolved_as_of)
+        ]
     )
     client = bigquery_client._ensure_client()
-    job = client.query(sql, job_config=job_config, location=bigquery_client.settings.location)
+    job = client.query(
+        sql, job_config=job_config, location=bigquery_client.settings.location
+    )
     result = job.result(page_size=1)
     row = next(iter(result), None)
     if not row:
