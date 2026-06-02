@@ -213,6 +213,51 @@ assert.throws(
 }
 
 {
+  const expectedLengths = {
+    today: 13,
+    yesterday: 24,
+    last_week: 7,
+    last_month: 4,
+    last_quarter: 12,
+    last_year: 12,
+    all_time: 2,
+  };
+  for (const [timeframe, expectedLength] of Object.entries(expectedLengths)) {
+    const data = engine.buildSiteActivityReportData({
+      snapshot: snapshot("site-b", 3, 11),
+      siteView: "site-b",
+      timeframe,
+      now: new Date("2026-02-20T12:30:00Z"),
+    });
+    assert.equal(
+      data.bucketLabels.length,
+      expectedLength,
+      `${timeframe} labels must align with Dashboard bucket count`,
+    );
+    assert.equal(
+      data.metrics.entrancesSeries.length,
+      expectedLength,
+      `${timeframe} entrances must align to labels`,
+    );
+    assert.equal(
+      data.metrics.exitsSeries.length,
+      expectedLength,
+      `${timeframe} exits must align to labels`,
+    );
+    assert.equal(
+      data.metrics.occupancySeries.length,
+      expectedLength,
+      `${timeframe} occupancy must align to labels`,
+    );
+    assert.equal(
+      data.metrics.dwellSeries.length,
+      expectedLength,
+      `${timeframe} dwell must align to labels`,
+    );
+  }
+}
+
+{
   const data = engine.buildVisitorProfileReportData({
     snapshot: snapshot("site-b", 3, 11),
     siteView: "site-b",

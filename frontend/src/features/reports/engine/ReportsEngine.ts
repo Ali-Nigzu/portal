@@ -455,22 +455,44 @@ const inferAllTimeStart = (end: Date, seriesList: number[][]): Date => {
   );
 };
 
-const buildBucketLabels = (
+const resolveBucketFrame = (
   timeframe: ReportTimeframe,
   snapshotTs: Date,
   seriesList: number[][],
-): string[] => {
+): { labels: string[]; sliceCount: number } => {
   const bucketLabelData = buildSiteFlowBucketLabels(
     timeframe,
     snapshotTs,
     seriesList,
   );
-  if (timeframe === "all_time") {
-    return bucketLabelData.timestamps.map((timestamp) =>
-      String(timestamp.getFullYear()),
-    );
+  const labels =
+    timeframe === "all_time"
+      ? bucketLabelData.timestamps.map((timestamp) =>
+          String(timestamp.getFullYear()),
+        )
+      : bucketLabelData.labels;
+  return { labels, sliceCount: bucketLabelData.sliceCount };
+};
+
+const normalizeSeriesForFrame = (
+  values: number[],
+  sliceCount: number,
+  timeframe: ReportTimeframe,
+): number[] => {
+  if (sliceCount <= 0) {
+    return [];
   }
-  return bucketLabelData.labels;
+  const sliced =
+    timeframe === "today"
+      ? values.slice(-sliceCount)
+      : values.slice(0, sliceCount);
+  if (sliced.length >= sliceCount) {
+    return sliced;
+  }
+  return [
+    ...sliced,
+    ...Array.from({ length: sliceCount - sliced.length }, () => 0),
+  ];
 };
 
 export const buildSiteActivityReportData = ({
@@ -485,17 +507,64 @@ export const buildSiteActivityReportData = ({
   now?: Date;
 }): SiteActivityReportData => {
   const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
-  const rollup = selectSchemaRollup(snapshot.payload, timeframe);
+  const rawRollup = selectSchemaRollup(snapshot.payload, timeframe);
+  const rawFootfallSeries = Array.from(
+    { length: Math.max(rawRollup.entrances.length, rawRollup.exits.length) },
+    (_, index) =>
+      (rawRollup.entrances[index] ?? 0) + (rawRollup.exits[index] ?? 0),
+  );
   const dwell96 = toNumberArray(
     snapshot.payload[SNAPSHOT_SLOT.dwellTime96],
     "dwell_time_96",
   );
-  const targetLength = Math.max(
-    rollup.entrances.length,
-    rollup.exits.length,
-    rollup.occupancyAvg.length,
+  const rawTargetLength = Math.max(
+    rawRollup.entrances.length,
+    rawRollup.exits.length,
+    rawRollup.occupancyAvg.length,
   );
-  const dwellSeries = aggregateDwellFromDwell96(dwell96, targetLength);
+  const rawDwellSeries = aggregateDwellFromDwell96(dwell96, rawTargetLength);
+  const bucketFrame = resolveBucketFrame(timeframe, snapshotTs, [
+    rawRollup.entrances,
+    rawRollup.exits,
+    rawFootfallSeries,
+    rawRollup.occupancyAvg,
+    rawDwellSeries,
+  ]);
+  const rollup: SchemaRollup = {
+    entrances: normalizeSeriesForFrame(
+      rawRollup.entrances,
+      bucketFrame.sliceCount,
+      timeframe,
+    ),
+    exits: normalizeSeriesForFrame(
+      rawRollup.exits,
+      bucketFrame.sliceCount,
+      timeframe,
+    ),
+    occupancyAvg: normalizeSeriesForFrame(
+      rawRollup.occupancyAvg,
+      bucketFrame.sliceCount,
+      timeframe,
+    ),
+    occupancyMin: normalizeSeriesForFrame(
+      rawRollup.occupancyMin,
+      bucketFrame.sliceCount,
+      timeframe,
+    ),
+    occupancyMax: normalizeSeriesForFrame(
+      rawRollup.occupancyMax,
+      bucketFrame.sliceCount,
+      timeframe,
+    ),
+    agePct: rawRollup.agePct,
+    sexPct: rawRollup.sexPct,
+    racePct: rawRollup.racePct,
+  };
+  const dwellSeries = normalizeSeriesForFrame(
+    rawDwellSeries,
+    bucketFrame.sliceCount,
+    timeframe,
+  );
   const footfallSeries = Array.from(
     { length: Math.max(rollup.entrances.length, rollup.exits.length) },
     (_, index) => (rollup.entrances[index] ?? 0) + (rollup.exits[index] ?? 0),
@@ -517,13 +586,7 @@ export const buildSiteActivityReportData = ({
     now,
     headerStartOverride,
   );
-  const bucketLabels = buildBucketLabels(timeframe, snapshotTs, [
-    rollup.entrances,
-    rollup.exits,
-    footfallSeries,
-    rollup.occupancyAvg,
-    dwellSeries,
-  ]);
+  const bucketLabels = bucketFrame.labels;
   const metrics: SiteActivityMetrics = {
     entrancesSeries: rollup.entrances,
     exitsSeries: rollup.exits,
