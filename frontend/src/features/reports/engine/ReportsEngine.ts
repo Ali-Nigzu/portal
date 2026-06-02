@@ -9,6 +9,7 @@ import {
   resolveSiteViewFromPathname,
   type SiteView,
 } from "../../../lib/siteView";
+import { parseDemoTimestamp } from "../../../lib/demoTime";
 import { startOfYear } from "../../../lib/timeWindows";
 import {
   AGE_BUCKET_LABELS,
@@ -170,7 +171,7 @@ const indexOfMax = (values: number[]): number =>
   values.length ? values.indexOf(max(values)) : 0;
 
 const parseSnapshotTimestamp = (value: string): Date => {
-  const parsed = new Date(value);
+  const parsed = parseDemoTimestamp(value) ?? new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     throw new Error(`Snapshot timestamp is invalid: ${value}`);
   }
