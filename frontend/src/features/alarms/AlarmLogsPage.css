@@ -85,3 +85,49 @@
     width: 150px;
   }
 }
+
+.alarm-logs-section-title-mobile {
+  display: none;
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  .alarm-logs-section-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .alarm-logs-section-title {
+    width: 100%;
+  }
+
+  .alarm-logs-section-title-desktop {
+    display: none;
+  }
+
+  .alarm-logs-section-title-mobile {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .alarm-logs-section-header .vrm-card-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .alarm-logs-section-header .vrm-card-actions .vrm-btn {
+    flex: 0 0 auto;
+  }
+
+  .alarm-logs-section-title-mobile > span:last-child {
+    flex: 0 0 auto;
+    text-align: right;
+  }
+}
