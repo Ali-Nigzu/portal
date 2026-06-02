@@ -21,7 +21,8 @@
     "verify:topology": "node scripts/topology-check.mjs",
     "test:landing-visual": "node scripts/landing-visual-regression.mjs",
     "verify:phone-countries": "node scripts/verify-phone-country-data.mjs",
-    "proof:eventlogs:closed-loop": "node scripts/eventlogs_closed_loop_proof.mjs"
+    "proof:eventlogs:closed-loop": "node scripts/eventlogs_closed_loop_proof.mjs",
+    "test:reports-engine": "node scripts/reports-engine-tests.mjs"
   },
   "browserslist": {
     "production": [

@@ -1,67 +1,38 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import { Credentials } from "../../types/credentials";
-import type { SnapshotResponse } from "../../lib/snapshots";
-import { fetchLatestSnapshot } from "./transport/fetchLatestSnapshot";
 import {
   AGE_BUCKET_LABELS,
   RACE_BUCKET_LABELS,
   SEX_BUCKET_LABELS,
   TIMEFRAME_OPTIONS,
-  buildSiteActivityMetrics,
-  formatReportDateRange,
-  buildVisitorProfileMetrics,
-  resolveRollup,
   type ReportTimeframe,
 } from "./utils/reportUtils";
-import { buildSiteFlowBucketLabels } from "../../lib/siteFlowBuckets";
-import { startOfYear } from "../../lib/timeWindows";
 import { isDemoSessionActive } from "../../lib/demoSession";
+import { loadReportData, type ReportData } from "./engine/ReportsEngine";
 interface ReportsPageProps {
   credentials?: Credentials;
-  fetchSnapshotFn?: typeof fetchLatestSnapshot;
+  reportDataLoader?: typeof loadReportData;
 }
 const ReportsPage: React.FC<ReportsPageProps> = ({
   credentials,
-  fetchSnapshotFn,
+  reportDataLoader,
 }) => {
   const [reportType, setReportType] = useState("site-activity");
   const [timePeriod, setTimePeriod] = useState<ReportTimeframe>("today");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [snapshot, setSnapshot] = useState<SnapshotResponse | null>(null);
-  const [snapshotError, setSnapshotError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [downloadBlockedMessage, setDownloadBlockedMessage] = useState<string | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [downloadBlockedMessage, setDownloadBlockedMessage] = useState<
+    string | null
+  >(null);
   const isDemoMode = isDemoSessionActive();
-  const fetchSnapshot = useCallback(async () => {
-    try {
-      setLoading(true);
-      setSnapshotError(null);
-      const snapshotLoader = fetchSnapshotFn ?? fetchLatestSnapshot;
-      const result = await snapshotLoader(credentials);
-      setSnapshot(result as SnapshotResponse);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      setSnapshotError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [credentials]);
-  useEffect(() => {
-    fetchSnapshot();
-  }, [fetchSnapshot]);
-
-  useEffect(() => {
-    if (downloadBlockedMessage && isDemoMode) {
-      setDownloadBlockedMessage(null);
-    }
-  }, [downloadBlockedMessage, isDemoMode]);
+  const location = useLocation();
   const reportTemplates = [
     {
       id: "site-activity",
       name: "Site Activity",
-      description:
-        "Entrances, exits, occupancy, and dwell trends",
+      description: "Entrances, exits, occupancy, and dwell trends",
       type: "Operational Report",
     },
     {
@@ -71,35 +42,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       type: "Demographics Report",
     },
   ];
-  const parseSnapshotTimestamp = (value: string) => {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-  };
   const formatNumber = (value: number) => value.toLocaleString();
-  const inferAllTimeStart = (end: Date, seriesList: number[][]): Date => {
-    const maxLength = Math.max(...seriesList.map((series) => series.length), 0);
-    if (maxLength <= 0) {
-      return startOfYear(end);
-    }
-    const endMonthStart = new Date(
-      end.getFullYear(),
-      end.getMonth(),
-      1,
-      0,
-      0,
-      0,
-      0,
-    );
-    return new Date(
-      endMonthStart.getFullYear(),
-      endMonthStart.getMonth() - (maxLength - 1),
-      1,
-      0,
-      0,
-      0,
-      0,
-    );
-  };
   const drawBarChart = (
     doc: jsPDF,
     valuesA: number[],
@@ -281,52 +224,21 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
     doc.setTextColor(0, 0, 0);
     doc.text(value, x + 3, y + 16);
   };
-  const generatePDFReport = () => {
-    if (!snapshot) {
-      alert("Snapshot data is not available yet.");
-      return;
-    }
-    if (
-      !Array.isArray(snapshot.payload) ||
-      !Array.isArray(snapshot.payload[7])
-    ) {
-      alert("Snapshot payload is missing legacy rollup data.");
-      return;
-    }
+  const generatePDFReport = async () => {
     setIsGenerating(true);
+    setReportError(null);
     try {
+      const loadData = reportDataLoader ?? loadReportData;
+      const reportData: ReportData = await loadData({
+        reportType: reportType as ReportData["reportType"],
+        timeframe: timePeriod,
+        pathname: location.pathname,
+        credentials,
+      });
       const doc = new jsPDF();
       const template = reportTemplates.find((t) => t.id === reportType);
-      const snapshotTs = parseSnapshotTimestamp(snapshot.ts);
-      const now = new Date();
-      const headerEnd =
-        snapshotTs.getTime() <= now.getTime() ? snapshotTs : now;
-      const rollup = resolveRollup(snapshot.payload ?? [], timePeriod);
-      let headerStartOverride: Date | undefined;
-      if (reportType === "site-activity" && timePeriod === "all_time") {
-        const metricsForHeader = buildSiteActivityMetrics(rollup);
-        headerStartOverride = inferAllTimeStart(headerEnd, [
-          metricsForHeader.entrancesSeries,
-          metricsForHeader.exitsSeries,
-          metricsForHeader.footfallSeries,
-          metricsForHeader.occupancySeries,
-          metricsForHeader.dwellSeries,
-        ]);
-      }
-      if (reportType === "visitor-profile" && timePeriod === "all_time") {
-        const visitorMetricsForHeader = buildVisitorProfileMetrics(rollup);
-        headerStartOverride = inferAllTimeStart(headerEnd, [
-          visitorMetricsForHeader.agePct,
-          visitorMetricsForHeader.sexPct,
-          visitorMetricsForHeader.racePct,
-        ]);
-      }
-      const { subtitle } = formatReportDateRange(
-        snapshotTs,
-        timePeriod,
-        now,
-        headerStartOverride,
-      );
+      const snapshotTs = reportData.snapshotTs;
+      const subtitle = reportData.subtitle;
       doc.setFontSize(22);
       doc.setTextColor(33, 150, 243);
       doc.text("camOS", 105, 18, { align: "center" });
@@ -343,25 +255,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       doc.text(subtitle, 105, 43, { align: "center" });
       doc.setDrawColor(220, 220, 220);
       doc.line(20, 48, 190, 48);
-      if (reportType === "site-activity") {
-        const metrics = buildSiteActivityMetrics(rollup);
-        const bucketLabelData = buildSiteFlowBucketLabels(
-          timePeriod,
-          snapshotTs,
-          [
-            metrics.entrancesSeries,
-            metrics.exitsSeries,
-            metrics.footfallSeries,
-            metrics.occupancySeries,
-            metrics.dwellSeries,
-          ],
-        );
-        const bucketLabels =
-          timePeriod === "all_time"
-            ? bucketLabelData.timestamps.map((timestamp) =>
-                String(timestamp.getFullYear()),
-              )
-            : bucketLabelData.labels;
+      if (reportData.reportType === "site-activity") {
+        const metrics = reportData.metrics;
+        const bucketLabels = reportData.bucketLabels;
         const footfallSeries =
           bucketLabels.length > 0
             ? metrics.footfallSeries.slice(0, bucketLabels.length)
@@ -545,8 +441,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
           });
           yPos += 4.5;
         });
-      } else if (reportType === "visitor-profile") {
-        const metrics = buildVisitorProfileMetrics(rollup);
+      } else if (reportData.reportType === "visitor-profile") {
+        const metrics = reportData.metrics;
         doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
         doc.text("Visitor Profile Report", 20, 60);
@@ -622,6 +518,11 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       doc.save(filename);
     } catch (error) {
       console.error("Error generating PDF:", error);
+      setReportError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate PDF report",
+      );
       alert("Failed to generate PDF report");
     } finally {
       setIsGenerating(false);
@@ -633,7 +534,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       return;
     }
     setDownloadBlockedMessage(null);
-    generatePDFReport();
+    void generatePDFReport();
   };
   return (
     <div>
@@ -732,13 +633,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
               className="vrm-btn"
               style={{ flex: 1 }}
               onClick={handleGenerateReport}
-              disabled={isGenerating || loading}
+              disabled={isGenerating}
             >
               {" "}
               {isGenerating ? "Generating..." : "Download Report"}{" "}
             </button>
           </div>{" "}
-          {snapshotError && (
+          {reportError && (
             <div
               style={{
                 marginTop: "12px",
@@ -747,7 +648,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
               }}
             >
               {" "}
-              {snapshotError}{" "}
+              {reportError}{" "}
             </div>
           )}{" "}
           {downloadBlockedMessage && (
