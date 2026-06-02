@@ -18,8 +18,6 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
     clientUsers,
     activeAlarms,
     clearedAlarms,
-    highSeverityAlarms,
-    mediumSeverityAlarms,
     refreshAlarms,
   } = useAlarmLogs(credentials);
   if (loading) {
@@ -124,7 +122,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
         </div>
       )}{" "}
       {}{" "}
-      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: "24px" }}>
+      <div className="vrm-grid vrm-grid-2" style={{ marginBottom: "24px" }}>
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: "center" }}>
             <div
@@ -135,47 +133,10 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                 marginBottom: "8px",
               }}
             >
-              {" "}
-              {activeAlarms.length}{" "}
+              {activeAlarms.length}
             </div>
             <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
               Active Alarms
-            </p>
-          </div>
-        </div>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "36px",
-                fontWeight: "700",
-                color: "#8b3a2f",
-                marginBottom: "8px",
-              }}
-            >
-              {" "}
-              {highSeverityAlarms}{" "}
-            </div>
-            <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              High Severity
-            </p>
-          </div>
-        </div>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "36px",
-                fontWeight: "700",
-                color: "#8b6321",
-                marginBottom: "8px",
-              }}
-            >
-              {" "}
-              {mediumSeverityAlarms}{" "}
-            </div>
-            <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              Medium Severity
             </p>
           </div>
         </div>
@@ -189,8 +150,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                 marginBottom: "8px",
               }}
             >
-              {" "}
-              {clearedAlarms.length}{" "}
+              {clearedAlarms.length}
             </div>
             <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
               Cleared Alarms
