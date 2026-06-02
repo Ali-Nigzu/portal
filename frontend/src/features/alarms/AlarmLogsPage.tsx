@@ -1,7 +1,9 @@
 import React from "react";
 import { Credentials } from "../../types/credentials";
 import { useAlarmLogs } from "./hooks/useAlarmLogs";
+import { isDemoSessionActive } from "../../lib/demoSession";
 import { getSeverityClass, getSeverityText } from "./utils/severityFormatters";
+import "./AlarmLogsPage.css";
 interface AlarmLogsPageProps {
   credentials: Credentials;
 }
@@ -18,10 +20,11 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
     clientUsers,
     activeAlarms,
     clearedAlarms,
-    highSeverityAlarms,
-    mediumSeverityAlarms,
     refreshAlarms,
   } = useAlarmLogs(credentials);
+  const isDemoRoute =
+    isDemoSessionActive() ||
+    (typeof window !== "undefined" && window.location.pathname.startsWith("/demo/"));
   if (loading) {
     return (
       <div
@@ -69,7 +72,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
     );
   }
   return (
-    <div>
+    <div className="alarm-logs-page">
       {" "}
       {}{" "}
       <div style={{ marginBottom: "24px" }}>
@@ -124,7 +127,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
         </div>
       )}{" "}
       {}{" "}
-      <div className="vrm-grid vrm-grid-4" style={{ marginBottom: "24px" }}>
+      <div className="vrm-grid vrm-grid-2" style={{ marginBottom: "24px" }}>
         <div className="vrm-card">
           <div className="vrm-card-body" style={{ textAlign: "center" }}>
             <div
@@ -135,47 +138,10 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                 marginBottom: "8px",
               }}
             >
-              {" "}
-              {activeAlarms.length}{" "}
+              {activeAlarms.length}
             </div>
             <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
               Active Alarms
-            </p>
-          </div>
-        </div>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "36px",
-                fontWeight: "700",
-                color: "#8b3a2f",
-                marginBottom: "8px",
-              }}
-            >
-              {" "}
-              {highSeverityAlarms}{" "}
-            </div>
-            <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              High Severity
-            </p>
-          </div>
-        </div>
-        <div className="vrm-card">
-          <div className="vrm-card-body" style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "36px",
-                fontWeight: "700",
-                color: "#8b6321",
-                marginBottom: "8px",
-              }}
-            >
-              {" "}
-              {mediumSeverityAlarms}{" "}
-            </div>
-            <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
-              Medium Severity
             </p>
           </div>
         </div>
@@ -189,8 +155,7 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
                 marginBottom: "8px",
               }}
             >
-              {" "}
-              {clearedAlarms.length}{" "}
+              {clearedAlarms.length}
             </div>
             <p style={{ color: "var(--vrm-text-secondary)", fontSize: "14px" }}>
               Cleared Alarms
@@ -206,6 +171,11 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
               Active Alarms ({activeAlarms.length})
             </h3>
             <div className="vrm-card-actions">
+              {isDemoRoute && (
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                  Filter
+                </button>
+              )}
               <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
                 Clear All
               </button>
@@ -218,8 +188,17 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
             </div>
           </div>
           <div className="vrm-card-body" style={{ padding: 0 }}>
-            <div style={{ overflowX: "auto" }}>
-              <table className="vrm-table">
+            <div className="vrm-table-scroll alarm-logs-table-scroll">
+              <table className="vrm-table alarm-logs-table alarm-logs-active-table">
+                <colgroup>
+                  <col className="alarm-logs-col-site" />
+                  <col className="alarm-logs-col-device" />
+                  <col className="alarm-logs-col-type" />
+                  <col className="alarm-logs-col-timestamp" />
+                  <col className="alarm-logs-col-status" />
+                  <col className="alarm-logs-col-severity" />
+                  <col className="alarm-logs-col-actions" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Site</th>
@@ -288,9 +267,20 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
             Alarm History ({alarms.length} total){" "}
           </h3>
           <div className="vrm-card-actions">
-            <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
-              Export CSV
-            </button>
+            {isDemoRoute ? (
+              <>
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                  Filter
+                </button>
+                <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                  Clear All
+                </button>
+              </>
+            ) : (
+              <button className="vrm-btn vrm-btn-secondary vrm-btn-sm">
+                Export CSV
+              </button>
+            )}
             <button
               className="vrm-btn vrm-btn-sm"
               onClick={refreshAlarms}
@@ -302,8 +292,16 @@ const AlarmLogsPage: React.FC<AlarmLogsPageProps> = ({
         <div className="vrm-card-body" style={{ padding: 0 }}>
           {" "}
           {alarms.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
-              <table className="vrm-table">
+            <div className="vrm-table-scroll alarm-logs-table-scroll">
+              <table className="vrm-table alarm-logs-table alarm-logs-history-table">
+                <colgroup>
+                  <col className="alarm-logs-col-timestamp" />
+                  <col className="alarm-logs-col-severity" />
+                  <col className="alarm-logs-col-site" />
+                  <col className="alarm-logs-col-device" />
+                  <col className="alarm-logs-col-type" />
+                  <col className="alarm-logs-col-status" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Timestamp</th>

@@ -1,0 +1,87 @@
+.alarm-logs-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: block;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+}
+
+@media (max-width: 1024px) {
+  .alarm-logs-page,
+  .alarm-logs-table-scroll {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .alarm-logs-table-scroll {
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
+    overflow-y: visible;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    touch-action: pan-x pan-y;
+  }
+
+  .alarm-logs-table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    max-width: none;
+    table-layout: fixed;
+  }
+
+  .alarm-logs-active-table {
+    min-width: 1040px;
+    width: 1040px;
+  }
+
+  .alarm-logs-history-table {
+    min-width: 980px;
+    width: 980px;
+  }
+
+  .alarm-logs-table th,
+  .alarm-logs-table td {
+    white-space: nowrap;
+  }
+
+  .alarm-logs-col-site {
+    min-width: 150px;
+    width: 150px;
+  }
+
+  .alarm-logs-col-device {
+    min-width: 170px;
+    width: 170px;
+  }
+
+  .alarm-logs-col-type {
+    min-width: 260px;
+    width: 260px;
+  }
+
+  .alarm-logs-col-timestamp {
+    min-width: 170px;
+    width: 170px;
+  }
+
+  .alarm-logs-col-status {
+    min-width: 110px;
+    width: 110px;
+  }
+
+  .alarm-logs-col-severity {
+    min-width: 130px;
+    width: 130px;
+  }
+
+  .alarm-logs-col-actions {
+    min-width: 150px;
+    width: 150px;
+  }
+}

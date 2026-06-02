@@ -1,23 +1,23 @@
 import type { AlarmEvent } from "./types";
 
 const ALARM_CATALOG = {
-  storageWarning: { description: "Storage utilisation exceeded 80%", severity: "medium" },
-  storageCritical: { description: "Storage utilisation exceeded 95%", severity: "high" },
-  gatewayOffline: { description: "Gateway heartbeat lost", severity: "high" },
-  gatewayRestored: { description: "Gateway connection restored", severity: "low" },
-  recordingRestarted: { description: "Recording service restarted", severity: "medium" },
-  databaseMaintenance: { description: "Database maintenance completed", severity: "low" },
-  cameraOffline: { description: "Device heartbeat lost", severity: "high" },
-  cameraRestored: { description: "Device connection restored", severity: "low" },
-  videoLost: { description: "Video stream unavailable", severity: "high" },
-  videoRestored: { description: "Video stream restored", severity: "low" },
-  deviceRestarted: { description: "Device restarted", severity: "medium" },
-  occupancyThreshold: { description: "Occupancy threshold exceeded", severity: "medium" },
-  queueThreshold: { description: "Queue threshold exceeded", severity: "medium" },
-  analyticsDelay: { description: "Event processing delay detected", severity: "medium" },
-  analyticsRestart: { description: "Analytics service restarted", severity: "medium" },
-  repeatedAccess: { description: "Repeated access activity detected", severity: "medium" },
-  restrictedArea: { description: "Restricted area activity detected", severity: "high" },
+  storageWarning: { description: "Capacity Exceeds 75%", severity: "medium" },
+  storageCritical: { description: "Capacity Exceeds 90%", severity: "high" },
+  gatewayOffline: { description: "Gateway Connection Lost", severity: "high" },
+  gatewayRestored: { description: "Gateway Connection Restored", severity: "low" },
+  recordingRestarted: { description: "Recording Service Restarted", severity: "medium" },
+  databaseMaintenance: { description: "Database Maintenance Completed", severity: "low" },
+  cameraOffline: { description: "Device Connection Lost", severity: "high" },
+  cameraRestored: { description: "Device Connection Restored", severity: "low" },
+  videoLost: { description: "Video Stream Unavailable", severity: "high" },
+  videoRestored: { description: "Video Stream Restored", severity: "low" },
+  deviceRestarted: { description: "Device Restarted", severity: "medium" },
+  occupancyThreshold: { description: "Occupancy Threshold Exceeded", severity: "medium" },
+  queueThreshold: { description: "Dwell Threshold Exceeded", severity: "medium" },
+  analyticsDelay: { description: "Event Processing Delay Detected", severity: "medium" },
+  analyticsRestart: { description: "Analytics Service Restarted", severity: "medium" },
+  repeatedAccess: { description: "Repeated Access Activity Detected", severity: "medium" },
+  restrictedArea: { description: "Restricted Area Activity Detected", severity: "high" },
 } as const;
 
 type AlarmCatalogKey = keyof typeof ALARM_CATALOG;
@@ -46,6 +46,8 @@ const CAMERA_ALARM_ROTATION: AlarmCatalogKey[] = [
   "queueThreshold",
   "cameraOffline",
   "cameraRestored",
+  "occupancyThreshold",
+  "queueThreshold",
   "deviceRestarted",
   "videoLost",
   "videoRestored",
@@ -64,6 +66,7 @@ const GATEWAY_ALARM_ROTATION: AlarmCatalogKey[] = [
   "storageWarning",
   "gatewayRestored",
   "analyticsDelay",
+  "storageWarning",
   "storageCritical",
   "gatewayOffline",
 ];
@@ -75,6 +78,18 @@ const formatAlarmDate = (date: Date) => {
 
 const addMinutes = (date: Date, minutes: number) =>
   new Date(date.getTime() + minutes * 60 * 1000);
+
+const getYesterdayAtUtcTime = (time: string) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  const now = new Date();
+  return new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() - 1,
+    hours,
+    minutes,
+  ));
+};
 
 const resolveAlarmSiteScope = (siteId?: string | null): "site-a" | "site-b" | "all" => {
   switch ((siteId || "all").toLowerCase()) {
@@ -165,15 +180,15 @@ const buildHistoricalAlarms = () => {
     alarms.push(buildAlarm({ index: index + 1, device, catalogKey, startedAt, clearMinutes }));
   }
 
-  const activeStartedBase = addMinutes(end, -74);
   const activeDefinitions: Array<{
     device: DemoAlarmDevice;
     catalogKey: AlarmCatalogKey;
-    minutesAgo: number;
+    time: string;
   }> = [
-    { device: DEMO_ALARM_DEVICES[1], catalogKey: "videoLost", minutesAgo: 18 },
-    { device: DEMO_ALARM_DEVICES[2], catalogKey: "queueThreshold", minutesAgo: 43 },
-    { device: DEMO_ALARM_DEVICES[5], catalogKey: "occupancyThreshold", minutesAgo: 67 },
+    { device: DEMO_ALARM_DEVICES[1], catalogKey: "videoLost", time: "11:24" },
+    { device: DEMO_ALARM_DEVICES[2], catalogKey: "queueThreshold", time: "10:59" },
+    { device: DEMO_ALARM_DEVICES[5], catalogKey: "occupancyThreshold", time: "10:35" },
+    { device: DEMO_ALARM_DEVICES[6], catalogKey: "cameraOffline", time: "10:06" },
   ];
 
   activeDefinitions.forEach((definition, activeIndex) => {
@@ -181,7 +196,7 @@ const buildHistoricalAlarms = () => {
       index: totalHistorical + activeIndex + 1,
       device: definition.device,
       catalogKey: definition.catalogKey,
-      startedAt: addMinutes(activeStartedBase, 74 - definition.minutesAgo),
+      startedAt: getYesterdayAtUtcTime(definition.time),
       active: true,
     }));
   });

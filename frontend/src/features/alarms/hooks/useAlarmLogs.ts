@@ -20,8 +20,6 @@ type AlarmLogsState = {
   clientUsers: Array<[string, AlarmUser]>;
   activeAlarms: AlarmEvent[];
   clearedAlarms: AlarmEvent[];
-  highSeverityAlarms: number;
-  mediumSeverityAlarms: number;
   refreshAlarms: () => void;
 };
 
@@ -125,15 +123,6 @@ export const useAlarmLogs = (
     [alarms],
   );
 
-  const highSeverityAlarms = useMemo(
-    () => alarms.filter((alarm) => alarm.severity === "high").length,
-    [alarms],
-  );
-
-  const mediumSeverityAlarms = useMemo(
-    () => alarms.filter((alarm) => alarm.severity === "medium").length,
-    [alarms],
-  );
 
   const refreshAlarms = useCallback(() => {
     if (isAdmin && selectedClient) {
@@ -153,8 +142,6 @@ export const useAlarmLogs = (
     clientUsers,
     activeAlarms,
     clearedAlarms,
-    highSeverityAlarms,
-    mediumSeverityAlarms,
     refreshAlarms,
   };
 };
