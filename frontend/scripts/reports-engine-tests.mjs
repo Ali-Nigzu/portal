@@ -213,6 +213,34 @@ assert.throws(
 }
 
 {
+  const britishSummerSnapshot = {
+    ...snapshot("site-b", 3, 11),
+    ts: "2026-04-20 19:56:00 UTC",
+  };
+  const data = engine.buildSiteActivityReportData({
+    snapshot: britishSummerSnapshot,
+    siteView: "site-b",
+    timeframe: "today",
+    now: new Date(2026, 3, 20, 19, 56, 0),
+  });
+  assert.equal(
+    data.snapshotTs.getHours(),
+    19,
+    "demo snapshot timestamps with a UTC suffix must preserve local wall-clock hour",
+  );
+  assert.equal(
+    data.bucketLabels.length,
+    20,
+    "today must only include elapsed local-hour buckets through the snapshot hour",
+  );
+  assert.equal(
+    data.bucketLabels.at(-1),
+    "19:00",
+    "today must not render the next future hour bucket during British Summer Time",
+  );
+}
+
+{
   const expectedLengths = {
     today: 13,
     yesterday: 24,
