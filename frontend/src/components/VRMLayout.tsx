@@ -423,8 +423,11 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     location.pathname === "/documents" || location.pathname.startsWith("/documents/");
   const isSitesRoute = /^\/(?:sites|demo)(?:\/|$)/.test(location.pathname);
   const isSettingsRoute = location.pathname.startsWith("/settings");
-  const shouldRenderSecondaryPanel =
+  const demoShouldRenderSecondaryPanel =
     isSettingsRoute || (!isDocumentsRoute && (!isHomeRoute || isSelectorOpen));
+  const shouldRenderSecondaryPanel = isAuthenticated
+    ? isSitesRoute || isSettingsRoute
+    : demoShouldRenderSecondaryPanel;
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
@@ -852,25 +855,61 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (!isMobileViewport) return;
     event.preventDefault();
     event.stopPropagation();
+    const isSameRoute = isSameMobileRoute(targetPath);
+    if (isSameRoute && isRowActive) {
+      return;
+    }
     if (mobileSidebarOpen !== panel) {
-      // On touch screens a single tap should navigate, even if the panel was
-      // not already expanded. Keeping this as open-only required a second tap
-      // and made row-strip taps appear unresponsive.
       if (panel === "primary") {
         openPrimaryDrawer();
       } else {
         openSecondaryDrawerForCurrentContext();
       }
     }
-    const isSameRoute = isSameMobileRoute(targetPath);
-    if (isSameRoute && isRowActive) {
-      return;
-    }
     if (panel === "site" && /\/(sites|demo)\/[^/]+\//.test(targetPath)) {
       setSecondaryModeMemory("site-menu");
     }
     navigate(targetPath, { replace: isDemoSession });
     closeMobileDrawer();
+  };
+  const handleMobileSitesPrimaryTap = (event: React.MouseEvent<HTMLElement>) => {
+    if (!isMobileViewport) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (mobileSidebarOpen !== "primary") {
+      openPrimaryDrawer();
+      return;
+    }
+    if (isSitesRoute) {
+      openSiteSelectorDrawer();
+      return;
+    }
+    const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
+    setSecondaryModeMemory("site-menu");
+    setMobileDrawer({ kind: "site-menu", siteId: resolvedSiteId });
+    setMobileSidebarOpen("site");
+    navigate(
+      {
+        pathname: `${siteRoutePrefix}/${resolvedSiteId}/dashboard`,
+        search: buildSearch({ panel: undefined }),
+      },
+      { replace: isDemoSession },
+    );
+  };
+  const handleMobileSettingsPrimaryTap = (event: React.MouseEvent<HTMLElement>) => {
+    if (!isMobileViewport) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (mobileSidebarOpen !== "primary") {
+      openPrimaryDrawer();
+      return;
+    }
+    setSecondaryModeMemory("site-menu");
+    setMobileDrawer({ kind: "site-menu", siteId: siteId ?? getStoredSiteId() ?? "all" });
+    setMobileSidebarOpen("site");
+    if (!isSettingsRoute) {
+      navigate(getNavigationPath("/settings/account"));
+    }
   };
   useEffect(() => {
     if (!isMobileViewport || mobileSidebarOpen === null) {
@@ -918,6 +957,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   return (
     <div
       className={`vrm-layout ${isMobileViewport ? "vrm-layout--mobile" : ""} ${
+        !shouldRenderSecondaryPanel ? "vrm-layout--no-secondary" : ""
+      } ${
         isMobileViewport && mobileSidebarOpen === "primary"
           ? "vrm-layout--mobile-primary-open"
           : ""
@@ -1029,15 +1070,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           event.stopPropagation();
                         }
                       : item.path === siteRoutePrefix
-                        ? (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (mobileSidebarOpen !== "primary") {
-                              openPrimaryDrawer();
-                              return;
-                            }
-                            openSiteSelectorDrawer();
-                          }
+                        ? handleMobileSitesPrimaryTap
                         : item.path
                           ? (event) =>
                               handleMobileActionRowClick(
@@ -1093,15 +1126,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           event.stopPropagation();
                         }
                       : item.path === siteRoutePrefix
-                        ? (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (mobileSidebarOpen !== "primary") {
-                              openPrimaryDrawer();
-                              return;
-                            }
-                            openSiteSelectorDrawer();
-                          }
+                        ? handleMobileSitesPrimaryTap
                         : item.path
                           ? (event) =>
                               handleMobileActionRowClick(
@@ -1137,20 +1162,44 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <MobileSidebarRow
                 icon={<NavIcon icon={FileText} />}
                 label="Documents"
-                disabled
+                active={isAuthenticated ? isDocumentsRoute : undefined}
+                disabled={!isAuthenticated}
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
-                onTap={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
+                onTap={
+                  isAuthenticated
+                    ? (event) =>
+                        handleMobileActionRowClick(
+                          event,
+                          getNavigationPath("/documents"),
+                          "primary",
+                          isDocumentsRoute,
+                        )
+                    : (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }
+                }
               />
             ) : (
               <NavRow
+                to={isAuthenticated ? getNavigationPath("/documents") : undefined}
+                onClick={
+                  isAuthenticated
+                    ? (event) =>
+                        handleMobileActionRowClick(
+                          event,
+                          getNavigationPath("/documents"),
+                          "primary",
+                          isDocumentsRoute,
+                        )
+                    : undefined
+                }
                 leftIcon={<NavIcon icon={FileText} />}
                 label="Documents"
-                disabled
-                mobileSidebarDisabled
+                active={isAuthenticated ? isDocumentsRoute : undefined}
+                disabled={!isAuthenticated}
+                mobileSidebarDisabled={!isAuthenticated}
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Documents" : undefined}
               />
@@ -1169,20 +1218,38 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <MobileSidebarRow
                 icon={<NavIcon icon={Settings} />}
                 label="Settings"
-                disabled
+                active={isAuthenticated ? isSettingsRoute : undefined}
+                disabled={!isAuthenticated}
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
-                onTap={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
+                onTap={
+                  isAuthenticated
+                    ? handleMobileSettingsPrimaryTap
+                    : (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }
+                }
               />
             ) : (
               <NavRow
+                to={isAuthenticated ? getNavigationPath("/settings") : undefined}
+                onClick={
+                  isAuthenticated
+                    ? (event) =>
+                        handleMobileActionRowClick(
+                          event,
+                          getNavigationPath("/settings"),
+                          "primary",
+                          isSettingsRoute,
+                        )
+                    : undefined
+                }
                 leftIcon={<NavIcon icon={Settings} />}
                 label="Settings"
-                disabled
-                mobileSidebarDisabled
+                active={isAuthenticated ? isSettingsRoute : undefined}
+                disabled={!isAuthenticated}
+                mobileSidebarDisabled={!isAuthenticated}
                 className={isAuthenticated ? undefined : "vrm-nav-row--placeholder"}
                 ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
               />
@@ -1197,10 +1264,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   onTap={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    if (mobileSidebarOpen !== "primary") {
-                      openPrimaryDrawer();
-                      return;
-                    }
                     handleLogoutClick();
                     closeMobileDrawer();
                   }}
@@ -1232,24 +1295,100 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         </nav>
         {shouldRenderSecondaryPanel && (
           <nav
-          id="vrm-secondary-panel"
-          className="vrm-extended-panel"
-          aria-label="Secondary"
-          aria-expanded={isMobileViewport ? mobileSidebarOpen === "site" : undefined}
-          ref={secondaryPanelRef}
-          onFocusCapture={() => setIsSecondaryFocused(true)}
-          onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
-          onPointerEnter={cancelSitesLeaveTimer}
-          onPointerLeave={handleSitesRowLeave}
-          onPointerDown={(event) => handleMobilePanelPointerDown(event, "site")}
-          data-mobile-sidebar-panel="site"
-          data-mobile-sidebar-switch={
-            isMobileViewport && mobileSidebarOpen !== "site" ? "site" : undefined
-          }
-          data-mobile-sidebar-blank="true"
-        >
+            id="vrm-secondary-panel"
+            className="vrm-extended-panel"
+            aria-label="Secondary"
+            aria-expanded={isMobileViewport ? mobileSidebarOpen === "site" : undefined}
+            ref={secondaryPanelRef}
+            onFocusCapture={() => setIsSecondaryFocused(true)}
+            onBlurCapture={handleFocusChange(setIsSecondaryFocused)}
+            onPointerEnter={cancelSitesLeaveTimer}
+            onPointerLeave={handleSitesRowLeave}
+            onPointerDown={(event) => handleMobilePanelPointerDown(event, "site")}
+            data-mobile-sidebar-panel="site"
+            data-mobile-sidebar-switch={
+              isMobileViewport && mobileSidebarOpen !== "site" ? "site" : undefined
+            }
+            data-mobile-sidebar-blank="true"
+          >
           {isSettingsRoute ? (
-            <SettingsSecondaryNav />
+            isMobileViewport ? (
+              <>
+                <div className="vrm-secondary-header">
+                  {mobileSidebarOpen === "site" && (
+                    <button
+                      type="button"
+                      className="vrm-sidebar-mobile-close-button"
+                      data-mobile-sidebar-explicit-close="true"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        closeMobileSidebar();
+                      }}
+                      aria-label="Close settings sidebar"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <MobileSidebarRow
+                    icon={<NavIcon icon={Settings} />}
+                    label="Settings"
+                    className="vrm-nav-row--inert"
+                    ariaLabel={!isSecondaryExpanded ? "Settings" : undefined}
+                    onTap={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openSecondaryDrawerForCurrentContext();
+                    }}
+                  />
+                  <SecondaryDivider />
+                </div>
+                <div data-mobile-sidebar-protected="true">
+                  <NavList className="vrm-secondary-list">
+                    <MobileSidebarRow
+                      icon={<NavIcon icon={Settings} />}
+                      label="My Account"
+                      active={location.pathname === "/settings/account"}
+                      ariaLabel={!isSecondaryExpanded ? "My Account" : undefined}
+                      onTap={(event) =>
+                        handleMobileActionRowClick(
+                          event,
+                          getNavigationPath("/settings/account"),
+                          "site",
+                          location.pathname === "/settings/account",
+                        )
+                      }
+                    />
+                    <MobileSidebarRow
+                      icon={<NavIcon icon={Shield} />}
+                      label="Manage Access"
+                      active={location.pathname === "/settings/access"}
+                      ariaLabel={!isSecondaryExpanded ? "Manage Access" : undefined}
+                      onTap={(event) =>
+                        handleMobileActionRowClick(
+                          event,
+                          getNavigationPath("/settings/access"),
+                          "site",
+                          location.pathname === "/settings/access",
+                        )
+                      }
+                    />
+                    <MobileSidebarRow
+                      icon={<NavIcon icon={Bell} />}
+                      label="Create Alarm"
+                      disabled
+                      ariaLabel={!isSecondaryExpanded ? "Create Alarm" : undefined}
+                      onTap={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                    />
+                  </NavList>
+                </div>
+              </>
+            ) : (
+              <SettingsSecondaryNav />
+            )
           ) : (
             <>
           <div className="vrm-secondary-header">
