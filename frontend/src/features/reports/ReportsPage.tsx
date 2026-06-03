@@ -10,6 +10,7 @@ import {
   type ReportTimeframe,
 } from "./utils/reportUtils";
 import { isDemoSessionActive } from "../../lib/demoSession";
+import { findSiteById } from "../../lib/sites";
 import { loadReportData, type ReportData } from "./engine/ReportsEngine";
 interface ReportsPageProps {
   credentials?: Credentials;
@@ -239,6 +240,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       const template = reportTemplates.find((t) => t.id === reportType);
       const snapshotTs = reportData.snapshotTs;
       const subtitle = reportData.subtitle;
+      const siteName =
+        findSiteById(reportData.siteView)?.label ?? reportData.siteView;
       doc.setFontSize(22);
       doc.setTextColor(33, 150, 243);
       doc.text("camOS", 105, 18, { align: "center" });
@@ -247,14 +250,17 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       doc.text(`${template?.name ?? "Report"} Report`, 105, 30, {
         align: "center",
       });
+      doc.setFontSize(11);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Site: ${siteName}`, 105, 37, { align: "center" });
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 37, {
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 43, {
         align: "center",
       });
-      doc.text(subtitle, 105, 43, { align: "center" });
+      doc.text(subtitle, 105, 49, { align: "center" });
       doc.setDrawColor(220, 220, 220);
-      doc.line(20, 48, 190, 48);
+      doc.line(20, 53, 190, 53);
       if (reportData.reportType === "site-activity") {
         const metrics = reportData.metrics;
         const bucketLabels = reportData.bucketLabels;
@@ -630,7 +636,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
           </div>
           <div style={{ marginTop: "20px", display: "flex", gap: "12px" }}>
             <button
-              className="vrm-btn"
+              className="vrm-btn vrm-btn-primary"
               style={{ flex: 1 }}
               onClick={handleGenerateReport}
               disabled={isGenerating}
