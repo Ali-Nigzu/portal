@@ -65,7 +65,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const [primaryOutgoingActivePath, setPrimaryOutgoingActivePath] = useState<string | null>(null);
   const primaryLastActivePathRef = useRef<string | null>(null);
   const primaryOutgoingActiveTimeoutRef = useRef<number | null>(null);
-  const authMobileSecondaryAutoOpenPathRef = useRef<string | null>(null);
   const sitesHoverTimeout = useRef<number | null>(null);
   const secondaryFocusRef = useRef(false);
   const primaryRailRef = useRef<HTMLDivElement | null>(null);
@@ -432,45 +431,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const shouldShowAdminMenu =
     userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
-  useEffect(() => {
-    if (
-      !isMobileViewport ||
-      !isAuthenticated ||
-      !shouldRenderSecondaryPanel ||
-      (!isSitesRoute && !isSettingsRoute)
-    ) {
-      authMobileSecondaryAutoOpenPathRef.current = null;
-      return;
-    }
-
-    if (authMobileSecondaryAutoOpenPathRef.current === location.pathname) {
-      return;
-    }
-
-    authMobileSecondaryAutoOpenPathRef.current = location.pathname;
-    setMobileSidebarOpen("site");
-    if (isSettingsRoute) {
-      setSecondaryModeMemory("site-menu");
-      setMobileDrawer({ kind: "site-menu", siteId: siteId ?? "all" });
-      return;
-    }
-    if (siteId) {
-      setSecondaryModeMemory("site-menu");
-      setMobileDrawer({ kind: "site-menu", siteId });
-      return;
-    }
-    setSecondaryModeMemory("selector");
-    setMobileDrawer({ kind: "site-selector" });
-  }, [
-    isAuthenticated,
-    isMobileViewport,
-    isSettingsRoute,
-    isSitesRoute,
-    location.pathname,
-    shouldRenderSecondaryPanel,
-    siteId,
-  ]);
-
   const handleLogoutClick = async () => {
     await logout();
     onLogout?.();
@@ -895,30 +855,61 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (!isMobileViewport) return;
     event.preventDefault();
     event.stopPropagation();
-    if (mobileSidebarOpen !== panel) {
-      if (panel === "primary") {
-        // Primary rows remain single-tap navigation targets on touch screens.
-        openPrimaryDrawer();
-      } else {
-        openSecondaryDrawerForCurrentContext();
-        if (isAuthenticated) {
-          // Auth secondary navigation must be readable and usable on touch
-          // devices. The first tap opens the Sites/Settings drawer; the next
-          // tap selects a destination. Demo keeps its existing single-tap
-          // secondary-row behaviour because it is not authenticated.
-          return;
-        }
-      }
-    }
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
       return;
+    }
+    if (mobileSidebarOpen !== panel) {
+      if (panel === "primary") {
+        openPrimaryDrawer();
+      } else {
+        openSecondaryDrawerForCurrentContext();
+      }
     }
     if (panel === "site" && /\/(sites|demo)\/[^/]+\//.test(targetPath)) {
       setSecondaryModeMemory("site-menu");
     }
     navigate(targetPath, { replace: isDemoSession });
     closeMobileDrawer();
+  };
+  const handleMobileSitesPrimaryTap = (event: React.MouseEvent<HTMLElement>) => {
+    if (!isMobileViewport) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (mobileSidebarOpen !== "primary") {
+      openPrimaryDrawer();
+      return;
+    }
+    if (isSitesRoute) {
+      openSiteSelectorDrawer();
+      return;
+    }
+    const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
+    setSecondaryModeMemory("site-menu");
+    setMobileDrawer({ kind: "site-menu", siteId: resolvedSiteId });
+    setMobileSidebarOpen("site");
+    navigate(
+      {
+        pathname: `${siteRoutePrefix}/${resolvedSiteId}/dashboard`,
+        search: buildSearch({ panel: undefined }),
+      },
+      { replace: isDemoSession },
+    );
+  };
+  const handleMobileSettingsPrimaryTap = (event: React.MouseEvent<HTMLElement>) => {
+    if (!isMobileViewport) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (mobileSidebarOpen !== "primary") {
+      openPrimaryDrawer();
+      return;
+    }
+    setSecondaryModeMemory("site-menu");
+    setMobileDrawer({ kind: "site-menu", siteId: siteId ?? getStoredSiteId() ?? "all" });
+    setMobileSidebarOpen("site");
+    if (!isSettingsRoute) {
+      navigate(getNavigationPath("/settings/account"));
+    }
   };
   useEffect(() => {
     if (!isMobileViewport || mobileSidebarOpen === null) {
@@ -1079,15 +1070,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           event.stopPropagation();
                         }
                       : item.path === siteRoutePrefix
-                        ? (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (mobileSidebarOpen !== "primary") {
-                              openPrimaryDrawer();
-                              return;
-                            }
-                            openSiteSelectorDrawer();
-                          }
+                        ? handleMobileSitesPrimaryTap
                         : item.path
                           ? (event) =>
                               handleMobileActionRowClick(
@@ -1143,15 +1126,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           event.stopPropagation();
                         }
                       : item.path === siteRoutePrefix
-                        ? (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (mobileSidebarOpen !== "primary") {
-                              openPrimaryDrawer();
-                              return;
-                            }
-                            openSiteSelectorDrawer();
-                          }
+                        ? handleMobileSitesPrimaryTap
                         : item.path
                           ? (event) =>
                               handleMobileActionRowClick(
@@ -1249,13 +1224,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 ariaLabel={!isPrimaryExpanded ? "Settings" : undefined}
                 onTap={
                   isAuthenticated
-                    ? (event) =>
-                        handleMobileActionRowClick(
-                          event,
-                          getNavigationPath("/settings"),
-                          "primary",
-                          isSettingsRoute,
-                        )
+                    ? handleMobileSettingsPrimaryTap
                     : (event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1295,10 +1264,6 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   onTap={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    if (mobileSidebarOpen !== "primary") {
-                      openPrimaryDrawer();
-                      return;
-                    }
                     handleLogoutClick();
                     closeMobileDrawer();
                   }}
