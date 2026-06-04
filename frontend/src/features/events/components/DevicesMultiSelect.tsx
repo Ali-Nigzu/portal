@@ -144,24 +144,31 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
               role="listbox"
               style={menuStyle}
             >
-              {options.map((option) => {
-                const isSelected = selectedTokens.has(option.token);
-                return (
-                  <button
-                    aria-selected={isSelected}
-                    className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
-                    key={option.token}
-                    onClick={() => toggleToken(option.token)}
-                    role="option"
-                    type="button"
-                  >
-                    <span aria-hidden="true" className="event-devices-option__check">
-                      {isSelected ? "✓" : ""}
-                    </span>
-                    <span className="event-devices-option__text">{option.label}</span>
-                  </button>
-                );
-              })}
+              {options.length === 0 ? (
+                <div className="event-devices-empty" role="status">
+                  <p>No devices connected.</p>
+                  <p>Please add a site and connect a device.</p>
+                </div>
+              ) : (
+                options.map((option) => {
+                  const isSelected = selectedTokens.has(option.token);
+                  return (
+                    <button
+                      aria-selected={isSelected}
+                      className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
+                      key={option.token}
+                      onClick={() => toggleToken(option.token)}
+                      role="option"
+                      type="button"
+                    >
+                      <span aria-hidden="true" className="event-devices-option__check">
+                        {isSelected ? "✓" : ""}
+                      </span>
+                      <span className="event-devices-option__text">{option.label}</span>
+                    </button>
+                  );
+                })
+              )}
             </div>,
             portalTarget,
           )

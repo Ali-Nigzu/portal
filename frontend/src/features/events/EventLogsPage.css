@@ -114,6 +114,21 @@
   touch-action: pan-y;
 }
 
+.event-devices-empty {
+  color: var(--vrm-text-secondary);
+  font-size: var(--vrm-typography-font-size-body-sm);
+  line-height: 1.35;
+  padding: var(--vrm-spacing-2) var(--vrm-spacing-3);
+}
+
+.event-devices-empty p {
+  margin: 0;
+}
+
+.event-devices-empty p + p {
+  margin-top: var(--vrm-spacing-1);
+}
+
 .event-devices-option {
   align-items: center;
   background: transparent;

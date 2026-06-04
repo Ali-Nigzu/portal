@@ -883,6 +883,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     event.stopPropagation();
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
+      if (panel === "site" && mobileSidebarOpen === "site") {
+        closeMobileDrawer();
+      }
       return;
     }
     if (mobileSidebarOpen !== panel) {
