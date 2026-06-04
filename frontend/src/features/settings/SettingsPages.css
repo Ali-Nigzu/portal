@@ -225,6 +225,29 @@
   }
 }
 
+@media (max-width: 600px) and (orientation: portrait) {
+  .settings-account-card-body {
+    overflow-x: auto;
+    overflow-y: visible;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .settings-account-card-body .settings-field-row {
+    min-width: 560px;
+    grid-template-columns: 140px minmax(220px, 1fr) 156px;
+    gap: 14px;
+  }
+
+  .settings-account-card-body .settings-field-actions {
+    width: 156px;
+  }
+
+  .settings-account-card-body .settings-field-actions .vrm-btn-sm {
+    min-height: 36px;
+  }
+}
+
 
 .settings-form-message {
   color: #8ad9a2;
