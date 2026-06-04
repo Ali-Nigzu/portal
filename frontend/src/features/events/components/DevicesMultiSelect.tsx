@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import {
   EVENT_DEVICE_OPTIONS,
   summarizeEventDeviceSelection,
+  type EventDeviceOption,
   type EventDeviceToken,
 } from "../utils/eventDevices";
 
@@ -11,9 +12,15 @@ interface DevicesMultiSelectProps {
   id?: string;
   value: EventDeviceToken[];
   onChange: (value: EventDeviceToken[]) => void;
+  options?: EventDeviceOption[];
 }
 
-const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onChange }) => {
+const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
+  id,
+  value,
+  onChange,
+  options = EVENT_DEVICE_OPTIONS,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | undefined>();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -22,7 +29,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
   const buttonId = id ?? generatedButtonId;
   const menuId = useId();
   const selectedTokens = new Set(value);
-  const summary = summarizeEventDeviceSelection(value);
+  const summary = summarizeEventDeviceSelection(value, options);
   const portalTarget = wrapperRef.current?.closest(".demo-overlay") ?? document.body;
 
   const updateMenuPosition = () => {
@@ -137,24 +144,31 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
               role="listbox"
               style={menuStyle}
             >
-              {EVENT_DEVICE_OPTIONS.map((option) => {
-                const isSelected = selectedTokens.has(option.token);
-                return (
-                  <button
-                    aria-selected={isSelected}
-                    className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
-                    key={option.token}
-                    onClick={() => toggleToken(option.token)}
-                    role="option"
-                    type="button"
-                  >
-                    <span aria-hidden="true" className="event-devices-option__check">
-                      {isSelected ? "✓" : ""}
-                    </span>
-                    <span className="event-devices-option__text">{option.label}</span>
-                  </button>
-                );
-              })}
+              {options.length === 0 ? (
+                <div className="event-devices-empty" role="status">
+                  <p>No devices connected.</p>
+                  <p>Please add a site and connect a device.</p>
+                </div>
+              ) : (
+                options.map((option) => {
+                  const isSelected = selectedTokens.has(option.token);
+                  return (
+                    <button
+                      aria-selected={isSelected}
+                      className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
+                      key={option.token}
+                      onClick={() => toggleToken(option.token)}
+                      role="option"
+                      type="button"
+                    >
+                      <span aria-hidden="true" className="event-devices-option__check">
+                        {isSelected ? "✓" : ""}
+                      </span>
+                      <span className="event-devices-option__text">{option.label}</span>
+                    </button>
+                  );
+                })
+              )}
             </div>,
             portalTarget,
           )

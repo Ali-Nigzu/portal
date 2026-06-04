@@ -286,6 +286,23 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setMobileDrawer({ kind: "closed" });
     setMobileSidebarOpen(null);
   };
+  const handleMobileAllSitesSelection = (event: React.MouseEvent<HTMLElement>) => {
+    if (!isMobileViewport || !isAuthenticated) {
+      return false;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const nextSiteId = allSitesOption.id;
+    setSecondaryModeMemory("site-menu");
+    setMobileDrawer({ kind: "site-menu", siteId: nextSiteId });
+    setMobileSidebarOpen("site");
+    navigate(
+      getNavigationPath(`${siteRoutePrefix}/${nextSiteId}/dashboard`, {
+        panel: undefined,
+      }),
+    );
+    return true;
+  };
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -866,6 +883,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     event.stopPropagation();
     const isSameRoute = isSameMobileRoute(targetPath);
     if (isSameRoute && isRowActive) {
+      if (panel === "site" && mobileSidebarOpen === "site") {
+        closeMobileDrawer();
+      }
       return;
     }
     if (mobileSidebarOpen !== panel) {
@@ -1415,6 +1435,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                 }
                 onTap={(event) =>
                   (() => {
+                    if (handleMobileAllSitesSelection(event)) {
+                      return;
+                    }
                     setSecondaryModeMemory(
                       isMobileViewport ? "site-menu" : "selector",
                     );

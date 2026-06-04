@@ -1,13 +1,16 @@
 import React from "react";
+import { useParams } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Credentials } from "../../types/credentials";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
 import type { searchEvents } from "./transport/searchEvents";
 import DevicesMultiSelect from "./components/DevicesMultiSelect";
+import { getEventDeviceOptionsForSiteId } from "./utils/eventDevices";
 import type { EventData } from "./utils/eventTypes";
 import "./EventLogsPage.css";
 import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
+import { isDemoSessionActive } from "../../lib/demoSession";
 import { installEventLogsRuntimeProof, runEventLogsRuntimeProofSuite, type RuntimeProofSuite } from "./runtimeProof";
 interface EventLogsPageProps {
   credentials: Credentials;
@@ -21,6 +24,12 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
   viewTokenOverride,
   clientIdOverride,
 }) => {
+  const { siteId } = useParams();
+  const isDemoSession = isDemoSessionActive();
+  const deviceOptions = React.useMemo(
+    () => (isDemoSession ? undefined : getEventDeviceOptionsForSiteId(siteId)),
+    [isDemoSession, siteId],
+  );
   const {
     events,
     loading,
@@ -516,6 +525,7 @@ const EventLogsPage: React.FC<EventLogsPageProps> = ({
               </label>
               <DevicesMultiSelect
                 id="event-devices-filter"
+                options={deviceOptions}
                 value={draftFilters.deviceTokens}
                 onChange={(deviceTokens) =>
                   setDraftFilters((prev) => ({
