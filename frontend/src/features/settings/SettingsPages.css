@@ -226,21 +226,28 @@
 }
 
 @media (max-width: 600px) and (orientation: portrait) {
-  .settings-account-card-body {
-    overflow-x: auto;
-    overflow-y: visible;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
+  .settings-account-card-body .settings-field-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "label label"
+      "main actions";
+    gap: 8px 12px;
+    align-items: center;
+    padding: 16px;
   }
 
-  .settings-account-card-body .settings-field-row {
-    min-width: 560px;
-    grid-template-columns: 140px minmax(220px, 1fr) 156px;
-    gap: 14px;
+  .settings-account-card-body .settings-field-label {
+    grid-area: label;
+  }
+
+  .settings-account-card-body .settings-field-main {
+    grid-area: main;
   }
 
   .settings-account-card-body .settings-field-actions {
-    width: 156px;
+    grid-area: actions;
+    align-self: center;
+    width: auto;
   }
 
   .settings-account-card-body .settings-field-actions .vrm-btn-sm {
