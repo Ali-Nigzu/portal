@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import {
   EVENT_DEVICE_OPTIONS,
   summarizeEventDeviceSelection,
+  type EventDeviceOption,
   type EventDeviceToken,
 } from "../utils/eventDevices";
 
@@ -11,9 +12,15 @@ interface DevicesMultiSelectProps {
   id?: string;
   value: EventDeviceToken[];
   onChange: (value: EventDeviceToken[]) => void;
+  options?: EventDeviceOption[];
 }
 
-const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onChange }) => {
+const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
+  id,
+  value,
+  onChange,
+  options = EVENT_DEVICE_OPTIONS,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | undefined>();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -22,7 +29,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
   const buttonId = id ?? generatedButtonId;
   const menuId = useId();
   const selectedTokens = new Set(value);
-  const summary = summarizeEventDeviceSelection(value);
+  const summary = summarizeEventDeviceSelection(value, options);
   const portalTarget = wrapperRef.current?.closest(".demo-overlay") ?? document.body;
 
   const updateMenuPosition = () => {
@@ -137,7 +144,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({ id, value, onCh
               role="listbox"
               style={menuStyle}
             >
-              {EVENT_DEVICE_OPTIONS.map((option) => {
+              {options.map((option) => {
                 const isSelected = selectedTokens.has(option.token);
                 return (
                   <button

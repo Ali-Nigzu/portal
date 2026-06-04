@@ -25,6 +25,21 @@ export const EVENT_DEVICE_OPTIONS: EventDeviceOption[] = [
   { token: "site-b:cam-2", label: "TT: Back Door Camera", siteId: 1, cameraId: 2, kind: "camera" },
 ];
 
+const EVENT_DEVICE_SITE_TOKEN_PREFIX: Record<string, string> = {
+  "site-a": "site-a",
+  "site-b": "site-b",
+};
+
+export const getEventDeviceOptionsForSiteId = (
+  siteId?: string | null,
+): EventDeviceOption[] => {
+  const tokenPrefix = siteId ? EVENT_DEVICE_SITE_TOKEN_PREFIX[siteId] : undefined;
+  if (!tokenPrefix) {
+    return [];
+  }
+  return EVENT_DEVICE_OPTIONS.filter((option) => option.token.startsWith(`${tokenPrefix}:`));
+};
+
 const EVENT_DEVICE_TOKEN_SET = new Set(EVENT_DEVICE_OPTIONS.map((option) => option.token));
 
 export const isEventDeviceToken = (value: string): value is EventDeviceToken =>
@@ -47,12 +62,15 @@ export const normalizeEventDeviceTokens = (values: unknown): EventDeviceToken[] 
   return tokens;
 };
 
-export const summarizeEventDeviceSelection = (tokens: EventDeviceToken[]): string => {
+export const summarizeEventDeviceSelection = (
+  tokens: EventDeviceToken[],
+  options: EventDeviceOption[] = EVENT_DEVICE_OPTIONS,
+): string => {
   if (tokens.length === 0) {
     return "All Devices";
   }
   if (tokens.length === 1) {
-    return EVENT_DEVICE_OPTIONS.find((option) => option.token === tokens[0])?.label ?? "1 device selected";
+    return options.find((option) => option.token === tokens[0])?.label ?? "1 device selected";
   }
   return `${tokens.length} devices selected`;
 };
