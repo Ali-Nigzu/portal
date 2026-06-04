@@ -836,6 +836,15 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (target.closest("[data-mobile-sidebar-row='true']")) {
       return;
     }
+    if (target.closest(".vrm-secondary-search")) {
+      return;
+    }
+    if (mobileSidebarOpen === panel) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeMobileDrawer();
+      return;
+    }
     if (mobileSidebarOpen !== panel) {
       event.preventDefault();
       event.stopPropagation();
@@ -880,21 +889,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       openPrimaryDrawer();
       return;
     }
-    if (isSitesRoute) {
-      openSiteSelectorDrawer();
-      return;
-    }
-    const resolvedSiteId = siteId ?? getStoredSiteId() ?? "all";
-    setSecondaryModeMemory("site-menu");
-    setMobileDrawer({ kind: "site-menu", siteId: resolvedSiteId });
-    setMobileSidebarOpen("site");
-    navigate(
-      {
-        pathname: `${siteRoutePrefix}/${resolvedSiteId}/dashboard`,
-        search: buildSearch({ panel: undefined }),
-      },
-      { replace: isDemoSession },
-    );
+    openSiteSelectorDrawer();
+    openSitesSelector();
   };
   const handleMobileSettingsPrimaryTap = (event: React.MouseEvent<HTMLElement>) => {
     if (!isMobileViewport) return;

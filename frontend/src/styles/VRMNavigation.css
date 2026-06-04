@@ -702,9 +702,6 @@ button.vrm-nav-row {
     cursor: default;
   }
 
-  .vrm-layout--mobile.vrm-layout--mobile-site-open .mobile-sidebar-blank-collapse-zone {
-    display: none;
-  }
 
   .vrm-layout--mobile .vrm-nav-list,
   .vrm-layout--mobile .vrm-primary-nav,
