@@ -42,6 +42,8 @@ import SettingsSecondaryNav from "../features/settings/components/SettingsSecond
 import MobileSidebarRow from "./MobileSidebarRow";
 
 type MobileSidebarOpen = null | "primary" | "site";
+const CALENDLY_SITE_SETUP_URL = "https://calendly.com/cameraoperatingsystems/camos-site-setup-appointment";
+
 type MobileDrawer =
   | { kind: "closed" }
   | { kind: "primary" }
@@ -178,6 +180,17 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
       { replace: isDemoSession },
     );
   };
+  const handleAddSiteClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isAuthenticated || typeof window === "undefined") {
+      return;
+    }
+
+    window.open(CALENDLY_SITE_SETUP_URL, "_blank", "noopener,noreferrer");
+  };
+
   const handleSitesClick = () => {
     if (isMobileViewport) {
       setMobileDrawer({ kind: "site-selector" });
@@ -1580,7 +1593,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   className="vrm-nav-row--inert"
                   disabled
                   ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
-                  onTap={(event) => {
+                  onTap={isAuthenticated ? handleAddSiteClick : (event) => {
                     event.preventDefault();
                     event.stopPropagation();
                   }}
@@ -1591,6 +1604,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   label="Add site"
                   className="vrm-nav-row--inert"
                   ariaLabel={!isSecondaryExpanded ? "Add site" : undefined}
+                  onClick={isAuthenticated ? handleAddSiteClick : undefined}
                 />
               )}
             </NavList>
