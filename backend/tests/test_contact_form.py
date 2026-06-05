@@ -9,7 +9,7 @@ from backend.app.services.postmark_email import PostmarkConfigurationError
 
 
 @pytest.mark.anyio
-async def test_contact_submission_succeeds_and_persists_when_email_is_unconfigured(tmp_path, monkeypatch):
+async def test_contact_submission_requires_email_pipeline_and_persists_when_unconfigured(tmp_path, monkeypatch):
     submissions_file = tmp_path / "contact_submissions.json"
     monkeypatch.setattr(auth, "CONTACT_SUBMISSIONS_FILE", str(submissions_file))
 
@@ -21,15 +21,16 @@ async def test_contact_submission_succeeds_and_persists_when_email_is_unconfigur
     monkeypatch.setattr(auth, "send_admin_contact_notification", fail_admin_notification)
     monkeypatch.setattr(auth, "send_contact_confirmation_email", lambda **_kwargs: None)
 
-    response = await auth.submit_contact(
-        name="Fallback User",
-        email="fallback@example.com",
-        phone=None,
-        message="Please contact me.",
-        attachments=[],
-    )
+    with pytest.raises(HTTPException) as exc_info:
+        await auth.submit_contact(
+            name="Fallback User",
+            email="fallback@example.com",
+            phone=None,
+            message="Please contact me.",
+            attachments=[],
+        )
 
-    assert response.message == "Thanks for contacting us. We'll be in touch soon."
+    assert exc_info.value.status_code == 503
 
     submissions = json.loads(Path(submissions_file).read_text())
     assert len(submissions) == 1
@@ -41,11 +42,25 @@ async def test_contact_submission_succeeds_and_persists_when_email_is_unconfigur
 
 
 @pytest.mark.anyio
-async def test_contact_submission_persists_optional_phone(tmp_path, monkeypatch):
+async def test_contact_submission_sends_internal_and_confirmation_emails(tmp_path, monkeypatch):
     submissions_file = tmp_path / "contact_submissions.json"
     monkeypatch.setattr(auth, "CONTACT_SUBMISSIONS_FILE", str(submissions_file))
-    monkeypatch.setattr(auth, "send_admin_contact_notification", lambda **_kwargs: None)
-    monkeypatch.setattr(auth, "send_contact_confirmation_email", lambda **_kwargs: None)
+    calls = []
+
+    class Result:
+        def __init__(self, message_id):
+            self.message_id = message_id
+
+    def capture_admin(**kwargs):
+        calls.append(("admin", kwargs))
+        return Result("admin-message-id")
+
+    def capture_confirmation(**kwargs):
+        calls.append(("confirmation", kwargs))
+        return Result("confirmation-message-id")
+
+    monkeypatch.setattr(auth, "send_admin_contact_notification", capture_admin)
+    monkeypatch.setattr(auth, "send_contact_confirmation_email", capture_confirmation)
 
     response = await auth.submit_contact(
         name="Phone User",
@@ -56,6 +71,13 @@ async def test_contact_submission_persists_optional_phone(tmp_path, monkeypatch)
     )
 
     assert response.message == "Thanks for contacting us. We'll be in touch soon."
+    assert [kind for kind, _ in calls] == ["admin", "confirmation"]
+    assert calls[0][1]["name"] == "Phone User"
+    assert calls[0][1]["email"] == "phone@example.com"
+    assert calls[0][1]["phone"] == "+15551234567"
+    assert calls[0][1]["message"] == "Please call me."
+    assert calls[0][1]["submitted_at"]
+    assert calls[1][1] == {"to_email": "phone@example.com", "name": "Phone User"}
 
     submissions = json.loads(Path(submissions_file).read_text())
     assert submissions[0]["phone"] == "+15551234567"
