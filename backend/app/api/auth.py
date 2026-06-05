@@ -235,9 +235,9 @@ def _raise_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
             bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
             exc.response_body,
         )
-        raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
+        raise HTTPException(status_code=502, detail="Failed to send signup email.") from exc
     logger.exception("signup.email.unknown_error request_id=%s", request_id)
-    raise HTTPException(status_code=502, detail="Failed to send verification email.") from exc
+    raise HTTPException(status_code=502, detail="Failed to send signup email.") from exc
 
 
 def _raise_password_reset_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
@@ -659,9 +659,10 @@ async def submit_contact(
         )
         attachment_names.append(filename)
 
+    submitted_at = _to_iso(_utc_now())
     submission_record = {
         "id": request_id,
-        "submitted_at": _to_iso(_utc_now()),
+        "submitted_at": submitted_at,
         "name": safe_name,
         "email": safe_email,
         "phone": safe_phone,
@@ -675,30 +676,25 @@ async def submit_contact(
         raise HTTPException(status_code=500, detail="Failed to save contact message.") from exc
 
     try:
-        send_admin_contact_notification(
+        admin_result = send_admin_contact_notification(
             name=safe_name,
             email=safe_email,
             phone=safe_phone,
             message=safe_message,
+            submitted_at=submitted_at,
             attachment_names=attachment_names,
             attachments=postmark_attachments,
         )
+        confirmation_result = send_contact_confirmation_email(to_email=safe_email, name=safe_name)
     except Exception as exc:
-        logger.warning(
-            "contact.email.admin_notification_skipped request_id=%s detail=%s",
-            request_id,
-            str(exc),
-        )
-    else:
-        try:
-            send_contact_confirmation_email(to_email=safe_email, name=safe_name)
-        except Exception:
-            logger.exception(
-                "contact.email.sender_confirmation_failed request_id=%s from_email=%s to_email=%s",
-                request_id,
-                bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
-                safe_email,
-            )
+        _raise_contact_mail_delivery_error(exc, request_id=request_id)
+
+    logger.info(
+        "contact.email.sent request_id=%s admin_message_id=%s confirmation_message_id=%s",
+        request_id,
+        admin_result.message_id,
+        confirmation_result.message_id,
+    )
 
     return ContactResponse(message="Thanks for contacting us. We'll be in touch soon.")
 
@@ -897,20 +893,27 @@ async def signup_verify(payload: SignupVerifyRequest):
     )
     user_data["updated_at"] = _to_iso(now)
     users[username] = user_data
-    save_users(users)
 
+    save_users(users)
     del pending_signups[email]
     save_pending_signups(pending_signups)
 
     try:
-        send_admin_signup_notification(
+        signup_notification_result = send_admin_signup_notification(
             verified_email=email,
             name=user_data.get("name", ""),
             username=username,
             timestamp=_to_iso(now),
+            phone=user_data.get("phone"),
         )
     except Exception:
-        logger.exception("Failed to send admin signup notification", extra={"email": email})
+        logger.exception("signup.email.admin_notification_failed", extra={"email": email})
+    else:
+        logger.info(
+            "signup.email.admin_notification_sent user_id=%s message_id=%s",
+            user_data.get("id"),
+            signup_notification_result.message_id,
+        )
 
     return AuthUserResponse(user=_safe_auth_user(user_data))
 

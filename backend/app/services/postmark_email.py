@@ -8,7 +8,7 @@ import os
 from dataclasses import dataclass
 from urllib import error, request
 
-POSTMARK_EMAIL_ENDPOINT = "https://api.postmarkapp.com/email"
+DEFAULT_POSTMARK_EMAIL_ENDPOINT = "https://api.postmarkapp.com/email"
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,14 @@ class PostmarkDeliveryError(RuntimeError):
 class PostmarkConfig:
     server_token: str
     from_email: str
+    endpoint: str
+
+
+@dataclass(frozen=True)
+class PostmarkSendResult:
+    message_id: str | None
+    submitted_at: str | None
+    to_email_masked: str
 
 
 @dataclass(frozen=True)
@@ -70,7 +78,10 @@ def _parse_postmark_error(body: str) -> tuple[int | None, str | None]:
         data = json.loads(body)
         error_code = data.get("ErrorCode")
         message = data.get("Message")
-        return (int(error_code) if isinstance(error_code, int) else None, message if isinstance(message, str) else None)
+        return (
+            int(error_code) if isinstance(error_code, int) else None,
+            message if isinstance(message, str) else None,
+        )
     except Exception:
         return None, None
 
@@ -94,19 +105,28 @@ def _load_config() -> PostmarkConfig:
     return PostmarkConfig(
         server_token=server_token,
         from_email=from_email,
+        endpoint=(
+            os.getenv("POSTMARK_EMAIL_ENDPOINT", DEFAULT_POSTMARK_EMAIL_ENDPOINT).strip()
+            or DEFAULT_POSTMARK_EMAIL_ENDPOINT
+        ),
     )
 
 
+DEFAULT_ADMIN_NOTIFY_EMAIL = "ali@camos.app"
+
+
 def _require_admin_notify_email() -> str:
-    admin_notify_email = os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()
-    if not admin_notify_email:
-        raise PostmarkConfigurationError("Email service is not configured. Missing ADMIN_NOTIFY_EMAIL.")
-    return admin_notify_email
+    return (
+        os.getenv("ADMIN_NOTIFY_EMAIL", DEFAULT_ADMIN_NOTIFY_EMAIL).strip()
+        or DEFAULT_ADMIN_NOTIFY_EMAIL
+    )
 
 
-def _postmark_send(*, token: str, payload: dict, from_email: str, to_email: str) -> None:
+def _postmark_send(
+    *, token: str, payload: dict, from_email: str, to_email: str, endpoint: str
+) -> PostmarkSendResult:
     req = request.Request(
-        POSTMARK_EMAIL_ENDPOINT,
+        endpoint,
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Accept": "application/json",
@@ -118,8 +138,8 @@ def _postmark_send(*, token: str, payload: dict, from_email: str, to_email: str)
     to_email_masked = _mask_email(to_email)
     try:
         with request.urlopen(req, timeout=10) as response:
+            body = response.read().decode("utf-8", errors="replace")
             if response.status >= 300:
-                body = response.read().decode("utf-8", errors="replace")
                 error_code, error_message = _parse_postmark_error(body)
                 logger.error(
                     "postmark.send.failed status=%s error_code=%s message=%s from_email=%s to_email=%s response_body=%s",
@@ -138,6 +158,26 @@ def _postmark_send(*, token: str, payload: dict, from_email: str, to_email: str)
                     from_email=from_email,
                     to_email_masked=to_email_masked,
                 )
+            message_id = None
+            submitted_at = None
+            try:
+                data = json.loads(body) if body else {}
+                message_id = data.get("MessageID") if isinstance(data.get("MessageID"), str) else None
+                submitted_at = data.get("SubmittedAt") if isinstance(data.get("SubmittedAt"), str) else None
+            except Exception:
+                pass
+            logger.info(
+                "postmark.send.success status=%s message_id=%s from_email=%s to_email=%s",
+                response.status,
+                message_id,
+                from_email,
+                to_email_masked,
+            )
+            return PostmarkSendResult(
+                message_id=message_id,
+                submitted_at=submitted_at,
+                to_email_masked=to_email_masked,
+            )
     except error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         error_code, error_message = _parse_postmark_error(body)
@@ -175,7 +215,7 @@ def _postmark_send(*, token: str, payload: dict, from_email: str, to_email: str)
         ) from exc
 
 
-def send_verification_email(*, to_email: str, code: str) -> None:
+def send_verification_email(*, to_email: str, code: str) -> PostmarkSendResult:
     config = _load_config()
     payload = {
         "From": config.from_email,
@@ -186,34 +226,55 @@ def send_verification_email(*, to_email: str, code: str) -> None:
             "It expires in 15 minutes."
         ),
     }
-    _postmark_send(
+    return _postmark_send(
         token=config.server_token,
         payload=payload,
         from_email=config.from_email,
         to_email=to_email,
+        endpoint=config.endpoint,
     )
 
 
-def send_admin_signup_notification(*, verified_email: str, name: str, username: str, timestamp: str) -> None:
+def send_admin_signup_notification(
+    *,
+    verified_email: str,
+    name: str,
+    username: str,
+    timestamp: str,
+    phone: str | None = None,
+) -> PostmarkSendResult:
     config = _load_config()
     admin_notify_email = _require_admin_notify_email()
+    environment = (
+        os.getenv("REACT_APP_ENVIRONMENT")
+        or os.getenv("ENVIRONMENT")
+        or os.getenv("APP_ENV")
+        or os.getenv("RAILWAY_ENVIRONMENT")
+        or "Not provided"
+    )
     payload = {
         "From": config.from_email,
         "To": admin_notify_email,
-        "Subject": f"New verified signup: {verified_email}",
+        "Subject": "New camOS Signup",
         "TextBody": (
-            "A new user has verified their email and completed signup.\n\n"
+            "A new camOS user has completed signup.\n\n"
+            f"Name: {name or 'Not provided'}\n"
             f"Email: {verified_email}\n"
-            f"Name: {name}\n"
+            "Company: Not captured\n"
+            f"Signup timestamp (UTC): {timestamp}\n"
+            f"Environment: {environment}\n\n"
+            "Additional captured signup fields:\n"
             f"Username: {username}\n"
-            f"Timestamp (UTC): {timestamp}\n"
+            f"Phone: {phone if phone else 'Not provided'}\n"
+            "Source: Signup verification\n"
         ),
     }
-    _postmark_send(
+    return _postmark_send(
         token=config.server_token,
         payload=payload,
         from_email=config.from_email,
         to_email=admin_notify_email,
+        endpoint=config.endpoint,
     )
 
 
@@ -223,21 +284,24 @@ def send_admin_contact_notification(
     email: str,
     phone: str | None,
     message: str,
+    submitted_at: str,
     attachment_names: list[str],
     attachments: list[PostmarkAttachment] | None = None,
-) -> None:
+) -> PostmarkSendResult:
     config = _load_config()
     admin_notify_email = _require_admin_notify_email()
     attachments_line = ", ".join(attachment_names) if attachment_names else "None"
     payload = {
         "From": config.from_email,
         "To": admin_notify_email,
-        "Subject": f"New contact submission: {name}",
+        "Subject": "New camOS Contact Request",
         "TextBody": (
-            "A new contact form submission has been received.\n\n"
+            "A new camOS Contact Us submission has been received.\n\n"
             f"Name: {name}\n"
             f"Email: {email}\n"
-            f"Phone: {phone if phone else 'Not provided'}\n"
+            f"Phone: {phone if phone else 'Not supplied'}\n"
+            "Company: Not supplied\n"
+            f"Submission timestamp (UTC): {submitted_at}\n"
             f"Attachments: {attachments_line}\n\n"
             "Message:\n"
             f"{message}\n"
@@ -254,36 +318,38 @@ def send_admin_contact_notification(
             for item in attachments
         ]
 
-    _postmark_send(
+    return _postmark_send(
         token=config.server_token,
         payload=payload,
         from_email=config.from_email,
         to_email=admin_notify_email,
+        endpoint=config.endpoint,
     )
 
 
-
-def send_contact_confirmation_email(*, to_email: str, name: str) -> None:
+def send_contact_confirmation_email(*, to_email: str, name: str) -> PostmarkSendResult:
     config = _load_config()
     greeting = f"Hi {name}," if name.strip() else "Hello,"
     payload = {
         "From": config.from_email,
         "To": to_email,
-        "Subject": "We received your message",
+        "Subject": "We've received your message",
         "TextBody": (
             f"{greeting}\n\n"
-            "Thank you for contacting camOS.\n"
-            "We have received your message and our team will review it.\n"
-            "We will get back to you as appropriate.\n\n"
-            "Regards,\n"
-            "camOS Team\n"
+            "Thank you for contacting camOS.\n\n"
+            "We've received your message and will review it shortly.\n\n"
+            "If your enquiry relates to a camera deployment, site setup, or product demonstration, "
+            "we will contact you as soon as possible.\n\n"
+            "camOS\n"
+            "Camera Operating Systems\n"
         ),
     }
-    _postmark_send(
+    return _postmark_send(
         token=config.server_token,
         payload=payload,
         from_email=config.from_email,
         to_email=to_email,
+        endpoint=config.endpoint,
     )
 
 
@@ -303,6 +369,7 @@ def send_settings_unlock_code_email(*, to_email: str, code: str) -> None:
         payload=payload,
         from_email=config.from_email,
         to_email=to_email,
+        endpoint=config.endpoint,
     )
 
 
@@ -322,4 +389,5 @@ def send_password_reset_code_email(*, to_email: str, code: str) -> None:
         payload=payload,
         from_email=config.from_email,
         to_email=to_email,
+        endpoint=config.endpoint,
     )
