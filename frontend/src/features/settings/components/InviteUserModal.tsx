@@ -154,7 +154,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, onClose, onSu
               </button>
               <button
                 type="submit"
-                className="vrm-btn vrm-btn-sm"
+                className="vrm-btn vrm-btn-primary vrm-btn-sm"
                 disabled={!isValid || state === "submitting"}
               >
                 {state === "submitting" ? "Sending..." : "Send invite"}
