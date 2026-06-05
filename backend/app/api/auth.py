@@ -21,7 +21,7 @@ from backend.app.auth import (
     set_auth_cookie,
     verify_password,
 )
-from backend.app.config import INTEREST_SUBMISSIONS_FILE
+from backend.app.config import CONTACT_SUBMISSIONS_FILE, INTEREST_SUBMISSIONS_FILE
 from backend.app.data.json_store import (
     create_account_user,
     find_user_by_email,
@@ -309,6 +309,27 @@ def _validate_contact_fields(name: str, email: str, phone: str | None, message: 
         raise HTTPException(status_code=422, detail="Message is required")
 
     return safe_name, safe_email, safe_phone, safe_message
+
+
+def _append_contact_submission_record(record: dict) -> None:
+    os.makedirs(os.path.dirname(CONTACT_SUBMISSIONS_FILE), exist_ok=True)
+    if os.path.exists(CONTACT_SUBMISSIONS_FILE):
+        with open(CONTACT_SUBMISSIONS_FILE, "r") as f:
+            try:
+                submissions = json.load(f)
+            except json.JSONDecodeError:
+                submissions = []
+    else:
+        submissions = []
+
+    if not isinstance(submissions, list):
+        submissions = []
+
+    submissions.append(record)
+    tmp_path = f"{CONTACT_SUBMISSIONS_FILE}.tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(submissions, f, indent=2)
+    os.replace(tmp_path, CONTACT_SUBMISSIONS_FILE)
 
 
 def _validate_contact_upload(content_type: str | None, filename: str, payload: bytes) -> None:
@@ -638,6 +659,21 @@ async def submit_contact(
         )
         attachment_names.append(filename)
 
+    submission_record = {
+        "id": request_id,
+        "submitted_at": _to_iso(_utc_now()),
+        "name": safe_name,
+        "email": safe_email,
+        "phone": safe_phone,
+        "message": safe_message,
+        "attachments": attachment_names,
+    }
+    try:
+        _append_contact_submission_record(submission_record)
+    except Exception as exc:
+        logger.exception("contact.submission.persist_failed request_id=%s", request_id)
+        raise HTTPException(status_code=500, detail="Failed to save contact message.") from exc
+
     try:
         send_admin_contact_notification(
             name=safe_name,
@@ -648,17 +684,21 @@ async def submit_contact(
             attachments=postmark_attachments,
         )
     except Exception as exc:
-        _raise_contact_mail_delivery_error(exc, request_id=request_id)
-
-    try:
-        send_contact_confirmation_email(to_email=safe_email, name=safe_name)
-    except Exception:
-        logger.exception(
-            "contact.email.sender_confirmation_failed request_id=%s from_email=%s to_email=%s",
+        logger.warning(
+            "contact.email.admin_notification_skipped request_id=%s detail=%s",
             request_id,
-            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
-            safe_email,
+            str(exc),
         )
+    else:
+        try:
+            send_contact_confirmation_email(to_email=safe_email, name=safe_name)
+        except Exception:
+            logger.exception(
+                "contact.email.sender_confirmation_failed request_id=%s from_email=%s to_email=%s",
+                request_id,
+                bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
+                safe_email,
+            )
 
     return ContactResponse(message="Thanks for contacting us. We'll be in touch soon.")
 
