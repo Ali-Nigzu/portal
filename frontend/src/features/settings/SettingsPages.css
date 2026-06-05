@@ -150,6 +150,10 @@
   font-size: 12px;
 }
 
+.settings-form-error {
+  white-space: pre-line;
+}
+
 .settings-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -318,4 +322,10 @@
 
 .settings-manage-access-save-message {
   padding: 0 16px 14px;
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  .settings-manage-access-card .settings-table {
+    min-width: 680px;
+  }
 }
