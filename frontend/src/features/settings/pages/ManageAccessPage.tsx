@@ -15,6 +15,9 @@ import UsersTable from "../components/UsersTable";
 import type { AccessLevel, ManagedUser, PendingInvite, SettingsUser } from "../types";
 import "../SettingsPages.css";
 
+const EMPTY_ALL_SITES_INVITE_MESSAGE =
+  "All Sites has no sites.\n\nPlease add a site to invite a member to your workspace.";
+
 const ManageAccessPage: React.FC = () => {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
@@ -29,6 +32,7 @@ const ManageAccessPage: React.FC = () => {
   const siteOptions = [
     { id: "all-sites", label: "All Sites" },
   ];
+  const hasInviteableSites = siteOptions.some((site) => site.id !== "all-sites");
 
   const isDirty = useMemo(() => {
     const left = [...baselineCurrentUserSites].sort().join("|");
@@ -84,6 +88,10 @@ const ManageAccessPage: React.FC = () => {
     site: string;
     accessLevel: AccessLevel;
   }) => {
+    if (!hasInviteableSites && payload.site === "all-sites") {
+      throw new Error(EMPTY_ALL_SITES_INVITE_MESSAGE);
+    }
+
     try {
       await inviteUser(payload);
     } catch (error) {
@@ -114,7 +122,7 @@ const ManageAccessPage: React.FC = () => {
         }
       />
 
-      <div className="vrm-card">
+      <div className="vrm-card settings-manage-access-card">
         <div className="vrm-card-header settings-users-card-header">
           <button
             type="button"
@@ -138,7 +146,7 @@ const ManageAccessPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="vrm-card">
+      <div className="vrm-card settings-manage-access-card">
         <div className="vrm-card-header">
           <h2 className="vrm-card-title">Pending invitations</h2>
         </div>
