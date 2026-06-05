@@ -112,13 +112,14 @@ def _load_config() -> PostmarkConfig:
     )
 
 
+DEFAULT_ADMIN_NOTIFY_EMAIL = "ali@camos.app"
+
+
 def _require_admin_notify_email() -> str:
-    admin_notify_email = os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()
-    if not admin_notify_email:
-        raise PostmarkConfigurationError(
-            "Email service is not configured. Missing ADMIN_NOTIFY_EMAIL."
-        )
-    return admin_notify_email
+    return (
+        os.getenv("ADMIN_NOTIFY_EMAIL", DEFAULT_ADMIN_NOTIFY_EMAIL).strip()
+        or DEFAULT_ADMIN_NOTIFY_EMAIL
+    )
 
 
 def _postmark_send(
@@ -265,6 +266,7 @@ def send_admin_signup_notification(
             "Additional captured signup fields:\n"
             f"Username: {username}\n"
             f"Phone: {phone if phone else 'Not provided'}\n"
+            "Source: Signup verification\n"
         ),
     }
     return _postmark_send(

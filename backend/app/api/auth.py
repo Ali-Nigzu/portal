@@ -894,6 +894,10 @@ async def signup_verify(payload: SignupVerifyRequest):
     user_data["updated_at"] = _to_iso(now)
     users[username] = user_data
 
+    save_users(users)
+    del pending_signups[email]
+    save_pending_signups(pending_signups)
+
     try:
         signup_notification_result = send_admin_signup_notification(
             verified_email=email,
@@ -902,18 +906,14 @@ async def signup_verify(payload: SignupVerifyRequest):
             timestamp=_to_iso(now),
             phone=user_data.get("phone"),
         )
-    except Exception as exc:
-        _raise_mail_delivery_error(exc, request_id=str(uuid.uuid4()))
-
-    save_users(users)
-    del pending_signups[email]
-    save_pending_signups(pending_signups)
-
-    logger.info(
-        "signup.email.admin_notification_sent user_id=%s message_id=%s",
-        user_data.get("id"),
-        signup_notification_result.message_id,
-    )
+    except Exception:
+        logger.exception("signup.email.admin_notification_failed", extra={"email": email})
+    else:
+        logger.info(
+            "signup.email.admin_notification_sent user_id=%s message_id=%s",
+            user_data.get("id"),
+            signup_notification_result.message_id,
+        )
 
     return AuthUserResponse(user=_safe_auth_user(user_data))
 

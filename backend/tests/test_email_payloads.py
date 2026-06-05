@@ -5,7 +5,7 @@ def test_signup_admin_notification_payload(monkeypatch):
     sent = []
     monkeypatch.setenv("POSTMARK_SERVER_TOKEN", "token")
     monkeypatch.setenv("POSTMARK_FROM_EMAIL", "noreply@camos.app")
-    monkeypatch.setenv("ADMIN_NOTIFY_EMAIL", "ali@camos.app")
+    monkeypatch.delenv("ADMIN_NOTIFY_EMAIL", raising=False)
     monkeypatch.setenv("APP_ENV", "test")
 
     def capture_send(**kwargs):
@@ -36,6 +36,7 @@ def test_signup_admin_notification_payload(monkeypatch):
     assert "Signup timestamp (UTC): 2026-06-05T12:00:00+00:00" in payload["TextBody"]
     assert "Environment: test" in payload["TextBody"]
     assert "Phone: +15551234567" in payload["TextBody"]
+    assert "Source: Signup verification" in payload["TextBody"]
 
 
 def test_contact_email_payloads(monkeypatch):
