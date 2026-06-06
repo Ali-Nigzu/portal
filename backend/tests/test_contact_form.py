@@ -27,6 +27,7 @@ async def test_contact_submission_requires_email_pipeline_and_persists_when_unco
             email="fallback@example.com",
             phone=None,
             message="Please contact me.",
+            page_url=None,
             attachments=[],
         )
 
@@ -67,6 +68,7 @@ async def test_contact_submission_sends_internal_and_confirmation_emails(tmp_pat
         email="phone@example.com",
         phone="+15551234567",
         message="Please call me.",
+        page_url="https://camos.app/contact?source=test",
         attachments=[],
     )
 
@@ -77,10 +79,12 @@ async def test_contact_submission_sends_internal_and_confirmation_emails(tmp_pat
     assert calls[0][1]["phone"] == "+15551234567"
     assert calls[0][1]["message"] == "Please call me."
     assert calls[0][1]["submitted_at"]
+    assert calls[0][1]["page_url"] == "https://camos.app/contact?source=test"
     assert calls[1][1] == {"to_email": "phone@example.com", "name": "Phone User"}
 
     submissions = json.loads(Path(submissions_file).read_text())
     assert submissions[0]["phone"] == "+15551234567"
+    assert submissions[0]["page_url"] == "https://camos.app/contact?source=test"
 
 
 @pytest.mark.anyio
@@ -148,6 +152,7 @@ async def test_contact_submission_rejects_invalid_email(tmp_path, monkeypatch):
             email="not-an-email",
             phone=None,
             message="Invalid.",
+            page_url=None,
             attachments=[],
         )
 

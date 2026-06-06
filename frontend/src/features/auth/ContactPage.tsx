@@ -115,6 +115,7 @@ const ContactPage: React.FC = () => {
         email: email.trim().toLowerCase(),
         phone: phoneState.effectivePhone || undefined,
         message: message.trim(),
+        pageUrl: window.location.href,
         attachments,
       });
 

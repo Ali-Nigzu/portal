@@ -286,11 +286,13 @@ def send_admin_contact_notification(
     message: str,
     submitted_at: str,
     attachment_names: list[str],
+    page_url: str | None = None,
     attachments: list[PostmarkAttachment] | None = None,
 ) -> PostmarkSendResult:
     config = _load_config()
     admin_notify_email = _require_admin_notify_email()
     attachments_line = ", ".join(attachment_names) if attachment_names else "None"
+    page_url_line = page_url if page_url else "Not supplied"
     payload = {
         "From": config.from_email,
         "To": admin_notify_email,
@@ -302,6 +304,7 @@ def send_admin_contact_notification(
             f"Phone: {phone if phone else 'Not supplied'}\n"
             "Company: Not supplied\n"
             f"Submission timestamp (UTC): {submitted_at}\n"
+            f"Page URL / context: {page_url_line}\n"
             f"Attachments: {attachments_line}\n\n"
             "Message:\n"
             f"{message}\n"
@@ -337,7 +340,7 @@ def send_contact_confirmation_email(*, to_email: str, name: str) -> PostmarkSend
         "TextBody": (
             f"{greeting}\n\n"
             "Thank you for contacting camOS.\n\n"
-            "We've received your message and will review it shortly.\n\n"
+            "We've received your message and will review it shortly. You can expect a response within 24 hours.\n\n"
             "If your enquiry relates to a camera deployment, site setup, or product demonstration, "
             "we will contact you as soon as possible.\n\n"
             "camOS\n"

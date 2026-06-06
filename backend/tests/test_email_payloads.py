@@ -62,6 +62,7 @@ def test_contact_email_payloads(monkeypatch):
         message="Camera deployment question.",
         submitted_at="2026-06-05T12:30:00+00:00",
         attachment_names=[],
+        page_url="https://camos.app/contact",
         attachments=[],
     )
     confirmation_result = postmark_email.send_contact_confirmation_email(
@@ -79,6 +80,7 @@ def test_contact_email_payloads(monkeypatch):
     assert "Phone: +15551234567" in admin_payload["TextBody"]
     assert "Company: Not supplied" in admin_payload["TextBody"]
     assert "Submission timestamp (UTC): 2026-06-05T12:30:00+00:00" in admin_payload["TextBody"]
+    assert "Page URL / context: https://camos.app/contact" in admin_payload["TextBody"]
     assert "Camera deployment question." in admin_payload["TextBody"]
 
     confirmation_payload = sent[1]["payload"]
@@ -86,4 +88,5 @@ def test_contact_email_payloads(monkeypatch):
     assert confirmation_payload["Subject"] == "We've received your message"
     assert "Hi Contact User," in confirmation_payload["TextBody"]
     assert "Thank you for contacting camOS." in confirmation_payload["TextBody"]
+    assert "expect a response within 24 hours" in confirmation_payload["TextBody"]
     assert "Camera Operating Systems" in confirmation_payload["TextBody"]
