@@ -2,6 +2,7 @@ export type ContactPayload = {
   name: string;
   email: string;
   phone?: string;
+  company?: string;
   message: string;
   pageUrl?: string;
   attachments: File[];
@@ -17,6 +18,9 @@ export const submitContact = async (payload: ContactPayload): Promise<ContactRes
   formData.append("email", payload.email);
   if (payload.phone?.trim()) {
     formData.append("phone", payload.phone.trim());
+  }
+  if (payload.company?.trim()) {
+    formData.append("company", payload.company.trim());
   }
   formData.append("message", payload.message);
   if (payload.pageUrl?.trim()) {
