@@ -105,3 +105,30 @@ def test_admin_notify_recipients_ignore_invalid_override(monkeypatch):
     monkeypatch.setenv("ADMIN_NOTIFY_EMAIL", "not-an-email")
 
     assert postmark_email._require_admin_notify_email() == "ali@camos.app"
+
+
+def test_signup_admin_notification_accepts_source(monkeypatch):
+    sent = []
+    monkeypatch.setenv("POSTMARK_SERVER_TOKEN", "token")
+    monkeypatch.setenv("POSTMARK_FROM_EMAIL", "noreply@camos.app")
+    monkeypatch.delenv("ADMIN_NOTIFY_EMAIL", raising=False)
+
+    def capture_send(**kwargs):
+        sent.append(kwargs)
+        return postmark_email.PostmarkSendResult(
+            message_id="legacy-message-id",
+            submitted_at="2026-06-05T00:00:00Z",
+            to_email_masked="al***@camos.app",
+        )
+
+    monkeypatch.setattr(postmark_email, "_postmark_send", capture_send)
+
+    postmark_email.send_admin_signup_notification(
+        verified_email="legacy@example.com",
+        name="Legacy User",
+        username="legacy-user",
+        timestamp="2026-06-05T12:00:00+00:00",
+        source="Legacy create-account endpoint",
+    )
+
+    assert "Source: Legacy create-account endpoint" in sent[0]["payload"]["TextBody"]

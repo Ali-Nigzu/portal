@@ -8,7 +8,7 @@ import type { SnapshotResponse } from "../../../lib/snapshots";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import type { SiteView } from "../../../lib/siteView";
 
-export type DashboardDataMode = "authenticated" | "demo" | "view_token";
+export type DashboardDataMode = "authenticated" | "demo" | "view_token" | "public_preview";
 
 export interface LoadWidgetOptions {
   signal?: AbortSignal;

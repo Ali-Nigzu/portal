@@ -141,6 +141,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     setManifest,
   } = useDashboardManifest({ credentials: PREVIEW_CREDENTIALS, orgIdOverride: previewOrgId });
 
+  const previewDataMode = previewOrgId && !viewToken ? "public_preview" : "demo";
+
   const {
     status: widgetStatus,
     error: widgetError,
@@ -153,6 +155,8 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     clientContextId: resolvedUiClient,
     resolvedDashboardId,
     setManifest,
+    dataMode: previewDataMode,
+    siteView: "site-b",
   });
 
   const kpiLookup = useMemo(() => new Map(kpiWidgets.map((item) => [item.widget.id, item])), [kpiWidgets]);

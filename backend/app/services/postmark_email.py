@@ -237,6 +237,7 @@ def _postmark_send(
 
 def send_verification_email(*, to_email: str, code: str) -> PostmarkSendResult:
     config = _load_config()
+    logger.info("postmark.verification.trigger_start to_email=%s", _mask_email(to_email))
     payload = {
         "From": config.from_email,
         "To": to_email,
@@ -262,9 +263,16 @@ def send_admin_signup_notification(
     username: str,
     timestamp: str,
     phone: str | None = None,
+    source: str = "Signup verification",
 ) -> PostmarkSendResult:
     config = _load_config()
     admin_notify_email = _require_admin_notify_email()
+    logger.info(
+        "postmark.admin_signup.trigger_start to_email=%s signup_email=%s source=%s",
+        _mask_email(admin_notify_email),
+        _mask_email(verified_email),
+        source,
+    )
     environment = (
         os.getenv("REACT_APP_ENVIRONMENT")
         or os.getenv("ENVIRONMENT")
@@ -286,7 +294,7 @@ def send_admin_signup_notification(
             "Additional captured signup fields:\n"
             f"Username: {username}\n"
             f"Phone: {phone if phone else 'Not provided'}\n"
-            "Source: Signup verification\n"
+            f"Source: {source}\n"
         ),
     }
     return _postmark_send(
@@ -312,6 +320,12 @@ def send_admin_contact_notification(
 ) -> PostmarkSendResult:
     config = _load_config()
     admin_notify_email = _require_admin_notify_email()
+    logger.info(
+        "postmark.admin_contact.trigger_start to_email=%s contact_email=%s attachments=%s",
+        _mask_email(admin_notify_email),
+        _mask_email(email),
+        len(attachment_names),
+    )
     attachments_line = ", ".join(attachment_names) if attachment_names else "None"
     page_url_line = page_url if page_url else "Not supplied"
     company_line = company if company else "Not supplied"
@@ -354,6 +368,7 @@ def send_admin_contact_notification(
 
 def send_contact_confirmation_email(*, to_email: str, name: str, message: str | None = None) -> PostmarkSendResult:
     config = _load_config()
+    logger.info("postmark.contact_confirmation.trigger_start to_email=%s", _mask_email(to_email))
     greeting = f"Hi {name}," if name.strip() else "Hello,"
     message_line = f"Message received: {message.strip()}\n\n" if message and message.strip() else ""
     payload = {
