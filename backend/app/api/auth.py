@@ -633,11 +633,15 @@ async def submit_contact(
     name: str = Form(...),
     email: str = Form(...),
     phone: str | None = Form(default=None),
+    company: str | None = Form(default=None),
     message: str = Form(...),
+    page_url: str | None = Form(default=None),
     attachments: list[UploadFile] = File(default=[]),
 ):
     request_id = str(uuid.uuid4())
     safe_name, safe_email, safe_phone, safe_message = _validate_contact_fields(name, email, phone, message)
+    safe_company = company.strip() if company and company.strip() else None
+    safe_page_url = page_url.strip() if page_url and page_url.strip() else None
 
     if len(attachments) > CONTACT_MAX_FILES:
         raise HTTPException(status_code=422, detail="Upload up to 3 attachments.")
@@ -666,7 +670,9 @@ async def submit_contact(
         "name": safe_name,
         "email": safe_email,
         "phone": safe_phone,
+        "company": safe_company,
         "message": safe_message,
+        "page_url": safe_page_url,
         "attachments": attachment_names,
     }
     try:
@@ -680,12 +686,14 @@ async def submit_contact(
             name=safe_name,
             email=safe_email,
             phone=safe_phone,
+            company=safe_company,
             message=safe_message,
             submitted_at=submitted_at,
+            page_url=safe_page_url,
             attachment_names=attachment_names,
             attachments=postmark_attachments,
         )
-        confirmation_result = send_contact_confirmation_email(to_email=safe_email, name=safe_name)
+        confirmation_result = send_contact_confirmation_email(to_email=safe_email, name=safe_name, message=safe_message)
     except Exception as exc:
         _raise_contact_mail_delivery_error(exc, request_id=request_id)
 

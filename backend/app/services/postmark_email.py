@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from urllib import error, request
 
@@ -113,13 +114,32 @@ def _load_config() -> PostmarkConfig:
 
 
 DEFAULT_ADMIN_NOTIFY_EMAIL = "ali@camos.app"
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _admin_notify_recipients() -> list[str]:
+    """Return admin notification recipients, always including Ali.
+
+    ADMIN_NOTIFY_EMAIL may add extra recipients, but it cannot replace the
+    production-required Ali notification target. Invalid entries are ignored so
+    an optional override cannot break internal notifications.
+    """
+    recipients: list[str] = [DEFAULT_ADMIN_NOTIFY_EMAIL]
+    configured = os.getenv("ADMIN_NOTIFY_EMAIL", "")
+    for candidate in re.split(r"[,;]", configured):
+        email = candidate.strip()
+        if not email:
+            continue
+        if not EMAIL_RE.match(email):
+            logger.warning("postmark.admin_notify.invalid_recipient_ignored recipient=%s", email)
+            continue
+        if email.lower() not in {item.lower() for item in recipients}:
+            recipients.append(email)
+    return recipients
 
 
 def _require_admin_notify_email() -> str:
-    return (
-        os.getenv("ADMIN_NOTIFY_EMAIL", DEFAULT_ADMIN_NOTIFY_EMAIL).strip()
-        or DEFAULT_ADMIN_NOTIFY_EMAIL
-    )
+    return ", ".join(_admin_notify_recipients())
 
 
 def _postmark_send(
@@ -286,11 +306,15 @@ def send_admin_contact_notification(
     message: str,
     submitted_at: str,
     attachment_names: list[str],
+    company: str | None = None,
+    page_url: str | None = None,
     attachments: list[PostmarkAttachment] | None = None,
 ) -> PostmarkSendResult:
     config = _load_config()
     admin_notify_email = _require_admin_notify_email()
     attachments_line = ", ".join(attachment_names) if attachment_names else "None"
+    page_url_line = page_url if page_url else "Not supplied"
+    company_line = company if company else "Not supplied"
     payload = {
         "From": config.from_email,
         "To": admin_notify_email,
@@ -300,8 +324,9 @@ def send_admin_contact_notification(
             f"Name: {name}\n"
             f"Email: {email}\n"
             f"Phone: {phone if phone else 'Not supplied'}\n"
-            "Company: Not supplied\n"
+            f"Company: {company_line}\n"
             f"Submission timestamp (UTC): {submitted_at}\n"
+            f"Page URL / context: {page_url_line}\n"
             f"Attachments: {attachments_line}\n\n"
             "Message:\n"
             f"{message}\n"
@@ -327,9 +352,10 @@ def send_admin_contact_notification(
     )
 
 
-def send_contact_confirmation_email(*, to_email: str, name: str) -> PostmarkSendResult:
+def send_contact_confirmation_email(*, to_email: str, name: str, message: str | None = None) -> PostmarkSendResult:
     config = _load_config()
     greeting = f"Hi {name}," if name.strip() else "Hello,"
+    message_line = f"Message received: {message.strip()}\n\n" if message and message.strip() else ""
     payload = {
         "From": config.from_email,
         "To": to_email,
@@ -337,7 +363,8 @@ def send_contact_confirmation_email(*, to_email: str, name: str) -> PostmarkSend
         "TextBody": (
             f"{greeting}\n\n"
             "Thank you for contacting camOS.\n\n"
-            "We've received your message and will review it shortly.\n\n"
+            "We've received your message and will review it shortly. You can expect a response within 24 hours.\n\n"
+            f"{message_line}"
             "If your enquiry relates to a camera deployment, site setup, or product demonstration, "
             "we will contact you as soon as possible.\n\n"
             "camOS\n"

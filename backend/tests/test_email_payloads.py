@@ -62,11 +62,14 @@ def test_contact_email_payloads(monkeypatch):
         message="Camera deployment question.",
         submitted_at="2026-06-05T12:30:00+00:00",
         attachment_names=[],
+        company="Camera Co",
+        page_url="https://camos.app/contact",
         attachments=[],
     )
     confirmation_result = postmark_email.send_contact_confirmation_email(
         to_email="contact@example.com",
         name="Contact User",
+        message="Camera deployment question.",
     )
 
     assert admin_result.message_id == "message-1"
@@ -77,8 +80,9 @@ def test_contact_email_payloads(monkeypatch):
     assert "Name: Contact User" in admin_payload["TextBody"]
     assert "Email: contact@example.com" in admin_payload["TextBody"]
     assert "Phone: +15551234567" in admin_payload["TextBody"]
-    assert "Company: Not supplied" in admin_payload["TextBody"]
+    assert "Company: Camera Co" in admin_payload["TextBody"]
     assert "Submission timestamp (UTC): 2026-06-05T12:30:00+00:00" in admin_payload["TextBody"]
+    assert "Page URL / context: https://camos.app/contact" in admin_payload["TextBody"]
     assert "Camera deployment question." in admin_payload["TextBody"]
 
     confirmation_payload = sent[1]["payload"]
@@ -86,4 +90,18 @@ def test_contact_email_payloads(monkeypatch):
     assert confirmation_payload["Subject"] == "We've received your message"
     assert "Hi Contact User," in confirmation_payload["TextBody"]
     assert "Thank you for contacting camOS." in confirmation_payload["TextBody"]
+    assert "expect a response within 24 hours" in confirmation_payload["TextBody"]
+    assert "Message received: Camera deployment question." in confirmation_payload["TextBody"]
     assert "Camera Operating Systems" in confirmation_payload["TextBody"]
+
+
+def test_admin_notify_recipients_always_include_ali(monkeypatch):
+    monkeypatch.setenv("ADMIN_NOTIFY_EMAIL", "ops@example.com")
+
+    assert postmark_email._require_admin_notify_email() == "ali@camos.app, ops@example.com"
+
+
+def test_admin_notify_recipients_ignore_invalid_override(monkeypatch):
+    monkeypatch.setenv("ADMIN_NOTIFY_EMAIL", "not-an-email")
+
+    assert postmark_email._require_admin_notify_email() == "ali@camos.app"

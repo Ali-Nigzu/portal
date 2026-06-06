@@ -2,7 +2,9 @@ export type ContactPayload = {
   name: string;
   email: string;
   phone?: string;
+  company?: string;
   message: string;
+  pageUrl?: string;
   attachments: File[];
 };
 
@@ -17,7 +19,13 @@ export const submitContact = async (payload: ContactPayload): Promise<ContactRes
   if (payload.phone?.trim()) {
     formData.append("phone", payload.phone.trim());
   }
+  if (payload.company?.trim()) {
+    formData.append("company", payload.company.trim());
+  }
   formData.append("message", payload.message);
+  if (payload.pageUrl?.trim()) {
+    formData.append("page_url", payload.pageUrl.trim());
+  }
   payload.attachments.forEach((file) => formData.append("attachments", file));
 
   const response = await fetch("/api/contact", {
