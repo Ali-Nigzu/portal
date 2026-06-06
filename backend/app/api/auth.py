@@ -681,6 +681,12 @@ async def submit_contact(
         logger.exception("contact.submission.persist_failed request_id=%s", request_id)
         raise HTTPException(status_code=500, detail="Failed to save contact message.") from exc
 
+    logger.info(
+        "contact.email.trigger_start request_id=%s contact_email=%s attachment_count=%s",
+        request_id,
+        safe_email,
+        len(attachment_names),
+    )
     try:
         admin_result = send_admin_contact_notification(
             name=safe_name,
@@ -777,10 +783,18 @@ async def signup_start(payload: CreateAccountRequest):
         "updated_at": now_iso,
     }
 
+    logger.info("signup.email.verification_trigger_start request_id=%s email=%s", request_id, email)
     try:
-        send_verification_email(to_email=email, code=code)
+        verification_result = send_verification_email(to_email=email, code=code)
     except Exception as exc:
         _raise_mail_delivery_error(exc, request_id=request_id)
+
+    logger.info(
+        "signup.email.verification_sent request_id=%s email=%s message_id=%s",
+        request_id,
+        email,
+        verification_result.message_id,
+    )
 
     save_pending_signups(pending_signups)
 
@@ -831,10 +845,18 @@ async def signup_resend(payload: SignupResendRequest):
     record["last_code_sent_at"] = now_iso
     record["updated_at"] = now_iso
 
+    logger.info("signup.email.verification_resend_trigger_start request_id=%s email=%s", request_id, email)
     try:
-        send_verification_email(to_email=email, code=code)
+        verification_result = send_verification_email(to_email=email, code=code)
     except Exception as exc:
         _raise_mail_delivery_error(exc, request_id=request_id)
+
+    logger.info(
+        "signup.email.verification_resent request_id=%s email=%s message_id=%s",
+        request_id,
+        email,
+        verification_result.message_id,
+    )
 
     save_pending_signups(pending_signups)
 
@@ -902,10 +924,13 @@ async def signup_verify(payload: SignupVerifyRequest):
     user_data["updated_at"] = _to_iso(now)
     users[username] = user_data
 
-    save_users(users)
-    del pending_signups[email]
-    save_pending_signups(pending_signups)
-
+    request_id = str(uuid.uuid4())
+    logger.info(
+        "signup.email.admin_notification_trigger_start request_id=%s user_id=%s email=%s",
+        request_id,
+        user_data.get("id"),
+        email,
+    )
     try:
         signup_notification_result = send_admin_signup_notification(
             verified_email=email,
@@ -914,14 +939,19 @@ async def signup_verify(payload: SignupVerifyRequest):
             timestamp=_to_iso(now),
             phone=user_data.get("phone"),
         )
-    except Exception:
-        logger.exception("signup.email.admin_notification_failed", extra={"email": email})
-    else:
-        logger.info(
-            "signup.email.admin_notification_sent user_id=%s message_id=%s",
-            user_data.get("id"),
-            signup_notification_result.message_id,
-        )
+    except Exception as exc:
+        _raise_mail_delivery_error(exc, request_id=request_id)
+
+    logger.info(
+        "signup.email.admin_notification_sent request_id=%s user_id=%s message_id=%s",
+        request_id,
+        user_data.get("id"),
+        signup_notification_result.message_id,
+    )
+
+    save_users(users)
+    del pending_signups[email]
+    save_pending_signups(pending_signups)
 
     return AuthUserResponse(user=_safe_auth_user(user_data))
 
@@ -1082,6 +1112,7 @@ async def password_reset_verify_legacy(payload: PasswordResetSetPasswordRequest)
 
 @router.post("/api/create-account", response_model=AuthUserResponse, status_code=201)
 async def create_account(payload: CreateAccountRequest):
+    request_id = str(uuid.uuid4())
     name, email, phone = _validate_signup_payload(payload)
 
     users = load_users()
@@ -1091,6 +1122,32 @@ async def create_account(payload: CreateAccountRequest):
 
     username, user_data = create_account_user(users, name, email, phone, payload.password)
     user_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    logger.info(
+        "signup.email.admin_notification_trigger_start request_id=%s user_id=%s email=%s source=legacy_create_account",
+        request_id,
+        user_data.get("id"),
+        email,
+    )
+    try:
+        signup_notification_result = send_admin_signup_notification(
+            verified_email=email,
+            name=user_data.get("name", ""),
+            username=username,
+            timestamp=user_data["updated_at"],
+            phone=user_data.get("phone"),
+            source="Legacy create-account endpoint",
+        )
+    except Exception as exc:
+        _raise_mail_delivery_error(exc, request_id=request_id)
+
+    logger.info(
+        "signup.email.admin_notification_sent request_id=%s user_id=%s message_id=%s source=legacy_create_account",
+        request_id,
+        user_data.get("id"),
+        signup_notification_result.message_id,
+    )
+
     users[username] = user_data
     save_users(users)
     return AuthUserResponse(user=_safe_auth_user(user_data))

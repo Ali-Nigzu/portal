@@ -91,7 +91,7 @@ async def test_contact_submission_sends_internal_and_confirmation_emails(tmp_pat
 
 
 @pytest.mark.anyio
-async def test_signup_verify_completes_when_admin_notification_fails(tmp_path, monkeypatch):
+async def test_signup_verify_fails_loudly_when_admin_notification_fails(tmp_path, monkeypatch):
     users_file = tmp_path / "users.json"
     pending_file = tmp_path / "pending_signups.json"
     monkeypatch.setattr(
@@ -137,12 +137,13 @@ async def test_signup_verify_completes_when_admin_notification_fails(tmp_path, m
 
     monkeypatch.setattr(auth, "send_admin_signup_notification", fail_admin_notification)
 
-    response = await auth.signup_verify(auth.SignupVerifyRequest(email=email, code=code))
+    with pytest.raises(HTTPException) as exc_info:
+        await auth.signup_verify(auth.SignupVerifyRequest(email=email, code=code))
 
-    assert response.user.email == email
-    users = json.loads(users_file.read_text())
-    assert any(user["email"] == email for user in users.values())
-    assert json.loads(pending_file.read_text()) == {}
+    assert exc_info.value.status_code == 503
+    assert "Admin notification is unavailable" in exc_info.value.detail
+    assert not users_file.exists()
+    assert email in json.loads(pending_file.read_text())
 
 
 @pytest.mark.anyio
