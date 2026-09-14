@@ -283,7 +283,7 @@ export const KpiTile = ({
       return formatKpiValue(value, primarySeries?.unit);
     }
     if (isVrm && primarySeries?.unit === "minutes") {
-      const rounded = Math.round(value);
+      const rounded = summary?.canonicalSnapshot === 1 ? value : Math.round(value);
       return `${rounded} min`;
     }
     return formatKpiValue(value, primarySeries?.unit);

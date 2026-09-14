@@ -62,11 +62,14 @@ export const CapacityDonut = ({
       color: capacityColors[index % capacityColors.length],
     };
   });
-  const usageValue =
+  const canonical = summary.canonicalSnapshot === 1;
+  const usageLabel = canonical ? "Average" : "Current";
+  const peakLabel = canonical ? "Rolling peak" : "Peak";
+  const usageValue = canonical ? Number(summary.capacity_average_pct) :
     mappedData.find((entry) => entry.label === "Usage")?.value ?? 0;
   const peakExtraValue =
     mappedData.find((entry) => entry.label === "Peak extra")?.value ?? 0;
-  const peakTotalValue = usageValue + peakExtraValue;
+  const peakTotalValue = canonical ? Number(summary.capacity_rolling_peak_pct) : usageValue + peakExtraValue;
   const total = mappedData.reduce((sum, entry) => sum + entry.value, 0);
   const renderData =
     total > 0
@@ -87,7 +90,7 @@ export const CapacityDonut = ({
         ? usageValue
         : entry.value,
   }));
-  const centerDisplay = `${Math.round(centerValue)}%`;
+  const centerDisplay = `${canonical ? centerValue : Math.round(centerValue)}%`;
   const donutInnerRadius = 48;
   const donutOuterRadius = 68;
   const donutChartHeight = 140;
@@ -134,8 +137,8 @@ export const CapacityDonut = ({
           typeof entry.displayValue === "number" ? entry.displayValue : entry.value;
         return {
           id: entry.label,
-          label: entry.label === "Usage" ? "Current" : "Peak",
-          valueText: `${Math.max(0, Math.round(value))}%`,
+          label: entry.label === "Usage" ? usageLabel : peakLabel,
+          valueText: `${canonical ? value : Math.max(0, Math.round(value))}%`,
           color: entry.color,
           isActive: activeSegmentId === entry.label,
           interactive: true,
@@ -152,8 +155,8 @@ export const CapacityDonut = ({
         typeof hoveredSlice.displayValue === "number"
           ? hoveredSlice.displayValue
           : hoveredSlice.value;
-      const rounded = Math.max(0, Math.round(value));
-      return hoveredSlice.label === "Peak extra" ? `Peak ${rounded}%` : `Current ${rounded}%`;
+      const rounded = canonical ? value : Math.max(0, Math.round(value));
+      return hoveredSlice.label === "Peak extra" ? `${peakLabel} ${rounded}%` : `${usageLabel} ${rounded}%`;
     }
     if (!legacyHoverLabel) {
       return "";
@@ -395,8 +398,8 @@ export const CapacityDonut = ({
       return;
     }
     const value = typeof hovered.displayValue === "number" ? hovered.displayValue : hovered.value;
-    const rounded = Math.max(0, Math.round(value));
-    const text = hovered.label === "Peak extra" ? `Peak ${rounded}%` : `Current ${rounded}%`;
+    const rounded = canonical ? value : Math.max(0, Math.round(value));
+    const text = hovered.label === "Peak extra" ? `${peakLabel} ${rounded}%` : `${usageLabel} ${rounded}%`;
     const container = containerRef.current;
     if (!container) {
       setLegacyHoverLabel({ text, x: 0, y: 0 });
