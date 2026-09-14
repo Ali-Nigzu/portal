@@ -10,6 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import admin, analytics, auth, client_data, dashboards, snapshots
 from backend.app.api import demo, documents
+from backend.app.api import demo_dashboard
+from backend.app.services.dashboard_postgres import DashboardPostgres
+from backend.app.services.organisation_dashboard import OrganisationDashboard
 from backend.app.config import get_allowed_origins
 from backend.app.services.bigquery_client import bigquery_client
 from backend.app.spa import configure_spa
@@ -31,6 +34,13 @@ def create_app() -> FastAPI:
     )
 
     allowed_origins = get_allowed_origins()
+    dashboard_database = DashboardPostgres()
+    app.state.organisation_dashboard = OrganisationDashboard(dashboard_database)
+
+    @app.on_event("shutdown")
+    def close_dashboard_database() -> None:
+        dashboard_database.close()
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -53,6 +63,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(demo.router)
+    app.include_router(demo_dashboard.router)
     app.include_router(admin.router)
     app.include_router(client_data.router)
     app.include_router(analytics.router)

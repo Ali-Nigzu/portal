@@ -1,0 +1,9 @@
+.git
+sa.json
+**/sa.json
+**/node_modules
+**/__pycache__
+.pytest_cache
+test-results
+frontend/build
+backend/frontend_build
