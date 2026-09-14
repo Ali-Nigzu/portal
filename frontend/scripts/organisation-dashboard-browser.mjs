@@ -25,6 +25,11 @@ try {
  await expect(page.getByRole('heading',{name:'Renamed Demo',exact:true})).toBeVisible();
  await expect(page.getByText('125.5%',{exact:true})).toBeVisible();
  await expect(page.getByText('2.5 min',{exact:true})).toBeVisible();
+ const ring=await page.locator('.capacity-usage .recharts-wrapper').boundingBox();
+ await page.mouse.move(ring.x+ring.width/2+56,ring.y+ring.height/2);
+ await expect(page.getByText('Rolling peak',{exact:true})).toBeVisible();
+ await expect(page.getByText('151.25%',{exact:true})).toBeVisible();
+ await page.mouse.move(400,100);
  assert.equal(requests.filter(p=>p==='/api/demo/dashboard/snapshot').length,1);
  await page.getByLabel('Site Flow period').selectOption('quarter');
  await page.getByLabel('Site Flow view').selectOption('demographics');
@@ -56,9 +61,13 @@ try {
  await page.clock.fastForward(65000);
  assert.equal(requests.length,beforeClock,'No background polling');
  await page.clock.resume();
+ await page.goto('http://127.0.0.1:4173/demo');
+ await expect(page).toHaveURL('http://127.0.0.1:4173/demo/renamed-demo/dashboard');
+ await expect(page.locator('[data-snapshot-ts]')).toBeVisible();
  await page.setViewportSize({width:390,height:844});
  await page.goto('http://127.0.0.1:4173/demo/renamed-demo/dashboard?panel=sites');
  await expect(page.locator('[data-snapshot-ts]')).toBeVisible();
+ await page.getByRole('button',{name:'Sites',exact:true}).click();
  await page.getByRole('button',{name:'Sites',exact:true}).click();
  await expect(page.getByText('New Site',{exact:true}).last()).toBeVisible();
  await page.getByText('New Site',{exact:true}).last().click();

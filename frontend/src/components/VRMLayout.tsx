@@ -1451,6 +1451,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               <MobileSidebarRow
                 icon={<NavIcon icon={MapPin} />}
                 label={allSitesOption.label}
+                ariaLabel={dashboardNavigation ? allSitesOption.label : undefined}
                 active={
                   isSiteSelection && allSitesOption.id === selectedSiteForList
                 }
