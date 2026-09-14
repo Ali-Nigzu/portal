@@ -37,6 +37,7 @@ const CreateAccountPage = React.lazy(() => import("../pages/CreateAccountPage"))
 const VerifyEmailPage = React.lazy(() => import("../pages/VerifyEmailPage"));
 const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"));
 const ContactPage = React.lazy(() => import("../pages/ContactPage"));
+const DemoDashboardRoute = React.lazy(() => import("../features/organisation-dashboard/DemoDashboardRoute"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
 const TermsAndConditionsPage = React.lazy(() => import("../pages/TermsAndConditionsPage"));
 const PrivacyPolicyPage = React.lazy(() => import("../pages/PrivacyPolicyPage"));
@@ -53,12 +54,13 @@ const AppRoutes: React.FC = () => {
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
   const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
+  const isDemoDashboardRoute = /^\/demo\/[^/]+(?:\/[^/]+)?\/dashboard\/?$/.test(location.pathname);
   const isDirectDemoDeviceListRoute = /^\/demo\/[^/]+\/device-list\/?$/i.test(
     location.pathname,
   );
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
   const shouldNormalizeDemoEntryRef = useRef(
-    isDemoRoute && location.pathname !== "/demo" && !isDirectDemoDeviceListRoute,
+    isDemoRoute && location.pathname !== "/demo" && !isDirectDemoDeviceListRoute && !isDemoDashboardRoute,
   );
   const demoEntryNavigationCompletedRef = useRef(false);
   const [isDemoEntryReady, setIsDemoEntryReady] = useState(
@@ -275,6 +277,8 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route path="/demo" element={lazyRoute(<DemoPage />)} />
+      <Route path="/demo/:organisationSlug/dashboard" element={lazyRoute(<DemoDashboardRoute />)} />
+      <Route path="/demo/:organisationSlug/:siteSlug/dashboard" element={lazyRoute(<DemoDashboardRoute />)} />
       <Route
         path="/create-account"
         element={
@@ -401,21 +405,6 @@ const AppRoutes: React.FC = () => {
                 path="/demo/:siteId"
                 element={renderClientRoute(
                   <DemoSiteIndexRedirect />,
-                )}
-              />
-              <Route
-                path="/demo/:siteId/dashboard"
-                element={renderClientRoute(
-                  lazyRoute(
-                    <DashboardPage
-                      credentials={credentials}
-                      dataMode={dashboardDataMode}
-                      donutTooltipMode="demo_cursor_hover"
-                      widgetResultLoader={
-                        isAuthenticatedMode ? loadEmptyWidgetResult : undefined
-                      }
-                    />,
-                  ),
                 )}
               />
               <Route

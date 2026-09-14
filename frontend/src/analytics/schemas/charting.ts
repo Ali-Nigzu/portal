@@ -118,6 +118,7 @@ export interface SeriesSummary {
 }
 export interface DataPoint {
   x: string;
+  label?: string;
   y?: number | null;
   value?: number | null;
   group?: string;

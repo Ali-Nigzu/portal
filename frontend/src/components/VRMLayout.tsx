@@ -26,6 +26,7 @@ import camOSLogo from "../assets/Untitled design (4).svg";
 import {
   SITE_OPTIONS,
   findSiteById,
+  getDefaultSiteId,
   getStoredSiteId,
   setStoredSiteId,
 } from "../lib/sites";
@@ -50,6 +51,7 @@ type MobileDrawer =
   | { kind: "site-selector" }
   | { kind: "site-menu"; siteId: string };
 interface VRMLayoutProps {
+  dashboardNavigation?: {organisation: {id:string;label:string}; sites: {id:string;label:string}[]; selectedKey:string; selectedLabel:string};
   userRole?: "client" | "admin";
   isAuthenticated?: boolean;
   onLogout?: () => void;
@@ -60,6 +62,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   isAuthenticated = false,
   onLogout,
   children,
+  dashboardNavigation,
 }) => {
   // Sidebar state and refs
   const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
@@ -98,7 +101,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   });
   const location = useLocation();
   const navigate = useNavigate();
-  const { siteId } = useParams();
+  const { siteId: routeSiteId } = useParams();
+  const siteId = dashboardNavigation ? dashboardNavigation.selectedKey : routeSiteId;
+  const legacySiteId = dashboardNavigation ? (findSiteById(getStoredSiteId())?.id ?? getDefaultSiteId()) : siteId;
   const searchParams = useMemo(
     () => new URLSearchParams(location.search),
     [location.search],
@@ -108,14 +113,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isForceExpandIntent = searchParams.get("expand_once") === "1";
   const isSiteMenuForceExpandIntent =
     searchParams.get("site_menu_expand_once") === "1";
-  const activeSite = findSiteById(siteId);
+  const activeSite = dashboardNavigation ? {id:siteId ?? "",label:dashboardNavigation.selectedLabel} : findSiteById(siteId);
   const isDemoSession = isDemoSessionActive();
   const siteRoutePrefix = location.pathname.startsWith("/demo/") ? "/demo" : "/sites";
-  const allSitesOption =
+  const allSitesOption = dashboardNavigation?.organisation ??
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
-  const selectorSiteOptions = isAuthenticated
+  const selectorSiteOptions = dashboardNavigation?.sites ?? (isAuthenticated
     ? []
-    : SITE_OPTIONS.filter((site) => site.id !== "all");
+    : SITE_OPTIONS.filter((site) => site.id !== "all"));
   const isSiteScopedRoute =
     Boolean(siteId) && /^\/(?:sites|demo)\/[^/]+(?:\/|$)/.test(location.pathname);
   const shouldUseSiteMenuForClosedMobileSecondary =
@@ -128,6 +133,9 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     : secondaryModeMemory;
   const buildSearch = (overrides?: Record<string, string | undefined>) => {
     const params = new URLSearchParams(location.search);
+    if (dashboardNavigation) {
+      ["org", "orgId", "organisation_id", "viewToken"].forEach(key => params.delete(key));
+    }
     if (!overrides || !Object.prototype.hasOwnProperty.call(overrides, "panel")) {
       params.delete("panel");
     }
@@ -201,10 +209,10 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     openSitesSelector();
   };
   useEffect(() => {
-    if (siteId) {
+    if (siteId && !dashboardNavigation) {
       setStoredSiteId(siteId);
     }
-  }, [siteId]);
+  }, [siteId, dashboardNavigation]);
   useEffect(() => {
     pointerZoneRef.current = pointerZone;
   }, [pointerZone]);
@@ -364,27 +372,27 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         statusLabel: "Coming Soon",
       },
       {
-        path: siteId ? `${siteRoutePrefix}/${siteId}/event-logs` : undefined,
+        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/event-logs` : undefined,
         label: "Event Logs",
         icon: <NavIcon icon={ClipboardList} />,
       },
       {
-        path: siteId ? `${siteRoutePrefix}/${siteId}/alarm-logs` : undefined,
+        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/alarm-logs` : undefined,
         label: "Alarm Logs",
         icon: <NavIcon icon={Bell} />,
       },
       {
-        path: siteId ? `${siteRoutePrefix}/${siteId}/device-list` : undefined,
+        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/device-list` : undefined,
         label: "Device List",
         icon: <NavIcon icon={Cpu} />,
       },
       {
-        path: siteId ? `${siteRoutePrefix}/${siteId}/reports` : undefined,
+        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/reports` : undefined,
         label: "Reports",
         icon: <NavIcon icon={FileBarChart2} />,
       },
     ],
-    [siteId, siteRoutePrefix],
+    [siteId, legacySiteId, siteRoutePrefix],
   );
   const adminNavigationItems = useMemo(
     () => [
@@ -440,7 +448,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     };
   }, []);
   const isSiteSelection = isSelectorOpen;
-  const selectedSiteForList = getStoredSiteId() ?? "all";
+  const selectedSiteForList = dashboardNavigation?.selectedKey ?? getStoredSiteId() ?? "all";
   const showSiteMenu = Boolean(siteId) && !isSelectorOpen;
   const showSiteMenuMobile =
     mobileDrawer.kind === "site-menu"
@@ -1537,6 +1545,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             <NavList className="vrm-secondary-list">
               {selectorSiteOptions.map((site) => {
                 const siteSubPath = (() => {
+                  if (dashboardNavigation) return "/dashboard";
                   const match = location.pathname.match(/^\/(?:sites|demo)\/[^/]+(\/.*)?$/);
                   const trailing = match?.[1];
                   if (!trailing || trailing === "/") {

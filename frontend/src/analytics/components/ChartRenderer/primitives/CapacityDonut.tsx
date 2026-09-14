@@ -560,6 +560,7 @@ export const CapacityDonut = ({
           <ResponsiveContainer width="100%" height={donutChartHeight}>
             <PieChart>
               <Pie
+              isAnimationActive={!canonical}
               dataKey="value"
               data={normalizedData}
               cx="50%"
