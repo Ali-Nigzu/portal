@@ -1,0 +1,13 @@
+sa.json
+**/sa.json
+__pycache__/
+*.pyc
+.pytest_cache/
+pytest-cache-files-*/
+.venv/
+node_modules/
+frontend/build/
+backend/frontend_build/
+test-results/
+playwright-report/
+frontend/.tmp/

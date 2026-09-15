@@ -7,6 +7,7 @@ import {
   formatValue,
   shouldShowRawCount,
 } from "../utils/format";
+import { formatSnapshotTick } from "../../../../features/organisation-dashboard/projection";
 import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
 import { SITE_FLOW_ACTIVITY_COLORS } from "../../../../lib/siteFlowActivityColors";
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
@@ -15,6 +16,7 @@ type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   variant?: "site_flow_activity";
   siteFlowTimeframe?: string;
   bucket?: string;
+  canonicalSnapshot?: boolean;
 };
 export const ChartTooltip = ({
   active,
@@ -25,6 +27,7 @@ export const ChartTooltip = ({
   variant,
   siteFlowTimeframe,
   bucket,
+  canonicalSnapshot,
 }: ChartTooltipProps) => {
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -105,7 +108,7 @@ export const ChartTooltip = ({
       return null;
     }
     const headerLabel = siteFlowTimeframe
-      ? formatSiteFlowTick(siteFlowTimeframe, bucket, xKey)
+      ? canonicalSnapshot ? formatSnapshotTick(siteFlowTimeframe, xKey) : formatSiteFlowTick(siteFlowTimeframe, bucket, xKey)
       : xKey;
     return (
       <div className="analytics-chart-tooltip">

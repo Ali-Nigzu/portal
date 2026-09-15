@@ -101,7 +101,7 @@ export const TrafficDistribution = ({
       .trim();
     const cameraId =
       normalizedCameraId !== "" ? normalizedCameraId : String(index + 1);
-    const baseLabel =
+    const baseLabel = summary.canonicalSnapshot === 1 ? point.label :
       labelKey && point && typeof point === "object"
         ? (point as unknown as Record<string, unknown>)[labelKey]
         : rawCamera;
@@ -124,6 +124,7 @@ export const TrafficDistribution = ({
     const cleanCamId = normalizedCameraId.replace(/^\D+/, "");
     return {
       label,
+      interactionId: summary.canonicalSnapshot === 1 ? String(point.x) : label,
       camId: shouldUseRawLabel ? rawLabel : cleanCamId || cameraId,
       value,
       color: pointColor ?? palette[index % palette.length],
@@ -144,6 +145,7 @@ export const TrafficDistribution = ({
     }))
     : [{
       label: "No traffic",
+      interactionId: "No traffic",
       camId: "—",
       value: 1,
       color: EMPTY_RING_COLOR,
@@ -168,7 +170,7 @@ export const TrafficDistribution = ({
       endAngle: 450,
     },
     segments: pieLegend.map((entry) => ({
-      id: entry.label,
+      id: entry.interactionId,
       value: entry.value,
       interactive: hasPositiveTraffic || isCoarsePointer,
     })),
@@ -202,17 +204,17 @@ export const TrafficDistribution = ({
     x: number;
     y: number;
   } | null>(null);
-  const hoveredSlice = pieLegend.find((entry) => entry.label === activeSegmentId);
+  const hoveredSlice = pieLegend.find((entry) => entry.interactionId === activeSegmentId);
   const tooltipRows = useMemo<DonutTooltipRow[]>(() => {
     if (!isDemoCursorHover || (!hasPositiveTraffic && !isCoarsePointer)) {
       return [];
     }
     return pieLegend.map((entry) => ({
-      id: entry.label,
+      id: entry.interactionId,
       label: entry.label,
       valueText: `${formatNumeric(Math.max(0, Number(entry.displayValue ?? entry.value) || 0))}%`,
       color: entry.color,
-      isActive: activeSegmentId === entry.label,
+      isActive: activeSegmentId === entry.interactionId,
       interactive: true,
     }));
   }, [activeSegmentId, hasPositiveTraffic, isCoarsePointer, isDemoCursorHover, pieLegend]);
@@ -665,7 +667,7 @@ export const TrafficDistribution = ({
             >
               {pieLegend.map((entry) => (
                 <Cell
-                  key={entry.label}
+                  key={entry.interactionId}
                   fill={entry.color}
                   stroke={isLandingPreviewTraffic ? "rgba(15, 23, 42, 0.2)" : "none"}
                   strokeWidth={isLandingPreviewTraffic ? 1 : 0}
@@ -712,7 +714,7 @@ export const TrafficDistribution = ({
             {renderLegend.map((entry) => (
               <div
                 className="traffic-distribution__annotation"
-                key={entry.label}
+                key={entry.interactionId}
               >
                 <span
                   className="traffic-distribution__annotation-swatch"

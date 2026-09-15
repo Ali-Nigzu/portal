@@ -18,6 +18,7 @@ import { buildCartesianDataset } from "./utils";
 import { ChartTooltip } from "../ui/ChartTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
 import { formatBrushTimestamp } from "../utils/formatBrushTimestamp";
+import { formatSnapshotTick } from "../../../../features/organisation-dashboard/projection";
 import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
 import { useCoarsePointer } from "./useCoarsePointer";
 export const TimeSeriesChart = ({
@@ -67,7 +68,7 @@ export const TimeSeriesChart = ({
   const isSiteFlowActivity = tooltipVariant === "site_flow_activity";
   const bucket = result.xDimension?.bucket;
   const tickFormatter = siteFlowTimeframe
-    ? (value: string) => formatSiteFlowTick(siteFlowTimeframe, bucket, value)
+    ? (value: string) => result.meta?.summary?.canonicalSnapshot === 1 ? formatSnapshotTick(siteFlowTimeframe, value) : formatSiteFlowTick(siteFlowTimeframe, bucket, value)
     : undefined;
   const resolveTouchIndex = useCallback((clientX: number) => {
     const rect = chartRef.current?.getBoundingClientRect();
@@ -151,7 +152,7 @@ export const TimeSeriesChart = ({
             active={isCoarsePointer && touchTooltipIndex !== null ? true : undefined}
             defaultIndex={isCoarsePointer && touchTooltipIndex !== null ? touchTooltipIndex : undefined}
             content={
-              <ChartTooltip
+              <ChartTooltip canonicalSnapshot={result.meta?.summary?.canonicalSnapshot === 1}
                 meta={dataset.meta}
                 seriesMap={seriesMap}
                 variant={tooltipVariant}
