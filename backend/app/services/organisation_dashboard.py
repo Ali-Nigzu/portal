@@ -4,32 +4,15 @@ import hashlib
 import re
 import unicodedata
 from datetime import datetime, timezone
-from typing import Annotated, Literal
-
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
-Number = Annotated[float, Field(strict=True, ge=0, allow_inf_nan=False)]
-Series96 = Annotated[list[Number], Field(min_length=96, max_length=96)]
+from typing import Literal
 
 
-class CanonicalModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class EntityNotFound(RuntimeError):
+    pass
 
 
-class Rollup(CanonicalModel):
-    entrances: list[Number]
-    occupancy: list[tuple[Number, Number, Number]]
-    exits: list[Number]
-    age_pct: Annotated[list[Number], Field(min_length=6, max_length=6)]
-    sex_pct: Annotated[list[Number], Field(min_length=2, max_length=2)]
-
-    @model_validator(mode="after")
-    def aligned(self):
-        if len(self.entrances) != len(self.occupancy) or len(self.exits) != len(self.entrances):
-            raise ValueError("Rollup series must align")
-        if any(value > 100 for value in self.age_pct + self.sex_pct):
-            raise ValueError("Invalid demographic percentage")
-        return self
+class InvalidSnapshot(RuntimeError):
+    pass
 
 
 def entity_id(value):
@@ -39,56 +22,6 @@ def entity_id(value):
     if int(value) > 9223372036854775807:
         raise ValueError("Invalid entity ID")
     return str(value)
-
-
-class DeviceAxis(CanonicalModel):
-    device_id: str
-    name: str
-    _id = field_validator("device_id", mode="before")(entity_id)
-
-
-class SiteAxis(CanonicalModel):
-    site_id: str
-    name: str
-    _id = field_validator("site_id", mode="before")(entity_id)
-
-
-class SnapshotPayload(CanonicalModel):
-    entrances_96: Series96
-    occupancy_96: Series96
-    exits_96: Series96
-    footfall_96: Series96
-    dwell_time_96: Series96
-    traffic_devices: list[DeviceAxis | SiteAxis]
-    traffic_split_96: Annotated[list[list[Number]], Field(min_length=96, max_length=96)]
-    capacity: Annotated[list[tuple[Number, Number]], Field(min_length=96, max_length=96)]
-    today: Rollup
-    yesterday: Rollup
-    week: Rollup
-    month: Rollup
-    quarter: Rollup
-    year: Rollup
-    all_time: Rollup
-
-    @model_validator(mode="after")
-    def dimensions(self):
-        width = len(self.traffic_devices)
-        if any(len(row) != width or any(v > 100 for v in row) for row in self.traffic_split_96):
-            raise ValueError("Traffic matrix must align with its axis")
-        for key, length in (("yesterday", 24), ("week", 7), ("month", 4), ("quarter", 12), ("year", 12)):
-            if len(getattr(self, key).entrances) != length:
-                raise ValueError("Invalid period length")
-        if len(self.today.entrances) > 24:
-            raise ValueError("Invalid today length")
-        return self
-
-
-class EntityNotFound(RuntimeError):
-    pass
-
-
-class InvalidSnapshot(RuntimeError):
-    pass
 
 
 def slug(name: str) -> str:
@@ -166,17 +99,13 @@ class OrganisationDashboard:
         if row is None:
             raise EntityNotFound()
         try:
-            payload = SnapshotPayload.model_validate(row[3])
-            expected_axis = SiteAxis if scope == "organisation" else DeviceAxis
-            if any(not isinstance(item, expected_axis) for item in payload.traffic_devices):
-                raise ValueError("Invalid traffic scope")
-            ids = [item.model_dump().get("site_id", item.model_dump().get("device_id")) for item in payload.traffic_devices]
-            if len(ids) != len(set(ids)):
-                raise ValueError("Duplicate traffic entity")
             ts = row[2]
+            payload = row[3]
             if not isinstance(ts, datetime) or ts.tzinfo is None:
                 raise ValueError("Snapshot timestamp must be timezone aware")
+            if not isinstance(payload, dict):
+                raise ValueError("Snapshot payload must be a JSON object")
             return dict(scope=scope, entity_id=entity_id(row[0]), entity_name=row[1],
-                        ts=ts.astimezone(timezone.utc).isoformat(), payload=payload.model_dump(mode="json"))
+                        ts=ts.astimezone(timezone.utc).isoformat(), payload=dict(payload))
         except (ValueError, TypeError) as exc:
             raise InvalidSnapshot() from exc

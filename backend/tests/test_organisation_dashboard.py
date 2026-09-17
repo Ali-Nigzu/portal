@@ -1,5 +1,4 @@
 from contextlib import contextmanager
-from copy import deepcopy
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -16,13 +15,14 @@ from backend.app.services.organisation_dashboard import (
 
 def payload():
     def rollup(n):
-        return dict(entrances=[10] * n, occupancy=[[2.5, 1, 4]] * n,
+        return dict(entrances=[10] * n, occupancy=[[3, 1, 4] for _ in range(n)],
                     exits=[3] * n, age_pct=[10, 15, 20, 25, 20, 10], sex_pct=[60, 40])
     return dict(
-        entrances_96=list(range(96)), occupancy_96=[2.5] * 96,
+        entrances_96=list(range(96)),
+        occupancy_96=[[index + 2, index + 1, index + 3] for index in range(96)],
         exits_96=[3] * 96, footfall_96=[103] * 96, dwell_time_96=[120] * 96,
         traffic_devices=[dict(site_id=7, name="Production door")],
-        traffic_split_96=[[100]] * 96, capacity=[[125, 150]] * 96,
+        traffic_split_96=[[100] for _ in range(96)], capacity=[[125, 150] for _ in range(96)],
         **{key: rollup(n) for key, n in (
             ("today", 13), ("yesterday", 24), ("week", 7), ("month", 4),
             ("quarter", 12), ("year", 12), ("all_time", 2))},
@@ -58,7 +58,8 @@ class Database:
 
 
 def snapshot_row(data=None):
-    return (1, "Relational name", datetime(2026, 9, 14, 12, 4, tzinfo=timezone.utc), data or payload())
+    return (1, "Relational name", datetime(2026, 9, 14, 12, 4, tzinfo=timezone.utc),
+            payload() if data is None else data)
 
 
 def test_context_uses_relational_names_and_retains_enabled_flags():
@@ -72,13 +73,17 @@ def test_context_uses_relational_names_and_retains_enabled_flags():
     assert renamed[0]["slug"] == "new-third-site"
 
 
-def test_snapshot_is_canonical_and_preserves_values():
+def test_snapshot_preserves_canonical_integer_occupancy_triples():
     db = Database([snapshot_row()])
     result = OrganisationDashboard(db).load_organisation_snapshot(1)
     assert result["scope"] == "organisation"
+    assert result["payload"]["occupancy_96"][0] == [2, 1, 3]
+    assert result["payload"]["occupancy_96"][95] == [97, 96, 98]
+    assert result["payload"]["today"]["occupancy"][0] == [3, 1, 4]
     assert result["payload"]["capacity"][95] == [125, 150]
-    assert result["payload"]["today"]["occupancy"][0] == [2.5, 1, 4]
-    assert result["payload"]["traffic_devices"][0]["site_id"] == "7"
+    assert isinstance(result["payload"]["occupancy_96"][0][0], int)
+    assert isinstance(result["payload"]["capacity"][95][0], int)
+    assert result["payload"]["traffic_devices"][0]["site_id"] == 7
     assert set(result) == {"scope", "entity_id", "entity_name", "ts", "payload"}
     assert db.closed == 1
 
@@ -91,20 +96,10 @@ def test_site_read_enforces_ownership_in_query():
     assert db.queries[0][1] == (999, 1)
 
 
-@pytest.mark.parametrize("change", [
-    lambda p: [],
-    lambda p: dict(p, entrances_96=[1] * 97),
-    lambda p: dict(p, entrances_96=[1] * 95),
-    lambda p: dict(p, capacity=[[0]] * 96),
-    lambda p: dict(p, traffic_split_96=[[]] * 96),
-    lambda p: dict(p, traffic_devices=[dict(device_id=1, name="Wrong scope")]),
-    lambda p: dict(p, today=dict(p["today"], race_pct=[0, 0, 0])),
-    lambda p: dict(p, today=dict(p["today"], age_pct=[0] * 5)),
-    lambda p: dict(p, occupancy_96=[float("nan")] * 96),
-])
-def test_malformed_snapshot_is_rejected_without_repair(change):
+@pytest.mark.parametrize("bad_payload", [None, [], "not-json-object"])
+def test_genuinely_unmappable_snapshot_rows_are_rejected(bad_payload):
     row = list(snapshot_row())
-    row[3] = change(deepcopy(payload()))
+    row[3] = bad_payload
     with pytest.raises(InvalidSnapshot):
         OrganisationDashboard(Database([row])).load_organisation_snapshot(1)
 
@@ -116,24 +111,27 @@ def api(reader):
     return TestClient(app)
 
 
-def test_public_api_ignores_auth_as_authority_and_pins_organisation():
+def test_public_api_accepts_canonical_snapshots_and_pins_organisation():
     calls = []
+    canonical = dict(scope="organisation", entity_id="1", entity_name="Demo",
+                     ts="2026-09-17T17:07:07+00:00", payload=payload())
     reader = SimpleNamespace(
         load_organisation_context=lambda org: calls.append(org) or {},
-        load_organisation_snapshot=lambda org: calls.append(org) or {},
-        load_site_snapshot=lambda org, site: calls.append((org, site)) or {},
+        load_organisation_snapshot=lambda org: calls.append(org) or canonical,
+        load_site_snapshot=lambda org, site: calls.append((org, site)) or dict(canonical, scope="site", entity_id=str(site)),
     )
     client = api(reader)
     for url in ("context", "snapshot", "sites/8/snapshot"):
         response = client.get("/api/demo/dashboard/" + url, headers={"Authorization": "Basic anything", "X-Demo-Session": "999"})
         assert response.status_code == 200
         assert response.headers["cache-control"] == "no-store"
-    assert calls == [1, 1, (1, 8)]
+    assert client.get("/api/demo/dashboard/snapshot").json()["payload"]["occupancy_96"][0] == [2, 1, 3]
+    assert calls == [1, 1, (1, 8), 1]
     for alias in ("org", "orgId", "organisation_id", "viewToken", "view_token", "siteView", "ts"):
         assert client.get(f"/api/demo/dashboard/snapshot?{alias}=999").status_code == 422
     for invalid in ("0", "-1", "1.2", "9223372036854775808", "1%20OR%201=1"):
         assert client.get(f"/api/demo/dashboard/sites/{invalid}/snapshot").status_code == 422
-    assert calls == [1, 1, (1, 8)]
+    assert calls == [1, 1, (1, 8), 1]
 
 
 def test_storage_failure_never_exposes_key_path_or_exception_text():
