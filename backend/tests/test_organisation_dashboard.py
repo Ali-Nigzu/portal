@@ -20,7 +20,7 @@ def payload():
     return dict(
         entrances_96=list(range(96)),
         occupancy_96=[[index + 2, index + 1, index + 3] for index in range(96)],
-        exits_96=[3] * 96, footfall_96=[103] * 96, dwell_time_96=[120] * 96,
+        exits_96=[3] * 96, footfall_96=[103] * 96, dwell_time_96=[20] * 96,
         traffic_devices=[dict(site_id=7, name="Production door")],
         traffic_split_96=[[100] for _ in range(96)], capacity=[[125, 150] for _ in range(96)],
         **{key: rollup(n) for key, n in (
@@ -81,8 +81,10 @@ def test_snapshot_preserves_canonical_integer_occupancy_triples():
     assert result["payload"]["occupancy_96"][95] == [97, 96, 98]
     assert result["payload"]["today"]["occupancy"][0] == [3, 1, 4]
     assert result["payload"]["capacity"][95] == [125, 150]
+    assert result["payload"]["dwell_time_96"][95] == 20
     assert isinstance(result["payload"]["occupancy_96"][0][0], int)
     assert isinstance(result["payload"]["capacity"][95][0], int)
+    assert isinstance(result["payload"]["dwell_time_96"][95], int)
     assert result["payload"]["traffic_devices"][0]["site_id"] == 7
     assert set(result) == {"scope", "entity_id", "entity_name", "ts", "payload"}
     assert db.closed == 1

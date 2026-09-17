@@ -24,7 +24,7 @@ try {
  await expect(page.locator('[data-snapshot-ts]')).toBeVisible();
  await expect(page.getByRole('heading',{name:'Renamed Demo',exact:true})).toBeVisible();
  await expect(page.getByText('125%',{exact:true})).toBeVisible();
- await expect(page.getByText('2 min',{exact:true})).toBeVisible();
+ await expect(page.getByText('20 min',{exact:true})).toBeVisible();
  const ring=await page.locator('.capacity-usage .recharts-wrapper').boundingBox();
  await page.mouse.move(ring.x+ring.width/2+56,ring.y+ring.height/2);
  await expect(page.getByText('Rolling peak',{exact:true})).toBeVisible();

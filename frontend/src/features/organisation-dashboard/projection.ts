@@ -60,7 +60,7 @@ export function projectKpis(snapshot: SelectedSnapshot): Array<{id: string; titl
     [VRM_KPI_IDS.occupancy, occupancyAverages, "people", "#5f7694"],
     [VRM_KPI_IDS.exits, p.exits_96, "events", "#8a6267"],
     [VRM_KPI_IDS.footfall, p.footfall_96, "events", "#9b7420"],
-    [VRM_KPI_IDS.dwell, p.dwell_time_96.map(v => v / 60), "minutes", "#6f6483"],
+    [VRM_KPI_IDS.dwell, p.dwell_time_96, "minutes", "#6f6483"],
   ] as const;
   const result: Array<{id: string; title: string; result: ChartResult}> = configs.map(([id, values, unit, color]) => ({
     id, title: VRM_KPI_TITLES[id], result: {
