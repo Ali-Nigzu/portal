@@ -54,12 +54,13 @@ const metadata = (title: string, extra: Record<string, string | number | null> =
 export function projectKpis(snapshot: SelectedSnapshot): Array<{id: string; title: string; result: ChartResult}> {
   const p = snapshot.payload;
   const timestamps = rollingTimestamps(snapshot.ts);
+  const occupancyAverages = p.occupancy_96.map(([average]) => average);
   const configs = [
     [VRM_KPI_IDS.entrances, p.entrances_96, "events", "#5f7f6c"],
-    [VRM_KPI_IDS.occupancy, p.occupancy_96, "people", "#5f7694"],
+    [VRM_KPI_IDS.occupancy, occupancyAverages, "people", "#5f7694"],
     [VRM_KPI_IDS.exits, p.exits_96, "events", "#8a6267"],
     [VRM_KPI_IDS.footfall, p.footfall_96, "events", "#9b7420"],
-    [VRM_KPI_IDS.dwell, p.dwell_time_96.map(v => v / 60), "minutes", "#6f6483"],
+    [VRM_KPI_IDS.dwell, p.dwell_time_96, "minutes", "#6f6483"],
   ] as const;
   const result: Array<{id: string; title: string; result: ChartResult}> = configs.map(([id, values, unit, color]) => ({
     id, title: VRM_KPI_TITLES[id], result: {

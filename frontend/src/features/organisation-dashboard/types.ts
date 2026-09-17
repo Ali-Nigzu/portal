@@ -5,9 +5,10 @@ export type OrganisationContext = { organisation: Organisation; sites: Site[] };
 export type Selection = { scope: "organisation"; id: EntityId } | { scope: "site"; id: EntityId };
 export const PERIODS = ["today", "yesterday", "week", "month", "quarter", "year", "all_time"] as const;
 export type Period = typeof PERIODS[number];
+export type OccupancyTriple = [number, number, number];
 export type Rollup = {
   entrances: number[];
-  occupancy: [number, number, number][];
+  occupancy: OccupancyTriple[];
   exits: number[];
   age_pct: number[];
   sex_pct: number[];
@@ -15,7 +16,7 @@ export type Rollup = {
 export type TrafficEntity = { name: string } & ({ site_id: EntityId } | { device_id: EntityId });
 export type SnapshotPayload = Record<Period, Rollup> & {
   entrances_96: number[];
-  occupancy_96: number[];
+  occupancy_96: OccupancyTriple[];
   exits_96: number[];
   footfall_96: number[];
   dwell_time_96: number[];
