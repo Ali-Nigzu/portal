@@ -3,7 +3,7 @@ import { build } from 'esbuild';
 import { mkdir, writeFile } from 'node:fs/promises';
 const output = new URL('../test-results/dashboard-core.mjs', import.meta.url);
 await mkdir(new URL('../test-results/', import.meta.url), { recursive: true });
-const compiled = await build({stdin:{contents:`export * from './src/features/organisation-dashboard/projection'; export * from './src/features/organisation-dashboard/selection'; export * from './src/features/organisation-dashboard/api';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',write:false,define:{'import.meta.env':'{}'}});
+const compiled = await build({stdin:{contents:`export * from './src/features/organisation-dashboard/projection'; export * from './src/features/organisation-dashboard/selection'; export * from './src/features/organisation-dashboard/api'; export * from './src/analytics/components/ChartRenderer/validation'; export * from './src/analytics/components/ChartRenderer/primitives/utils';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',write:false,define:{'import.meta.env':'{}'}});
 await writeFile(output,compiled.outputFiles[0].text);
 globalThis.window = {location:{hostname:'localhost'}};
 const core = await import(output.href);
@@ -50,21 +50,58 @@ for(const period of core.PERIOD_OPTIONS){
  assert.equal(activity.series[2].data[0].occupancy_min,1);
  assert.equal(activity.series[2].data[0].occupancy_max,5);
  assert.equal(activity.series[2].data[0].value,3);
+ assert.deepEqual(core.validateChartResult(activity),[]);
  const demographics=core.projectDemographics(snapshot.payload[period.value]);
  assert.deepEqual(demographics.map(d=>d.id),['age','sex']);
  assert.deepEqual(demographics.map(d=>d.result.series[0].data.length),[6,2]);
  assert.deepEqual(demographics[1].result.series[0].data.map(p=>[p.label,p.value]),[['Male',40],['Female',60]]);
+}
+assert.equal(core.PERIOD_OPTIONS.find(p=>p.value==='month').label,'Last Month');
+assert.equal(core.PERIOD_OPTIONS.find(p=>p.value==='quarter').label,'Last Quarter');
+const temporal=fixture();
+temporal.ts='2026-09-16T13:07:00Z';
+temporal.payload.today={...temporal.payload.today,entrances:Array(24).fill(17),exits:Array(24).fill(9),occupancy:Array.from({length:24},()=>[3,1,5])};
+for(const period of ['today','week','year']) {
+ temporal.payload[period].occupancy[1]=[0,0,0];
+ const activity=core.projectActivity(temporal,period);
+ const [entrances,exits,occupancy]=activity.series;
+ const expectedLength={today:14,week:3,year:9}[period];
+ assert.equal(occupancy.data.length,expectedLength);
+ assert(occupancy.data.every(p=>Date.parse(p.x)<=Date.parse(temporal.ts)));
+ assert.equal(occupancy.data[1].value,0,'Historical zero remains');
+ assert.deepEqual(entrances.data.map(p=>p.value),temporal.payload[period].entrances);
+ assert.deepEqual(exits.data.map(p=>p.value),temporal.payload[period].exits);
+ assert.deepEqual(core.validateChartResult(activity),[]);
+ const merged=core.buildCartesianDataset(activity.series).data;
+ assert.equal(merged[expectedLength-1].occupancy,3,'Current partial bucket remains');
+ assert.equal(merged[expectedLength].occupancy,undefined,'No future occupancy value reaches the renderer');
+ assert.equal(temporal.payload[period].occupancy.length,entrances.data.length,'Source payload stays intact');
+}
+const year=core.projectActivity(temporal,'year');
+assert.deepEqual(year.series[2].data.map(p=>new Date(p.x).getUTCMonth()),[0,1,2,3,4,5,6,7,8]);
+const exact=fixture();exact.ts='2026-09-16T13:00:00Z';
+assert.equal(core.projectActivity(exact,'today').series[2].data.at(-1).x,exact.ts.replace('Z','.000Z'));
+for(const corrupt of [
+ result=>{delete result.meta.summary.canonicalSnapshot;},
+ result=>{result.meta.summary.chartStyle='unrelated';},
+ result=>{result.series[1].data.pop();},
+ result=>{result.series[2].data.shift();},
+ result=>{result.series[2].data[0].value=NaN;},
+]) {
+ const invalid=structuredClone(year);corrupt(invalid);
+ assert(core.validateChartResult(invalid).length>0,'Unrelated mismatches, wrong ordering and invalid values remain rejected');
 }
 for(const corrupt of [null,[],{scope:'organisation'},{scope:'organisation',entity_id:'1',entity_name:'Demo',ts:'now',payload:[]}]){
  assert.throws(()=>core.parseSnapshot(corrupt));
 }
 const obsolete=fixture();obsolete.payload.occupancy_96=Array(96).fill(2);
 assert.throws(()=>core.projectKpis(core.parseSnapshot(obsolete)));
-const context={organisation:{id:'1',name:'Renamed Demo',slug:'renamed-demo',enabled:true},sites:[{id:'17',organisation_id:'1',name:'New Site',slug:'new-site',enabled:false,max_capacity:2}]};
+const context={organisation:{id:'1',name:'Renamed Demo',slug:'renamed-demo',enabled:true,realtime:true},sites:[{id:'17',organisation_id:'1',name:'New Site',slug:'new-site',enabled:false,realtime:true,max_capacity:2}]};
 assert.equal(core.organisationPath(context),'/demo/renamed-demo/dashboard');
 assert.equal(core.sitePath(context,'new-site'),'/demo/renamed-demo/new-site/dashboard');
 assert.deepEqual(core.resolveSelection(context,'renamed-demo','new-site'),{scope:'site',id:'17'});
 assert.equal(core.resolveSelection(context,'renamed-demo','foreign'),null);
 assert.equal(core.resolveSelection(context,'foreign'),null);
+assert.deepEqual(core.resolveSelection(context,'renamed-demo'),{scope:'organisation',id:'1'},'Generic organisation selection has no Demo default');
 assert.equal(core.dashboardSearch('?org=2&viewToken=secret&embed=1'),'?embed=1');
 console.log('Canonical projection, envelope parsing and slug selection assertions passed.');

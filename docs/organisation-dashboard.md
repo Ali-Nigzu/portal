@@ -1,12 +1,18 @@
 # Real organisation Demo dashboard
 
-Only the Demo dashboard uses PostgreSQL. The public wrapper supplies integer organisation ID `1` to a reusable read service; query parameters, cookies and view tokens cannot choose another organisation. A site read includes both its ID and organisation ownership in SQL. The service reads only `public.organisations`, `public.sites`, `public.organisation_snapshots` and `public.site_snapshots`, using parameterized SELECTs. Snapshot `state` is neither queried nor returned.
+Only the Demo dashboard uses PostgreSQL. The public wrapper supplies integer organisation ID `1` to a reusable read service; query parameters, cookies and view tokens cannot choose another organisation. A site read includes both its ID and organisation ownership in SQL. The service reads only `public.organisations`, `public.sites`, `public.devices`, `public.organisation_snapshots` and `public.site_snapshots`, using parameterized SELECTs. Snapshot `state` is neither queried nor returned.
 
-The frontend resolves name slugs through the context API. IDs are lossless decimal strings internally, never dashboard URL segments. `/demo` and existing dashboard entry links redirect to the current organisation name. Unknown organisation/site slugs show not-found. Names and enabled flags come from context; disabled sites remain listed. Normalization collisions receive a deterministic name hash, without IDs or slug history.
+The frontend resolves name slugs through the context API. IDs are lossless decimal strings internally, never dashboard URL segments. Bare `/demo` selects owned Site ID `2` in the Demo wrapper and redirects using that site's current relational slug; there is no hardcoded site name or slug. If Site 2 is absent, Demo shows a configuration error with Retry. Existing `site-a`, `site-b` and `all` dashboard aliases still redirect to the organisation. Explicit organisation/site deep links retain their selection, and unknown slugs show not-found. Names and enabled flags come from context; disabled sites remain listed. Normalization collisions receive a deterministic name hash, without IDs or slug history.
+
+Context includes a `realtime` boolean on each site and the organisation. A site is Realtime when at least one of its devices satisfies `analyzed_until >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'`; exactly fifteen minutes qualifies, null does not, and no devices means Offline. One site SELECT derives these booleans with `EXISTS`, and organisation Realtime is `any` owned site Realtime (false for no sites). Device enabled flags, gateways and Snapshot timestamps are not involved. The header's separate System ON/OFF comes directly from the selected site's or organisation's own `enabled` flag. The two statuses are independent. Local time keeps the established browser-local display and one-minute cadence.
+
+Realtime is evaluated by PostgreSQL on each normal context fetch. There is no polling or browser-clock expiry; a long-open page retains that response's status until the next context fetch. This is intentional for this phase. Context failures remain real sanitized errors; missing privileges never produce fake status.
 
 One abortable provider loads and freezes one selected snapshot. All cards use that same payload and `ts`; selection and explicit retry load one new snapshot. Period changes are projections only. There is no polling, positional parser or legacy fallback in this path. The 96 rolling timestamps end at the UTC quarter-hour containing `ts`. Period labels use UTC hours/days, ISO weeks, January–December for `year`, and consecutive years ending at the snapshot year for `all_time`. `dwell_time_96` contains whole integer minutes and is displayed directly. Canonical analytics remain integers, and rolling and named-period occupancy preserve Snapshot's `[average_positive, minimum_positive, maximum]` triples; the occupancy KPI selects the supplied average while Site Flow retains the supplied range. Displayed capacity can exceed 100%. Demographics contain six Age and two Sex values only. Portal performs only lightweight response-envelope checks and does not duplicate Snapshot analytics validation.
 
 Event Logs, Alarm Logs, Reports, Devices, the authenticated/view-token dashboard, email/signup and the landing preview retain their existing loaders and behavior. Dashboard navigation into those Demo sections retains their legacy selected site. This migration does not map production sites onto fake legacy sites.
+
+The Dashboard reuses the established responsive status header, including an animated Realtime wave and muted, stationary crossed Offline wave. The title has no visible Snapshot UTC line, but `ts` remains analytical data. Site Flow's Month/Quarter labels are now Last Month/Last Quarter without changing the existing four-/twelve-ISO-week semantics. Demographics keeps its donuts and interactive values without duplicate lists. Only occupancy points whose bucket start is at or before Snapshot `ts` are plotted; historical zero and the current partial bucket remain, and entrances/exits are unchanged. Chart validation permits only the canonical Site Flow occupancy prefix to be shorter. One themed accessible spinner covers session, context and Snapshot loading and respects reduced motion.
 
 ## Dedicated Portal identity and one-time provisioning
 
@@ -14,7 +20,13 @@ Intended service account: `portal-reader@camosbase.iam.gserviceaccount.com`.
 
 Exact IAM database username: `portal-reader@camosbase.iam`.
 
-The account and key do not exist yet. No existing Gateway/TestAdmin credentials were read or reused. These commands are for a project administrator to run once; the application never runs them.
+The original provisioning recipe below is for a project administrator; the application never runs it. This phase does not create credentials or administer Cloud SQL. For an already provisioned Portal reader, the one additional operator action required before deploying or live-validating the new context query is:
+
+```sql
+GRANT SELECT ON TABLE public.devices TO "portal-reader@camosbase.iam";
+```
+
+The user will provision this grant separately. Controlled tests can run before it exists; live production Realtime context validation remains pending that grant. Do not broaden privileges or add a fallback to bypass it.
 
 The service account needs **Cloud SQL Client** (`roles/cloudsql.client`) for connector access and **Cloud SQL Instance User** (`roles/cloudsql.instanceUser`) for IAM database login. It does not need Cloud SQL Admin or Service Account Token Creator for this key-based connector flow. See [IAM login requirements](https://docs.cloud.google.com/sql/docs/postgres/iam-logins) and [IAM service account database provisioning](https://docs.cloud.google.com/sql/docs/postgres/add-manage-iam-users).
 
@@ -39,11 +51,11 @@ REVOKE ALL PRIVILEGES ON SCHEMA public FROM "portal-reader@camosbase.iam";
 GRANT USAGE ON SCHEMA public TO "portal-reader@camosbase.iam";
 
 REVOKE ALL PRIVILEGES ON TABLE
-  public.organisations, public.sites,
+  public.organisations, public.sites, public.devices,
   public.organisation_snapshots, public.site_snapshots
 FROM "portal-reader@camosbase.iam";
 GRANT SELECT ON TABLE
-  public.organisations, public.sites,
+  public.organisations, public.sites, public.devices,
   public.organisation_snapshots, public.site_snapshots
 TO "portal-reader@camosbase.iam";
 
@@ -63,7 +75,7 @@ SELECT table_name,
   has_table_privilege('portal-reader@camosbase.iam', table_name, 'TRUNCATE') AS can_truncate,
   has_table_privilege('portal-reader@camosbase.iam', table_name, 'REFERENCES') AS can_reference,
   has_table_privilege('portal-reader@camosbase.iam', table_name, 'TRIGGER') AS can_create_trigger
-FROM (VALUES ('public.organisations'), ('public.sites'),
+FROM (VALUES ('public.organisations'), ('public.sites'), ('public.devices'),
   ('public.organisation_snapshots'), ('public.site_snapshots')) AS tables(table_name);
 
 SELECT has_database_privilege('portal-reader@camosbase.iam', 'camos_prod', 'CONNECT') AS can_connect,
@@ -102,9 +114,23 @@ npm run build
 
 For browser assertions, serve the production build on `127.0.0.1:4173`, then run `node scripts/organisation-dashboard-browser.mjs`. The test intercepts all API calls with test data; it never contacts production. It uses installed Edge by default; set `DASHBOARD_BROWSER_CHANNEL=chrome` to use Chrome. Screenshots go to ignored `frontend/test-results/`.
 
+The browser harness covers desktop (1440×900), tablet (768×1024), phone (390×844), all four enabled/Realtime combinations, long relational names, Site 2 routing and renamed slugs, Year line termination, demographic hover values, delayed loading success/failure/Retry for all three stages, and no timer-driven requests. The backend status tests execute the service's SELECTs in an isolated SQLite fixture with a frozen SQL clock and only interval/placeholder syntax adapted. They prove the inclusive boundary and ownership without claiming live PostgreSQL verification.
+
+On narrow phones, the canonical header places the full relational title above the existing stacked statuses. The activity timeline scrolls horizontally to retain readable axes; its legend remains in view and keyboard/touch scrolling is supported. These refinements do not change shared chart primitives or navigation.
+
 Live Cloud SQL verification must follow service-account/user/grant provisioning. It has not been represented as a passing test. No production mutation tests are required: verify context and organisation/site snapshot GETs, and use the privilege inspection SELECTs above.
 
-Recorded implementation results (14 September 2026):
+Micro Phase 1 verification (19 September 2026):
+
+- Backend dashboard tests: **23 passed**. Full backend suite with `ANALYTICS_OFFLINE_MODE=true`: **47 passed**, 0 failed (3 dependency deprecation warnings). `pip check`: no broken requirements.
+- `node scripts/organisation-dashboard-tests.mjs`: **1 script passed**, including the narrow ChartRenderer validation regression cases.
+- `node scripts/reports-engine-tests.mjs`: **1 script passed**.
+- `node scripts/organisation-dashboard-browser.mjs`: **34 scenarios passed**, 0 failed, against the production build in Edge using controlled API fixtures.
+- `node node_modules/vite/bin/vite.js build`: passed, with the existing large-chunk warning. The Windows host used matching-version `esbuild-wasm` locally because the native compiler could not traverse sandboxed ancestor directories; no dependency manifest, lockfile or build-script changes were made.
+- `git diff --check`: passed. Desktop/tablet/phone screenshots were inspected, including header states, long names, loaders, demographics, and Year occupancy stopping at September.
+- No live PostgreSQL verification or provisioning was performed. Production Realtime context still requires the separately supplied devices SELECT grant.
+
+Historical implementation results (14 September 2026):
 
 - Backend suite: **39 passed** using Python 3.12; `pip check` found no broken requirements. The Docker image remains Python 3.11; a container build was not run on this Windows host.
 - Canonical projection/mapping/slug assertions: passed.

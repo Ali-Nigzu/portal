@@ -10,19 +10,30 @@ const statusCopy: Record<SystemStatus, string> = {
   critical: "System status: Attention required",
 };
 
+export type DashboardStatus = { realtime: boolean; enabled: boolean };
+
 interface HeaderStatusStripProps {
   className?: string;
   isAuthenticatedView?: boolean;
   layout?: "desktop" | "mobile";
+  status?: DashboardStatus;
 }
 
 const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
   className,
   isAuthenticatedView = false,
   layout = "desktop",
+  status,
 }) => {
   const { systemStatus, localTime } = useGlobalControls();
-  const RealtimeWaveIcon = () => (
+  // Canonical dashboards supply relational truth; legacy consumers retain
+  // their existing presentation without writing to GlobalControlsContext.
+  const placeholder = !status && isAuthenticatedView;
+  const realtime = status ? status.realtime : true;
+  const systemLabel = status ? `System status: ${status.enabled ? "ON" : "OFF"}` : statusCopy[systemStatus];
+  const indicator = status ? (status.enabled ? "on" : "off") : systemStatus;
+  const RealtimeWaveIcon = () => {
+    const wave = (
     <svg
       className="vrm-realtime-wave"
       viewBox="0 0 120 16"
@@ -50,32 +61,40 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
         />
       </g>
     </svg>
-  );
+    );
+    if (!status) return wave;
+    return <span className={`vrm-status-wave${realtime ? "" : " vrm-status-wave--offline"}`}>
+    {wave}
+    {!realtime && <svg className="vrm-status-wave__cross" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+      <path d="M3 3l6 6M9 3L3 9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>}
+    </span>;
+  };
 
   if (layout === "mobile") {
     return (
       <div className={`vrm-header-meta-mobile ${className ?? ""}`.trim()} role="status" aria-live="polite">
         <div className="vrm-header-meta-mobile__row">
           Last updated:{" "}
-          <span className="vrm-header-chip-highlight">
-            {isAuthenticatedView ? (
+          <span className={`vrm-header-chip-highlight${realtime ? "" : " vrm-header-chip-highlight--offline"}`}>
+            {placeholder ? (
               <span style={{ color: "var(--vrm-text-muted)" }}>-</span>
             ) : (
               <>
-                <RealtimeWaveIcon /> Realtime
+                <RealtimeWaveIcon /> {realtime ? "Realtime" : "Offline"}
               </>
             )}
           </span>
         </div>
         <div className="vrm-header-meta-mobile__row">
-          {isAuthenticatedView ? (
+          {placeholder ? (
             <>
               System status: <span style={{ color: "var(--vrm-text-muted)" }}>NA</span>
             </>
           ) : (
             <>
-              <span className={`vrm-status-indicator ${systemStatus}`} aria-hidden />{" "}
-              {statusCopy[systemStatus]}
+              <span className={`vrm-status-indicator ${indicator}`} aria-hidden />{" "}
+              {systemLabel}
             </>
           )}
         </div>
@@ -91,25 +110,25 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
       aria-live="polite"
     >
       <div className="vrm-header-meta-group">
-        <span className="vrm-header-chip" title="Last updated timestamp">
+        <span className="vrm-header-chip" title={status ? "Analysed device data freshness" : "Last updated timestamp"}>
           Last updated:{" "}
-          <span className="vrm-header-chip-highlight">
-            {isAuthenticatedView ? <span style={{ color: "var(--vrm-text-muted)" }}>-</span> : <><RealtimeWaveIcon /> Realtime</>}
+          <span className={`vrm-header-chip-highlight${realtime ? "" : " vrm-header-chip-highlight--offline"}`}>
+            {placeholder ? <span style={{ color: "var(--vrm-text-muted)" }}>-</span> : <><RealtimeWaveIcon /> {realtime ? "Realtime" : "Offline"}</>}
           </span>
         </span>
       </div>
       <span className="vrm-header-meta-divider" aria-hidden="true" />
       <div className="vrm-header-meta-group">
-        <span className="vrm-header-chip" title={isAuthenticatedView ? "System status unavailable" : statusCopy[systemStatus]}>
-          {isAuthenticatedView ? (
+        <span className="vrm-header-chip" title={placeholder ? "System status unavailable" : systemLabel}>
+          {placeholder ? (
             <span style={{ color: "var(--vrm-text-muted)" }}>NA</span>
           ) : (
             <>
               <span
-                className={`vrm-status-indicator ${systemStatus}`}
+                className={`vrm-status-indicator ${indicator}`}
                 aria-hidden
               />{" "}
-              {statusCopy[systemStatus]}
+              {systemLabel}
             </>
           )}
         </span>

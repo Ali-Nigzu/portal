@@ -19,6 +19,7 @@ const SUPPORTED_UNITS = new Set<ChartSeries["unit"] | undefined | null>([
 ]);
 interface ValidationOptions {
   allowMisalignedBuckets?: boolean;
+  allowOccupancyPrefix?: boolean;
 }
 const getSeriesBaseLabel = (series: ChartSeries): string => {
   const labelSource = series.label ?? series.id ?? "";
@@ -110,7 +111,10 @@ function validateSeriesData(
       }
     });
     if (!allowMisalignedBuckets) {
-      if (referenceOrder.length !== seriesItem.data.length) {
+      const occupancyPrefix = options.allowOccupancyPrefix
+        && seriesItem.id === "occupancy" && seriesItem.geometry === "line"
+        && seriesItem.data.length <= referenceOrder.length;
+      if (referenceOrder.length !== seriesItem.data.length && !occupancyPrefix) {
         issues.push({
           code: "bucket_mismatch",
           message: `Series ${seriesItem.id} has a different bucket count than the first series.`,
@@ -153,6 +157,13 @@ export function validateChartResult(result: ChartResult): ValidationIssue[] {
   }
   const issues = validateSeriesData(result.series, result.chartType, {
     allowMisalignedBuckets: isSplitTimeSeries(result),
+    // Canonical Site Flow omits only the future occupancy tail. Keep order,
+    // bar lengths, values and all other chart validation unchanged.
+    allowOccupancyPrefix: result.chartType === "composed_time"
+      && result.xDimension?.type === "time"
+      && result.meta?.summary?.canonicalSnapshot === 1
+      && result.meta?.summary?.chartStyle === "site_flow_activity"
+      && result.series[0]?.id === "entrances",
   });
   return issues;
 }

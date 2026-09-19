@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import sqlite3
 from types import SimpleNamespace
 
 import pytest
@@ -63,14 +64,106 @@ def snapshot_row(data=None):
 
 
 def test_context_uses_relational_names_and_retains_enabled_flags():
-    db = Database([(1, "Demo renamed", False), [(7, "Café", 1, False, 5), (8, "Cafe", 1, True, 10)]])
+    db = Database([(1, "Demo renamed", False), [(7, "Café", 1, False, 5, True), (8, "Cafe", 1, True, 10, False)]])
     context = OrganisationDashboard(db).load_organisation_context(1)
-    assert context["organisation"] == dict(id="1", name="Demo renamed", enabled=False, slug="demo-renamed")
+    assert context["organisation"] == dict(id="1", name="Demo renamed", enabled=False, slug="demo-renamed", realtime=True)
     assert len({s["slug"] for s in context["sites"]}) == 2
     assert context["sites"][0]["enabled"] is False
     assert all(params == (1,) for _, params in db.queries)
     renamed = site_slugs([dict(name="New third site")])
     assert renamed[0]["slug"] == "new-third-site"
+
+
+class RelationalDatabase(Database):
+    """Execute the service SELECTs against isolated rows and a frozen SQL clock.
+
+    SQLite only substitutes PostgreSQL's interval syntax and placeholders;
+    EXISTS, >=, ownership and joins are executed, not mocked as booleans.
+    This is not a production PostgreSQL integration test.
+    """
+    now = datetime(2026, 9, 19, 12, 0, 0)
+
+    def __init__(self, sites, devices, organisation_enabled=True):
+        super().__init__([])
+        self.db = sqlite3.connect(":memory:")
+        self.db.create_function("current_timestamp", 0, lambda: self.now.isoformat(" "))
+        self.db.executescript("""
+            ATTACH DATABASE ':memory:' AS public;
+            CREATE TABLE public.organisations (id, name, enabled);
+            CREATE TABLE public.sites (id, name, organisation_id, enabled, max_capacity);
+            CREATE TABLE public.devices (site_id, analyzed_until, enabled);
+        """)
+        self.db.execute("INSERT INTO public.organisations VALUES (1, 'Demo', ?)", (organisation_enabled,))
+        self.db.executemany("INSERT INTO public.sites VALUES (?, ?, ?, ?, ?)", sites)
+        self.db.executemany("INSERT INTO public.devices VALUES (?, ?, ?)", [
+            (site, (self.now - timedelta(minutes=age)).isoformat(" ") if age is not None else None, enabled)
+            for site, age, enabled in devices
+        ])
+
+    def execute(self, sql, params):
+        super().execute(sql, params)
+        sql = sql.replace("CURRENT_TIMESTAMP - INTERVAL '15 minutes'", "datetime(CURRENT_TIMESTAMP, '-15 minutes')")
+        self.result = self.db.execute(sql.replace("%s", "?"), params)
+
+    def fetchone(self):
+        return self.result.fetchone()
+
+    def fetchall(self):
+        return self.result.fetchall()
+
+
+@pytest.mark.parametrize("devices,site_enabled,expected", [
+    ([(7, 5, True)], True, True),
+    ([(7, 15, True)], True, True),
+    ([(7, 16, True)], True, False),
+    ([(7, 16, True), (7, 5, True)], True, True),
+    ([(7, 16, True), (7, 30, True)], True, False),
+    ([(7, None, True)], True, False),
+    ([], True, False),
+    ([(7, 5, False)], True, True),
+    ([(7, 5, True)], False, True),
+    ([(8, 5, True)], True, False),
+], ids=["fresh", "inclusive-15-minutes", "stale", "mixed", "all-stale", "null", "no-devices",
+        "disabled-device-fresh", "disabled-site-fresh", "foreign-site-fresh"])
+def test_context_realtime_executes_frozen_clock_query(devices, site_enabled, expected):
+    db = RelationalDatabase([(7, "Owned", 1, site_enabled, 10), (8, "Foreign", 2, True, 10)], devices)
+    try:
+        context = OrganisationDashboard(db).load_organisation_context(1)
+        assert [site["id"] for site in context["sites"]] == ["7"]
+        assert context["sites"][0]["realtime"] is expected
+        assert context["sites"][0]["enabled"] == site_enabled
+        assert context["organisation"]["realtime"] is expected
+        assert context["organisation"]["enabled"] == True
+        assert len(db.queries) == 2
+        assert "d.analyzed_until >= CURRENT_TIMESTAMP - INTERVAL '15 minutes'" in db.queries[1][0]
+        assert "d.enabled" not in db.queries[1][0]
+        assert "gateway" not in db.queries[1][0]
+    finally:
+        db.db.close()
+
+
+@pytest.mark.parametrize("sites,devices,expected", [
+    ([(7, "One", 1, True, 10), (8, "Two", 1, False, 10)], [(7, 30, True), (8, 5, False)], True),
+    ([(7, "One", 1, True, 10), (8, "Two", 1, True, 10)], [(7, 30, True)], False),
+    ([], [], False),
+], ids=["one-fresh-owned-site", "all-offline", "no-sites"])
+def test_organisation_realtime_is_any_owned_site_independent_of_enabled(sites, devices, expected):
+    db = RelationalDatabase(sites, devices, organisation_enabled=False)
+    try:
+        context = OrganisationDashboard(db).load_organisation_context(1)
+        assert context["organisation"]["realtime"] is expected
+        assert context["organisation"]["enabled"] == False
+        assert len(db.queries) == 2, "No per-site device queries"
+    finally:
+        db.db.close()
+
+
+def test_missing_devices_permission_returns_sanitized_context_error():
+    def fail(org):
+        raise RuntimeError('permission denied for table devices: private credentials')
+    response = api(SimpleNamespace(load_organisation_context=fail)).get("/api/demo/dashboard/context")
+    assert response.status_code == 503
+    assert "permission denied" not in response.text and "credentials" not in response.text
 
 
 def test_snapshot_preserves_canonical_integer_occupancy_triples():
