@@ -46,6 +46,40 @@
   display: none;
 }
 
+.dashboard-v2__header--canonical { margin-bottom: 0; }
+.dashboard-v2__header--canonical .vrm-dashboard-header { flex-wrap: wrap; }
+.dashboard-v2__header--canonical .vrm-dashboard-header-left { flex: 1 1 180px; min-width: 0; }
+.dashboard-v2__header--canonical .vrm-dashboard-header-right { min-width: 0; max-width: 100%; }
+.dashboard-v2__header--canonical h1 { margin: 0; font-size: 24px; overflow-wrap: anywhere; }
+.dashboard-v2__header--canonical .vrm-status-indicator { flex-shrink: 0; border-radius: 50%; }
+.dashboard-v2__header--canonical .vrm-status-indicator.on { background: #22c55e; }
+.dashboard-v2__header--canonical .vrm-status-indicator.off { background: var(--sys-text-3, var(--vrm-text-muted)); }
+.dashboard-v2__header--canonical .vrm-status-wave { display: inline-flex; align-items: center; position: relative; width: 32px; height: 16px; }
+.dashboard-v2__header--canonical .vrm-status-wave--offline .vrm-realtime-wave,
+.dashboard-v2__header--canonical .vrm-header-chip-highlight--offline { color: var(--sys-text-3, var(--vrm-text-muted)); }
+.dashboard-v2__header--canonical .vrm-status-wave--offline .vrm-realtime-wave-track { animation: none; will-change: auto; }
+.dashboard-v2__header--canonical .vrm-status-wave__cross {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 12px; height: 12px;
+  border-radius: 50%; background: var(--sys-bg-2, var(--vrm-bg-panel));
+}
+
+.dashboard-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--vrm-spacing-4); min-height: 60vh; padding: var(--vrm-spacing-6);
+  color: var(--sys-text-3, var(--vrm-text-muted)); text-align: center;
+}
+.dashboard-loading__spinner {
+  width: 40px; height: 40px; border: 4px solid var(--line-default, var(--vrm-border));
+  border-top-color: var(--signal-gold, #b79a55); border-radius: 50%;
+  animation: dashboard-loading-spin 1s linear infinite;
+}
+.dashboard-loading__label { font-size: var(--vrm-typography-font-size-body); }
+@keyframes dashboard-loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-loading__spinner,
+  .dashboard-v2__header--canonical .vrm-realtime-wave-track { animation: none; }
+}
+
 .dashboard-v2__error-banner {
   background: rgba(139,58,47,0.1);
   color: #8b3a2f;
@@ -169,6 +203,9 @@
 }
 .site-flow-card__controls .vrm-select { min-width: 140px; }
 
+.site-flow-activity { min-width: 0; }
+.site-flow-activity:focus-visible { outline: 2px solid var(--signal-gold, #b79a55); outline-offset: 2px; }
+
 .dashboard-v2__chart-card {
   min-height: 360px;
   background: color-mix(in srgb, var(--sys-bg-2, var(--vrm-bg-panel)) 75%, transparent);
@@ -285,6 +322,8 @@
     min-width: 0;
   }
 
+  .dashboard-v2__header--canonical .vrm-dashboard-header-mobile__site { font-size: 18px; }
+
   .vrm-dashboard-header-mobile__divider {
     width: 1px;
     background: var(--sys-line-soft, rgba(120, 112, 96, 0.24));
@@ -318,6 +357,31 @@
 }
 
 @media (max-width: 600px) and (orientation: portrait) {
+  .dashboard-v2__header--canonical .vrm-dashboard-header-mobile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-v2__header--canonical .vrm-dashboard-header-mobile__site {
+    padding-inline: var(--vrm-spacing-4) 44px;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .dashboard-v2__header--canonical .vrm-dashboard-header-mobile__divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  /* Keep both axes and time buckets legible in the narrow Demo content lane. */
+  .dashboard-v2__chart-card--site-flow .analytics-card__body:has(> .site-flow-body) { padding: var(--vrm-spacing-3); }
+  .site-flow-body { padding: 0; }
+  .site-flow-activity { overflow-x: auto; container-type: inline-size; scrollbar-width: thin; }
+  .dashboard-v2 .dashboard-v2__chart-card--site-flow .site-flow-activity > .analytics-chart-surface {
+    min-width: 400px;
+    touch-action: auto !important;
+  }
+  .site-flow-activity .analytics-series-legend { position: sticky; left: 0; width: 100cqw; }
+
   .dashboard-v2__chart-card--site-flow {
     margin-top: var(--vrm-spacing-3);
   }

@@ -1,5 +1,5 @@
 export type EntityId = string; // Lossless decimal PostgreSQL bigint, never a URL slug.
-export type Organisation = { id: EntityId; name: string; slug: string; enabled: boolean };
+export type Organisation = { id: EntityId; name: string; slug: string; enabled: boolean; realtime: boolean };
 export type Site = Organisation & { organisation_id: EntityId; max_capacity: number };
 export type OrganisationContext = { organisation: Organisation; sites: Site[] };
 export type Selection = { scope: "organisation"; id: EntityId } | { scope: "site"; id: EntityId };

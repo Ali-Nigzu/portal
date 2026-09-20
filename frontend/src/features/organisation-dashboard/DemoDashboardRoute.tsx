@@ -4,16 +4,25 @@ import VRMLayout from "../../components/VRMLayout";
 import { applyDemoDefaultsOnce, applyDemoEntryDefaults, enableDemoSession } from "../../lib/demoSession";
 import { OrganisationDashboardProvider, useDashboardSnapshot } from "./OrganisationDashboardProvider";
 import OrganisationDashboardPage from "./OrganisationDashboardPage";
+import DashboardLoadingState from "./DashboardLoadingState";
 import { demoDashboardSource } from "./api";
-import { dashboardSearch, organisationPath } from "./selection";
+import { dashboardSearch, organisationPath, sitePath } from "./selection";
 
 function DemoDashboardShell() {
-  const {context, selection} = useDashboardSnapshot();
+  const {context, selection, retry} = useDashboardSnapshot();
   const {organisationSlug,siteSlug} = useParams();
   const location = useLocation();
   // Existing entry links are dashboard-only aliases; unknown real slugs never fall back.
   const legacyEntry = !siteSlug && ["site-a","site-b","all"].includes(organisationSlug ?? "");
-  if (context && (!organisationSlug || (legacyEntry && organisationSlug !== context.organisation.slug))) {
+  if (context && !organisationSlug) {
+    const defaultSite = context.sites.find(site => site.id === "2");
+    if (!defaultSite) return <VRMLayout><div className="dashboard-v2"><div className="dashboard-v2__error-banner" role="alert">
+      <p>Demo is unavailable: the configured default site is missing.</p>
+      <button className="vrm-btn" onClick={retry}>Retry</button>
+    </div></div></VRMLayout>;
+    return <Navigate to={sitePath(context, defaultSite.slug)+dashboardSearch(location.search)} replace />;
+  }
+  if (context && legacyEntry && organisationSlug !== context.organisation.slug) {
     return <Navigate to={organisationPath(context)+dashboardSearch(location.search)} replace />;
   }
   const organisation = context ? {id:encodeURIComponent(context.organisation.slug),label:context.organisation.name} : {id:"",label:"Dashboard"};
@@ -37,6 +46,6 @@ export default function DemoDashboardRoute() {
     return () => {active=false;};
   }, []);
   if(error) return <div role="alert">Unable to start Demo. <button onClick={() => window.location.reload()}>Retry</button></div>;
-  if(!ready) return <p role="status">Loading dashboard…</p>;
+  if(!ready) return <DashboardLoadingState label="Loading live demo…" />;
   return <OrganisationDashboardProvider source={demoDashboardSource} organisationSlug={organisationSlug} siteSlug={siteSlug}><DemoDashboardShell /></OrganisationDashboardProvider>;
 }

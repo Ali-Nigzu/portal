@@ -7,8 +7,8 @@ const QUARTER_HOUR = 900000;
 const DAY = 86400000;
 export const PERIOD_OPTIONS: Array<{value: Period; label: string}> = [
   { value: "today", label: "Today" }, { value: "yesterday", label: "Yesterday" },
-  { value: "week", label: "Week" }, { value: "month", label: "Last 4 ISO Weeks" },
-  { value: "quarter", label: "Last 12 ISO Weeks" }, { value: "year", label: "Year" },
+  { value: "week", label: "Week" }, { value: "month", label: "Last Month" },
+  { value: "quarter", label: "Last Quarter" }, { value: "year", label: "Year" },
   { value: "all_time", label: "All Time" },
 ];
 
@@ -106,7 +106,8 @@ export function projectActivity(snapshot: SelectedSnapshot, period: Period): Cha
   series.push({ id: "occupancy", label: "Occupancy", geometry: "line", unit: "people",
     color: SITE_FLOW_ACTIVITY_COLORS.occupancy,
     data: r.occupancy.map(([average, minimum, maximum], i) => ({ x: timestamps[i], value: average, y: average,
-      occupancy_avg: average, occupancy_min: minimum, occupancy_max: maximum })),
+      occupancy_avg: average, occupancy_min: minimum, occupancy_max: maximum }))
+      .filter(point => Date.parse(point.x) <= Date.parse(snapshot.ts)),
   });
   return { chartType: "composed_time", xDimension: { id: "timestamp", type: "time", timezone: "UTC",
     bucket: period === "today" || period === "yesterday" ? "HOUR" : period === "week" ? "DAY" : period === "year" ? "MONTH" : period === "all_time" ? "YEAR" : "WEEK" },

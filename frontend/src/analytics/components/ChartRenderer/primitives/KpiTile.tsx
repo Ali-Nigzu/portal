@@ -283,6 +283,9 @@ export const KpiTile = ({
       return formatKpiValue(value, primarySeries?.unit);
     }
     if (isVrm && primarySeries?.unit === "minutes") {
+      if (summary?.canonicalSnapshot === 1 && primarySeries.id === "kpi-vrm-dwell") {
+        return value;
+      }
       const rounded = summary?.canonicalSnapshot === 1 ? value : Math.round(value);
       return `${rounded} min`;
     }

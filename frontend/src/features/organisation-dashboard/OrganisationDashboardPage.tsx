@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import ErrorBoundary from "../../common/components/ErrorBoundary";
 import DashboardKpiSection from "../dashboard/components/DashboardKpiSection";
+import DashboardHeader from "../dashboard/components/DashboardHeader";
+import DashboardLoadingState from "./DashboardLoadingState";
 import type { DashboardWidgetState } from "../dashboard/types";
 import { Card } from "../../analytics/components/Card/Card";
 import { ChartRenderer } from "../../analytics/components/ChartRenderer/ChartRenderer";
@@ -19,21 +21,20 @@ export default function OrganisationDashboardPage() {
   })) : [], [snapshot]);
   const activity = useMemo(() => snapshot && projectActivity(snapshot, period), [snapshot,period]);
   const demographics = useMemo(() => snapshot && projectDemographics(snapshot.payload[period]), [snapshot,period]);
-  const name = selection?.scope === "site" ? context?.sites.find(site => site.id === selection.id)?.name : context?.organisation.name;
+  const entity = selection?.scope === "site" ? context?.sites.find(site => site.id === selection.id)
+    : selection?.scope === "organisation" ? context?.organisation : undefined;
   return <ErrorBoundary name="organisation-dashboard"><DemoDonutTooltipProvider><DemoDonutTooltipBoundary>
     <div className="dashboard-v2" data-snapshot-ts={snapshot?.ts}>
       <div className="dashboard-v2__content vrm-dashboard-shell">
-      <header className="dashboard-v2__header">
-        <div><h1 style={{margin:0,fontSize:24}}>{name ?? "Dashboard"}</h1>{snapshot && <p>Snapshot: <time dateTime={snapshot.ts}>{new Date(snapshot.ts).toLocaleString("en-GB",{timeZone:"UTC"})} UTC</time></p>}</div>
-      </header>
-      {notFound ? <p role="alert">Dashboard not found.</p> : error ? <div role="alert"><p>{error}</p><button className="vrm-btn" onClick={retry}>Retry</button></div> : !snapshot ? <p role="status">Loading dashboard…</p> : <>
+      {entity && <DashboardHeader siteLabelOverride={entity.name} status={{realtime:entity.realtime, enabled:entity.enabled}} />}
+      {notFound ? <p role="alert">Dashboard not found.</p> : error ? <div role="alert"><p>{error}</p><button className="vrm-btn" onClick={retry}>Retry</button></div> : !snapshot ? <DashboardLoadingState /> : <>
         <DashboardKpiSection kpiWidgets={kpis} onRemoveWidget={() => {}} donutTooltipMode="demo_cursor_hover" />
         <Card title="Site Flow" className="dashboard-v2__chart-card dashboard-v2__chart-card--site-flow vrm-card vrm-card--chart-panel"
           dateSelector={<div className="site-flow-card__controls">
               <select className="vrm-select" aria-label="Site Flow view" value={mode} onChange={e => setMode(e.target.value)}><option value="activity">Activity</option><option value="demographics">Demographics</option></select>
               <select className="vrm-select" aria-label="Site Flow period" value={period} onChange={e => setPeriod(e.target.value as Period)}>{PERIOD_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
             </div>}>
-          <div className="vrm-card-body">{mode === "activity" ? <ChartRenderer result={activity!} height={340} /> : <div className="site-flow-demographics">{demographics!.map(({id,result}) => <div key={id} style={{flex:"1 1 240px"}}><ChartRenderer className="site-flow-demographics__chart" result={result} height={200} donutTooltipMode="demo_cursor_hover" donutTooltipOwnerId={id} /><dl style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 16px",maxWidth:300,margin:"0 auto"}}>{result.series[0].data.map(point => <div key={point.x} style={{display:"contents"}}><dt>{String(point.label)}</dt><dd style={{margin:0}}>{point.value}%</dd></div>)}</dl></div>)}</div>}</div>
+          <div className="vrm-card-body site-flow-body">{mode === "activity" ? <div className="site-flow-activity" tabIndex={0} role="region" aria-label="Site Flow activity timeline"><ChartRenderer result={activity!} height={340} /></div> : <div className="site-flow-demographics">{demographics!.map(({id,result}) => <div key={id}><ChartRenderer className="site-flow-demographics__chart" result={result} height={200} donutTooltipMode="demo_cursor_hover" donutTooltipOwnerId={id} /></div>)}</div>}</div>
         </Card>
       </>}
       </div>
