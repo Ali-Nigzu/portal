@@ -59,7 +59,7 @@
 .dashboard-v2__header--canonical .vrm-header-chip-highlight--offline { color: var(--sys-text-3, var(--vrm-text-muted)); }
 .dashboard-v2__header--canonical .vrm-status-wave--offline .vrm-realtime-wave-track { animation: none; will-change: auto; }
 .dashboard-v2__header--canonical .vrm-status-wave__cross {
-  position: absolute; right: -3px; top: -3px; width: 12px; height: 12px;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 12px; height: 12px;
   border-radius: 50%; background: var(--sys-bg-2, var(--vrm-bg-panel));
 }
 

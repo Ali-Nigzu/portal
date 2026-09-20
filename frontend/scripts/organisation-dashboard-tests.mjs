@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { build } from 'esbuild';
 import { mkdir, writeFile } from 'node:fs/promises';
 const output = new URL('../test-results/dashboard-core.mjs', import.meta.url);
 await mkdir(new URL('../test-results/', import.meta.url), { recursive: true });
-const compiled = await build({stdin:{contents:`export * from './src/features/organisation-dashboard/projection'; export * from './src/features/organisation-dashboard/selection'; export * from './src/features/organisation-dashboard/api'; export * from './src/analytics/components/ChartRenderer/validation'; export * from './src/analytics/components/ChartRenderer/primitives/utils';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',write:false,define:{'import.meta.env':'{}'}});
+const compiled = await build({stdin:{contents:`export * from './src/features/organisation-dashboard/projection'; export * from './src/features/organisation-dashboard/selection'; export * from './src/features/organisation-dashboard/api'; export * from './src/analytics/components/ChartRenderer/validation'; export * from './src/analytics/components/ChartRenderer/primitives/utils'; export * from './src/analytics/components/ChartRenderer/primitives/KpiTile'; export * from './src/analytics/components/ChartRenderer/utils/format';`,resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react-dom','recharts'],write:false,define:{'import.meta.env':'{}'}});
 await writeFile(output,compiled.outputFiles[0].text);
 globalThis.window = {location:{hostname:'localhost'}};
 const core = await import(output.href);
@@ -33,6 +35,20 @@ assert.equal(kpis[3].result.meta.summary.headlineValue,26);
 assert.equal(snapshot.payload.dwell_time_96[95],20);
 assert.equal(kpis[4].result.meta.summary.headlineValue,20);
 assert(kpis[4].result.series[0].data.every(p=>p.value===20));
+assert.equal(kpis[4].result.series[0].unit,'minutes');
+assert.equal(core.formatValue(20,kpis[4].result.series[0].unit),'20 minutes');
+const headline=result=>renderToStaticMarkup(createElement(core.KpiTile,{result,series:result.series,height:168})).match(/class="kpi-value">([^<]*)</)?.[1];
+assert.deepEqual(kpis.slice(0,5).map(kpi=>headline(kpi.result)),['96','97','9','26','20']);
+for(const value of [0,27,1250]) {
+ const result=structuredClone(kpis[4].result);result.meta.summary.headlineValue=value;
+ assert.equal(headline(result),String(value),'Canonical Dwell headline has no suffix or numeric conversion');
+}
+const legacyDwell=structuredClone(kpis[4].result);delete legacyDwell.meta.summary.canonicalSnapshot;
+assert.equal(headline(legacyDwell),'20 min','Legacy headline formatting is unchanged');
+const otherMinutes=structuredClone(kpis[4].result);otherMinutes.series[0].id='other-minutes-kpi';
+assert.equal(headline(otherMinutes),'20 min','Other minute-based KPIs are unchanged');
+const percentage=structuredClone(kpis[4].result);percentage.series[0].unit='percentage';
+assert.equal(headline(percentage),'20%','Percentage headlines retain their suffix');
 assert.equal(kpis[5].result.series[0].data[0].label,'Payload Site Name');
 assert.equal(kpis[5].result.series[0].data[0].x,'site:17');
 assert.equal(core.projectKpis(fixture('site','17'))[5].result.series[0].data[0].x,'device:81');

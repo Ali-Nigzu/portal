@@ -57,6 +57,13 @@ async function assertHeader(page,{name,realtime,enabled}) {
  const wave=header.locator('.vrm-realtime-wave-track:visible');
  assert.equal(await wave.evaluate(el=>getComputedStyle(el).animationName),realtime?'vrm-realtime-wave':'none');
  assert.equal(await header.locator('.vrm-status-wave__cross:visible').count(),realtime?0:1);
+ const waveBox=await header.locator('.vrm-status-wave:visible').boundingBox();
+ assert(Math.abs(waveBox.width-32)<1 && Math.abs(waveBox.height-16)<1,'Wave size is unchanged');
+ if(!realtime) {
+  const crossBox=await header.locator('.vrm-status-wave__cross:visible').boundingBox();
+  assert(Math.abs(crossBox.x+crossBox.width/2-waveBox.x-waveBox.width/2)<0.5,'Offline cross is horizontally centered on the wave');
+  assert(Math.abs(crossBox.y+crossBox.height/2-waveBox.y-waveBox.height/2)<0.5,'Offline cross is vertically centered on the wave');
+ }
  await expect(header.locator(`.vrm-status-indicator.${enabled?'on':'off'}:visible`)).toBeVisible();
  if(enabled)assert.equal(await header.locator('.vrm-status-indicator.on:visible').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(34, 197, 94)');
  assert.equal(await header.evaluate(el=>el.scrollWidth>el.clientWidth+1),false,'Header does not overflow');
@@ -68,7 +75,14 @@ try {
   await page.goto(base+orgPath+'?panel=sites&org=2&viewToken=ignored');await ready(page);
   await assertHeader(page,{name:'Renamed Demo',realtime:true,enabled:false});
   await expect(page.getByText('125%',{exact:true})).toBeVisible();
-  await expect(page.getByText('20 min',{exact:true})).toBeVisible();
+  await expect(page.locator('.dashboard-v2__kpi-band .kpi-value')).toHaveText(['96','97','9','26','20']);
+  const dwell=page.locator('.dashboard-v2__kpi-content[aria-label="Dwell Minutes"]');
+  await expect(dwell.locator('.kpi-value')).toHaveText('20');
+  await expect(dwell.locator('.kpi-label')).toHaveText('Dwell Minutes');
+  await dwell.getByTestId('vrm-sparkline-overlay').hover();
+  await expect(dwell.getByTestId('vrm-sparkline-footer').locator('.kpi-sparkline-strip__value')).toHaveText('20');
+  await dwell.screenshot({path:'test-results/dwell-headline-desktop.png'});
+  await page.mouse.move(400,100);
   const ring=await page.locator('.capacity-usage .recharts-wrapper').boundingBox();
   await page.mouse.move(ring.x+ring.width/2+56,ring.y+ring.height/2);
   await expect(page.getByText('Rolling peak',{exact:true})).toBeVisible();
@@ -136,6 +150,13 @@ try {
 
  for(const [size,viewport] of sizes) {
   await page.setViewportSize(viewport);
+  await check(`${size}: Dwell headline retains minute meaning without suffix`,async()=>{
+   await page.goto(base+sitePath);await ready(page);
+   const dwell=page.locator('.dashboard-v2__kpi-content[aria-label="Dwell Minutes"]');
+   await expect(dwell.locator('.kpi-value')).toHaveText('20');
+   await expect(dwell.locator('.kpi-label')).toHaveText('Dwell Minutes');
+   await dwell.screenshot({path:`test-results/dwell-headline-${size}.png`});
+  });
   for(const realtime of [true,false])for(const enabled of [true,false]){
    await check(`${size}: ${enabled?'ON':'OFF'} and ${realtime?'Realtime':'Offline'}`,async()=>{
     Object.assign(state.data.sites[1],{enabled,realtime});
