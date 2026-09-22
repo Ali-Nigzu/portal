@@ -1,661 +1,181 @@
-import React from "react";
-import { useParams } from "react-router-dom";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { Credentials } from "../../types/credentials";
+import { useEffect, useRef, useState } from "react";
+import {
+  useOptionalPortal,
+  usePortal,
+  scopeParams,
+  responseJson,
+} from "../../context/PortalContext";
+import {
+  PortalFilters,
+  emptyFilters,
+  filterParams,
+  type Filters,
+} from "../../components/PortalFilters";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
-import type { searchEvents } from "./transport/searchEvents";
-import DevicesMultiSelect from "./components/DevicesMultiSelect";
-import { getEventDeviceOptionsForSiteId } from "./utils/eventDevices";
-import type { EventData } from "./utils/eventTypes";
+import type { Credentials } from "../../types/credentials";
 import "./EventLogsPage.css";
-import { demoNow, formatDemoTimestamp, parseDemoTimestamp } from "../../lib/demoTime";
-import { isDemoSessionActive } from "../../lib/demoSession";
-import { installEventLogsRuntimeProof, runEventLogsRuntimeProofSuite, type RuntimeProofSuite } from "./runtimeProof";
-interface EventLogsPageProps {
-  credentials: Credentials;
-  searchEventsFn?: typeof searchEvents;
-  viewTokenOverride?: string | null;
-  clientIdOverride?: string | null;
-}
-const EventLogsPage: React.FC<EventLogsPageProps> = ({
-  credentials,
-  searchEventsFn,
-  viewTokenOverride,
-  clientIdOverride,
-}) => {
-  const { siteId } = useParams();
-  const isDemoSession = isDemoSessionActive();
-  const deviceOptions = React.useMemo(
-    () => (isDemoSession ? undefined : getEventDeviceOptionsForSiteId(siteId)),
-    [isDemoSession, siteId],
-  );
-  const {
-    events,
-    loading,
-    error,
-    draftFilters,
-    setDraftFilters,
-    draftStartDate,
-    setDraftStartDate,
-    draftEndDate,
-    setDraftEndDate,
-    appliedStartDate,
-    appliedEndDate,
-    currentPage,
-    setCurrentPage,
-    totalPages,
-    totalEvents,
-    eventsPerPage,
-    searchToken,
-    handleSearch,
-    fetchExportEvents,
-    fetchEvents,
-  } = useEventLogsQuery(credentials, {
-    searchEventsFn,
-    viewToken: viewTokenOverride,
-    clientId: clientIdOverride,
-  });
-  const [runtimeProof, setRuntimeProof] = React.useState<RuntimeProofSuite | null>(null);
+import "../../styles/PortalLogs.css";
 
-  React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    installEventLogsRuntimeProof();
-  }, []);
-
-  React.useLayoutEffect(() => {
-    if (typeof window === "undefined" || searchToken <= 0 || events.length <= 0) {
-      return;
-    }
-    const scroller = document.querySelector<HTMLDivElement>(".event-logs-table-scroll");
-    if (!scroller) {
-      return;
-    }
-    const reset = () => {
-      scroller.scrollLeft = 0;
-    };
-    reset();
-    const rafA = window.requestAnimationFrame(reset);
-    const rafB = window.requestAnimationFrame(() => window.requestAnimationFrame(reset));
-    return () => {
-      window.cancelAnimationFrame(rafA);
-      window.cancelAnimationFrame(rafB);
-    };
-  }, [searchToken, events.length]);
-
-  React.useEffect(() => {
-    if (searchToken <= 0 || events.length <= 0) {
-      setRuntimeProof(null);
-      return;
-    }
-    const id = window.requestAnimationFrame(() => {
-      setRuntimeProof(runEventLogsRuntimeProofSuite(searchToken));
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [events.length, searchToken]);
-  const ageBuckets = [
-    { value: "0", label: "0-4" },
-    { value: "1", label: "5-13" },
-    { value: "2", label: "14-25" },
-    { value: "3", label: "26-45" },
-    { value: "4", label: "46-65" },
-    { value: "5", label: "66+" },
-  ];
-  const raceOptions = [
-    { value: "0", label: "Light" },
-    { value: "1", label: "Mix" },
-    { value: "2", label: "Dark" },
-  ];
-  const sexOptions = [
-    { value: "0", label: "Male" },
-    { value: "1", label: "Female" },
-  ];
-  const today = demoNow();
-  today.setHours(0, 0, 0, 0);
-  const clampToToday = (date: Date | null): Date | null => {
-    if (!date) {
-      return null;
-    }
-    const next = new Date(date);
-    next.setHours(0, 0, 0, 0);
-    return next.getTime() > today.getTime() ? new Date(today) : next;
-  };
-  const handleTrackIdKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      handleSearch();
-    }
-  };
-  const formatSex = (value: EventData["sex"]) => {
-    if (value === null || value === undefined) {
-      return "Unknown";
-    }
-    const normalized = value.toString().toLowerCase();
-    if (normalized === "0" || normalized === "m" || normalized === "male") {
-      return "Male";
-    }
-    if (normalized === "1" || normalized === "f" || normalized === "female") {
-      return "Female";
-    }
-    return "Unknown";
-  };
-  const formatAgeBucket = (
-    value: EventData["age_bucket"] | EventData["age_estimate"],
-  ) => {
-    if (value === null || value === undefined) {
-      return "Unknown";
-    }
-    const raw = value.toString();
-    const mapped = ageBuckets.find((bucket) => bucket.value === raw);
-    if (mapped) {
-      return mapped.label;
-    }
-    const numeric = parseInt(raw, 10);
-    if (!Number.isNaN(numeric) && ageBuckets[numeric]) {
-      return ageBuckets[numeric].label;
-    }
-    return raw;
-  };
-  const formatRace = (value: EventData["race"]) => {
-    if (value === null || value === undefined) {
-      return "Unknown";
-    }
-    const raw = value.toString();
-    const mapped = raceOptions.find((option) => option.value === raw);
-    if (mapped) {
-      return mapped.label;
-    }
-    return "Unknown";
-  };
-  const formatTimestamp = (timestamp: string) => {
-    const parsed = parseDemoTimestamp(timestamp);
-    if (!parsed) {
-      return timestamp;
-    }
-    return formatDemoTimestamp(parsed);
-  };
-  const getEventIcon = (event: string) => {
-    switch (event.toLowerCase()) {
-      case "entry":
-        return "";
-      case "exit":
-        return "";
-      default:
-        return "";
-    }
-  };
-  const normalizeEventCode = (value: EventData["event"]) => {
-    const normalized = value?.toString().toLowerCase() ?? "";
-    if (normalized === "entry" || normalized === "entrance") {
-      return 1;
-    }
-    return 0;
-  };
-  const normalizeNumeric = (
-    value: string | number | null | undefined,
-    fallback = 0,
-  ) => {
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : fallback;
-  };
-  const normalizeTrackId = (value: EventData["track_id"], fallback: string) => {
-    const raw = value ?? fallback;
-    const text = raw === null || raw === undefined ? "" : String(raw).trim();
-    if (!text) {
-      return "00";
-    }
-    return text.length >= 2 ? text : text.padStart(2, "0");
-  };
-  const normalizeAgeBucket = (
-    value: EventData["age_bucket"] | EventData["age_estimate"],
-  ) => {
-    const numeric = normalizeNumeric(value, 0);
-    if (numeric < 0 || numeric > 5) {
-      return 0;
-    }
-    return Math.trunc(numeric);
-  };
-  const normalizeSex = (value: EventData["sex"]) => {
-    if (value === null || value === undefined) {
-      return 0;
-    }
-    const normalized = value.toString().toLowerCase();
-    if (normalized === "1" || normalized === "f" || normalized === "female") {
-      return 1;
-    }
-    return 0;
-  };
-  const normalizeRace = (value: EventData["race"]) => {
-    const numeric = normalizeNumeric(value, 0);
-    if (numeric < 0 || numeric > 2) {
-      return 0;
-    }
-    return Math.trunc(numeric);
-  };
-  const clearAllFilters = () => {
-    setDraftFilters({
-      event: "",
-      sex: "",
-      age: "",
-      trackId: "",
-      race: "",
-      deviceTokens: [],
-    });
-    setDraftStartDate(null);
-    setDraftEndDate(null);
-  };
-  const handleExport = async () => {
+function Results({ filters }: { filters: string }) {
+  const query = useEventLogsQuery(filters);
+  const portal = usePortal();
+  const [exportError, setExportError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const controller = useRef<AbortController>();
+  useEffect(() => () => controller.current?.abort(), []);
+  async function exportCsv() {
+    controller.current?.abort();
+    const abort = new AbortController();
+    controller.current = abort;
+    setExporting(true);
+    setExportError("");
     try {
-      if (totalEvents <= 0 || events.length === 0) {
-        return;
-      }
-      const exportEvents = await fetchExportEvents();
-      if (!Array.isArray(exportEvents) || exportEvents.length === 0) {
-        throw new Error("No events available for export.");
-      }
-      const columns = [
-        "site_id",
-        "cam_id",
-        "track_id",
-        "event",
-        "timestamp",
-        "sex",
-        "age_bucket",
-        "race",
-      ];
-      const escapeCsv = (value: unknown) => {
-        if (value === null || value === undefined) {
-          return "";
-        }
-        const text = String(value);
-        if (/[",\n]/.test(text)) {
-          return `"${text.replace(/"/g, '""')}"`;
-        }
-        return text;
-      };
-      const toExportRow = (event: EventData) => {
-        const siteId = normalizeNumeric(event.site_id, 0);
-        const camId = normalizeNumeric(event.cam_id ?? event.camera_id, 0);
-        const trackId = normalizeTrackId(event.track_id, event.track_number);
-        const eventCode = normalizeEventCode(event.event);
-        const eventLabel = eventCode === 1 ? "Entrance" : "Exit";
-        const timestamp = event.timestamp?.toString().trim()
-          ? event.timestamp
-          : formatDemoTimestamp(demoNow());
-        const sexCode = normalizeSex(event.sex);
-        const sexLabel = sexCode === 1 ? "Female" : "Male";
-        const ageBucketCode = normalizeAgeBucket(
-          event.age_bucket ?? event.age_estimate,
-        );
-        const ageLabel =
-          ageBuckets[ageBucketCode]?.label ?? ageBuckets[0].label;
-        const raceCode = normalizeRace(event.race);
-        const raceLabel = raceOptions[raceCode]?.label ?? raceOptions[0].label;
-        return [
-          siteId,
-          camId,
-          trackId,
-          eventLabel,
-          timestamp,
-          sexLabel,
-          ageLabel,
-          raceLabel,
-        ];
-      };
-      const csvRows = [
-        columns.join(","),
-        ...exportEvents.map((event: EventData) =>
-          toExportRow(event).map((value) => escapeCsv(value)).join(","),
-        ),
-      ];
-      const csvBlob = new Blob([csvRows.join("\n")], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const url = window.URL.createObjectURL(csvBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "event-logs.csv";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(
-        `Failed to export events: ${err instanceof Error ? err.message : "Unknown error"}`,
+      const params = scopeParams(portal);
+      new URLSearchParams(filters).forEach((v, k) => params.append(k, v));
+      const response = await portal.source.request(
+        "/events/export",
+        params,
+        abort.signal,
       );
+      if (!response.ok) await responseJson(response);
+      const blob = await response.blob();
+      if (abort.signal.aborted) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "events.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      if (!abort.signal.aborted)
+        setExportError(
+          error instanceof Error ? error.message : "Export unavailable.",
+        );
+    } finally {
+      if (!abort.signal.aborted) setExporting(false);
     }
-  };
-  if (loading) {
+  }
+  if (query.loading) return <p role="status">Loading events…</p>;
+  if (query.error)
     return (
-      <div className="vrm-loading-state">
-        <div className="vrm-loading-state-content">
-          <div className="vrm-loading-spinner" />
-        </div>
+      <div role="alert">
+        {query.error}
+        <button className="vrm-btn" onClick={query.retry}>
+          Retry
+        </button>
       </div>
     );
-  }
-  if (error) {
-    return (
-      <div className="vrm-card vrm-card--spaced">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Connection Error</h3>
-        </div>
-        <div className="vrm-card-body">
-          <p
-            style={{
-              color: "var(--vrm-accent-red)",
-              marginBottom: "var(--vrm-spacing-4)",
-            }}
-          >
-            {error}
-          </p>
-          <button className="vrm-btn" onClick={fetchEvents}>
-            Retry Connection
-          </button>
-        </div>
-      </div>
-    );
-  }
   return (
-    <div className="event-logs-page" data-search-token={searchToken}>
-      {/* Page Header */}
-      <div className="vrm-page-header">
-        <h1 className="vrm-page-title">Event Logs</h1>
+    <div className="vrm-card">
+      <div className="vrm-card-header">
+        <h3>Events ({query.total ?? "—"})</h3>
+        <button className="vrm-btn" onClick={exportCsv} disabled={exporting}>
+          {exporting ? "Exporting…" : "Export CSV"}
+        </button>
       </div>
-      {/* Filters */}
-      <div className="vrm-card vrm-card--spaced event-logs-filters-card">
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">Filters</h3>
-          <div className="vrm-card-actions">
-            <button
-              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={clearAllFilters}
-            >
-              Clear All
-            </button>
-            <button
-              className="vrm-btn vrm-btn-primary vrm-btn-sm"
-              onClick={handleSearch}
-            >
-              🔍 Search
-            </button>
-          </div>
-        </div>
-        <div className="vrm-card-body event-logs-filters-body">
-          <div className="event-logs-filter-grid">
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-start-date">
-                Start Date
-              </label>
-              <DatePicker
-                selected={draftStartDate}
-                onChange={(date: Date | null) =>
-                  setDraftStartDate(clampToToday(date))
-                }
-                placeholderText="Select start date"
-                dateFormat="yyyy-MM-dd"
-                className="vrm-date-picker event-logs-filter-control"
-                maxDate={draftEndDate || today}
-                id="event-start-date"
-              />
-            </div>
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-end-date">
-                End Date
-              </label>
-              <DatePicker
-                selected={draftEndDate}
-                onChange={(date: Date | null) =>
-                  setDraftEndDate(clampToToday(date))
-                }
-                placeholderText="Select end date"
-                dateFormat="yyyy-MM-dd"
-                className="vrm-date-picker event-logs-filter-control"
-                minDate={draftStartDate || undefined}
-                maxDate={today}
-                id="event-end-date"
-              />
-            </div>
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-track-id">
-                Track ID
-              </label>
-              <input
-                id="event-track-id"
-                type="text"
-                value={draftFilters.trackId}
-                onChange={(e) =>
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    trackId: e.target.value,
-                  }))
-                }
-                onKeyDown={handleTrackIdKeyDown}
-                placeholder="Filter by Track ID"
-                className="vrm-input event-logs-filter-control"
-              />
-            </div>
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-type">
-                Event Type
-              </label>
-              <select
-                id="event-type"
-                value={draftFilters.event}
-                onChange={(e) =>
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    event: e.target.value,
-                  }))
-                }
-                className="vrm-select event-logs-filter-control"
-              >
-                <option value="">All Events</option>
-                <option value="entry">Entry</option>
-                <option value="exit">Exit</option>
-              </select>
-            </div>
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-sex">
-                Sex
-              </label>
-              <select
-                id="event-sex"
-                value={draftFilters.sex}
-                onChange={(e) =>
-                  setDraftFilters((prev) => ({ ...prev, sex: e.target.value }))
-                }
-                className="vrm-select event-logs-filter-control"
-              >
-                <option value="">All Sexes</option>
-                {sexOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-age-group">
-                Age Group
-              </label>
-              <select
-                id="event-age-group"
-                value={draftFilters.age}
-                onChange={(e) =>
-                  setDraftFilters((prev) => ({ ...prev, age: e.target.value }))
-                }
-                className="vrm-select event-logs-filter-control"
-              >
-                <option value="">All Ages</option>
-                {ageBuckets.map((age) => (
-                  <option key={age.value} value={age.value}>
-                    {age.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-race">
-                Race
-              </label>
-              <select
-                id="event-race"
-                value={draftFilters.race}
-                onChange={(e) =>
-                  setDraftFilters((prev) => ({ ...prev, race: e.target.value }))
-                }
-                className="vrm-select event-logs-filter-control"
-              >
-                <option value="">All Races</option>
-                {raceOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="event-logs-filter-field">
-              <label className="vrm-label" htmlFor="event-devices-filter">
-                Devices
-              </label>
-              <DevicesMultiSelect
-                id="event-devices-filter"
-                options={deviceOptions}
-                value={draftFilters.deviceTokens}
-                onChange={(deviceTokens) =>
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    deviceTokens,
-                  }))
-                }
-              />
-            </div>
-          </div>
-        </div>
+      {exportError && <p role="alert">{exportError}</p>}
+      <div className="vrm-table-scroll event-logs-table-scroll">
+        <table className="vrm-table portal-log-table">
+          <thead>
+            <tr>
+              {[
+                "Site",
+                "Source",
+                "Event ID",
+                "Event Type",
+                "Timestamp",
+                "Sex",
+                "Age",
+              ].map((t) => (
+                <th key={t}>{t}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {query.data?.items.map((row) => (
+              <tr key={row.event_id}>
+                <td>{row.site.name}</td>
+                <td>{row.source.label}</td>
+                <td>
+                  <span
+                    className="portal-event-id"
+                    title={row.event_id}
+                    tabIndex={0}
+                  >
+                    {row.event_id}
+                  </span>
+                </td>
+                <td>{row.event.label}</td>
+                <td>{new Date(row.timestamp).toLocaleString()}</td>
+                <td>{row.sex.label}</td>
+                <td>{row.age.label}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      {/* Events Table */}
-      <div className="vrm-card">
-        <div className="vrm-card-header event-logs-table-header">
-          <h3 className="vrm-card-title">
-            Activity Events ({totalEvents.toLocaleString()} total)
-          </h3>
-          <div className="vrm-card-actions">
-            <button
-              className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-              onClick={handleExport}
-            >
-              Export Logs
-            </button>
-          </div>
-        </div>
-        <div className="vrm-card-body vrm-card-body--flush">
-          {searchToken === 0 ? null : events.length > 0 ? (
-            <div className="vrm-table-scroll event-logs-table-scroll">
-              <table className="event-logs-results-table">
-                <colgroup>
-                  <col className="event-logs-col-event" />
-                  <col className="event-logs-col-track" />
-                  <col className="event-logs-col-camera" />
-                  <col className="event-logs-col-timestamp" />
-                  <col className="event-logs-col-demographics" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Event</th>
-                    <th>Track ID</th>
-                    <th>Camera</th>
-                    <th>Timestamp</th>
-                    <th>Demographics</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((event, index) => (
-                    <tr key={`${event.index}-${index}`}>
-                      <td>
-                        <div className="vrm-inline">
-                          <span>{getEventIcon(event.event)}</span>
-                          <span style={{ textTransform: "capitalize" }}>
-                            {event.event}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <code className="vrm-code-badge">
-                          {event.track_number}
-                        </code>
-                      </td>
-                      <td>
-                        {event.cam_id ?? event.camera_id ?? "—"}
-                      </td>
-                      <td>{formatTimestamp(event.timestamp)}</td>
-                      <td>
-                        <div
-                          style={{
-                            fontSize: "var(--vrm-typography-font-size-body)",
-                            color: "var(--vrm-text-secondary)",
-                          }}
-                        >
-                          {formatSex(event.sex)} •{" "}
-                          {formatAgeBucket(
-                            event.age_bucket ?? event.age_estimate,
-                          )}{" "}
-                          • {formatRace(event.race)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-        </div>
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div
-            className="vrm-card-body"
-            style={{
-              borderTop: "var(--vrm-borderWidth-thin) solid var(--vrm-border)",
-            }}
-          >
-            <div className="vrm-pagination">
-              <div className="vrm-pagination-info">
-                Showing {(currentPage - 1) * eventsPerPage + 1} to{" "}
-                {Math.min(currentPage * eventsPerPage, totalEvents)} of{" "}
-                {totalEvents.toLocaleString()} events
-              </div>
-              <div className="vrm-pagination-controls">
-                <button
-                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </button>
-                <span className="vrm-pagination-badge">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      {!query.data?.items.length && (
+        <p className="vrm-card-body">No events match these filters.</p>
+      )}
+      <div className="vrm-card-body vrm-pagination">
+        <button
+          className="vrm-btn"
+          disabled={!query.page}
+          onClick={query.previous}
+        >
+          Previous
+        </button>
+        <span>
+          Page {query.page + 1} of{" "}
+          {Math.max(1, Math.ceil((query.total ?? 0) / 20))}
+        </span>
+        <button
+          className="vrm-btn"
+          disabled={!query.data?.page.next_cursor}
+          onClick={query.next}
+        >
+          Next
+        </button>
       </div>
     </div>
   );
-};
-export default EventLogsPage;
+}
+function CanonicalEvents() {
+  const [draft, setDraft] = useState<Filters>(emptyFilters);
+  const [applied, setApplied] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [error, setError] = useState("");
+  return (
+    <div className="event-logs-page">
+      <h1>Event Logs</h1>
+      <form
+        className="vrm-card vrm-card-body"
+        onSubmit={(e) => {
+          e.preventDefault();
+          try {
+            setApplied(filterParams(draft).toString());
+            setRevision((v) => v + 1);
+            setError("");
+          } catch {
+            setError("Invalid date range.");
+          }
+        }}
+      >
+        <PortalFilters value={draft} onChange={setDraft} />
+        <p>Gateway selection includes all device events for that site.</p>
+        <button className="vrm-btn" type="submit">
+          Search
+        </button>
+        {error && <p role="alert">{error}</p>}
+      </form>
+      <Results key={`${applied}:${revision}`} filters={applied} />
+    </div>
+  );
+}
+export default function EventLogsPage(_props: { credentials?: Credentials }) {
+  return useOptionalPortal() ? (
+    <CanonicalEvents />
+  ) : (
+    <div role="alert">An authorised Portal context is required.</div>
+  );
+}

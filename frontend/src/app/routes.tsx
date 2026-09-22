@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import {
   Navigate,
   Route,
@@ -9,9 +9,7 @@ import {
 
 import VRMLayout from "../components/VRMLayout";
 import {
-  applyDemoEntryDefaults,
   clearDemoSessionLocal,
-  enableDemoSession,
   isDemoSessionActive,
 } from "../lib/demoSession";
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
@@ -54,18 +52,7 @@ const AppRoutes: React.FC = () => {
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
   const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
-  const isDemoDashboardRoute = /^\/demo\/[^/]+(?:\/[^/]+)?\/dashboard\/?$/.test(location.pathname);
-  const isDirectDemoDeviceListRoute = /^\/demo\/[^/]+\/device-list\/?$/i.test(
-    location.pathname,
-  );
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
-  const shouldNormalizeDemoEntryRef = useRef(
-    isDemoRoute && location.pathname !== "/demo" && !isDirectDemoDeviceListRoute && !isDemoDashboardRoute,
-  );
-  const demoEntryNavigationCompletedRef = useRef(false);
-  const [isDemoEntryReady, setIsDemoEntryReady] = useState(
-    !shouldNormalizeDemoEntryRef.current,
-  );
 
   useEffect(() => {
     if (hasViewToken) {
@@ -188,64 +175,8 @@ const AppRoutes: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    if (
-      !shouldNormalizeDemoEntryRef.current ||
-      isDemoEntryReady
-    ) {
-      return;
-    }
-
-    let isCancelled = false;
-    const bootstrapDemoEntry = async () => {
-      try {
-        await enableDemoSession();
-        applyDemoEntryDefaults();
-      } finally {
-        if (!isCancelled) {
-          setIsDemoEntryReady(true);
-        }
-      }
-    };
-
-    bootstrapDemoEntry();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isDemoEntryReady]);
-
-  if (!isSessionChecked || !isDemoEntryReady) {
+  if (!isSessionChecked) {
     return null;
-  }
-
-  if (
-    shouldNormalizeDemoEntryRef.current &&
-    !demoEntryNavigationCompletedRef.current
-  ) {
-    const targetPath = `/demo/${getDefaultSiteId()}/dashboard`;
-    const targetSearchParams = new URLSearchParams(location.search);
-    targetSearchParams.delete("panel");
-    targetSearchParams.delete("expand_once");
-    targetSearchParams.delete("site_menu_expand_once");
-    const targetSearchValue = targetSearchParams.toString();
-    const targetSearch = targetSearchValue ? `?${targetSearchValue}` : "";
-    const isAtTarget =
-      location.pathname === targetPath && location.search === targetSearch;
-
-    if (!isAtTarget) {
-      return (
-        <Navigate
-          to={{
-            pathname: targetPath,
-            search: targetSearch,
-          }}
-          replace
-        />
-      );
-    }
-
-    demoEntryNavigationCompletedRef.current = true;
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
@@ -277,8 +208,8 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route path="/demo" element={lazyRoute(<DemoPage />)} />
-      <Route path="/demo/:organisationSlug/dashboard" element={lazyRoute(<DemoDashboardRoute />)} />
-      <Route path="/demo/:organisationSlug/:siteSlug/dashboard" element={lazyRoute(<DemoDashboardRoute />)} />
+      <Route path="/demo/:organisationSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
+      <Route path="/demo/:organisationSlug/:siteSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
       <Route
         path="/create-account"
         element={
@@ -405,30 +336,6 @@ const AppRoutes: React.FC = () => {
                 path="/demo/:siteId"
                 element={renderClientRoute(
                   <DemoSiteIndexRedirect />,
-                )}
-              />
-              <Route
-                path="/demo/:siteId/event-logs"
-                element={renderClientRoute(
-                  lazyRoute(<EventLogsPage credentials={credentials} />),
-                )}
-              />
-              <Route
-                path="/demo/:siteId/alarm-logs"
-                element={renderClientRoute(
-                  lazyRoute(<AlarmLogsPage credentials={credentials} />),
-                )}
-              />
-              <Route
-                path="/demo/:siteId/device-list"
-                element={renderClientRoute(
-                  lazyRoute(<DeviceListPage credentials={credentials} />),
-                )}
-              />
-              <Route
-                path="/demo/:siteId/reports"
-                element={renderClientRoute(
-                  lazyRoute(<ReportsPage credentials={credentials} />),
                 )}
               />
             </>

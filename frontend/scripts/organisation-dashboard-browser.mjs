@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { fixture } from './organisation-dashboard-tests.mjs';
 
 const browser = await chromium.launch({headless:true,channel:process.env.DASHBOARD_BROWSER_CHANNEL || 'msedge'});
-const base='http://127.0.0.1:4173';
+const base=process.env.PORTAL_TEST_URL || 'http://127.0.0.1:4173';
 const orgPath='/demo/renamed-demo/dashboard';
 const sitePath='/demo/renamed-demo/relational-second-site/dashboard';
-const contextFixture=()=>({organisation:{id:'1',name:'Renamed Demo',slug:'renamed-demo',enabled:false,realtime:true},sites:[
+const contextFixture=()=>({organisation:{id:'1',name:'Renamed Demo',slug:'renamed-demo',enabled:false,realtime:true},sources:[],clock:{server_now:'2026-09-20T10:00:00Z',effective_now:'2026-09-20T10:00:00Z',time_zone:'Europe/London'},sites:[
  {id:'1',organisation_id:'1',name:'First Site',slug:'first-site',enabled:true,realtime:false,max_capacity:2},
  {id:'2',organisation_id:'1',name:'Relational Second Site',slug:'relational-second-site',enabled:false,realtime:true,max_capacity:3},
 ]});
@@ -27,7 +27,7 @@ async function harness({viewport=sizes[0][1],pending}={}) {
   if(path===pending)await gate;
   let body={};let status=200;
   if(path==='/api/auth/me')body={ok:false};
-  else if(path==='/api/demo/dashboard/context')body=state.data;
+  else if(path==='/api/demo/portal/context')body=state.data;
   else if(path==='/api/demo/dashboard/snapshot')body=fixture();
   else if(path.startsWith('/api/demo/dashboard/sites/'))body=fixture('site',path.split('/')[5]);
   if(body.payload) {
@@ -88,17 +88,17 @@ try {
   await expect(page.getByText('Rolling peak',{exact:true})).toBeVisible();
   await expect(page.getByText('151%',{exact:true})).toBeVisible();
   await page.mouse.move(400,100);
-  assert.equal(count('/api/demo/dashboard/context'),1);
+  assert.equal(count('/api/demo/portal/context'),1);
   assert.equal(count('/api/demo/dashboard/snapshot'),1);
  });
  await check('bare Demo, relational rename and default Site 2',async()=>{
-  const beforeContext=count('/api/demo/dashboard/context');
+  const beforeContext=count('/api/demo/portal/context');
   const beforeOrganisation=count('/api/demo/dashboard/snapshot');
   await page.goto(base+'/demo');await ready(page);
   await expect(page).toHaveURL(base+sitePath);
   await assertHeader(page,{name:'Relational Second Site',realtime:true,enabled:false});
   assert.equal(count('/api/demo/dashboard/sites/2/snapshot'),1);
-  assert.equal(count('/api/demo/dashboard/context'),beforeContext+1,'Redirect reuses context');
+  assert.equal(count('/api/demo/portal/context'),beforeContext+1,'Redirect reuses context');
   assert.equal(count('/api/demo/dashboard/snapshot'),beforeOrganisation,'Bare entry only loads the selected site Snapshot');
   state.data.sites[1].name='Changed Relational Name';state.data.sites[1].slug='changed-relational-name';
   await page.goto(base+'/demo');await ready(page);
@@ -114,7 +114,7 @@ try {
   await page.getByRole('button',{name:'First Site',exact:true}).click();
   await page.getByRole('link',{name:'Renamed Demo',exact:true}).click();await ready(page);
   await expect(page).toHaveURL(base+orgPath);
-  await expect(page.getByRole('link',{name:'Event Logs',exact:true})).toHaveAttribute('href',/\/demo\/site-b\/event-logs/);
+  await expect(page.getByRole('link',{name:'Event Logs',exact:true})).toHaveAttribute('href',/\/demo\/renamed-demo\/event-logs/);
   assert.equal(await page.evaluate(()=>sessionStorage.getItem('camOS_selected_site')),'site-b');
  });
  await check('unknown slugs and existing legacy aliases',async()=>{
@@ -124,7 +124,7 @@ try {
   assert(!state.requests.slice(before).some(p=>p.endsWith('/snapshot')));
   for(const alias of ['site-a','site-b','all']){
    await page.goto(base+`/demo/${alias}/dashboard`);await ready(page);
-   await expect(page).toHaveURL(base+orgPath);
+   await expect(page).toHaveURL(base+(alias==='site-a'?'/demo/renamed-demo/first-site/dashboard':alias==='site-b'?sitePath:orgPath));
   }
  });
  await check('missing default site is a recoverable configuration error',async()=>{
@@ -228,11 +228,11 @@ try {
   await page.getByText('First Site',{exact:true}).last().click();await ready(page);
   await expect(page).toHaveURL(/\/first-site\/dashboard/);
  });
- assert(state.requests.every(p=>p==='/api/me'||p==='/api/auth/me'||p==='/api/demo/session'||p.startsWith('/api/demo/dashboard/')),'No legacy fallback API requests');
+ assert(state.requests.every(p=>p==='/api/me'||p==='/api/auth/me'||p==='/api/demo/session'||(p.startsWith('/api/demo/dashboard/')||p==='/api/demo/portal/context')),'No legacy fallback API requests');
  assert.deepEqual(state.errors,[]);
  await h.context.close();
 
- for(const [phase,endpoint] of [['session','/api/demo/session'],['context','/api/demo/dashboard/context'],['snapshot','/api/demo/dashboard/sites/2/snapshot']]){
+ for(const [phase,endpoint] of [['session','/api/demo/session'],['context','/api/demo/portal/context'],['snapshot','/api/demo/dashboard/sites/2/snapshot']]){
   for(const fail of [false,true])await check(`${phase} delayed ${fail?'failure and retry':'success'}`,async()=>{
    const h=await harness({pending:endpoint,viewport:sizes[phase==='session'?0:phase==='context'?1:2][1]});
    if(fail)h.state.fail.add(endpoint);

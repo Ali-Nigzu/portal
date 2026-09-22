@@ -1,6 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { DashboardSource, OrganisationContext, SelectedSnapshot } from "./types";
-import { resolveSelection } from "./selection";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import type { OrganisationContext, Selection, SelectedSnapshot } from "./types";
+import { usePortal } from "../../context/PortalContext";
 
 function freeze<T>(value: T): T {
   if (value && typeof value === "object") {
@@ -10,60 +16,58 @@ function freeze<T>(value: T): T {
   return value;
 }
 
-export function useOrganisationDashboard(source: DashboardSource, organisationSlug?: string, siteSlug?: string) {
-  const [context, setContext] = useState<OrganisationContext>();
-  const [contextError, setContextError] = useState<string>();
-  const [retry, setRetry] = useState(0);
-  const [loaded, setLoaded] = useState<{key: string; snapshot?: SelectedSnapshot; error?: string}>();
+type View = {
+  context?: OrganisationContext;
+  selection: Selection | null;
+  snapshot?: SelectedSnapshot;
+  error?: string;
+  notFound: boolean;
+  retry: () => void;
+};
+export function PortalDashboardProvider({ children }: { children: ReactNode }) {
+  const portal = usePortal();
+  const { context, selection, key, source } = portal;
+  const [loaded, setLoaded] = useState<{
+    key: string;
+    snapshot?: SelectedSnapshot;
+    error?: string;
+  }>();
   useEffect(() => {
-    const controller = new AbortController();
-    setContext(undefined);
-    setContextError(undefined);
-    // Defer until after StrictMode's effect cleanup, avoiding duplicate requests.
-    Promise.resolve().then(async () => {
-      if (controller.signal.aborted) return;
-      try {
-        const result = await source.context(controller.signal);
-        if (!controller.signal.aborted) setContext(freeze(result));
-      } catch {
-        if (!controller.signal.aborted) setContextError("Organisation context is unavailable. Please retry.");
-      }
-    });
-    return () => controller.abort();
-  }, [source, retry]);
-  const selection = useMemo(() => context ? resolveSelection(context, organisationSlug, siteSlug) : null,
-    [context, organisationSlug, siteSlug]);
-  const key = selection ? `${selection.scope}:${selection.id}` : "";
-  useEffect(() => {
-    if (!selection || contextError) return;
-    const controller = new AbortController();
+    const abort = new AbortController();
     setLoaded(undefined);
     Promise.resolve().then(async () => {
-      if (controller.signal.aborted) return;
+      if (!selection || abort.signal.aborted) return;
       try {
-        const snapshot = await source.snapshot(selection, controller.signal);
-        if (snapshot.scope !== selection.scope || snapshot.entity_id !== selection.id) throw new Error("Snapshot selection mismatch.");
-        if (!controller.signal.aborted) setLoaded({ key, snapshot: freeze(snapshot) });
+        const snapshot = await source.snapshot(selection, abort.signal);
+        if (
+          snapshot.scope !== selection.scope ||
+          snapshot.entity_id !== selection.id
+        )
+          throw new Error("Snapshot selection mismatch.");
+        if (!abort.signal.aborted)
+          setLoaded({ key, snapshot: freeze(snapshot) });
       } catch (error) {
-        if (!controller.signal.aborted) setLoaded({ key, error: error instanceof Error ? error.message : "Snapshot unavailable." });
+        if (!abort.signal.aborted)
+          setLoaded({
+            key,
+            error:
+              error instanceof Error ? error.message : "Snapshot unavailable.",
+          });
       }
     });
-    return () => controller.abort();
-  }, [source, key, context]);
-  return { context, selection, snapshot: loaded?.key === key ? loaded.snapshot : undefined,
-    error: contextError ?? (loaded?.key === key ? loaded.error : undefined),
-    notFound: Boolean(context && organisationSlug && !selection),
-    retry: () => setRetry(value => value + 1) };
-}
-
-type View = ReturnType<typeof useOrganisationDashboard>;
-const Context = createContext<View | null>(null);
-export function OrganisationDashboardProvider({ source, organisationSlug, siteSlug, children }: {
-  source: DashboardSource; organisationSlug?: string; siteSlug?: string; children: ReactNode;
-}) {
-  const value = useOrganisationDashboard(source, organisationSlug, siteSlug);
+    return () => abort.abort();
+  }, [key, source, context]);
+  const value = {
+    context,
+    selection,
+    snapshot: loaded?.key === key ? loaded.snapshot : undefined,
+    error: loaded?.key === key ? loaded.error : undefined,
+    notFound: false,
+    retry: portal.retry,
+  };
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
+const Context = createContext<View | null>(null);
 export function useDashboardSnapshot() {
   const value = useContext(Context);
   if (!value) throw new Error("Organisation dashboard provider is missing");

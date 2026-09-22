@@ -1,17 +1,14 @@
-export interface EventData {
-  index: number;
-  site_id?: string | number | null;
-  cam_id?: string | number | null;
-  camera_id?: string | number | null;
-  track_id?: string | number | null;
-  track_number: string;
-  event: string;
+export type EventData = {
+  event_id: string;
+  site: { id: string; name: string };
+  source: { ref: string; kind: "device"; label: string };
   timestamp: string;
-  sex: string | number | null;
-  age_estimate: string | number | null;
-  age_bucket?: string | number | null;
-  race?: string | number | null;
-  hour: number;
-  day_of_week: string;
-  date: string;
-}
+  event: { value: string; label: string };
+  sex: { value: string; label: string };
+  age: { value: string; label: string };
+};
+export type EventResult = {
+  items: EventData[];
+  total: number | null;
+  page: { size: number; next_cursor: string | null };
+};

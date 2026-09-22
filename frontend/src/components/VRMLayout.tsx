@@ -103,7 +103,8 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const navigate = useNavigate();
   const { siteId: routeSiteId } = useParams();
   const siteId = dashboardNavigation ? dashboardNavigation.selectedKey : routeSiteId;
-  const legacySiteId = dashboardNavigation ? (findSiteById(getStoredSiteId())?.id ?? getDefaultSiteId()) : siteId;
+  const legacySiteId = siteId;
+  const selectedModule = dashboardNavigation ? location.pathname.split("/").filter(Boolean).at(-1) ?? "dashboard" : "dashboard";
   const searchParams = useMemo(
     () => new URLSearchParams(location.search),
     [location.search],
@@ -318,7 +319,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     setMobileDrawer({ kind: "site-menu", siteId: nextSiteId });
     setMobileSidebarOpen("site");
     navigate(
-      getNavigationPath(`${siteRoutePrefix}/${nextSiteId}/dashboard`, {
+      getNavigationPath(`${siteRoutePrefix}/${nextSiteId}/${selectedModule}`, {
         panel: undefined,
       }),
     );
@@ -1465,7 +1466,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     );
                     handleMobileActionRowClick(
                       event,
-                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/${selectedModule}`, {
                         panel: undefined,
                       }),
                       "site",
@@ -1477,7 +1478,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ) : (
               <SecondaryPinnedRow
                 to={getNavigationPath(
-                  `${siteRoutePrefix}/${allSitesOption.id}/dashboard`,
+                  `${siteRoutePrefix}/${allSitesOption.id}/${selectedModule}`,
                   { panel: undefined },
                 )}
                 replace={isDemoSession}
@@ -1493,7 +1494,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     );
                     handleMobileActionRowClick(
                       event,
-                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/dashboard`, {
+                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/${selectedModule}`, {
                         panel: undefined,
                       }),
                       "site",
@@ -1546,7 +1547,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
             <NavList className="vrm-secondary-list">
               {selectorSiteOptions.map((site) => {
                 const siteSubPath = (() => {
-                  if (dashboardNavigation) return "/dashboard";
+                  if (dashboardNavigation) return `/${selectedModule}`;
                   const match = location.pathname.match(/^\/(?:sites|demo)\/[^/]+(\/.*)?$/);
                   const trailing = match?.[1];
                   if (!trailing || trailing === "/") {
