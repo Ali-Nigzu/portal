@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from dataclasses import dataclass
@@ -11,7 +10,6 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from google.cloud import bigquery
-from google.oauth2 import service_account
 
 try:  # pragma: no cover - informational logging only
     import db_dtypes  # type: ignore
@@ -60,25 +58,6 @@ def _bqstorage_enabled() -> bool:
     return os.getenv("BQ_ENABLE_BQSTORAGE", "").lower() in {"1", "true", "yes"}
 
 
-def _load_credentials() -> Optional[service_account.Credentials]:
-    """Load service account credentials from environment configuration."""
-    credentials_json = os.getenv("BQ_SERVICE_ACCOUNT_JSON")
-    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-    try:
-        if credentials_json:
-            info = json.loads(credentials_json)
-            return service_account.Credentials.from_service_account_info(info)
-        if credentials_path and os.path.exists(credentials_path):
-            return service_account.Credentials.from_service_account_file(credentials_path)
-    except Exception:
-        logger.exception("Failed to load BigQuery service account credentials")
-        raise
-
-    # Fall back to Application Default Credentials (ADC)
-    return None
-
-
 def _normalize_project(project: Optional[str]) -> Optional[str]:
     if project:
         return project
@@ -101,7 +80,8 @@ class BigQueryClient:
             dataset=os.getenv("BQ_DATASET"),
             location=os.getenv("BQ_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION"),
         )
-        self._credentials = _load_credentials()
+        # ADC resolves the attached runtime identity; never load a bundled key.
+        self._credentials = None
         self._client: Optional[bigquery.Client] = None
         self._bqstorage_client: Optional[object] = None
         self._bqstorage_unavailable = False
@@ -188,6 +168,29 @@ class BigQueryClient:
         client = self._ensure_client()
         job = client.query(sql, job_config=job_config, location=self.settings.location)
         return job
+
+    def portal_rows(self, sql, params, *, limit):
+        """Bounded REST rows, not DataFrames or the Storage API."""
+        config = bigquery.QueryJobConfig(
+            query_parameters=self._build_query_parameters(params),
+            maximum_bytes_billed=int(os.getenv("PORTAL_BQ_MAX_BYTES", "1000000000")),
+            use_query_cache=True,
+        )
+        job = self._ensure_client().query(sql, job_config=config, location=self.settings.location,
+                                          timeout=10)
+        try:
+            return list(job.result(timeout=30, page_size=min(limit, 1000), max_results=limit))
+        except Exception:
+            try:
+                job.cancel()
+            except Exception:
+                pass
+            raise
+
+    def close(self):
+        for client in (self._bqstorage_client, self._client):
+            if client is not None:
+                client.close()
 
     def query_dataframe(
         self, sql: str, params: Dict[str, Any], *, job_context: Optional[str] = None

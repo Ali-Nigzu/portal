@@ -62,9 +62,9 @@ const FIFTEEN_MINUTE_BUCKETS_PER_DAY = 96;
 
 type FetchLike = typeof fetch;
 
-interface ReportsSnapshotResponse extends SnapshotResponse {
+interface ReportsSnapshotResponse extends Omit<SnapshotResponse, "siteView"> {
   orgId?: string;
-  siteView?: SiteView;
+  siteView?: string;
   fallback?: boolean;
 }
 
@@ -101,7 +101,7 @@ export interface SiteActivityMetrics {
 
 export interface SiteActivityReportData {
   reportType: "site-activity";
-  siteView: SiteView;
+  siteView: string;
   snapshot: ReportsSnapshotResponse;
   snapshotTs: Date;
   subtitle: string;
@@ -122,7 +122,7 @@ export interface VisitorProfileMetrics {
 
 export interface VisitorProfileReportData {
   reportType: "visitor-profile";
-  siteView: SiteView;
+  siteView: string;
   snapshot: ReportsSnapshotResponse;
   snapshotTs: Date;
   subtitle: string;
@@ -503,7 +503,7 @@ export const buildSiteActivityReportData = ({
   now = new Date(),
 }: {
   snapshot: ReportsSnapshotResponse;
-  siteView: SiteView;
+  siteView: string;
   timeframe: ReportTimeframe;
   now?: Date;
 }): SiteActivityReportData => {
@@ -628,7 +628,7 @@ export const buildVisitorProfileReportData = ({
   now = new Date(),
 }: {
   snapshot: ReportsSnapshotResponse;
-  siteView: SiteView;
+  siteView: string;
   timeframe: ReportTimeframe;
   now?: Date;
 }): VisitorProfileReportData => {

@@ -1,0 +1,72 @@
+.portal-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.portal-filter-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.portal-filter-grid input,
+.portal-filter-grid select {
+  width: 100%;
+  max-width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+}
+.portal-filter-grid select[multiple] {
+  min-height: 100px;
+}
+.portal-source-group {
+  padding: 10px 12px 4px;
+  font-weight: 700;
+  color: var(--vrm-text-secondary);
+}
+.portal-log-table {
+  min-width: 800px;
+  width: 100%;
+}
+.portal-event-id {
+  display: block;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.portal-event-id:focus,
+.portal-event-id:hover {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.event-logs-page,
+.alarm-logs-page {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+.portal-log-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.portal-log-counts .vrm-card-body {
+  text-align: center;
+}
+.portal-log-counts strong {
+  font-size: 36px;
+  display: block;
+}
+@media (max-width: 600px) {
+  .portal-filter-grid {
+    grid-template-columns: 1fr;
+  }
+  .portal-event-id {
+    max-width: 160px;
+  }
+  .portal-log-counts {
+    gap: 10px;
+  }
+}

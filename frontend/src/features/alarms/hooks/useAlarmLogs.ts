@@ -1,147 +1,70 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import type { Credentials } from "../../../types/credentials";
-import { isDemoSessionActive } from "../../../lib/demoSession";
-import { getViewTokenFromLocation } from "../../../lib/viewToken";
-import { fetchAlarmLogs } from "../transport/fetchAlarmLogs";
-import { fetchAlarmUsers } from "../transport/fetchAlarmUsers";
-import type { AlarmEvent, AlarmUser } from "../types";
-import { getDemoAlarmLogsForScope } from "../demoAlarmLogs";
-
-type AlarmUsersMap = Record<string, AlarmUser>;
-
-type AlarmLogsState = {
-  alarms: AlarmEvent[];
-  loading: boolean;
-  error: string | null;
-  isAdmin: boolean;
-  selectedClient: string;
-  setSelectedClient: (value: string) => void;
-  clientUsers: Array<[string, AlarmUser]>;
-  activeAlarms: AlarmEvent[];
-  clearedAlarms: AlarmEvent[];
-  refreshAlarms: () => void;
-};
-
-export const useAlarmLogs = (
-  credentials: Credentials,
-): AlarmLogsState => {
-  const { siteId = "all" } = useParams<{ siteId: string }>();
-  const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [users, setUsers] = useState<AlarmUsersMap>({});
-  const [selectedClient, setSelectedClient] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  const viewToken = getViewTokenFromLocation();
-  const isDemoSession =
-    isDemoSessionActive() ||
-    (typeof window !== "undefined" &&
-      window.location.pathname.startsWith("/demo/"));
-
-  const loadUsers = useCallback(async () => {
+import { useEffect, useRef, useState } from "react";
+import {
+  responseJson,
+  scopeParams,
+  usePortal,
+  verifyScope,
+} from "../../../context/PortalContext";
+import { usePortalQuery } from "../../../context/usePortalQuery";
+import type { AlarmResult, AlarmEvent } from "../types";
+export function useAlarmLogs(filters: string) {
+  const portal = usePortal();
+  const query = usePortalQuery<AlarmResult>("/alarms", filters);
+  const [more, setMore] = useState<{
+    base: AlarmResult;
+    items: AlarmEvent[];
+    cursor: string | null;
+  }>();
+  const [moreError, setMoreError] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const abortRef = useRef<AbortController>();
+  useEffect(() => {
+    abortRef.current?.abort();
+    setMore(undefined);
+    setMoreError("");
+    setLoadingMore(false);
+    return () => abortRef.current?.abort();
+  }, [filters, portal.key, query.data]);
+  const current = more?.base === query.data ? more : undefined;
+  const items = current?.items ?? query.data?.cleared.items ?? [];
+  const cursor = current ? current.cursor : query.data?.cleared.next_cursor;
+  async function showMore() {
+    if (!cursor || loadingMore || !query.data) return;
+    const abort = new AbortController();
+    abortRef.current = abort;
+    const base = query.data;
+    setLoadingMore(true);
+    setMoreError("");
     try {
-      const data = await fetchAlarmUsers(credentials);
-      setUsers(data);
-      setIsAdmin(
-        credentials.username === "admin" ||
-          data[credentials.username]?.role === "admin",
+      const params = scopeParams(portal);
+      new URLSearchParams(filters).forEach((v, k) => params.append(k, v));
+      params.set("cursor", cursor);
+      const result = await responseJson(
+        await portal.source.request("/alarms", params, abort.signal),
       );
-      const clientUsers = Object.entries(data).filter(
-        ([_, user]) => user.role === "client",
-      );
-      if (clientUsers.length > 0) {
-        setSelectedClient(clientUsers[0][0]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-    }
-  }, [credentials]);
-
-  const loadAlarms = useCallback(
-    async (clientId?: string) => {
-      try {
-        setLoading(true);
-        if (isDemoSession) {
-          setAlarms(getDemoAlarmLogsForScope(siteId));
-          setError(null);
-          return;
-        }
-        const result = await fetchAlarmLogs({
-          credentials,
-          viewToken,
-          clientId,
-          isAdmin,
+      verifyScope(portal, result);
+      if (!abort.signal.aborted) {
+        const ids = new Set(items.map((r) => r.id));
+        if (result.cleared.items.some((r: AlarmEvent) => ids.has(r.id)))
+          throw new Error(
+            "Alarm continuation repeated rows. Refresh this search.",
+          );
+        setMore({
+          base,
+          items: [...items, ...result.cleared.items],
+          cursor: result.cleared.next_cursor,
         });
-        setAlarms(result);
-        setError(null);
-      } catch (err) {
-        setError(
-          `Failed to load alarm logs: ${
-            err instanceof Error ? err.message : "Unknown error"
-          }`,
-        );
-      } finally {
-        setLoading(false);
       }
-    },
-    [credentials, isAdmin, isDemoSession, siteId, viewToken],
-  );
-
-  useEffect(() => {
-    if (!viewToken && !isDemoSession) {
-      loadUsers();
+    } catch (error) {
+      if (!abort.signal.aborted)
+        setMoreError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load more alarms.",
+        );
+    } finally {
+      if (!abort.signal.aborted) setLoadingMore(false);
     }
-  }, [isDemoSession, loadUsers, viewToken]);
-
-  useEffect(() => {
-    if (isDemoSession) {
-      setIsAdmin(false);
-      loadAlarms();
-      return;
-    }
-    if (isAdmin && selectedClient) {
-      loadAlarms(selectedClient);
-    } else if (!isAdmin) {
-      loadAlarms();
-    }
-  }, [isAdmin, isDemoSession, loadAlarms, selectedClient]);
-
-  const clientUsers = useMemo(
-    () => Object.entries(users).filter(([_, user]) => user.role === "client"),
-    [users],
-  );
-
-  const activeAlarms = useMemo(
-    () => alarms.filter((alarm) => !alarm.alarmClearedAfter),
-    [alarms],
-  );
-
-  const clearedAlarms = useMemo(
-    () => alarms.filter((alarm) => alarm.alarmClearedAfter),
-    [alarms],
-  );
-
-
-  const refreshAlarms = useCallback(() => {
-    if (isAdmin && selectedClient) {
-      loadAlarms(selectedClient);
-    } else {
-      loadAlarms();
-    }
-  }, [isAdmin, loadAlarms, selectedClient]);
-
-  return {
-    alarms,
-    loading,
-    error,
-    isAdmin,
-    selectedClient,
-    setSelectedClient,
-    clientUsers,
-    activeAlarms,
-    clearedAlarms,
-    refreshAlarms,
-  };
-};
+  }
+  return { ...query, items, cursor, showMore, loadingMore, moreError };
+}

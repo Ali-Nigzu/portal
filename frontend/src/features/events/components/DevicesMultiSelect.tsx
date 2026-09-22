@@ -1,25 +1,21 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import {
-  EVENT_DEVICE_OPTIONS,
-  summarizeEventDeviceSelection,
-  type EventDeviceOption,
-  type EventDeviceToken,
-} from "../utils/eventDevices";
+type EventDeviceToken = string;
+type EventDeviceOption = {token:string;label:string;group?:string};
 
 interface DevicesMultiSelectProps {
   id?: string;
   value: EventDeviceToken[];
   onChange: (value: EventDeviceToken[]) => void;
-  options?: EventDeviceOption[];
+  options: EventDeviceOption[];
 }
 
 const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
   id,
   value,
   onChange,
-  options = EVENT_DEVICE_OPTIONS,
+  options,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | undefined>();
@@ -29,7 +25,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
   const buttonId = id ?? generatedButtonId;
   const menuId = useId();
   const selectedTokens = new Set(value);
-  const summary = summarizeEventDeviceSelection(value, options);
+  const summary = value.length ? `${value.length} source${value.length===1?"":"s"} selected` : "All sources";
   const portalTarget = wrapperRef.current?.closest(".demo-overlay") ?? document.body;
 
   const updateMenuPosition = () => {
@@ -146,13 +142,14 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
             >
               {options.length === 0 ? (
                 <div className="event-devices-empty" role="status">
-                  <p>No devices connected.</p>
-                  <p>Please add a site and connect a device.</p>
+                  <p>No sources in this scope.</p>
                 </div>
               ) : (
-                options.map((option) => {
+                options.map((option,index) => {
                   const isSelected = selectedTokens.has(option.token);
                   return (
+                    <React.Fragment key={option.token}>
+                    {option.group && option.group!==options[index-1]?.group && <div className="portal-source-group" role="presentation">{option.group}</div>}
                     <button
                       aria-selected={isSelected}
                       className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
@@ -166,6 +163,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
                       </span>
                       <span className="event-devices-option__text">{option.label}</span>
                     </button>
+                    </React.Fragment>
                   );
                 })
               )}

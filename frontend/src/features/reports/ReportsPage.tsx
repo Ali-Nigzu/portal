@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import { Credentials } from "../../types/credentials";
@@ -15,11 +15,15 @@ import { loadReportData, type ReportData } from "./engine/ReportsEngine";
 interface ReportsPageProps {
   credentials?: Credentials;
   reportDataLoader?: typeof loadReportData;
+  scopeLabel?: string;
 }
 const ReportsPage: React.FC<ReportsPageProps> = ({
   credentials,
   reportDataLoader,
+  scopeLabel,
 }) => {
+  const mounted=useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const [reportType, setReportType] = useState("site-activity");
   const [timePeriod, setTimePeriod] = useState<ReportTimeframe>("today");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -236,12 +240,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
         pathname: location.pathname,
         credentials,
       });
+      if(!mounted.current)return;
       const doc = new jsPDF();
       const template = reportTemplates.find((t) => t.id === reportType);
       const snapshotTs = reportData.snapshotTs;
       const subtitle = reportData.subtitle;
       const siteName =
-        findSiteById(reportData.siteView)?.label ?? reportData.siteView;
+        scopeLabel ?? findSiteById(reportData.siteView)?.label ?? reportData.siteView;
       doc.setFontSize(22);
       doc.setTextColor(33, 150, 243);
       doc.text("camOS", 105, 18, { align: "center" });
@@ -523,6 +528,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       const filename = `${template?.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
       doc.save(filename);
     } catch (error) {
+      if(!mounted.current)return;
       console.error("Error generating PDF:", error);
       setReportError(
         error instanceof Error
@@ -535,7 +541,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
     }
   };
   const handleGenerateReport = () => {
-    if (!isDemoMode) {
+    if (!reportDataLoader && !isDemoMode) {
       setDownloadBlockedMessage("No Sites Connected");
       return;
     }

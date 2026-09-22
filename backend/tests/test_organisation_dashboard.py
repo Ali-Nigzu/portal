@@ -237,31 +237,31 @@ def test_storage_failure_never_exposes_key_path_or_exception_text():
     assert "private_key" not in response.text and "sa.json" not in response.text
 
 
-def test_connector_uses_root_credentials_and_iam_without_password(monkeypatch, tmp_path):
+def test_connector_uses_adc_pool_and_iam_without_password(monkeypatch, tmp_path):
     calls = {}
     class Connector:
         def __init__(self, **kwargs):
             calls["connector"] = kwargs
         def connect(self, *args, **kwargs):
             calls["connect"] = (args, kwargs)
-            return SimpleNamespace(autocommit=False, close=lambda: calls.update(closed=True))
+            calls["connections"] = calls.get("connections", 0) + 1
+            return SimpleNamespace(autocommit=False, rollback=lambda: None, close=lambda: calls.update(closed=True))
         def close(self):
             calls["connector_closed"] = True
-    def credentials(path):
-        calls["path"] = path
-        return SimpleNamespace(service_account_email="portal-reader@camosbase.iam.gserviceaccount.com")
     monkeypatch.setattr(dashboard_postgres, "Connector", Connector)
-    monkeypatch.setattr(dashboard_postgres.service_account.Credentials, "from_service_account_file", credentials)
     monkeypatch.chdir(tmp_path)
     db = dashboard_postgres.DashboardPostgres()
     assert not calls
     with db.connection() as connection:
         assert connection.autocommit is True
+    with db.connection():
+        pass
+    assert calls["connections"] == 1
     db.close()
     args, kwargs = calls["connect"]
     assert args == ("camosbase:europe-west2:camos-prod-postgres", "pg8000")
     assert kwargs["user"] == "portal-reader@camosbase.iam"
     assert kwargs["db"] == "camos_prod" and kwargs["enable_iam_auth"] is True
     assert "password" not in kwargs
-    assert calls["path"] == str(dashboard_postgres.APPLICATION_ROOT / "sa.json")
+    assert "credentials" not in calls["connector"]
     assert calls["closed"] and calls["connector_closed"]
