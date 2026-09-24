@@ -16,6 +16,8 @@ class InvalidGatewayState(RuntimeError):
 def gateway_enabled(desired_state):
     if type(desired_state) is not int:
         raise InvalidGatewayState("Invalid persisted Gateway desired state")
+    if desired_state == 0:
+        return None
     if desired_state == 1:
         return False
     if desired_state == 2:
@@ -108,12 +110,15 @@ class PortalDevices:
                 )
             )
         for _, site_id, desired_state in gateways:
+            enabled = gateway_enabled(desired_state)
+            if enabled is None:
+                continue
             sid = entity_id(site_id)
             items.append(
                 dict(
                     ref=f"gateway:{sid}", kind="gateway", site_id=sid,
                     site_name=site_names[sid], name=f"Gateway {sid}",
-                    canonical_enabled=gateway_enabled(desired_state), analyzed_until=None,
+                    canonical_enabled=enabled, analyzed_until=None,
                     freshness="unavailable",
                     records=site_totals.get(sid, 0) if records_status == "available" else None,
                     records_status=records_status,

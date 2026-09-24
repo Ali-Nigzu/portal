@@ -90,7 +90,22 @@ def test_gateway_desired_state_maps_explicitly(desired_state, enabled):
     assert "desired_state" not in gateway and "private-gateway-uuid" not in str(result)
 
 
-@pytest.mark.parametrize("desired_state", [None, 0, 3, -1, True, False, "2", 2.0])
+def test_gateway_desired_state_zero_is_valid_but_omitted():
+    result = PortalDevices(DB(0), BQ()).read(make_scope("11"))
+    assert [item["ref"] for item in result["items"]] == ["device:101"]
+    assert result["items"][0]["canonical_enabled"] is True
+    assert result["records_status"] == "available"
+
+    app = FastAPI()
+    app.include_router(portal.router)
+    app.state.portal_metadata = Metadata()
+    app.state.portal_devices = PortalDevices(DB(0), BQ())
+    response = TestClient(app).get("/api/demo/portal/devices?site_id=11")
+    assert response.status_code == 200
+    assert [item["ref"] for item in response.json()["items"]] == ["device:101"]
+
+
+@pytest.mark.parametrize("desired_state", [None, 3, -1, True, False, "2", 2.0])
 def test_gateway_desired_state_rejects_invalid_persisted_values(desired_state):
     with pytest.raises(InvalidGatewayState):
         gateway_enabled(desired_state)
