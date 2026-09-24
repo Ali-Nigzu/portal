@@ -303,14 +303,38 @@ try {
       await expect(
         page.getByRole("heading", { name: "Event Logs", exact: true }),
       ).toBeVisible();
-      await page.getByRole("button", { name: "Sources", exact: true }).click();
+      await expect(
+        page.getByText(
+          "Gateway selection includes all device events for that site.",
+          { exact: true },
+        ),
+      ).toHaveCount(0);
+      const sourceTrigger = page.getByRole("button", {
+        name: "Sources",
+        exact: true,
+      });
+      await sourceTrigger.focus();
+      await page.keyboard.press("Enter");
       await expect(page.locator(".portal-source-group")).toHaveText([
         "Renamed First",
         "Renamed Second",
       ]);
       await expect(
+        page.getByRole("group", { name: "Renamed First", exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: "test-results/portal-sources-organisation.png",
+        fullPage: true,
+      });
+      await expect(
         page.getByRole("option", { name: "Front Door", exact: true }),
       ).toHaveCount(2);
+      await page
+        .getByRole("option", { name: "Front Door", exact: true })
+        .first()
+        .focus();
+      await page.keyboard.press("Enter");
+      await expect(sourceTrigger).toContainText("1 source selected");
       await page.keyboard.press("Escape");
       await page.getByRole("link", { name: "Alarm Logs", exact: true }).click();
       await expect(page).toHaveURL(base + "/demo/example/alarm-logs");
@@ -325,6 +349,12 @@ try {
   await check(
     "alarms ten then twenty then twenty-five, counts unchanged",
     async () => {
+      await expect(
+        page.getByRole("button", { name: "Apply filters", exact: true }),
+      ).toHaveClass(/vrm-btn-primary/);
+      await expect(
+        page.getByRole("button", { name: "Show more", exact: true }),
+      ).toHaveClass(/vrm-btn-secondary/);
       await expect(
         page.locator("section").nth(1).locator("tbody tr"),
       ).toHaveCount(10);
@@ -358,7 +388,6 @@ try {
     },
   );
   await check("alarm filter clears old continuation", async () => {
-    await page.getByRole("button", { name: "Filter", exact: true }).click();
     await page.getByLabel("Severity", { exact: true }).selectOption("high");
     await page
       .getByRole("button", { name: "Apply filters", exact: true })
@@ -397,6 +426,14 @@ try {
     h.state.fail = false;
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(page.locator("tbody tr")).toHaveCount(1);
+  });
+  await check("event actions preserve visual hierarchy", async () => {
+    await expect(
+      page.getByRole("button", { name: "Search", exact: true }),
+    ).toHaveClass(/vrm-btn-primary/);
+    await expect(
+      page.getByRole("button", { name: "Export CSV", exact: true }),
+    ).toHaveClass(/vrm-btn-secondary/);
   });
   await check("scoped server CSV download", async () => {
     const download = page.waitForEvent("download");
