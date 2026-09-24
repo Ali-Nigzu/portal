@@ -116,6 +116,17 @@ def context(request: Request, response: Response):
     return read(operation)
 
 
+@router.get("/devices")
+def devices(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+
+    def operation():
+        scope, _ = scope_and_filters(request, set())
+        return request.app.state.portal_devices.read(scope)
+
+    return read(operation)
+
+
 EVENT_FILTERS = {"start", "end", "event", "sex", "age", "event_id"}
 
 

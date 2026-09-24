@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config";
 import { DEFAULT_DEMO_SITE_ID } from "./sites";
+import { clearDemoDeviceOverrides } from "./demoDeviceControls";
 
 const DEMO_SESSION_KEY = "camOS_demo_session";
 const DEMO_DEFAULTS_APPLIED_KEY = "camOS_demo_defaults_applied";
@@ -39,6 +40,7 @@ export const enableDemoSession = async (): Promise<void> => {
     );
   }
   if (typeof window !== "undefined") {
+    clearDemoDeviceOverrides();
     window.sessionStorage.setItem(DEMO_SESSION_KEY, "true");
   }
   notifyDemoSessionChanged();
@@ -46,6 +48,7 @@ export const enableDemoSession = async (): Promise<void> => {
 
 export const clearDemoSessionLocal = (): void => {
   if (typeof window !== "undefined") {
+    clearDemoDeviceOverrides();
     window.sessionStorage.removeItem(DEMO_SESSION_KEY);
     window.sessionStorage.removeItem(DEMO_DEFAULTS_APPLIED_KEY);
     window.sessionStorage.removeItem(DEMO_TIME_RANGE_KEY);

@@ -131,16 +131,28 @@ async function check(name, run) {
 async function harness(viewport = { width: 1440, height: 900 }) {
   const context = await browser.newContext({ viewport });
   const requests = [];
+  const writeRequests = [];
   const errors = [];
   const state = { fail: false, hold: false, release: null };
   await context.route("https://consent.cookiebot.com/**", (r) => r.abort());
   await context.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     requests.push(url.pathname + url.search);
+    if (!["GET", "HEAD", "OPTIONS"].includes(route.request().method()))
+      writeRequests.push(`${route.request().method()} ${url.pathname}`);
     const site = url.searchParams.get("site_id");
     const scope = { organisation_id: "77", site_id: site };
     let body = { ok: false };
     if (url.pathname === "/api/demo/portal/context") body = metadata;
+    if (url.pathname === "/api/demo/portal/devices") {
+      const all = [
+        { ref: "device:101", kind: "device", site_id: "1", site_name: "Renamed First", name: "Front Door", canonical_enabled: true, analyzed_until: "2026-09-20T09:00:00Z", freshness: "stale", records: 36_836, records_status: "available" },
+        { ref: "gateway:1", kind: "gateway", site_id: "1", site_name: "Renamed First", name: "Gateway 1", canonical_enabled: true, analyzed_until: null, freshness: "unavailable", records: 36_836, records_status: "available" },
+        { ref: "device:202", kind: "device", site_id: "2", site_name: "Renamed Second", name: "Front Door", canonical_enabled: false, analyzed_until: null, freshness: "unknown", records: 12_000, records_status: "available" },
+        { ref: "gateway:2", kind: "gateway", site_id: "2", site_name: "Renamed Second", name: "Gateway 2", canonical_enabled: true, analyzed_until: null, freshness: "unavailable", records: 12_000, records_status: "available" },
+      ];
+      body = { scope, records_status: "available", items: site ? all.filter((item) => item.site_id === site) : all };
+    }
     if (url.pathname === "/api/demo/dashboard/snapshot")
       body = fixture("organisation", "77");
     if (url.pathname.startsWith("/api/demo/dashboard/sites/"))
@@ -254,7 +266,7 @@ async function harness(viewport = { width: 1440, height: 900 }) {
   page.setDefaultTimeout(10000);
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("dialog", (dialog) => dialog.dismiss());
-  return { context, page, requests, errors, state };
+  return { context, page, requests, writeRequests, errors, state };
 }
 try {
   const h = await harness();
@@ -477,17 +489,24 @@ try {
     },
   );
   await check(
-    "Devices uses scoped metadata without fabricated status or extra requests",
+    "Devices renders canonical cards and Demo controls never write",
     async () => {
       const before = requests.length;
       await page.goto(base + "/demo/example/first/device-list");
-      await expect(page.locator("tbody tr")).toHaveCount(2);
-      await expect(page.locator("tbody")).toContainText("Gateway 1");
-      await expect(page.locator("tbody")).not.toContainText("Gateway 2");
+      await expect(page.locator("article.device-runtime-card")).toHaveCount(2);
+      await expect(page.getByRole("heading", { name: "Gateway 1" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Gateway 2" })).toHaveCount(0);
+      await expect(page.getByText("Total Sources")).toBeVisible();
+      await page.getByRole("button", { name: "Disconnect Front Door at Renamed First" }).click();
+      await expect(page.getByRole("button", { name: "Connect Front Door at Renamed First" })).toBeVisible();
+      await expect(page.locator(".device-runtime-stat-value").nth(2)).toHaveText("1");
+      await page.getByRole("button", { name: "Refresh All" }).click();
+      await expect(page.getByRole("button", { name: "Connect Front Door at Renamed First" })).toBeVisible();
+      assert.equal(h.writeRequests.filter((request) => request.includes("/portal/devices")).length, 0);
       assert(
         !requests
           .slice(before)
-          .some((r) => /\/events|\/alarms|\/snapshot/.test(r)),
+          .some((r) => /\/alarms|\/snapshot/.test(r)),
       );
       await page.goto(base + "/demo/example/third/device-list");
       await expect(
@@ -495,6 +514,15 @@ try {
       ).toBeVisible();
     },
   );
+  await check("Device See More deep-links into the first filtered Event request", async () => {
+    await page.goto(base + "/demo/example/second/device-list");
+    const before = requests.filter((request) => request.startsWith("/api/demo/portal/events")).length;
+    await page.getByRole("link", { name: "View events for Front Door at Renamed Second" }).click();
+    await expect(page).toHaveURL(/event-logs\?source=device%3A202/);
+    const eventRequests = requests.filter((request) => request.startsWith("/api/demo/portal/events")).slice(before);
+    assert(eventRequests.length >= 1);
+    assert(eventRequests[0].includes("source=device%3A202"));
+  });
   for (const [name, viewport] of [
     ["desktop", { width: 1440, height: 900 }],
     ["tablet", { width: 768, height: 1024 }],
@@ -532,6 +560,18 @@ try {
         );
         await page.screenshot({
           path: `test-results/portal-alarms-${name}.png`,
+          fullPage: true,
+        });
+        await page.goto(base + "/demo/example/first/device-list");
+        await expect(page.locator("article.device-runtime-card")).toHaveCount(2);
+        assert.equal(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > window.innerWidth + 1,
+          ),
+          false,
+        );
+        await page.screenshot({
+          path: `test-results/portal-devices-${name}.png`,
           fullPage: true,
         });
       },

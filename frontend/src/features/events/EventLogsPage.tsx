@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   useOptionalPortal,
   usePortal,
@@ -180,10 +181,24 @@ function Results({ filters }: { filters: string }) {
   );
 }
 function CanonicalEvents() {
-  const [draft, setDraft] = useState<Filters>(emptyFilters);
-  const [applied, setApplied] = useState("");
+  const portal = usePortal();
+  const location = useLocation();
+  const requestedSources = new URLSearchParams(location.search).getAll("source");
+  const allowedSources = new Set(
+    portal.context!.sources
+      .filter((source) => portal.selection?.scope !== "site" || source.site_id === portal.selection.id)
+      .map((source) => source.ref),
+  );
+  const validSources = requestedSources.filter((source) => allowedSources.has(source));
+  const invalidDeepLink = requestedSources.length !== validSources.length;
+  const initialFilters = { ...emptyFilters, sources: validSources };
+  const initialApplied = filterParams(initialFilters).toString();
+  const [draft, setDraft] = useState<Filters>(initialFilters);
+  const [applied, setApplied] = useState(initialApplied);
   const [revision, setRevision] = useState(0);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    invalidDeepLink ? "The requested source is unavailable in this Portal scope." : "",
+  );
   return (
     <div className="event-logs-page">
       <header className="portal-log-page-header">

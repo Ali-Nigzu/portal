@@ -26,3 +26,22 @@ export interface DeviceUser {
   csv_url?: string;
   data_sources?: DataSource[];
 }
+
+export type CanonicalDevice = {
+  ref: string;
+  kind: "device" | "gateway";
+  site_id: string;
+  site_name: string;
+  name: string;
+  canonical_enabled: boolean;
+  analyzed_until: string | null;
+  freshness: "fresh" | "stale" | "unknown" | "unavailable";
+  records: number | null;
+  records_status: "available" | "unavailable";
+};
+
+export type DeviceListResponse = {
+  scope: { organisation_id: string; site_id: string | null };
+  records_status: "available" | "unavailable";
+  items: CanonicalDevice[];
+};
