@@ -62,9 +62,7 @@
 .device-runtime-stat .vrm-card-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "label value"
-    "note value";
+  grid-template-areas: "label value";
   align-items: center;
   column-gap: 12px;
   row-gap: 2px;
@@ -88,18 +86,6 @@
   line-height: 1;
   text-align: right;
 }
-
-.device-runtime-stat-note {
-  grid-area: note;
-  color: var(--vrm-text-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.device-runtime-stat-note--alert {
-  color: #8b6321;
-}
-
 
 .device-runtime-section {
   overflow: hidden;
@@ -157,13 +143,6 @@
   background: color-mix(in srgb, var(--surface-elevated) 93%, white 7%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.device-runtime-activity {
-  margin: 6px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 650;
 }
 
 .device-runtime-site-group > h3 {
@@ -239,26 +218,26 @@
   width: 100%;
 }
 
-.device-runtime-primary-action--online {
+.device-runtime-primary-action--enabled {
   background: rgba(122, 48, 48, 0.1);
   border-color: rgba(122, 48, 48, 0.22);
   color: #7a3030;
 }
 
-.device-runtime-primary-action--online:hover,
-.device-runtime-primary-action--online:focus-visible {
+.device-runtime-primary-action--enabled:hover,
+.device-runtime-primary-action--enabled:focus-visible {
   border-color: rgba(122, 48, 48, 0.42);
   background: rgba(122, 48, 48, 0.14);
 }
 
-.device-runtime-primary-action--offline {
+.device-runtime-primary-action--disabled {
   background: rgba(68, 100, 75, 0.14);
   border-color: rgba(68, 100, 75, 0.28);
   color: #315f3a;
 }
 
-.device-runtime-primary-action--offline:hover,
-.device-runtime-primary-action--offline:focus-visible {
+.device-runtime-primary-action--disabled:hover,
+.device-runtime-primary-action--disabled:focus-visible {
   border-color: rgba(68, 100, 75, 0.48);
   background: rgba(68, 100, 75, 0.2);
 }
@@ -296,21 +275,21 @@
   border-radius: 50%;
 }
 
-.device-runtime-status--online {
+.device-runtime-status--enabled {
   background: rgba(68, 100, 75, 0.12);
   color: #44644b;
 }
 
-.device-runtime-status--online::before {
+.device-runtime-status--enabled::before {
   background: #44644b;
 }
 
-.device-runtime-status--offline {
+.device-runtime-status--disabled {
   background: rgba(139, 99, 33, 0.13);
   color: #8b6321;
 }
 
-.device-runtime-status--offline::before {
+.device-runtime-status--disabled::before {
   background: #8b6321;
 }
 

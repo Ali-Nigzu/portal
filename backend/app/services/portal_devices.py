@@ -3,7 +3,7 @@
 from datetime import timedelta
 
 from .organisation_dashboard import entity_id
-from .portal_context import iso
+from .portal_context import instant, iso
 
 
 EVENTS_TABLE = "`camosbase.camos_prod.events`"
@@ -23,6 +23,16 @@ def gateway_enabled(desired_state):
     if desired_state == 2:
         return True
     raise InvalidGatewayState("Invalid persisted Gateway desired state")
+
+
+def runtime_state(last_activity, effective_now):
+    return (
+        "online"
+        if last_activity is not None
+        and effective_now is not None
+        and last_activity >= effective_now - timedelta(minutes=15)
+        else "offline"
+    )
 
 
 class PortalDevices:
@@ -50,8 +60,8 @@ class PortalDevices:
                 )
                 devices = cursor.fetchall()
                 cursor.execute(
-                    "SELECT g.gateway_id, g.site_id, g.desired_state FROM public.gateways g "
-                    "JOIN public.sites s ON s.id = g.site_id "
+                    "SELECT g.gateway_id, g.site_id, g.desired_state, g.last_seen_at "
+                    "FROM public.gateways g JOIN public.sites s ON s.id = g.site_id "
                     "WHERE s.organisation_id = %s" + gateway_filter + " ORDER BY g.site_id",
                     tuple(gateway_params),
                 )
@@ -88,28 +98,23 @@ class PortalDevices:
         site_totals = {}
         for (site_id, _), count in counts.items():
             site_totals[site_id] = site_totals.get(site_id, 0) + count
-        effective_now = scope.identity.cutoff
+        effective_now = scope.identity.cutoff or instant(
+            scope.context["clock"]["effective_now"]
+        )
         items = []
         for device_id, site_id, name, enabled, analyzed_until in devices:
             sid, did = entity_id(site_id), entity_id(device_id)
-            freshness = "unknown"
-            if analyzed_until is not None and effective_now is not None:
-                freshness = (
-                    "fresh"
-                    if analyzed_until >= effective_now - timedelta(minutes=15)
-                    else "stale"
-                )
             items.append(
                 dict(
                     ref=f"device:{did}", kind="device", site_id=sid,
                     site_name=site_names[sid], name=name,
-                    canonical_enabled=bool(enabled), analyzed_until=iso(analyzed_until),
-                    freshness=freshness,
+                    canonical_enabled=bool(enabled), last_activity=iso(analyzed_until),
+                    runtime_state=runtime_state(analyzed_until, effective_now),
                     records=counts.get((sid, did)) if records_status == "available" else None,
                     records_status=records_status,
                 )
             )
-        for _, site_id, desired_state in gateways:
+        for _, site_id, desired_state, last_seen_at in gateways:
             enabled = gateway_enabled(desired_state)
             if enabled is None:
                 continue
@@ -118,8 +123,8 @@ class PortalDevices:
                 dict(
                     ref=f"gateway:{sid}", kind="gateway", site_id=sid,
                     site_name=site_names[sid], name=f"Gateway {sid}",
-                    canonical_enabled=enabled, analyzed_until=None,
-                    freshness="unavailable",
+                    canonical_enabled=enabled, last_activity=iso(last_seen_at),
+                    runtime_state=runtime_state(last_seen_at, effective_now),
                     records=site_totals.get(sid, 0) if records_status == "available" else None,
                     records_status=records_status,
                 )

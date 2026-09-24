@@ -3,37 +3,28 @@ import { usePortal } from "../../context/PortalContext";
 import { useCanonicalDeviceList, type DeviceView } from "./hooks/useCanonicalDeviceList";
 import "./DeviceListPage.css";
 
-function activityLabel(item: DeviceView) {
-  if (item.kind === "gateway") return "Activity unavailable";
-  if (item.freshness === "fresh") return "Fresh activity";
-  if (item.freshness === "stale") return "Last activity stale";
-  return "No activity data";
-}
-
 function SourceCard({ item, refresh, setEnabled }: {
   item: DeviceView;
   refresh: () => void;
   setEnabled: (item: DeviceView, enabled: boolean) => Promise<void>;
 }) {
   const location = useLocation();
-  const state = item.displayed_enabled ? "Enabled" : "Disconnected";
+  const administrativeState = item.displayed_enabled ? "Enabled" : "Disabled";
+  const runtimeState = item.runtime_state === "online" ? "Online" : "Offline";
   const eventPath = location.pathname.replace(/\/device-list$/, "/event-logs");
   return (
     <article className="device-runtime-card" aria-busy={item.pending}>
-      <div>
-        <div className="device-runtime-card-top">
-          <h4 className="device-runtime-device-name">{item.name}</h4>
-          <span className={`device-runtime-status device-runtime-status--${item.displayed_enabled ? "online" : "offline"}`}>
-            {state}
-          </span>
-        </div>
-        <p className="device-runtime-activity">{activityLabel(item)}</p>
+      <div className="device-runtime-card-top">
+        <h4 className="device-runtime-device-name">{item.name}</h4>
+        <span className={`device-runtime-status device-runtime-status--${item.displayed_enabled ? "enabled" : "disabled"}`}>
+          {administrativeState}
+        </span>
       </div>
       <dl className="device-runtime-meta-grid">
         <div className="device-runtime-meta">
           <dt className="device-runtime-meta-label">Last activity</dt>
           <dd className="device-runtime-meta-value">
-            {item.analyzed_until ? new Date(item.analyzed_until).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Unavailable"}
+            {item.last_activity ? new Date(item.last_activity).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Unavailable"}
           </dd>
         </div>
         <div className="device-runtime-meta">
@@ -55,7 +46,7 @@ function SourceCard({ item, refresh, setEnabled }: {
         </div>
         <div className="device-runtime-meta">
           <dt className="device-runtime-meta-label">State</dt>
-          <dd className="device-runtime-meta-value">{state}</dd>
+          <dd className="device-runtime-meta-value">{runtimeState}</dd>
         </div>
       </dl>
       {item.control_error && <p className="device-runtime-card-error" role="alert">{item.control_error}</p>}
@@ -64,7 +55,7 @@ function SourceCard({ item, refresh, setEnabled }: {
           Refresh
         </button>
         <button
-          className={`device-runtime-primary-action device-runtime-primary-action--${item.displayed_enabled ? "online" : "offline"}`}
+          className={`device-runtime-primary-action device-runtime-primary-action--${item.displayed_enabled ? "enabled" : "disabled"}`}
           disabled={item.pending}
           onClick={() => setEnabled(item, !item.displayed_enabled)}
           aria-label={`${item.displayed_enabled ? "Disconnect" : "Connect"} ${item.name} at ${item.site_name}`}
@@ -73,7 +64,7 @@ function SourceCard({ item, refresh, setEnabled }: {
         </button>
       </div>
       <span className="device-runtime-announcement" aria-live="polite">
-        {!item.pending && !item.control_error ? `${item.name} is ${state.toLowerCase()}.` : ""}
+        {!item.pending && !item.control_error ? `${item.name} is administratively ${administrativeState.toLowerCase()}.` : ""}
       </span>
     </article>
   );
@@ -88,7 +79,7 @@ export default function CanonicalDeviceList() {
   const stats = [
     ["Total Sources", devices.summary.total],
     ["Enabled", devices.summary.enabled],
-    ["Disconnected", devices.summary.disconnected],
+    ["Disabled", devices.summary.disabled],
     ["Gateways", devices.summary.gateways],
   ] as const;
   return (
@@ -105,7 +96,6 @@ export default function CanonicalDeviceList() {
             <div className="vrm-card-body">
               <span className="device-runtime-stat-label">{label}</span>
               <strong className="device-runtime-stat-value">{devices.loading ? "—" : value.toLocaleString()}</strong>
-              <span className="device-runtime-stat-note">Current scope</span>
             </div>
           </div>
         ))}

@@ -8,8 +8,12 @@ from fastapi.testclient import TestClient
 
 from backend.app.api import portal
 from backend.app.services.portal_context import PortalIdentity, PortalScope
-from backend.app.services.portal_devices import PortalDevices
-from backend.app.services.portal_devices import InvalidGatewayState, gateway_enabled
+from backend.app.services.portal_devices import (
+    InvalidGatewayState,
+    PortalDevices,
+    gateway_enabled,
+    runtime_state,
+)
 
 NOW = datetime(2026, 9, 20, 12, tzinfo=timezone.utc)
 
@@ -28,7 +32,10 @@ class Metadata:
 
 
 class DB:
-    def __init__(self, gateway_state=2): self.calls = []; self.gateway_state = gateway_state
+    def __init__(self, gateway_state=2, gateway_seen=NOW - timedelta(minutes=10)):
+        self.calls = []
+        self.gateway_state = gateway_state
+        self.gateway_seen = gateway_seen
     @contextmanager
     def connection(self): yield self
     def cursor(self): return self
@@ -38,7 +45,7 @@ class DB:
         if "public.devices" in self.sql:
             rows = [(101, 11, "Front Door", True, NOW - timedelta(minutes=5)), (202, 22, "Front Door", False, None)]
         else:
-            rows = [("private-gateway-uuid", 11, self.gateway_state)]
+            rows = [("private-gateway-uuid", 11, self.gateway_state, self.gateway_seen)]
         if "site_id = %s" in self.sql: rows = [row for row in rows if row[1] == int(self.params[-1])]
         return rows
 
@@ -60,14 +67,17 @@ def test_device_projection_is_scoped_and_uses_one_grouped_query():
     result = PortalDevices(db, bq).read(make_scope())
     assert [item["ref"] for item in result["items"]] == ["device:101", "device:202", "gateway:11"]
     assert [item["canonical_enabled"] for item in result["items"]] == [True, False, True]
-    assert result["items"][0]["freshness"] == "fresh"
-    assert result["items"][1]["freshness"] == "unknown"
-    assert result["items"][2]["freshness"] == "unavailable"
+    assert result["items"][0]["runtime_state"] == "online"
+    assert result["items"][1]["runtime_state"] == "offline"
+    assert result["items"][2]["runtime_state"] == "online"
+    assert result["items"][0]["last_activity"] == (NOW - timedelta(minutes=5)).isoformat()
+    assert result["items"][2]["last_activity"] == (NOW - timedelta(minutes=10)).isoformat()
     assert result["items"][0]["records"] == 7
     assert result["items"][2]["records"] == 10
     assert "private-gateway-uuid" not in str(result)
     gateway_sql = next(sql for sql, _ in db.calls if "public.gateways" in sql)
-    assert "g.desired_state" in gateway_sql and "g.enabled" not in gateway_sql
+    assert "g.desired_state" in gateway_sql and "g.last_seen_at" in gateway_sql
+    assert "g.enabled" not in gateway_sql
     assert len(bq.calls) == 1 and "GROUP BY site_id, device_id" in bq.calls[0][0]
     assert bq.calls[0][1] == {"org": 1, "cutoff": NOW}
 
@@ -88,6 +98,24 @@ def test_gateway_desired_state_maps_explicitly(desired_state, enabled):
     gateway = next(item for item in result["items"] if item["kind"] == "gateway")
     assert gateway["canonical_enabled"] is enabled
     assert "desired_state" not in gateway and "private-gateway-uuid" not in str(result)
+
+
+@pytest.mark.parametrize(
+    "last_activity,state",
+    [
+        (NOW - timedelta(minutes=15), "online"),
+        (NOW - timedelta(minutes=15, microseconds=1), "offline"),
+        (None, "offline"),
+    ],
+)
+def test_runtime_state_uses_effective_now_threshold(last_activity, state):
+    assert runtime_state(last_activity, NOW) == state
+    result = PortalDevices(DB(2, last_activity), BQ()).read(make_scope("11"))
+    gateway = next(item for item in result["items"] if item["kind"] == "gateway")
+    assert gateway["runtime_state"] == state
+    assert gateway["last_activity"] == (
+        last_activity.isoformat() if last_activity is not None else None
+    )
 
 
 def test_gateway_desired_state_zero_is_valid_but_omitted():

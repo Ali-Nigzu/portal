@@ -34,8 +34,8 @@ export type CanonicalDevice = {
   site_name: string;
   name: string;
   canonical_enabled: boolean;
-  analyzed_until: string | null;
-  freshness: "fresh" | "stale" | "unknown" | "unavailable";
+  last_activity: string | null;
+  runtime_state: "online" | "offline";
   records: number | null;
   records_status: "available" | "unavailable";
 };

@@ -96,7 +96,7 @@ export function useCanonicalDeviceList() {
     summary: {
       total: items.length,
       enabled: items.filter((item) => item.displayed_enabled).length,
-      disconnected: items.filter((item) => !item.displayed_enabled).length,
+      disabled: items.filter((item) => !item.displayed_enabled).length,
       gateways: items.filter((item) => item.kind === "gateway").length,
     },
   };
