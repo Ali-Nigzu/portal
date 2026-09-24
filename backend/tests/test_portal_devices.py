@@ -2,12 +2,14 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.app.api import portal
 from backend.app.services.portal_context import PortalIdentity, PortalScope
 from backend.app.services.portal_devices import PortalDevices
+from backend.app.services.portal_devices import InvalidGatewayState, gateway_enabled
 
 NOW = datetime(2026, 9, 20, 12, tzinfo=timezone.utc)
 
@@ -26,7 +28,7 @@ class Metadata:
 
 
 class DB:
-    def __init__(self): self.calls = []
+    def __init__(self, gateway_state=2): self.calls = []; self.gateway_state = gateway_state
     @contextmanager
     def connection(self): yield self
     def cursor(self): return self
@@ -36,7 +38,7 @@ class DB:
         if "public.devices" in self.sql:
             rows = [(101, 11, "Front Door", True, NOW - timedelta(minutes=5)), (202, 22, "Front Door", False, None)]
         else:
-            rows = [("private-gateway-uuid", 11, True)]
+            rows = [("private-gateway-uuid", 11, self.gateway_state)]
         if "site_id = %s" in self.sql: rows = [row for row in rows if row[1] == int(self.params[-1])]
         return rows
 
@@ -64,6 +66,8 @@ def test_device_projection_is_scoped_and_uses_one_grouped_query():
     assert result["items"][0]["records"] == 7
     assert result["items"][2]["records"] == 10
     assert "private-gateway-uuid" not in str(result)
+    gateway_sql = next(sql for sql, _ in db.calls if "public.gateways" in sql)
+    assert "g.desired_state" in gateway_sql and "g.enabled" not in gateway_sql
     assert len(bq.calls) == 1 and "GROUP BY site_id, device_id" in bq.calls[0][0]
     assert bq.calls[0][1] == {"org": 1, "cutoff": NOW}
 
@@ -76,6 +80,20 @@ def test_device_projection_site_scope_and_partial_records_failure():
     assert all(item["records"] is None for item in result["items"])
     assert bq.calls[0][1]["site"] == 11
     assert all(params == (1, 11) for _, params in db.calls)
+
+
+@pytest.mark.parametrize("desired_state,enabled", [(1, False), (2, True)])
+def test_gateway_desired_state_maps_explicitly(desired_state, enabled):
+    result = PortalDevices(DB(desired_state), BQ()).read(make_scope("11"))
+    gateway = next(item for item in result["items"] if item["kind"] == "gateway")
+    assert gateway["canonical_enabled"] is enabled
+    assert "desired_state" not in gateway and "private-gateway-uuid" not in str(result)
+
+
+@pytest.mark.parametrize("desired_state", [None, 0, 3, -1, True, False, "2", 2.0])
+def test_gateway_desired_state_rejects_invalid_persisted_values(desired_state):
+    with pytest.raises(InvalidGatewayState):
+        gateway_enabled(desired_state)
 
 
 def test_demo_devices_is_get_only():

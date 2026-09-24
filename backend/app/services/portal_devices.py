@@ -9,6 +9,20 @@ from .portal_context import iso
 EVENTS_TABLE = "`camosbase.camos_prod.events`"
 
 
+class InvalidGatewayState(RuntimeError):
+    """A persisted Gateway administrative state is outside its closed domain."""
+
+
+def gateway_enabled(desired_state):
+    if type(desired_state) is not int:
+        raise InvalidGatewayState("Invalid persisted Gateway desired state")
+    if desired_state == 1:
+        return False
+    if desired_state == 2:
+        return True
+    raise InvalidGatewayState("Invalid persisted Gateway desired state")
+
+
 class PortalDevices:
     def __init__(self, database, bigquery):
         self.database, self.bigquery = database, bigquery
@@ -34,7 +48,7 @@ class PortalDevices:
                 )
                 devices = cursor.fetchall()
                 cursor.execute(
-                    "SELECT g.gateway_id, g.site_id, g.enabled FROM public.gateways g "
+                    "SELECT g.gateway_id, g.site_id, g.desired_state FROM public.gateways g "
                     "JOIN public.sites s ON s.id = g.site_id "
                     "WHERE s.organisation_id = %s" + gateway_filter + " ORDER BY g.site_id",
                     tuple(gateway_params),
@@ -93,13 +107,13 @@ class PortalDevices:
                     records_status=records_status,
                 )
             )
-        for _, site_id, enabled in gateways:
+        for _, site_id, desired_state in gateways:
             sid = entity_id(site_id)
             items.append(
                 dict(
                     ref=f"gateway:{sid}", kind="gateway", site_id=sid,
                     site_name=site_names[sid], name=f"Gateway {sid}",
-                    canonical_enabled=bool(enabled), analyzed_until=None,
+                    canonical_enabled=gateway_enabled(desired_state), analyzed_until=None,
                     freshness="unavailable",
                     records=site_totals.get(sid, 0) if records_status == "available" else None,
                     records_status=records_status,
