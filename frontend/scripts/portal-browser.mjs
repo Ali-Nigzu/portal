@@ -146,8 +146,8 @@ async function harness(viewport = { width: 1440, height: 900 }) {
     if (url.pathname === "/api/demo/portal/context") body = metadata;
     if (url.pathname === "/api/demo/portal/devices") {
       const all = [
-        { ref: "device:101", kind: "device", site_id: "1", site_name: "Renamed First", name: "Front Door", canonical_enabled: true, last_activity: "2026-09-20T09:00:00Z", runtime_state: "offline", records: 36_836, records_status: "available" },
-        { ref: "gateway:1", kind: "gateway", site_id: "1", site_name: "Renamed First", name: "Gateway 1", canonical_enabled: false, last_activity: "2026-09-20T09:55:00Z", runtime_state: "online", records: 36_836, records_status: "available" },
+        { ref: "device:101", kind: "device", site_id: "1", site_name: "Renamed First", name: "Front Door", canonical_enabled: true, last_activity: "2026-09-20T09:55:00Z", runtime_state: "online", records: 36_836, records_status: "available" },
+        { ref: "gateway:1", kind: "gateway", site_id: "1", site_name: "Renamed First", name: "Gateway 1", canonical_enabled: false, last_activity: "2026-09-20T09:00:00Z", runtime_state: "offline", records: 36_836, records_status: "available" },
         { ref: "device:202", kind: "device", site_id: "2", site_name: "Renamed Second", name: "Front Door", canonical_enabled: false, last_activity: null, runtime_state: "offline", records: 12_000, records_status: "available" },
         { ref: "gateway:2", kind: "gateway", site_id: "2", site_name: "Renamed Second", name: "Gateway 2", canonical_enabled: true, last_activity: "2026-09-20T09:50:00Z", runtime_state: "online", records: 12_000, records_status: "available" },
       ];
@@ -502,14 +502,20 @@ try {
       await expect(page.getByText("Current scope", { exact: true })).toHaveCount(0);
       await expect(page.getByText(/Fresh activity|Last activity stale|No activity data|Activity unavailable/)).toHaveCount(0);
       const frontDoorCard = page.locator("article.device-runtime-card").filter({ has: page.getByRole("heading", { name: "Front Door" }) });
-      await expect(frontDoorCard).toContainText("Enabled");
-      await expect(frontDoorCard).toContainText("Offline");
+      await expect(frontDoorCard.locator(".device-runtime-status")).toHaveText("Online");
+      await expect(frontDoorCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Enabled");
       const gatewayCard = page.locator("article.device-runtime-card").filter({ has: page.getByRole("heading", { name: "Gateway 1" }) });
-      await expect(gatewayCard).toContainText("Disabled");
-      await expect(gatewayCard).toContainText("Online");
+      await expect(gatewayCard.locator(".device-runtime-status")).toHaveText("Offline");
+      await expect(gatewayCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Disabled");
       await page.getByRole("button", { name: "Disconnect Front Door at Renamed First" }).click();
       await expect(page.getByRole("button", { name: "Connect Front Door at Renamed First" })).toBeVisible();
+      await expect(frontDoorCard.locator(".device-runtime-status")).toHaveText("Online");
+      await expect(frontDoorCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Disabled");
       await expect(page.locator(".device-runtime-stat-value").nth(2)).toHaveText("2");
+      await page.getByRole("button", { name: "Connect Gateway 1 at Renamed First" }).click();
+      await expect(page.getByRole("button", { name: "Disconnect Gateway 1 at Renamed First" })).toBeVisible();
+      await expect(gatewayCard.locator(".device-runtime-status")).toHaveText("Offline");
+      await expect(gatewayCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Enabled");
       await page.getByRole("button", { name: "Refresh All" }).click();
       await expect(page.getByRole("button", { name: "Connect Front Door at Renamed First" })).toBeVisible();
       assert.equal(h.writeRequests.filter((request) => request.includes("/portal/devices")).length, 0);

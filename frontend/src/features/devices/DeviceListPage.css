@@ -275,21 +275,21 @@
   border-radius: 50%;
 }
 
-.device-runtime-status--enabled {
+.device-runtime-status--online {
   background: rgba(68, 100, 75, 0.12);
   color: #44644b;
 }
 
-.device-runtime-status--enabled::before {
+.device-runtime-status--online::before {
   background: #44644b;
 }
 
-.device-runtime-status--disabled {
+.device-runtime-status--offline {
   background: rgba(139, 99, 33, 0.13);
   color: #8b6321;
 }
 
-.device-runtime-status--disabled::before {
+.device-runtime-status--offline::before {
   background: #8b6321;
 }
 

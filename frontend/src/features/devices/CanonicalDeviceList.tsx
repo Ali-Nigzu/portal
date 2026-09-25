@@ -16,8 +16,8 @@ function SourceCard({ item, refresh, setEnabled }: {
     <article className="device-runtime-card" aria-busy={item.pending}>
       <div className="device-runtime-card-top">
         <h4 className="device-runtime-device-name">{item.name}</h4>
-        <span className={`device-runtime-status device-runtime-status--${item.displayed_enabled ? "enabled" : "disabled"}`}>
-          {administrativeState}
+        <span className={`device-runtime-status device-runtime-status--${item.runtime_state}`}>
+          {runtimeState}
         </span>
       </div>
       <dl className="device-runtime-meta-grid">
@@ -46,7 +46,7 @@ function SourceCard({ item, refresh, setEnabled }: {
         </div>
         <div className="device-runtime-meta">
           <dt className="device-runtime-meta-label">State</dt>
-          <dd className="device-runtime-meta-value">{runtimeState}</dd>
+          <dd className="device-runtime-meta-value">{administrativeState}</dd>
         </div>
       </dl>
       {item.control_error && <p className="device-runtime-card-error" role="alert">{item.control_error}</p>}
