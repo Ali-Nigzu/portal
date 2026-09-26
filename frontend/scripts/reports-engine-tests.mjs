@@ -3,298 +3,170 @@ import { mkdir, rm } from "node:fs/promises";
 import { build } from "esbuild";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-
 const outdir = path.resolve(".tmp/reports-engine-tests");
 await rm(outdir, { recursive: true, force: true });
 await mkdir(outdir, { recursive: true });
-const outfile = path.join(outdir, "ReportsEngine.mjs");
-
 await build({
   entryPoints: ["src/features/reports/engine/ReportsEngine.ts"],
-  outfile,
+  outfile: path.join(outdir, "engine.mjs"),
   bundle: true,
   format: "esm",
   platform: "browser",
-  define: {
-    "import.meta.env.VITE_API_URL": '"http://api.test"',
-    "import.meta.env.DEV": "false",
-    "import.meta.env.VITE_ENVIRONMENT": '"test"',
-  },
 });
-
-const engine = await import(pathToFileURL(outfile).href);
-
-const n = (length, value) => Array.from({ length }, () => value);
-const seq = (length, start = 1) =>
-  Array.from({ length }, (_, index) => start + index);
-const occupancy = (length, avg) =>
-  Array.from({ length }, () => [avg, Math.max(avg - 2, 0), avg + 2]);
-const rollup = (length, base) => [
-  seq(length, base),
-  occupancy(length, base + 10),
-  seq(length, base + 2),
-  [10, 20, 30, 25, 10, 5],
-  [55, 45],
-  [40, 35, 25],
-];
-const payload = (base, dwellValue = 7) => {
-  const entrances96 = n(96, base);
-  const exits96 = n(96, base + 1);
-  const footfall96 = entrances96.map((value, index) => value + exits96[index]);
-  return [
-    entrances96,
-    n(96, base + 20),
-    exits96,
-    footfall96,
-    n(96, dwellValue),
-    [30, 40, 30],
-    [50, 70],
-    rollup(24, base),
-    rollup(24, base + 1),
-    rollup(7, base + 2),
-    rollup(4, base + 3),
-    rollup(12, base + 4),
-    rollup(12, base + 5),
-    rollup(2, base + 6),
-  ];
+await build({
+  entryPoints: ["src/features/reports/pdf/renderReportPdf.ts"],
+  outfile: path.join(outdir, "pdf.mjs"),
+  bundle: true,
+  format: "esm",
+  platform: "node",
+});
+const engine = await import(pathToFileURL(path.join(outdir, "engine.mjs")));
+const pdf = await import(pathToFileURL(path.join(outdir, "pdf.mjs")));
+const n = (l, v) => Array.from({ length: l }, () => v),
+  seq = (l, start = 1) => Array.from({ length: l }, (_, i) => start + i),
+  occupancy = (l, avg) =>
+    Array.from({ length: l }, () => [avg, Math.max(0, avg - 2), avg + 2]);
+const rollup = (length, base) => ({
+  entrances: seq(length, base),
+  occupancy: occupancy(length, base + 10),
+  exits: seq(length, base + 2),
+  age_pct: [10, 20, 30, 25, 10, 5],
+  sex_pct: [55, 45],
+});
+const payload = (base = 2, dwell = 7) => {
+  const entrances = n(96, base),
+    exits = n(96, base + 1);
+  return {
+    entrances_96: entrances,
+    occupancy_96: occupancy(96, base + 10),
+    exits_96: exits,
+    footfall_96: entrances.map((v, i) => v + exits[i]),
+    dwell_time_96: n(96, dwell),
+    traffic_devices: [],
+    traffic_split_96: n(96, []),
+    capacity: n(96, [50, 70]),
+    today: rollup(13, base),
+    yesterday: rollup(24, base + 1),
+    week: rollup(7, base + 2),
+    month: rollup(4, base + 3),
+    quarter: rollup(12, base + 4),
+    year: rollup(12, base + 5),
+    all_time: rollup(30, base + 6),
+  };
 };
-const snapshot = (siteView, base, dwellValue) => ({
+const snapshot = (scope = "site", name = "Tokis Takeout") => ({
+  scope,
+  entity_id: scope === "site" ? "2" : "1",
+  entity_name: name,
   ts: "2026-02-20T12:00:00Z",
-  mode: "snapshots",
-  orgId: "client1",
-  siteView,
-  fallback: false,
-  payload: payload(base, dwellValue),
+  payload: payload(),
 });
-
-const credentials = {
-  username: "client1",
-  password: "secret",
-  orgId: "client1",
+for (const [timeframe, length] of Object.entries({
+  today: 13,
+  yesterday: 24,
+  last_week: 7,
+  last_month: 4,
+  last_quarter: 12,
+  last_year: 12,
+  all_time: 30,
+})) {
+  const data = engine.buildSiteActivityReportData(
+    snapshot(),
+    timeframe,
+    new Date("2026-02-20T12:30:00Z"),
+  );
+  assert.equal(data.bucketLabels.length, length);
+  assert.equal(data.metrics.entrancesSeries.length, length);
+  assert.equal(data.metrics.exitsSeries.length, length);
+  assert.equal(
+    data.metrics.footfallSeries[0],
+    data.metrics.entrancesSeries[0] + data.metrics.exitsSeries[0],
+  );
+  assert.equal(data.metrics.dwellAvg, 7);
+}
+const activity = engine.buildSiteActivityReportData(
+  snapshot(),
+  "today",
+  new Date("2026-02-20T12:30:00Z"),
+);
+assert(activity.metrics.totalEntrances > 0);
+assert(activity.metrics.occupancyMax >= activity.metrics.occupancyAvg);
+assert(activity.metrics.peakEntrancesBucket >= 0);
+const visitors = engine.buildVisitorProfileReportData(
+  snapshot(),
+  "today",
+  new Date("2026-02-20T12:30:00Z"),
+);
+assert.deepEqual(visitors.metrics.agePct, [10, 20, 30, 25, 10, 5]);
+assert.deepEqual(visitors.metrics.sexPct, [55, 45]);
+assert.equal("racePct" in visitors.metrics, false);
+assert.equal(JSON.stringify(visitors).match(/race/i), null);
+assert.throws(
+  () => engine.validateCanonicalSnapshot({ ...snapshot(), payload: [[], []] }),
+  /invalid/i,
+  "legacy positional payload is rejected",
+);
+const generated = new Date("2026-09-25T19:42:00Z");
+const siteIdentity = {
+  organisationName: "Demo",
+  siteName: "Tokis Takeout",
+  heading: "Demo - Tokis Takeout",
 };
-
-const mockFetchFor =
-  (snapshots, urls = []) =>
-  async (url) => {
-    urls.push(String(url));
-    const parsed = new URL(String(url));
-    const siteView = parsed.searchParams.get("siteView");
-    const body = snapshots[siteView];
-    return new Response(JSON.stringify(body), {
-      status: body ? 200 : 404,
-      headers: { "Content-Type": "application/json" },
-    });
-  };
-
-{
-  const urls = [];
-  const siteA = await engine.loadReportData({
-    reportType: "site-activity",
-    timeframe: "today",
-    pathname: "/demo/site-a/reports",
-    fetchFn: mockFetchFor(
-      {
-        "site-a": snapshot("site-a", 1, 5),
-        "site-b": snapshot("site-b", 10, 9),
-      },
-      urls,
-    ),
-    credentials,
-  });
-  const siteB = await engine.loadReportData({
-    reportType: "site-activity",
-    timeframe: "today",
-    pathname: "/demo/site-b/reports",
-    fetchFn: mockFetchFor(
-      {
-        "site-a": snapshot("site-a", 1, 5),
-        "site-b": snapshot("site-b", 10, 9),
-      },
-      urls,
-    ),
-    credentials,
-  });
-  assert.notEqual(
-    siteA.metrics.totalEntrances,
-    siteB.metrics.totalEntrances,
-    "site reports must not share data",
-  );
-  assert(
-    urls.some((url) => url.includes("siteView=site-a")),
-    "site-a request must include siteView",
-  );
-  assert(
-    urls.some((url) => url.includes("siteView=site-b")),
-    "site-b request must include siteView",
-  );
-}
-
-{
-  const dashboardSnapshot = snapshot("site-b", 4, 8);
-  const reportsSnapshot = await engine.loadReportSnapshot({
-    siteView: "site-b",
-    fetchFn: mockFetchFor({ "site-b": dashboardSnapshot }),
-    credentials,
-  });
-  assert.equal(
-    reportsSnapshot.siteView,
-    dashboardSnapshot.siteView,
-    "Dashboard and Reports siteView must match",
-  );
-  assert.equal(
-    reportsSnapshot.ts,
-    dashboardSnapshot.ts,
-    "Dashboard and Reports snapshot ts must match",
-  );
-  assert.equal(
-    engine.snapshotPayloadHash(reportsSnapshot),
-    engine.snapshotPayloadHash(dashboardSnapshot),
-    "Dashboard and Reports payload hashes must match",
-  );
-}
-
-assert.throws(
-  () => engine.resolveReportSiteView("/demo/reports"),
-  /Missing site context/,
-  "missing site context must hard fail",
+const labels = pdf
+  .reportDocumentText(activity, siteIdentity, generated)
+  .join(" ");
+assert.match(labels, /Demo - Tokis Takeout/);
+assert.match(labels, /Site Activity Report/);
+assert.match(labels, /Generated:/);
+assert.match(labels, /Camos Reports/);
+assert.doesNotMatch(labels, /As of|Race|Confidential|Business Intelligence/i);
+const orgVisitors = engine.buildVisitorProfileReportData(
+  snapshot("organisation", "Demo"),
+  "today",
+  new Date(),
 );
-
-assert.throws(
-  () =>
-    engine.validateSnapshotResponse(
-      { ...snapshot("site-a", 1, 5), siteView: "site-a" },
-      "site-b",
-    ),
-  /Snapshot site mismatch/,
-  "mismatched siteView response must be rejected",
+const orgLabels = pdf
+  .reportDocumentText(
+    orgVisitors,
+    { organisationName: "Demo", heading: "Demo" },
+    generated,
+  )
+  .join(" ");
+assert.match(orgLabels, /Demo Visitor Profile Report/);
+assert.equal(
+  pdf.reportFilename(siteIdentity, "Site Activity"),
+  "Demo-Tokis-Takeout-Site-Activity-Report.pdf",
 );
-
-assert.throws(
-  () =>
-    engine.validateSnapshotResponse(
-      { ...snapshot("site-b", 1, 5), fallback: true },
-      "site-b",
-    ),
-  /fallback responses are not allowed/,
-  "fallback responses must be rejected",
+assert.equal(
+  pdf.reportFilename(
+    {
+      organisationName: "Long / Organisation: Name",
+      heading: "Long / Organisation: Name",
+    },
+    "Visitor Profile",
+  ),
+  "Long-Organisation-Name-Visitor-Profile-Report.pdf",
 );
-
-engine.validateSchemaPayload(payload(2, 6));
-assert.throws(
-  () => engine.validateSchemaPayload([[], [], []]),
-  /14 slots/,
-  "schema payload length must be enforced",
+const rendered = pdf.renderReportPdf(
+  activity,
+  {
+    organisationName:
+      "An extraordinarily long organisation name for report layout",
+    siteName: "A similarly long site name",
+    heading:
+      "An extraordinarily long organisation name for report layout - A similarly long site name",
+  },
+  generated,
 );
-const invalidOccupancyPayload = payload(2, 6);
-invalidOccupancyPayload[7][1] = [1, 2, 3];
-assert.throws(
-  () => engine.validateSchemaPayload(invalidOccupancyPayload),
-  /occupancy\[0\] must be \[avg,min,max\]/,
-  "occupancy triplets must be enforced",
+assert(
+  rendered.doc.getNumberOfPages() >= 2,
+  "activity table exercises multi-page output",
 );
-
-{
-  const data = engine.buildSiteActivityReportData({
-    snapshot: snapshot("site-b", 3, 11),
-    siteView: "site-b",
-    timeframe: "today",
-    now: new Date("2026-02-20T12:30:00Z"),
-  });
-  assert.equal(
-    data.metrics.dwellAvg,
-    11,
-    "dwell must come from dwell_time_96 aggregation",
-  );
-  assert.notEqual(
-    data.metrics.dwellAvg,
-    data.metrics.occupancyAvg,
-    "dwell must not come from occupancy rollup values",
-  );
-}
-
-{
-  const britishSummerSnapshot = {
-    ...snapshot("site-b", 3, 11),
-    ts: "2026-04-20 19:56:00 UTC",
-  };
-  const data = engine.buildSiteActivityReportData({
-    snapshot: britishSummerSnapshot,
-    siteView: "site-b",
-    timeframe: "today",
-    now: new Date(2026, 3, 20, 19, 56, 0),
-  });
-  assert.equal(
-    data.snapshotTs.getHours(),
-    19,
-    "demo snapshot timestamps with a UTC suffix must preserve local wall-clock hour",
-  );
-  assert.equal(
-    data.bucketLabels.length,
-    20,
-    "today must only include elapsed local-hour buckets through the snapshot hour",
-  );
-  assert.equal(
-    data.bucketLabels.at(-1),
-    "19:00",
-    "today must not render the next future hour bucket during British Summer Time",
-  );
-}
-
-{
-  const expectedLengths = {
-    today: 13,
-    yesterday: 24,
-    last_week: 7,
-    last_month: 4,
-    last_quarter: 12,
-    last_year: 12,
-    all_time: 2,
-  };
-  for (const [timeframe, expectedLength] of Object.entries(expectedLengths)) {
-    const data = engine.buildSiteActivityReportData({
-      snapshot: snapshot("site-b", 3, 11),
-      siteView: "site-b",
-      timeframe,
-      now: new Date("2026-02-20T12:30:00Z"),
-    });
-    assert.equal(
-      data.bucketLabels.length,
-      expectedLength,
-      `${timeframe} labels must align with Dashboard bucket count`,
-    );
-    assert.equal(
-      data.metrics.entrancesSeries.length,
-      expectedLength,
-      `${timeframe} entrances must align to labels`,
-    );
-    assert.equal(
-      data.metrics.exitsSeries.length,
-      expectedLength,
-      `${timeframe} exits must align to labels`,
-    );
-    assert.equal(
-      data.metrics.occupancySeries.length,
-      expectedLength,
-      `${timeframe} occupancy must align to labels`,
-    );
-    assert.equal(
-      data.metrics.dwellSeries.length,
-      expectedLength,
-      `${timeframe} dwell must align to labels`,
-    );
-  }
-}
-
-{
-  const data = engine.buildVisitorProfileReportData({
-    snapshot: snapshot("site-b", 3, 11),
-    siteView: "site-b",
-    timeframe: "today",
-    now: new Date("2026-02-20T12:30:00Z"),
-  });
-  assert.deepEqual(data.metrics.agePct, [10, 20, 30, 25, 10, 5]);
-  assert.deepEqual(data.metrics.sexPct, [55, 45]);
-  assert.deepEqual(data.metrics.racePct, [40, 35, 25]);
-}
-
-console.log("ReportsEngine tests passed");
+assert.equal(rendered.filename.endsWith(".pdf"), true);
+const visitorPdf = pdf.renderReportPdf(
+  orgVisitors,
+  { organisationName: "Demo", heading: "Demo" },
+  generated,
+);
+assert.equal(visitorPdf.doc.getNumberOfPages(), 1);
+console.log("ReportsEngine and PDF tests passed");

@@ -9,34 +9,16 @@ const seq = (length, start = 1) =>
   Array.from({ length }, (_, index) => start + index);
 const occupancy = (length, avg) =>
   Array.from({ length }, () => [avg, Math.max(avg - 2, 0), avg + 2]);
-const rollup = (length, base) => [
-  seq(length, base),
-  occupancy(length, base + 10),
-  seq(length, base + 2),
-  [10, 20, 30, 25, 10, 5],
-  [55, 45],
-  [40, 35, 25],
-];
+const rollup = (length, base) => ({ entrances: seq(length, base), occupancy: occupancy(length, base + 10), exits: seq(length, base + 2), age_pct: [10, 20, 30, 25, 10, 5], sex_pct: [55, 45] });
 const payload = (base, dwellValue = 7) => {
   const entrances96 = n(96, base);
   const exits96 = n(96, base + 1);
   const footfall96 = entrances96.map((value, index) => value + exits96[index]);
-  return [
-    entrances96,
-    n(96, base + 20),
-    exits96,
-    footfall96,
-    n(96, dwellValue),
-    [30, 40, 30],
-    [50, 70],
-    rollup(24, base),
-    rollup(24, base + 1),
-    rollup(7, base + 2),
-    rollup(4, base + 3),
-    rollup(12, base + 4),
-    rollup(12, base + 5),
-    rollup(2, base + 6),
-  ];
+  return { entrances_96: entrances96, occupancy_96: occupancy(96, base + 20), exits_96: exits96,
+    footfall_96: footfall96, dwell_time_96: n(96, dwellValue), traffic_devices: [],
+    traffic_split_96: n(96, []), capacity: n(96, [50, 70]), today: rollup(13, base),
+    yesterday: rollup(24, base + 1), week: rollup(7, base + 2), month: rollup(4, base + 3),
+    quarter: rollup(12, base + 4), year: rollup(12, base + 5), all_time: rollup(2, base + 6) };
 };
 const browser = await chromium.launch({
   headless: true,
@@ -133,7 +115,7 @@ async function harness(viewport = { width: 1440, height: 900 }) {
   const requests = [];
   const writeRequests = [];
   const errors = [];
-  const state = { fail: false, hold: false, release: null };
+  const state = { fail: false, hold: false, release: null, reportFail: false, reportHold: false, reportRelease: null };
   await context.route("https://consent.cookiebot.com/**", (r) => r.abort());
   await context.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
@@ -238,21 +220,28 @@ async function harness(viewport = { width: 1440, height: 900 }) {
       return;
     }
     if (url.pathname === "/api/demo/portal/reports/snapshot") {
+      if (state.reportHold && site === "2") {
+        state.reportHold = false;
+        await new Promise((resolve) => (state.reportRelease = resolve));
+      }
+      if (state.reportFail) {
+        await route.fulfill({ status: 503, json: { detail: { message: "Reports temporarily unavailable" } } });
+        return;
+      }
       if (site !== "9007199254740993") {
+        const selected = site ? metadata.sites.find((entry) => entry.id === site) : metadata.organisation;
         await route.fulfill({
           json: {
             scope,
-            ts: "2026-09-20T09:00:00Z",
-            mode: "snapshots",
-            fallback: false,
-            payload: payload(2),
+            snapshot: { scope: site ? "site" : "organisation", entity_id: selected.id,
+              entity_name: selected.name, ts: "2026-09-20T09:00:00Z", payload: payload(2) },
           },
         });
         return;
       }
       await route.fulfill({
         status: 404,
-        json: { detail: { message: "Reports unavailable for this site" } },
+        json: { detail: { message: "No report snapshot is available for this scope." } },
       });
       return;
     }
@@ -457,17 +446,21 @@ try {
     assert(request.includes("site_id=1") && request.includes("effective_now="));
   });
   await check(
-    "Reports downloads both existing PDF types with canonical scope",
+    "Reports loads canonical scope and downloads both PDF types",
     async () => {
       await page.goto(base + "/demo/example/first/reports");
-      for (const type of ["site-activity", "visitor-profile"]) {
-        await page.locator("select").first().selectOption(type);
+      await expect(page.getByRole("heading", { name: "Example Organisation - Renamed First" })).toBeVisible();
+      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      await expect(page.getByText(/Race|As of/i)).toHaveCount(0);
+      for (const type of ["Site Activity", "Visitor Profile"]) {
+        await page.getByRole("button", { name: new RegExp(type) }).click();
         const download = page.waitForEvent("download");
         await page
           .getByRole("button", { name: "Download Report", exact: true })
           .click();
         const result = await download;
         assert(result.suggestedFilename().endsWith(".pdf"));
+        await result.saveAs(`test-results/portal-report-${type.toLowerCase().replaceAll(" ", "-")}.pdf`);
         const stream = await result.createReadStream();
         const chunks = [];
         for await (const chunk of stream) chunks.push(chunk);
@@ -479,15 +472,37 @@ try {
             .includes("site_id=1"),
         );
       }
+      await page.goto(base + "/demo/example/reports");
+      await expect(page.getByRole("heading", { name: "Example Organisation", exact: true })).toBeVisible();
+      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      assert(
+        requests.filter((r) => r.startsWith("/api/demo/portal/reports/snapshot")).at(-1).includes("effective_now=") &&
+        !requests.filter((r) => r.startsWith("/api/demo/portal/reports/snapshot")).at(-1).includes("site_id="),
+      );
       await page.goto(base + "/demo/example/third/reports");
-      await page
-        .getByRole("button", { name: "Download Report", exact: true })
-        .click();
       await expect(
-        page.getByText("Reports unavailable for this site", { exact: true }),
+        page.getByText("No report snapshot is available for this scope.", { exact: true }),
       ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download Report", exact: true })).toHaveCount(0);
+      h.state.reportFail = true;
+      await page.goto(base + "/demo/example/second/reports");
+      await expect(page.getByText("Reports temporarily unavailable", { exact: true })).toBeVisible();
+      h.state.reportFail = false;
+      await page.getByRole("button", { name: "Retry" }).click();
+      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      assert.equal(h.writeRequests.filter((request) => request.includes("/portal/reports")).length, 0);
+      assert.equal(requests.filter((request) => request.includes("/api/snapshots/latest")).length, 0);
     },
   );
+  await check("Reports rejects a stale snapshot after scope switch", async () => {
+    h.state.reportHold = true;
+    await page.goto(base + "/demo/example/second/reports?panel=sites");
+    await expect.poll(() => Boolean(h.state.reportRelease)).toBe(true);
+    await page.getByRole("link", { name: "Renamed First", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Example Organisation - Renamed First" })).toBeVisible();
+    h.state.reportRelease();
+    await expect(page.getByRole("heading", { name: "Example Organisation - Renamed Second" })).toHaveCount(0);
+  });
   await check(
     "Devices renders canonical cards and Demo controls never write",
     async () => {
@@ -588,6 +603,19 @@ try {
         );
         await page.screenshot({
           path: `test-results/portal-devices-${name}.png`,
+          fullPage: true,
+          animations: "disabled",
+        });
+        await page.goto(base + "/demo/example/first/reports");
+        await expect(page.getByText("Available", { exact: true })).toBeVisible();
+        assert.equal(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > window.innerWidth + 1,
+          ),
+          false,
+        );
+        await page.screenshot({
+          path: `test-results/portal-reports-${name}.png`,
           fullPage: true,
           animations: "disabled",
         });

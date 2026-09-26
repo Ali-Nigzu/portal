@@ -445,56 +445,62 @@ def test_alarm_empty_and_failure_are_distinct():
     assert response.status_code == 503 and "secret" not in response.text
 
 
-@pytest.mark.parametrize(
-    "site,source", [("1", "site-a"), ("2", "site-b"), (None, "all")]
-)
-def test_reports_real_sqlite_adapter_scope_and_cutoff(
-    tmp_path, monkeypatch, site, source
-):
-    import sqlite3
-    import json
-    from backend.app.services import local_data
-
-    path = tmp_path / "snapshot.db"
-    with sqlite3.connect(path) as db:
-        db.execute("CREATE TABLE snapshots (ts TEXT NOT NULL, payload TEXT NOT NULL)")
-        db.execute(
-            "INSERT INTO snapshots VALUES (?, ?)",
-            ("2026-09-20 12:00:00 UTC", json.dumps([[7] * 96])),
-        )
-        db.execute(
-            "INSERT INTO snapshots VALUES (?, ?)",
-            ("2099-01-01 00:00:00 UTC", json.dumps([[99] * 96])),
-        )
-    used = []
-    monkeypatch.setattr(
-        local_data, "snapshot_db_for_site", lambda value: used.append(value) or path
-    )
-    monkeypatch.setattr(portal, "demo_identity", lambda: PortalIdentity(1, NOW))
-
+def test_reports_endpoint_uses_canonical_service_and_is_get_only():
     class ReportMetadata(Metadata):
         def load(self, identity):
             context, gateways = super().load(identity)
-            context["sites"] = [{"id": "1"}, {"id": "2"}, {"id": "3"}]
+            context["sites"] = [{"id": "1"}, {"id": "2"}]
             return context, gateways
 
+    calls = []
+    service = SimpleNamespace(
+        read_snapshot=lambda scope: calls.append(scope)
+        or {
+            "scope": scope.dto,
+            "snapshot": {
+                "scope": "site",
+                "entity_id": scope.site_id,
+                "entity_name": "Canonical site",
+                "ts": NOW.isoformat(),
+                "payload": {},
+            },
+        }
+    )
     app = FastAPI()
     app.include_router(portal.router)
     app.state.portal_metadata = ReportMetadata()
+    app.state.portal_reports = service
     api = TestClient(app)
-    response = api.get(
-        "/api/demo/portal/reports/snapshot", params={"site_id": site} if site else {}
+    response = api.get("/api/demo/portal/reports/snapshot?site_id=2")
+    assert response.status_code == 200
+    assert response.json()["scope"] == {"organisation_id": "1", "site_id": "2"}
+    assert response.json()["snapshot"]["entity_name"] == "Canonical site"
+    assert len(calls) == 1
+    for method in (api.post, api.put, api.patch, api.delete):
+        assert method("/api/demo/portal/reports/snapshot").status_code == 405
+
+
+def test_reports_endpoint_maps_missing_invalid_and_storage_errors_safely():
+    from backend.app.services.portal_reports import (
+        InvalidReportSnapshot,
+        ReportSnapshotNotFound,
     )
-    assert response.status_code == 200 and response.json()["scope"] == {
-        "organisation_id": "1",
-        "site_id": site,
-    }
-    assert (
-        response.json()["payload"][0][0] == 7 and response.json()["fallback"] is False
-    )
-    assert used == [source]
-    missing = api.get("/api/demo/portal/reports/snapshot?site_id=3")
-    assert missing.status_code == 404 and "Reports unavailable" in missing.text
+
+    app = FastAPI()
+    app.include_router(portal.router)
+    app.state.portal_metadata = Metadata()
+    api = TestClient(app)
+    for error, status, expected in (
+        (ReportSnapshotNotFound(), 404, "report_snapshot_not_found"),
+        (InvalidReportSnapshot(), 502, "invalid_snapshot"),
+        (RuntimeError("password=/private/credential"), 503, "source_unavailable"),
+    ):
+        app.state.portal_reports = SimpleNamespace(
+            read_snapshot=lambda scope, error=error: (_ for _ in ()).throw(error)
+        )
+        response = api.get("/api/demo/portal/reports/snapshot")
+        assert response.status_code == status and expected in response.text
+        assert "password" not in response.text and "credential" not in response.text
 
 
 def test_retires_legacy_event_endpoint_without_fallback():
