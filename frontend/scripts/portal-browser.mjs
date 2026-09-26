@@ -9,34 +9,16 @@ const seq = (length, start = 1) =>
   Array.from({ length }, (_, index) => start + index);
 const occupancy = (length, avg) =>
   Array.from({ length }, () => [avg, Math.max(avg - 2, 0), avg + 2]);
-const rollup = (length, base) => [
-  seq(length, base),
-  occupancy(length, base + 10),
-  seq(length, base + 2),
-  [10, 20, 30, 25, 10, 5],
-  [55, 45],
-  [40, 35, 25],
-];
+const rollup = (length, base) => ({ entrances: seq(length, base), occupancy: occupancy(length, base + 10), exits: seq(length, base + 2), age_pct: [10, 20, 30, 25, 10, 5], sex_pct: [55, 45] });
 const payload = (base, dwellValue = 7) => {
   const entrances96 = n(96, base);
   const exits96 = n(96, base + 1);
   const footfall96 = entrances96.map((value, index) => value + exits96[index]);
-  return [
-    entrances96,
-    n(96, base + 20),
-    exits96,
-    footfall96,
-    n(96, dwellValue),
-    [30, 40, 30],
-    [50, 70],
-    rollup(24, base),
-    rollup(24, base + 1),
-    rollup(7, base + 2),
-    rollup(4, base + 3),
-    rollup(12, base + 4),
-    rollup(12, base + 5),
-    rollup(2, base + 6),
-  ];
+  return { entrances_96: entrances96, occupancy_96: occupancy(96, base + 20), exits_96: exits96,
+    footfall_96: footfall96, dwell_time_96: n(96, dwellValue), traffic_devices: [],
+    traffic_split_96: n(96, []), capacity: n(96, [50, 70]), today: rollup(13, base),
+    yesterday: rollup(24, base + 1), week: rollup(7, base + 2), month: rollup(4, base + 3),
+    quarter: rollup(12, base + 4), year: rollup(12, base + 5), all_time: rollup(2, base + 6) };
 };
 const browser = await chromium.launch({
   headless: true,
@@ -131,16 +113,28 @@ async function check(name, run) {
 async function harness(viewport = { width: 1440, height: 900 }) {
   const context = await browser.newContext({ viewport });
   const requests = [];
+  const writeRequests = [];
   const errors = [];
-  const state = { fail: false, hold: false, release: null };
+  const state = { fail: false, hold: false, release: null, reportFail: false, reportHold: false, reportRelease: null };
   await context.route("https://consent.cookiebot.com/**", (r) => r.abort());
   await context.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     requests.push(url.pathname + url.search);
+    if (!["GET", "HEAD", "OPTIONS"].includes(route.request().method()))
+      writeRequests.push(`${route.request().method()} ${url.pathname}`);
     const site = url.searchParams.get("site_id");
     const scope = { organisation_id: "77", site_id: site };
     let body = { ok: false };
     if (url.pathname === "/api/demo/portal/context") body = metadata;
+    if (url.pathname === "/api/demo/portal/devices") {
+      const all = [
+        { ref: "device:101", kind: "device", site_id: "1", site_name: "Renamed First", name: "Front Door", canonical_enabled: true, last_activity: "2026-09-20T09:55:00Z", runtime_state: "online", records: 36_836, records_status: "available" },
+        { ref: "gateway:1", kind: "gateway", site_id: "1", site_name: "Renamed First", name: "Gateway 1", canonical_enabled: false, last_activity: "2026-09-20T09:00:00Z", runtime_state: "offline", records: 36_836, records_status: "available" },
+        { ref: "device:202", kind: "device", site_id: "2", site_name: "Renamed Second", name: "Front Door", canonical_enabled: false, last_activity: null, runtime_state: "offline", records: 12_000, records_status: "available" },
+        { ref: "gateway:2", kind: "gateway", site_id: "2", site_name: "Renamed Second", name: "Gateway 2", canonical_enabled: true, last_activity: "2026-09-20T09:50:00Z", runtime_state: "online", records: 12_000, records_status: "available" },
+      ];
+      body = { scope, records_status: "available", items: site ? all.filter((item) => item.site_id === site) : all };
+    }
     if (url.pathname === "/api/demo/dashboard/snapshot")
       body = fixture("organisation", "77");
     if (url.pathname.startsWith("/api/demo/dashboard/sites/"))
@@ -226,21 +220,28 @@ async function harness(viewport = { width: 1440, height: 900 }) {
       return;
     }
     if (url.pathname === "/api/demo/portal/reports/snapshot") {
+      if (state.reportHold && site === "2") {
+        state.reportHold = false;
+        await new Promise((resolve) => (state.reportRelease = resolve));
+      }
+      if (state.reportFail) {
+        await route.fulfill({ status: 503, json: { detail: { message: "Reports temporarily unavailable" } } });
+        return;
+      }
       if (site !== "9007199254740993") {
+        const selected = site ? metadata.sites.find((entry) => entry.id === site) : metadata.organisation;
         await route.fulfill({
           json: {
             scope,
-            ts: "2026-09-20T09:00:00Z",
-            mode: "snapshots",
-            fallback: false,
-            payload: payload(2),
+            snapshot: { scope: site ? "site" : "organisation", entity_id: selected.id,
+              entity_name: selected.name, ts: "2026-09-20T09:00:00Z", payload: payload(2) },
           },
         });
         return;
       }
       await route.fulfill({
         status: 404,
-        json: { detail: { message: "Reports unavailable for this site" } },
+        json: { detail: { message: "No report snapshot is available for this scope." } },
       });
       return;
     }
@@ -254,7 +255,7 @@ async function harness(viewport = { width: 1440, height: 900 }) {
   page.setDefaultTimeout(10000);
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("dialog", (dialog) => dialog.dismiss());
-  return { context, page, requests, errors, state };
+  return { context, page, requests, writeRequests, errors, state };
 }
 try {
   const h = await harness();
@@ -303,14 +304,38 @@ try {
       await expect(
         page.getByRole("heading", { name: "Event Logs", exact: true }),
       ).toBeVisible();
-      await page.getByRole("button", { name: "Sources", exact: true }).click();
+      await expect(
+        page.getByText(
+          "Gateway selection includes all device events for that site.",
+          { exact: true },
+        ),
+      ).toHaveCount(0);
+      const sourceTrigger = page.getByRole("button", {
+        name: "Sources",
+        exact: true,
+      });
+      await sourceTrigger.focus();
+      await page.keyboard.press("Enter");
       await expect(page.locator(".portal-source-group")).toHaveText([
         "Renamed First",
         "Renamed Second",
       ]);
       await expect(
+        page.getByRole("group", { name: "Renamed First", exact: true }),
+      ).toBeVisible();
+      await page.screenshot({
+        path: "test-results/portal-sources-organisation.png",
+        fullPage: true,
+      });
+      await expect(
         page.getByRole("option", { name: "Front Door", exact: true }),
       ).toHaveCount(2);
+      await page
+        .getByRole("option", { name: "Front Door", exact: true })
+        .first()
+        .focus();
+      await page.keyboard.press("Enter");
+      await expect(sourceTrigger).toContainText("1 source selected");
       await page.keyboard.press("Escape");
       await page.getByRole("link", { name: "Alarm Logs", exact: true }).click();
       await expect(page).toHaveURL(base + "/demo/example/alarm-logs");
@@ -325,6 +350,12 @@ try {
   await check(
     "alarms ten then twenty then twenty-five, counts unchanged",
     async () => {
+      await expect(
+        page.getByRole("button", { name: "Apply filters", exact: true }),
+      ).toHaveClass(/vrm-btn-primary/);
+      await expect(
+        page.getByRole("button", { name: "Show more", exact: true }),
+      ).toHaveClass(/vrm-btn-secondary/);
       await expect(
         page.locator("section").nth(1).locator("tbody tr"),
       ).toHaveCount(10);
@@ -358,7 +389,6 @@ try {
     },
   );
   await check("alarm filter clears old continuation", async () => {
-    await page.getByRole("button", { name: "Filter", exact: true }).click();
     await page.getByLabel("Severity", { exact: true }).selectOption("high");
     await page
       .getByRole("button", { name: "Apply filters", exact: true })
@@ -398,6 +428,14 @@ try {
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(page.locator("tbody tr")).toHaveCount(1);
   });
+  await check("event actions preserve visual hierarchy", async () => {
+    await expect(
+      page.getByRole("button", { name: "Search", exact: true }),
+    ).toHaveClass(/vrm-btn-primary/);
+    await expect(
+      page.getByRole("button", { name: "Export CSV", exact: true }),
+    ).toHaveClass(/vrm-btn-secondary/);
+  });
   await check("scoped server CSV download", async () => {
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export CSV", exact: true }).click();
@@ -408,17 +446,21 @@ try {
     assert(request.includes("site_id=1") && request.includes("effective_now="));
   });
   await check(
-    "Reports downloads both existing PDF types with canonical scope",
+    "Reports loads canonical scope and downloads both PDF types",
     async () => {
       await page.goto(base + "/demo/example/first/reports");
-      for (const type of ["site-activity", "visitor-profile"]) {
-        await page.locator("select").first().selectOption(type);
+      await expect(page.getByRole("heading", { name: "Example Organisation - Renamed First" })).toBeVisible();
+      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      await expect(page.getByText(/Race|As of/i)).toHaveCount(0);
+      for (const type of ["Site Activity", "Visitor Profile"]) {
+        await page.getByRole("button", { name: new RegExp(type) }).click();
         const download = page.waitForEvent("download");
         await page
           .getByRole("button", { name: "Download Report", exact: true })
           .click();
         const result = await download;
         assert(result.suggestedFilename().endsWith(".pdf"));
+        await result.saveAs(`test-results/portal-report-${type.toLowerCase().replaceAll(" ", "-")}.pdf`);
         const stream = await result.createReadStream();
         const chunks = [];
         for await (const chunk of stream) chunks.push(chunk);
@@ -430,27 +472,72 @@ try {
             .includes("site_id=1"),
         );
       }
+      await page.goto(base + "/demo/example/reports");
+      await expect(page.getByRole("heading", { name: "Example Organisation", exact: true })).toBeVisible();
+      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      assert(
+        requests.filter((r) => r.startsWith("/api/demo/portal/reports/snapshot")).at(-1).includes("effective_now=") &&
+        !requests.filter((r) => r.startsWith("/api/demo/portal/reports/snapshot")).at(-1).includes("site_id="),
+      );
       await page.goto(base + "/demo/example/third/reports");
-      await page
-        .getByRole("button", { name: "Download Report", exact: true })
-        .click();
       await expect(
-        page.getByText("Reports unavailable for this site", { exact: true }),
+        page.getByText("No report snapshot is available for this scope.", { exact: true }),
       ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Download Report", exact: true })).toHaveCount(0);
+      h.state.reportFail = true;
+      await page.goto(base + "/demo/example/second/reports");
+      await expect(page.getByText("Reports temporarily unavailable", { exact: true })).toBeVisible();
+      h.state.reportFail = false;
+      await page.getByRole("button", { name: "Retry" }).click();
+      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      assert.equal(h.writeRequests.filter((request) => request.includes("/portal/reports")).length, 0);
+      assert.equal(requests.filter((request) => request.includes("/api/snapshots/latest")).length, 0);
     },
   );
+  await check("Reports rejects a stale snapshot after scope switch", async () => {
+    h.state.reportHold = true;
+    await page.goto(base + "/demo/example/second/reports?panel=sites");
+    await expect.poll(() => Boolean(h.state.reportRelease)).toBe(true);
+    await page.getByRole("link", { name: "Renamed First", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Example Organisation - Renamed First" })).toBeVisible();
+    h.state.reportRelease();
+    await expect(page.getByRole("heading", { name: "Example Organisation - Renamed Second" })).toHaveCount(0);
+  });
   await check(
-    "Devices uses scoped metadata without fabricated status or extra requests",
+    "Devices renders canonical cards and Demo controls never write",
     async () => {
       const before = requests.length;
       await page.goto(base + "/demo/example/first/device-list");
-      await expect(page.locator("tbody tr")).toHaveCount(2);
-      await expect(page.locator("tbody")).toContainText("Gateway 1");
-      await expect(page.locator("tbody")).not.toContainText("Gateway 2");
+      await expect(page.locator("article.device-runtime-card")).toHaveCount(2);
+      await expect(page.getByRole("heading", { name: "Gateway 1" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Gateway 2" })).toHaveCount(0);
+      await expect(page.getByText("Total Sources")).toBeVisible();
+      await expect(page.getByText("Disabled", { exact: true })).toHaveCount(2);
+      await expect(page.getByText("Disconnected", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Current scope", { exact: true })).toHaveCount(0);
+      await expect(page.getByText(/Fresh activity|Last activity stale|No activity data|Activity unavailable/)).toHaveCount(0);
+      const frontDoorCard = page.locator("article.device-runtime-card").filter({ has: page.getByRole("heading", { name: "Front Door" }) });
+      await expect(frontDoorCard.locator(".device-runtime-status")).toHaveText("Online");
+      await expect(frontDoorCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Enabled");
+      const gatewayCard = page.locator("article.device-runtime-card").filter({ has: page.getByRole("heading", { name: "Gateway 1" }) });
+      await expect(gatewayCard.locator(".device-runtime-status")).toHaveText("Offline");
+      await expect(gatewayCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Disabled");
+      await page.getByRole("button", { name: "Disconnect Front Door at Renamed First" }).click();
+      await expect(page.getByRole("button", { name: "Connect Front Door at Renamed First" })).toBeVisible();
+      await expect(frontDoorCard.locator(".device-runtime-status")).toHaveText("Online");
+      await expect(frontDoorCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Disabled");
+      await expect(page.locator(".device-runtime-stat-value").nth(2)).toHaveText("2");
+      await page.getByRole("button", { name: "Connect Gateway 1 at Renamed First" }).click();
+      await expect(page.getByRole("button", { name: "Disconnect Gateway 1 at Renamed First" })).toBeVisible();
+      await expect(gatewayCard.locator(".device-runtime-status")).toHaveText("Offline");
+      await expect(gatewayCard.locator("dt", { hasText: "State" }).locator("xpath=following-sibling::dd[1]")).toHaveText("Enabled");
+      await page.getByRole("button", { name: "Refresh All" }).click();
+      await expect(page.getByRole("button", { name: "Connect Front Door at Renamed First" })).toBeVisible();
+      assert.equal(h.writeRequests.filter((request) => request.includes("/portal/devices")).length, 0);
       assert(
         !requests
           .slice(before)
-          .some((r) => /\/events|\/alarms|\/snapshot/.test(r)),
+          .some((r) => /\/alarms|\/snapshot/.test(r)),
       );
       await page.goto(base + "/demo/example/third/device-list");
       await expect(
@@ -458,6 +545,15 @@ try {
       ).toBeVisible();
     },
   );
+  await check("Device See More deep-links into the first filtered Event request", async () => {
+    await page.goto(base + "/demo/example/second/device-list");
+    const before = requests.filter((request) => request.startsWith("/api/demo/portal/events")).length;
+    await page.getByRole("link", { name: "View events for Front Door at Renamed Second" }).click();
+    await expect(page).toHaveURL(/event-logs\?source=device%3A202/);
+    const eventRequests = requests.filter((request) => request.startsWith("/api/demo/portal/events")).slice(before);
+    assert(eventRequests.length >= 1);
+    assert(eventRequests[0].includes("source=device%3A202"));
+  });
   for (const [name, viewport] of [
     ["desktop", { width: 1440, height: 900 }],
     ["tablet", { width: 768, height: 1024 }],
@@ -496,6 +592,32 @@ try {
         await page.screenshot({
           path: `test-results/portal-alarms-${name}.png`,
           fullPage: true,
+        });
+        await page.goto(base + "/demo/example/first/device-list");
+        await expect(page.locator("article.device-runtime-card")).toHaveCount(2);
+        assert.equal(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > window.innerWidth + 1,
+          ),
+          false,
+        );
+        await page.screenshot({
+          path: `test-results/portal-devices-${name}.png`,
+          fullPage: true,
+          animations: "disabled",
+        });
+        await page.goto(base + "/demo/example/first/reports");
+        await expect(page.getByText("Available", { exact: true })).toBeVisible();
+        assert.equal(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > window.innerWidth + 1,
+          ),
+          false,
+        );
+        await page.screenshot({
+          path: `test-results/portal-reports-${name}.png`,
+          fullPage: true,
+          animations: "disabled",
         });
       },
     );

@@ -15,6 +15,8 @@ from backend.app.api import portal
 from backend.app.services.portal_context import PortalMetadata
 from backend.app.services.portal_events import EventLogs
 from backend.app.services.portal_alarms import AlarmLogs
+from backend.app.services.portal_devices import PortalDevices
+from backend.app.services.portal_reports import PortalReports
 from backend.app.services.dashboard_postgres import DashboardPostgres
 from backend.app.services.organisation_dashboard import OrganisationDashboard
 from backend.app.config import get_allowed_origins
@@ -40,9 +42,13 @@ def create_app() -> FastAPI:
     allowed_origins = get_allowed_origins()
     dashboard_database = DashboardPostgres()
     app.state.organisation_dashboard = OrganisationDashboard(dashboard_database)
-    app.state.portal_metadata = PortalMetadata(dashboard_database, app.state.organisation_dashboard)
+    app.state.portal_metadata = PortalMetadata(
+        dashboard_database, app.state.organisation_dashboard
+    )
     app.state.portal_events = EventLogs(bigquery_client)
     app.state.portal_alarms = AlarmLogs(dashboard_database)
+    app.state.portal_devices = PortalDevices(dashboard_database, bigquery_client)
+    app.state.portal_reports = PortalReports(dashboard_database)
 
     @app.on_event("shutdown")
     def close_dashboard_database() -> None:
@@ -61,7 +67,9 @@ def create_app() -> FastAPI:
     async def startup_health_check() -> None:
         """Run a lightweight BigQuery connectivity check on startup."""
         if ANALYTICS_OFFLINE_MODE:
-            logger.info("Analytics offline mode enabled; skipping BigQuery startup health check")
+            logger.info(
+                "Analytics offline mode enabled; skipping BigQuery startup health check"
+            )
             return
         try:
             bigquery_client.run_health_check()
