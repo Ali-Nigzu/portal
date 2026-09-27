@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { build } from "esbuild";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -120,6 +120,24 @@ assert.match(labels, /Site Activity Report/);
 assert.match(labels, /Generated:/);
 assert.match(labels, /Camos Reports/);
 assert.doesNotMatch(labels, /As of|Race|Confidential|Business Intelligence/i);
+assert.equal(pdf.reportLayoutSpec.headerAlignment, "center");
+const countPresentation = pdf.chartPresentation(activity, [24, 187, 1284]);
+assert.deepEqual(countPresentation.valueLabels, ["24", "187", "1,284"]);
+assert.deepEqual(countPresentation.scaleLabels, ["0", "642", "1,284"]);
+const percentagePresentation = pdf.chartPresentation(
+  visitors,
+  visitors.metrics.sexPct,
+  true,
+);
+assert.deepEqual(percentagePresentation.valueLabels, ["55%", "45%"]);
+assert.deepEqual(percentagePresentation.scaleLabels, ["0%", "50%", "100%"]);
+const quarterActivity = engine.buildSiteActivityReportData(
+  snapshot(),
+  "last_quarter",
+  new Date("2026-02-20T12:30:00Z"),
+);
+assert.equal(pdf.chartLabelAngle(quarterActivity), 45);
+assert.equal(pdf.chartLabelAngle(activity), 0);
 const orgVisitors = engine.buildVisitorProfileReportData(
   snapshot("organisation", "Demo"),
   "today",
@@ -169,4 +187,47 @@ const visitorPdf = pdf.renderReportPdf(
   generated,
 );
 assert.equal(visitorPdf.doc.getNumberOfPages(), 1);
+await mkdir("test-results", { recursive: true });
+const visualCases = [
+  ["reports-site-activity-today.pdf", activity, siteIdentity],
+  ["reports-site-activity-quarter.pdf", quarterActivity, siteIdentity],
+  ["reports-site-visitor-profile.pdf", visitors, siteIdentity],
+  [
+    "reports-organisation-activity-today.pdf",
+    engine.buildSiteActivityReportData(
+      snapshot("organisation", "Demo"),
+      "today",
+      new Date("2026-02-20T12:30:00Z"),
+    ),
+    { organisationName: "Demo", heading: "Demo" },
+  ],
+  [
+    "reports-organisation-activity-quarter.pdf",
+    engine.buildSiteActivityReportData(
+      snapshot("organisation", "Demo"),
+      "last_quarter",
+      new Date("2026-02-20T12:30:00Z"),
+    ),
+    { organisationName: "Demo", heading: "Demo" },
+  ],
+  [
+    "reports-organisation-visitor-profile.pdf",
+    orgVisitors,
+    { organisationName: "Demo", heading: "Demo" },
+  ],
+];
+for (const [filename, data, identity] of visualCases) {
+  const renderedCase = pdf.renderReportPdf(data, identity, generated);
+  await writeFile(
+    path.join("test-results", filename),
+    Buffer.from(renderedCase.doc.output("arraybuffer")),
+  );
+}
+const pageSource = await readFile(
+  "src/features/reports/ReportsPage.tsx",
+  "utf8",
+);
+assert.match(pageSource, /<h1>Reports<\/h1>/);
+assert.doesNotMatch(pageSource, />Reporting</);
+assert.doesNotMatch(pageSource, /Generate a concise report/);
 console.log("ReportsEngine and PDF tests passed");

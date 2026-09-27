@@ -78,14 +78,7 @@ export default function ReportsPage({
   return (
     <main className="portal-reports">
       <header className="portal-reports-header">
-        <div>
-          <p className="portal-reports-kicker">Reporting</p>
-          <h1>Reports</h1>
-          <p>
-            Generate a concise report from the latest available data for the
-            current Portal scope.
-          </p>
-        </div>
+        <h1>Reports</h1>
       </header>
       <section
         className="portal-reports-surface"
