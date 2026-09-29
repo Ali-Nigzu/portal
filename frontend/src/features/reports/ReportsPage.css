@@ -3,6 +3,14 @@
   gap: 20px;
   color: var(--vrm-text-primary);
 }
+.portal-reports-header {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-right: 48px;
+}
 .portal-reports-header h1 {
   margin: 0;
   font-size: clamp(25px, 3vw, 32px);
@@ -160,6 +168,12 @@ select:focus-visible {
   }
 }
 @media (max-width: 700px) {
+  .portal-reports-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding-right: 0;
+  }
   .portal-reports-message {
     align-items: flex-start;
     flex-direction: column;

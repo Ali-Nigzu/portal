@@ -79,14 +79,14 @@ export default function ReportsPage({
     <main className="portal-reports">
       <header className="portal-reports-header">
         <h1>Reports</h1>
+        <div className="portal-reports-scope-pill">
+          {identity.siteName ?? identity.organisationName}
+        </div>
       </header>
       <section
         className="portal-reports-surface"
         aria-label="Report configuration"
       >
-        <div className="portal-reports-scope-pill">
-          {identity.siteName ?? identity.organisationName}
-        </div>
         {loading && (
           <div className="portal-reports-loading" aria-live="polite">
             <span className="portal-reports-spinner" />
