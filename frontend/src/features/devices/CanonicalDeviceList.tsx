@@ -3,14 +3,18 @@ import { usePortal } from "../../context/PortalContext";
 import { useCanonicalDeviceList, type DeviceView } from "./hooks/useCanonicalDeviceList";
 import "./DeviceListPage.css";
 
-function SourceCard({ item, refresh, setEnabled }: {
+function SourceCard({ item, refresh, setEnabled, controlMode }: {
   item: DeviceView;
   refresh: () => void;
   setEnabled: (item: DeviceView, enabled: boolean) => Promise<void>;
+  controlMode?: "simulated" | "canonical" | "read-only";
 }) {
   const location = useLocation();
   const administrativeState = item.displayed_enabled ? "Enabled" : "Disabled";
   const runtimeState = item.runtime_state === "online" ? "Online" : "Offline";
+  const action = controlMode === "simulated"
+    ? (item.displayed_enabled ? "Disconnect" : "Connect")
+    : (item.displayed_enabled ? "Disable" : "Enable");
   const eventPath = location.pathname.replace(/\/device-list$/, "/event-logs");
   return (
     <article className="device-runtime-card" aria-busy={item.pending}>
@@ -58,9 +62,9 @@ function SourceCard({ item, refresh, setEnabled }: {
           className={`device-runtime-primary-action device-runtime-primary-action--${item.displayed_enabled ? "enabled" : "disabled"}`}
           disabled={item.pending}
           onClick={() => setEnabled(item, !item.displayed_enabled)}
-          aria-label={`${item.displayed_enabled ? "Disconnect" : "Connect"} ${item.name} at ${item.site_name}`}
+          aria-label={`${action} ${item.name} at ${item.site_name}`}
         >
-          {item.pending ? "Updating…" : item.displayed_enabled ? "Disconnect" : "Connect"}
+          {item.pending ? "Updating…" : action}
         </button>
       </div>
       <span className="device-runtime-announcement" aria-live="polite">
@@ -71,7 +75,7 @@ function SourceCard({ item, refresh, setEnabled }: {
 }
 
 export default function CanonicalDeviceList() {
-  const { context, selection } = usePortal();
+  const { context, selection, source } = usePortal();
   const devices = useCanonicalDeviceList();
   const scopeName = selection?.scope === "site"
     ? context!.sites.find((site) => site.id === selection.id)?.name
@@ -123,7 +127,7 @@ export default function CanonicalDeviceList() {
               <section className="device-runtime-site-group" key={group.site_id} aria-labelledby={`site-${group.site_id}`}>
                 <h3 id={`site-${group.site_id}`}>{group.site_name}</h3>
                 <div className="device-runtime-device-grid">
-                  {group.items.map((item) => <SourceCard key={item.ref} item={item} refresh={devices.refresh} setEnabled={devices.setEnabled} />)}
+                  {group.items.map((item) => <SourceCard key={item.ref} item={item} refresh={devices.refresh} setEnabled={devices.setEnabled} controlMode={source.deviceControl.mode} />)}
                 </div>
               </section>
             ))}

@@ -30,7 +30,7 @@ export const useLoginForm = (
         if (result.ok) {
           onLogin();
         } else if (result.status === 401) {
-          setError("Invalid email or password");
+          setError("Invalid email or username or password");
         } else {
           setError("Unable to complete request. Please try again.");
         }

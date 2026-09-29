@@ -44,10 +44,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         setEmailStepError("This field is required");
         return;
       }
-      if (!emailValid) {
-        setEmailStepError("Not a valid email address");
-        return;
-      }
       setEmailStepError(null);
       setStep("password");
       return;
@@ -91,11 +87,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
             <form className="login-form" onSubmit={onPrimaryAction}>
               <div className="vrm-field login-field">
-                <label className="vrm-label" htmlFor="login-email">Email</label>
+                <label className="vrm-label" htmlFor="login-email">Email or username</label>
                 <input
                   id="login-email"
                   className="vrm-input"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(event) => {
                     setEmail(event.target.value);
@@ -103,8 +99,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       setEmailStepError(null);
                     }
                   }}
-                  placeholder="Enter email"
-                  autoComplete="email"
+                  placeholder="Enter email or username"
+                  autoComplete="username"
                   aria-invalid={Boolean(emailStepError)}
                   aria-describedby={emailStepError ? "login-email-error" : undefined}
                 />

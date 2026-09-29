@@ -13,6 +13,10 @@ class InvalidGatewayState(RuntimeError):
     """A persisted Gateway administrative state is outside its closed domain."""
 
 
+class SourceNotFound(RuntimeError):
+    pass
+
+
 def gateway_enabled(desired_state):
     if type(desired_state) is not int:
         raise InvalidGatewayState("Invalid persisted Gateway desired state")
@@ -23,6 +27,15 @@ def gateway_enabled(desired_state):
     if desired_state == 2:
         return True
     raise InvalidGatewayState("Invalid persisted Gateway desired state")
+
+
+def gateway_desired_state_for_enabled(enabled: bool) -> int:
+    if type(enabled) is not bool:
+        raise InvalidGatewayState("Invalid Gateway control intent")
+    state = 2 if enabled else 1
+    if state not in (1, 2):  # Deliberate second boundary against future mapper changes.
+        raise InvalidGatewayState("Invalid Gateway control state")
+    return state
 
 
 def runtime_state(last_activity, effective_now):
@@ -130,3 +143,62 @@ class PortalDevices:
                 )
             )
         return dict(scope=scope.dto, records_status=records_status, items=items)
+
+    def set_device_enabled(self, scope, device_id, enabled: bool):
+        if type(enabled) is not bool:
+            raise ValueError("Device enabled must be boolean")
+        did = int(entity_id(device_id))
+        params = [enabled, did, scope.identity.organisation_id]
+        site_filter = ""
+        if scope.site_id:
+            site_filter = " AND d.site_id = %s"
+            params.append(int(scope.site_id))
+        with self.database.connection() as connection:
+            cursor = connection.cursor()
+            try:
+                cursor.execute(
+                    "UPDATE public.devices d SET enabled = %s FROM public.sites s "
+                    "WHERE d.id = %s AND s.id = d.site_id AND s.organisation_id = %s"
+                    + site_filter + " RETURNING d.id, d.site_id, d.enabled",
+                    tuple(params),
+                )
+                row = cursor.fetchone()
+            finally:
+                cursor.close()
+        if row is None:
+            raise SourceNotFound()
+        return dict(
+            scope=dict(organisation_id=str(scope.identity.organisation_id), site_id=str(row[1])),
+            source=dict(ref=f"device:{entity_id(row[0])}", kind="device", canonical_enabled=bool(row[2])),
+        )
+
+    def set_gateway_enabled(self, scope, gateway_site_id, enabled: bool):
+        desired_state = gateway_desired_state_for_enabled(enabled)
+        sid = int(entity_id(gateway_site_id))
+        params = [desired_state, sid, scope.identity.organisation_id, desired_state]
+        site_filter = ""
+        if scope.site_id:
+            site_filter = " AND g.site_id = %s"
+            params.append(int(scope.site_id))
+        with self.database.connection() as connection:
+            cursor = connection.cursor()
+            try:
+                cursor.execute(
+                    "UPDATE public.gateways g SET desired_state = %s FROM public.sites s "
+                    "WHERE g.site_id = %s AND s.id = g.site_id AND s.organisation_id = %s "
+                    "AND g.desired_state IN (1, 2) AND %s IN (1, 2)" + site_filter
+                    + " RETURNING g.site_id, g.desired_state",
+                    tuple(params),
+                )
+                row = cursor.fetchone()
+            finally:
+                cursor.close()
+        if row is None:
+            raise SourceNotFound()
+        returned = int(row[1])
+        if returned not in (1, 2):
+            raise InvalidGatewayState("Invalid persisted Gateway desired state")
+        return dict(
+            scope=dict(organisation_id=str(scope.identity.organisation_id), site_id=str(row[0])),
+            source=dict(ref=f"gateway:{entity_id(row[0])}", kind="gateway", canonical_enabled=returned == 2),
+        )

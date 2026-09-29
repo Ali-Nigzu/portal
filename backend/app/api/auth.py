@@ -11,16 +11,18 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 
 from backend.app.auth import (
     clear_auth_cookie,
-    create_session_token,
     get_session_user,
     hash_session_token,
     set_auth_cookie,
     verify_password,
 )
+from backend.app.services.session_tokens import create_session
 from backend.app.config import CONTACT_SUBMISSIONS_FILE, INTEREST_SUBMISSIONS_FILE
 from backend.app.data.json_store import (
     create_account_user,
@@ -41,6 +43,7 @@ from backend.app.models import (
     AuthUserResponse,
     CreateAccountRequest,
     EmailLoginRequest,
+    IdentifierLoginRequest,
     LoginRequest,
     LoginResponse,
     ContactResponse,
@@ -65,7 +68,6 @@ from backend.app.models import (
     SignupStartResponse,
     SignupVerifyRequest,
 )
-from backend.app.services.auth_context import org_id_for_user_record
 from backend.app.services.postmark_email import (
     PostmarkConfigurationError,
     PostmarkDeliveryError,
@@ -1154,50 +1156,28 @@ async def create_account(payload: CreateAccountRequest):
 
 
 @router.post("/api/login")
-async def login(login_request: LoginRequest | EmailLoginRequest, response: Response):
+async def login(login_request: IdentifierLoginRequest | EmailLoginRequest | LoginRequest, response: Response, request: Request):
     """Authentication endpoint for user login."""
     try:
-        users = load_users()
-
-        if hasattr(login_request, "email"):
-            email = _validate_email(login_request.email)
-            username, user_data = find_user_by_email(users, email)
-            password = login_request.password
-            if not username or not user_data:
-                raise HTTPException(status_code=401, detail="Invalid email or password")
-        else:
-            username = login_request.username
-            password = login_request.password
-            user_data = users.get(username)
-            if not user_data:
-                raise HTTPException(status_code=401, detail="Invalid username or password")
-
-        stored_hash = user_data.get("password_hash") or user_data.get("password", "")
-        if not verify_password(password, stored_hash):
-            if hasattr(login_request, "email"):
-                raise HTTPException(status_code=401, detail="Invalid email or password")
-            raise HTTPException(status_code=401, detail="Invalid username or password")
-
-        users[username]["last_login"] = datetime.now(timezone.utc).isoformat()
-        session_token = create_session_token()
-        users[username]["session_token_hash"] = hash_session_token(session_token)
-        users[username]["updated_at"] = datetime.now(timezone.utc).isoformat()
-        save_users(users)
-        set_auth_cookie(response, session_token)
-
-        if hasattr(login_request, "email"):
-            return AuthUserResponse(user=_safe_auth_user(users[username]))
-
-        org_id = org_id_for_user_record(username, user_data)
-        safe_user = {
-            "username": username,
-            "role": user_data["role"],
-            "name": user_data["name"],
-            "orgId": org_id,
-            "org_id": org_id,
-        }
-
-        return LoginResponse(user=safe_user, message="Login successful")
+        identifier = getattr(login_request, "identifier", None) or getattr(
+            login_request, "email", None
+        ) or getattr(login_request, "username", "")
+        identifier = identifier.strip()
+        user = request.app.state.auth_repository.find_user(identifier)
+        valid = False
+        if user is not None and user.status == 1:
+            try:
+                valid = PasswordHasher().verify(user.password_hash, login_request.password)
+            except (InvalidHashError, VerificationError):
+                valid = False
+        if not valid:
+            raise HTTPException(status_code=401, detail="Invalid identifier or password")
+        session_token, expires_at = create_session(user.id)
+        set_auth_cookie(response, session_token, expires_at)
+        return AuthUserResponse(user=AuthUser(
+            id=str(user.id), name=user.username, email=user.email,
+            phone=user.phone_number,
+        ))
 
     except HTTPException:
         raise

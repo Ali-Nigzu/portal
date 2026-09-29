@@ -16,7 +16,21 @@ const modules = [
   "reports",
 ];
 // Identity and transport are supplied by the parent; this application has no Demo defaults.
-export default function PortalApplication({ module }: { module: string }) {
+export default function PortalApplication({
+  module,
+  authenticated = false,
+  authenticatedOrganisations = [],
+  onLogout,
+  pathForOrganisation,
+  pathForSite,
+}: {
+  module: string;
+  authenticated?: boolean;
+  authenticatedOrganisations?: {id:string;name:string;role:0|1}[];
+  onLogout?: () => void;
+  pathForOrganisation?: (organisationId: string) => string;
+  pathForSite?: (organisationId: string, siteId: string) => string;
+}) {
   const { context, selection, key } = usePortal();
   if (!context) return null;
   if (!selection || !modules.includes(module))
@@ -30,10 +44,12 @@ export default function PortalApplication({ module }: { module: string }) {
   const organisation = {
     id: encodeURIComponent(context.organisation.slug),
     label: context.organisation.name,
+    path: pathForOrganisation?.(context.organisation.id),
   };
   const sites = context.sites.map((s) => ({
     id: `${organisation.id}/${encodeURIComponent(s.slug)}`,
     label: s.name,
+    path: pathForSite?.(context.organisation.id, s.id),
   }));
   const site =
     selection.scope === "site"
@@ -61,6 +77,9 @@ export default function PortalApplication({ module }: { module: string }) {
         selectedKey,
         selectedLabel: site?.name ?? organisation.label,
       }}
+      isAuthenticated={authenticated}
+      authenticatedOrganisations={authenticatedOrganisations}
+      onLogout={onLogout}
     >
       <div key={key}>{pages[module]}</div>
     </VRMLayout>

@@ -15,6 +15,7 @@ import {
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
 import { fetchMe } from "../features/auth/transport/me";
+import { fetchOrganisations, type AuthenticatedOrganisation } from "../features/auth/transport/organisations";
 import { Credentials } from "../types/credentials";
 import { loadEmptyWidgetResult } from "../features/dashboard/transport/loadEmptyWidgetResult";
 import type { DashboardDataMode } from "../features/dashboard/transport/loadWidgetResult";
@@ -37,6 +38,7 @@ const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"))
 const ContactPage = React.lazy(() => import("../pages/ContactPage"));
 const DemoDashboardRoute = React.lazy(() => import("../features/organisation-dashboard/DemoDashboardRoute"));
 const DemoPage = React.lazy(() => import("../pages/DemoPage"));
+const AuthenticatedOrganisationPortalRoute = React.lazy(() => import("../features/organisation-dashboard/AuthenticatedOrganisationPortalRoute"));
 const TermsAndConditionsPage = React.lazy(() => import("../pages/TermsAndConditionsPage"));
 const PrivacyPolicyPage = React.lazy(() => import("../pages/PrivacyPolicyPage"));
 const SubProcessorRegisterPage = React.lazy(() => import("../pages/SubProcessorRegisterPage"));
@@ -48,6 +50,7 @@ const AppRoutes: React.FC = () => {
     password: "",
   });
   const [userRole, setUserRole] = useState<"client" | "admin">("client");
+  const [organisations, setOrganisations] = useState<AuthenticatedOrganisation[]>([]);
   const location = useLocation();
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
@@ -64,6 +67,12 @@ const AppRoutes: React.FC = () => {
       try {
         const me = await fetchMe();
         setIsLoggedIn(me.ok);
+        if (me.ok) {
+          clearDemoSessionLocal();
+          setOrganisations(await fetchOrganisations().catch(() => []));
+        } else {
+          setOrganisations([]);
+        }
       } catch {
         setIsLoggedIn(false);
       } finally {
@@ -79,6 +88,7 @@ const AppRoutes: React.FC = () => {
     setIsLoggedIn(true);
     setCredentials({ username: "", password: "" });
     setUserRole("client");
+    fetchOrganisations().then(setOrganisations).catch(() => setOrganisations([]));
   };
 
   const handleLogout = () => {
@@ -86,6 +96,7 @@ const AppRoutes: React.FC = () => {
     setIsLoggedIn(false);
     setCredentials({ username: "", password: "" });
     setUserRole("client");
+    setOrganisations([]);
   };
 
   const isDemoSession = isDemoSessionActive();
@@ -180,7 +191,7 @@ const AppRoutes: React.FC = () => {
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
-    <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout}>
+    <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout} authenticatedOrganisations={organisations}>
       {userRole === "admin" && !hasViewToken ? (
         <Navigate to="/admin" replace />
       ) : (
@@ -342,7 +353,7 @@ const AppRoutes: React.FC = () => {
           )}
           <Route
             path="/sites"
-            element={<SitesSelectorRedirect />}
+            element={isAuthenticatedMode ? <Navigate to="/home" replace /> : <SitesSelectorRedirect />}
           />
           <Route
             path="/home"
@@ -422,6 +433,18 @@ const AppRoutes: React.FC = () => {
                 />
               )
             }
+          />
+          <Route
+            path="/sites/organisations/:organisationId/:module"
+            element={isAuthenticatedMode ? lazyRoute(
+              <AuthenticatedOrganisationPortalRoute organisations={organisations} onLogout={handleLogout} />
+            ) : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/sites/organisations/:organisationId/sites/:siteId/:module"
+            element={isAuthenticatedMode ? lazyRoute(
+              <AuthenticatedOrganisationPortalRoute organisations={organisations} onLogout={handleLogout} />
+            ) : <Navigate to="/login" replace />}
           />
           <Route
             path="/sites/:siteId"
