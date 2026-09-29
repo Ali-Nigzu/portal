@@ -2,7 +2,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type EventDeviceToken = string;
-type EventDeviceOption = {token:string;label:string;group?:string};
+type EventDeviceOption = { token: string; label: string; group?: string };
 
 interface DevicesMultiSelectProps {
   id?: string;
@@ -25,8 +25,11 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
   const buttonId = id ?? generatedButtonId;
   const menuId = useId();
   const selectedTokens = new Set(value);
-  const summary = value.length ? `${value.length} source${value.length===1?"":"s"} selected` : "All sources";
-  const portalTarget = wrapperRef.current?.closest(".demo-overlay") ?? document.body;
+  const summary = value.length
+    ? `${value.length} source${value.length === 1 ? "" : "s"} selected`
+    : "All sources";
+  const portalTarget =
+    wrapperRef.current?.closest(".demo-overlay") ?? document.body;
 
   const updateMenuPosition = () => {
     const wrapper = wrapperRef.current;
@@ -41,12 +44,21 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
     const viewportOffsetTop = viewport?.offsetTop ?? 0;
     const viewportOffsetLeft = viewport?.offsetLeft ?? 0;
     const maxMenuHeight = Math.min(320, Math.max(180, viewportHeight - 24));
-    const menuHeight = Math.min(maxMenuHeight, menu.scrollHeight || maxMenuHeight);
-    const availableBelow = viewportOffsetTop + viewportHeight - triggerRect.bottom - 8;
+    const menuHeight = Math.min(
+      maxMenuHeight,
+      menu.scrollHeight || maxMenuHeight,
+    );
+    const availableBelow =
+      viewportOffsetTop + viewportHeight - triggerRect.bottom - 8;
     const availableAbove = triggerRect.top - viewportOffsetTop - 8;
-    const shouldOpenUpward = availableBelow < Math.min(180, menuHeight) && availableAbove > availableBelow;
+    const shouldOpenUpward =
+      availableBelow < Math.min(180, menuHeight) &&
+      availableAbove > availableBelow;
     const top = shouldOpenUpward
-      ? Math.max(viewportOffsetTop + 8, triggerRect.top - Math.min(menuHeight, availableAbove))
+      ? Math.max(
+          viewportOffsetTop + 8,
+          triggerRect.top - Math.min(menuHeight, availableAbove),
+        )
       : Math.max(viewportOffsetTop + 8, triggerRect.bottom + 8);
     const maxWidth = Math.max(220, viewportWidth - 16);
     const width = Math.min(Math.max(triggerRect.width, 220), maxWidth);
@@ -63,7 +75,10 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
       width,
       maxHeight: shouldOpenUpward
         ? Math.max(120, triggerRect.top - viewportOffsetTop - 8)
-        : Math.max(120, viewportOffsetTop + viewportHeight - triggerRect.bottom - 8),
+        : Math.max(
+            120,
+            viewportOffsetTop + viewportHeight - triggerRect.bottom - 8,
+          ),
       zIndex: 2400,
     });
   };
@@ -75,7 +90,10 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (wrapperRef.current?.contains(target) || menuRef.current?.contains(target)) {
+      if (
+        wrapperRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
         return;
       }
       setIsOpen(false);
@@ -113,13 +131,25 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
     onChange([...value, token]);
   };
 
+  const optionGroups = options.reduce<
+    { label?: string; options: EventDeviceOption[] }[]
+  >((groups, option) => {
+    const current = groups.at(-1);
+    if (!current || current.label !== option.group) {
+      groups.push({ label: option.group, options: [option] });
+    } else {
+      current.options.push(option);
+    }
+    return groups;
+  }, []);
+
   return (
     <div className="event-devices-select" ref={wrapperRef}>
       <button
         aria-controls={menuId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="event-devices-trigger event-logs-filter-control"
+        className={`event-devices-trigger event-logs-filter-control${isOpen ? " event-devices-trigger--expanded" : ""}`}
         id={buttonId}
         onClick={() => setIsOpen((open) => !open)}
         type="button"
@@ -145,25 +175,44 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
                   <p>No sources in this scope.</p>
                 </div>
               ) : (
-                options.map((option,index) => {
-                  const isSelected = selectedTokens.has(option.token);
+                optionGroups.map((group, groupIndex) => {
+                  const groupId = `${menuId}-group-${groupIndex}`;
                   return (
-                    <React.Fragment key={option.token}>
-                    {option.group && option.group!==options[index-1]?.group && <div className="portal-source-group" role="presentation">{option.group}</div>}
-                    <button
-                      aria-selected={isSelected}
-                      className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
-                      key={option.token}
-                      onClick={() => toggleToken(option.token)}
-                      role="option"
-                      type="button"
+                    <div
+                      aria-labelledby={group.label ? groupId : undefined}
+                      className="portal-source-group-wrap"
+                      key={group.label ?? "sources"}
+                      role="group"
                     >
-                      <span aria-hidden="true" className="event-devices-option__check">
-                        {isSelected ? "✓" : ""}
-                      </span>
-                      <span className="event-devices-option__text">{option.label}</span>
-                    </button>
-                    </React.Fragment>
+                      {group.label && (
+                        <div className="portal-source-group" id={groupId}>
+                          {group.label}
+                        </div>
+                      )}
+                      {group.options.map((option) => {
+                        const isSelected = selectedTokens.has(option.token);
+                        return (
+                          <button
+                            aria-selected={isSelected}
+                            className={`event-devices-option${isSelected ? " event-devices-option--selected" : ""}`}
+                            key={option.token}
+                            onClick={() => toggleToken(option.token)}
+                            role="option"
+                            type="button"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="event-devices-option__check"
+                            >
+                              {isSelected ? "✓" : ""}
+                            </span>
+                            <span className="event-devices-option__text">
+                              {option.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })
               )}

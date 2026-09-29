@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   useOptionalPortal,
   usePortal,
@@ -55,101 +56,156 @@ function Results({ filters }: { filters: string }) {
       if (!abort.signal.aborted) setExporting(false);
     }
   }
-  if (query.loading) return <p role="status">Loading events…</p>;
-  if (query.error)
-    return (
-      <div role="alert">
-        {query.error}
-        <button className="vrm-btn" onClick={query.retry}>
-          Retry
-        </button>
-      </div>
-    );
+  const formattedTotal =
+    query.total == null ? "—" : query.total.toLocaleString();
   return (
-    <div className="vrm-card">
-      <div className="vrm-card-header">
-        <h3>Events ({query.total ?? "—"})</h3>
-        <button className="vrm-btn" onClick={exportCsv} disabled={exporting}>
+    <section className="vrm-card portal-log-results" aria-busy={query.loading}>
+      <div className="vrm-card-header portal-log-results__header">
+        <div className="portal-log-results__heading">
+          <h2>Events</h2>
+          <span className="portal-log-results__count">{formattedTotal}</span>
+        </div>
+        <button
+          className="vrm-btn vrm-btn-secondary portal-log-secondary-action"
+          onClick={exportCsv}
+          disabled={exporting || query.loading || Boolean(query.error)}
+        >
           {exporting ? "Exporting…" : "Export CSV"}
         </button>
       </div>
-      {exportError && <p role="alert">{exportError}</p>}
-      <div className="vrm-table-scroll event-logs-table-scroll">
-        <table className="vrm-table portal-log-table">
-          <thead>
-            <tr>
-              {[
-                "Site",
-                "Source",
-                "Event ID",
-                "Event Type",
-                "Timestamp",
-                "Sex",
-                "Age",
-              ].map((t) => (
-                <th key={t}>{t}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {query.data?.items.map((row) => (
-              <tr key={row.event_id}>
-                <td>{row.site.name}</td>
-                <td>{row.source.label}</td>
-                <td>
-                  <span
-                    className="portal-event-id"
-                    title={row.event_id}
-                    tabIndex={0}
-                  >
-                    {row.event_id}
-                  </span>
-                </td>
-                <td>{row.event.label}</td>
-                <td>{new Date(row.timestamp).toLocaleString()}</td>
-                <td>{row.sex.label}</td>
-                <td>{row.age.label}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {!query.data?.items.length && (
-        <p className="vrm-card-body">No events match these filters.</p>
+      {exportError && (
+        <div className="portal-log-inline-error" role="alert">
+          {exportError}
+        </div>
       )}
-      <div className="vrm-card-body vrm-pagination">
+      {query.loading ? (
+        <div
+          className="portal-log-state portal-log-state--loading"
+          role="status"
+        >
+          <span className="portal-log-spinner" aria-hidden="true" />
+          <span>Loading events…</span>
+        </div>
+      ) : query.error ? (
+        <div className="portal-log-state portal-log-state--error" role="alert">
+          <div>
+            <strong>Events are unavailable</strong>
+            <p>{query.error}</p>
+          </div>
+          <button className="vrm-btn vrm-btn-secondary" onClick={query.retry}>
+            Retry
+          </button>
+        </div>
+      ) : query.data?.items.length ? (
+        <div className="vrm-table-scroll event-logs-table-scroll">
+          <table className="vrm-table portal-log-table event-logs-table">
+            <thead>
+              <tr>
+                <th className="event-logs-col-site" scope="col">
+                  Site
+                </th>
+                <th className="event-logs-col-source" scope="col">
+                  Source
+                </th>
+                <th className="event-logs-col-id" scope="col">
+                  Event ID
+                </th>
+                <th className="event-logs-col-type" scope="col">
+                  Event Type
+                </th>
+                <th className="event-logs-col-timestamp" scope="col">
+                  Timestamp
+                </th>
+                <th className="event-logs-col-sex" scope="col">
+                  Sex
+                </th>
+                <th className="event-logs-col-age" scope="col">
+                  Age
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {query.data.items.map((row) => (
+                <tr key={row.event_id}>
+                  <td>{row.site.name}</td>
+                  <td>{row.source.label}</td>
+                  <td>
+                    <span
+                      className="portal-event-id"
+                      title={row.event_id}
+                      tabIndex={0}
+                    >
+                      {row.event_id}
+                    </span>
+                  </td>
+                  <td>{row.event.label}</td>
+                  <td>{new Date(row.timestamp).toLocaleString()}</td>
+                  <td>{row.sex.label}</td>
+                  <td>{row.age.label}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="portal-log-state portal-log-state--empty" role="status">
+          <strong>No events found</strong>
+          <p>No events match these filters.</p>
+        </div>
+      )}
+      <div className="vrm-card-body vrm-pagination portal-log-pagination">
         <button
-          className="vrm-btn"
-          disabled={!query.page}
+          className="vrm-btn portal-log-utility-action"
+          disabled={!query.page || query.loading || Boolean(query.error)}
           onClick={query.previous}
         >
           Previous
         </button>
-        <span>
+        <span className="portal-log-pagination__label">
           Page {query.page + 1} of{" "}
           {Math.max(1, Math.ceil((query.total ?? 0) / 20))}
         </span>
         <button
-          className="vrm-btn"
-          disabled={!query.data?.page.next_cursor}
+          className="vrm-btn portal-log-utility-action"
+          disabled={
+            !query.data?.page.next_cursor ||
+            query.loading ||
+            Boolean(query.error)
+          }
           onClick={query.next}
         >
           Next
         </button>
       </div>
-    </div>
+    </section>
   );
 }
 function CanonicalEvents() {
-  const [draft, setDraft] = useState<Filters>(emptyFilters);
-  const [applied, setApplied] = useState("");
+  const portal = usePortal();
+  const location = useLocation();
+  const requestedSources = new URLSearchParams(location.search).getAll("source");
+  const allowedSources = new Set(
+    portal.context!.sources
+      .filter((source) => portal.selection?.scope !== "site" || source.site_id === portal.selection.id)
+      .map((source) => source.ref),
+  );
+  const validSources = requestedSources.filter((source) => allowedSources.has(source));
+  const invalidDeepLink = requestedSources.length !== validSources.length;
+  const initialFilters = { ...emptyFilters, sources: validSources };
+  const initialApplied = filterParams(initialFilters).toString();
+  const [draft, setDraft] = useState<Filters>(initialFilters);
+  const [applied, setApplied] = useState(initialApplied);
   const [revision, setRevision] = useState(0);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    invalidDeepLink ? "The requested source is unavailable in this Portal scope." : "",
+  );
   return (
     <div className="event-logs-page">
-      <h1>Event Logs</h1>
+      <header className="portal-log-page-header">
+        <h1 className="portal-log-page-title">Event Logs</h1>
+      </header>
       <form
-        className="vrm-card vrm-card-body"
+        className="vrm-card portal-log-filter-card"
         onSubmit={(e) => {
           e.preventDefault();
           try {
@@ -161,12 +217,25 @@ function CanonicalEvents() {
           }
         }}
       >
-        <PortalFilters value={draft} onChange={setDraft} />
-        <p>Gateway selection includes all device events for that site.</p>
-        <button className="vrm-btn" type="submit">
-          Search
-        </button>
-        {error && <p role="alert">{error}</p>}
+        <div className="portal-log-filter-header">
+          <h2>Filters</h2>
+        </div>
+        <div className="portal-log-filter-body">
+          <PortalFilters value={draft} onChange={setDraft} />
+        </div>
+        <div className="portal-log-filter-actions">
+          {error && (
+            <p className="portal-log-form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button
+            className="vrm-btn vrm-btn-primary portal-log-primary-action"
+            type="submit"
+          >
+            Search
+          </button>
+        </div>
       </form>
       <Results key={`${applied}:${revision}`} filters={applied} />
     </div>

@@ -1,6 +1,5 @@
 import { usePortal } from "../context/PortalContext";
 import DevicesMultiSelect from "../features/events/components/DevicesMultiSelect";
-import "../features/events/EventLogsPage.css";
 export type Filters = {
   sources: string[];
   start: string;
@@ -39,7 +38,9 @@ export function PortalFilters({
     (s) => selection?.scope !== "site" || s.id === selection.id,
   );
   const select = (key: keyof Filters, label: string, options: string[][]) => (
-    <label className="vrm-label">
+    <label
+      className={`vrm-label portal-filter-field portal-filter-field--${key}`}
+    >
       {label}
       <select
         aria-label={label}
@@ -57,8 +58,10 @@ export function PortalFilters({
     </label>
   );
   return (
-    <div className="portal-filter-grid">
-      <div>
+    <div
+      className={`portal-filter-grid portal-filter-grid--${alarms ? "alarms" : "events"}`}
+    >
+      <div className="portal-filter-field portal-filter-field--sources">
         <label className="vrm-label" htmlFor="portal-sources">
           Sources
         </label>
@@ -78,7 +81,7 @@ export function PortalFilters({
           )}
         />
       </div>
-      <label className="vrm-label">
+      <label className="vrm-label portal-filter-field portal-filter-field--from">
         From (local time)
         <input
           className="vrm-input"
@@ -87,7 +90,7 @@ export function PortalFilters({
           onChange={(e) => onChange({ ...value, start: e.target.value })}
         />
       </label>
-      <label className="vrm-label">
+      <label className="vrm-label portal-filter-field portal-filter-field--before">
         Before (local time)
         <input
           className="vrm-input"
@@ -119,7 +122,7 @@ export function PortalFilters({
               (label, i) => [String(i), label],
             ),
           )}
-          <label className="vrm-label">
+          <label className="vrm-label portal-filter-field portal-filter-field--event-id">
             Event ID
             <input
               className="vrm-input"

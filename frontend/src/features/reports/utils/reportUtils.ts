@@ -31,7 +31,6 @@ export const AGE_BUCKET_LABELS = [
   "66+",
 ];
 export const SEX_BUCKET_LABELS = ["Male", "Female"];
-export const RACE_BUCKET_LABELS = ["Light", "Mix", "Dark"];
 
 const clampEnd = (snapshotTs: Date, now: Date): Date =>
   snapshotTs.getTime() <= now.getTime() ? snapshotTs : now;

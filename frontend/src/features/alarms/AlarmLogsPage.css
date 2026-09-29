@@ -1,133 +1,205 @@
+.alarm-logs-results {
+  display: grid;
+  gap: var(--vrm-spacing-5);
+  min-width: 0;
+}
+.portal-log-counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--vrm-spacing-4);
+}
+.portal-log-metric {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+.portal-log-metric::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--line-default);
+  content: "";
+}
+.portal-log-metric--active::after {
+  background: color-mix(in srgb, var(--signal-gold) 72%, var(--line-default));
+}
+.portal-log-metric__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vrm-spacing-4);
+  min-height: 104px;
+  padding: var(--vrm-spacing-5) var(--vrm-spacing-6);
+}
+.portal-log-metric__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vrm-spacing-2);
+  color: var(--text-default);
+  font-size: var(--vrm-typography-font-size-body);
+  font-weight: 750;
+}
+.portal-log-metric__marker,
+.alarm-logs-section-marker {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cam-graphite-0);
+}
+.portal-log-metric--active .portal-log-metric__marker,
+.alarm-logs-section-marker--active {
+  background: var(--signal-gold);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--signal-gold) 14%, transparent);
+}
+.portal-log-metric__value {
+  color: var(--text-strong);
+  font-size: 36px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.alarm-logs-section-heading {
+  flex-wrap: wrap;
+}
+.alarm-logs-section-marker--cleared {
+  background: var(--cam-graphite-0);
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--cam-graphite-0) 10%, transparent);
+}
 .alarm-logs-table-scroll {
+  display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  display: block;
   overflow-x: auto;
   overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
-
+.alarm-logs-table {
+  min-width: 900px;
+  table-layout: fixed;
+}
+.alarm-logs-col-site {
+  width: 150px;
+}
+.alarm-logs-col-source {
+  width: 160px;
+}
+.alarm-logs-col-type {
+  width: 230px;
+}
+.alarm-logs-col-timestamp {
+  width: 190px;
+}
+.alarm-logs-col-status,
+.alarm-logs-col-severity {
+  width: 110px;
+}
+.alarm-status-badge,
+.alarm-severity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 27px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--vrm-radii-chip);
+  font-size: var(--vrm-typography-font-size-caption);
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+}
+.alarm-status-badge--active {
+  border-color: color-mix(in srgb, var(--signal-gold) 34%, var(--line-soft));
+  background: color-mix(in srgb, var(--signal-gold) 10%, white);
+  color: color-mix(in srgb, var(--signal-gold-strong) 82%, var(--text-strong));
+}
+.alarm-status-badge--cleared {
+  background: color-mix(in srgb, var(--surface-panel) 66%, white 34%);
+  color: var(--text-default);
+}
+.alarm-severity-badge--high {
+  border-color: rgba(122, 48, 48, 0.25);
+  background: rgba(122, 48, 48, 0.08);
+  color: #7a3030;
+}
+.alarm-severity-badge--medium {
+  border-color: rgba(143, 107, 36, 0.28);
+  background: rgba(143, 107, 36, 0.09);
+  color: #735720;
+}
+.alarm-severity-badge--low {
+  border-color: color-mix(in srgb, var(--cam-graphite-0) 22%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 60%, white 40%);
+  color: #4f5965;
+}
+.alarm-logs-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--vrm-spacing-3);
+  padding: var(--vrm-spacing-4) var(--vrm-spacing-5);
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface-canvas) 68%, white 32%);
+}
+.alarm-logs-more:empty {
+  display: none;
+}
+.alarm-logs-more .portal-log-inline-error {
+  width: 100%;
+  margin: 0;
+}
+.alarm-logs-loading,
+.alarm-logs-error {
+  min-height: 240px;
+}
 @media (max-width: 1024px) {
   .alarm-logs-page,
   .alarm-logs-table-scroll {
-    min-width: 0;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
-
   .alarm-logs-table-scroll {
-    max-width: 100%;
-    display: block;
-    overflow-x: auto;
-    overflow-y: visible;
-    overscroll-behavior-x: contain;
-    overscroll-behavior-y: auto;
     touch-action: pan-x pan-y;
   }
-
   .alarm-logs-table {
+    width: 900px;
+    max-width: none;
+    min-width: 900px;
     border-collapse: collapse;
     border-spacing: 0;
-    max-width: none;
-    table-layout: fixed;
   }
-
-  .alarm-logs-active-table {
-    min-width: 1040px;
-    width: 1040px;
-  }
-
-  .alarm-logs-history-table {
-    min-width: 980px;
-    width: 980px;
-  }
-
   .alarm-logs-table th,
   .alarm-logs-table td {
     white-space: nowrap;
   }
-
-  .alarm-logs-col-site {
-    min-width: 150px;
-    width: 150px;
-  }
-
-  .alarm-logs-col-device {
-    min-width: 170px;
-    width: 170px;
-  }
-
-  .alarm-logs-col-type {
-    min-width: 260px;
-    width: 260px;
-  }
-
-  .alarm-logs-col-timestamp {
-    min-width: 170px;
-    width: 170px;
-  }
-
-  .alarm-logs-col-status {
-    min-width: 110px;
-    width: 110px;
-  }
-
-  .alarm-logs-col-severity {
-    min-width: 130px;
-    width: 130px;
-  }
-
-  .alarm-logs-col-actions {
-    min-width: 150px;
-    width: 150px;
-  }
 }
-
-.alarm-logs-section-title-mobile {
-  display: none;
-}
-
-@media (max-width: 600px) and (orientation: portrait) {
+@media (max-width: 600px) {
+  .alarm-logs-results {
+    gap: var(--vrm-spacing-4);
+  }
+  .portal-log-counts {
+    grid-template-columns: 1fr;
+    gap: var(--vrm-spacing-3);
+  }
+  .portal-log-metric__body {
+    min-height: 84px;
+    padding: var(--vrm-spacing-4);
+  }
+  .portal-log-metric__value {
+    font-size: 32px;
+  }
   .alarm-logs-section-header {
     align-items: stretch;
-    flex-direction: column;
-    gap: 12px;
   }
-
-  .alarm-logs-section-title {
+  .alarm-logs-section-heading {
     width: 100%;
-  }
-
-  .alarm-logs-section-title-desktop {
-    display: none;
-  }
-
-  .alarm-logs-section-title-mobile {
-    align-items: center;
-    display: flex;
-    gap: 12px;
-    justify-content: space-between;
-    width: 100%;
-  }
-
-  .alarm-logs-section-header .vrm-card-actions {
-    align-items: center;
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
-    justify-content: flex-start;
-    width: 100%;
-  }
-
-  .alarm-logs-section-header .vrm-card-actions .vrm-btn {
-    flex: 0 0 auto;
-  }
-
-  .alarm-logs-section-title-mobile > span:last-child {
-    flex: 0 0 auto;
-    text-align: right;
   }
 }

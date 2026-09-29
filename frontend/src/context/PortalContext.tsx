@@ -35,6 +35,16 @@ export type PortalSource = {
     params: URLSearchParams,
     signal: AbortSignal,
   ): Promise<Response>;
+  deviceControl: PortalDeviceControl;
+};
+export type PortalDeviceControl = {
+  mode: "simulated" | "canonical" | "read-only";
+  getOverrides(): Record<string, boolean>;
+  setSourceEnabled(
+    ref: string,
+    enabled: boolean,
+    signal: AbortSignal,
+  ): Promise<{ ref: string; enabled: boolean }>;
 };
 type PortalView = {
   context?: PortalMetadata;

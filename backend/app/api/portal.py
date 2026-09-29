@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 import logging
 import os
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
@@ -12,6 +11,10 @@ from fastapi.responses import StreamingResponse
 from backend.app.services.portal_context import PortalIdentity, PortalScope, instant
 from backend.app.services.portal_events import InvalidEventData
 from backend.app.services.organisation_dashboard import EntityNotFound
+from backend.app.services.portal_reports import (
+    InvalidReportSnapshot,
+    ReportSnapshotNotFound,
+)
 
 router = APIRouter(prefix="/api/demo/portal")
 logger = logging.getLogger(__name__)
@@ -38,6 +41,22 @@ def read(operation):
             detail={
                 "error": "not_found",
                 "message": "Entity unavailable in this scope.",
+            },
+        ) from None
+    except ReportSnapshotNotFound:
+        raise HTTPException(
+            404,
+            detail={
+                "error": "report_snapshot_not_found",
+                "message": "No report snapshot is available for this scope.",
+            },
+        ) from None
+    except InvalidReportSnapshot:
+        raise HTTPException(
+            502,
+            detail={
+                "error": "invalid_snapshot",
+                "message": "Report snapshot data is invalid.",
             },
         ) from None
     except ValueError as exc:
@@ -116,6 +135,17 @@ def context(request: Request, response: Response):
     return read(operation)
 
 
+@router.get("/devices")
+def devices(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+
+    def operation():
+        scope, _ = scope_and_filters(request, set())
+        return request.app.state.portal_devices.read(scope)
+
+    return read(operation)
+
+
 EVENT_FILTERS = {"start", "end", "event", "sex", "age", "event_id"}
 
 
@@ -174,35 +204,7 @@ def report_snapshot(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
 
     def operation():
-        from backend.app.services.local_data import (
-            ensure_local_db_exists,
-            snapshot_db_for_site,
-        )
-        from backend.app.snapshots import fetch_latest_snapshot_from_sqlite
-
         scope, _ = scope_and_filters(request, set())
-        # The sole legacy Reports source mapping: never used by other modules.
-        sources = {None: "all", "1": "site-a", "2": "site-b"}
-        if scope.site_id not in sources:
-            raise HTTPException(
-                404, detail={"message": "Reports unavailable for this site"}
-            )
-        source = sources[scope.site_id]
-        path = ensure_local_db_exists(
-            snapshot_db_for_site(source), label="Reports snapshot"
-        )
-        clock = scope.identity.cutoff.astimezone(
-            ZoneInfo(scope.identity.time_zone)
-        ).replace(tzinfo=None)
-        row = fetch_latest_snapshot_from_sqlite(path, org_id="client1", as_of=clock)
-        if row is None:
-            raise EntityNotFound()
-        return dict(
-            scope=scope.dto,
-            ts=row.ts,
-            payload=row.payload,
-            mode="snapshots",
-            fallback=False,
-        )
+        return request.app.state.portal_reports.read_snapshot(scope)
 
     return read(operation)

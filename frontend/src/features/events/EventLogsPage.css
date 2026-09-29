@@ -1,245 +1,67 @@
-.event-logs-results-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: var(--vrm-bg-secondary);
-}
-
-.event-logs-results-table th,
-.event-logs-results-table td {
-  padding: var(--vrm-spacing-3) var(--vrm-spacing-4);
-  text-align: left;
-  border-bottom: 1px solid var(--vrm-border);
-}
-
-.event-logs-results-table th {
-  background-color: var(--vrm-bg-tertiary);
-  color: var(--vrm-text-secondary);
-  font-weight: 600;
-  font-size: var(--vrm-typography-font-size-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.event-logs-results-table td {
-  color: var(--vrm-text-primary);
-  font-size: var(--vrm-typography-font-size-body);
-}
-
-.event-logs-results-table tr:hover {
-  background-color: var(--vrm-hover);
-}
-
-
-.event-logs-page .vrm-card-body--flush {
-  padding: 0;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
 .event-logs-page,
 .event-logs-page .vrm-card,
-.event-logs-filters-body,
-.event-logs-filter-grid {
-  min-width: 0;
-  max-width: 100%;
-}
-
 .event-logs-table-scroll {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+.event-logs-table-scroll {
   display: block;
   overflow-x: auto;
   overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
-
-.event-devices-select {
-  position: relative;
-  width: 100%;
+.event-logs-table {
+  min-width: 940px;
+  table-layout: fixed;
 }
-
-.event-devices-trigger {
-  align-items: center;
-  background: var(--vrm-bg-tertiary);
-  border: 1px solid var(--vrm-border);
-  border-radius: var(--vrm-radii-input);
-  color: var(--vrm-text-primary);
-  cursor: pointer;
-  display: flex;
-  font: inherit;
-  gap: var(--vrm-spacing-2);
-  justify-content: space-between;
-  padding: 0 var(--vrm-spacing-3);
-  text-align: left;
+.event-logs-col-site {
+  width: 150px;
 }
-
-.event-devices-trigger:focus-visible,
-.event-devices-option:focus-visible {
-  outline: 2px solid var(--vrm-color-focus);
-  outline-offset: 2px;
+.event-logs-col-source {
+  width: 150px;
 }
-
-.event-devices-trigger__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.event-logs-col-id {
+  width: 250px;
 }
-
-.event-devices-trigger__chevron {
-  color: var(--vrm-text-secondary);
-  flex: 0 0 auto;
+.event-logs-col-type {
+  width: 120px;
 }
-
-.event-devices-menu {
-  background: var(--vrm-bg-secondary);
-  border: 1px solid var(--vrm-border);
-  border-radius: var(--vrm-radii-card);
-  box-shadow: var(--vrm-elevation-popover);
-  display: grid;
-  gap: var(--vrm-spacing-1);
-  margin: 0;
-  max-height: min(320px, calc(100vh - 32px));
-  min-width: 0;
-  overflow-y: auto;
-  padding: var(--vrm-spacing-2);
-  position: fixed;
-  inset: auto;
-  z-index: 2200;
-  touch-action: pan-y;
+.event-logs-col-timestamp {
+  width: 190px;
 }
-
-.event-devices-empty {
-  color: var(--vrm-text-secondary);
-  font-size: var(--vrm-typography-font-size-body-sm);
-  line-height: 1.35;
-  padding: var(--vrm-spacing-2) var(--vrm-spacing-3);
+.event-logs-col-sex {
+  width: 90px;
 }
-
-.event-devices-empty p {
-  margin: 0;
+.event-logs-col-age {
+  width: 90px;
 }
-
-.event-devices-empty p + p {
-  margin-top: var(--vrm-spacing-1);
-}
-
-.event-devices-option {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--vrm-radii-input);
-  color: var(--vrm-text-secondary);
-  cursor: pointer;
-  display: flex;
-  font: inherit;
-  gap: var(--vrm-spacing-2);
-  min-height: 44px;
-  padding: var(--vrm-spacing-2) var(--vrm-spacing-3);
-  text-align: left;
-  width: 100%;
-}
-
-.event-devices-option:hover,
-.event-devices-option--selected {
-  background: var(--vrm-hover);
-  color: var(--vrm-text-primary);
-}
-
-.event-devices-option__check {
-  align-items: center;
-  background: var(--vrm-bg-tertiary);
-  border: 1px solid var(--vrm-border);
-  border-radius: var(--vrm-radii-badge);
-  color: var(--vrm-accent-teal);
-  display: inline-flex;
-  flex: 0 0 20px;
-  height: 20px;
-  justify-content: center;
-  width: 20px;
-}
-
-.event-devices-option__text {
-  min-width: 0;
-  white-space: normal;
-}
-
 @media (max-width: 768px) {
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-page,
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
-    min-width: 0;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
-
   .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table-scroll {
-    max-width: 100%;
     display: block;
     overflow-x: auto;
     overflow-y: visible;
     overscroll-behavior-x: contain;
-  overscroll-behavior-y: auto;
+    overscroll-behavior-y: auto;
     touch-action: pan-x pan-y;
   }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-page .vrm-card-body--flush {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .event-devices-menu {
-    max-height: min(300px, calc(100vh - 24px));
-  }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table {
+    width: 940px;
+    max-width: none;
+    min-width: 940px;
     border-collapse: collapse;
     border-spacing: 0;
-    max-width: none;
-    min-width: 712px;
-    width: 712px;
-    table-layout: fixed;
   }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table th,
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td {
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table th,
+  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-table td {
     white-space: nowrap;
   }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-event {
-    min-width: 96px;
-    width: 96px;
-  }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-track {
-    min-width: 120px;
-    width: 120px;
-  }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-camera {
-    min-width: 96px;
-    width: 96px;
-  }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-timestamp {
-    min-width: 180px;
-    width: 180px;
-  }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-col-demographics {
-    min-width: 220px;
-    width: 220px;
-  }
-
-  .vrm-layout--mobile .vrm-content--mobile-lane .event-logs-results-table td:nth-child(5) {
-    white-space: nowrap;
-  }
-}
-
-.event-logs-filters-card {
-  overflow: visible;
 }

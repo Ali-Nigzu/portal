@@ -178,7 +178,7 @@ def test_event_paging_ties_and_count_once():
         assert "SELECT *" not in sql
 
 
-def test_event_source_semantics_and_exact_id():
+def test_event_source_semantics_and_id_prefix():
     service = EventLogs(BQ())
     clauses, params, *_ = service.specification(
         scope(None, ["device:101", "gateway:11"]),
@@ -188,9 +188,51 @@ def test_event_source_semantics_and_exact_id():
     assert "site_id = @site" not in sql
     assert "device_id IN UNNEST(@devices) OR site_id IN UNNEST(@gateways)" in sql
     assert params["devices"] == [101] and params["gateways"] == [11]
-    assert params["event_id"] == "uuid" and "event_id = @event_id" in sql
+    assert params["event_id"] == "uuid"
+    assert "STARTS_WITH(event_id, @event_id)" in sql
     assert params["event"] == 0 and params["sex"] == 1 and params["age"] == 5
     assert "race" not in sql and "track" not in sql
+
+
+@pytest.mark.parametrize("prefix", ["a", "abc", "abc123"])
+def test_event_id_prefix_is_parameterized_and_starts_with(prefix):
+    clauses, params, *_ = EventLogs(BQ()).specification(scope(), {"event_id": prefix})
+    sql = " AND ".join(clauses)
+    assert "STARTS_WITH(event_id, @event_id)" in sql
+    assert "event_id = @event_id" not in sql
+    assert params["event_id"] == prefix
+    assert "%" not in params["event_id"]
+
+
+def test_empty_event_id_adds_no_restriction():
+    clauses, params, *_ = EventLogs(BQ()).specification(scope(), {"event_id": ""})
+    sql = " AND ".join(clauses)
+    assert "STARTS_WITH" not in sql
+    assert "event_id" not in params
+
+
+def test_event_id_prefix_matches_only_ids_that_start_with_value():
+    rows = [
+        {**event(1), "event_id": "abc123"},
+        {**event(2), "event_id": "abc999"},
+        {**event(3), "event_id": "zabc123"},
+    ]
+
+    class PrefixBQ(BQ):
+        def portal_rows(self, sql, params, limit):
+            matching = [
+                row
+                for row in self.rows
+                if row["event_id"].startswith(params.get("event_id", ""))
+            ]
+            self.calls.append((sql, dict(params), limit))
+            if "COUNT(*)" in sql:
+                return [dict(total=len(matching), unique_ids=len(matching))]
+            return matching[:limit]
+
+    result = EventLogs(PrefixBQ(rows)).search(scope(), {"event_id": "abc"})
+    assert [item["event_id"] for item in result["items"]] == ["abc123", "abc999"]
+    assert result["total"] == 2
 
 
 @pytest.mark.parametrize("size", [0, 101, -1])
@@ -445,56 +487,62 @@ def test_alarm_empty_and_failure_are_distinct():
     assert response.status_code == 503 and "secret" not in response.text
 
 
-@pytest.mark.parametrize(
-    "site,source", [("1", "site-a"), ("2", "site-b"), (None, "all")]
-)
-def test_reports_real_sqlite_adapter_scope_and_cutoff(
-    tmp_path, monkeypatch, site, source
-):
-    import sqlite3
-    import json
-    from backend.app.services import local_data
-
-    path = tmp_path / "snapshot.db"
-    with sqlite3.connect(path) as db:
-        db.execute("CREATE TABLE snapshots (ts TEXT NOT NULL, payload TEXT NOT NULL)")
-        db.execute(
-            "INSERT INTO snapshots VALUES (?, ?)",
-            ("2026-09-20 12:00:00 UTC", json.dumps([[7] * 96])),
-        )
-        db.execute(
-            "INSERT INTO snapshots VALUES (?, ?)",
-            ("2099-01-01 00:00:00 UTC", json.dumps([[99] * 96])),
-        )
-    used = []
-    monkeypatch.setattr(
-        local_data, "snapshot_db_for_site", lambda value: used.append(value) or path
-    )
-    monkeypatch.setattr(portal, "demo_identity", lambda: PortalIdentity(1, NOW))
-
+def test_reports_endpoint_uses_canonical_service_and_is_get_only():
     class ReportMetadata(Metadata):
         def load(self, identity):
             context, gateways = super().load(identity)
-            context["sites"] = [{"id": "1"}, {"id": "2"}, {"id": "3"}]
+            context["sites"] = [{"id": "1"}, {"id": "2"}]
             return context, gateways
 
+    calls = []
+    service = SimpleNamespace(
+        read_snapshot=lambda scope: calls.append(scope)
+        or {
+            "scope": scope.dto,
+            "snapshot": {
+                "scope": "site",
+                "entity_id": scope.site_id,
+                "entity_name": "Canonical site",
+                "ts": NOW.isoformat(),
+                "payload": {},
+            },
+        }
+    )
     app = FastAPI()
     app.include_router(portal.router)
     app.state.portal_metadata = ReportMetadata()
+    app.state.portal_reports = service
     api = TestClient(app)
-    response = api.get(
-        "/api/demo/portal/reports/snapshot", params={"site_id": site} if site else {}
+    response = api.get("/api/demo/portal/reports/snapshot?site_id=2")
+    assert response.status_code == 200
+    assert response.json()["scope"] == {"organisation_id": "1", "site_id": "2"}
+    assert response.json()["snapshot"]["entity_name"] == "Canonical site"
+    assert len(calls) == 1
+    for method in (api.post, api.put, api.patch, api.delete):
+        assert method("/api/demo/portal/reports/snapshot").status_code == 405
+
+
+def test_reports_endpoint_maps_missing_invalid_and_storage_errors_safely():
+    from backend.app.services.portal_reports import (
+        InvalidReportSnapshot,
+        ReportSnapshotNotFound,
     )
-    assert response.status_code == 200 and response.json()["scope"] == {
-        "organisation_id": "1",
-        "site_id": site,
-    }
-    assert (
-        response.json()["payload"][0][0] == 7 and response.json()["fallback"] is False
-    )
-    assert used == [source]
-    missing = api.get("/api/demo/portal/reports/snapshot?site_id=3")
-    assert missing.status_code == 404 and "Reports unavailable" in missing.text
+
+    app = FastAPI()
+    app.include_router(portal.router)
+    app.state.portal_metadata = Metadata()
+    api = TestClient(app)
+    for error, status, expected in (
+        (ReportSnapshotNotFound(), 404, "report_snapshot_not_found"),
+        (InvalidReportSnapshot(), 502, "invalid_snapshot"),
+        (RuntimeError("password=/private/credential"), 503, "source_unavailable"),
+    ):
+        app.state.portal_reports = SimpleNamespace(
+            read_snapshot=lambda scope, error=error: (_ for _ in ()).throw(error)
+        )
+        response = api.get("/api/demo/portal/reports/snapshot")
+        assert response.status_code == status and expected in response.text
+        assert "password" not in response.text and "credential" not in response.text
 
 
 def test_retires_legacy_event_endpoint_without_fallback():
