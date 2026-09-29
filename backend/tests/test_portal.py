@@ -178,7 +178,7 @@ def test_event_paging_ties_and_count_once():
         assert "SELECT *" not in sql
 
 
-def test_event_source_semantics_and_exact_id():
+def test_event_source_semantics_and_id_prefix():
     service = EventLogs(BQ())
     clauses, params, *_ = service.specification(
         scope(None, ["device:101", "gateway:11"]),
@@ -188,9 +188,51 @@ def test_event_source_semantics_and_exact_id():
     assert "site_id = @site" not in sql
     assert "device_id IN UNNEST(@devices) OR site_id IN UNNEST(@gateways)" in sql
     assert params["devices"] == [101] and params["gateways"] == [11]
-    assert params["event_id"] == "uuid" and "event_id = @event_id" in sql
+    assert params["event_id"] == "uuid"
+    assert "STARTS_WITH(event_id, @event_id)" in sql
     assert params["event"] == 0 and params["sex"] == 1 and params["age"] == 5
     assert "race" not in sql and "track" not in sql
+
+
+@pytest.mark.parametrize("prefix", ["a", "abc", "abc123"])
+def test_event_id_prefix_is_parameterized_and_starts_with(prefix):
+    clauses, params, *_ = EventLogs(BQ()).specification(scope(), {"event_id": prefix})
+    sql = " AND ".join(clauses)
+    assert "STARTS_WITH(event_id, @event_id)" in sql
+    assert "event_id = @event_id" not in sql
+    assert params["event_id"] == prefix
+    assert "%" not in params["event_id"]
+
+
+def test_empty_event_id_adds_no_restriction():
+    clauses, params, *_ = EventLogs(BQ()).specification(scope(), {"event_id": ""})
+    sql = " AND ".join(clauses)
+    assert "STARTS_WITH" not in sql
+    assert "event_id" not in params
+
+
+def test_event_id_prefix_matches_only_ids_that_start_with_value():
+    rows = [
+        {**event(1), "event_id": "abc123"},
+        {**event(2), "event_id": "abc999"},
+        {**event(3), "event_id": "zabc123"},
+    ]
+
+    class PrefixBQ(BQ):
+        def portal_rows(self, sql, params, limit):
+            matching = [
+                row
+                for row in self.rows
+                if row["event_id"].startswith(params.get("event_id", ""))
+            ]
+            self.calls.append((sql, dict(params), limit))
+            if "COUNT(*)" in sql:
+                return [dict(total=len(matching), unique_ids=len(matching))]
+            return matching[:limit]
+
+    result = EventLogs(PrefixBQ(rows)).search(scope(), {"event_id": "abc"})
+    assert [item["event_id"] for item in result["items"]] == ["abc123", "abc999"]
+    assert result["total"] == 2
 
 
 @pytest.mark.parametrize("size", [0, 101, -1])

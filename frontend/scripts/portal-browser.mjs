@@ -415,6 +415,17 @@ try {
       await expect(page.locator("tbody")).not.toContainText("Renamed Second");
     },
   );
+  await check("Event ID sends a partial prefix to the server", async () => {
+    await page.getByLabel("Event ID", { exact: true }).fill("00000000-0000");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    const request = requests
+      .filter((value) => value.startsWith("/api/demo/portal/events"))
+      .at(-1);
+    assert.equal(
+      new URL(request, base).searchParams.get("event_id"),
+      "00000000-0000",
+    );
+  });
   await check("event outage is an error, not zero", async () => {
     h.state.fail = true;
     await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -449,8 +460,12 @@ try {
     "Reports loads canonical scope and downloads both PDF types",
     async () => {
       await page.goto(base + "/demo/example/first/reports");
-      await expect(page.getByRole("heading", { name: "Example Organisation - Renamed First" })).toBeVisible();
-      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      await expect(page.locator(".portal-reports-scope-pill", { hasText: "Renamed First" })).toBeVisible();
+      await expect(page.getByText("Current report", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Report type", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Available", { exact: true })).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "Example Organisation - Renamed First" })).toHaveCount(0);
+      await expect(page.getByRole("combobox", { name: "Period" })).toBeVisible();
       await expect(page.getByText(/Race|As of/i)).toHaveCount(0);
       for (const type of ["Site Activity", "Visitor Profile"]) {
         await page.getByRole("button", { name: new RegExp(type) }).click();
@@ -473,8 +488,8 @@ try {
         );
       }
       await page.goto(base + "/demo/example/reports");
-      await expect(page.getByRole("heading", { name: "Example Organisation", exact: true })).toBeVisible();
-      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      await expect(page.locator(".portal-reports-scope-pill", { hasText: "Example Organisation" })).toBeVisible();
+      await expect(page.getByText("Available", { exact: true })).toHaveCount(0);
       assert(
         requests.filter((r) => r.startsWith("/api/demo/portal/reports/snapshot")).at(-1).includes("effective_now=") &&
         !requests.filter((r) => r.startsWith("/api/demo/portal/reports/snapshot")).at(-1).includes("site_id="),
@@ -489,7 +504,7 @@ try {
       await expect(page.getByText("Reports temporarily unavailable", { exact: true })).toBeVisible();
       h.state.reportFail = false;
       await page.getByRole("button", { name: "Retry" }).click();
-      await expect(page.getByText("Available", { exact: true })).toBeVisible();
+      await expect(page.locator(".portal-reports-scope-pill", { hasText: "Renamed Second" })).toBeVisible();
       assert.equal(h.writeRequests.filter((request) => request.includes("/portal/reports")).length, 0);
       assert.equal(requests.filter((request) => request.includes("/api/snapshots/latest")).length, 0);
     },
@@ -499,9 +514,9 @@ try {
     await page.goto(base + "/demo/example/second/reports?panel=sites");
     await expect.poll(() => Boolean(h.state.reportRelease)).toBe(true);
     await page.getByRole("link", { name: "Renamed First", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Example Organisation - Renamed First" })).toBeVisible();
+    await expect(page.locator(".portal-reports-scope-pill", { hasText: "Renamed First" })).toBeVisible();
     h.state.reportRelease();
-    await expect(page.getByRole("heading", { name: "Example Organisation - Renamed Second" })).toHaveCount(0);
+    await expect(page.locator(".portal-reports-scope-pill", { hasText: "Renamed Second" })).toHaveCount(0);
   });
   await check(
     "Devices renders canonical cards and Demo controls never write",
@@ -607,7 +622,7 @@ try {
           animations: "disabled",
         });
         await page.goto(base + "/demo/example/first/reports");
-        await expect(page.getByText("Available", { exact: true })).toBeVisible();
+        await expect(page.locator(".portal-reports-scope-pill", { hasText: "Renamed First" })).toBeVisible();
         assert.equal(
           await page.evaluate(
             () => document.documentElement.scrollWidth > window.innerWidth + 1,

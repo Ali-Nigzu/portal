@@ -82,22 +82,10 @@ export default function ReportsPage({
       </header>
       <section
         className="portal-reports-surface"
-        aria-labelledby="report-scope-title"
+        aria-label="Report configuration"
       >
-        <div className="portal-reports-scope">
-          <div>
-            <span>Current report</span>
-            <h2 id="report-scope-title">{identity.heading}</h2>
-          </div>
-          <span
-            className={`portal-reports-availability ${snapshot && !invalid ? "is-ready" : ""}`}
-          >
-            {loading
-              ? "Checking availability"
-              : snapshot && !invalid
-                ? "Available"
-                : "Unavailable"}
-          </span>
+        <div className="portal-reports-scope-pill">
+          {identity.siteName ?? identity.organisationName}
         </div>
         {loading && (
           <div className="portal-reports-loading" aria-live="polite">
@@ -131,8 +119,10 @@ export default function ReportsPage({
         )}
         {snapshot && !invalid && (
           <>
-            <fieldset className="portal-reports-fieldset">
-              <legend>Report type</legend>
+            <fieldset
+              className="portal-reports-fieldset"
+              aria-label="Choose a report"
+            >
               <div className="portal-reports-types">
                 {templates.map((t) => (
                   <button

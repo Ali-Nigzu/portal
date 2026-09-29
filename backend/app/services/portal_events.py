@@ -74,7 +74,7 @@ class EventLogs:
         if event_id:
             if len(event_id) > 256:
                 raise ValueError("Event ID is too long")
-            clauses.append("event_id = @event_id")
+            clauses.append("STARTS_WITH(event_id, @event_id)")
             params["event_id"] = event_id
         return clauses, params, key, cutoff, continuation
 
