@@ -41,6 +41,8 @@ import {
 import { NavIcon } from "../common/components/icons";
 import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
 import MobileSidebarRow from "./MobileSidebarRow";
+import AuthenticatedVRMLayout from "./AuthenticatedVRMLayout";
+import type { AuthenticatedOrganisation } from "../features/auth/transport/organisations";
 
 type MobileSidebarOpen = null | "primary" | "site";
 const CALENDLY_SITE_SETUP_URL = "https://calendly.com/cameraoperatingsystems/camos-site-setup-appointment";
@@ -57,8 +59,11 @@ interface VRMLayoutProps {
   isAuthenticated?: boolean;
   onLogout?: () => void;
   children?: React.ReactNode;
+  authenticatedApplication?: {
+    organisations: AuthenticatedOrganisation[];
+  };
 }
-const VRMLayout: React.FC<VRMLayoutProps> = ({
+const LegacyVRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
   isAuthenticated = false,
   onLogout,
@@ -1789,4 +1794,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     </div>
   );
 };
+
+const VRMLayout: React.FC<VRMLayoutProps> = (props) => {
+  if (props.authenticatedApplication) {
+    return (
+      <AuthenticatedVRMLayout
+        organisations={props.authenticatedApplication.organisations}
+        onLogout={props.onLogout}
+      >
+        {props.children}
+      </AuthenticatedVRMLayout>
+    );
+  }
+  return <LegacyVRMLayout {...props} />;
+};
+
 export default VRMLayout;

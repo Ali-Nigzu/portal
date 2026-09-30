@@ -1,55 +1,20 @@
-import type { ReactNode } from "react";
 import { usePortal } from "../context/PortalContext";
 import VRMLayout from "./VRMLayout";
-import { PortalDashboardProvider } from "../features/organisation-dashboard/OrganisationDashboardProvider";
-import OrganisationDashboardPage from "../features/organisation-dashboard/OrganisationDashboardPage";
-import EventLogsPage from "../features/events/EventLogsPage";
-import AlarmLogsPage from "../features/alarms/AlarmLogsPage";
-import DeviceListPage from "../features/devices/DeviceListPage";
-import PortalReports from "../features/reports/PortalReports";
-
-const modules = [
-  "dashboard",
-  "event-logs",
-  "alarm-logs",
-  "device-list",
-  "reports",
-];
-// Identity and transport are supplied by the parent; this application has no Demo defaults.
-export default function PortalApplication({
-  module,
-  authenticated = false,
-  authenticatedOrganisations = [],
-  onLogout,
-  pathForOrganisation,
-  pathForSite,
-}: {
+import PortalModuleContent from "./PortalModuleContent";
+// Demo retains its own shell; authenticated routes render PortalModuleContent in the app shell.
+export default function PortalApplication({ module }: {
   module: string;
-  authenticated?: boolean;
-  authenticatedOrganisations?: {id:string;name:string;role:0|1}[];
-  onLogout?: () => void;
-  pathForOrganisation?: (organisationId: string) => string;
-  pathForSite?: (organisationId: string, siteId: string) => string;
 }) {
-  const { context, selection, key } = usePortal();
+  const { context, selection } = usePortal();
   if (!context) return null;
-  if (!selection || !modules.includes(module))
-    return (
-      <div role="alert">
-        {module === "dashboard"
-          ? "Dashboard not found."
-          : "Portal page not found."}
-      </div>
-    );
+  if (!selection) return <div role="alert">Portal page not found.</div>;
   const organisation = {
     id: encodeURIComponent(context.organisation.slug),
     label: context.organisation.name,
-    path: pathForOrganisation?.(context.organisation.id),
   };
   const sites = context.sites.map((s) => ({
     id: `${organisation.id}/${encodeURIComponent(s.slug)}`,
     label: s.name,
-    path: pathForSite?.(context.organisation.id, s.id),
   }));
   const site =
     selection.scope === "site"
@@ -58,17 +23,6 @@ export default function PortalApplication({
   const selectedKey = site
     ? `${organisation.id}/${encodeURIComponent(site.slug)}`
     : organisation.id;
-  const pages: Record<string, ReactNode> = {
-    dashboard: (
-      <PortalDashboardProvider>
-        <OrganisationDashboardPage />
-      </PortalDashboardProvider>
-    ),
-    "event-logs": <EventLogsPage />,
-    "alarm-logs": <AlarmLogsPage />,
-    "device-list": <DeviceListPage />,
-    reports: <PortalReports />,
-  };
   return (
     <VRMLayout
       dashboardNavigation={{
@@ -77,11 +31,8 @@ export default function PortalApplication({
         selectedKey,
         selectedLabel: site?.name ?? organisation.label,
       }}
-      isAuthenticated={authenticated}
-      authenticatedOrganisations={authenticatedOrganisations}
-      onLogout={onLogout}
     >
-      <div key={key}>{pages[module]}</div>
+      <PortalModuleContent module={module} />
     </VRMLayout>
   );
 }

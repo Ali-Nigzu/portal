@@ -1,34 +1,26 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import PortalApplication from "../../components/PortalApplication";
+import PortalModuleContent from "../../components/PortalModuleContent";
 import { PortalProvider } from "../../context/PortalContext";
 import { authenticatedPortalSource } from "./authenticatedPortalSource";
+import { isPortalModule } from "./authenticatedPortalRoutes";
+import { recordRecentPortalLocation } from "./recentPortalDestinations";
 
-export type AuthenticatedOrganisation = { id: string; name: string; role: 0 | 1 };
-
-export default function AuthenticatedOrganisationPortalRoute({
-  organisations,
-  onLogout,
-}: {
-  organisations: AuthenticatedOrganisation[];
-  onLogout: () => void;
-}) {
+export default function AuthenticatedOrganisationPortalRoute() {
   const { organisationId, siteId, module = "dashboard" } = useParams();
   const source = useMemo(
     () => authenticatedPortalSource(organisationId ?? ""),
     [organisationId],
   );
+  useEffect(() => {
+    if (organisationId && isPortalModule(module)) {
+      recordRecentPortalLocation({ organisationId, siteId, module });
+    }
+  }, [organisationId, siteId, module]);
   if (!organisationId) return <div role="alert">Organisation unavailable.</div>;
   return (
     <PortalProvider source={source} organisationId={organisationId} siteId={siteId}>
-      <PortalApplication
-        module={module}
-        authenticated
-        authenticatedOrganisations={organisations}
-        onLogout={onLogout}
-        pathForOrganisation={(id) => `/sites/organisations/${encodeURIComponent(id)}`}
-        pathForSite={(organisation, site) => `/sites/organisations/${encodeURIComponent(organisation)}/sites/${encodeURIComponent(site)}`}
-      />
+      <PortalModuleContent module={module} />
     </PortalProvider>
   );
 }

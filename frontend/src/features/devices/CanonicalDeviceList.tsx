@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { usePortal } from "../../context/PortalContext";
 import { useCanonicalDeviceList, type DeviceView } from "./hooks/useCanonicalDeviceList";
 import "./DeviceListPage.css";
+import { parseAuthenticatedPortalPath, replaceModule } from "../organisation-dashboard/authenticatedPortalRoutes";
 
 function SourceCard({ item, refresh, setEnabled, controlMode }: {
   item: DeviceView;
@@ -15,7 +16,10 @@ function SourceCard({ item, refresh, setEnabled, controlMode }: {
   const action = controlMode === "simulated"
     ? (item.displayed_enabled ? "Disconnect" : "Connect")
     : (item.displayed_enabled ? "Disable" : "Enable");
-  const eventPath = location.pathname.replace(/\/device-list$/, "/event-logs");
+  const portalLocation = parseAuthenticatedPortalPath(location.pathname);
+  const eventPath = portalLocation
+    ? replaceModule(portalLocation, "event-logs")
+    : location.pathname.replace(/\/device-list$/, "/event-logs");
   return (
     <article className="device-runtime-card" aria-busy={item.pending}>
       <div className="device-runtime-card-top">

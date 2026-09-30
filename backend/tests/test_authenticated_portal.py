@@ -16,7 +16,9 @@ class Repository:
         return None
 
     def organisations(self, user_id):
-        return [{"id": "1", "name": "Demo", "role": 0}] if self.organisation_enabled else []
+        return [{"id": "1", "name": "Demo", "role": 0, "sites": [
+            {"id": "11", "name": "Alis Barber"}
+        ]}] if self.organisation_enabled else []
 
     def enabled_membership(self, user_id, organisation_id):
         if user_id == 0 and organisation_id == 1 and self.organisation_enabled:
@@ -86,7 +88,9 @@ def client(monkeypatch):
 def test_enabled_organisations_and_live_membership_disable(monkeypatch):
     api, repo, _ = client(monkeypatch)
     assert api.get("/api/portal/organisations").json() == {
-        "organisations": [{"id": "1", "name": "Demo", "role": 0}]
+        "organisations": [{"id": "1", "name": "Demo", "role": 0, "sites": [
+            {"id": "11", "name": "Alis Barber"}
+        ]}]
     }
     assert api.get("/api/portal/organisations/1/context").status_code == 200
     repo.organisation_enabled = False

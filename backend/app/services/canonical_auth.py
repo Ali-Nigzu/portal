@@ -68,16 +68,25 @@ class CanonicalAuthRepository:
             cursor = connection.cursor()
             try:
                 cursor.execute(
-                    "SELECT o.id, o.name, m.role FROM public.memberships m "
+                    "SELECT o.id, o.name, m.role, s.id, s.name FROM public.memberships m "
                     "JOIN public.organisations o ON o.id = m.organisation_id "
+                    "LEFT JOIN public.sites s ON s.organisation_id = o.id "
                     "WHERE m.user_id = %s AND m.status = 1 AND o.enabled = TRUE "
-                    "ORDER BY o.id",
+                    "ORDER BY o.id, s.id",
                     (user_id,),
                 )
                 rows = cursor.fetchall()
             finally:
                 cursor.close()
-        return [dict(id=str(row[0]), name=row[1], role=int(row[2])) for row in rows]
+        organisations = {}
+        for organisation_id, name, role, site_id, site_name in rows:
+            organisation = organisations.setdefault(
+                organisation_id,
+                dict(id=str(organisation_id), name=name, role=int(role), sites=[]),
+            )
+            if site_id is not None:
+                organisation["sites"].append(dict(id=str(site_id), name=site_name))
+        return list(organisations.values())
 
     def enabled_membership(self, user_id: int, organisation_id: int) -> Membership | None:
         with self.database.connection() as connection:

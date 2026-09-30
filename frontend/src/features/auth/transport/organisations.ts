@@ -1,4 +1,10 @@
-export type AuthenticatedOrganisation = { id: string; name: string; role: 0 | 1 };
+export type AuthenticatedSite = { id: string; name: string };
+export type AuthenticatedOrganisation = {
+  id: string;
+  name: string;
+  role: 0 | 1;
+  sites: AuthenticatedSite[];
+};
 
 export async function fetchOrganisations(): Promise<AuthenticatedOrganisation[]> {
   const response = await fetch("/api/portal/organisations", { credentials: "include", cache: "no-store" });

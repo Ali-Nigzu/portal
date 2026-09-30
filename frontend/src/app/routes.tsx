@@ -15,7 +15,10 @@ import {
 import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
 import { getViewTokenFromLocation } from "../lib/viewToken";
 import { fetchMe } from "../features/auth/transport/me";
+import type { AuthUser } from "../features/auth/transport/me";
 import { fetchOrganisations, type AuthenticatedOrganisation } from "../features/auth/transport/organisations";
+import { AuthenticatedApplicationProvider } from "../context/AuthenticatedApplicationContext";
+import AuthenticatedAppShell from "../components/AuthenticatedAppShell";
 import { Credentials } from "../types/credentials";
 import { loadEmptyWidgetResult } from "../features/dashboard/transport/loadEmptyWidgetResult";
 import type { DashboardDataMode } from "../features/dashboard/transport/loadWidgetResult";
@@ -45,6 +48,7 @@ const SubProcessorRegisterPage = React.lazy(() => import("../pages/SubProcessorR
 
 const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(null);
   const [credentials, setCredentials] = useState<Credentials>({
     username: "",
     password: "",
@@ -66,15 +70,19 @@ const AppRoutes: React.FC = () => {
     const checkSession = async () => {
       try {
         const me = await fetchMe();
-        setIsLoggedIn(me.ok);
         if (me.ok) {
+          setAuthenticatedUser(me.data.user);
           clearDemoSessionLocal();
           setOrganisations(await fetchOrganisations().catch(() => []));
+          setIsLoggedIn(true);
         } else {
+          setIsLoggedIn(false);
+          setAuthenticatedUser(null);
           setOrganisations([]);
         }
       } catch {
         setIsLoggedIn(false);
+        setAuthenticatedUser(null);
       } finally {
         setIsSessionChecked(true);
       }
@@ -83,17 +91,22 @@ const AppRoutes: React.FC = () => {
     checkSession();
   }, [hasViewToken]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     clearDemoSessionLocal();
-    setIsLoggedIn(true);
+    const me = await fetchMe();
+    if (!me.ok) return;
+    const nextOrganisations = await fetchOrganisations().catch(() => []);
+    setAuthenticatedUser(me.data.user);
+    setOrganisations(nextOrganisations);
     setCredentials({ username: "", password: "" });
     setUserRole("client");
-    fetchOrganisations().then(setOrganisations).catch(() => setOrganisations([]));
+    setIsLoggedIn(true);
   };
 
   const handleLogout = () => {
     clearDemoSessionLocal();
     setIsLoggedIn(false);
+    setAuthenticatedUser(null);
     setCredentials({ username: "", password: "" });
     setUserRole("client");
     setOrganisations([]);
@@ -203,6 +216,18 @@ const AppRoutes: React.FC = () => {
   const lazyRoute = (element: React.ReactNode) => (
     <Suspense fallback={null}>{element}</Suspense>
   );
+  const refreshOrganisations = async () => {
+    setOrganisations(await fetchOrganisations());
+  };
+  const authenticatedShell = authenticatedUser ? (
+    <AuthenticatedApplicationProvider
+      user={authenticatedUser}
+      organisations={organisations}
+      refreshOrganisations={refreshOrganisations}
+    >
+      <AuthenticatedAppShell onLogout={handleLogout} />
+    </AuthenticatedApplicationProvider>
+  ) : <Navigate to="/login" replace />;
 
   return (
     <Routes>
@@ -355,97 +380,34 @@ const AppRoutes: React.FC = () => {
             path="/sites"
             element={isAuthenticatedMode ? <Navigate to="/home" replace /> : <SitesSelectorRedirect />}
           />
-          <Route
-            path="/home"
-            element={
-              isAuthenticatedMode ? (
-                renderClientRoute(lazyRoute(<HomePage />))
-              ) : (
-                <Navigate
-                  to={appendViewToken(
-                    demoAwareSitePath(resolveLegacySiteId()),
-                  )}
-                  replace
-                />
-              )
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              isAuthenticatedMode ? (
-                <Navigate to="/settings/account" replace />
-              ) : (
-                <Navigate
-                  to={appendViewToken(
-                    demoAwareSitePath(resolveLegacySiteId()),
-                  )}
-                  replace
-                />
-              )
-            }
-          />
-          <Route
-            path="/settings/account"
-            element={
-              isAuthenticatedMode ? (
-                renderClientRoute(lazyRoute(<MyAccountPage />))
-              ) : (
-                <Navigate
-                  to={appendViewToken(
-                    demoAwareSitePath(resolveLegacySiteId()),
-                  )}
-                  replace
-                />
-              )
-            }
-          />
-          <Route
-            path="/settings/access"
-            element={
-              isAuthenticatedMode ? (
-                renderClientRoute(lazyRoute(<ManageAccessPage />))
-              ) : (
-                <Navigate
-                  to={appendViewToken(
-                    demoAwareSitePath(resolveLegacySiteId()),
-                  )}
-                  replace
-                />
-              )
-            }
-          />
-          <Route
-            path="/settings/alarms"
-            element={<Navigate to="/settings/account" replace />}
-          />
-          <Route
-            path="/documents"
-            element={
-              isAuthenticatedMode ? (
-                renderClientRoute(lazyRoute(<DocumentsPage />))
-              ) : (
-                <Navigate
-                  to={appendViewToken(
-                    demoAwareSitePath(resolveLegacySiteId()),
-                  )}
-                  replace
-                />
-              )
-            }
-          />
-          <Route
-            path="/sites/organisations/:organisationId/:module"
-            element={isAuthenticatedMode ? lazyRoute(
-              <AuthenticatedOrganisationPortalRoute organisations={organisations} onLogout={handleLogout} />
-            ) : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/sites/organisations/:organisationId/sites/:siteId/:module"
-            element={isAuthenticatedMode ? lazyRoute(
-              <AuthenticatedOrganisationPortalRoute organisations={organisations} onLogout={handleLogout} />
-            ) : <Navigate to="/login" replace />}
-          />
+          {isAuthenticatedMode && (
+            <Route element={authenticatedShell}>
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/settings" element={<Navigate to="/settings/account" replace />} />
+              <Route path="/settings/account" element={<MyAccountPage />} />
+              <Route path="/settings/access" element={<ManageAccessPage />} />
+              <Route path="/settings/alarms" element={<Navigate to="/settings/account" replace />} />
+              <Route
+                path="/sites/organisations/:organisationId/:module"
+                element={<AuthenticatedOrganisationPortalRoute />}
+              />
+              <Route
+                path="/sites/organisations/:organisationId/sites/:siteId/:module"
+                element={<AuthenticatedOrganisationPortalRoute />}
+              />
+            </Route>
+          )}
+          {!isAuthenticatedMode && (
+            <>
+              <Route path="/home" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
+              <Route path="/settings" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
+              <Route path="/settings/account" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
+              <Route path="/settings/access" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
+              <Route path="/settings/alarms" element={<Navigate to="/settings/account" replace />} />
+              <Route path="/documents" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
+            </>
+          )}
           <Route
             path="/sites/:siteId"
             element={renderClientRoute(

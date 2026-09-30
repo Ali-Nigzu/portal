@@ -109,6 +109,34 @@
   pointer-events: auto;
 }
 
+.vrm-organisation-navigation-title,
+.vrm-organisation-navigation-section {
+  color: var(--vrm-text-primary);
+  padding: 0 var(--vrm-nav-row-padding-x);
+}
+
+.vrm-sidebar-mobile-open-button {
+  border: 0;
+  background: transparent;
+  color: var(--vrm-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.vrm-organisation-navigation-title {
+  font-size: 15px;
+}
+
+.vrm-organisation-navigation-section {
+  display: block;
+  margin: 10px 0 4px;
+  color: var(--vrm-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 
 .vrm-nav-row {
   display: flex;

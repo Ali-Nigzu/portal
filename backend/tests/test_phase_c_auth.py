@@ -82,7 +82,7 @@ def test_organisation_catalog_and_membership_require_enabled_organisation():
     class Cursor:
         def __init__(self): self.calls = []
         def execute(self, sql, params): self.calls.append((sql, params))
-        def fetchall(self): return [(1, "Demo", 0)]
+        def fetchall(self): return [(1, "Demo", 0, 11, "Alis Barber")]
         def fetchone(self): return (1, 0)
         def close(self): pass
     class DB:
@@ -91,7 +91,11 @@ def test_organisation_catalog_and_membership_require_enabled_organisation():
         def connection(self): yield SimpleNamespace(cursor=lambda: self.cursor_value)
     database = DB()
     repository = CanonicalAuthRepository(database)
-    assert repository.organisations(0) == [{"id": "1", "name": "Demo", "role": 0}]
+    assert repository.organisations(0) == [{
+        "id": "1", "name": "Demo", "role": 0,
+        "sites": [{"id": "11", "name": "Alis Barber"}],
+    }]
     assert repository.enabled_membership(0, 1) == Membership(1, 0)
-    for sql, _ in database.cursor_value.calls:
+    membership_queries = [sql for sql, _ in database.cursor_value.calls if "public.memberships" in sql]
+    for sql in membership_queries:
         assert "m.status = 1" in sql and "o.enabled = TRUE" in sql

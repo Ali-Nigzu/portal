@@ -10,7 +10,7 @@ import { passwordResetStart } from "./transport/passwordResetStart";
 import "./LoginPage.css";
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: () => void | Promise<void>;
 }
 
 type LoginStep = "email" | "password";
