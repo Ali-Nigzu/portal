@@ -36,6 +36,11 @@ class EmailLoginRequest(BaseModel):
     password: str
 
 
+class IdentifierLoginRequest(BaseModel):
+    identifier: str
+    password: str
+
+
 class AuthUserResponse(BaseModel):
     user: AuthUser
 

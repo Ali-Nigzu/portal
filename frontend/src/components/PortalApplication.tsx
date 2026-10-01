@@ -1,32 +1,13 @@
-import type { ReactNode } from "react";
 import { usePortal } from "../context/PortalContext";
 import VRMLayout from "./VRMLayout";
-import { PortalDashboardProvider } from "../features/organisation-dashboard/OrganisationDashboardProvider";
-import OrganisationDashboardPage from "../features/organisation-dashboard/OrganisationDashboardPage";
-import EventLogsPage from "../features/events/EventLogsPage";
-import AlarmLogsPage from "../features/alarms/AlarmLogsPage";
-import DeviceListPage from "../features/devices/DeviceListPage";
-import PortalReports from "../features/reports/PortalReports";
-
-const modules = [
-  "dashboard",
-  "event-logs",
-  "alarm-logs",
-  "device-list",
-  "reports",
-];
-// Identity and transport are supplied by the parent; this application has no Demo defaults.
-export default function PortalApplication({ module }: { module: string }) {
-  const { context, selection, key } = usePortal();
+import PortalModuleContent from "./PortalModuleContent";
+// Demo retains its own shell; authenticated routes render PortalModuleContent in the app shell.
+export default function PortalApplication({ module }: {
+  module: string;
+}) {
+  const { context, selection } = usePortal();
   if (!context) return null;
-  if (!selection || !modules.includes(module))
-    return (
-      <div role="alert">
-        {module === "dashboard"
-          ? "Dashboard not found."
-          : "Portal page not found."}
-      </div>
-    );
+  if (!selection) return <div role="alert">Portal page not found.</div>;
   const organisation = {
     id: encodeURIComponent(context.organisation.slug),
     label: context.organisation.name,
@@ -42,17 +23,6 @@ export default function PortalApplication({ module }: { module: string }) {
   const selectedKey = site
     ? `${organisation.id}/${encodeURIComponent(site.slug)}`
     : organisation.id;
-  const pages: Record<string, ReactNode> = {
-    dashboard: (
-      <PortalDashboardProvider>
-        <OrganisationDashboardPage />
-      </PortalDashboardProvider>
-    ),
-    "event-logs": <EventLogsPage />,
-    "alarm-logs": <AlarmLogsPage />,
-    "device-list": <DeviceListPage />,
-    reports: <PortalReports />,
-  };
   return (
     <VRMLayout
       dashboardNavigation={{
@@ -62,7 +32,7 @@ export default function PortalApplication({ module }: { module: string }) {
         selectedLabel: site?.name ?? organisation.label,
       }}
     >
-      <div key={key}>{pages[module]}</div>
+      <PortalModuleContent module={module} />
     </VRMLayout>
   );
 }

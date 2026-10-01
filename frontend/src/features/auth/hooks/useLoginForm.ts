@@ -12,7 +12,7 @@ type UseLoginFormResult = {
 };
 
 export const useLoginForm = (
-  onLogin: () => void,
+  onLogin: () => void | Promise<void>,
 ): UseLoginFormResult => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,9 +28,9 @@ export const useLoginForm = (
       try {
         const result = await login(email, password);
         if (result.ok) {
-          onLogin();
+          await onLogin();
         } else if (result.status === 401) {
-          setError("Invalid email or password");
+          setError("Invalid email or username or password");
         } else {
           setError("Unable to complete request. Please try again.");
         }

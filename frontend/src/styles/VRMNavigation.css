@@ -109,6 +109,22 @@
   pointer-events: auto;
 }
 
+.vrm-organisation-navigation-title {
+  color: var(--vrm-text-primary);
+  padding: 0 var(--vrm-nav-row-padding-x);
+}
+
+.vrm-sidebar-mobile-open-button {
+  border: 0;
+  background: transparent;
+  color: var(--vrm-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.vrm-organisation-navigation-title {
+  font-size: 15px;
+}
 
 .vrm-nav-row {
   display: flex;
@@ -142,6 +158,11 @@ button.vrm-nav-row {
 }
 
 .vrm-nav-row--interactive:hover {
+  background-color: var(--vrm-nav-row-hover-bg);
+  color: var(--vrm-text-primary);
+}
+
+.vrm-nav-row--interactive[aria-expanded="true"]:not(.vrm-nav-row--active) {
   background-color: var(--vrm-nav-row-hover-bg);
   color: var(--vrm-text-primary);
 }

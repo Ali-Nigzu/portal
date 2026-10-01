@@ -1,61 +1,43 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Activity, Building2, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../analytics/components/Card/Card";
-import { fetchMe } from "../auth/transport/me";
+import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
+import { organisationPortalPath, sitePortalPath } from "../organisation-dashboard/authenticatedPortalRoutes";
+import { readRecentPortalDestinations } from "../organisation-dashboard/recentPortalDestinations";
 import "../dashboard/styles/DashboardPage.css";
 import "./HomePage.css";
 
-const ALL_SITES_LABEL = "All Sites";
-
 const HomePage: React.FC = () => {
-  const [userName, setUserName] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, organisations } = useAuthenticatedApplication();
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const me = await fetchMe();
-        if (me.ok) {
-          setUserName(me.data.user.name);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadUser();
-  }, []);
-
-  const navigateToAllSitesContext = () => {
-    navigate("/sites/all/dashboard?site_menu_expand_once=1");
-    setSearchValue(ALL_SITES_LABEL);
+  const navigateTo = (path: string, label?: string) => {
+    navigate(path);
+    if (label) setSearchValue(label);
     setIsSearchFocused(false);
   };
 
-  const showAllSitesSuggestion = useMemo(() => {
-    if (!isSearchFocused) {
-      return false;
-    }
+  const searchResults = useMemo(() => {
+    if (!isSearchFocused) return [];
     const normalizedInput = searchValue.trim().toLowerCase();
-    if (!normalizedInput) {
-      return true;
-    }
-    return ALL_SITES_LABEL.toLowerCase().startsWith(normalizedInput);
-  }, [isSearchFocused, searchValue]);
-
-  if (isLoading) {
-    return null;
-  }
+    return organisations.flatMap((organisation) => [
+      { label: organisation.name, path: organisationPortalPath(organisation.id, "dashboard") },
+      ...organisation.sites.map((site) => ({
+        label: `${site.name} · ${organisation.name}`,
+        path: sitePortalPath(organisation.id, site.id, "dashboard"),
+      })),
+    ]).filter((result) => !normalizedInput || result.label.toLowerCase().includes(normalizedInput)).slice(0, 8);
+  }, [isSearchFocused, organisations, searchValue]);
+  const recent = useMemo(() => readRecentPortalDestinations(organisations), [organisations]);
 
   return (
     <div className="dashboard-v2 home-page">
       <div className="dashboard-v2__content home-page__content">
         <header className="dashboard-v2__header home-page__header">
-          <h1 className="home-page__title">Welcome {userName}</h1>
+          <h1 className="home-page__title">Welcome {user.name}</h1>
           <div
             className="home-page__search-wrap"
             onBlur={(event) => {
@@ -78,26 +60,27 @@ const HomePage: React.FC = () => {
                 onChange={(event) => setSearchValue(event.target.value)}
               />
             </label>
-            {showAllSitesSuggestion && (
+            {searchResults.length > 0 && (
               <div className="home-page__search-suggestions" role="listbox" aria-label="Search suggestions">
-                <button
+                {searchResults.map((result) => <button
+                  key={result.path}
                   type="button"
                   className="home-page__search-suggestion"
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={navigateToAllSitesContext}
+                  onClick={() => navigateTo(result.path, result.label)}
                 >
-                  {ALL_SITES_LABEL}
-                </button>
+                  {result.label}
+                </button>)}
               </div>
             )}
           </div>
         </header>
 
         <section className="home-page__layout" aria-label="Home modules">
-          <button
+          {organisations.length === 1 ? <button
             type="button"
             className="home-page__card-button home-page__card-button--fleet"
-            onClick={() => navigate("/sites/all/alarm-logs?panel=sites&expand_once=1")}
+            onClick={() => navigate(organisationPortalPath(organisations[0].id, "alarm-logs"))}
             aria-label="Open Monitor Fleet"
           >
             <Card
@@ -105,30 +88,34 @@ const HomePage: React.FC = () => {
               className="home-page__card home-page__card--interactive home-page__card--compact"
             >
               <div className="home-page__card-body home-page__card-body--icon">
-                <span className="home-page__footer-icon" aria-hidden="true">
-                  <Activity size={22} />
-                </span>
+                <span className="home-page__footer-icon" aria-hidden="true"><Activity size={22} /></span>
               </div>
             </Card>
-          </button>
+          </button> : <div className="home-page__panel home-page__card-button--fleet">
+            <Card title="Monitor Fleet" className="home-page__card home-page__card--interactive home-page__card--compact">
+              <div className="home-page__card-body home-page__card-body--links">
+                {organisations.map((organisation) => <button key={organisation.id} className="home-page__list-row" onClick={() => navigate(organisationPortalPath(organisation.id, "alarm-logs"))}>
+                  <span>{organisation.name}</span><Activity size={18} aria-hidden="true" />
+                </button>)}
+              </div>
+            </Card>
+          </div>}
 
-          <button
-            type="button"
-            className="home-page__card-button home-page__card-button--sites"
-            onClick={() => navigate("/sites/all/dashboard?panel=sites&expand_once=1")}
-            aria-label="Open My Sites"
-          >
+          <div className="home-page__panel home-page__card-button--sites">
             <Card
               title="My Sites"
               className="home-page__card home-page__card--interactive home-page__card--compact"
             >
-              <div className="home-page__card-body home-page__card-body--icon">
-                <span className="home-page__footer-icon" aria-hidden="true">
-                  <Building2 size={22} />
-                </span>
+              <div className="home-page__card-body home-page__card-body--links">
+                {organisations.map((organisation) => <div className="home-page__organisation-group" key={organisation.id}>
+                  <strong><Building2 size={15} aria-hidden="true" /> {organisation.name}</strong>
+                  {organisation.sites.map((site) => <button key={site.id} className="home-page__list-row" onClick={() => navigate(sitePortalPath(organisation.id, site.id, "dashboard"))}>
+                    <span>{site.name}</span><ChevronRight size={18} aria-hidden="true" />
+                  </button>)}
+                </div>)}
               </div>
             </Card>
-          </button>
+          </div>
 
           <div className="home-page__panel home-page__panel--news">
             <Card title="Product News" className="home-page__card home-page__card--news">
@@ -150,14 +137,15 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--recent">
             <Card title="Recently Viewed" className="home-page__card home-page__card--recent">
               <div className="home-page__card-body home-page__card-body--recent">
-                <button
+                {recent.length ? recent.map((destination) => <button
+                  key={`${destination.organisationId}:${destination.siteId ?? "all"}:${destination.module}`}
                   type="button"
                   className="home-page__list-row"
-                  onClick={navigateToAllSitesContext}
+                  onClick={() => navigate(destination.path)}
                 >
-                  <span>{ALL_SITES_LABEL}</span>
+                  <span>{destination.label}</span>
                   <ChevronRight size={18} aria-hidden="true" />
-                </button>
+                </button>) : <p>No recently viewed organisation pages.</p>}
               </div>
             </Card>
           </div>

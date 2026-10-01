@@ -41,6 +41,8 @@ import {
 import { NavIcon } from "../common/components/icons";
 import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
 import MobileSidebarRow from "./MobileSidebarRow";
+import AuthenticatedVRMLayout from "./AuthenticatedVRMLayout";
+import type { AuthenticatedOrganisation } from "../features/auth/transport/organisations";
 
 type MobileSidebarOpen = null | "primary" | "site";
 const CALENDLY_SITE_SETUP_URL = "https://calendly.com/cameraoperatingsystems/camos-site-setup-appointment";
@@ -51,18 +53,23 @@ type MobileDrawer =
   | { kind: "site-selector" }
   | { kind: "site-menu"; siteId: string };
 interface VRMLayoutProps {
-  dashboardNavigation?: {organisation: {id:string;label:string}; sites: {id:string;label:string}[]; selectedKey:string; selectedLabel:string};
+  dashboardNavigation?: {organisation: {id:string;label:string;path?:string}; sites: {id:string;label:string;path?:string}[]; selectedKey:string; selectedLabel:string};
+  authenticatedOrganisations?: {id:string;name:string;role:0|1}[];
   userRole?: "client" | "admin";
   isAuthenticated?: boolean;
   onLogout?: () => void;
   children?: React.ReactNode;
+  authenticatedApplication?: {
+    organisations: AuthenticatedOrganisation[];
+  };
 }
-const VRMLayout: React.FC<VRMLayoutProps> = ({
+const LegacyVRMLayout: React.FC<VRMLayoutProps> = ({
   userRole = "client",
   isAuthenticated = false,
   onLogout,
   children,
   dashboardNavigation,
+  authenticatedOrganisations = [],
 }) => {
   // Sidebar state and refs
   const [isPrimaryFocused, setIsPrimaryFocused] = useState(false);
@@ -114,9 +121,14 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
   const isForceExpandIntent = searchParams.get("expand_once") === "1";
   const isSiteMenuForceExpandIntent =
     searchParams.get("site_menu_expand_once") === "1";
-  const activeSite = dashboardNavigation ? {id:siteId ?? "",label:dashboardNavigation.selectedLabel} : findSiteById(siteId);
-  const isDemoSession = isDemoSessionActive();
   const siteRoutePrefix = location.pathname.startsWith("/demo/") ? "/demo" : "/sites";
+  const activeSite = dashboardNavigation ? {id:siteId ?? "",label:dashboardNavigation.selectedLabel} : findSiteById(siteId);
+  const activeScopePath = dashboardNavigation
+    ? (dashboardNavigation.sites.find((site) => site.id === dashboardNavigation.selectedKey)?.path
+      ?? dashboardNavigation.organisation.path
+      ?? `${location.pathname.replace(/\/(dashboard|event-logs|alarm-logs|device-list|reports)$/, "")}`)
+    : (siteId ? `${siteRoutePrefix}/${siteId}` : undefined);
+  const isDemoSession = isDemoSessionActive();
   const allSitesOption = dashboardNavigation?.organisation ??
     SITE_OPTIONS.find((site) => site.id === "all") ?? SITE_OPTIONS[0];
   const selectorSiteOptions = dashboardNavigation?.sites ?? (isAuthenticated
@@ -343,18 +355,27 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         icon: <NavIcon icon={Home} />,
         disabled: isDemoSession,
       },
-      {
-        path: `${siteRoutePrefix}`,
-        label: "Sites",
-        icon: <NavIcon icon={MapPin} />,
-      },
+      ...(isAuthenticated
+        ? authenticatedOrganisations.map((organisation) => ({
+            path: `/sites/organisations/${encodeURIComponent(organisation.id)}`,
+            targetPath: `/sites/organisations/${encodeURIComponent(organisation.id)}/dashboard`,
+            label: organisation.name,
+            icon: <NavIcon icon={MapPin} />,
+            disabled: false,
+          }))
+        : [{
+            path: `${siteRoutePrefix}`,
+            label: "Sites",
+            icon: <NavIcon icon={MapPin} />,
+            disabled: false,
+          }]),
     ],
-    [isDemoSession, siteRoutePrefix],
+    [authenticatedOrganisations, isAuthenticated, isDemoSession, siteRoutePrefix],
   );
   const clientNavigationItems = useMemo(
     () => [
       {
-        path: siteId ? `${siteRoutePrefix}/${siteId}/dashboard` : undefined,
+        path: activeScopePath ? `${activeScopePath}/dashboard` : undefined,
         label: "Dashboard",
         icon: <NavIcon icon={LayoutDashboard} />,
       },
@@ -373,27 +394,27 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
         statusLabel: "Coming Soon",
       },
       {
-        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/event-logs` : undefined,
+        path: activeScopePath ? `${activeScopePath}/event-logs` : undefined,
         label: "Event Logs",
         icon: <NavIcon icon={ClipboardList} />,
       },
       {
-        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/alarm-logs` : undefined,
+        path: activeScopePath ? `${activeScopePath}/alarm-logs` : undefined,
         label: "Alarm Logs",
         icon: <NavIcon icon={Bell} />,
       },
       {
-        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/device-list` : undefined,
+        path: activeScopePath ? `${activeScopePath}/device-list` : undefined,
         label: "Device List",
         icon: <NavIcon icon={Cpu} />,
       },
       {
-        path: legacySiteId ? `${siteRoutePrefix}/${legacySiteId}/reports` : undefined,
+        path: activeScopePath ? `${activeScopePath}/reports` : undefined,
         label: "Reports",
         icon: <NavIcon icon={FileBarChart2} />,
       },
     ],
-    [siteId, legacySiteId, siteRoutePrefix],
+    [activeScopePath],
   );
   const adminNavigationItems = useMemo(
     () => [
@@ -1113,7 +1134,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           ? (event) =>
                               handleMobileActionRowClick(
                                 event,
-                                getNavigationPath(item.path),
+                                getNavigationPath(item.targetPath ?? item.path),
                                 "primary",
                                 isActive,
                               )
@@ -1129,7 +1150,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   to={
                     item.disabled || !item.path || item.path === siteRoutePrefix
                       ? undefined
-                      : getNavigationPath(item.path)
+                      : getNavigationPath(item.targetPath ?? item.path)
                   }
                   replace={Boolean(item.path) && isDemoSession}
                   onClick={
@@ -1141,7 +1162,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           ? (event) =>
                               handleMobileActionRowClick(
                                 event,
-                                getNavigationPath(item.path),
+                                getNavigationPath(item.targetPath ?? item.path),
                                 "primary",
                                 isActive,
                               )
@@ -1169,7 +1190,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                           ? (event) =>
                               handleMobileActionRowClick(
                                 event,
-                                getNavigationPath(item.path),
+                                getNavigationPath(item.targetPath ?? item.path),
                                 "primary",
                                 isActive,
                               )
@@ -1466,7 +1487,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     );
                     handleMobileActionRowClick(
                       event,
-                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/${selectedModule}`, {
+                      getNavigationPath(`${allSitesOption.path ?? `${siteRoutePrefix}/${allSitesOption.id}`}/${selectedModule}`, {
                         panel: undefined,
                       }),
                       "site",
@@ -1478,7 +1499,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
               ) : (
               <SecondaryPinnedRow
                 to={getNavigationPath(
-                  `${siteRoutePrefix}/${allSitesOption.id}/${selectedModule}`,
+                  `${allSitesOption.path ?? `${siteRoutePrefix}/${allSitesOption.id}`}/${selectedModule}`,
                   { panel: undefined },
                 )}
                 replace={isDemoSession}
@@ -1494,7 +1515,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                     );
                     handleMobileActionRowClick(
                       event,
-                      getNavigationPath(`${siteRoutePrefix}/${allSitesOption.id}/${selectedModule}`, {
+                      getNavigationPath(`${allSitesOption.path ?? `${siteRoutePrefix}/${allSitesOption.id}`}/${selectedModule}`, {
                         panel: undefined,
                       }),
                       "site",
@@ -1555,7 +1576,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
                   }
                   return trailing;
                 })();
-                const siteTargetPath = `${siteRoutePrefix}/${site.id}${siteSubPath}`;
+                const siteTargetPath = `${site.path ?? `${siteRoutePrefix}/${site.id}`}${siteSubPath}`;
                 const isActive =
                   isSiteSelection && site.id === selectedSiteForList;
                 return (
@@ -1773,4 +1794,19 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     </div>
   );
 };
+
+const VRMLayout: React.FC<VRMLayoutProps> = (props) => {
+  if (props.authenticatedApplication) {
+    return (
+      <AuthenticatedVRMLayout
+        organisations={props.authenticatedApplication.organisations}
+        onLogout={props.onLogout}
+      >
+        {props.children}
+      </AuthenticatedVRMLayout>
+    );
+  }
+  return <LegacyVRMLayout {...props} />;
+};
+
 export default VRMLayout;

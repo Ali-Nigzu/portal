@@ -59,11 +59,15 @@ export function PortalProvider({
   source,
   organisationSlug,
   siteSlug,
+  organisationId,
+  siteId,
   children,
 }: {
   source: PortalSource;
   organisationSlug?: string;
   siteSlug?: string;
+  organisationId?: string;
+  siteId?: string;
   children: ReactNode;
 }) {
   const [result, setResult] = useState<{
@@ -100,8 +104,18 @@ export function PortalProvider({
   const context = result?.source === source ? result.context : undefined;
   const selection = useMemo(
     () =>
-      context ? resolveSelection(context, organisationSlug, siteSlug) : null,
-    [context, organisationSlug, siteSlug],
+      context
+        ? organisationId !== undefined
+          ? context.organisation.id === organisationId
+            ? siteId === undefined
+              ? { scope: "organisation" as const, id: organisationId }
+              : context.sites.some((site) => site.id === siteId)
+                ? { scope: "site" as const, id: siteId }
+                : null
+            : null
+          : resolveSelection(context, organisationSlug, siteSlug)
+        : null,
+    [context, organisationSlug, siteSlug, organisationId, siteId],
   );
   const key =
     context && selection

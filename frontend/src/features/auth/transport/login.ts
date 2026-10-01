@@ -14,7 +14,7 @@ type LoginResult =
   | { ok: false; status: number };
 
 export const login = async (
-  email: string,
+  identifier: string,
   password: string,
 ): Promise<LoginResult> => {
   const response = await fetch("/api/login", {
@@ -23,7 +23,7 @@ export const login = async (
       "Content-Type": "application/json",
     },
     credentials: "include",
-    body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+    body: JSON.stringify({ identifier: identifier.trim(), password }),
   });
 
   if (!response.ok) {
