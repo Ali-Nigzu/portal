@@ -37,9 +37,9 @@ class Database:
         self.closed += 1
 
 
-def scope(site=None):
+def scope(site=None, cutoff=NOW):
     return SimpleNamespace(
-        identity=SimpleNamespace(organisation_id=27, cutoff=NOW),
+        identity=SimpleNamespace(organisation_id=27, cutoff=cutoff),
         site_id=site,
         dto={"organisation_id": "27", "site_id": site},
     )
@@ -49,12 +49,13 @@ def row(entity=27, name="Customer", ts=NOW, payload=None):
     return (entity, name, ts, {"today": {}} if payload is None else payload)
 
 
-def test_organisation_snapshot_is_latest_eligible_and_read_only():
+def test_organisation_snapshot_reads_canonical_current_row_without_cutoff():
     db = Database(row())
-    result = PortalReports(db).read_snapshot(scope())
+    result = PortalReports(db).read_snapshot(scope(cutoff=None))
     sql, params = db.queries[0]
-    assert "public.organisation_snapshots" in sql and "os.ts <= %s" in sql
-    assert "ORDER BY os.ts DESC LIMIT 1" in sql and params == (27, NOW)
+    assert "public.organisation_snapshots" in sql
+    assert "os.ts" not in sql.split("WHERE", 1)[1]
+    assert "ORDER BY" not in sql and "LIMIT" not in sql and params == (27,)
     assert result["scope"] == {"organisation_id": "27", "site_id": None}
     assert (
         result["snapshot"]["scope"] == "organisation"
@@ -63,38 +64,28 @@ def test_organisation_snapshot_is_latest_eligible_and_read_only():
     assert db.closed == 1
 
 
-def test_site_snapshot_enforces_organisation_and_cutoff():
+def test_site_snapshot_reads_current_row_and_enforces_organisation():
     db = Database(row(42, "Owned site"))
-    result = PortalReports(db).read_snapshot(scope("42"))
+    result = PortalReports(db).read_snapshot(scope("42", cutoff=None))
     sql, params = db.queries[0]
     assert (
         "public.site_snapshots" in sql and "s.id = %s AND s.organisation_id = %s" in sql
     )
-    assert "ss.ts <= %s" in sql and "ORDER BY ss.ts DESC LIMIT 1" in sql
-    assert params == (42, 27, NOW) and result["snapshot"]["entity_id"] == "42"
+    assert "ss.ts" not in sql.split("WHERE", 1)[1] and "ORDER BY" not in sql
+    assert params == (42, 27) and result["snapshot"]["entity_id"] == "42"
 
 
-def test_latest_at_or_before_cutoff_excludes_future_and_includes_exact_cutoff():
-    class HistoricalDatabase(Database):
-        def __init__(self, rows):
-            super().__init__(None)
-            self.rows = rows
-
-        def fetchone(self):
-            cutoff = self.queries[-1][1][-1]
-            eligible = [candidate for candidate in self.rows if candidate[2] <= cutoff]
-            return (
-                max(eligible, key=lambda candidate: candidate[2]) if eligible else None
-            )
-
-    older = datetime(2026, 9, 25, 17, 0, tzinfo=timezone.utc)
-    future = datetime(2026, 9, 25, 19, 0, tzinfo=timezone.utc)
-    db = HistoricalDatabase(
-        [row(ts=older), row(name="Exact cutoff", ts=NOW), row(name="Future", ts=future)]
-    )
-    result = PortalReports(db).read_snapshot(scope())
-    assert result["snapshot"]["entity_name"] == "Exact cutoff"
-    assert result["snapshot"]["ts"] == NOW.isoformat()
+def test_demo_clock_and_live_auth_return_the_same_canonical_snapshot():
+    stored = row(42, "Owned site", ts=NOW, payload={"today": {"visitors": 7}})
+    live = PortalReports(Database(stored)).read_snapshot(scope("42", cutoff=None))
+    demo = PortalReports(Database(stored)).read_snapshot(scope("42", cutoff=NOW))
+    assert live["snapshot"] == demo["snapshot"] == {
+        "scope": "site",
+        "entity_id": "42",
+        "entity_name": "Owned site",
+        "ts": NOW.isoformat(),
+        "payload": {"today": {"visitors": 7}},
+    }
 
 
 @pytest.mark.parametrize(
@@ -104,6 +95,8 @@ def test_latest_at_or_before_cutoff_excludes_future_and_includes_exact_cutoff():
         (1, "Bad", "naive", {}),
         (1, "Bad", datetime(2026, 1, 1), {}),
         (1, "Bad", NOW, []),
+        (0, "Bad", NOW, {}),
+        (1, "", NOW, {}),
     ],
 )
 def test_missing_and_invalid_snapshots_fail_explicitly(bad):
