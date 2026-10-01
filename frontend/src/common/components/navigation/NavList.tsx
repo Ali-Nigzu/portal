@@ -1,12 +1,11 @@
 import React from "react";
 
-type NavListProps = {
+type NavListProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactNode;
-  className?: string;
 };
 
-const NavList: React.FC<NavListProps> = ({ children, className }) => (
-  <div className={["vrm-nav-list", className].filter(Boolean).join(" ")}>
+const NavList: React.FC<NavListProps> = ({ children, className, ...props }) => (
+  <div {...props} className={["vrm-nav-list", className].filter(Boolean).join(" ")}>
     {children}
   </div>
 );

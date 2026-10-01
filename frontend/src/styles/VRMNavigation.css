@@ -109,8 +109,7 @@
   pointer-events: auto;
 }
 
-.vrm-organisation-navigation-title,
-.vrm-organisation-navigation-section {
+.vrm-organisation-navigation-title {
   color: var(--vrm-text-primary);
   padding: 0 var(--vrm-nav-row-padding-x);
 }
@@ -126,17 +125,6 @@
 .vrm-organisation-navigation-title {
   font-size: 15px;
 }
-
-.vrm-organisation-navigation-section {
-  display: block;
-  margin: 10px 0 4px;
-  color: var(--vrm-text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 
 .vrm-nav-row {
   display: flex;
@@ -170,6 +158,11 @@ button.vrm-nav-row {
 }
 
 .vrm-nav-row--interactive:hover {
+  background-color: var(--vrm-nav-row-hover-bg);
+  color: var(--vrm-text-primary);
+}
+
+.vrm-nav-row--interactive[aria-expanded="true"]:not(.vrm-nav-row--active) {
   background-color: var(--vrm-nav-row-hover-bg);
   color: var(--vrm-text-primary);
 }
