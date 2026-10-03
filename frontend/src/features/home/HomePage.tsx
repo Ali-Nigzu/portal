@@ -32,6 +32,10 @@ const HomePage: React.FC = () => {
     ]).filter((result) => !normalizedInput || result.label.toLowerCase().includes(normalizedInput)).slice(0, 8);
   }, [isSearchFocused, organisations, searchValue]);
   const recent = useMemo(() => readRecentPortalDestinations(organisations), [organisations]);
+  const siteCount = useMemo(
+    () => organisations.reduce((total, organisation) => total + organisation.sites.length, 0),
+    [organisations],
+  );
 
   return (
     <div className="dashboard-v2 home-page">
@@ -112,6 +116,7 @@ const HomePage: React.FC = () => {
                   {organisation.sites.map((site) => <button key={site.id} className="home-page__list-row" onClick={() => navigate(sitePortalPath(organisation.id, site.id, "dashboard"))}>
                     <span>{site.name}</span><ChevronRight size={18} aria-hidden="true" />
                   </button>)}
+                  {!organisation.sites.length && <p className="home-page__empty-copy">No Sites connected.</p>}
                 </div>)}
               </div>
             </Card>
@@ -126,9 +131,9 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--favorites">
             <Card title="Favourite Sites" className="home-page__card home-page__card--favorites">
               <div className="home-page__card-body home-page__card-body--text">
-                <p>
-                  You don't have any Favorite Sites yet. Get started by marking a Site as favorite
-                  from the dashboard page.
+                <p>{siteCount === 0
+                  ? "Favourite Sites will appear here after a Site is connected."
+                  : "You don't have any Favorite Sites yet. Get started by marking a Site as favorite from the dashboard page."}
                 </p>
               </div>
             </Card>

@@ -100,13 +100,15 @@ export default function ReportsPage({
           >
             <div>
               <h3>
-                {missing ? "No report available" : "Reports are unavailable"}
+                {missing ? "No report data yet" : "Reports are unavailable"}
               </h3>
-              <p>{invalid ?? error}</p>
+              <p>{missing
+                ? "Reports will become available after a Site is connected and analytics data has been collected."
+                : invalid ?? error}</p>
             </div>
-            <button className="portal-reports-secondary" onClick={retry}>
+            {!missing && <button className="portal-reports-secondary" onClick={retry}>
               Retry
-            </button>
+            </button>}
           </div>
         )}
         {!loading && !snapshot && !error && (

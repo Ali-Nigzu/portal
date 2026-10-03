@@ -84,6 +84,11 @@ class EventLogs:
         clauses, params, key, cutoff, continuation = self.specification(
             scope, filters, cursor
         )
+        if scope.site_id is None and not scope.context["sites"]:
+            return dict(
+                scope=scope.dto, effective_now=iso(cutoff), items=[], total=0,
+                page=dict(size=page_size, next_cursor=None),
+            )
         total = None
         if not cursor:
             # Validate uniqueness/non-nullness for the actual search before keyset paging.
@@ -161,6 +166,14 @@ class EventLogs:
 
     def export(self, scope, filters, limit=100000):
         clauses, params, _, _, _ = self.specification(scope, filters)
+        if scope.site_id is None and not scope.context["sites"]:
+            def empty_chunks():
+                buffer = io.StringIO()
+                csv.writer(buffer).writerow(
+                    ["Event ID", "Site", "Source", "Event Type", "Timestamp", "Sex", "Age"]
+                )
+                yield buffer.getvalue()
+            return empty_chunks()
         # One bounded result prevents count/page races from silently truncating a CSV.
         params["limit"] = limit + 1
         rows = self.bigquery.portal_rows(

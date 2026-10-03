@@ -21,8 +21,8 @@ from backend.app.services.portal_reports import PortalReports
 from backend.app.services.dashboard_postgres import DashboardPostgres
 from backend.app.services.canonical_auth import CanonicalAuthRepository
 from backend.app.services.organisation_dashboard import OrganisationDashboard
+from backend.app.services.local_new_account import LocalNewAccountServices
 from backend.app.config import get_allowed_origins
-from backend.app.services.bigquery_client import bigquery_client
 from backend.app.spa import configure_spa
 
 logging.basicConfig(level=logging.INFO)
@@ -42,21 +42,42 @@ def create_app() -> FastAPI:
     )
 
     allowed_origins = get_allowed_origins()
-    dashboard_database = DashboardPostgres()
-    app.state.auth_repository = CanonicalAuthRepository(dashboard_database)
-    app.state.organisation_dashboard = OrganisationDashboard(dashboard_database)
-    app.state.portal_metadata = PortalMetadata(
-        dashboard_database, app.state.organisation_dashboard
-    )
-    app.state.portal_events = EventLogs(bigquery_client)
-    app.state.portal_alarms = AlarmLogs(dashboard_database)
-    app.state.portal_devices = PortalDevices(dashboard_database, bigquery_client)
-    app.state.portal_reports = PortalReports(dashboard_database)
+    backend_mode = os.getenv("PORTAL_BACKEND_MODE", "live").strip().lower()
+    if backend_mode not in {"live", "local-new-account"}:
+        raise RuntimeError("PORTAL_BACKEND_MODE must be 'live' or 'local-new-account'")
+    if backend_mode == "local-new-account" and os.getenv("NODE_ENV", "").lower() == "production":
+        raise RuntimeError("local-new-account backend mode is forbidden in production")
+
+    dashboard_database = None
+    if backend_mode == "local-new-account":
+        services = LocalNewAccountServices()
+        logger.warning("Portal backend mode: local-new-account development fixture active")
+    else:
+        from backend.app.services.bigquery_client import bigquery_client
+
+        dashboard_database = DashboardPostgres()
+        services = type("LivePortalServices", (), {})()
+        services.auth_repository = CanonicalAuthRepository(dashboard_database)
+        services.organisation_dashboard = OrganisationDashboard(dashboard_database)
+        services.portal_metadata = PortalMetadata(dashboard_database, services.organisation_dashboard)
+        services.portal_events = EventLogs(bigquery_client)
+        services.portal_alarms = AlarmLogs(dashboard_database)
+        services.portal_devices = PortalDevices(dashboard_database, bigquery_client)
+        services.portal_reports = PortalReports(dashboard_database)
+
+    for name in (
+        "auth_repository", "organisation_dashboard", "portal_metadata",
+        "portal_events", "portal_alarms", "portal_devices", "portal_reports",
+    ):
+        setattr(app.state, name, getattr(services, name))
 
     @app.on_event("shutdown")
     def close_dashboard_database() -> None:
-        dashboard_database.close()
-        bigquery_client.close()
+        if dashboard_database is not None:
+            from backend.app.services.bigquery_client import bigquery_client
+
+            dashboard_database.close()
+            bigquery_client.close()
 
     app.add_middleware(
         CORSMiddleware,
@@ -69,12 +90,14 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_health_check() -> None:
         """Run a lightweight BigQuery connectivity check on startup."""
-        if ANALYTICS_OFFLINE_MODE:
+        if backend_mode == "local-new-account" or ANALYTICS_OFFLINE_MODE:
             logger.info(
                 "Analytics offline mode enabled; skipping BigQuery startup health check"
             )
             return
         try:
+            from backend.app.services.bigquery_client import bigquery_client
+
             bigquery_client.run_health_check()
         except Exception as exc:
             logger.error("BigQuery startup health check failed: %s", exc)

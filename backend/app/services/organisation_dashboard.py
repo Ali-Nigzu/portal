@@ -15,6 +15,47 @@ class InvalidSnapshot(RuntimeError):
     pass
 
 
+def build_zero_organisation_snapshot(organisation_id, organisation_name, timestamp=None):
+    """Build a transient Dashboard projection for a real organisation with no Sites."""
+    timestamp = timestamp or datetime.now(timezone.utc)
+    if not isinstance(timestamp, datetime) or timestamp.tzinfo is None:
+        raise ValueError("Zero Dashboard timestamp must be timezone aware")
+
+    def rollup(length):
+        return dict(
+            entrances=[0] * length,
+            occupancy=[[0, 0, 0] for _ in range(length)],
+            exits=[0] * length,
+            age_pct=[0] * 6,
+            sex_pct=[0] * 2,
+        )
+
+    payload = dict(
+        entrances_96=[0] * 96,
+        occupancy_96=[[0, 0, 0] for _ in range(96)],
+        exits_96=[0] * 96,
+        footfall_96=[0] * 96,
+        dwell_time_96=[0] * 96,
+        traffic_devices=[],
+        traffic_split_96=[[] for _ in range(96)],
+        capacity=[[0, 0] for _ in range(96)],
+    )
+    payload.update({
+        name: rollup(length) for name, length in (
+            ("today", 24), ("yesterday", 24), ("week", 7),
+            ("month", 4), ("quarter", 12), ("year", 12),
+            ("all_time", 1),
+        )
+    })
+    return dict(
+        scope="organisation",
+        entity_id=entity_id(organisation_id),
+        entity_name=organisation_name,
+        ts=timestamp.astimezone(timezone.utc).isoformat(),
+        payload=payload,
+    )
+
+
 def entity_id(value):
     # Decimal serialization preserves PostgreSQL bigint identity in JavaScript.
     if isinstance(value, bool) or not re.fullmatch(r"[1-9][0-9]*", str(value)):
@@ -77,11 +118,18 @@ class OrganisationDashboard:
                 cursor.close()
 
     def load_organisation_snapshot(self, organisation_id: int):
-        return self._snapshot(
+        snapshot = self._snapshot(
             "SELECT o.id, o.name, os.ts, os.payload FROM public.organisations AS o "
             "JOIN public.organisation_snapshots AS os ON os.organisation_id = o.id "
-            "WHERE o.id = %s", (organisation_id,), "organisation",
+            "WHERE o.id = %s", (organisation_id,), "organisation", missing_ok=True,
         )
+        if snapshot is not None:
+            return snapshot
+        context = self.load_organisation_context(organisation_id)
+        if context["sites"]:
+            raise EntityNotFound()
+        organisation = context["organisation"]
+        return build_zero_organisation_snapshot(organisation["id"], organisation["name"])
 
     def load_site_snapshot(self, organisation_id: int, site_id: int):
         return self._snapshot(
@@ -91,7 +139,7 @@ class OrganisationDashboard:
             (site_id, organisation_id), "site",
         )
 
-    def _snapshot(self, sql, parameters, scope: Literal["organisation", "site"]):
+    def _snapshot(self, sql, parameters, scope: Literal["organisation", "site"], missing_ok=False):
         with self.database.connection() as connection:
             cursor = connection.cursor()
             try:
@@ -100,6 +148,8 @@ class OrganisationDashboard:
             finally:
                 cursor.close()
         if row is None:
+            if missing_ok:
+                return None
             raise EntityNotFound()
         try:
             ts = row[2]
