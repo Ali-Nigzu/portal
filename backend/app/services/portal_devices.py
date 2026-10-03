@@ -53,6 +53,8 @@ class PortalDevices:
         self.database, self.bigquery = database, bigquery
 
     def read(self, scope):
+        if scope.site_id is None and not scope.context["sites"]:
+            return dict(scope=scope.dto, records_status="available", items=[])
         site_names = {site["id"]: site["name"] for site in scope.context["sites"]}
         site_filter = " AND d.site_id = %s" if scope.site_id else ""
         gateway_filter = " AND g.site_id = %s" if scope.site_id else ""

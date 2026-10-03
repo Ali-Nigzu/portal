@@ -13,6 +13,13 @@ If Postmark credentials are missing, email-dependent endpoints return an explici
 
 ## Canonical authentication and Cloud SQL
 
+`PORTAL_BACKEND_MODE` defaults to `live`. For isolated local development while
+GCP is unavailable, set it explicitly to `local-new-account`. That mode loads
+`backend/fixtures/local_new_account.json`, provides the normal authenticated
+Portal API for `test` / `test`, and does not construct Cloud SQL or BigQuery
+clients for the authenticated journey. The application refuses to start in
+this mode when `NODE_ENV=production`.
+
 - `PORTAL_SESSION_SECRET` is required for login and session validation. It must be
   a stable secret of at least 32 characters supplied by the runtime secret store.
 - `PORTAL_SESSION_SECURE` may explicitly control the cookie Secure flag. When it

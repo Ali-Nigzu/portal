@@ -25,6 +25,12 @@ class AlarmLogs:
         if continuation:
             cutoff = continuation[2]
             entity_id(continuation[1])
+        if scope.site_id is None and not scope.context["sites"]:
+            return dict(
+                scope=scope.dto, effective_now=iso(cutoff),
+                counts=dict(active=0, cleared=0), active=dict(items=[]),
+                cleared=dict(items=[], next_cursor=None, has_more=False),
+            )
         clauses, params = ["a.organisation_id = %s"], [scope.identity.organisation_id]
         if scope.site_id:
             clauses.append("a.site_id = %s")
