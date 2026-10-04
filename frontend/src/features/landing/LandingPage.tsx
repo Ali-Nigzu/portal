@@ -5,7 +5,7 @@ import { landingCopy } from "./content";
 import LandingHeader from "./components/LandingHeader";
 import LandingFooter from "./components/LandingFooter";
 import SystemOverviewPreview from "./components/SystemOverviewPreview";
-import camOSLogo from "../../assets/Untitled design (4).svg";
+import camOSLogo from "../../assets/brand/camos-logo.svg";
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();

@@ -25,7 +25,8 @@
     "test:reports-engine": "node scripts/reports-engine-tests.mjs",
     "test:phase-c": "node scripts/phase-c-tests.mjs",
     "test:authenticated-shell": "node scripts/authenticated-shell-browser.mjs",
-    "test:local-new-account": "node scripts/local-new-account-browser.mjs"
+    "test:local-new-account": "node scripts/local-new-account-browser.mjs",
+    "test:auth-brand-assets": "node scripts/auth-brand-assets-browser.mjs"
   },
   "browserslist": {
     "production": [

@@ -2,9 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import camOSLogo from '../../assets/Untitled design (4).svg';
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
 import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import AuthPhoneField from './components/AuthPhoneField';
@@ -209,14 +209,8 @@ const CreateAccountPage: React.FC = () => {
           </div>
         </section>
 
-        <aside className="create-account-right-pane" aria-label="System visual placeholder">
-          <img
-            src={camOSLogo}
-            alt=""
-            aria-hidden="true"
-            focusable="false"
-            className="auth-right-pane-overlay"
-          />
+        <aside className="create-account-right-pane" aria-hidden="true">
+          <AuthDesktopArtwork />
         </aside>
       </div>
 

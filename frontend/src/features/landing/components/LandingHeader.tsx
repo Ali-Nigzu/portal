@@ -1,5 +1,5 @@
 import React from "react";
-import camOSLogo from "../../../assets/Untitled design (4).svg";
+import camOSLogo from "../../../assets/brand/camos-logo.svg";
 import { landingCopy } from "../content";
 
 type LandingHeaderProps = {
