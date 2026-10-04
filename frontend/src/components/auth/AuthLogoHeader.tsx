@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import camOSLogo from "../../assets/Untitled design (4).svg";
+import camOSLogo from "../../assets/brand/camos-logo.svg";
 import styles from "./AuthLogoHeader.module.css";
 
 const AuthLogoHeader: React.FC = () => (

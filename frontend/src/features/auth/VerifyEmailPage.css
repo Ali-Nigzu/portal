@@ -94,6 +94,8 @@
 }
 
 .verify-email-right-pane {
+  position: relative;
+  overflow: hidden;
   border-left: 1px solid var(--line-soft);
   background:
     radial-gradient(circle at 22% 20%, rgba(160, 173, 189, 0.10), transparent 48%),

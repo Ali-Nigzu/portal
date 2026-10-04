@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
@@ -169,7 +170,9 @@ const ResetPasswordPage: React.FC = () => {
             <p className="verify-email-back-row"><Link to="/login" className="verify-email-link">Back to login</Link></p>
           </div>
         </section>
-        <aside className="verify-email-right-pane" aria-hidden="true" />
+        <aside className="verify-email-right-pane" aria-hidden="true">
+          <AuthDesktopArtwork />
+        </aside>
       </div>
 
       {isPhoneLayout ? <AuthBottomNav /> : null}

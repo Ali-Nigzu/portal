@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
@@ -175,7 +176,9 @@ const VerifyEmailPage: React.FC = () => {
           </div>
         </section>
 
-        <aside className="verify-email-right-pane" aria-hidden="true" />
+        <aside className="verify-email-right-pane" aria-hidden="true">
+          <AuthDesktopArtwork />
+        </aside>
       </div>
 
       {isPhoneLayout ? <AuthBottomNav /> : null}

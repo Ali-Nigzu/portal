@@ -16,7 +16,7 @@ import { NavIcon } from "../common/components/icons";
 import { NavList, NavRow, SecondaryDivider, SecondaryPinnedRow } from "../common/components/navigation";
 import MobileSidebarRow from "./MobileSidebarRow";
 import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
-import camOSLogo from "../assets/Untitled design (4).svg";
+import camOSLogo from "../assets/brand/camos-logo.svg";
 import "../styles/VRMTheme.css";
 import "../styles/VRMNavigation.css";
 

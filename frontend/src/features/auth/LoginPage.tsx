@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
+import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import camOSLogo from "../../assets/Untitled design (4).svg";
 import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
 import { useLoginForm } from "./hooks/useLoginForm";
 import { passwordResetStart } from "./transport/passwordResetStart";
@@ -161,14 +161,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         </section>
 
-        <aside className="login-right-pane" aria-label="System visual placeholder">
-          <img
-            src={camOSLogo}
-            alt=""
-            aria-hidden="true"
-            focusable="false"
-            className="auth-right-pane-overlay"
-          />
+        <aside className="login-right-pane" aria-hidden="true">
+          <AuthDesktopArtwork />
         </aside>
       </div>
 

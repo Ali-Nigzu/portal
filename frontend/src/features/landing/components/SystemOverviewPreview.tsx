@@ -7,7 +7,7 @@ import { useDashboardManifest } from "../../dashboard/hooks/useDashboardManifest
 import { useDashboardWidgets } from "../../dashboard/hooks/useDashboardWidgets";
 import { VRM_KPI_IDS } from "../../dashboard/utils/applyVRMOverrides";
 import DashboardKpiSection from "../../dashboard/components/DashboardKpiSection";
-import camOSLogo from "../../../assets/Untitled design (4).svg";
+import camOSLogo from "../../../assets/brand/camos-logo.svg";
 import "../../dashboard/styles/DashboardPage.css";
 import styles from "./SystemOverviewPreview.module.css";
 
