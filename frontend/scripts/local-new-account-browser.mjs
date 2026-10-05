@@ -15,6 +15,7 @@ await expect(page).toHaveURL(/\/home$/);
 await expect(page.getByRole("heading", { name: "Welcome Test User" })).toBeVisible();
 await expect(page.getByText("No Sites connected.", { exact: true })).toBeVisible();
 
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
 const primary = page.getByRole("navigation", { name: "Primary" });
 for (const label of ["Home", "My Org", "Documents", "Settings", "Logout"])
   await expect(primary.getByText(label, { exact: true })).toBeVisible();
@@ -22,7 +23,7 @@ for (const label of ["Home", "My Org", "Documents", "Settings", "Logout"])
 await primary.getByRole("button", { name: "My Org", exact: true }).click();
 const scopes = page.getByRole("navigation", { name: "My Org scope selector" });
 await expect(scopes.getByRole("button", { name: "All Sites" })).toBeVisible();
-await expect(scopes.locator(".vrm-nav-row")).toHaveCount(1);
+await expect(scopes.locator(".authenticated-navigation__row")).toHaveCount(1);
 await scopes.getByRole("button", { name: "All Sites" }).click();
 await expect(page).toHaveURL(/\/sites\/organisations\/900000000000000101\/dashboard$/);
 
@@ -37,22 +38,28 @@ await modules.getByRole("button", { name: "Event Logs" }).click();
 await expect(page.getByText("No events found", { exact: true })).toBeVisible();
 await expect(page.getByText("0", { exact: true }).first()).toBeVisible();
 
-await modules.getByRole("button", { name: "Alarm Logs" }).click();
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
+await page.getByRole("navigation", { name: "My Org module navigation" }).getByRole("button", { name: "Alarm Logs" }).click();
 await expect(page.getByText("No active alarms", { exact: true })).toBeVisible();
 await expect(page.getByText("No cleared alarms", { exact: true })).toBeVisible();
 
-await modules.getByRole("button", { name: "Device List" }).click();
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
+await page.getByRole("navigation", { name: "My Org module navigation" }).getByRole("button", { name: "Device List" }).click();
 await expect(page.getByText("No sources in this scope.", { exact: true })).toBeVisible();
 await expect(page.getByText("Gateways", { exact: true })).toBeVisible();
 
-await modules.getByRole("button", { name: "Reports" }).click();
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
+await page.getByRole("navigation", { name: "My Org module navigation" }).getByRole("button", { name: "Reports" }).click();
 await expect(page.getByRole("heading", { name: "No report data yet" })).toBeVisible();
 await expect(page.getByRole("button", { name: "Retry" })).toHaveCount(0);
 await expect(page.getByRole("button", { name: "Download Report" })).toHaveCount(0);
 
-await primary.getByText("Documents", { exact: true }).click();
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
+await page.getByRole("navigation", { name: "Primary" }).getByText("Documents", { exact: true }).click();
 await expect(page.getByRole("heading", { name: "My Documents" })).toBeVisible();
-await primary.getByText("Settings", { exact: true }).click();
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
+await page.getByRole("navigation", { name: "Primary" }).getByText("Settings", { exact: true }).click();
+await page.getByRole("navigation", { name: "Settings navigation" }).getByRole("button", { name: "My Account" }).click();
 await expect(page.getByRole("heading", { name: "My Account" })).toBeVisible();
 await expect(page.getByText("Test User", { exact: true })).toBeVisible();
 
