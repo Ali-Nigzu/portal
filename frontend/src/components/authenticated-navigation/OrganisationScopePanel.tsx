@@ -22,7 +22,6 @@ export default function OrganisationScopePanel({ organisation, routeContext, sho
             <span>Primary</span>
           </button>
         )}
-        <div className="authenticated-navigation__eyebrow">Organisation</div>
         <strong title={organisation.name}>{organisation.name}</strong>
       </header>
       <div className="authenticated-navigation__panel-list">

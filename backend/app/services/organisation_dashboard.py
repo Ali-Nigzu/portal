@@ -17,42 +17,11 @@ class InvalidSnapshot(RuntimeError):
 
 def build_zero_organisation_snapshot(organisation_id, organisation_name, timestamp=None):
     """Build a transient Dashboard projection for a real organisation with no Sites."""
-    timestamp = timestamp or datetime.now(timezone.utc)
-    if not isinstance(timestamp, datetime) or timestamp.tzinfo is None:
-        raise ValueError("Zero Dashboard timestamp must be timezone aware")
+    from .zero_snapshot import build_zero_snapshot
 
-    def rollup(length):
-        return dict(
-            entrances=[0] * length,
-            occupancy=[[0, 0, 0] for _ in range(length)],
-            exits=[0] * length,
-            age_pct=[0] * 6,
-            sex_pct=[0] * 2,
-        )
-
-    payload = dict(
-        entrances_96=[0] * 96,
-        occupancy_96=[[0, 0, 0] for _ in range(96)],
-        exits_96=[0] * 96,
-        footfall_96=[0] * 96,
-        dwell_time_96=[0] * 96,
-        traffic_devices=[],
-        traffic_split_96=[[] for _ in range(96)],
-        capacity=[[0, 0] for _ in range(96)],
-    )
-    payload.update({
-        name: rollup(length) for name, length in (
-            ("today", 24), ("yesterday", 24), ("week", 7),
-            ("month", 4), ("quarter", 12), ("year", 12),
-            ("all_time", 1),
-        )
-    })
-    return dict(
-        scope="organisation",
-        entity_id=entity_id(organisation_id),
-        entity_name=organisation_name,
-        ts=timestamp.astimezone(timezone.utc).isoformat(),
-        payload=payload,
+    return build_zero_snapshot(
+        "organisation", organisation_id, organisation_name,
+        timestamp or datetime.now(timezone.utc),
     )
 
 
@@ -117,7 +86,7 @@ class OrganisationDashboard:
             finally:
                 cursor.close()
 
-    def load_organisation_snapshot(self, organisation_id: int):
+    def load_organisation_snapshot(self, organisation_id: int, *, zero_scope=None):
         snapshot = self._snapshot(
             "SELECT o.id, o.name, os.ts, os.payload FROM public.organisations AS o "
             "JOIN public.organisation_snapshots AS os ON os.organisation_id = o.id "
@@ -125,19 +94,33 @@ class OrganisationDashboard:
         )
         if snapshot is not None:
             return snapshot
+        if zero_scope is not None:
+            return self._zero_snapshot(organisation_id, None, zero_scope)
         context = self.load_organisation_context(organisation_id)
         if context["sites"]:
             raise EntityNotFound()
         organisation = context["organisation"]
         return build_zero_organisation_snapshot(organisation["id"], organisation["name"])
 
-    def load_site_snapshot(self, organisation_id: int, site_id: int):
-        return self._snapshot(
+    def load_site_snapshot(self, organisation_id: int, site_id: int, *, zero_scope=None):
+        snapshot = self._snapshot(
             "SELECT s.id, s.name, ss.ts, ss.payload FROM public.sites AS s "
             "JOIN public.site_snapshots AS ss ON ss.site_id = s.id "
             "WHERE s.id = %s AND s.organisation_id = %s",
-            (site_id, organisation_id), "site",
+            (site_id, organisation_id), "site", missing_ok=zero_scope is not None,
         )
+        if snapshot is not None:
+            return snapshot
+        return self._zero_snapshot(organisation_id, site_id, zero_scope)
+
+    @staticmethod
+    def _zero_snapshot(organisation_id, site_id, scope):
+        from .zero_snapshot import build_zero_scope_snapshot
+
+        if (scope.identity.organisation_id != organisation_id
+                or scope.site_id != (entity_id(site_id) if site_id is not None else None)):
+            raise EntityNotFound()
+        return build_zero_scope_snapshot(scope)
 
     def _snapshot(self, sql, parameters, scope: Literal["organisation", "site"], missing_ok=False):
         with self.database.connection() as connection:

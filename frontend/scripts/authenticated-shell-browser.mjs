@@ -87,6 +87,8 @@ const orgButton = (name) => primary.getByRole("button", { name, exact: true });
 await orgButton("Demo").hover();
 const demoScopes = desktop.getByRole("navigation", { name: "Demo scope selector" });
 await expect(demoScopes).toBeVisible();
+await expect(demoScopes.locator("header strong")).toHaveText("Demo");
+await expect(demoScopes.locator(".authenticated-navigation__eyebrow")).toHaveCount(0);
 await expect(demoScopes.getByRole("button", { name: "All Sites" })).toBeVisible();
 await expect(desktop).toHaveURL(/\/home$/);
 await primary.getByRole("button", { name: "Settings", exact: true }).hover();
@@ -107,6 +109,16 @@ await expect(desktop).toHaveURL(/\/sites\/organisations\/1\/sites\/2\/dashboard$
 const demoModules = desktop.getByRole("navigation", { name: "Demo module navigation" });
 await expect(demoModules.getByRole("button", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
 await expect(desktop.locator(".authenticated-navigation__pod")).toBeVisible();
+const changeScopeButton = demoModules.getByRole("button", { name: "Change scope for Demo" });
+await expect(changeScopeButton).toHaveText("");
+await expect(changeScopeButton.locator("svg")).toHaveCount(1);
+const changeBox = await changeScopeButton.boundingBox();
+expect(changeBox.width).toBeGreaterThanOrEqual(44);
+expect(changeBox.height).toBeGreaterThanOrEqual(44);
+await changeScopeButton.focus();
+await desktop.keyboard.press("Enter");
+await expect(demoScopes).toBeVisible();
+await demoScopes.getByRole("button", { name: "Tokis Takeout" }).click();
 
 // Module selection completes navigation and closes.
 await demoModules.getByRole("button", { name: "Event Logs" }).click();

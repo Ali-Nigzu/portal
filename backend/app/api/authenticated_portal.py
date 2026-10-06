@@ -73,7 +73,10 @@ def context(organisation: str, request: Request, response: Response, user=Depend
 def organisation_snapshot(organisation: str, request: Request, user=Depends(get_canonical_user)):
     def operation():
         identity, _ = authorised_identity(request, user, organisation)
-        return request.app.state.organisation_dashboard.load_organisation_snapshot(identity.organisation_id)
+        resolved = PortalScope.resolve(identity, request.app.state.portal_metadata)
+        return request.app.state.organisation_dashboard.load_organisation_snapshot(
+            identity.organisation_id, zero_scope=resolved
+        )
     return read(operation)
 
 
@@ -83,7 +86,7 @@ def site_snapshot(organisation: str, site: str, request: Request, user=Depends(g
         identity, _ = authorised_identity(request, user, organisation)
         resolved = PortalScope.resolve(identity, request.app.state.portal_metadata, site)
         return request.app.state.organisation_dashboard.load_site_snapshot(
-            identity.organisation_id, int(resolved.site_id)
+            identity.organisation_id, int(resolved.site_id), zero_scope=resolved
         )
     return read(operation)
 
@@ -132,7 +135,7 @@ def alarms(organisation: str, request: Request, response: Response, user=Depends
 def reports(organisation: str, request: Request, response: Response, user=Depends(get_canonical_user)):
     response.headers["Cache-Control"] = "no-store"
     return read(lambda: request.app.state.portal_reports.read_snapshot(
-        scope_and_filters(request, user, organisation, set())[0]
+        scope_and_filters(request, user, organisation, set())[0], allow_empty=True
     ))
 
 

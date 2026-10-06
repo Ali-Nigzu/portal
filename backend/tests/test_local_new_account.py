@@ -178,8 +178,12 @@ def test_local_mode_uses_normal_auth_session_catalogue_and_context(local_client)
     assert local_client.get(base + "/alarms").json()["counts"] == {"active": 0, "cleared": 0}
     assert local_client.get(base + "/devices").json()["items"] == []
     report = local_client.get(base + "/reports/snapshot")
-    assert report.status_code == 404
-    assert report.json()["detail"]["error"] == "report_snapshot_not_found"
+    assert report.status_code == 200
+    assert report.json()["scope"] == {"organisation_id": str(ORGANISATION_ID), "site_id": None}
+    assert report.json()["snapshot"]["entity_name"] == "My Org"
+    assert_all_zero(report.json()["snapshot"]["payload"])
+    assert local_client.get(base + "/reports/snapshot?site_id=123").status_code == 404
+    assert local_client.get(base + "/sites/123/snapshot").status_code == 404
     assert local_client.get(base + "/events?site_id=123").status_code == 404
     assert local_client.get("/api/documents").status_code == 200
 

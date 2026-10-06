@@ -106,6 +106,50 @@ assert.throws(
   /invalid/i,
   "legacy positional payload is rejected",
 );
+// Zero snapshots use both real templates and every existing reporting period.
+const zeroSnapshot = snapshot();
+zeroSnapshot.ts = "2026-01-02T12:00:00Z";
+for (const [key, value] of Object.entries(zeroSnapshot.payload)) {
+  if (["traffic_devices", "traffic_split_96"].includes(key)) continue;
+  if (Array.isArray(value)) {
+    zeroSnapshot.payload[key] = value.map((bucket) => Array.isArray(bucket) ? bucket.map(() => 0) : 0);
+  } else {
+    for (const [field, buckets] of Object.entries(value))
+      value[field] = buckets.map((bucket) => Array.isArray(bucket) ? bucket.map(() => 0) : 0);
+  }
+}
+zeroSnapshot.payload.all_time = { ...zeroSnapshot.payload.all_time, entrances: [0], exits: [0], occupancy: [[0, 0, 0]] };
+for (const timeframe of ["today", "yesterday", "last_week", "last_month", "last_quarter", "last_year", "all_time"]) {
+  for (const type of ["site-activity", "visitor-profile"]) {
+    const data = engine.buildReportData(zeroSnapshot, type, timeframe, new Date(zeroSnapshot.ts));
+    const rendered = pdf.renderReportPdf(data, { organisationName: "Empty Org", heading: "Empty Org - Empty Site", siteName: "Empty Site" });
+    const bytes = Buffer.from(rendered.doc.output("arraybuffer"));
+    assert.equal(bytes.subarray(0, 5).toString(), "%PDF-");
+    assert(bytes.length > 3000, "the real template is rendered");
+    assert.doesNotMatch(bytes.toString("latin1"), /NaN|Infinity/);
+    assert.doesNotMatch(data.subtitle, /Invalid/);
+    if (type === "visitor-profile") {
+      assert.equal(data.metrics.dominantAgeBucket, null);
+      assert.deepEqual(data.metrics.sexSplit, { Male: 0, Female: 0 });
+    } else {
+      for (const key of ["totalEntrances", "totalExits", "netFlow", "occupancyAvg", "dwellAvg", "dwellMax"])
+        assert.equal(data.metrics[key], 0);
+      assert.equal(data.metrics.entrancesSeries.length, data.bucketLabels.length);
+    }
+    if (timeframe === "all_time") assert.match(data.subtitle, /2026 – 2026/);
+  }
+}
+for (const years of [1, 3]) {
+  const sample = structuredClone(zeroSnapshot);
+  sample.payload.all_time.entrances = Array(years).fill(0);
+  sample.payload.all_time.exits = Array(years).fill(0);
+  sample.payload.all_time.occupancy = Array.from({ length: years }, () => [0, 0, 0]);
+  for (const type of ["site-activity", "visitor-profile"]) {
+    const data = engine.buildReportData(sample, type, "all_time", new Date(sample.ts));
+    assert.match(data.subtitle, new RegExp(`${2027 - years} – 2026`));
+  }
+}
+assert.equal(visitors.metrics.dominantAgeBucket, "14-25", "populated dominant age remains unchanged");
 const generated = new Date("2026-09-25T19:42:00Z");
 const siteIdentity = {
   organisationName: "Demo",

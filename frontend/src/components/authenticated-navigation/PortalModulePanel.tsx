@@ -29,7 +29,6 @@ export default function PortalModulePanel({ organisation, siteId, routeContext, 
       <header className="authenticated-navigation__panel-header authenticated-navigation__panel-header--context">
         <button type="button" className="authenticated-navigation__back" onClick={onChangeScope} aria-label={`Change scope for ${organisation.name}`}>
           <NavIcon icon={ArrowLeft} size={18} />
-          <span>Change</span>
         </button>
         <div className="authenticated-navigation__eyebrow" title={organisation.name}>{organisation.name}</div>
         <strong title={scopeLabel}>{scopeLabel}</strong>

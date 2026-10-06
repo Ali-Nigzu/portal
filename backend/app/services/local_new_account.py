@@ -19,6 +19,7 @@ from .portal_alarms import AlarmLogs
 from .portal_devices import PortalDevices
 from .portal_events import EventLogs
 from .portal_reports import ReportSnapshotNotFound
+from .zero_snapshot import build_zero_scope_snapshot
 
 FIXTURE_PATH = Path(__file__).resolve().parents[2] / "fixtures" / "local_new_account.json"
 OWNER_ROLE = 0
@@ -126,12 +127,14 @@ class LocalOrganisationDashboard:
             "sites": [],
         }
 
-    def load_organisation_snapshot(self, organisation_id):
+    def load_organisation_snapshot(self, organisation_id, *, zero_scope=None):
         context = self.load_organisation_context(organisation_id)
+        if zero_scope is not None:
+            return build_zero_scope_snapshot(zero_scope)
         organisation = context["organisation"]
         return build_zero_organisation_snapshot(organisation["id"], organisation["name"])
 
-    def load_site_snapshot(self, organisation_id, site_id):
+    def load_site_snapshot(self, organisation_id, site_id, *, zero_scope=None):
         self.load_organisation_context(organisation_id)
         raise EntityNotFound()
 
@@ -155,7 +158,9 @@ class LocalPortalMetadata:
 
 
 class LocalReports:
-    def read_snapshot(self, scope):
+    def read_snapshot(self, scope, *, allow_empty=False):
+        if allow_empty:
+            return {"scope": scope.dto, "snapshot": build_zero_scope_snapshot(scope)}
         raise ReportSnapshotNotFound()
 
 

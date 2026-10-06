@@ -37,7 +37,7 @@ export default function PortalReports() {
             setState({
               key: portal.key,
               error: message,
-              missing: response.status === 404,
+              missing: response.status === 404 && body?.detail?.error === "report_snapshot_not_found",
             });
           return;
         }

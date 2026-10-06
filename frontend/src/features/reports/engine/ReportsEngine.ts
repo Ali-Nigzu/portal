@@ -44,7 +44,7 @@ export interface VisitorProfileMetrics {
   agePct: number[];
   sexPct: number[];
   totalEntrances: number;
-  dominantAgeBucket: string;
+  dominantAgeBucket: string | null;
   sexSplit: { Male: number; Female: number };
 }
 export interface VisitorProfileReportData {
@@ -178,7 +178,7 @@ const subtitle = (
   if (timeframe === "all_time") {
     const length = Math.max(...series.map((s) => s.length), 0);
     start = length
-      ? new Date(ts.getFullYear(), ts.getMonth() - (length - 1), 1)
+      ? new Date(ts.getFullYear() - length + 1, 0, 1)
       : startOfYear(ts);
   }
   return formatReportDateRange(ts, timeframe, now, start).subtitle;
@@ -216,7 +216,7 @@ export function buildSiteActivityReportData(
     subtitle: subtitle(
       timeframe,
       ts,
-      [entrances, exits, occupancy, dwell],
+      [snapshot.payload.all_time.entrances],
       now,
     ),
     bucketLabels: f.labels,
@@ -258,12 +258,12 @@ export function buildVisitorProfileReportData(
     snapshot,
     snapshotTs: ts,
     timeframe,
-    subtitle: subtitle(timeframe, ts, [rollup.agePct, rollup.sexPct], now),
+    subtitle: subtitle(timeframe, ts, [snapshot.payload.all_time.entrances], now),
     metrics: {
       agePct: rollup.agePct,
       sexPct: rollup.sexPct,
       totalEntrances: sum(rollup.entrances),
-      dominantAgeBucket: AGE_BUCKET_LABELS[dominant] ?? AGE_BUCKET_LABELS[0],
+      dominantAgeBucket: sum(rollup.agePct) > 0 ? AGE_BUCKET_LABELS[dominant] : null,
       sexSplit: { Male: rollup.sexPct[0] ?? 0, Female: rollup.sexPct[1] ?? 0 },
     },
   };

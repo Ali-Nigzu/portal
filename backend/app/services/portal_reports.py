@@ -17,7 +17,7 @@ class PortalReports:
     def __init__(self, database):
         self.database = database
 
-    def read_snapshot(self, scope):
+    def read_snapshot(self, scope, *, allow_empty=False):
         organisation_id = scope.identity.organisation_id
         if scope.site_id is None:
             sql = (
@@ -45,6 +45,10 @@ class PortalReports:
             finally:
                 cursor.close()
         if row is None:
+            if allow_empty:
+                from .zero_snapshot import build_zero_scope_snapshot
+
+                return {"scope": scope.dto, "snapshot": build_zero_scope_snapshot(scope)}
             raise ReportSnapshotNotFound()
         try:
             timestamp, payload = row[2], row[3]
