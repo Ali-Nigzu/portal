@@ -1,17 +1,19 @@
 import { createContext, useContext, useMemo, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { AuthUser } from "../features/auth/transport/me";
 import type { AuthenticatedOrganisation } from "../features/auth/transport/organisations";
+import { favouriteScopeKey, readFavouriteScopes, writeFavouriteScopes } from "../features/organisation-dashboard/favouriteScopesStorage";
 
 type AuthenticatedApplicationInput = {
   user: AuthUser;
   organisations: AuthenticatedOrganisation[];
   refreshOrganisations: () => Promise<void>;
+  favouritesCatalogueReady?: boolean;
 };
 
-export const favouriteScopeKey = (organisationId: string, siteId?: string) =>
-  `${organisationId}:${siteId === undefined ? `organisation:${organisationId}` : `site:${siteId}`}`;
+export { favouriteScopeKey } from "../features/organisation-dashboard/favouriteScopesStorage";
 
 type AuthenticatedApplicationValue = AuthenticatedApplicationInput & {
+  favouriteStorageError: boolean;
   isScopeFavourite: (organisationId: string, siteId?: string) => boolean;
   toggleScopeFavourite: (organisationId: string, siteId?: string) => void;
 };
@@ -22,37 +24,46 @@ export function AuthenticatedApplicationProvider({
   user,
   organisations,
   refreshOrganisations,
+  favouritesCatalogueReady = true,
   children,
 }: AuthenticatedApplicationInput & { children: ReactNode }) {
-  const [favourites, setFavourites] = useState(() => ({ userId: user.id, keys: new Set<string>() }));
+  const [favourites, setFavourites] = useState(() => ({ userId: user.id, hydrated: favouritesCatalogueReady, ...(favouritesCatalogueReady ? readFavouriteScopes(user.id, organisations) : { keys: new Set<string>(), storageError: false }) }));
   const validKeys = useMemo(() => new Set(organisations.flatMap(organisation => [
     favouriteScopeKey(organisation.id),
     ...organisation.sites.map(site => favouriteScopeKey(organisation.id, site.id)),
   ])), [organisations]);
   useEffect(() => {
+    if (!favouritesCatalogueReady) return;
     setFavourites(previous => {
-      if (previous.userId !== user.id) return { userId: user.id, keys: new Set<string>() };
+      if (previous.userId !== user.id || !previous.hydrated) return { userId: user.id, hydrated: true, ...readFavouriteScopes(user.id, organisations) };
       const keys = new Set([...previous.keys].filter(key => validKeys.has(key)));
-      return keys.size === previous.keys.size ? previous : { userId: user.id, keys };
+      return keys.size === previous.keys.size ? previous : { ...previous, keys };
     });
-  }, [user.id, validKeys]);
+  }, [user.id, validKeys, favouritesCatalogueReady]);
+  // Initial state is read before any persistence effect; a user change never
+  // writes the previous user's keys into the new user's namespace.
+  useEffect(() => {
+    if (!favouritesCatalogueReady || !favourites.hydrated || favourites.userId !== user.id) return;
+    const storageError = !writeFavouriteScopes(user.id, favourites.keys, organisations);
+    setFavourites(previous => previous.storageError === storageError ? previous : { ...previous, storageError });
+  }, [favourites.keys, favourites.userId, favourites.hydrated, user.id, organisations, favouritesCatalogueReady]);
   const isScopeFavourite = useCallback((organisationId: string, siteId?: string) => {
     const key = favouriteScopeKey(organisationId, siteId);
-    return favourites.userId === user.id && validKeys.has(key) && favourites.keys.has(key);
-  }, [favourites, user.id, validKeys]);
+    return favouritesCatalogueReady && favourites.userId === user.id && validKeys.has(key) && favourites.keys.has(key);
+  }, [favourites, user.id, validKeys, favouritesCatalogueReady]);
   const toggleScopeFavourite = useCallback((organisationId: string, siteId?: string) => {
     const key = favouriteScopeKey(organisationId, siteId);
-    if (!validKeys.has(key)) return;
+    if (!favouritesCatalogueReady || !favourites.hydrated || favourites.userId !== user.id || !validKeys.has(key)) return;
     setFavourites(previous => {
       const keys = new Set(previous.userId === user.id ? [...previous.keys].filter(value => validKeys.has(value)) : []);
       if (keys.has(key)) keys.delete(key);
       else keys.add(key);
-      return { userId: user.id, keys };
+      return { userId: user.id, hydrated: true, keys, storageError: previous.storageError };
     });
-  }, [user.id, validKeys]);
+  }, [user.id, validKeys, favouritesCatalogueReady, favourites.hydrated, favourites.userId]);
   const value = useMemo(
-    () => ({ user, organisations, refreshOrganisations, isScopeFavourite, toggleScopeFavourite }),
-    [user, organisations, refreshOrganisations, isScopeFavourite, toggleScopeFavourite],
+    () => ({ user, organisations, refreshOrganisations, isScopeFavourite, toggleScopeFavourite, favouriteStorageError: favourites.userId === user.id && favourites.storageError }),
+    [user, organisations, refreshOrganisations, isScopeFavourite, toggleScopeFavourite, favourites.userId, favourites.storageError],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

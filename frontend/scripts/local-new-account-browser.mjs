@@ -6,13 +6,21 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.setDefaultTimeout(12_000);
 
-await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
+// The fixture account is data, not a session: a clean browser must log in.
+await page.context().clearCookies();
+await expect.poll(async () => (await page.request.get(`${baseUrl}/api/me`)).status()).toBe(401);
+await page.goto(`${baseUrl}/sites/organisations/900000000000000101/dashboard`, { waitUntil: "networkidle" });
+await expect(page).toHaveURL(/\/login$/);
+await expect(page.getByLabel("Email or username")).toBeVisible();
+await expect(page.getByTestId("authenticated-app-shell")).toHaveCount(0);
 await page.getByLabel("Email or username").fill("test");
 await page.getByRole("button", { name: /continue/i }).click();
 await page.getByLabel("Password").fill("test");
 await page.getByRole("button", { name: /login|sign in/i }).click();
 await expect(page).toHaveURL(/\/home$/);
 await expect(page.getByRole("heading", { name: "Welcome Test User" })).toBeVisible();
+await expect.poll(async () => (await page.request.get(`${baseUrl}/api/me`)).status()).toBe(200);
+if (!(await page.context().cookies()).some(cookie => cookie.name === "camos_session" && cookie.httpOnly)) throw new Error("Explicit login must create a real session");
 await expect(page.getByText("No Sites connected.", { exact: true })).toBeVisible();
 
 await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
@@ -36,6 +44,11 @@ await expect(page.getByText("Snapshot unavailable.", { exact: false })).toHaveCo
 await expect(page.getByText("Site Flow", { exact: true })).toBeVisible();
 await expect(page.locator(".dashboard-v2__kpi-tile")).toHaveCount(7);
 
+await page.keyboard.press("Escape");
+await page.getByRole("button", {name:"Add All Sites to favourites"}).click();
+await page.reload();
+await expect(page.getByRole("button", {name:"Remove All Sites from favourites"})).toBeVisible();
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
 await modules.getByRole("button", { name: "Event Logs" }).click();
 await expect(page.getByText("No events found", { exact: true })).toBeVisible();
 await expect(page.getByText("0", { exact: true }).first()).toBeVisible();
@@ -78,5 +91,18 @@ await expect(page.getByText("Test User", { exact: true })).toBeVisible();
 
 await page.goto(`${baseUrl}/home`, { waitUntil: "networkidle" });
 await page.screenshot({ path: "/tmp/portal-local-new-account.png", fullPage: true });
+await expect(page.getByTestId("home-favourites").getByRole("button", {name:/My Org All Sites/})).toBeVisible();
+await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
+await page.getByRole("navigation", {name:"Primary"}).getByRole("button", {name:"Logout",exact:true}).click();
+await expect(page).toHaveURL(/\/login$/);
+await expect.poll(async () => (await page.request.get(`${baseUrl}/api/me`)).status()).toBe(401);
+await page.goto(`${baseUrl}/sites/organisations/900000000000000101/dashboard`);
+await expect(page).toHaveURL(/\/login$/);
+await page.getByLabel("Email or username").fill("test");
+await page.getByRole("button", {name:/continue/i}).click();
+await page.getByLabel("Password").fill("test");
+await page.getByRole("button", {name:/login|sign in/i}).click();
+await expect(page).toHaveURL(/\/home$/);
+await expect(page.getByTestId("home-favourites").getByRole("button", {name:/My Org All Sites/})).toBeVisible();
 await browser.close();
 console.log("Local new-account authenticated browser checks passed.");

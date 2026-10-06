@@ -55,6 +55,7 @@ const AppRoutes: React.FC = () => {
   });
   const [userRole, setUserRole] = useState<"client" | "admin">("client");
   const [organisations, setOrganisations] = useState<AuthenticatedOrganisation[]>([]);
+  const [favouritesCatalogueReady, setFavouritesCatalogueReady] = useState(false);
   const location = useLocation();
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
@@ -73,7 +74,9 @@ const AppRoutes: React.FC = () => {
         if (me.ok) {
           setAuthenticatedUser(me.data.user);
           clearDemoSessionLocal();
-          setOrganisations(await fetchOrganisations().catch(() => []));
+          const catalogue = await fetchOrganisations().catch(() => null);
+          setOrganisations(catalogue ?? []);
+          setFavouritesCatalogueReady(catalogue !== null);
           setIsLoggedIn(true);
         } else {
           setIsLoggedIn(false);
@@ -95,9 +98,10 @@ const AppRoutes: React.FC = () => {
     clearDemoSessionLocal();
     const me = await fetchMe();
     if (!me.ok) return;
-    const nextOrganisations = await fetchOrganisations().catch(() => []);
+    const nextOrganisations = await fetchOrganisations().catch(() => null);
     setAuthenticatedUser(me.data.user);
-    setOrganisations(nextOrganisations);
+    setOrganisations(nextOrganisations ?? []);
+    setFavouritesCatalogueReady(nextOrganisations !== null);
     setCredentials({ username: "", password: "" });
     setUserRole("client");
     setIsLoggedIn(true);
@@ -110,6 +114,7 @@ const AppRoutes: React.FC = () => {
     setCredentials({ username: "", password: "" });
     setUserRole("client");
     setOrganisations([]);
+    setFavouritesCatalogueReady(false);
   };
 
   const isDemoSession = isDemoSessionActive();
@@ -203,6 +208,12 @@ const AppRoutes: React.FC = () => {
     return null;
   }
 
+  const isCanonicalPortalPath = location.pathname.startsWith("/sites/organisations/");
+  const isAccountAppPath = location.pathname === "/home" || location.pathname === "/documents" || location.pathname.startsWith("/settings");
+  if (!authenticatedUser && (isCanonicalPortalPath || (appMode === "public" && isAccountAppPath))) {
+    return <Navigate to="/login" replace />;
+  }
+
   const renderClientRoute = (element: React.ReactNode) => (
     <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout} authenticatedOrganisations={organisations}>
       {userRole === "admin" && !hasViewToken ? (
@@ -218,12 +229,14 @@ const AppRoutes: React.FC = () => {
   );
   const refreshOrganisations = async () => {
     setOrganisations(await fetchOrganisations());
+    setFavouritesCatalogueReady(true);
   };
   const authenticatedShell = authenticatedUser ? (
     <AuthenticatedApplicationProvider
       user={authenticatedUser}
       organisations={organisations}
       refreshOrganisations={refreshOrganisations}
+      favouritesCatalogueReady={favouritesCatalogueReady}
     >
       <AuthenticatedAppShell onLogout={handleLogout} />
     </AuthenticatedApplicationProvider>

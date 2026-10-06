@@ -1,33 +1,23 @@
 .authenticated-portal-scope-header {
+  position: relative;
   margin-bottom: 20px;
   min-width: 0;
 }
 
-.authenticated-portal-scope-header .vrm-dashboard-identity,
-.authenticated-portal-scope-header .vrm-dashboard-header-mobile__site {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.authenticated-portal-scope-header .vrm-dashboard-title,
-.authenticated-portal-scope-title {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .authenticated-portal-favourite {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  border: 1px solid var(--line-soft);
-  border-radius: 11px;
-  background: var(--surface-elevated);
+  border: 0;
+  background: transparent;
   color: var(--text-muted);
   cursor: pointer;
 }
@@ -40,18 +30,44 @@
   fill: currentColor;
 }
 
-.authenticated-portal-favourite:hover,
-.authenticated-portal-favourite:focus-visible {
-  border-color: var(--signal-gold);
-}
-
 .authenticated-portal-favourite:focus-visible {
   outline: 2px solid var(--signal-gold);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
-@media (max-width: 768px) {
-  .authenticated-portal-scope-header .authenticated-portal-scope-title {
-    font-size: 18px;
+.authenticated-portal-scope-header .vrm-header-meta-group:last-child,
+.authenticated-portal-scope-header .vrm-header-meta-mobile__row:last-child {
+  position: relative;
+  padding-right: 28px;
+}
+
+.authenticated-portal-scope-header .vrm-header-meta-mobile__row:last-child {
+  width: fit-content;
+  justify-self: center;
+  max-width: 100%;
+}
+
+.authenticated-portal-favourite-warning {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (pointer: coarse) {
+  .authenticated-portal-scope-header .vrm-header-meta-mobile__row:last-child {
+    padding-right: 44px;
+  }
+
+  .authenticated-portal-favourite {
+    right: 10px;
+  }
+
+  .authenticated-portal-favourite::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
   }
 }

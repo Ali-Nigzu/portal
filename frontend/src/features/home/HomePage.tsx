@@ -9,7 +9,7 @@ import "../dashboard/styles/DashboardPage.css";
 import "./HomePage.css";
 
 const HomePage: React.FC = () => {
-  const { user, organisations } = useAuthenticatedApplication();
+  const { user, organisations, isScopeFavourite, favouriteStorageError } = useAuthenticatedApplication();
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
@@ -32,10 +32,16 @@ const HomePage: React.FC = () => {
     ]).filter((result) => !normalizedInput || result.label.toLowerCase().includes(normalizedInput)).slice(0, 8);
   }, [isSearchFocused, organisations, searchValue]);
   const recent = useMemo(() => readRecentPortalDestinations(organisations), [organisations]);
-  const siteCount = useMemo(
-    () => organisations.reduce((total, organisation) => total + organisation.sites.length, 0),
-    [organisations],
-  );
+  const favourites = organisations.flatMap(organisation => [
+    ...(isScopeFavourite(organisation.id) ? [{
+      key: `${organisation.id}:all`, organisationName: organisation.name, scopeName: "All Sites",
+      path: organisationPortalPath(organisation.id, "dashboard"),
+    }] : []),
+    ...organisation.sites.filter(site => isScopeFavourite(organisation.id, site.id)).map(site => ({
+      key: `${organisation.id}:site:${site.id}`, organisationName: organisation.name, scopeName: site.name,
+      path: sitePortalPath(organisation.id, site.id, "dashboard"),
+    })),
+  ]);
 
   return (
     <div className="dashboard-v2 home-page">
@@ -130,11 +136,19 @@ const HomePage: React.FC = () => {
 
           <div className="home-page__panel home-page__panel--favorites">
             <Card title="Favourite Sites" className="home-page__card home-page__card--favorites">
-              <div className="home-page__card-body home-page__card-body--text">
-                <p>{siteCount === 0
-                  ? "Favourite Sites will appear here after a Site is connected."
-                  : "You don't have any Favorite Sites yet. Get started by marking a Site as favorite from the dashboard page."}
-                </p>
+              <div className="home-page__card-body home-page__card-body--links" data-testid="home-favourites">
+                {favourites.length ? favourites.map(favourite => <button
+                  type="button" key={favourite.key}
+                  className="home-page__list-row home-page__favourite-row"
+                  onClick={() => navigate(favourite.path)}
+                >
+                  <span className="home-page__favourite-identity">
+                    <span className="home-page__favourite-organisation">{favourite.organisationName}</span>
+                    <span>{favourite.scopeName}</span>
+                  </span>
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>) : <p className="home-page__empty-copy">Use the scope star to add favourites here.</p>}
+                {favouriteStorageError && <p className="home-page__empty-copy" role="status">Couldn’t save favourites in this browser.</p>}
               </div>
             </Card>
           </div>

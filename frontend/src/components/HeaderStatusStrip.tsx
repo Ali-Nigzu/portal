@@ -17,6 +17,7 @@ interface HeaderStatusStripProps {
   isAuthenticatedView?: boolean;
   layout?: "desktop" | "mobile";
   status?: DashboardStatus;
+  trailingAction?: React.ReactNode;
 }
 
 const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
@@ -24,6 +25,7 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
   isAuthenticatedView = false,
   layout = "desktop",
   status,
+  trailingAction,
 }) => {
   const { systemStatus, localTime } = useGlobalControls();
   // Canonical dashboards supply relational truth; legacy consumers retain
@@ -98,7 +100,7 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
             </>
           )}
         </div>
-        <div className="vrm-header-meta-mobile__row">Local time: {localTime}</div>
+        <div className="vrm-header-meta-mobile__row">Local time: {localTime}{trailingAction}</div>
       </div>
     );
   }
@@ -138,6 +140,7 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
         <span className="vrm-header-chip" title="Local site time">
           Local time: {localTime}
         </span>
+        {trailingAction}
       </div>
     </div>
   );
