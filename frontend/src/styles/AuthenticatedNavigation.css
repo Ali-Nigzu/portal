@@ -465,3 +465,16 @@
     animation: none;
   }
 }
+
+.authenticated-navigation__scope-divider {
+  flex: 0 0 auto;
+  height: 1px;
+  margin: 7px 12px;
+  background: var(--line-soft);
+}
+
+.authenticated-navigation__row--external-action {
+  flex-shrink: 0;
+  color: var(--signal-gold);
+  text-decoration: none;
+}

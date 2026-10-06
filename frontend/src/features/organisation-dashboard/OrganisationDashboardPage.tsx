@@ -12,7 +12,7 @@ import { PERIOD_OPTIONS, projectActivity, projectDemographics, projectKpis } fro
 import type { Period } from "./types";
 import "../dashboard/styles/DashboardPage.css";
 
-export default function OrganisationDashboardPage() {
+export default function OrganisationDashboardPage({ hideHeader = false }: { hideHeader?: boolean }) {
   const { context, selection, snapshot, error, notFound, retry } = useDashboardSnapshot();
   const [period, setPeriod] = useState<Period>("today");
   const [mode, setMode] = useState("activity");
@@ -26,7 +26,7 @@ export default function OrganisationDashboardPage() {
   return <ErrorBoundary name="organisation-dashboard"><DemoDonutTooltipProvider><DemoDonutTooltipBoundary>
     <div className="dashboard-v2" data-snapshot-ts={snapshot?.ts}>
       <div className="dashboard-v2__content vrm-dashboard-shell">
-      {entity && <DashboardHeader siteLabelOverride={entity.name} status={{realtime:entity.realtime, enabled:entity.enabled}} />}
+      {!hideHeader && entity && <DashboardHeader siteLabelOverride={entity.name} status={{realtime:entity.realtime, enabled:entity.enabled}} />}
       {notFound ? <p role="alert">Dashboard not found.</p> : error ? <div role="alert"><p>{error}</p><button className="vrm-btn" onClick={retry}>Retry</button></div> : !snapshot ? <DashboardLoadingState /> : <>
         <DashboardKpiSection kpiWidgets={kpis} onRemoveWidget={() => {}} donutTooltipMode="demo_cursor_hover" />
         <Card title="Site Flow" className="dashboard-v2__chart-card dashboard-v2__chart-card--site-flow vrm-card vrm-card--chart-panel"

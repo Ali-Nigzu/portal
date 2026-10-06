@@ -9,6 +9,7 @@ interface DevicesMultiSelectProps {
   value: EventDeviceToken[];
   onChange: (value: EventDeviceToken[]) => void;
   options: EventDeviceOption[];
+  terminology?: "source" | "device";
 }
 
 const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
@@ -16,6 +17,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
   value,
   onChange,
   options,
+  terminology = "source",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | undefined>();
@@ -26,8 +28,8 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
   const menuId = useId();
   const selectedTokens = new Set(value);
   const summary = value.length
-    ? `${value.length} source${value.length === 1 ? "" : "s"} selected`
-    : "All sources";
+    ? `${value.length} ${terminology}${value.length === 1 ? "" : "s"} selected`
+    : terminology === "device" ? "All Devices" : "All sources";
   const portalTarget =
     wrapperRef.current?.closest(".demo-overlay") ?? document.body;
 
@@ -172,7 +174,7 @@ const DevicesMultiSelect: React.FC<DevicesMultiSelectProps> = ({
             >
               {options.length === 0 ? (
                 <div className="event-devices-empty" role="status">
-                  <p>No sources in this scope.</p>
+                  <p>{terminology === "device" ? "No devices in this scope." : "No sources in this scope."}</p>
                 </div>
               ) : (
                 optionGroups.map((group, groupIndex) => {

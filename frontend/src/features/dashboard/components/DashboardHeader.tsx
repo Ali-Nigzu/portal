@@ -9,6 +9,7 @@ type DashboardHeaderProps = {
   mode?: "full" | "preview";
   isAuthenticatedView?: boolean;
   status?: DashboardStatus;
+  identityAction?: React.ReactNode;
 };
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -16,6 +17,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   mode = "full",
   isAuthenticatedView = false,
   status,
+  identityAction,
 }) => {
   const { siteId } = useParams();
   const siteLabel = useMemo(() => {
@@ -33,6 +35,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         <div className="vrm-dashboard-header-left">
           <div className="vrm-dashboard-identity">
             <Title className="vrm-dashboard-title">{siteLabel}</Title>
+            {identityAction}
           </div>
         </div>
         {mode === "full" ? (
@@ -43,7 +46,10 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       </div>
       {mode === "full" ? (
         <div className="vrm-dashboard-header-mobile" role="group" aria-label={status ? "Dashboard status summary" : "Site status summary"}>
-          <Title className="vrm-dashboard-header-mobile__site">{siteLabel}</Title>
+          {identityAction ? <div className="vrm-dashboard-header-mobile__site">
+            <Title className="authenticated-portal-scope-title">{siteLabel}</Title>
+            {identityAction}
+          </div> : <Title className="vrm-dashboard-header-mobile__site">{siteLabel}</Title>}
           <div className="vrm-dashboard-header-mobile__divider" aria-hidden="true" />
           <div className="vrm-dashboard-header-mobile__status">
             <HeaderStatusStrip layout="mobile" isAuthenticatedView={isAuthenticatedView} status={status} />

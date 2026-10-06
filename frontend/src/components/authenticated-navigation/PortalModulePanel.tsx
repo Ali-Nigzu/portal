@@ -3,14 +3,15 @@ import type { AuthenticatedOrganisation } from "../../features/auth/transport/or
 import { PORTAL_MODULES, type PortalModule } from "../../features/organisation-dashboard/authenticatedPortalRoutes";
 import { NavIcon } from "../../common/components/icons";
 import type { AuthenticatedRouteContext } from "./authenticatedNavigationModel";
+import { PORTAL_MODULE_LABELS } from "../../features/organisation-dashboard/portalModuleLabels";
 
 const details = {
-  dashboard: { label: "Dashboard", icon: LayoutDashboard },
-  "event-logs": { label: "Event Logs", icon: ClipboardList },
-  "alarm-logs": { label: "Alarm Logs", icon: Bell },
-  "device-list": { label: "Device List", icon: Cpu },
-  reports: { label: "Reports", icon: FileBarChart2 },
-} satisfies Record<PortalModule, { label: string; icon: typeof LayoutDashboard }>;
+  dashboard: { icon: LayoutDashboard },
+  "event-logs": { icon: ClipboardList },
+  "alarm-logs": { icon: Bell },
+  "device-list": { icon: Cpu },
+  reports: { icon: FileBarChart2 },
+} satisfies Record<PortalModule, { icon: typeof LayoutDashboard }>;
 
 type Props = {
   organisation: AuthenticatedOrganisation;
@@ -49,7 +50,7 @@ export default function PortalModulePanel({ organisation, siteId, routeContext, 
               onClick={() => onSelectModule(module)}
             >
               <span className="authenticated-navigation__icon"><NavIcon icon={detail.icon} /></span>
-              <span className="authenticated-navigation__label">{detail.label}</span>
+              <span className="authenticated-navigation__label">{PORTAL_MODULE_LABELS[module]}</span>
             </button>
           );
         })}

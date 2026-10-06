@@ -23,7 +23,9 @@ for (const label of ["Home", "My Org", "Documents", "Settings", "Logout"])
 await primary.getByRole("button", { name: "My Org", exact: true }).click();
 const scopes = page.getByRole("navigation", { name: "My Org scope selector" });
 await expect(scopes.getByRole("button", { name: "All Sites" })).toBeVisible();
-await expect(scopes.locator(".authenticated-navigation__row")).toHaveCount(1);
+await expect(scopes.locator("button.authenticated-navigation__row")).toHaveCount(1);
+await expect(scopes.locator('.authenticated-navigation__scope-divider')).toHaveCount(1);
+await expect(scopes.getByRole('link', {name:'Add Site'})).toHaveAttribute('target', '_blank');
 await scopes.getByRole("button", { name: "All Sites" }).click();
 await expect(page).toHaveURL(/\/sites\/organisations\/900000000000000101\/dashboard$/);
 

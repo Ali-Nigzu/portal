@@ -1,0 +1,57 @@
+.authenticated-portal-scope-header {
+  margin-bottom: 20px;
+  min-width: 0;
+}
+
+.authenticated-portal-scope-header .vrm-dashboard-identity,
+.authenticated-portal-scope-header .vrm-dashboard-header-mobile__site {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.authenticated-portal-scope-header .vrm-dashboard-title,
+.authenticated-portal-scope-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.authenticated-portal-favourite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  background: var(--surface-elevated);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.authenticated-portal-favourite.is-favourite {
+  color: var(--signal-gold);
+}
+
+.authenticated-portal-favourite.is-favourite svg {
+  fill: currentColor;
+}
+
+.authenticated-portal-favourite:hover,
+.authenticated-portal-favourite:focus-visible {
+  border-color: var(--signal-gold);
+}
+
+.authenticated-portal-favourite:focus-visible {
+  outline: 2px solid var(--signal-gold);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .authenticated-portal-scope-header .authenticated-portal-scope-title {
+    font-size: 18px;
+  }
+}

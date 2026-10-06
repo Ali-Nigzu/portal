@@ -122,7 +122,7 @@ export default function CanonicalDeviceList() {
             <div className="device-runtime-device-grid">{[0, 1, 2].map((value) => <div className="device-runtime-card device-runtime-card--skeleton" key={value} />)}</div>
           </div>
         ) : !devices.items.length ? (
-          source.deviceControl.mode === "canonical" ? null : <div className="device-runtime-state">No sources in this scope.</div>
+          source.deviceControl.mode === "canonical" ? <div className="device-runtime-empty" aria-hidden="true" /> : <div className="device-runtime-state">No sources in this scope.</div>
         ) : (
           <div className="device-runtime-groups">
             {devices.recordsStatus === "unavailable" && <div className="device-runtime-warning" role="alert">Record counts are temporarily unavailable. Source controls and Event Logs remain available.</div>}

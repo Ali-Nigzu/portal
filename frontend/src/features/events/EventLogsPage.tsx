@@ -105,7 +105,7 @@ function Results({ filters }: { filters: string }) {
                   Site
                 </th>
                 <th className="event-logs-col-source" scope="col">
-                  Source
+                  {portal.source.deviceControl.mode === "canonical" ? "Device" : "Source"}
                 </th>
                 <th className="event-logs-col-id" scope="col">
                   Event ID
@@ -197,7 +197,7 @@ function CanonicalEvents() {
   const [applied, setApplied] = useState(initialApplied);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState(
-    invalidDeepLink ? "The requested source is unavailable in this Portal scope." : "",
+    invalidDeepLink ? `The requested ${portal.source.deviceControl.mode === "canonical" ? "device" : "source"} is unavailable in this Portal scope.` : "",
   );
   return (
     <div className="event-logs-page">
@@ -221,7 +221,7 @@ function CanonicalEvents() {
           <h2>Filters</h2>
         </div>
         <div className="portal-log-filter-body">
-          <PortalFilters value={draft} onChange={setDraft} />
+          <PortalFilters value={draft} onChange={setDraft} deviceTerminology={portal.source.deviceControl.mode === "canonical"} />
         </div>
         <div className="portal-log-filter-actions">
           {error && (

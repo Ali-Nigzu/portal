@@ -91,6 +91,10 @@
   overflow: hidden;
 }
 
+.device-runtime-empty {
+  min-height: 180px;
+}
+
 .device-runtime-section-header {
   display: flex;
   justify-content: space-between;

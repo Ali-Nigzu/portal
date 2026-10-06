@@ -5,6 +5,7 @@ import { PortalProvider } from "../../context/PortalContext";
 import { authenticatedPortalSource } from "./authenticatedPortalSource";
 import { isPortalModule } from "./authenticatedPortalRoutes";
 import { recordRecentPortalLocation } from "./recentPortalDestinations";
+import AuthenticatedPortalScopeHeader from "../../components/AuthenticatedPortalScopeHeader";
 
 export default function AuthenticatedOrganisationPortalRoute() {
   const { organisationId, siteId, module = "dashboard" } = useParams();
@@ -20,7 +21,7 @@ export default function AuthenticatedOrganisationPortalRoute() {
   if (!organisationId) return <div role="alert">Organisation unavailable.</div>;
   return (
     <PortalProvider source={source} organisationId={organisationId} siteId={siteId}>
-      <PortalModuleContent module={module} />
+      <PortalModuleContent module={module} scopeHeader={<AuthenticatedPortalScopeHeader />} />
     </PortalProvider>
   );
 }
