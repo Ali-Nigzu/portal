@@ -119,6 +119,7 @@ async function harness(viewport = { width: 1440, height: 900 }) {
   await context.route("https://consent.cookiebot.com/**", (r) => r.abort());
   await context.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
+    if (url.pathname === "/api/me") return route.fulfill({ status: 401, json: { detail: "Authentication required" } });
     requests.push(url.pathname + url.search);
     if (!["GET", "HEAD", "OPTIONS"].includes(route.request().method()))
       writeRequests.push(`${route.request().method()} ${url.pathname}`);
@@ -241,7 +242,7 @@ async function harness(viewport = { width: 1440, height: 900 }) {
       }
       await route.fulfill({
         status: 404,
-        json: { detail: { message: "No report snapshot is available for this scope." } },
+        json: { detail: { error: "report_snapshot_not_found", message: "No report snapshot is available for this scope." } },
       });
       return;
     }
@@ -496,7 +497,7 @@ try {
       );
       await page.goto(base + "/demo/example/third/reports");
       await expect(
-        page.getByText("No report snapshot is available for this scope.", { exact: true }),
+        page.getByRole("heading", { name: "No report data yet", exact: true }),
       ).toBeVisible();
       await expect(page.getByRole("button", { name: "Download Report", exact: true })).toHaveCount(0);
       h.state.reportFail = true;

@@ -1,3 +1,5 @@
+import pytest
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -46,9 +48,9 @@ class Devices:
 
 
 class Dashboard:
-    def load_organisation_snapshot(self, organisation):
+    def load_organisation_snapshot(self, organisation, *, zero_scope=None):
         return {"scope": "organisation", "entity_id": str(organisation), "entity_name": "Demo", "ts": "2026-09-29T00:00:00+00:00", "payload": {}}
-    def load_site_snapshot(self, organisation, site):
+    def load_site_snapshot(self, organisation, site, *, zero_scope=None):
         return {"scope": "site", "entity_id": str(site), "entity_name": "Alis Barber", "ts": "2026-09-29T00:00:00+00:00", "payload": {}}
 
 
@@ -63,7 +65,7 @@ class Alarms:
 
 
 class Reports:
-    def read_snapshot(self, scope):
+    def read_snapshot(self, scope, *, allow_empty=False):
         return {"scope": scope.dto, "snapshot": {}}
 
 
@@ -118,3 +120,54 @@ def test_all_shared_module_routes_are_available_in_authorised_scope(monkeypatch)
         assert response.status_code == 200, (path, response.text)
     assert api.get("/api/portal/organisations/2/events").status_code == 404
     assert api.get(base + "/events?site_id=999").status_code == 404
+
+
+@pytest.mark.parametrize("site_count", [0, 1, 3])
+def test_authenticated_missing_snapshots_use_real_scope_and_keep_authorisation(monkeypatch, site_count):
+    from backend.app.services.organisation_dashboard import OrganisationDashboard
+    from backend.app.services.portal_reports import PortalReports
+    from backend.tests.test_zero_snapshot import Database
+
+    api, repo, _ = client(monkeypatch)
+    metadata, _ = Metadata().load(None)
+    metadata["sites"] = [dict(metadata["sites"][0], id=str(11 + i), name=f"Owned Site {i + 1}")
+                         for i in range(site_count)]
+    api.app.state.portal_metadata.load = lambda identity: (metadata, {})
+    database = Database()
+    api.app.state.organisation_dashboard = OrganisationDashboard(database)
+    api.app.state.portal_reports = PortalReports(database)
+    base = "/api/portal/organisations/1"
+    paths = [("/snapshot", "organisation", "1", "Demo"),
+             ("/reports/snapshot", "organisation", "1", "Demo")]
+    if site_count:
+        paths += [("/sites/11/snapshot", "site", "11", "Owned Site 1"),
+                  ("/reports/snapshot?site_id=11", "site", "11", "Owned Site 1")]
+    for path, scope, entity, name in paths:
+        response = api.get(base + path)
+        assert response.status_code == 200
+        body = response.json()
+        snapshot = body["snapshot"] if "/reports/" in path else body
+        assert snapshot["scope"] == scope
+        assert snapshot["entity_id"] == entity and snapshot["entity_name"] == name
+        assert snapshot["payload"]["entrances_96"] == [0] * 96
+    queries = len(database.queries)
+    for path in ("/sites/999/snapshot", "/reports/snapshot?site_id=999"):
+        assert api.get(base + path).status_code == 404
+    assert api.get("/api/portal/organisations/2/reports/snapshot").status_code == 404
+    repo.organisation_enabled = False
+    assert api.get(base + "/snapshot").status_code == 404
+    assert api.get(base + "/reports/snapshot").status_code == 404
+    assert len(database.queries) == queries, "invalid scopes never reach snapshot storage"
+
+
+def test_authenticated_report_errors_are_not_successful_zero_models(monkeypatch):
+    from datetime import datetime, timezone
+    from backend.app.services.portal_reports import PortalReports
+    from backend.tests.test_zero_snapshot import Database
+
+    api, _, _ = client(monkeypatch)
+    path = "/api/portal/organisations/1/reports/snapshot"
+    api.app.state.portal_reports = PortalReports(Database(error=RuntimeError("database unavailable")))
+    assert api.get(path).status_code == 503
+    api.app.state.portal_reports = PortalReports(Database((1, "Demo", datetime.now(timezone.utc), [])))
+    assert api.get(path).status_code == 502

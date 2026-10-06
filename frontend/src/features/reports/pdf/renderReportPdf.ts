@@ -304,7 +304,7 @@ export function renderReportPdf(
     doc.setFontSize(9);
     doc.text("Visitor profile summary", 105, y + 8, { align: "center" });
     doc.setFont("helvetica", "normal");
-    doc.text(`Largest age group: ${m.dominantAgeBucket}`, 105, y + 17, {
+    doc.text(`Largest age group: ${m.dominantAgeBucket ?? "—"}`, 105, y + 17, {
       align: "center",
     });
     doc.text(

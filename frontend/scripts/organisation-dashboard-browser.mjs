@@ -23,6 +23,7 @@ async function harness({viewport=sizes[0][1],pending}={}) {
  const gate=pending?new Promise(resolve=>{release=resolve;}):Promise.resolve();
  await context.route('**/api/**',async route=>{
   const url=new URL(route.request().url());const path=url.pathname;
+  if(path==='/api/me')return route.fulfill({status:401,json:{detail:'Authentication required'}});
   state.requests.push(path+url.search);
   if(path===pending)await gate;
   let body={};let status=200;
@@ -120,7 +121,7 @@ try {
  await check('unknown slugs and existing legacy aliases',async()=>{
   const before=state.requests.length;
   await page.goto(base+'/demo/renamed-demo/foreign/dashboard');
-  await expect(page.getByText('Dashboard not found.',{exact:true})).toBeVisible();
+  await expect(page.getByText('Portal page not found.',{exact:true})).toBeVisible();
   assert(!state.requests.slice(before).some(p=>p.endsWith('/snapshot')));
   for(const alias of ['site-a','site-b','all']){
    await page.goto(base+`/demo/${alias}/dashboard`);await ready(page);

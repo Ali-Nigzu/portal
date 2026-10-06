@@ -19,7 +19,7 @@ const DEFAULT_SLICE_COLORS = [
 
 const VRM_SLICE_COLORS = ["#7EA6DC", "#3F78C1", "#1F3F73"];
 const PREVIEW_SLICE_COLORS = ["#dce3eb", "#aebac9", "#738297", "#5e6c80"];
-const EMPTY_RING_COLOR = "rgba(96, 122, 165, 0.28)";
+const EMPTY_RING_COLOR = "#aebac9";
 
 export const TrafficDistribution = ({
   result,
@@ -79,20 +79,6 @@ export const TrafficDistribution = ({
     : isVrmTraffic
       ? VRM_SLICE_COLORS
       : DEFAULT_SLICE_COLORS;
-
-  if (!primary || data.length === 0) {
-    return (
-      <div
-        className={`traffic-distribution kpi-tile ${className ?? ""}`}
-        style={{ minHeight: height }}
-      >
-        <div className="traffic-distribution__title">{title}</div>
-        <div className="traffic-distribution__empty">
-          Traffic Split data unavailable.
-        </div>
-      </div>
-    );
-  }
 
   const legend = data.map((point, index) => {
     const rawCamera = point.x ?? `Cam ${index + 1}`;
@@ -172,7 +158,7 @@ export const TrafficDistribution = ({
     segments: pieLegend.map((entry) => ({
       id: entry.interactionId,
       value: entry.value,
-      interactive: hasPositiveTraffic || isCoarsePointer,
+      interactive: hasPositiveTraffic,
     })),
   });
   const {
@@ -206,7 +192,7 @@ export const TrafficDistribution = ({
   } | null>(null);
   const hoveredSlice = pieLegend.find((entry) => entry.interactionId === activeSegmentId);
   const tooltipRows = useMemo<DonutTooltipRow[]>(() => {
-    if (!isDemoCursorHover || (!hasPositiveTraffic && !isCoarsePointer)) {
+    if (!isDemoCursorHover || !hasPositiveTraffic) {
       return [];
     }
     return pieLegend.map((entry) => ({
@@ -219,6 +205,9 @@ export const TrafficDistribution = ({
     }));
   }, [activeSegmentId, hasPositiveTraffic, isCoarsePointer, isDemoCursorHover, pieLegend]);
   const hoverLabelText = useMemo(() => {
+    if (!hasPositiveTraffic) {
+      return "";
+    }
     if (isDemoCursorHover) {
       if (!isTooltipVisible || !hoveredSlice) {
         return "";
@@ -233,7 +222,7 @@ export const TrafficDistribution = ({
       return "";
     }
     return legacyHoverLabel.text;
-  }, [hoveredSlice, isDemoCursorHover, isTooltipVisible, legacyHoverLabel]);
+  }, [hasPositiveTraffic, hoveredSlice, isDemoCursorHover, isTooltipVisible, legacyHoverLabel]);
   const getHoverBounds = useCallback(() => {
     const surface = chartSurfaceRef.current;
     if (!surface) {
@@ -466,7 +455,7 @@ export const TrafficDistribution = ({
     entryIndex: number,
     shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
   ) => {
-    if (isDemoCursorHover) {
+    if (isDemoCursorHover || !hasPositiveTraffic) {
       return;
     }
     const hovered = pieLegend[entryIndex];

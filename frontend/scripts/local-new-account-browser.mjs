@@ -45,14 +45,25 @@ await expect(page.getByText("No cleared alarms", { exact: true })).toBeVisible()
 
 await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
 await page.getByRole("navigation", { name: "My Org module navigation" }).getByRole("button", { name: "Device List" }).click();
-await expect(page.getByText("No sources in this scope.", { exact: true })).toBeVisible();
+await expect(page.getByText("No sources in this scope.", { exact: true })).toHaveCount(0);
+await expect(page.locator(".device-runtime-card")).toHaveCount(0);
+await expect(page.getByRole("button", { name: "Refresh All" })).toBeVisible();
 await expect(page.getByText("Gateways", { exact: true })).toBeVisible();
 
 await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
 await page.getByRole("navigation", { name: "My Org module navigation" }).getByRole("button", { name: "Reports" }).click();
-await expect(page.getByRole("heading", { name: "No report data yet" })).toBeVisible();
-await expect(page.getByRole("button", { name: "Retry" })).toHaveCount(0);
-await expect(page.getByRole("button", { name: "Download Report" })).toHaveCount(0);
+await expect(page.getByRole("heading", { name: "No report data yet" })).toHaveCount(0);
+await expect(page.getByRole("combobox", { name: "Period" })).toBeVisible();
+await expect(page.getByRole("combobox", { name: "Period" }).locator("option")).toHaveCount(7);
+for (const report of ["Site Activity", "Visitor Profile"]) {
+  await page.getByRole("button", { name: new RegExp(report) }).click();
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download Report" }).click();
+  const download = await pending;
+  if (!download.suggestedFilename().startsWith("My-Org-")) throw new Error("Incorrect report identity");
+  if (await download.failure()) throw new Error("Zero report download failed");
+}
+
 
 await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
 await page.getByRole("navigation", { name: "Primary" }).getByText("Documents", { exact: true }).click();
