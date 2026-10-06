@@ -8,7 +8,7 @@ import "../styles/AuthenticatedPortalScopeHeader.css";
 
 export default function AuthenticatedPortalScopeHeader() {
   const { context, selection } = usePortal();
-  const { isScopeFavourite, toggleScopeFavourite } = useAuthenticatedApplication();
+  const { isScopeFavourite, toggleScopeFavourite, favouriteStorageError } = useAuthenticatedApplication();
   if (!context || !selection) return null;
   const siteId = selection.scope === "site" ? selection.id : undefined;
   const entity = siteId === undefined ? context.organisation : context.sites.find(site => site.id === siteId);
@@ -24,8 +24,9 @@ export default function AuthenticatedPortalScopeHeader() {
       event.stopPropagation();
       toggleScopeFavourite(context.organisation.id, siteId);
     }}
-  ><NavIcon icon={Star} /></button>;
+  ><NavIcon icon={Star} size={16} /></button>;
   return <div className="authenticated-portal-scope-header" data-testid="portal-scope-header">
-    <DashboardHeader siteLabelOverride={label} status={{ enabled: entity.enabled, realtime: entity.realtime }} identityAction={control} />
+    {favouriteStorageError && <span className="authenticated-portal-favourite-warning" role="status">Couldn’t save favourites in this browser.</span>}
+    <DashboardHeader siteLabelOverride={label} status={{ enabled: entity.enabled, realtime: entity.realtime }} metadataAction={control} />
   </div>;
 }

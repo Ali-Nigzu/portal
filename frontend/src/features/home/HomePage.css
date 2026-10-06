@@ -253,3 +253,25 @@
       "news";
   }
 }
+
+.home-page__favourite-row {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.home-page__favourite-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.home-page__favourite-organisation {
+  color: var(--sys-text-3, var(--vrm-text-muted));
+  font-size: 12px;
+}
+
+.home-page__favourite-row svg {
+  flex-shrink: 0;
+}

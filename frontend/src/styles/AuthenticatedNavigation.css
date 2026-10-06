@@ -313,7 +313,7 @@
   border-color: var(--line-soft);
   box-shadow: none;
   opacity: .62;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 .authenticated-navigation__row:focus-visible,

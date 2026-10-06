@@ -177,6 +177,11 @@ await expect(settings.getByRole("button", { name: "My Account" })).toBeVisible()
 const createAlarm = settings.getByRole("button", { name: "Create Alarm" });
 await expect(createAlarm).toBeVisible();
 await expect(createAlarm).toBeDisabled();
+await expect(createAlarm).toHaveCSS("cursor", "default");
+const alarmURL = desktop.url();
+await createAlarm.hover();
+await expect(createAlarm).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+await expect(desktop).toHaveURL(alarmURL);
 await expect(createAlarm).toHaveAttribute("aria-disabled", "true");
 await expect(desktop).toHaveURL(currentUrl);
 await settings.getByRole("button", { name: "Manage Access" }).click();
