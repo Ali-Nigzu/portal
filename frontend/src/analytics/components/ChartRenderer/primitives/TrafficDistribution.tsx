@@ -19,7 +19,7 @@ const DEFAULT_SLICE_COLORS = [
 
 const VRM_SLICE_COLORS = ["#7EA6DC", "#3F78C1", "#1F3F73"];
 const PREVIEW_SLICE_COLORS = ["#dce3eb", "#aebac9", "#738297", "#5e6c80"];
-const EMPTY_RING_COLOR = "#aebac9";
+const EMPTY_RING_COLOR = "var(--vrm-bg-panel, var(--surface-panel, #e8edf2))";
 
 export const TrafficDistribution = ({
   result,

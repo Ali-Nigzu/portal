@@ -1,4 +1,4 @@
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, MapPin, Plus } from "lucide-react";
 import type { AuthenticatedOrganisation } from "../../features/auth/transport/organisations";
 import { NavIcon } from "../../common/components/icons";
 import type { AuthenticatedRouteContext } from "./authenticatedNavigationModel";
@@ -34,6 +34,7 @@ export default function OrganisationScopePanel({ organisation, routeContext, sho
           <span className="authenticated-navigation__icon"><NavIcon icon={MapPin} /></span>
           <span className="authenticated-navigation__label">All Sites</span>
         </button>
+        <div className="authenticated-navigation__scope-divider" aria-hidden="true" />
         {organisation.sites.map((site) => {
           const active = routeMatchesOrganisation && routeContext.siteId === site.id;
           return (
@@ -50,6 +51,15 @@ export default function OrganisationScopePanel({ organisation, routeContext, sho
             </button>
           );
         })}
+        <a
+          className="authenticated-navigation__row authenticated-navigation__row--external-action"
+          href="https://calendly.com/cameraoperatingsystems/camos-site-setup-appointment"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="authenticated-navigation__icon"><NavIcon icon={Plus} /></span>
+          <span className="authenticated-navigation__label">Add Site</span>
+        </a>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { AuthenticatedOrganisation } from "../auth/transport/organisations";
+import { PORTAL_MODULE_LABELS } from "./portalModuleLabels";
 import {
   authenticatedPortalPath,
   isPortalModule,
@@ -53,7 +54,7 @@ export function readRecentPortalDestinations(
     };
     result.push({
       ...destination,
-      label: `${organisation.name} · ${site?.name ?? "Full organisation"} · ${candidate.module.replaceAll("-", " ")}`,
+      label: `${organisation.name} · ${site?.name ?? "All Sites"} · ${PORTAL_MODULE_LABELS[candidate.module]}`,
       path: authenticatedPortalPath(destination),
     });
     if (result.length === LIMIT) break;

@@ -175,6 +175,18 @@ try {
     await expect(page.locator(".device-runtime-card")).toHaveCount(count);
     await expect(page.getByText("No sources in this scope.", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Source summary" })).toBeVisible();
+    if (count === 0) {
+      for (const width of [1440, 768, 390]) {
+        await page.setViewportSize({ width, height: 1000 });
+        const blank = page.locator('.device-runtime-empty');
+        await expect(blank).toHaveText('');
+        assert((await blank.boundingBox()).height >= 180);
+        const card = await page.locator('.device-runtime-section').boundingBox();
+        const button = await page.getByRole('button', {name:'Refresh All'}).boundingBox();
+        assert(card.y + card.height - button.y - button.height >= 180, 'empty body must protect the control from bottom clipping');
+      }
+      await page.setViewportSize({width:1440,height:1000});
+    }
     checks++;
   }
   state.deviceCount = 0;
@@ -195,8 +207,11 @@ try {
   for (const [org, site] of cases.slice(0, 6)) {
     await page.goto(base + portalPath(org, site, "dashboard"));
     await expect(page.locator(".traffic-distribution .recharts-sector")).toHaveCount(1);
-    await expect(page.locator(".traffic-distribution .recharts-sector")).toHaveAttribute("fill", "#aebac9");
+    await expect(page.locator(".traffic-distribution .recharts-sector")).toHaveAttribute("fill", "var(--vrm-bg-panel, var(--surface-panel, #e8edf2))");
     await expect(page.locator(".traffic-distribution__center")).toHaveText("—");
+    const colours = await page.evaluate(() => ({ traffic: getComputedStyle(document.querySelector('.traffic-distribution .recharts-sector')).fill,
+      capacity: [...document.querySelectorAll('.capacity-usage .recharts-sector')].map(el => getComputedStyle(el).fill) }));
+    assert(colours.capacity.includes(colours.traffic), 'Traffic zero fill must match Capacity Remaining');
     await expect(page.getByText("Traffic Split data unavailable.")).toHaveCount(0);
     await page.screenshot({ path: path.join(out, `dashboard-${org.id}-${site?.id ?? "all"}.png`), fullPage: true });
     checks++;
@@ -237,7 +252,7 @@ try {
       if (label === "Positive") await expect(page.locator(".traffic-distribution__center")).toHaveAttribute("aria-label", "New Site");
       else await expect(page.locator(".traffic-distribution__center")).toHaveText("—");
       if (label !== "Positive") {
-        await expect(ring).toHaveAttribute("fill", "#aebac9");
+        await expect(ring).toHaveAttribute("fill", "var(--vrm-bg-panel, var(--surface-panel, #e8edf2))");
         await ring.hover({ position: { x: 68, y: 10 } });
         await expect(page.locator(".traffic-distribution")).not.toContainText("100%");
         await expect(page.locator(".traffic-distribution .analytics-chart-tooltip--donut")).toHaveCount(0);

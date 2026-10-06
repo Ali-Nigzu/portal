@@ -28,10 +28,12 @@ export function PortalFilters({
   value,
   onChange,
   alarms = false,
+  deviceTerminology = false,
 }: {
   value: Filters;
   onChange: (value: Filters) => void;
   alarms?: boolean;
+  deviceTerminology?: boolean;
 }) {
   const { context, selection } = usePortal();
   const sites = context!.sites.filter(
@@ -63,10 +65,11 @@ export function PortalFilters({
     >
       <div className="portal-filter-field portal-filter-field--sources">
         <label className="vrm-label" htmlFor="portal-sources">
-          Sources
+          {deviceTerminology ? "Device" : "Sources"}
         </label>
         <DevicesMultiSelect
           id="portal-sources"
+          terminology={deviceTerminology ? "device" : "source"}
           value={value.sources}
           onChange={(sources) => onChange({ ...value, sources })}
           options={sites.flatMap((site) =>
