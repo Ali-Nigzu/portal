@@ -45,7 +45,7 @@ const contextFor = org => ({
   sources: [],
   clock: { server_now: anchor, effective_now: anchor, time_zone: "Europe/London" },
 });
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.PORTAL_BROWSER_EXECUTABLE ? { executablePath: process.env.PORTAL_BROWSER_EXECUTABLE } : {}) });
 let checks = 0, downloads = 0;
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
 page.setDefaultTimeout(12000);

@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=320)
+    password: str = Field(max_length=1024)
 
 
 class LoginResponse(BaseModel):
@@ -22,23 +22,26 @@ class AuthUser(BaseModel):
     name: str
     email: str
     phone: Optional[str] = None
+    account_version: int = 0
 
 
 class CreateAccountRequest(BaseModel):
-    name: str
-    email: str
-    phone: Optional[str] = None
-    password: str
+    name: str = Field(min_length=1, max_length=120)
+    email: str = Field(max_length=320)
+    phone: Optional[str] = Field(default=None, max_length=32)
+    password: str = Field(max_length=1024)
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class EmailLoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=320)
+    password: str = Field(max_length=1024)
 
 
 class IdentifierLoginRequest(BaseModel):
-    identifier: str
-    password: str
+    identifier: str = Field(max_length=320)
+    password: str = Field(max_length=1024)
 
 
 class AuthUserResponse(BaseModel):
@@ -82,12 +85,18 @@ class SignupStartResponse(BaseModel):
 
 
 class SignupVerifyRequest(BaseModel):
-    email: str
-    code: str
+    email: str = Field(max_length=320)
+    code: str = Field(max_length=16)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class SignupResendRequest(BaseModel):
-    email: str
+    email: str = Field(max_length=320)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class SignupResendResponse(BaseModel):
@@ -98,7 +107,10 @@ class SignupResendResponse(BaseModel):
 
 
 class PasswordResetStartRequest(BaseModel):
-    email: str
+    email: str = Field(max_length=320)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class PasswordResetStartResponse(BaseModel):
@@ -109,7 +121,10 @@ class PasswordResetStartResponse(BaseModel):
 
 
 class PasswordResetResendRequest(BaseModel):
-    email: str
+    email: str = Field(max_length=320)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class PasswordResetResendResponse(BaseModel):
@@ -120,21 +135,25 @@ class PasswordResetResendResponse(BaseModel):
 
 
 class PasswordResetVerifyRequest(BaseModel):
-    email: str
-    code: str
+    email: str = Field(max_length=320)
+    code: str = Field(max_length=16)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class PasswordResetVerifyResponse(BaseModel):
     ok: bool
-    resetToken: str
     resetExpiresInSeconds: int
 
 
 class PasswordResetSetPasswordRequest(BaseModel):
-    email: str
-    reset_token: str
-    password: str
-    confirm_password: str
+    email: str = Field(max_length=320)
+    password: str = Field(max_length=1024)
+    confirm_password: str = Field(max_length=1024)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class PasswordResetSetPasswordResponse(BaseModel):
@@ -144,7 +163,10 @@ class PasswordResetSetPasswordResponse(BaseModel):
 
 
 class SettingsUnlockStartRequest(BaseModel):
-    current_password: str
+    current_password: str = Field(max_length=1024)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class SettingsUnlockStartResponse(BaseModel):
@@ -154,7 +176,10 @@ class SettingsUnlockStartResponse(BaseModel):
 
 
 class SettingsUnlockVerifyRequest(BaseModel):
-    code: str
+    code: str = Field(max_length=16)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 
 class SettingsUnlockVerifyResponse(BaseModel):
@@ -171,11 +196,12 @@ class SettingsUnlockResendResponse(BaseModel):
 
 
 class UpdateMeRequest(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    password: Optional[str] = None
-    confirm_password: Optional[str] = None
-    unlock_token: str
+    name: Optional[str] = Field(default=None, max_length=120)
+    phone: Optional[str] = Field(default=None, max_length=32)
+    password: Optional[str] = Field(default=None, max_length=1024)
+    confirm_password: Optional[str] = Field(default=None, max_length=1024)
+    unlock_token: str = Field(max_length=128)
+    account_version: Optional[int] = Field(default=None, ge=0)
 
     model_config = ConfigDict(extra="forbid")
 

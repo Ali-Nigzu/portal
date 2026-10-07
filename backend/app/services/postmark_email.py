@@ -162,13 +162,11 @@ def _postmark_send(
             if response.status >= 300:
                 error_code, error_message = _parse_postmark_error(body)
                 logger.error(
-                    "postmark.send.failed status=%s error_code=%s message=%s from_email=%s to_email=%s response_body=%s",
+                    "postmark.send.failed status=%s error_code=%s from_email=%s to_email=%s",
                     response.status,
                     error_code,
-                    error_message,
                     from_email,
                     to_email_masked,
-                    body,
                 )
                 raise PostmarkDeliveryError(
                     status_code=response.status,
@@ -202,13 +200,11 @@ def _postmark_send(
         body = exc.read().decode("utf-8", errors="replace")
         error_code, error_message = _parse_postmark_error(body)
         logger.error(
-            "postmark.send.http_error status=%s error_code=%s message=%s from_email=%s to_email=%s response_body=%s",
+            "postmark.send.http_error status=%s error_code=%s from_email=%s to_email=%s",
             exc.code,
             error_code,
-            error_message,
             from_email,
             to_email_masked,
-            body,
         )
         raise PostmarkDeliveryError(
             status_code=exc.code,

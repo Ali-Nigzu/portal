@@ -21,7 +21,7 @@ export const signupStart = async (
 ): Promise<SignupStartResult> => {
   const response = await fetch("/api/signup/start", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify({
       ...payload,

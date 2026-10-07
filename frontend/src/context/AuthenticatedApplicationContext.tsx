@@ -7,6 +7,7 @@ type AuthenticatedApplicationInput = {
   user: AuthUser;
   organisations: AuthenticatedOrganisation[];
   refreshOrganisations: () => Promise<void>;
+  refreshAccount?: () => Promise<void>;
   favouritesCatalogueReady?: boolean;
 };
 
@@ -25,6 +26,7 @@ export function AuthenticatedApplicationProvider({
   organisations,
   refreshOrganisations,
   favouritesCatalogueReady = true,
+  refreshAccount,
   children,
 }: AuthenticatedApplicationInput & { children: ReactNode }) {
   const [favourites, setFavourites] = useState(() => ({ userId: user.id, hydrated: favouritesCatalogueReady, ...(favouritesCatalogueReady ? readFavouriteScopes(user.id, organisations) : { keys: new Set<string>(), storageError: false }) }));
@@ -62,8 +64,8 @@ export function AuthenticatedApplicationProvider({
     });
   }, [user.id, validKeys, favouritesCatalogueReady, favourites.hydrated, favourites.userId]);
   const value = useMemo(
-    () => ({ user, organisations, refreshOrganisations, favouritesCatalogueReady, isScopeFavourite, toggleScopeFavourite, favouriteStorageError: favourites.userId === user.id && favourites.storageError }),
-    [user, organisations, refreshOrganisations, favouritesCatalogueReady, isScopeFavourite, toggleScopeFavourite, favourites.userId, favourites.storageError],
+    () => ({ user, organisations, refreshAccount, refreshOrganisations, favouritesCatalogueReady, isScopeFavourite, toggleScopeFavourite, favouriteStorageError: favourites.userId === user.id && favourites.storageError }),
+    [user, organisations, refreshAccount, refreshOrganisations, favouritesCatalogueReady, isScopeFavourite, toggleScopeFavourite, favourites.userId, favourites.storageError],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

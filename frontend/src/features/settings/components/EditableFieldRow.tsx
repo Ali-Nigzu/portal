@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId, useRef, useEffect } from "react";
 import { PenLine } from "lucide-react";
 
 type EditableFieldRowProps = {
@@ -28,6 +28,13 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
   onSave,
   onChange,
 }) => {
+  const inputId = useId();
+  const button = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(isEditing);
+  useEffect(() => {
+    if (wasEditing.current && !isEditing) button.current?.focus();
+    wasEditing.current = isEditing;
+  }, [isEditing]);
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -47,12 +54,16 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
 
   return (
     <div className={`settings-field-row ${isEditing ? "settings-field-row--editing" : "settings-field-row--readonly"}`}>
-      <div className="settings-field-label">{label}</div>
+      <label className="settings-field-label" htmlFor={isEditing ? inputId : undefined}>{label}</label>
       <div className="settings-field-main">
         {!isEditing ? (
           <div className="settings-field-value">{displayValue || "—"}</div>
         ) : (
           <input
+            id={inputId}
+            maxLength={120}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `${inputId}-error` : undefined}
             className="settings-input"
             value={value}
             type={type}
@@ -62,11 +73,11 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
             autoFocus
           />
         )}
-        {error ? <div className="settings-inline-error">{error}</div> : null}
+        {error ? <div id={`${inputId}-error`} className="settings-inline-error">{error}</div> : null}
       </div>
       <div className="settings-field-actions">
         {!isEditing ? (
-          <button className="settings-edit-icon-btn" onClick={onEdit} aria-label={`Edit ${label}`}>
+          <button ref={button} disabled={isSaving} className="settings-edit-icon-btn" onClick={onEdit} aria-label={`Edit ${label}`}>
             <PenLine size={14} aria-hidden="true" />
           </button>
         ) : (
@@ -74,7 +85,7 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={onCancel} disabled={isSaving}>
               Cancel
             </button>
-            <button className="vrm-btn vrm-btn-sm" onClick={onSave} disabled={isSaving}>
+            <button className="vrm-btn vrm-btn-sm" onClick={onSave} disabled={isSaving || value === displayValue}>
               {isSaving ? "Saving..." : "Save"}
             </button>
           </>

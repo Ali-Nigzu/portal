@@ -2,13 +2,12 @@ export type PasswordResetSetPasswordResponse = { ok: boolean };
 
 export const passwordResetSetPassword = async (payload: {
   email: string;
-  reset_token: string;
   password: string;
   confirm_password: string;
 }): Promise<PasswordResetSetPasswordResponse> => {
   const response = await fetch('/api/password-reset/set-password', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'camOS' },
     credentials: 'include',
     body: JSON.stringify({ ...payload, email: payload.email.trim().toLowerCase() }),
   });

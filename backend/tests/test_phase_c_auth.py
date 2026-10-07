@@ -36,7 +36,7 @@ def client(monkeypatch):
     app = FastAPI()
     app.state.auth_repository = Repository()
     app.include_router(auth.router)
-    return TestClient(app), app.state.auth_repository
+    return TestClient(app, headers={"X-Requested-With": "camOS"}), app.state.auth_repository
 
 
 def test_email_and_username_argon_login_issue_one_year_cookie(monkeypatch):
@@ -44,7 +44,7 @@ def test_email_and_username_argon_login_issue_one_year_cookie(monkeypatch):
     for identifier in ("COD4DINNER@GMAIL.COM", "ALIGG"):
         response = api.post("/api/login", json={"identifier": identifier, "password": "1"})
         assert response.status_code == 200
-        assert response.json() == {"user": {"id": "0", "name": "aligg", "email": "cod4dinner@gmail.com", "phone": None}}
+        assert response.json() == {"user": {"id": "0", "name": "aligg", "email": "cod4dinner@gmail.com", "phone": None, "account_version": 0}}
         assert "password_hash" not in response.text
         cookie = response.headers["set-cookie"].lower()
         assert "max-age=31536000" in cookie and "httponly" in cookie and "samesite=lax" in cookie

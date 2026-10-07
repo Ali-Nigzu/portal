@@ -1,6 +1,5 @@
 export type PasswordResetVerifyCodeResponse = {
   ok: boolean;
-  resetToken: string;
   resetExpiresInSeconds: number;
 };
 
@@ -10,7 +9,7 @@ export const passwordResetVerifyCode = async (payload: {
 }): Promise<PasswordResetVerifyCodeResponse> => {
   const response = await fetch('/api/password-reset/verify-code', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'camOS' },
     credentials: 'include',
     body: JSON.stringify({ ...payload, email: payload.email.trim().toLowerCase() }),
   });

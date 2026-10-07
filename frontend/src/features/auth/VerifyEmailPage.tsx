@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
@@ -12,15 +12,16 @@ import "./VerifyEmailPage.css";
 const VerifyEmailPage: React.FC = () => {
   const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const email = useMemo(() => searchParams.get("email")?.trim().toLowerCase() ?? "", [searchParams]);
 
   const [code, setCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(location.state?.warning ?? null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [cooldownRemaining, setCooldownRemaining] = useState(30);
 
   useEffect(() => {
     if (cooldownRemaining <= 0) return;
@@ -69,7 +70,7 @@ const VerifyEmailPage: React.FC = () => {
     try {
       const result = await signupVerify(email, code);
       if (result.ok) {
-        navigate("/login");
+        navigate("/login", { replace: true, state: { message: "Account verified. Please sign in." } });
         return;
       }
       setError(mapVerifyError(result.status, result.message));
@@ -113,7 +114,7 @@ const VerifyEmailPage: React.FC = () => {
             <p className="verify-email-title">Verify Email</p>
             <h1 className="verify-email-hero">Enter the 6-digit code</h1>
             <p className="verify-email-copy">
-              We sent a verification code to <strong>{email || "your email"}</strong>.
+              Enter the verification code for <strong>{email || "your email"}</strong>.
             </p>
 
             <form className="verify-email-form" onSubmit={handleVerify}>
@@ -133,11 +134,12 @@ const VerifyEmailPage: React.FC = () => {
                   }}
                   placeholder="123456"
                   aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "verify-code-error" : undefined}
                 />
               </div>
 
               {error && (
-                <div className="verify-email-error" role="alert" aria-live="assertive">
+                <div id="verify-code-error" className="verify-email-error" role="alert" aria-live="assertive">
                   {error}
                 </div>
               )}

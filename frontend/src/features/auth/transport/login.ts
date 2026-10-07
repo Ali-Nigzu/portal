@@ -20,7 +20,7 @@ export const login = async (
   const response = await fetch("/api/login", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json", "X-Requested-With": "camOS",
     },
     credentials: "include",
     body: JSON.stringify({ identifier: identifier.trim(), password }),

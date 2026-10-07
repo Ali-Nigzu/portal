@@ -40,7 +40,7 @@ INSERT INTO public.memberships VALUES(0,1,0,1,now() - INTERVAL '1 year');
 
 
 class LocalPostgres:
-    def __init__(self):
+    def __init__(self, lifecycle=True):
         port = os.getenv("PORTAL_TEST_POSTGRES_PORT")
         if not port:
             raise RuntimeError(
@@ -57,6 +57,12 @@ class LocalPostgres:
         with self.database.connection() as connection:
             with closing(connection.cursor()) as cursor:
                 cursor.execute(SCHEMA)
+
+        if lifecycle:
+            migration = Path(__file__).resolve().parents[1] / 'migrations/002_canonical_user_lifecycle.sql'
+            with self.database.connection() as connection:
+                with closing(connection.cursor()) as cursor:
+                    cursor.execute(migration.read_text())
 
     def connect(self, name):
         return pg8000.dbapi.connect(

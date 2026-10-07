@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from fastapi import HTTPException, Request, status
 
-from backend.app.auth import verify_password
+from backend.app.auth import verify_password, require_legacy_password_auth
 from backend.app.data.json_store import load_users
 from backend.app.view_tokens import validate_view_token
 from backend.app.services.demo_session import resolve_demo_org_id
@@ -44,6 +44,7 @@ def _decode_basic_auth(auth_header: str) -> Tuple[str, str]:
 
 
 def _load_user(username: str, password: str) -> Dict[str, Any]:
+    require_legacy_password_auth()
     users = load_users()
     if username not in users or not verify_password(password, users[username]["password"]):
         raise HTTPException(
@@ -88,6 +89,7 @@ def authenticate_chart_data_request(
         )
 
     username, password = _decode_basic_auth(auth_header)
+    require_legacy_password_auth()
     users = load_users()
     if username not in users or not verify_password(password, users[username]["password"]):
         raise HTTPException(

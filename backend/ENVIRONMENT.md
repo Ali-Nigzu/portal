@@ -9,7 +9,11 @@ These variables are required for signup verification, Contact Us admin notificat
 - `ADMIN_NOTIFY_EMAIL` (optional; defaults to `ali@camos.app`)
 - `POSTMARK_EMAIL_ENDPOINT` (optional; defaults to Postmark `/email`, primarily for runtime verification against a local provider stub)
 
-If Postmark credentials are missing, email-dependent endpoints return an explicit `503` configuration error instead of reporting success while silently skipping email delivery. Signup admin-notification failures are logged after account creation so they cannot block verification completion.
+Contact email configuration failures return `503`. Signup/unlock delivery failures
+return recoverable `502` responses and retain their pending challenge for resend.
+Password recovery acknowledgements remain generic for known, unknown, disabled,
+and temporarily undeliverable accounts. Signup admin-notification failures are
+logged after canonical account creation and cannot block verification completion.
 
 ## Canonical authentication and Cloud SQL
 
@@ -31,7 +35,9 @@ this mode when `NODE_ENV=production`.
 
 Authenticated sessions have a fixed 365-day lifetime. User and membership state
 is re-read from Postgres for protected requests; membership claims are never
-stored in the cookie.
+stored in the cookie. A canonical session version revokes previous cookies when
+passwords change or reset. Deploying the versioned cookie format signs existing
+sessions out once.
 
 Self-service organisation/access management also uses this canonical identity.
 Apply the administrator-only membership migration before enabling its writes;
@@ -39,8 +45,17 @@ see [deployment and validation instructions](../docs/self-service-organisations.
 The runtime needs SELECT/INSERT on organisations, USAGE on organisations_id_seq,
 SELECT/INSERT/UPDATE on memberships and SELECT on users. No DDL, organisation
 UPDATE/DELETE or membership DELETE is required. Invitations do not create users;
-legacy signup persistence is unchanged. The local-new-account fixture does not
-provide membership mutations.
+signup creates a verified canonical user with zero memberships. The
+local-new-account fixture does not provide lifecycle or membership mutations.
+
+Apply the reviewed administrator-only user lifecycle migration and column grants
+before deploying this revision; see [canonical lifecycle deployment and validation](../docs/canonical-user-lifecycle.md).
+No runtime DDL or production migration is performed by the application.
+
+Legacy JSON password authentication is disabled by default, and is always
+disabled when `NODE_ENV=production`. `PORTAL_LEGACY_PASSWORD_AUTH=true` is an
+explicit non-production compatibility opt-in only. Production uses canonical
+Argon2 credentials; legacy view-token/demo mappings remain outside this migration.
 
 The database principal also needs SELECT on the canonical Portal tables and
 these existing write privileges for device/gateway controls:

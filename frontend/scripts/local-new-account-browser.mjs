@@ -2,14 +2,15 @@ import { chromium } from "playwright";
 import { expect } from "@playwright/test";
 
 const baseUrl = process.env.PORTAL_BROWSER_BASE_URL ?? "http://127.0.0.1:3000";
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.PORTAL_BROWSER_EXECUTABLE ? { executablePath: process.env.PORTAL_BROWSER_EXECUTABLE } : {}) });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.setDefaultTimeout(12_000);
+await page.route("https://consent.cookiebot.com/**", route => route.abort());
 
 // The fixture account is data, not a session: a clean browser must log in.
 await page.context().clearCookies();
 await expect.poll(async () => (await page.request.get(`${baseUrl}/api/me`)).status()).toBe(401);
-await page.goto(`${baseUrl}/sites/organisations/900000000000000101/dashboard`, { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/sites/organisations/900000000000000101/dashboard`, { waitUntil: "domcontentloaded" });
 await expect(page).toHaveURL(/\/login$/);
 await expect(page.getByLabel("Email or username")).toBeVisible();
 await expect(page.getByTestId("authenticated-app-shell")).toHaveCount(0);
@@ -89,7 +90,7 @@ await page.getByRole("navigation", { name: "Settings navigation" }).getByRole("b
 await expect(page.getByRole("heading", { name: "My Account" })).toBeVisible();
 await expect(page.getByText("Test User", { exact: true })).toBeVisible();
 
-await page.goto(`${baseUrl}/home`, { waitUntil: "networkidle" });
+await page.goto(`${baseUrl}/home`, { waitUntil: "domcontentloaded" });
 await page.screenshot({ path: "/tmp/portal-local-new-account.png", fullPage: true });
 await expect(page.getByTestId("home-favourites").getByRole("button", {name:/My Org All Sites/})).toBeVisible();
 await page.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });

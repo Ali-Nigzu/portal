@@ -7,8 +7,6 @@ import type {
   UpdateMePayload,
 } from "../types";
 
-const notImplementedError = new Error("Not implemented yet");
-
 export const getMe = async (): Promise<SettingsUser> => {
   const response = await fetchMe();
   if (!response.ok) {
@@ -20,7 +18,7 @@ export const getMe = async (): Promise<SettingsUser> => {
 export const startSettingsUnlock = async (currentPassword: string): Promise<SettingsUnlockStartResult> => {
   const response = await fetch("/api/settings/unlock/start", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify({ current_password: currentPassword }),
   });
@@ -29,7 +27,7 @@ export const startSettingsUnlock = async (currentPassword: string): Promise<Sett
     let message: string | undefined;
     try {
       const data = (await response.json()) as { detail?: string };
-      message = data.detail;
+      message = typeof data.detail === "string" ? data.detail : undefined;
     } catch {
       message = undefined;
     }
@@ -48,6 +46,7 @@ export const startSettingsUnlock = async (currentPassword: string): Promise<Sett
 export const resendSettingsUnlockCode = async (): Promise<SettingsUnlockResendResult> => {
   const response = await fetch("/api/settings/unlock/resend", {
     method: "POST",
+    headers: { "X-Requested-With": "camOS" },
     credentials: "include",
   });
 
@@ -55,7 +54,7 @@ export const resendSettingsUnlockCode = async (): Promise<SettingsUnlockResendRe
     let message: string | undefined;
     try {
       const data = (await response.json()) as { detail?: string };
-      message = data.detail;
+      message = typeof data.detail === "string" ? data.detail : undefined;
     } catch {
       message = undefined;
     }
@@ -74,7 +73,7 @@ export const resendSettingsUnlockCode = async (): Promise<SettingsUnlockResendRe
 export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUnlockVerifyResult> => {
   const response = await fetch("/api/settings/unlock/verify", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify({ code: code.trim() }),
   });
@@ -83,7 +82,7 @@ export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUn
     let message: string | undefined;
     try {
       const data = (await response.json()) as { detail?: string };
-      message = data.detail;
+      message = typeof data.detail === "string" ? data.detail : undefined;
     } catch {
       message = undefined;
     }
@@ -102,7 +101,7 @@ export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUn
 export const updateMe = async (payload: UpdateMePayload): Promise<SettingsUser> => {
   const response = await fetch("/api/me", {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify(payload),
   });
@@ -111,7 +110,7 @@ export const updateMe = async (payload: UpdateMePayload): Promise<SettingsUser> 
     let message = "Unable to save";
     try {
       const data = (await response.json()) as { detail?: string };
-      if (data.detail) {
+      if (typeof data.detail === "string") {
         message = data.detail;
       }
     } catch {
@@ -122,8 +121,4 @@ export const updateMe = async (payload: UpdateMePayload): Promise<SettingsUser> 
 
   const data = await response.json() as { user: SettingsUser };
   return data.user;
-};
-
-export const updatePassword = async (_password: string): Promise<void> => {
-  throw notImplementedError;
 };

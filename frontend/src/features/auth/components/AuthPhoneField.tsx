@@ -17,6 +17,8 @@ type AuthPhoneFieldProps = {
   onSelectedIsoChange: (value: string) => void;
   onPhoneTextChange: (value: string) => void;
   inputClassName?: string;
+  error?: string;
+  disabled?: boolean;
 };
 
 type PopoverPlacement = "up" | "down";
@@ -33,6 +35,8 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
   onSelectedIsoChange,
   onPhoneTextChange,
   inputClassName = "vrm-input",
+  error,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -183,6 +187,7 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
           </svg>
         </span>
         <input
+          disabled={disabled}
           className="vrm-input auth-phone-country-search"
           placeholder=""
           aria-label="Search countries"
@@ -247,6 +252,7 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
         type="button"
         id={`${idPrefix}-country`}
         className="vrm-input auth-phone-country-trigger"
+        disabled={disabled}
         onClick={() => {
           setIsOpen((value) => !value);
           setQuery("");
@@ -259,6 +265,10 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
       </button>
 
       <input
+        disabled={disabled}
+        aria-label="Phone number"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${idPrefix}-phone-error` : undefined}
         id={`${idPrefix}-phone`}
         className={inputClassName}
         autoComplete="tel"
@@ -267,6 +277,7 @@ const AuthPhoneField: React.FC<AuthPhoneFieldProps> = ({
         value={phoneText}
         onChange={(event) => onPhoneTextChange(sanitizePhoneText(event.target.value))}
       />
+      {error && <p id={`${idPrefix}-phone-error`} className="settings-inline-error">{error}</p>}
 
       {renderedPopover}
     </div>

@@ -8,7 +8,7 @@ export type PasswordResetResendResponse = {
 export const passwordResetResend = async (email: string): Promise<PasswordResetResendResponse> => {
   const response = await fetch("/api/password-reset/resend", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify({ email: email.trim().toLowerCase() }),
   });

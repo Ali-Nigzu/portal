@@ -12,6 +12,8 @@ from fastapi import FastAPI
 
 from backend.app.api import auth, authenticated_portal, organisation_memberships
 from backend.app.services.canonical_auth import CanonicalAuthRepository
+from backend.app.services.user_lifecycle import UserLifecycle
+from backend.app.services.user_lifecycle_repository import UserLifecycleRepository
 from backend.app.services.organisation_dashboard import OrganisationDashboard
 from backend.app.services.organisation_membership_repository import (
     OrganisationMembershipRepository,
@@ -63,6 +65,7 @@ def main():
         app = FastAPI()
         db = pg.database
         app.state.auth_repository = CanonicalAuthRepository(db)
+        app.state.user_lifecycle = UserLifecycle(UserLifecycleRepository(db))
         app.state.organisation_memberships = OrganisationMemberships(
             OrganisationMembershipRepository(db)
         )

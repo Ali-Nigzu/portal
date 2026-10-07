@@ -143,7 +143,7 @@ def local_client(monkeypatch):
     monkeypatch.setenv("PORTAL_BACKEND_MODE", "local-new-account")
     monkeypatch.setenv("PORTAL_SESSION_SECRET", "local-development-secret-value-123456789")
     monkeypatch.delenv("NODE_ENV", raising=False)
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(), headers={"X-Requested-With": "camOS"}) as client:
         yield client
 
 
@@ -154,7 +154,7 @@ def test_local_mode_uses_normal_auth_session_catalogue_and_context(local_client)
     assert response.status_code == 200
     assert response.json()["user"] == {
         "id": str(USER_ID), "name": "Test User",
-        "email": "test@local.invalid", "phone": None,
+        "email": "test@local.invalid", "phone": None, "account_version": 0,
     }
     assert "camos_session" in response.cookies
     assert "demo" not in response.headers.get("set-cookie", "").lower()

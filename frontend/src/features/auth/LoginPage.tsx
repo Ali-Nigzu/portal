@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
@@ -20,6 +20,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = (location.state as { message?: string } | null)?.message;
   const {
     email,
     password,
@@ -84,6 +86,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <section className="login-left-pane" aria-label="Login form panel">
           <div className="login-content">
             <h1 className="login-hero">Welcome Back</h1>
+            {successMessage && <p role="status" className="verify-email-message">{successMessage}</p>}
 
             <form className="login-form" onSubmit={onPrimaryAction}>
               <div className="vrm-field login-field">

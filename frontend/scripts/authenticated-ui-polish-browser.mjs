@@ -56,7 +56,7 @@ globalThis.localStorage={getItem:()=>{throw new Error('blocked')},setItem:()=>{t
 assert(storage.readFavouriteScopes('user-A',orgs).storageError);
 assert.equal(storage.writeFavouriteScopes('user-A',new Set(),orgs),false);
 console.log('PASS storage: version/schema, duplicates, stale scopes, renames, string IDs, user isolation and storage exceptions');
-const browser = await chromium.launch({ headless: true }), errors = [], requests = [];
+const browser = await chromium.launch({ headless: true, ...(process.env.PORTAL_BROWSER_EXECUTABLE ? { executablePath: process.env.PORTAL_BROWSER_EXECUTABLE } : {}) }), errors = [], requests = [];
 const page = await browser.newPage({ viewport: { width: 1440, height: 1e3 } });
 page.setDefaultTimeout(12e3);
 page.on("pageerror", (e) => errors.push(e.message));

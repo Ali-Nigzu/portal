@@ -237,9 +237,15 @@ const AppRoutes: React.FC = () => {
   const lazyRoute = (element: React.ReactNode) => (
     <Suspense fallback={null}>{element}</Suspense>
   );
+  const refreshAccount = async () => {
+    const me = await fetchMe();
+    if (!me.ok) { handleLogout(); return; }
+    setAuthenticatedUser(me.data.user);
+  };
   const authenticatedShell = authenticatedUser ? (
     <AuthenticatedApplicationProvider
       user={authenticatedUser}
+      refreshAccount={refreshAccount}
       organisations={organisations}
       refreshOrganisations={refreshOrganisations}
       favouritesCatalogueReady={favouritesCatalogueReady}
