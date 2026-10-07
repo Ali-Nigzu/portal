@@ -163,8 +163,23 @@ try {
     await expect(
       page.getByRole("heading", { name: "Manage Access", exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: "Your invitations and requests",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    for (const action of ["+ Add Organisation", "+ Request Access"])
+      await expect(
+        page
+          .locator(".access-page-actions")
+          .getByRole("button", { name: action, exact: true }),
+      ).toBeVisible();
   }
   async function sendInvite(page, identifier, type = "Email") {
+    const selectedId = await page
+      .locator(".access-organisation-id strong")
+      .innerText();
     await page
       .getByRole("button", { name: "Invite member", exact: true })
       .click();
@@ -172,6 +187,25 @@ try {
       name: "Invite member",
       exact: true,
     });
+    const selector = dialog.getByRole("combobox", {
+      name: "Organisation",
+      exact: true,
+    });
+    await expect(selector).toHaveValue(selectedId);
+    const catalogue = await (
+      await page.request.get(`${base}/api/portal/organisations`)
+    ).json();
+    assert.deepEqual(
+      await selector
+        .locator("option")
+        .evaluateAll((options) => options.map((option) => option.value)),
+      catalogue.organisations
+        .filter((org) => org.role === 0)
+        .map((org) => org.id),
+    );
+    await expect(
+      dialog.getByRole("textbox", { name: "Email", exact: true }),
+    ).toBeFocused();
     if (type === "Username")
       await dialog
         .getByRole("radio", { name: "Username", exact: true })
@@ -179,7 +213,7 @@ try {
     await dialog
       .getByRole("textbox", { name: type, exact: true })
       .fill(identifier);
-    await expect(dialog.getByRole("combobox")).toHaveCount(0);
+    await expect(dialog.getByRole("combobox")).toHaveCount(1);
     await dialog
       .getByRole("button", { name: "Send invitation", exact: true })
       .click();
@@ -187,6 +221,22 @@ try {
   }
   const personalRow = (page, name) =>
     page.locator(".access-personal-row").filter({ hasText: name });
+  async function requestAccess(page, id) {
+    await page
+      .locator(".access-page-actions")
+      .getByRole("button", { name: "+ Request Access", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: "Request access",
+      exact: true,
+    });
+    await dialog.getByLabel("Organisation ID", { exact: true }).fill(id);
+    await dialog.getByRole("button", { name: "Continue", exact: true }).click();
+    await dialog
+      .getByRole("button", { name: "Request access", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+  }
 
   // Existing canonical login, normal shell, zero organisation navigation.
   await owner.goto(`${base}/login`);
@@ -231,6 +281,23 @@ try {
   await expect(modal).toHaveCount(0);
   assert(await member.evaluate(() => document.activeElement !== document.body));
   assert(await member.evaluate(() => !document.querySelector("#root").inert));
+  await settings(member);
+  await member
+    .locator(".access-page-actions")
+    .getByRole("button", { name: "+ Add Organisation", exact: true })
+    .click();
+  await expect(
+    member.getByRole("dialog", { name: "Create organisation", exact: true }),
+  ).toBeVisible();
+  await member.keyboard.press("Escape");
+  await member
+    .locator(".access-page-actions")
+    .getByRole("button", { name: "+ Request Access", exact: true })
+    .click();
+  await expect(
+    member.getByRole("dialog", { name: "Request access", exact: true }),
+  ).toBeVisible();
+  await member.keyboard.press("Escape");
 
   const orgA = await create(owner, "Atlas Retail");
   assert.equal(orgA, "900000000000000101");
@@ -301,6 +368,17 @@ try {
   await expect(personalRow(member, "Atlas Retail")).toContainText(
     "Invited you to join",
   );
+  const incoming = member.getByRole("region", {
+    name: "Pending invitations",
+    exact: true,
+  });
+  await expect(incoming).toContainText(`Organisation ID ${orgA}`);
+  await expect(
+    incoming.getByRole("button", { name: "Accept", exact: true }),
+  ).toBeVisible();
+  await expect(
+    incoming.getByRole("button", { name: "Withdraw", exact: true }),
+  ).toHaveCount(0);
   assert.equal(
     (
       await member.request.get(
@@ -411,6 +489,44 @@ try {
   await expect(personalRow(owner, "Warehouse Co")).toContainText(
     "Pending approval",
   );
+  await expect(
+    owner.getByRole("region", { name: "Access requests", exact: true }),
+  ).toContainText(`Organisation ID ${orgB}`);
+  await expect(
+    owner.getByRole("region", { name: "Pending invitations", exact: true }),
+  ).not.toContainText("Warehouse Co");
+  // An Owner's incoming requests and their own outgoing request share one section.
+  await settings(third);
+  await requestAccess(third, orgA);
+  await settings(owner, orgA);
+  const requests = owner.getByRole("region", {
+    name: "Access requests",
+    exact: true,
+  });
+  await expect(
+    requests.getByRole("heading", {
+      name: "Requests to Atlas Retail",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    requests.getByRole("heading", { name: "Your requests", exact: true }),
+  ).toBeVisible();
+  await expect(
+    requests.getByRole("button", { name: "Approve third", exact: true }),
+  ).toBeVisible();
+  await expect(requests.locator(".access-personal-row")).toContainText(
+    "Warehouse Co",
+  );
+  await expect(
+    requests.locator(".access-personal-row").getByRole("button"),
+  ).toHaveCount(0);
+  await requests
+    .getByRole("button", { name: "Decline request from third", exact: true })
+    .click();
+  await expect(
+    requests.getByRole("button", { name: "Approve third", exact: true }),
+  ).toHaveCount(0);
   assert.equal(
     (
       await owner.request.get(
@@ -461,6 +577,76 @@ try {
   ).toHaveCount(0);
   modal = await sendInvite(member, "third", "Username");
   await expect(modal).toHaveCount(0);
+  // Invite into another Owner organisation without changing the page's scope.
+  await settings(owner, orgA);
+  const accessURLBeforeInvite = owner.url();
+  await owner
+    .getByRole("button", { name: "Invite member", exact: true })
+    .click();
+  modal = owner.getByRole("dialog", { name: "Invite member", exact: true });
+  const inviteOrganisation = modal.getByRole("combobox", {
+    name: "Organisation",
+    exact: true,
+  });
+  await expect(inviteOrganisation).toHaveValue(orgA);
+  await inviteOrganisation.selectOption("1");
+  await expect(owner).toHaveURL(accessURLBeforeInvite);
+  await modal
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill("member@example.com");
+  const submittedInvite = owner.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname ===
+        "/api/portal/organisations/1/invitations",
+  );
+  await modal
+    .getByRole("button", { name: "Send invitation", exact: true })
+    .click();
+  assert.deepEqual((await submittedInvite).postDataJSON(), {
+    identifier_type: "email",
+    identifier: "member@example.com",
+  });
+  await expect(modal).toHaveCount(0);
+  await expect(owner).toHaveURL(accessURLBeforeInvite);
+  await expect(
+    owner.getByRole("combobox", { name: "Organisation", exact: true }),
+  ).toHaveValue(orgA);
+  assert(
+    (
+      await (
+        await owner.request.get(`${base}/api/portal/organisations/1/access`)
+      ).json()
+    ).invitations.some((invitation) => invitation.user_id === "1"),
+  );
+  await member.evaluate(() => window.dispatchEvent(new Event("focus")));
+  const invitations = member.getByRole("region", {
+    name: "Pending invitations",
+    exact: true,
+  });
+  await expect(
+    invitations.getByRole("heading", {
+      name: "Sent for Warehouse Co",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    invitations.getByRole("heading", {
+      name: "Invitations for you",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    invitations.getByRole("button", {
+      name: "Withdraw invitation for third",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(personalRow(member, "Demo")).toContainText("Organisation ID 1");
+  await personalRow(member, "Demo")
+    .getByRole("button", { name: "Decline", exact: true })
+    .click();
+  await expect(personalRow(member, "Demo")).toHaveCount(0);
   await member
     .getByRole("button", { name: "Withdraw invitation for third", exact: true })
     .click();

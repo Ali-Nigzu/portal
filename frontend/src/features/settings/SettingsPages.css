@@ -334,9 +334,11 @@
 .access-you { color: var(--vrm-text-muted); display: block; font-size: 11px; margin-top: 4px; }
 .access-empty { margin: 0; padding: 18px 20px; color: var(--vrm-text-muted); font-size: 14px; }
 .access-personal-body { display: grid; gap: 16px; }
+.access-perspective-label { margin: 0; padding: 18px 20px 0; font-size: 13px; font-weight: 600; color: var(--vrm-text-secondary); }
 .access-personal-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--vrm-border-subtle); }
 .access-personal-row strong { overflow-wrap: anywhere; }
 .access-personal-row p { margin: 4px 0 0; }
+.access-personal-row:last-child { padding-bottom: 0; border-bottom: 0; }
 .access-pending-badge { color: var(--vrm-text-muted); font-size: 12px; flex-shrink: 0; }
 .access-feedback { display: grid; gap: 8px; justify-items: start; }
 .access-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -344,5 +346,5 @@
   .access-table th, .access-table td { padding: 12px; }
   .access-table { min-width: 480px; }
   .access-personal-row { flex-direction: column; align-items: flex-start; }
-  .access-personal .vrm-btn, .access-table .vrm-btn { min-height: 44px; }
+  .access-personal-body .vrm-btn, .access-page-actions .vrm-btn, .access-table .vrm-btn { min-height: 44px; }
 }

@@ -3,7 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import { useAuthenticatedApplication } from "../../../context/AuthenticatedApplicationContext";
 import { useOrganisationAccess } from "../../organisation-access/OrganisationAccessContext";
-import PersonalAccess from "../../organisation-access/PersonalAccess";
+import PersonalAccess, {
+  usePersonalAccess,
+} from "../../organisation-access/PersonalAccess";
 import AccessDialog from "../../organisation-access/AccessDialog";
 import {
   getManageAccess,
@@ -24,7 +26,8 @@ import "../SettingsPages.css";
 export default function ManageAccessPage() {
   const { organisations, user, favouritesCatalogueReady } =
     useAuthenticatedApplication();
-  const { refreshAccess } = useOrganisationAccess();
+  const { refreshAccess, openCreate, openRequest } = useOrganisationAccess();
+  const personal = usePersonalAccess();
   const [search, setSearch] = useSearchParams();
   const selected = search.get("organisation_id");
   const id =
@@ -33,6 +36,9 @@ export default function ManageAccessPage() {
   const [loadedData, setData] = useState<ManageAccess | null>(null),
     [loading, setLoading] = useState(false);
   const data = loadedData?.organisation.id === id ? loadedData : null;
+  const scopedAccessReady = !eligible || data !== null;
+  const sentInvitations = data?.can_manage ? data.invitations : [];
+  const receivedRequests = data?.can_manage ? data.requests : [];
   const currentId = useRef(id);
   currentId.current = id;
   const [error, setError] = useState<string | null>(null),
@@ -266,35 +272,6 @@ export default function ManageAccessPage() {
               }}
             />
           </section>
-          <section
-            className="vrm-card settings-manage-access-card"
-            aria-label="Pending invitations"
-          >
-            <div className="vrm-card-header">
-              <h2 className="vrm-card-title">Pending invitations</h2>
-            </div>
-            <PendingInvitesTable
-              invites={data.invitations}
-              busy={busy}
-              onWithdraw={(member) => {
-                setConfirmError(null);
-                setConfirmation({ member, action: "withdraw" });
-              }}
-            />
-          </section>
-          <section
-            className="vrm-card settings-manage-access-card"
-            aria-label="Access requests"
-          >
-            <div className="vrm-card-header">
-              <h2 className="vrm-card-title">Access requests</h2>
-            </div>
-            <AccessRequestsTable
-              requests={data.requests}
-              busy={busy}
-              onDecision={(member, action) => void decision(member, action)}
-            />
-          </section>
         </>
       )}
       {data && !data.can_manage && (
@@ -307,18 +284,125 @@ export default function ManageAccessPage() {
           </div>
         </div>
       )}
-      <PersonalAccess />
+      <section
+        id="personal-access"
+        className="vrm-card settings-manage-access-card"
+        aria-label="Pending invitations"
+      >
+        <div className="vrm-card-header">
+          <h2 className="vrm-card-title">Pending invitations</h2>
+        </div>
+        {!!sentInvitations.length && (
+          <>
+            {!!personal.pending.invitations.length && (
+              <h3 className="access-perspective-label">
+                Sent for {data?.organisation.name}
+              </h3>
+            )}
+            <PendingInvitesTable
+              invites={sentInvitations}
+              busy={busy}
+              onWithdraw={(member) => {
+                setConfirmError(null);
+                setConfirmation({ member, action: "withdraw" });
+              }}
+            />
+          </>
+        )}
+        {!!sentInvitations.length && !!personal.pending.invitations.length && (
+          <h3 className="access-perspective-label">Invitations for you</h3>
+        )}
+        <PersonalAccess kind="invitations" access={personal} />
+        {!personal.pendingLoading &&
+          scopedAccessReady &&
+          !personal.pendingError &&
+          !sentInvitations.length &&
+          !personal.pending.invitations.length && (
+            <p className="access-empty">No pending invitations</p>
+          )}
+      </section>
+      <section
+        className="vrm-card settings-manage-access-card"
+        aria-label="Access requests"
+      >
+        <div className="vrm-card-header">
+          <h2 className="vrm-card-title">Access requests</h2>
+        </div>
+        {!!receivedRequests.length && (
+          <>
+            {!!personal.pending.requests.length && (
+              <h3 className="access-perspective-label">
+                Requests to {data?.organisation.name}
+              </h3>
+            )}
+            <AccessRequestsTable
+              requests={receivedRequests}
+              busy={busy}
+              onDecision={(member, action) => void decision(member, action)}
+            />
+          </>
+        )}
+        {!!receivedRequests.length && !!personal.pending.requests.length && (
+          <h3 className="access-perspective-label">Your requests</h3>
+        )}
+        <PersonalAccess kind="requests" access={personal} />
+        {!personal.pendingLoading &&
+          scopedAccessReady &&
+          !personal.pendingError &&
+          !receivedRequests.length &&
+          !personal.pending.requests.length && (
+            <p className="access-empty">No access requests</p>
+          )}
+      </section>
+      {(personal.error || personal.pendingError) && (
+        <div className="access-feedback" role="alert">
+          <p className="settings-form-error">
+            {personal.error || personal.pendingError}
+          </p>
+          <button
+            className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+            onClick={personal.retry}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+      {personal.message && (
+        <p className="settings-form-message" role="status">
+          {personal.message}
+        </p>
+      )}
+      <div className="access-row-actions access-page-actions">
+        <button
+          className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+          onClick={openCreate}
+        >
+          + Add Organisation
+        </button>
+        <button
+          className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+          onClick={openRequest}
+        >
+          + Request Access
+        </button>
+      </div>
       {invite && data?.can_manage && id && (
         <InviteUserModal
+          organisations={organisations}
+          initialOrganisationId={id}
           onClose={() => setInvite(false)}
           onSubmitted={async (payload) => {
-            await inviteMember(id, payload.identifier_type, payload.identifier);
+            await inviteMember(
+              payload.organisation_id,
+              payload.identifier_type,
+              payload.identifier,
+            );
             if (currentId.current !== id) {
               await refreshAccess();
               return;
             }
             setMessage(
-              "Invitation sent. The member will have access after accepting.",
+              `Invitation sent for ${organisations.find((organisation) => organisation.id === payload.organisation_id)?.name ?? "the organisation"}. The member will have access after accepting.`,
             );
             await reload();
           }}
