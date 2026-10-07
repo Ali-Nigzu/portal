@@ -5,22 +5,6 @@ export type SettingsUser = {
   phone?: string | null;
 };
 
-export type AccessLevel = "Admin" | "Viewer";
-
-export type ManagedUser = {
-  username: string;
-  email: string;
-  site: string;
-  accessLevel: AccessLevel;
-};
-
-export type PendingInvite = {
-  email: string;
-  site: string;
-  accessLevel: AccessLevel;
-  invitedAt?: string;
-};
-
 export type UpdateMePayload = {
   name?: string;
   phone?: string;

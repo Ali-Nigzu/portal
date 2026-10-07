@@ -1,8 +1,5 @@
 import { fetchMe } from "../../auth/transport/me";
 import type {
-  AccessLevel,
-  ManagedUser,
-  PendingInvite,
   SettingsUnlockStartResult,
   SettingsUnlockVerifyResult,
   SettingsUnlockResendResult,
@@ -130,18 +127,3 @@ export const updateMe = async (payload: UpdateMePayload): Promise<SettingsUser> 
 export const updatePassword = async (_password: string): Promise<void> => {
   throw notImplementedError;
 };
-
-export const getManagedUsers = async (): Promise<ManagedUser[]> => [];
-
-export const getPendingInvites = async (): Promise<PendingInvite[]> => [];
-
-export const inviteUser = async (_payload: {
-  email: string;
-  site: string;
-  accessLevel: AccessLevel;
-}): Promise<void> => {
-  throw notImplementedError;
-};
-
-export const isNotImplementedError = (error: unknown) =>
-  error instanceof Error && error.message === "Not implemented yet";

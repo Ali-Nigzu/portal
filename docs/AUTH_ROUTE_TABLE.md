@@ -19,7 +19,7 @@ Authenticated mode is selected when `appMode === "authenticated"`. In this mode,
 | `/reset-password` | Y | N | Y | Redirects to `/home` in authenticated mode. | Public-only page intentionally blocked after login. |
 | `/reset-password/code` | Y | N | Y | Redirects to `/home` in authenticated mode. | Public-only page intentionally blocked after login. |
 | `/reset-password/new` | Y | N | Y | Redirects to `/home` in authenticated mode. | Public-only page intentionally blocked after login. |
-| `/contact` | Y | N | Y | Redirects to `/home` in authenticated mode. | Public-only page intentionally blocked after login. |
+| `/contact` | Y | Y | Y | Renders the existing Contact page in either mode. | Available to logged-in users from invitation guidance. |
 | `/terms-and-conditions` | Y | N | Y | Redirects to `/home` in authenticated mode. | Public-only legal page intentionally blocked after login by current route table. |
 | `/privacy-policy` | Y | N | Y | Redirects to `/home` in authenticated mode. | Public-only legal page intentionally blocked after login by current route table. |
 | `/sub-processor-register` | Y | N | Y | Redirects to `/home` in authenticated mode. | Public-only page intentionally blocked after login by current route table. |

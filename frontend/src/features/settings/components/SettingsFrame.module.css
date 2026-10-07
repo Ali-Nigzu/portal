@@ -4,8 +4,12 @@
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 20px;
 }
+
+.frame > * { min-width: 0; }
 
 @media (max-width: 960px) {
   .frame {

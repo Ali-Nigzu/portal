@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from types import SimpleNamespace
 
+import pytest
 from argon2 import PasswordHasher
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -78,11 +79,12 @@ def test_signed_session_has_absolute_non_sliding_one_year_expiry(monkeypatch):
         pass
 
 
-def test_organisation_catalog_and_membership_require_enabled_organisation():
+@pytest.mark.parametrize("site_id,site_name", [(11, "Alis Barber"), (None, None)])
+def test_organisation_catalog_and_membership_require_enabled_organisation(site_id, site_name):
     class Cursor:
         def __init__(self): self.calls = []
         def execute(self, sql, params): self.calls.append((sql, params))
-        def fetchall(self): return [(1, "Demo", 0, 11, "Alis Barber")]
+        def fetchall(self): return [(1, "Demo", 0, site_id, site_name)]
         def fetchone(self): return (1, 0)
         def close(self): pass
     class DB:
@@ -93,7 +95,7 @@ def test_organisation_catalog_and_membership_require_enabled_organisation():
     repository = CanonicalAuthRepository(database)
     assert repository.organisations(0) == [{
         "id": "1", "name": "Demo", "role": 0,
-        "sites": [{"id": "11", "name": "Alis Barber"}],
+        "sites": [{"id": "11", "name": "Alis Barber"}] if site_id is not None else [],
     }]
     assert repository.enabled_membership(0, 1) == Membership(1, 0)
     membership_queries = [sql for sql, _ in database.cursor_value.calls if "public.memberships" in sql]

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { ChevronRight, FileText, Home, LogOut, MapPin, Settings } from "lucide-react";
+import { ChevronRight, FileText, Home, LogOut, MapPin, Settings, Plus, UserPlus } from "lucide-react";
+import { useOrganisationAccess } from "../../features/organisation-access/OrganisationAccessContext";
 import type { AuthenticatedOrganisation } from "../../features/auth/transport/organisations";
 import { NavIcon } from "../../common/components/icons";
 import type { AuthenticatedRouteContext, NavigationStage } from "./authenticatedNavigationModel";
@@ -58,6 +59,7 @@ export default function AuthenticatedPrimaryNav({
   onDestination,
   onLogout,
 }: Props) {
+  const { pending, openCreate, openRequest } = useOrganisationAccess();
   const stageOrganisationId = stage.kind === "organisation-scopes" || stage.kind === "scope-modules"
     ? stage.organisationId
     : undefined;
@@ -86,6 +88,22 @@ export default function AuthenticatedPrimaryNav({
           onClick={() => onShowScopes(organisation.id)}
         />
       ))}
+      <PrimaryRow label="+ Add Organisation" icon={<NavIcon icon={Plus} />} onPointerEnter={clearSecondary} onClick={openCreate} />
+      <PrimaryRow label="+ Request Access" icon={<NavIcon icon={UserPlus} />} onPointerEnter={clearSecondary} onClick={openRequest} />
+      {pending.invitations.length > 0 && <div className="authenticated-navigation__pending-group" aria-label="Invitations">
+        <span className="authenticated-navigation__section-label">Invitations</span>
+        {pending.invitations.map(item => <button key={item.organisation_id} type="button" className="authenticated-navigation__row authenticated-navigation__pending-row"
+          onClick={() => onDestination("/settings/access#personal-access")} title={item.organisation_name}>
+          <span className="authenticated-navigation__label">{item.organisation_name}</span><span className="authenticated-navigation__pending-label">Invited</span>
+        </button>)}
+      </div>}
+      {pending.requests.length > 0 && <div className="authenticated-navigation__pending-group" aria-label="Requests">
+        <span className="authenticated-navigation__section-label">Requests</span>
+        {pending.requests.map(item => <button key={item.organisation_id} type="button" className="authenticated-navigation__row authenticated-navigation__pending-row"
+          onClick={() => onDestination("/settings/access#personal-access")} title={item.organisation_name}>
+          <span className="authenticated-navigation__label">{item.organisation_name}</span><span className="authenticated-navigation__pending-label">Pending</span>
+        </button>)}
+      </div>}
       <PrimaryRow
         label="Documents"
         icon={<NavIcon icon={FileText} />}

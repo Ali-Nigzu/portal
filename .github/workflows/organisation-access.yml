@@ -1,0 +1,68 @@
+name: Portal organisation access
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PORTAL_TEST_POSTGRES_PORT: '5432'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -r backend/requirements-dev.txt
+      - run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - run: python -m pytest -q backend/tests
+      - working-directory: frontend
+        run: npm ci
+      - working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - working-directory: frontend
+        run: npm run test:phase-c && npm run test:reports-engine && npm run build
+      - working-directory: frontend
+        run: |
+          npm run dev > /tmp/portal-vite.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3000/ > /dev/null
+          npm run test:authenticated-shell
+          node scripts/authenticated-ui-polish-browser.mjs
+          node scripts/authenticated-zero-data-browser.mjs
+          npm run test:organisation-access
+      - run: |
+          PORTAL_BACKEND_MODE=local-new-account PORTAL_SESSION_SECRET=ci-local-fixture-session-secret-only \
+            python -m uvicorn backend.fastapi_app:app --host 127.0.0.1 --port 8000 > /tmp/portal-fixture.log 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if [ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8000/api/me)" = '401' ]; then break; fi
+            sleep 1
+          done
+          cd frontend
+          npm run test:local-new-account
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portal-browser-evidence
+          path: frontend/test-results
+          if-no-files-found: ignore
