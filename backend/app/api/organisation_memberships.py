@@ -3,6 +3,7 @@
 import logging
 from datetime import datetime
 from typing import Literal
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -117,23 +118,91 @@ class Resolved(StrictModel):
     can_request: bool
 
 
-def mutation_origin(request: Request):
-    # A custom header rules out cross-site HTML form submissions, including
-    # requests without Origin. Browser JSON mutations also validate Origin.
-    origin = request.headers.get("origin")
-    allowed = set(get_allowed_origins()) | {str(request.base_url).rstrip("/")}
-    if (
-        request.headers.get("x-requested-with") != "camOS"
-        or request.headers.get("sec-fetch-site") == "cross-site"
-        or (origin is not None and origin not in allowed)
+def http_origin(value: str):
+    """Parse an HTTP origin, retaining ports and rejecting non-origin URLs."""
+    if not value or any(
+        ord(character) <= 32 or ord(character) == 127 for character in value
     ):
-        raise HTTPException(
-            403,
-            detail={
-                "error": "untrusted_origin",
-                "message": "Request unavailable. Reload and try again.",
-            },
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in {"", "/"}
+            or parsed.query
+            or parsed.fragment
+            or "\\" in parsed.netloc
+        ):
+            return None
+        return (
+            parsed.scheme,
+            parsed.hostname.lower(),
+            parsed.port
+            if parsed.port is not None
+            else (443 if parsed.scheme == "https" else 80),
         )
+    except ValueError:
+        return None
+
+
+def mutation_origin(request: Request):
+    # Browser Host survives the existing Vite/production reverse proxy, while
+    # ASGI's scheme can describe the internal HTTP hop after TLS termination.
+    # Parse Host using the Origin's scheme so an implicit HTTPS port means 443,
+    # not the internal hop's port 80. Never trust raw forwarded-host/proto headers.
+    origins = request.headers.getlist("origin")
+    origin = http_origin(origins[0]) if len(origins) == 1 else None
+    hosts = request.headers.getlist("host")
+    host = (
+        http_origin(f"{origin[0]}://{hosts[0]}")
+        if (
+            origin
+            and len(hosts) == 1
+            and not any(character in hosts[0] for character in "/?#@")
+        )
+        else None
+    )
+    transport = request.scope.get("scheme", "http")
+    same_origin = (
+        origin is not None
+        and origin == host
+        and (origin[0] == transport or (origin[0] == "https" and transport == "http"))
+    )
+    configured = origin is not None and origin in {
+        http_origin(value) for value in get_allowed_origins()
+    }
+    fetch_site = request.headers.get("sec-fetch-site")
+    reason = None
+    if request.headers.get("x-requested-with") != "camOS":
+        reason = "missing_or_incorrect_mutation_marker"
+    elif fetch_site == "cross-site":
+        reason = "sec_fetch_site_cross_site"
+    elif origins and not (same_origin or configured):
+        reason = "origin_host_mismatch"
+    if reason is None:
+        return
+    # Deliberately log only parsed origin/host metadata, never credentials,
+    # cookies, session tokens, request bodies or query strings.
+    logger.warning(
+        "memberships.origin_rejected reason=%s origin=%r host=%r transport=%s sec_fetch_site=%s",
+        reason,
+        origin,
+        host,
+        transport,
+        fetch_site
+        if fetch_site in {None, "same-origin", "same-site", "cross-site", "none"}
+        else "invalid",
+    )
+    raise HTTPException(
+        403,
+        detail={
+            "error": "untrusted_origin",
+            "message": "Request unavailable. Reload and try again.",
+        },
+    )
 
 
 def operation(request, callback):

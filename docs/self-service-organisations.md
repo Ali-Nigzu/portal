@@ -66,9 +66,20 @@ log or decline-reason history.
   must coordinate with the same policy; no cross-service locking is implied.
 - No network/email/analytics work is performed inside membership transactions.
 
-Mutation requests use JSON and `X-Requested-With: camOS`; browser Origin must
-match the request's application origin or configured application origins.
-Cross-site fetches are rejected. Success, validation, authorisation and domain
+Mutation requests use JSON and `X-Requested-With: camOS`. Browser Origin is
+compared with the incoming public Host, including its port, rather than the
+backend's `request.base_url`. HTTPS on that Host is accepted over an internal
+HTTP hop after proxy TLS termination. Ordinary same-origin local, development
+proxy and production traffic needs no hostname-specific origin configuration.
+The existing proxies must preserve the public Host; raw `Forwarded` and
+`X-Forwarded-Host` headers are not an additional authority. Explicitly configured
+HTTP(S) origins remain supported for intended cross-origin development.
+Cross-site fetches are rejected even for configured origins, and the mutation
+marker remains required. Rejection warnings identify
+`missing_or_incorrect_mutation_marker`, `sec_fetch_site_cross_site` or
+`origin_host_mismatch`, with parsed origin/Host and transport metadata only;
+cookies, credentials, bodies and query strings are excluded.
+Success, validation, authorisation and domain
 error responses carry `Cache-Control: no-store`. IDs are decimal strings in
 JSON, preserving PostgreSQL bigint values; user ID zero remains supported.
 
