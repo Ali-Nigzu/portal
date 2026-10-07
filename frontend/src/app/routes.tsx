@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import {
   Navigate,
   Route,
@@ -56,6 +56,15 @@ const AppRoutes: React.FC = () => {
   const [userRole, setUserRole] = useState<"client" | "admin">("client");
   const [organisations, setOrganisations] = useState<AuthenticatedOrganisation[]>([]);
   const [favouritesCatalogueReady, setFavouritesCatalogueReady] = useState(false);
+  const catalogueRevision = useRef(0);
+  const refreshOrganisations = useCallback(async () => {
+    const revision = ++catalogueRevision.current;
+    const catalogue = await fetchOrganisations();
+    if (revision === catalogueRevision.current) {
+      setOrganisations(catalogue);
+      setFavouritesCatalogueReady(true);
+    }
+  }, []);
   const location = useLocation();
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
@@ -108,6 +117,7 @@ const AppRoutes: React.FC = () => {
   };
 
   const handleLogout = () => {
+    catalogueRevision.current += 1;
     clearDemoSessionLocal();
     setIsLoggedIn(false);
     setAuthenticatedUser(null);
@@ -227,10 +237,6 @@ const AppRoutes: React.FC = () => {
   const lazyRoute = (element: React.ReactNode) => (
     <Suspense fallback={null}>{element}</Suspense>
   );
-  const refreshOrganisations = async () => {
-    setOrganisations(await fetchOrganisations());
-    setFavouritesCatalogueReady(true);
-  };
   const authenticatedShell = authenticatedUser ? (
     <AuthenticatedApplicationProvider
       user={authenticatedUser}
@@ -321,13 +327,7 @@ const AppRoutes: React.FC = () => {
       />
       <Route
         path="/contact"
-        element={
-          !isAuthenticatedMode ? (
-            lazyRoute(<ContactPage />)
-          ) : (
-            <Navigate to="/home" replace />
-          )
-        }
+        element={lazyRoute(<ContactPage />)}
       />
       <Route
         path="/terms-and-conditions"

@@ -478,3 +478,7 @@
   color: var(--signal-gold);
   text-decoration: none;
 }
+.authenticated-navigation__pending-group { padding: 8px 0; }
+.authenticated-navigation__section-label { display: block; padding: 4px 16px; font-size: 11px; color: var(--vrm-text-muted); letter-spacing: .05em; }
+.authenticated-navigation__pending-label { color: var(--vrm-text-muted); font-size: 11px; flex-shrink: 0; }
+.authenticated-navigation__pending-row .authenticated-navigation__label { font-size: 13px; }

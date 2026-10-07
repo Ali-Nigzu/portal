@@ -1,0 +1,89 @@
+.access-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: var(--vrm-overlay, rgba(0, 0, 0, 0.5));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.access-dialog {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.access-dialog:focus {
+  outline: none;
+}
+.access-dialog-body {
+  display: grid;
+  gap: 20px;
+}
+.access-description {
+  color: var(--vrm-text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+.access-confirmation {
+  display: grid;
+  gap: 10px;
+}
+.access-confirmation h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.access-dialog .settings-form-actions {
+  flex-wrap: wrap;
+}
+.access-success {
+  color: var(--vrm-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+.access-dialog input:focus-visible,
+.access-dialog button:focus-visible,
+.access-dialog a:focus-visible {
+  outline: 2px solid var(--vrm-accent-blue);
+  outline-offset: 3px;
+}
+.access-dialog .settings-form-error a {
+  color: inherit;
+  text-decoration: underline;
+}
+.access-identifier-choice {
+  display: flex;
+  gap: 20px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.access-identifier-choice legend {
+  margin-bottom: 10px;
+}
+.access-identifier-choice label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.access-identifier-choice input {
+  accent-color: var(--vrm-accent-blue);
+}
+@media (max-width: 600px) {
+  .access-dialog-backdrop {
+    padding: 12px;
+  }
+  .access-dialog {
+    max-height: calc(100dvh - 24px);
+  }
+  .access-dialog .vrm-card-header,
+  .access-dialog .vrm-card-body {
+    padding: 20px;
+  }
+  .access-dialog .settings-form-actions .vrm-btn {
+    min-height: 44px;
+  }
+}

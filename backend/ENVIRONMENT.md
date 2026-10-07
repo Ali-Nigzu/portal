@@ -33,8 +33,17 @@ Authenticated sessions have a fixed 365-day lifetime. User and membership state
 is re-read from Postgres for protected requests; membership claims are never
 stored in the cookie.
 
-The database principal needs SELECT on the canonical Portal and authentication
-tables, plus only these write privileges for authenticated controls:
+Self-service organisation/access management also uses this canonical identity.
+Apply the administrator-only membership migration before enabling its writes;
+see [deployment and validation instructions](../docs/self-service-organisations.md).
+The runtime needs SELECT/INSERT on organisations, USAGE on organisations_id_seq,
+SELECT/INSERT/UPDATE on memberships and SELECT on users. No DDL, organisation
+UPDATE/DELETE or membership DELETE is required. Invitations do not create users;
+legacy signup persistence is unchanged. The local-new-account fixture does not
+provide membership mutations.
+
+The database principal also needs SELECT on the canonical Portal tables and
+these existing write privileges for device/gateway controls:
 
 ```sql
 GRANT UPDATE (enabled) ON public.devices TO "<actual portal DB user>";

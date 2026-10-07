@@ -6,6 +6,7 @@ import AuthenticatedNavigationPod from "./authenticated-navigation/Authenticated
 import { useAuthenticatedNavigation } from "./authenticated-navigation/useAuthenticatedNavigation";
 import "../styles/VRMTheme.css";
 import "../styles/AuthenticatedNavigation.css";
+import { useAuthenticatedApplication } from "../context/AuthenticatedApplicationContext";
 
 export default function AuthenticatedVRMLayout({
   organisations,
@@ -18,6 +19,7 @@ export default function AuthenticatedVRMLayout({
 }) {
   const navigate = useNavigate();
   const navigation = useAuthenticatedNavigation(organisations);
+  const { favouritesCatalogueReady } = useAuthenticatedApplication();
   const activeOrganisation = useMemo(
     () => navigation.routeContext.area === "portal"
       ? organisations.find((organisation) => organisation.id === navigation.routeContext.organisationId)
@@ -26,10 +28,10 @@ export default function AuthenticatedVRMLayout({
   );
 
   useEffect(() => {
-    if (navigation.routeContext.area === "portal" && !activeOrganisation) {
+    if (favouritesCatalogueReady && navigation.routeContext.area === "portal" && !activeOrganisation) {
       navigate("/home", { replace: true });
     }
-  }, [activeOrganisation, navigate, navigation.routeContext]);
+  }, [activeOrganisation, navigate, navigation.routeContext, favouritesCatalogueReady]);
 
   const handleLogout = async () => {
     await logout();

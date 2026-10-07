@@ -13,6 +13,9 @@ from backend.app.api import demo, documents
 from backend.app.api import demo_dashboard
 from backend.app.api import portal
 from backend.app.api import authenticated_portal
+from backend.app.api import organisation_memberships
+from backend.app.services.organisation_memberships import OrganisationMemberships
+from backend.app.services.organisation_membership_repository import OrganisationMembershipRepository
 from backend.app.services.portal_context import PortalMetadata
 from backend.app.services.portal_events import EventLogs
 from backend.app.services.portal_alarms import AlarmLogs
@@ -58,6 +61,7 @@ def create_app() -> FastAPI:
         dashboard_database = DashboardPostgres()
         services = type("LivePortalServices", (), {})()
         services.auth_repository = CanonicalAuthRepository(dashboard_database)
+        app.state.organisation_memberships = OrganisationMemberships(OrganisationMembershipRepository(dashboard_database))
         services.organisation_dashboard = OrganisationDashboard(dashboard_database)
         services.portal_metadata = PortalMetadata(dashboard_database, services.organisation_dashboard)
         services.portal_events = EventLogs(bigquery_client)
@@ -108,6 +112,7 @@ def create_app() -> FastAPI:
     app.include_router(demo_dashboard.router)
     app.include_router(portal.router)
     app.include_router(authenticated_portal.router)
+    app.include_router(organisation_memberships.router)
     app.include_router(admin.router)
     app.include_router(client_data.router)
     app.include_router(analytics.router)

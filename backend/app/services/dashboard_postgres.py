@@ -67,6 +67,46 @@ class DashboardPostgres:
             if connection is not None:
                 connection.close()
 
+    @contextmanager
+    def transaction(self):
+        """One atomic operation; ordinary connection() reads stay autocommit.
+
+        Set autocommit on the DBAPI connection, not QueuePool's proxy. A broken
+        commit/rollback/reset invalidates the checkout instead of leaking state
+        into the next request. Domain exceptions roll back a healthy connection.
+        """
+        checkout = self._pool.connect()
+        driver = checkout.driver_connection
+        try:
+            try:
+                driver.autocommit = False
+            except BaseException:
+                checkout.invalidate()
+                raise
+            try:
+                yield checkout
+            except BaseException:
+                try:
+                    driver.rollback()
+                except BaseException:
+                    checkout.invalidate()
+                raise
+            else:
+                try:
+                    driver.commit()
+                except BaseException:
+                    checkout.invalidate()
+                    raise
+            finally:
+                if checkout.is_valid:
+                    try:
+                        driver.autocommit = True
+                    except BaseException:
+                        checkout.invalidate()
+                        raise
+        finally:
+            checkout.close()
+
     def close(self):
         self._pool.dispose()
         with self._lock:

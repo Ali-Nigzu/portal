@@ -4,12 +4,14 @@ import { parseSnapshot } from "./api";
 
 export function authenticatedPortalSource(organisationId: string): PortalSource {
   const base = `${API_BASE_URL}/api/portal/organisations/${encodeURIComponent(organisationId)}`;
-  const request: PortalSource["request"] = (path, input, signal) => {
+  const request: PortalSource["request"] = async (path, input, signal) => {
     const params = new URLSearchParams(input);
     params.delete("effective_now");
-    return fetch(`${base}${path}${params.size ? `?${params}` : ""}`, {
+    const response = await fetch(`${base}${path}${params.size ? `?${params}` : ""}`, {
       signal, cache: "no-store", credentials: "include",
     });
+    if (response.status === 404 || response.status === 401) window.dispatchEvent(new Event("camos:refresh-access"));
+    return response;
   };
   const deviceControl: PortalDeviceControl = {
     mode: "canonical",

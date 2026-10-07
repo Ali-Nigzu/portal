@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { build } from "esbuild";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const [routes, layout, authenticatedLayout, portalApplication, portalContent, routeHelpers,
@@ -22,17 +23,29 @@ assert.match(routes, /<Route element=\{authenticatedShell\}>/);
 assert.match(routes, /AuthenticatedApplicationProvider/);
 assert.match(layout, /AuthenticatedVRMLayout/);
 assert.match(authenticatedLayout, /data-testid="authenticated-app-shell"/);
-assert.match(authenticatedLayout, /openScopeOrganisationId/);
-assert.match(authenticatedLayout, /secondaryMode/);
-assert.match(authenticatedLayout, /"scope-selector"/);
-assert.match(authenticatedLayout, /"modules"/);
-assert.match(authenticatedLayout, /label="All Sites"/);
-assert.doesNotMatch(authenticatedLayout, /Full organisation/);
-assert.match(authenticatedLayout, /SecondaryPinnedRow/);
-assert.match(authenticatedLayout, /active\?\.organisationId === selectorOrganisation\.id \? active\.module : "dashboard"/);
-assert.match(authenticatedLayout, /secondaryMode === "scope-selector"/);
-assert.match(authenticatedLayout, /secondaryMode === "modules"/);
-assert.match(authenticatedLayout, /PORTAL_MODULES\.map/);
+assert.match(authenticatedLayout, /AuthenticatedNavigationPod/);
+assert.match(authenticatedLayout, /useAuthenticatedNavigation/);
+const [scopePanel, modulePanel, navigation] = await Promise.all([
+  read("src/components/authenticated-navigation/OrganisationScopePanel.tsx"),
+  read("src/components/authenticated-navigation/PortalModulePanel.tsx"),
+  read("src/components/authenticated-navigation/useAuthenticatedNavigation.ts"),
+]);
+assert.match(scopePanel, /All Sites/);
+assert.match(scopePanel, /Add Site/);
+assert.match(modulePanel, /PORTAL_MODULES\.map/);
+assert.match(navigation, /routeContext\.organisationId === organisationId/);
+assert.match(navigation, /routeContext\.module/);
+await build({entryPoints:["src/components/authenticated-navigation/authenticatedNavigationModel.ts"],bundle:true,format:"esm",platform:"node",outfile:".tmp/phase-c/navigation.mjs"});
+const { navigationReducer, contextualStage } = await import("../.tmp/phase-c/navigation.mjs");
+const portal = {area:"portal",organisationId:"900000000000000101",siteId:"17",module:"reports"};
+assert.deepEqual(contextualStage(portal),{kind:"scope-modules",organisationId:portal.organisationId,siteId:"17"});
+assert.deepEqual(contextualStage({area:"settings",section:"access"}),{kind:"settings"});
+assert.deepEqual(contextualStage({area:"home"}),{kind:"primary"});
+let state = navigationReducer({status:"closed"},{type:"open",stage:contextualStage(portal)});
+assert.equal(state.stage.kind,"scope-modules");
+state = navigationReducer(state,{type:"show-scopes",organisationId:portal.organisationId});
+assert.deepEqual(state,{status:"open",stage:{kind:"organisation-scopes",organisationId:portal.organisationId}});
+assert.deepEqual(navigationReducer(state,{type:"close"}),{status:"closed"});
 assert.doesNotMatch(portalContent, /VRMLayout/);
 assert.match(portalApplication, /PortalModuleContent/); // Demo retains its own wrapper.
 assert.match(routeHelpers, /replaceScope/);

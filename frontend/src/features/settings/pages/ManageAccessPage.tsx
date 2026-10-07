@@ -1,167 +1,374 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Copy, Check } from "lucide-react";
+import { useAuthenticatedApplication } from "../../../context/AuthenticatedApplicationContext";
+import { useOrganisationAccess } from "../../organisation-access/OrganisationAccessContext";
+import PersonalAccess from "../../organisation-access/PersonalAccess";
+import AccessDialog from "../../organisation-access/AccessDialog";
 import {
-  getManagedUsers,
-  getMe,
-  getPendingInvites,
-  inviteUser,
-  isNotImplementedError,
-} from "../api/settingsApi";
+  getManageAccess,
+  inviteMember,
+  manageMembership,
+  errorMessage,
+  type ManageAccess,
+  type ManagedRelationship,
+} from "../../organisation-access/api";
 import InviteUserModal from "../components/InviteUserModal";
 import PendingInvitesTable from "../components/PendingInvitesTable";
+import AccessRequestsTable from "../components/AccessRequestsTable";
+import UsersTable from "../components/UsersTable";
 import SettingsFrame from "../components/SettingsFrame";
 import SettingsPageHeader from "../components/SettingsPageHeader";
-import UsersTable from "../components/UsersTable";
-import type { AccessLevel, ManagedUser, PendingInvite, SettingsUser } from "../types";
 import "../SettingsPages.css";
 
-const EMPTY_ALL_SITES_INVITE_MESSAGE =
-  "All Sites has no sites.\n\nPlease add a site to invite a member to your workspace.";
-
-const ManageAccessPage: React.FC = () => {
-  const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [invites, setInvites] = useState<PendingInvite[]>([]);
-  const [currentUser, setCurrentUser] = useState<SettingsUser | null>(null);
-  const [baselineCurrentUserSites, setBaselineCurrentUserSites] = useState<string[]>(["all-sites"]);
-  const [currentUserSites, setCurrentUserSites] = useState<string[]>(["all-sites"]);
-  const [currentUserSitesError, setCurrentUserSitesError] = useState<string | null>(null);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const inviteButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  const siteOptions = [
-    { id: "all-sites", label: "All Sites" },
-  ];
-  const hasInviteableSites = siteOptions.some((site) => site.id !== "all-sites");
-
-  const isDirty = useMemo(() => {
-    const left = [...baselineCurrentUserSites].sort().join("|");
-    const right = [...currentUserSites].sort().join("|");
-    return left !== right;
-  }, [baselineCurrentUserSites, currentUserSites]);
-
+export default function ManageAccessPage() {
+  const { organisations, user, favouritesCatalogueReady } =
+    useAuthenticatedApplication();
+  const { refreshAccess } = useOrganisationAccess();
+  const [search, setSearch] = useSearchParams();
+  const selected = search.get("organisation_id");
+  const id =
+    selected ?? (organisations.length === 1 ? organisations[0].id : null);
+  const eligible = organisations.some((organisation) => organisation.id === id);
+  const [loadedData, setData] = useState<ManageAccess | null>(null),
+    [loading, setLoading] = useState(false);
+  const data = loadedData?.organisation.id === id ? loadedData : null;
+  const currentId = useRef(id);
+  currentId.current = id;
+  const [error, setError] = useState<string | null>(null),
+    [message, setMessage] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0),
+    [invite, setInvite] = useState(false),
+    [busy, setBusy] = useState(false);
+  const [confirmation, setConfirmation] = useState<{
+    member: ManagedRelationship;
+    action: "disable" | "withdraw";
+  } | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null),
+    [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
   useEffect(() => {
-    const load = async () => {
-      const [me, loadedUsers, loadedInvites] = await Promise.all([
-        getMe(),
-        getManagedUsers(),
-        getPendingInvites(),
-      ]);
-
-      setCurrentUser(me);
-      const currentUserRow: ManagedUser = {
-        username: me.name,
-        email: me.email,
-        site: "All Sites",
-        accessLevel: "Admin",
-      };
-
-      setUsers([currentUserRow, ...loadedUsers]);
-      setInvites(loadedInvites);
-      setBaselineCurrentUserSites(["all-sites"]);
-      setCurrentUserSites(["all-sites"]);
-    };
-
-    load();
-  }, []);
-
-  const handleCurrentUserSitesChange = (sites: string[]) => {
-    setCurrentUserSites(sites);
-    setSaveMessage(null);
-    if (sites.length > 0) {
-      setCurrentUserSitesError(null);
-    }
-  };
-
-  const handleCurrentUserSitesSave = () => {
-    if (currentUserSites.length === 0) {
-      setCurrentUserSitesError("Sites required");
+    const abort = new AbortController();
+    setData(null);
+    setError(null);
+    setMessage(null);
+    setCopied(false);
+    setInvite(false);
+    setConfirmation(null);
+    if (!id || !eligible) {
+      setLoading(false);
       return;
     }
-    setCurrentUserSitesError(null);
-    setBaselineCurrentUserSites(currentUserSites);
-    setSaveMessage("Access settings saved.");
+    setLoading(true);
+    getManageAccess(id, abort.signal)
+      .then((next) => {
+        if (!abort.signal.aborted) setData(next);
+      })
+      .catch((failure) => {
+        if (!abort.signal.aborted) {
+          setError(errorMessage(failure));
+          window.dispatchEvent(new Event("camos:refresh-access"));
+        }
+      })
+      .finally(() => {
+        if (!abort.signal.aborted) setLoading(false);
+      });
+    return () => abort.abort();
+  }, [id, eligible, revision]);
+  const reload = async () => {
+    if (!id) return;
+    const next = await getManageAccess(id);
+    if (currentId.current === id) setData(next);
+    await refreshAccess();
   };
-
-  const handleInviteSubmit = async (payload: {
-    email: string;
-    site: string;
-    accessLevel: AccessLevel;
-  }) => {
-    if (!hasInviteableSites && payload.site === "all-sites") {
-      throw new Error(EMPTY_ALL_SITES_INVITE_MESSAGE);
-    }
-
+  const decision = async (
+    member: ManagedRelationship,
+    action: "approve" | "decline" | "withdraw" | "disable",
+  ) => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    setConfirmError(null);
     try {
-      await inviteUser(payload);
-    } catch (error) {
-      if (isNotImplementedError(error)) {
-        throw new Error("Not implemented yet");
+      await manageMembership(member, action);
+      if (currentId.current !== member.organisation_id) {
+        await refreshAccess();
+        return;
       }
-      throw error;
+      setConfirmation(null);
+      setMessage(
+        action === "approve"
+          ? `${member.username} now has access.`
+          : action === "decline"
+            ? "Access request declined."
+            : action === "withdraw"
+              ? "Invitation withdrawn."
+              : `${member.username}'s access is disabled.`,
+      );
+      await reload();
+    } catch (failure) {
+      if (currentId.current !== member.organisation_id) return;
+      if (confirmation) setConfirmError(errorMessage(failure));
+      else setError(errorMessage(failure));
+      if (id)
+        void getManageAccess(id)
+          .then((next) => {
+            if (currentId.current === id) setData(next);
+          })
+          .catch(() => {});
+    } finally {
+      setBusy(false);
     }
   };
-
-  const handleCloseModal = () => {
-    setIsInviteOpen(false);
-    window.setTimeout(() => inviteButtonRef.current?.focus(), 0);
+  const copy = async () => {
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setError("Couldn't copy the ID. You can select and copy it below.");
+    }
   };
-
   return (
     <SettingsFrame>
       <SettingsPageHeader
         title="Manage Access"
         action={
-          <button
-            ref={inviteButtonRef}
-            className="vrm-btn vrm-btn-primary vrm-btn-sm"
-            onClick={() => setIsInviteOpen(true)}
-          >
-            Invite user
-          </button>
+          data?.can_manage ? (
+            <button
+              className="vrm-btn vrm-btn-primary vrm-btn-sm"
+              onClick={() => setInvite(true)}
+              disabled={busy}
+            >
+              Invite member
+            </button>
+          ) : undefined
         }
       />
-
-      <div className="vrm-card settings-manage-access-card">
-        <div className="vrm-card-header settings-users-card-header">
+      <div className="vrm-card access-organisation-card">
+        <div className="vrm-card-body access-organisation-body">
+          {organisations.length > 1 ||
+          (!!selected && !eligible && organisations.length > 0) ? (
+            <div className="settings-form-field">
+              <label
+                htmlFor="access-organisation"
+                className="settings-form-label"
+              >
+                Organisation
+              </label>
+              <select
+                id="access-organisation"
+                className="settings-select"
+                value={eligible ? id! : ""}
+                disabled={busy}
+                onChange={(event) => {
+                  const next = new URLSearchParams(search);
+                  next.set("organisation_id", event.target.value);
+                  setSearch(next);
+                }}
+              >
+                <option value="" disabled>
+                  Select an organisation
+                </option>
+                {organisations.map((organisation) => (
+                  <option key={organisation.id} value={organisation.id}>
+                    {organisation.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : eligible ? (
+            <h2 className="vrm-card-title">
+              {
+                organisations.find((organisation) => organisation.id === id)
+                  ?.name
+              }
+            </h2>
+          ) : null}
+          {eligible && (
+            <div className="access-organisation-id">
+              <span>
+                Organisation ID <strong>{id}</strong>
+              </span>
+              <button
+                className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                aria-label="Copy Organisation ID"
+                onClick={() => void copy()}
+              >
+                {copied ? <Check size={15} /> : <Copy size={15} />}
+                {copied ? "Copied" : "Copy ID"}
+              </button>
+              <span className="access-sr-only" role="status">
+                {copied ? "Organisation ID copied" : ""}
+              </span>
+            </div>
+          )}
+          {!favouritesCatalogueReady ? (
+            <p className="access-description">
+              The organisation catalogue is unavailable. Try refreshing access
+              below.
+            </p>
+          ) : !organisations.length ? (
+            <p className="access-description">
+              You don't belong to an organisation yet. Your invitations and
+              requests are below.
+            </p>
+          ) : !eligible ? (
+            <p className="access-description">
+              {selected
+                ? "That organisation is no longer available. Select an organisation to manage access."
+                : "Select an organisation to view access."}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      {loading && (
+        <p role="status" className="access-description">
+          Loading organisation access…
+        </p>
+      )}
+      {error && (
+        <div className="access-feedback" role="alert">
+          <p className="settings-form-error">{error}</p>
           <button
-            type="button"
-            className={`vrm-btn vrm-btn-sm ${isDirty ? "vrm-btn-primary settings-save-cta--active" : "vrm-btn-secondary settings-save-cta--inactive"}`}
-            onClick={handleCurrentUserSitesSave}
+            className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+            onClick={() => setRevision((value) => value + 1)}
           >
-            Save
+            Try again
           </button>
-          <h2 className="vrm-card-title">Users</h2>
         </div>
-        <div className="vrm-card-body settings-table-card-body">
-          <UsersTable
-            users={users}
-            currentUsername={currentUser?.name}
-            currentUserSites={currentUserSites}
-            currentUserSitesError={currentUserSitesError}
-            onCurrentUserSitesChange={handleCurrentUserSitesChange}
-            siteOptions={siteOptions}
-          />
-          {saveMessage ? <div className="settings-form-message settings-manage-access-save-message">{saveMessage}</div> : null}
+      )}
+      {message && (
+        <p role="status" className="settings-form-message">
+          {message}
+        </p>
+      )}
+      {data && data.can_manage && (
+        <>
+          <section
+            className="vrm-card settings-manage-access-card"
+            aria-label="Members"
+          >
+            <div className="vrm-card-header">
+              <h2 className="vrm-card-title">Members</h2>
+            </div>
+            <UsersTable
+              users={data.members}
+              currentUserId={user.id}
+              busy={busy}
+              onDisable={(member) => {
+                setConfirmError(null);
+                setConfirmation({ member, action: "disable" });
+              }}
+            />
+          </section>
+          <section
+            className="vrm-card settings-manage-access-card"
+            aria-label="Pending invitations"
+          >
+            <div className="vrm-card-header">
+              <h2 className="vrm-card-title">Pending invitations</h2>
+            </div>
+            <PendingInvitesTable
+              invites={data.invitations}
+              busy={busy}
+              onWithdraw={(member) => {
+                setConfirmError(null);
+                setConfirmation({ member, action: "withdraw" });
+              }}
+            />
+          </section>
+          <section
+            className="vrm-card settings-manage-access-card"
+            aria-label="Access requests"
+          >
+            <div className="vrm-card-header">
+              <h2 className="vrm-card-title">Access requests</h2>
+            </div>
+            <AccessRequestsTable
+              requests={data.requests}
+              busy={busy}
+              onDecision={(member, action) => void decision(member, action)}
+            />
+          </section>
+        </>
+      )}
+      {data && !data.can_manage && (
+        <div className="vrm-card">
+          <div className="vrm-card-body">
+            <p className="access-description">
+              You are a Member of {data.organisation.name}. An organisation
+              Owner manages invitations, requests and member access.
+            </p>
+          </div>
         </div>
-      </div>
-
-      <div className="vrm-card settings-manage-access-card">
-        <div className="vrm-card-header">
-          <h2 className="vrm-card-title">Pending invitations</h2>
-        </div>
-        <div className="vrm-card-body settings-table-card-body">
-          <PendingInvitesTable invites={invites} />
-        </div>
-      </div>
-
-      <InviteUserModal
-        isOpen={isInviteOpen}
-        onClose={handleCloseModal}
-        onSubmitted={handleInviteSubmit}
-      />
+      )}
+      <PersonalAccess />
+      {invite && data?.can_manage && id && (
+        <InviteUserModal
+          onClose={() => setInvite(false)}
+          onSubmitted={async (payload) => {
+            await inviteMember(id, payload.identifier_type, payload.identifier);
+            if (currentId.current !== id) {
+              await refreshAccess();
+              return;
+            }
+            setMessage(
+              "Invitation sent. The member will have access after accepting.",
+            );
+            await reload();
+          }}
+        />
+      )}
+      {confirmation && (
+        <AccessDialog
+          title={
+            confirmation.action === "disable"
+              ? "Disable member access"
+              : "Withdraw invitation"
+          }
+          description={
+            confirmation.action === "disable"
+              ? `${confirmation.member.username} will no longer have access to ${data?.organisation.name}. You can invite them again later.`
+              : `Withdraw ${confirmation.member.username}'s invitation to ${data?.organisation.name}?`
+          }
+          onClose={() => setConfirmation(null)}
+          busy={busy}
+        >
+          {confirmError && (
+            <p role="alert" className="settings-form-error">
+              {confirmError}
+            </p>
+          )}
+          <div className="settings-form-actions">
+            <button
+              data-autofocus
+              className="vrm-btn vrm-btn-secondary"
+              disabled={busy}
+              onClick={() => setConfirmation(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className="vrm-btn vrm-btn-primary"
+              disabled={busy}
+              onClick={() =>
+                void decision(confirmation.member, confirmation.action)
+              }
+            >
+              {busy
+                ? "Please wait…"
+                : confirmation.action === "disable"
+                  ? "Disable access"
+                  : "Withdraw invitation"}
+            </button>
+          </div>
+        </AccessDialog>
+      )}
     </SettingsFrame>
   );
-};
-
-export default ManageAccessPage;
+}

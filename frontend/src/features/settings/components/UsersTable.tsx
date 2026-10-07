@@ -1,62 +1,63 @@
-import React from "react";
-import SiteMultiSelect from "./SiteMultiSelect";
+import type { ManagedRelationship } from "../../organisation-access/api";
 
-import type { ManagedUser } from "../types";
-
-type UsersTableProps = {
-  users: ManagedUser[];
-  currentUsername?: string;
-  currentUserSites: string[];
-  currentUserSitesError?: string | null;
-  onCurrentUserSitesChange: (sites: string[]) => void;
-  siteOptions: Array<{ id: string; label: string }>;
+type Props = {
+  users: ManagedRelationship[];
+  currentUserId: string;
+  busy: boolean;
+  onDisable: (member: ManagedRelationship) => void;
 };
 
-const UsersTable: React.FC<UsersTableProps> = ({
+export default function UsersTable({
   users,
-  currentUsername,
-  currentUserSites,
-  currentUserSitesError,
-  onCurrentUserSitesChange,
-  siteOptions,
-}) => (
-  <div className="settings-table-wrap">
-    <table className="vrm-table settings-table">
-      <thead>
-        <tr>
-          <th>Username</th>
-          <th>Email</th>
-          <th>Site</th>
-          <th>Access level</th>
-        </tr>
-      </thead>
-      <tbody>
-        {users.map((user) => {
-          const isCurrentUser = Boolean(currentUsername) && user.username === currentUsername;
-          return (
-            <tr key={`${user.username}-${user.email}`}>
-              <td>{user.username}</td>
-              <td>{user.email}</td>
+  currentUserId,
+  busy,
+  onDisable,
+}: Props) {
+  return (
+    <div className="settings-table-wrap">
+      <table className="vrm-table settings-table access-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>
+              <span className="access-sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((member) => (
+            <tr key={member.user_id}>
               <td>
-                {isCurrentUser ? (
-                  <SiteMultiSelect
-                    options={siteOptions}
-                    selectedSites={currentUserSites}
-                    onChange={onCurrentUserSitesChange}
-                    placeholder="Select sites"
-                    error={currentUserSitesError}
-                  />
-                ) : (
-                  user.site
+                {member.username}
+                {member.user_id === currentUserId && (
+                  <span className="access-you">You</span>
                 )}
               </td>
-              <td>{user.accessLevel}</td>
+              <td>
+                {member.email}
+                {!member.user_enabled && (
+                  <span className="access-you">Account disabled</span>
+                )}
+              </td>
+              <td>{member.role === 0 ? "Owner" : "Member"}</td>
+              <td className="access-table-actions">
+                {member.user_id !== currentUserId && member.role === 1 && (
+                  <button
+                    className="vrm-btn vrm-btn-secondary vrm-btn-sm"
+                    disabled={busy}
+                    onClick={() => onDisable(member)}
+                    aria-label={`Disable ${member.username}`}
+                  >
+                    Disable
+                  </button>
+                )}
+              </td>
             </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
-
-export default UsersTable;
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

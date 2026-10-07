@@ -11,6 +11,7 @@ from backend.app.services.session_tokens import create_session
 class Repository:
     enabled = True
     organisation_enabled = True
+    membership_status = 1
 
     def get_enabled_user(self, user_id):
         if user_id == 0 and self.enabled:
@@ -20,10 +21,10 @@ class Repository:
     def organisations(self, user_id):
         return [{"id": "1", "name": "Demo", "role": 0, "sites": [
             {"id": "11", "name": "Alis Barber"}
-        ]}] if self.organisation_enabled else []
+        ]}] if self.organisation_enabled and self.membership_status == 1 else []
 
     def enabled_membership(self, user_id, organisation_id):
-        if user_id == 0 and organisation_id == 1 and self.organisation_enabled:
+        if user_id == 0 and organisation_id == 1 and self.organisation_enabled and self.membership_status == 1:
             return Membership(1, 0)
         return None
 
@@ -120,6 +121,16 @@ def test_all_shared_module_routes_are_available_in_authorised_scope(monkeypatch)
         assert response.status_code == 200, (path, response.text)
     assert api.get("/api/portal/organisations/2/events").status_code == 404
     assert api.get(base + "/events?site_id=999").status_code == 404
+
+
+@pytest.mark.parametrize("membership_status", [0, 1, 2, 3])
+def test_only_exact_active_status_grants_normal_access(monkeypatch, membership_status):
+    api, repository, _ = client(monkeypatch)
+    repository.membership_status = membership_status
+    base = "/api/portal/organisations/1"
+    for path in ("/context", "/snapshot", "/sites/11/snapshot", "/devices", "/events", "/alarms", "/reports/snapshot"):
+        assert api.get(base + path).status_code == (200 if membership_status == 1 else 404)
+    assert bool(api.get("/api/portal/organisations").json()["organisations"]) == (membership_status == 1)
 
 
 @pytest.mark.parametrize("site_count", [0, 1, 3])

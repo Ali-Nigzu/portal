@@ -54,7 +54,8 @@ def scope_and_filters(request, user, organisation, allowed):
 
 
 @router.get("/organisations")
-def organisations(request: Request, user=Depends(get_canonical_user)):
+def organisations(request: Request, response: Response, user=Depends(get_canonical_user)):
+    response.headers["Cache-Control"] = "no-store"
     return {"organisations": request.app.state.auth_repository.organisations(user.id)}
 
 

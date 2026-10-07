@@ -182,7 +182,8 @@ export default function AuthenticatedNavigationPod({ organisations, navigation, 
                     routeContext={routeContext}
                     showBack={!showPrimaryBesideSecondary}
                     onBack={navigation.showPrimary}
-                    onDestination={navigation.selectDestination}
+                    onDestination={(path) => navigation.selectDestination(path === "/settings/access" && contextualOrganisation
+                      ? `${path}?organisation_id=${encodeURIComponent(contextualOrganisation)}` : path)}
                   />
                 )}
               </nav>
