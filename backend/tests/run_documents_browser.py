@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 
 from backend.app.api import auth, documents
-from backend.app.data.documents_store import MemoryDocumentsStore
+from backend.tests.support.memory_documents_store import MemoryDocumentsStore
 from backend.app.models_documents import DocumentError
 from backend.app.services import passwords
 from backend.app.services.canonical_auth import CanonicalUser

@@ -1,6 +1,6 @@
 import pytest
 
-from backend.app.snapshots import SnapshotLookupError, fetch_latest_snapshot
+from backend.app.compatibility.snapshots import SnapshotLookupError, fetch_latest_snapshot
 
 
 def test_fetch_latest_snapshot_can_disable_fixture_fallback(monkeypatch):

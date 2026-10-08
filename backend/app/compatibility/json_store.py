@@ -7,13 +7,12 @@ import os
 import json
 import tempfile
 import shutil
-from typing import Dict
 import hashlib
 import secrets
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from backend.app.config import (
+from backend.app.compatibility.config import (
     USERS_FILE,
     ALARM_LOGS_FILE,
     DEVICE_LISTS_FILE,
@@ -31,49 +30,6 @@ def hash_password(password: str) -> str:
         iterations,
     ).hex()
     return f"pbkdf2_sha256${iterations}${salt}${digest}"
-
-
-def normalize_email(email: str) -> str:
-    return email.strip().lower()
-
-
-def find_user_by_email(users: dict, email: str):
-    normalized = normalize_email(email)
-    for username, user_data in users.items():
-        user_email = user_data.get("email")
-        if isinstance(user_email, str) and normalize_email(user_email) == normalized:
-            return username, user_data
-    return None, None
-
-
-def create_account_user(
-    users: dict,
-    name: str,
-    email: str,
-    phone: str | None,
-    password: str,
-    *,
-    password_is_hashed: bool = False,
-):
-    now = datetime.now(timezone.utc).isoformat()
-    user_id = str(uuid4())
-    username = f"u_{user_id.replace('-', '')[:12]}"
-    normalized_email = normalize_email(email)
-    password_hash = password if password_is_hashed else hash_password(password)
-    users[username] = {
-        "id": user_id,
-        "name": name,
-        "email": normalized_email,
-        "phone": phone,
-        "password_hash": password_hash,
-        "password": password_hash,
-        "created_at": now,
-        "updated_at": now,
-        "last_login": now,
-        "role": "client",
-        "data_sources": [],
-    }
-    return username, users[username]
 
 
 def load_users():
@@ -168,13 +124,6 @@ def load_alarm_logs():
         return json.load(f)
 
 
-def save_alarm_logs(alarm_data: dict):
-    """Save alarm logs to JSON file"""
-    os.makedirs(os.path.dirname(ALARM_LOGS_FILE), exist_ok=True)
-    with open(ALARM_LOGS_FILE, 'w') as f:
-        json.dump(alarm_data, f, indent=2)
-
-
 def load_device_lists():
     """Load device lists from JSON file"""
     if not os.path.exists(DEVICE_LISTS_FILE):
@@ -183,8 +132,3 @@ def load_device_lists():
         return json.load(f)
 
 
-def save_device_lists(device_data: dict):
-    """Save device lists to JSON file"""
-    os.makedirs(os.path.dirname(DEVICE_LISTS_FILE), exist_ok=True)
-    with open(DEVICE_LISTS_FILE, 'w') as f:
-        json.dump(device_data, f, indent=2)

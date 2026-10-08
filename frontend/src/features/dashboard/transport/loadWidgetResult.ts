@@ -1,3 +1,4 @@
+import { isAbortError } from "../../../common/utils/isAbortError";
 import { API_BASE_URL } from "../../../config";
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";
 import type { ChartResult } from "../../../analytics/schemas/charting";
@@ -23,16 +24,7 @@ export interface LoadWidgetOptions {
 
 const SNAPSHOT_ENDPOINT = "/api/snapshots/latest";
 
-export const isAbortError = (error: unknown): boolean => {
-  if (error instanceof DOMException) {
-    return error.name === "AbortError";
-  }
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { name?: string }).name === "AbortError"
-  );
-};
+export { isAbortError } from "../../../common/utils/isAbortError";
 
 async function loadSnapshotPayload(options: {
   signal?: AbortSignal;

@@ -12,9 +12,6 @@ class LoginRequest(BaseModel):
     password: str = Field(max_length=1024)
 
 
-class LoginResponse(BaseModel):
-    user: Dict[str, Any]
-    message: str
 
 
 class AuthUser(BaseModel):

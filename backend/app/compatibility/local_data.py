@@ -20,7 +20,6 @@ class LocalDataPaths:
     combined_snapshots: Path
     site_a_snapshots: Path
     site_b_snapshots: Path
-    combined_logs: Path
 
 
 def resolve_site_view(value: Optional[str]) -> SiteView:
@@ -45,9 +44,6 @@ def local_data_paths() -> LocalDataPaths:
         site_b_snapshots=Path(
             os.getenv("LOCAL_SITE_B_SNAPSHOTS_DB", "user1_snapshots.db")
         ),
-        combined_logs=Path(
-            os.getenv("LOCAL_COMBINED_LOGS_DB", "combined_logs.db")
-        ),
     )
 
 
@@ -58,10 +54,6 @@ def snapshot_db_for_site(site_view: SiteView) -> Path:
     if site_view == "site-b":
         return paths.site_b_snapshots
     return paths.site_a_snapshots
-
-
-def combined_logs_db() -> Path:
-    return local_data_paths().combined_logs
 
 
 def ensure_local_db_exists(path: Path, *, label: str) -> Path:

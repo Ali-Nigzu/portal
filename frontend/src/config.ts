@@ -21,6 +21,3 @@ const getApiBaseUrl = (): string => {
 };
 
 export const API_BASE_URL = getApiBaseUrl();
-export const API_ENDPOINTS = {
-  SEARCH_EVENTS: `${API_BASE_URL}/api/search-events`,
-} as const;

@@ -8,7 +8,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api import admin, analytics, auth, client_data, dashboards, snapshots
+from backend.app.api import admin, auth
+from backend.app.compatibility.api import analytics, client_data, dashboards, snapshots, interest
 from backend.app.api import demo, documents
 from backend.app.api import demo_dashboard
 from backend.app.api import portal
@@ -26,7 +27,6 @@ from backend.app.services.canonical_auth import CanonicalAuthRepository
 from backend.app.services.user_lifecycle import UserLifecycle
 from backend.app.services.user_lifecycle_repository import UserLifecycleRepository
 from backend.app.services.organisation_dashboard import OrganisationDashboard
-from backend.app.services.local_new_account import LocalNewAccountServices
 from backend.app.config import get_allowed_origins
 from backend.app.spa import configure_spa
 
@@ -37,65 +37,31 @@ ANALYTICS_OFFLINE_MODE = os.getenv("ANALYTICS_OFFLINE_MODE", "").lower() == "tru
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(
-        title="camOS Analytics API",
-        description="Intelligent CCTV data analytics with auto-scaling insights",
-        version="2.0.0",
-        docs_url=None,
-        redoc_url=None,
-        openapi_url=None,
-    )
-
-    allowed_origins = get_allowed_origins()
-    backend_mode = os.getenv("PORTAL_BACKEND_MODE", "live").strip().lower()
-    if backend_mode not in {"live", "local-new-account"}:
-        raise RuntimeError("PORTAL_BACKEND_MODE must be 'live' or 'local-new-account'")
-    if backend_mode == "local-new-account" and os.getenv("NODE_ENV", "").lower() == "production":
-        raise RuntimeError("local-new-account backend mode is forbidden in production")
-
+    app = create_http_app()
     from backend.app.services.documents_service import DocumentsService
-    from backend.app.data.documents_store import MemoryDocumentsStore
     from backend.app.data.gcs_documents_store import GcsDocumentsStore
+    from backend.app.services.bigquery_client import bigquery_client
+    from backend.app.services.admin_repository import AdminRepository
 
-    documents_store = (MemoryDocumentsStore() if backend_mode == "local-new-account" else
-                       GcsDocumentsStore(os.getenv("PORTAL_DOCUMENTS_BUCKET", "camos-prod-1")))
+    documents_store = GcsDocumentsStore(os.getenv("PORTAL_DOCUMENTS_BUCKET", "camos-prod-1"))
     app.state.documents_service = DocumentsService(documents_store)
-    dashboard_database = None
-    if backend_mode == "local-new-account":
-        services = LocalNewAccountServices()
-        logger.warning("Portal backend mode: local-new-account development fixture active")
-    else:
-        from backend.app.services.bigquery_client import bigquery_client
-
-        dashboard_database = DashboardPostgres()
-        from backend.app.services.admin_repository import AdminRepository
-        app.state.admin_repository = AdminRepository(dashboard_database)
-        services = type("LivePortalServices", (), {})()
-        services.auth_repository = CanonicalAuthRepository(dashboard_database)
-        app.state.user_lifecycle = UserLifecycle(UserLifecycleRepository(dashboard_database))
-        app.state.organisation_memberships = OrganisationMemberships(OrganisationMembershipRepository(dashboard_database))
-        services.organisation_dashboard = OrganisationDashboard(dashboard_database)
-        services.portal_metadata = PortalMetadata(dashboard_database, services.organisation_dashboard)
-        services.portal_events = EventLogs(bigquery_client)
-        services.portal_alarms = AlarmLogs(dashboard_database)
-        services.portal_devices = PortalDevices(dashboard_database, bigquery_client)
-        services.portal_reports = PortalReports(dashboard_database)
-
-    for name in (
-        "auth_repository", "organisation_dashboard", "portal_metadata",
-        "portal_events", "portal_alarms", "portal_devices", "portal_reports",
-    ):
-        setattr(app.state, name, getattr(services, name))
+    dashboard_database = DashboardPostgres()
+    app.state.admin_repository = AdminRepository(dashboard_database)
+    app.state.auth_repository = CanonicalAuthRepository(dashboard_database)
+    app.state.user_lifecycle = UserLifecycle(UserLifecycleRepository(dashboard_database))
+    app.state.organisation_memberships = OrganisationMemberships(OrganisationMembershipRepository(dashboard_database))
+    app.state.organisation_dashboard = OrganisationDashboard(dashboard_database)
+    app.state.portal_metadata = PortalMetadata(dashboard_database, app.state.organisation_dashboard)
+    app.state.portal_events = EventLogs(bigquery_client)
+    app.state.portal_alarms = AlarmLogs(dashboard_database)
+    app.state.portal_devices = PortalDevices(dashboard_database, bigquery_client)
+    app.state.portal_reports = PortalReports(dashboard_database)
 
     @app.on_event("shutdown")
     def close_dashboard_database() -> None:
-        if isinstance(documents_store, GcsDocumentsStore):
-            documents_store.close()
-        if dashboard_database is not None:
-            from backend.app.services.bigquery_client import bigquery_client
-
-            dashboard_database.close()
-            bigquery_client.close()
+        documents_store.close()
+        dashboard_database.close()
+        bigquery_client.close()
 
     @app.on_event("startup")
     def cleanup_lifecycle_rows() -> None:
@@ -103,18 +69,10 @@ def create_app() -> FastAPI:
         if lifecycle is not None:
             lifecycle.cleanup_expired()
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-    )
-
     @app.on_event("startup")
     async def startup_health_check() -> None:
         """Run a lightweight BigQuery connectivity check on startup."""
-        if backend_mode == "local-new-account" or ANALYTICS_OFFLINE_MODE:
+        if ANALYTICS_OFFLINE_MODE:
             logger.info(
                 "Analytics offline mode enabled; skipping BigQuery startup health check"
             )
@@ -127,7 +85,35 @@ def create_app() -> FastAPI:
             logger.error("BigQuery startup health check failed: %s", exc)
             return
 
+    return app
+
+
+def create_http_app() -> FastAPI:
+    """Same HTTP contract, with storage supplied explicitly by the caller.
+
+    create_app is the sole production composition. Isolated development/tests
+    attach fixture services to this HTTP shell outside the production package.
+    """
+    app = FastAPI(
+        title="camOS Analytics API",
+        description="Intelligent CCTV data analytics with auto-scaling insights",
+        version="2.0.0",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
+
+    allowed_origins = get_allowed_origins()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    )
+
     app.include_router(auth.router)
+    app.include_router(interest.router)
     app.include_router(demo.router)
     app.include_router(demo_dashboard.router)
     app.include_router(portal.router)

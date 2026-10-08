@@ -8,20 +8,20 @@ from pathlib import Path
 
 from argon2 import PasswordHasher
 
-from .canonical_auth import CanonicalUser, Membership
-from .organisation_dashboard import (
+from backend.app.services.canonical_auth import CanonicalUser, Membership
+from backend.app.services.organisation_dashboard import (
     EntityNotFound,
     build_zero_organisation_snapshot,
     entity_id,
     slug,
 )
-from .portal_alarms import AlarmLogs
-from .portal_devices import PortalDevices
-from .portal_events import EventLogs
-from .portal_reports import ReportSnapshotNotFound
-from .zero_snapshot import build_zero_scope_snapshot
+from backend.app.services.portal_alarms import AlarmLogs
+from backend.app.services.portal_devices import PortalDevices
+from backend.app.services.portal_events import EventLogs
+from backend.app.services.portal_reports import ReportSnapshotNotFound
+from backend.app.services.zero_snapshot import build_zero_scope_snapshot
 
-FIXTURE_PATH = Path(__file__).resolve().parents[2] / "fixtures" / "local_new_account.json"
+FIXTURE_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "local_new_account.json"
 OWNER_ROLE = 0
 
 

@@ -18,44 +18,7 @@ except Exception:  # pragma: no cover - defensive logging
     DB_DTYPES_VERSION = None
 
 
-class BigQueryDataFrameError(RuntimeError):
-    """Raised when a query job fails during DataFrame materialisation."""
-
-    def __init__(self, message: str, job_id: Optional[str]) -> None:
-        super().__init__(message)
-        self.job_id = job_id
-
-
 logger = logging.getLogger(__name__)
-
-
-DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS = 3600
-
-
-def _load_analytics_timeout() -> int:
-    raw_timeout = os.getenv("ANALYTICS_BQ_TIMEOUT_SECONDS")
-    if raw_timeout is None:
-        return DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS
-
-    try:
-        parsed_timeout = int(raw_timeout)
-        if parsed_timeout <= 0:
-            raise ValueError("timeout must be positive")
-        return parsed_timeout
-    except (TypeError, ValueError):
-        logger.warning(
-            "Invalid ANALYTICS_BQ_TIMEOUT_SECONDS=%r; using default %s seconds",  # pragma: no cover - logging only
-            raw_timeout,
-            DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS,
-        )
-        return DEFAULT_ANALYTICS_BQ_TIMEOUT_SECONDS
-
-
-ANALYTICS_BQ_TIMEOUT_SECONDS = _load_analytics_timeout()
-
-
-def _bqstorage_enabled() -> bool:
-    return os.getenv("BQ_ENABLE_BQSTORAGE", "").lower() in {"1", "true", "yes"}
 
 
 def _normalize_project(project: Optional[str]) -> Optional[str]:
@@ -83,8 +46,6 @@ class BigQueryClient:
         # ADC resolves the attached runtime identity; never load a bundled key.
         self._credentials = None
         self._client: Optional[bigquery.Client] = None
-        self._bqstorage_client: Optional[object] = None
-        self._bqstorage_unavailable = False
 
     def _ensure_client(self) -> bigquery.Client:
         if self._client is None:
@@ -101,31 +62,6 @@ class BigQueryClient:
             )
         return self._client
 
-    def _get_bqstorage_client(self) -> Optional[object]:
-        """Return a BigQuery Storage client if the dependency is available."""
-        if self._bqstorage_unavailable:
-            return None
-        if self._bqstorage_client is None:
-            try:
-                from google.cloud import bigquery_storage
-
-                self._bqstorage_client = bigquery_storage.BigQueryReadClient(
-                    credentials=self._credentials
-                )
-                logger.info(
-                    "Initialized BigQuery Storage client for high-throughput downloads"
-                )
-            except ImportError:
-                logger.info(
-                    "google-cloud-bigquery-storage not installed; using REST fallback"
-                )
-                self._bqstorage_unavailable = True
-            except Exception:
-                logger.exception(
-                    "Failed to initialize BigQuery Storage client; falling back to REST"
-                )
-                self._bqstorage_unavailable = True
-        return self._bqstorage_client if not self._bqstorage_unavailable else None
 
     def _build_query_parameters(self, params: Dict[str, Any]) -> List[bigquery.ScalarQueryParameter]:
         query_parameters: List[bigquery.ScalarQueryParameter] = []
@@ -159,15 +95,6 @@ class BigQueryClient:
                 query_parameters.append(bigquery.ScalarQueryParameter(name, "STRING", value))
         return query_parameters
 
-    def query(self, sql: str, params: Dict[str, Any]) -> bigquery.job.QueryJob:
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=self._build_query_parameters(params),
-            use_query_cache=True,
-        )
-        logger.debug("Executing BigQuery SQL: %s | params=%s", sql, params)
-        client = self._ensure_client()
-        job = client.query(sql, job_config=job_config, location=self.settings.location)
-        return job
 
     def portal_rows(self, sql, params, *, limit):
         """Bounded REST rows, not DataFrames or the Storage API."""
@@ -188,58 +115,10 @@ class BigQueryClient:
             raise
 
     def close(self):
-        for client in (self._bqstorage_client, self._client):
+        for client in (self._client,):
             if client is not None:
                 client.close()
 
-    def query_dataframe(
-        self, sql: str, params: Dict[str, Any], *, job_context: Optional[str] = None
-    ) -> pd.DataFrame:
-        job = self.query(sql, params)
-        timeout_seconds = ANALYTICS_BQ_TIMEOUT_SECONDS
-        try:
-            result = job.result(timeout=timeout_seconds)
-            dataframe_kwargs: Dict[str, Any] = {"create_bqstorage_client": False}
-            if _bqstorage_enabled():
-                storage_client = self._get_bqstorage_client()
-                if storage_client is not None:
-                    dataframe_kwargs["bqstorage_client"] = storage_client
-                    dataframe_kwargs.pop("create_bqstorage_client", None)
-            df = result.to_dataframe(**dataframe_kwargs)
-            stats = getattr(job, "_properties", {}).get("statistics", {}) if job else {}
-            query_stats = stats.get("query", {}) if isinstance(stats, dict) else {}
-            logger.info(
-                "analytics.bigquery.job_stats",
-                extra={
-                    "job_id": getattr(job, "job_id", None),
-                    "job_context": job_context or "unlabeled",
-                    "location": getattr(job, "location", None),
-                    "total_bytes_processed": query_stats.get("totalBytesProcessed"),
-                    "total_slot_ms": query_stats.get("totalSlotMs"),
-                },
-            )
-            logger.debug(
-                "BigQuery job %s materialised dataframe (%s rows) [%s]",
-                job.job_id,
-                len(df),
-                job_context or "unlabeled",
-            )
-            return df
-        except Exception as exc:
-            logger.exception(
-                "BigQuery job %s failed during to_dataframe [%s]: %s",
-                getattr(job, "job_id", "unknown"),
-                job_context or "unlabeled",
-                exc,
-            )
-            raise BigQueryDataFrameError(str(exc), getattr(job, "job_id", None)) from exc
-
-    def get_table_schema(self, table_name: str) -> List[str]:
-        """Return the column names for the given fully-qualified table."""
-
-        client = self._ensure_client()
-        table = client.get_table(table_name)
-        return [schema_field.name for schema_field in table.schema]
 
     def run_health_check(self) -> None:
         try:
@@ -260,4 +139,4 @@ class BigQueryClient:
 
 bigquery_client = BigQueryClient()
 
-__all__ = ["bigquery_client", "BigQueryClient", "BigQueryDataFrameError"]
+__all__ = ["bigquery_client", "BigQueryClient"]

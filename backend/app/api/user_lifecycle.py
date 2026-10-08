@@ -1,5 +1,7 @@
 """Canonical signup, recovery and password-plus-email account unlock routes."""
 
+from backend.app.services.cookie_policy import session_cookie_secure
+
 import logging
 import hmac
 from datetime import datetime, timezone
@@ -85,10 +87,8 @@ def challenge_handle(request, purpose):
 
 
 def lifecycle_cookie(response, purpose, value, *, expires=None):
-    import os
     name = COOKIE_NAMES[purpose]
-    secure = os.getenv('PORTAL_SESSION_SECURE', '').lower() == 'true' or (
-        not os.getenv('PORTAL_SESSION_SECURE') and os.getenv('NODE_ENV') == 'production')
+    secure = session_cookie_secure()
     response.set_cookie(name, value, httponly=True, secure=secure, samesite='strict',
                         path=COOKIE_PATHS[purpose], max_age=expires or CHALLENGE_TTL)
 

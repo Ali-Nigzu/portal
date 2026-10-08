@@ -6,8 +6,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Request
 
-from backend.app.data.json_store import load_alarm_logs, load_device_lists, load_users
-from backend.app.services.auth_context import resolve_client_from_request
+from backend.app.compatibility.json_store import load_alarm_logs, load_device_lists, load_users
+from backend.app.compatibility.auth_context import resolve_client_from_request
 
 router = APIRouter(prefix="/api")
 

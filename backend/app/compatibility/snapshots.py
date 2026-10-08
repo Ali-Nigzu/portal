@@ -12,8 +12,8 @@ from typing import Any, Iterable, Optional
 
 from google.cloud import bigquery
 
-from .services.bigquery_client import bigquery_client
-from .services.demo_time import demo_now, format_demo_timestamp
+from backend.app.services.bigquery_client import bigquery_client
+from backend.app.services.demo_time import demo_now, format_demo_timestamp
 
 SNAPSHOT_ORG_IDS = {"client1", "client2"}
 

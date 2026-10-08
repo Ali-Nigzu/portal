@@ -11,3 +11,4 @@ backend/frontend_build/
 test-results/
 playwright-report/
 frontend/.tmp/
+frontend/artifacts/

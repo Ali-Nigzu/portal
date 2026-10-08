@@ -8,8 +8,8 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from backend.app.services.auth_context import resolve_snapshot_org
-from backend.app.snapshots import (
+from backend.app.compatibility.auth_context import resolve_snapshot_org
+from backend.app.compatibility.snapshots import (
     SNAPSHOT_ORG_IDS,
     SnapshotLookupError,
     fetch_latest_snapshot,
@@ -17,7 +17,7 @@ from backend.app.snapshots import (
     is_snapshot_org,
 )
 from backend.app.services.demo_session import resolve_demo_org_id
-from backend.app.services.local_data import (
+from backend.app.compatibility.local_data import (
     LocalDataError,
     ensure_local_db_exists,
     resolve_site_view,

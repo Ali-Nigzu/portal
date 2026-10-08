@@ -53,8 +53,8 @@ jobs:
           npm run test:documents
           npm run test:admin
       - run: |
-          PORTAL_BACKEND_MODE=local-new-account PORTAL_SESSION_SECRET=ci-local-fixture-session-secret-only \
-            python -m uvicorn backend.fastapi_app:app --host 127.0.0.1 --port 8000 > /tmp/portal-fixture.log 2>&1 &
+          PORTAL_SESSION_SECRET=ci-local-fixture-session-secret-only \
+            python -m backend.dev.run_fixture_portal > /tmp/portal-fixture.log 2>&1 &
           fixture_pid=$!
           trap 'kill "$fixture_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do

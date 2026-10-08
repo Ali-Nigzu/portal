@@ -6,13 +6,13 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from backend.app.analytics.dashboard_catalogue import (
+from backend.app.compatibility.analytics.dashboard_catalogue import (
     ManifestValidationError,
     get_dashboard_manifest,
     remove_widget_from_manifest,
 )
 from backend.app.models import DashboardManifest
-from backend.app.services.auth_context import resolve_view_token_context
+from backend.app.compatibility.auth_context import resolve_view_token_context
 from backend.app.services.demo_session import resolve_demo_org_id
 
 router = APIRouter(prefix="/api")

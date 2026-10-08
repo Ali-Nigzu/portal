@@ -7,9 +7,9 @@ from typing import Any, Dict, Optional, Tuple
 
 from fastapi import HTTPException, Request, status
 
-from backend.app.auth import verify_password, require_legacy_password_auth
-from backend.app.data.json_store import load_users
-from backend.app.view_tokens import validate_view_token
+from backend.app.compatibility.password_auth import verify_password, require_legacy_password_auth
+from backend.app.compatibility.json_store import load_users
+from backend.app.compatibility.view_tokens import validate_view_token
 from backend.app.services.demo_session import resolve_demo_org_id
 
 
@@ -69,36 +69,6 @@ def resolve_view_token_context(view_token: str) -> str:
     return org_id_for_user_record(client_id, user_record)
 
 
-def authenticate_chart_data_request(
-    request: Request,
-    view_token: Optional[str],
-    client_id: Optional[str] = None,
-) -> str:
-    """Authenticate chart data requests via view token or Basic auth."""
-    if view_token:
-        return resolve_view_token_context(view_token)
-
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        demo_org = resolve_demo_org_id(request)
-        if demo_org:
-            return demo_org
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-        )
-
-    username, password = _decode_basic_auth(auth_header)
-    require_legacy_password_auth()
-    users = load_users()
-    if username not in users or not verify_password(password, users[username]["password"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-
-    user_record = users[username]
-    return org_id_for_user_record(username, user_record)
 
 
 def resolve_snapshot_org(
