@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Loader2, Trash2, Upload, X } from "lucide-react";
 import { ACCEPTED_EXTENSIONS, PendingUploadItem, UploadError } from "../types";
 
@@ -21,6 +22,10 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   const [pendingFiles, setPendingFiles] = useState<PendingUploadItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const uploadingRef = useRef(isUploading);
+  const closeRef = useRef(onClose);
+  uploadingRef.current = isUploading;
+  closeRef.current = onClose;
 
   const mode = useMemo(() => {
     if (isUploading) {
@@ -40,8 +45,8 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        if (!isUploading) {
-          onClose();
+        if (!uploadingRef.current) {
+          closeRef.current();
         }
         return;
       }
@@ -57,10 +62,12 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
 
       const focusableElements = Array.from(
         container.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+          'button:not([disabled]), input:not([disabled]):not([type="file"]), [href], [tabindex]:not([tabindex="-1"])',
         ),
       );
       if (focusableElements.length === 0) {
+        event.preventDefault();
+        dialogRef.current?.focus();
         return;
       }
 
@@ -79,29 +86,41 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     document.addEventListener("keydown", handleKeyDown);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    fileInputRef.current?.focus();
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const background = Array.from(document.body.children).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement && !element.contains(dialogRef.current),
+    );
+    const previousInert = background.map(element => element.inert);
+    background.forEach(element => { element.inert = true; });
+    dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
+      background.forEach((element, index) => { element.inert = previousInert[index]; });
+      previouslyFocused?.focus();
     };
-  }, [isOpen, isUploading, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
   }
 
   const addPendingFiles = (files: File[]) => {
-    const next: PendingUploadItem[] = files.map((file) => ({
-      localId: typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      file,
-      status: "ready",
-    }));
-
-    setPendingFiles((prev) => [...prev, ...next]);
-    setErrorMessage(null);
+    const seen = new Set(pendingFiles.map(item => item.file.name));
+    const next: PendingUploadItem[] = [];
+    let validationError: string | null = null;
+    for (const file of files) {
+      if (seen.has(file.name)) { validationError = "Each staged file must have a different filename."; continue; }
+      if (!ACCEPTED_EXTENSIONS.some(extension => file.name.toLowerCase().endsWith(extension))) {
+        validationError = "Accepted types: PDF, CSV, XLSX and DOCX."; continue;
+      }
+      if (file.size > 25 * 1024 * 1024) { validationError = "Each file must be 25 MiB or smaller."; continue; }
+      seen.add(file.name);
+      next.push({ localId: crypto.randomUUID(), file, status: "ready" });
+    }
+    setPendingFiles(prev => [...prev, ...next]);
+    setErrorMessage(validationError);
   };
 
   const submitUpload = async () => {
@@ -122,21 +141,18 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
         return;
       }
 
-      const errorMap = new Map(uploadResult.errors.map((entry) => [entry.filename, entry.message]));
+      // Multipart transports can escape quotes in filenames. Match failures by
+      // batch index, retaining filename fallback for the existing envelope.
+      const errorMap = new Map(uploadResult.errors.filter(entry => entry.index !== undefined)
+        .map(entry => [entry.index!, entry.message]));
+      const legacyErrors = new Map(uploadResult.errors.filter(entry => entry.index === undefined)
+        .map(entry => [entry.filename, entry.message]));
       setPendingFiles((prev) => {
-        const failed = prev
-          .map((item) => {
-            const message = errorMap.get(item.file.name);
-            if (!message) {
-              return null;
-            }
-            return {
-              ...item,
-              status: "failed" as const,
-              error: message,
-            };
-          })
-          .filter((item): item is PendingUploadItem => item !== null);
+        const failed: PendingUploadItem[] = [];
+        for (const [index, item] of prev.entries()) {
+          const message = errorMap.get(index) ?? legacyErrors.get(item.file.name);
+          if (message) failed.push({ ...item, status: "failed", error: message });
+        }
         return failed;
       });
       setErrorMessage("Some files failed. Remove or retry failed files.");
@@ -152,7 +168,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
       className="documents-page__modal-overlay"
@@ -165,7 +181,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
         }
       }}
     >
-      <div ref={dialogRef} className="documents-page__modal">
+      <div ref={dialogRef} tabIndex={-1} className="documents-page__modal">
         <div className="documents-page__modal-header">
           <h2 id="documents-upload-title">Upload documents</h2>
           <button
@@ -184,6 +200,8 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
             ref={fileInputRef}
             className="documents-page__file-input"
             type="file"
+            tabIndex={-1}
+            disabled={isUploading}
             accept={ACCEPTED_FILES}
             multiple
             onChange={(event) => {
@@ -200,7 +218,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           >
             <Upload size={22} aria-hidden="true" />
             <span>Add files</span>
-            <small>Accepted types: PDF, CSV, XLSX, DOCX</small>
+            <small>PDF, CSV, XLSX, DOCX · maximum 25 MiB per file</small>
           </button>
 
           <ul className="documents-page__staged-list" aria-live="polite">
@@ -234,7 +252,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           <p className="documents-page__selection-label">
             {mode === "OPEN_EMPTY" ? "No files staged" : `${pendingFiles.length} file(s) staged`}
           </p>
-          {errorMessage && <p className="documents-page__error">{errorMessage}</p>}
+          {errorMessage && <p role="alert" className="documents-page__error">{errorMessage}</p>}
         </div>
 
         <div className="documents-page__modal-actions">
@@ -248,7 +266,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           </button>
           <button
             type="button"
-            className="documents-page__button"
+            className="vrm-btn vrm-btn-primary"
             onClick={submitUpload}
             disabled={pendingFiles.length === 0 || isUploading}
           >
@@ -256,7 +274,8 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

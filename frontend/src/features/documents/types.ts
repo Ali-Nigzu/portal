@@ -13,8 +13,9 @@ export type DocumentItem = {
 };
 
 export type UploadError = {
+  index?: number;
   filename: string;
-  code: "unsupported_type" | "too_large" | "internal";
+  code: "unsupported_type" | "too_large" | "unsafe_filename" | "duplicate_filename" | "storage_unavailable";
   message: string;
 };
 

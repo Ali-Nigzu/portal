@@ -10,8 +10,6 @@ ALARM_LOGS_FILE = 'backend/data/alarm_logs.json'
 DEVICE_LISTS_FILE = 'backend/data/device_lists.json'
 INTEREST_SUBMISSIONS_FILE = 'backend/data/interest_submissions.json'
 CONTACT_SUBMISSIONS_FILE = 'backend/data/contact_submissions.json'
-DOCUMENTS_FILE = 'backend/data/documents.json'
-DOCUMENT_BLOBS_DIR = 'backend/data/document_blobs'
 
 
 

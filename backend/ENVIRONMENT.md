@@ -65,3 +65,31 @@ these existing write privileges for device/gateway controls:
 GRANT UPDATE (enabled) ON public.devices TO "<actual portal DB user>";
 GRANT UPDATE (desired_state) ON public.gateways TO "<actual portal DB user>";
 ```
+
+## Private Documents (GCS)
+
+Live mode uses only GCS. `PORTAL_DOCUMENTS_BUCKET` defaults to `camos-prod-1`;
+it is server configuration and cannot be selected by the frontend. Each canonical
+user accesses only `<user.id>/<filename>`. Opening/refreshing Documents lists the
+bucket; login and startup do not scan it. No PostgreSQL metadata or signup folder
+provisioning is needed.
+
+The pinned `google-cloud-storage` client uses Application Default Credentials in
+project `camosbase`. Codespace/Docker execution retains the read-only sa.json mount
+with `GOOGLE_APPLICATION_CREDENTIALS=/app/sa.json`; production uses its existing
+attached service identity. Never commit/copy the credential into the image.
+The owner has already granted Storage Object Admin on this private bucket to
+`portal-reader@camosbase.iam.gserviceaccount.com`. No bucket-admin/IAM changes are
+required or performed by the application.
+
+Uploads retain PDF/CSV/XLSX/DOCX and a 25 MiB per-file limit. Filenames are flat,
+validated names; duplicate live objects are rejected atomically, never overwritten.
+Downloads are authenticated backend attachments. Deletes use a generation
+precondition; GCS Soft Delete remains a bucket feature without Portal restore UI.
+Storage errors never fall back to local files.
+
+`local-new-account` explicitly selects an empty in-memory Documents adapter;
+its uploads disappear on process restart. This fixture is forbidden in production.
+Old local Documents data is not imported, migrated, synchronized or dual-written.
+Any required old files must be placed under canonical ID prefixes manually,
+separately from this deployment. See [Documents contract and acceptance](../docs/documents-gcs.md).

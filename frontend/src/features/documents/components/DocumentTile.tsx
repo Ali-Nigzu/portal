@@ -6,6 +6,8 @@ type DocumentTileProps = {
   documentItem: DocumentItem;
   onDownload: (documentItem: DocumentItem) => void;
   onDelete: (documentId: string) => void | Promise<void>;
+  deleting?: boolean;
+  deleteDisabled?: boolean;
 };
 
 const getFileIcon = (type: DocumentItem["type"]) => {
@@ -22,6 +24,8 @@ const DocumentTile: React.FC<DocumentTileProps> = ({
   documentItem,
   onDownload,
   onDelete,
+  deleting,
+  deleteDisabled,
 }) => {
   const fileTypeLabel = documentItem.type.toUpperCase();
 
@@ -48,15 +52,22 @@ const DocumentTile: React.FC<DocumentTileProps> = ({
             type="button"
             className="documents-page__icon-button documents-page__icon-button--danger"
             onClick={() => onDelete(documentItem.id)}
+            disabled={deleteDisabled}
             aria-label={`Delete ${documentItem.name}`}
           >
             <Trash2 size={16} />
           </button>
         </div>
+        {deleting && <span role="status">Deleting…</span>}
 
         <h3 title={documentItem.name} className="documents-page__file-name">
           {documentItem.name}
         </h3>
+        <p className="documents-page__file-meta">
+          {documentItem.sizeBytes < 1024 ? `${documentItem.sizeBytes} B` : documentItem.sizeBytes < 1024 * 1024
+            ? `${(documentItem.sizeBytes / 1024).toFixed(1)} KiB` : `${(documentItem.sizeBytes / (1024 * 1024)).toFixed(1)} MiB`}
+          {" · "}<time dateTime={documentItem.createdAt}>{new Date(documentItem.createdAt).toLocaleDateString()}</time>
+        </p>
       </div>
     </article>
   );

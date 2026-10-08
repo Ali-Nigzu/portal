@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from backend.app.data import documents_store
 from backend.tests.run_membership_browser import main as run_portal
 
 
@@ -34,8 +33,6 @@ def main():
     os.environ['POSTMARK_SERVER_TOKEN'] = 'local-provider-stub-only'
     os.environ['POSTMARK_FROM_EMAIL'] = 'test@local.invalid'
     os.environ['POSTMARK_EMAIL_ENDPOINT'] = 'http://127.0.0.1:8001/email'
-    documents_store.DOCUMENTS_FILE = str(directory / 'documents.json')
-    documents_store.DOCUMENT_BLOBS_DIR = str(directory / 'document_blobs')
     try:
         run_portal()
     finally:

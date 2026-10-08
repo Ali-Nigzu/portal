@@ -1,23 +1,20 @@
-"""Documents business logic."""
+"""Canonical-user Documents policy, backed by one selected object adapter."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from tempfile import SpooledTemporaryFile
 
 from fastapi import UploadFile
+from starlette.concurrency import run_in_threadpool
 
-from backend.app.data.documents_store import (
-    create_document,
-    get_document,
-    list_documents,
-    mark_deleted,
-    read_blob,
-    write_blob,
+from backend.app.data.documents_store import CHUNK_SIZE, DocumentsStore
+from backend.app.models_documents import (
+    DocumentError, DocumentRecord, MIME_TYPES, document_id, filename_from_id,
+    infer_type, safe_filename,
 )
-from backend.app.models_documents import DocumentRecord, infer_type, new_doc_id, now_iso
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
-ALLOWED_TYPES = {"pdf", "csv", "xlsx", "docx"}
 
 
 @dataclass
@@ -25,6 +22,7 @@ class UploadError:
     filename: str
     code: str
     message: str
+    index: int
 
 
 @dataclass
@@ -34,76 +32,95 @@ class UploadBatchResult:
 
 
 class DocumentsService:
-    def list(self, account_id: str) -> list[DocumentRecord]:
-        return list_documents(account_id)
+    def __init__(self, store: DocumentsStore):
+        self.store = store
 
-    async def upload_batch(self, account_id: str, files: list[UploadFile]) -> UploadBatchResult:
-        created: list[DocumentRecord] = []
-        errors: list[UploadError] = []
+    @staticmethod
+    def prefix(user_id):
+        # This value comes from CanonicalUser.id, never a request field.
+        if not isinstance(user_id, int) or isinstance(user_id, bool) or user_id < 0:
+            raise ValueError('Canonical user ID required')
+        return f'{user_id}/'
 
-        for upload in files:
-            filename = upload.filename or "unnamed"
-            payload = await upload.read()
-            inferred_type = infer_type(upload.content_type or "", filename)
+    def record(self, user_id, item):
+        prefix = self.prefix(user_id)
+        if not item.name.startswith(prefix):
+            raise ValueError('Unexpected object prefix')
+        name = safe_filename(item.name[len(prefix):])
+        kind = infer_type('', name)
+        return DocumentRecord(id=document_id(name), accountId=str(user_id), name=name,
+            type=kind, mimeType=MIME_TYPES.get(kind.value, 'application/octet-stream'),
+            sizeBytes=item.size, createdAt=item.created_at, updatedAt=item.updated_at)
 
-            if inferred_type.value not in ALLOWED_TYPES:
-                errors.append(
-                    UploadError(
-                        filename=filename,
-                        code="unsupported_type",
-                        message="Unsupported file type.",
-                    ),
-                )
-                continue
-
-            if len(payload) > MAX_UPLOAD_BYTES:
-                errors.append(
-                    UploadError(
-                        filename=filename,
-                        code="too_large",
-                        message="File exceeds maximum size of 25MB.",
-                    ),
-                )
-                continue
-
-            now = now_iso()
-            document = DocumentRecord(
-                id=new_doc_id(),
-                accountId=account_id,
-                name=filename,
-                type=inferred_type,
-                mimeType=upload.content_type or "application/octet-stream",
-                sizeBytes=len(payload),
-                createdAt=now,
-                updatedAt=now,
-                status="active",
-            )
-
+    def list(self, user_id):
+        records = []
+        for item in self.store.list(self.prefix(user_id)):
             try:
-                create_document(document)
-                write_blob(document.id, payload)
-                created.append(document)
-            except Exception:
-                errors.append(
-                    UploadError(
-                        filename=filename,
-                        code="internal",
-                        message="Failed to persist file.",
-                    ),
-                )
+                records.append(self.record(user_id, item))
+            except (DocumentError, ValueError):
+                # Ignore nested objects, markers and unsafe administrative names.
+                continue
+        return sorted(records, key=lambda item: (item.createdAt, item.name), reverse=True)
 
-        created.sort(key=lambda item: item.createdAt, reverse=True)
-        return UploadBatchResult(documents=created, errors=errors)
+    async def upload_batch(self, user_id, files: list[UploadFile]):
+        created, errors = [], []
+        try:
+            for index, upload in enumerate(files):
+                filename = upload.filename or ''
+                try:
+                    name = safe_filename(filename)
+                    kind = infer_type('', name)
+                    if kind.value not in MIME_TYPES:
+                        raise DocumentError(422, 'unsupported_type', 'Accepted types: PDF, CSV, XLSX and DOCX.')
+                    # Temporary request spool is not document persistence. Reading
+                    # stops at the limit; at most one bounded chunk is in memory.
+                    with SpooledTemporaryFile(max_size=1024 * 1024) as source:
+                        size = 0
+                        while True:
+                            chunk = await upload.read(CHUNK_SIZE)
+                            if not chunk:
+                                break
+                            size += len(chunk)
+                            if size > MAX_UPLOAD_BYTES:
+                                raise DocumentError(422, 'too_large', 'File exceeds maximum size of 25 MiB.')
+                            await run_in_threadpool(source.write, chunk)
+                        source.seek(0)
+                        item = await run_in_threadpool(self.store.create, self.prefix(user_id) + name,
+                                                       source, MIME_TYPES[kind.value])
+                    created.append(self.record(user_id, item))
+                except DocumentError as error:
+                    errors.append(UploadError(filename, error.code, error.message, index))
+            return UploadBatchResult(sorted(created, key=lambda item: item.createdAt, reverse=True), errors)
+        finally:
+            for upload in files:
+                await upload.close()
 
-    def download(self, account_id: str, document_id: str) -> tuple[DocumentRecord | None, bytes | None]:
-        document = get_document(account_id, document_id)
-        if not document:
-            return None, None
-        payload = read_blob(document_id)
-        return document, payload
+    def download(self, user_id, value):
+        name = self.prefix(user_id) + filename_from_id(value)
+        item = self.store.get(name)
+        reader = self.store.open(name, item.generation)
+        try:
+            # Preflight the first read before returning HTTP 200.
+            first = reader.read(CHUNK_SIZE)
+            return self.record(user_id, item), reader, first
+        except Exception:
+            reader.close()
+            raise
 
-    def delete(self, account_id: str, document_id: str) -> bool:
-        return mark_deleted(account_id, document_id, now_iso())
+    @staticmethod
+    def chunks(reader, first):
+        try:
+            if first:
+                yield first
+            while True:
+                chunk = reader.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            reader.close()
 
-
-documents_service = DocumentsService()
+    def delete(self, user_id, value):
+        name = self.prefix(user_id) + filename_from_id(value)
+        item = self.store.get(name)
+        self.store.delete(name, item.generation)

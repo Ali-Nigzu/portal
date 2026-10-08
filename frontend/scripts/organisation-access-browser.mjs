@@ -101,7 +101,7 @@ try {
   }
   async function create(page, name) {
     await (await primary(page))
-      .getByRole("button", { name: "+ Add Organisation", exact: true })
+      .getByRole("button", { name: "Add Organisation", exact: true })
       .click();
     const dialog = page.getByRole("dialog", {
       name: "Create organisation",
@@ -252,10 +252,10 @@ try {
   await apiLogin(third, "third");
   const zero = await primary(member);
   await expect(
-    zero.getByRole("button", { name: "+ Add Organisation", exact: true }),
+    zero.getByRole("button", { name: "Add Organisation", exact: true }),
   ).toBeVisible();
   await expect(
-    zero.getByRole("button", { name: "+ Request Access", exact: true }),
+    zero.getByRole("button", { name: "Request Access", exact: true }),
   ).toBeVisible();
   for (const name of ["Home", "Documents", "Settings", "Logout"])
     await expect(zero.getByRole("button", { name, exact: true })).toBeVisible();
@@ -265,7 +265,7 @@ try {
 
   // Modal keyboard containment and Escape return focus.
   await zero
-    .getByRole("button", { name: "+ Add Organisation", exact: true })
+    .getByRole("button", { name: "Add Organisation", exact: true })
     .click();
   let modal = member.getByRole("dialog", {
     name: "Create organisation",
