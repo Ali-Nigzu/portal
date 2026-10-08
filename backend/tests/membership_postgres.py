@@ -14,10 +14,10 @@ SCHEMA = """
 CREATE TABLE public.users (
  id bigint PRIMARY KEY, email text NOT NULL, username text NOT NULL,
  phone_number text, password_hash text NOT NULL, status smallint NOT NULL CHECK(status IN (0,1)),
- created_at timestamptz NOT NULL DEFAULT now()
+ created_at timestamptz NOT NULL
 );
-CREATE UNIQUE INDEX users_email_ci ON public.users(lower(email));
-CREATE UNIQUE INDEX users_username_ci ON public.users(lower(username));
+CREATE UNIQUE INDEX uq_users_email_ci ON public.users(lower(email));
+CREATE UNIQUE INDEX uq_users_username_ci ON public.users(lower(username));
 CREATE TABLE public.organisations (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL,
  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), enabled boolean NOT NULL DEFAULT true
@@ -28,12 +28,12 @@ CREATE TABLE public.memberships (
  created_at timestamptz NOT NULL, PRIMARY KEY(user_id,organisation_id)
 );
 CREATE TABLE public.sites (id bigint PRIMARY KEY, organisation_id bigint NOT NULL REFERENCES public.organisations(id), name text NOT NULL, UNIQUE(organisation_id,name));
-INSERT INTO public.users(id,email,username,password_hash,status) VALUES
- (0,'owner@example.com','owner','not-exposed',1),
- (1,'member@example.com','member','not-exposed',1),
- (2,'third@example.com','third','not-exposed',1),
- (3,'disabled@example.com','disabled','not-exposed',0),
- (4,'other@example.com','member@example.com','not-exposed',1);
+INSERT INTO public.users(id,email,username,password_hash,status,created_at) VALUES
+ (0,'owner@example.com','owner','not-exposed',1,CURRENT_TIMESTAMP),
+ (1,'member@example.com','member','not-exposed',1,CURRENT_TIMESTAMP),
+ (2,'third@example.com','third','not-exposed',1,CURRENT_TIMESTAMP),
+ (3,'disabled@example.com','disabled','not-exposed',0,CURRENT_TIMESTAMP),
+ (4,'other@example.com','member@example.com','not-exposed',1,CURRENT_TIMESTAMP);
 INSERT INTO public.organisations(name) VALUES ('Demo');
 INSERT INTO public.memberships VALUES(0,1,0,1,now() - INTERVAL '1 year');
 """

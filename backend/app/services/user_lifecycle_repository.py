@@ -7,7 +7,11 @@ from .canonical_auth import CanonicalAuthRepository
 
 USER_COLUMNS = (
     "id, email, username, phone_number, password_hash, status, "
-    "session_version, account_version, document_owner_key"
+    "session_version"
+)
+CHALLENGE_COLUMNS = (
+    "id, purpose, user_id, payload, code_hash, code_expires_at, attempts, "
+    "resends, last_sent_at, verified_at, consumed_at, created_at"
 )
 
 
@@ -26,7 +30,7 @@ class UserLifecycleRepository:
             with self.database.transaction() as connection:
                 with closing(connection.cursor()) as cursor:
                     result = operation(cursor)
-            # Expected domain failures may include durable attempt/budget writes.
+            # Expected domain failures may include durable wrong-attempt writes.
             # Raise only after commit so those writes are never rolled back.
             if isinstance(result, LifecycleError):
                 raise result
@@ -38,26 +42,13 @@ class UserLifecycleRepository:
             raise
 
     @staticmethod
-    def budget(cursor, key, now, limit=10):
-        cursor.execute(
-            "INSERT INTO public.user_lifecycle_limits(key,window_started_at,count) "
-            "VALUES (%s,%s,1) ON CONFLICT(key) DO UPDATE SET "
-            "count=CASE WHEN user_lifecycle_limits.window_started_at <= %s::timestamptz - INTERVAL '1 hour' "
-            "THEN 1 ELSE user_lifecycle_limits.count+1 END, "
-            "window_started_at=CASE WHEN user_lifecycle_limits.window_started_at <= %s::timestamptz - INTERVAL '1 hour' "
-            "THEN %s ELSE user_lifecycle_limits.window_started_at END RETURNING count",
-            (key, now, now, now, now),
-        )
-        return int(cursor.fetchone()[0]) <= limit
-
-    @staticmethod
     def user(cursor, user_id):
         cursor.execute(f"SELECT {USER_COLUMNS} FROM public.users WHERE id=%s FOR UPDATE", (user_id,))
         return CanonicalAuthRepository._user(cursor.fetchone())
 
     @staticmethod
     def email_user(cursor, email):
-        cursor.execute(f"SELECT {USER_COLUMNS} FROM public.users WHERE lower(email)=lower(%s)", (email,))
+        cursor.execute(f"SELECT {USER_COLUMNS} FROM public.users WHERE lower(email)=lower(%s) FOR UPDATE", (email,))
         return CanonicalAuthRepository._user(cursor.fetchone())
 
     @staticmethod
@@ -89,9 +80,10 @@ class UserLifecycleRepository:
         )
 
     @staticmethod
-    def challenge(cursor, challenge_id, purpose):
+    def challenge(cursor, challenge_id, purpose, *, lock=True):
         cursor.execute(
-            'SELECT * FROM public.user_lifecycle_challenges WHERE id=%s AND purpose=%s FOR UPDATE',
+            f'SELECT {CHALLENGE_COLUMNS} FROM public.user_lifecycle_challenges WHERE id=%s AND purpose=%s'
+            + (' FOR UPDATE' if lock else ''),
             (challenge_id, purpose),
         )
         row = cursor.fetchone()
@@ -109,3 +101,30 @@ class UserLifecycleRepository:
             + ','.join(key + '=%s' for key in fields) + ' WHERE id=%s',
             (*fields.values(), challenge_id),
         )
+
+    @staticmethod
+    def delete_challenge(cursor, challenge_id, purpose):
+        cursor.execute('DELETE FROM public.user_lifecycle_challenges WHERE id=%s AND purpose=%s',
+                       (challenge_id, purpose))
+
+    @staticmethod
+    def invalidate_user_challenges(cursor, user_id):
+        # Caller holds the user lock; all existing-user operations lock it first.
+        cursor.execute('DELETE FROM public.user_lifecycle_challenges WHERE user_id=%s AND purpose IN (1,2)',
+                       (user_id,))
+
+    @staticmethod
+    def cleanup(cursor, now, limit, pending_seconds, reset_seconds, unlock_seconds):
+        cursor.execute("SET LOCAL statement_timeout = '250ms'")
+        cursor.execute("SET LOCAL lock_timeout = '100ms'")
+        cursor.execute(
+            'DELETE FROM public.user_lifecycle_challenges WHERE id IN ('
+            'SELECT id FROM public.user_lifecycle_challenges WHERE consumed_at IS NOT NULL OR '
+            '(verified_at IS NULL AND created_at <= %s::timestamptz - %s * INTERVAL \'1 second\') OR '
+            '(verified_at IS NOT NULL AND (purpose=0 OR '
+            '(purpose=1 AND verified_at <= %s::timestamptz - %s * INTERVAL \'1 second\') OR '
+            '(purpose=2 AND verified_at <= %s::timestamptz - %s * INTERVAL \'1 second\'))) '
+            'ORDER BY created_at,id LIMIT %s FOR UPDATE SKIP LOCKED) RETURNING id',
+            (now, pending_seconds, now, reset_seconds, now, unlock_seconds, limit),
+        )
+        return len(cursor.fetchall())

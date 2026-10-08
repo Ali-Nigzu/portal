@@ -106,9 +106,9 @@ def get_session_user(
     session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
 ):
     user = get_canonical_user(request, session_token)
-    return user.document_owner_key or user.username, {
+    return user.username, {
         "id": str(user.id), "name": user.username, "email": user.email,
-        "phone": user.phone_number, "role": "client", "account_version": user.account_version,
+        "phone": user.phone_number, "role": "client",
     }
 
 

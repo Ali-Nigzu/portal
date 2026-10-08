@@ -46,9 +46,16 @@ try {
   await page.goto(`${base}/settings/account`);await expect(page.getByRole('heading',{name:'Account details'})).toBeVisible();await unlock(page,password);
   await page.getByRole('button',{name:'Edit Username',exact:true}).click();await page.getByLabel('Username',{exact:true}).fill('renamed-browser');
   await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('status')).toContainText('Account details saved');
+  await page.getByRole('button',{name:'Lock editing',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Unlock to edit',exact:true})).toBeVisible();
   await page.goto(`${base}/home`);await expect(page.getByRole('heading',{name:'Welcome renamed-browser'})).toBeVisible();
   await page.goto(`${base}/settings/account`);await unlock(page,password);await page.getByRole('button',{name:'Edit phone',exact:true}).click();
   await page.getByLabel('Phone number',{exact:true}).fill('+447700900123');await page.getByRole('button',{name:'Save',exact:true}).click();
+  await expect(page.getByText('+447700900123',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Edit phone',exact:true}).click();await page.getByLabel('Phone number',{exact:true}).fill('+15551234567');
+  await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByText('+15551234567',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Edit phone',exact:true}).click();await page.getByLabel('Phone number',{exact:true}).fill('+447700900123');
+  await page.getByRole('button',{name:'Save',exact:true}).click();
   await expect(page.getByText('+447700900123',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Edit phone',exact:true}).click();
   await page.getByRole('button',{name:'Remove phone number',exact:true}).click();await page.getByRole('button',{name:'Save',exact:true}).click();
   await expect(page.getByText('Not added',{exact:true})).toBeVisible();await page.screenshot({path:`${output}/desktop.png`,fullPage:true});
@@ -66,6 +73,9 @@ try {
   await page.getByRole('button',{name:'Set new password',exact:true}).click();await expect(page.getByRole('status')).toContainText('Password reset successful');
   const old=await page.request.post(`${base}/api/login`,{headers:{'X-Requested-With':'camOS'},data:{identifier:email,password:'new-browser-password'}});assert.equal(old.status(),401);
   await signIn(page,email,'reset-browser-password');await page.goto(`${base}/settings/account`);await expect(page.getByText('renamed-browser',{exact:true})).toBeVisible();
+  await page.reload();await expect(page.getByText('renamed-browser',{exact:true})).toBeVisible();await expect(page.getByText('Not added',{exact:true})).toBeVisible();
+  assert.equal((await page.request.post(`${base}/api/logout`,{headers:{'X-Requested-With':'camOS'}})).status(),204);
+  await signIn(page,'renamed-browser','reset-browser-password');await page.goto(`${base}/settings/account`);await expect(page.getByText('renamed-browser',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Unlock to edit',exact:true}).click();const dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Current password',{exact:true})).toBeFocused();
   await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);assert.deepEqual(errors,[]);
   console.log('Canonical browser signup, Postmark HTTP stub, zero-org login, account edits, shell refresh, mobile, password change, reset and focus checks passed.');

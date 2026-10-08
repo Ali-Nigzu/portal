@@ -48,8 +48,9 @@ UPDATE/DELETE or membership DELETE is required. Invitations do not create users;
 signup creates a verified canonical user with zero memberships. The
 local-new-account fixture does not provide lifecycle or membership mutations.
 
-Apply the reviewed administrator-only user lifecycle migration and column grants
-before deploying this revision; see [canonical lifecycle deployment and validation](../docs/canonical-user-lifecycle.md).
+The locked user lifecycle schema and runtime grants are already applied live.
+Migration/grant sources document that contract for future environments; do not
+apply them to production for this correction. See [canonical lifecycle behavior and validation](../docs/canonical-user-lifecycle.md).
 No runtime DDL or production migration is performed by the application.
 
 Legacy JSON password authentication is disabled by default, and is always

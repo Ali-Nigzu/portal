@@ -154,7 +154,7 @@ def test_local_mode_uses_normal_auth_session_catalogue_and_context(local_client)
     assert response.status_code == 200
     assert response.json()["user"] == {
         "id": str(USER_ID), "name": "Test User",
-        "email": "test@local.invalid", "phone": None, "account_version": 0,
+        "email": "test@local.invalid", "phone": None,
     }
     assert "camos_session" in response.cookies
     assert "demo" not in response.headers.get("set-cookie", "").lower()

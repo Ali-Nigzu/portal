@@ -8,10 +8,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.tests.membership_postgres import LocalPostgres
-from backend.app.api import auth, documents
+from backend.app.api import auth
 from backend.app.services import passwords, postmark_email
 from backend.app.services.canonical_auth import CanonicalAuthRepository
-from backend.app.services.user_lifecycle import UserLifecycle, digest, CODE_TTL
+from backend.app.services.user_lifecycle import UserLifecycle, digest, CODE_TTL, SIGNUP, RESET, UNLOCK, CHALLENGE_TTL
 from backend.app.services.user_lifecycle_repository import UserLifecycleRepository, LifecycleError
 
 
@@ -27,17 +27,14 @@ def setup(monkeypatch, tmp_path):
     app.state.auth_repository = CanonicalAuthRepository(db.database)
     app.state.user_lifecycle = lifecycle
     app.include_router(auth.router)
-    app.include_router(documents.router)
     mail = []
-    for purpose, sender in [('signup', 'send_verification_email'), ('reset', 'send_password_reset_code_email'), ('unlock', 'send_settings_unlock_code_email')]:
+    for purpose, sender in [(SIGNUP, 'send_verification_email'), (RESET, 'send_password_reset_code_email'), (UNLOCK, 'send_settings_unlock_code_email')]:
         monkeypatch.setattr(postmark_email, sender, lambda purpose=purpose, **kw: mail.append((purpose, kw)))
     monkeypatch.setattr(postmark_email, 'send_admin_signup_notification', lambda **kw: None)
     # Every migrated path must work even when JSON identity access explodes.
-    from backend.app.data import json_store, documents_store
+    from backend.app.data import json_store
     monkeypatch.setattr(json_store, 'load_users', lambda: (_ for _ in ()).throw(AssertionError('JSON authority used')))
     monkeypatch.setattr(json_store, 'save_users', lambda value: (_ for _ in ()).throw(AssertionError('JSON identity write')))
-    monkeypatch.setattr(documents_store, 'DOCUMENTS_FILE', str(tmp_path / 'documents.json'))
-    monkeypatch.setattr(documents_store, 'DOCUMENT_BLOBS_DIR', str(tmp_path / 'blobs'))
     api = TestClient(app, headers={'X-Requested-With': 'camOS', 'Origin': 'http://testserver'})
     yield api, db, lifecycle, mail, now, app
     db.close()
@@ -75,9 +72,11 @@ def test_signup_creates_canonical_username_argon_and_zero_memberships(setup):
     user_id = int(account['id'])
     assert user_id > 4
     assert db.query('SELECT id FROM public.users WHERE id IN (0,1) ORDER BY id') == [[0], [1]]
-    row = db.query('SELECT password_hash,document_owner_key FROM public.users WHERE id=%s', (user_id,))[0]
+    row = db.query('SELECT password_hash,created_at,session_version FROM public.users WHERE id=%s', (user_id,))[0]
     assert row[0].startswith('$argon2id$') and passwords.verify_password('  secret123  ', row[0])
-    assert row[1].startswith('canonical:')
+    assert row[1] is not None and row[2] == 0
+    assert db.query("SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='created_at'") == [[None]]
+    assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges') == [[0]]
     assert db.query('SELECT count(*) FROM public.memberships WHERE user_id=%s', (user_id,)) == [[0]]
     for identifier in ('NEW-USER', 'NEW@EXAMPLE.COM'):
         login(api, identifier)
@@ -100,18 +99,17 @@ def test_signup_duplicate_and_identifier_validation(setup, username, email, expe
     assert db.query('SELECT count(*) FROM public.users') == [[5]]
 
 
-def test_wrong_code_attempts_commit_and_restart_budget(setup):
+def test_wrong_code_attempts_commit_and_exhaustion(setup):
     api, db, _, mail, _, _ = setup
     api.post('/api/signup/start', json=dict(name='new-user',email='new@example.com',password='password123'))
     wrong = '000000' if mail[-1][1]['code'] != '000000' else '000001'
     for attempt in range(5):
         response = api.post('/api/signup/verify', json=dict(email='new@example.com',code=wrong))
         assert response.status_code == (429 if attempt == 4 else 400)
-    assert db.query('SELECT attempts,state FROM public.user_lifecycle_challenges') == [[5,'exhausted']]
-    assert api.post('/api/signup/verify', json=dict(email='new@example.com',code=mail[-1][1]['code'])).status_code == 400
-    for _ in range(9):
-        assert api.post('/api/signup/start', json=dict(name='new-user',email='new@example.com',password='password123')).status_code == 202
-    assert api.post('/api/signup/start', json=dict(name='new-user',email='new@example.com',password='password123')).status_code == 429
+    assert db.query('SELECT attempts FROM public.user_lifecycle_challenges') == [[5]]
+    assert api.post('/api/signup/verify', json=dict(email='new@example.com',code=mail[-1][1]['code'])).status_code == 429
+    # Starting another challenge is intentionally not a global rate limit.
+    assert api.post('/api/signup/start', json=dict(name='new-user',email='new@example.com',password='password123')).status_code == 202
 
 
 def test_expired_code_resend_does_not_restore_attempts(setup):
@@ -130,12 +128,12 @@ def test_expired_code_resend_does_not_restore_attempts(setup):
 
 def test_resend_limit_and_code_invalidation(setup):
     _, db, lifecycle, _, now, _ = setup
-    handle, (_, first_code) = lifecycle.start('signup','new@example.com',username='new-user',password='password123')
+    handle, (_, first_code) = lifecycle.start(SIGNUP,'new@example.com',username='new-user',password='password123')
     for _ in range(5):
         now[0] += timedelta(seconds=30)
-        _, code, _ = lifecycle.resend('signup',handle)
+        _, code, _ = lifecycle.resend(SIGNUP,handle)
     with pytest.raises(LifecycleError) as error:
-        lifecycle.resend('signup',handle)
+        lifecycle.resend(SIGNUP,handle)
     assert error.value.status == 429
     assert db.query('SELECT resends FROM public.user_lifecycle_challenges') == [[5]]
     # Challenge digest contains no plaintext code or password.
@@ -146,16 +144,16 @@ def test_resend_limit_and_code_invalidation(setup):
 
 def test_parallel_completion_and_cross_browser_signup_isolation(setup):
     _, db, lifecycle, _, _, _ = setup
-    handle, (_, code) = lifecycle.start('signup','new@example.com',username='first-user',password='password123')
-    other, _ = lifecycle.start('signup','new@example.com',username='second-user',password='different123')
+    handle, (_, code) = lifecycle.start(SIGNUP,'new@example.com',username='first-user',password='password123')
+    other, _ = lifecycle.start(SIGNUP,'new@example.com',username='second-user',password='different123')
     def complete(_):
-        try: return lifecycle.verify('signup',handle,code).username
+        try: return lifecycle.verify(SIGNUP,handle,code).username
         except LifecycleError as error: return error.status
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(complete, range(2)))
     assert sorted(map(str,results)) == ['400','first-user']
     assert db.query('SELECT username FROM public.users WHERE email=%s', ('new@example.com',)) == [['first-user']]
-    assert db.query("SELECT state FROM public.user_lifecycle_challenges WHERE id=%s", (digest(other),)) == [['pending']]
+    assert db.query("SELECT verified_at,consumed_at FROM public.user_lifecycle_challenges WHERE id=%s", (digest(other),)) == [[None,None]]
 
 
 def test_admin_notification_failure_cannot_undo_signup(setup, monkeypatch):
@@ -175,7 +173,7 @@ def test_verification_email_failure_is_recoverable(setup, monkeypatch):
     assert api.cookies.get('camos_signup_challenge')
     assert db.query('SELECT count(*) FROM public.users') == [[5]]
     now[0] += timedelta(seconds=30)
-    monkeypatch.setattr(postmark_email,'send_verification_email',lambda **kw: mail.append(('signup',kw)))
+    monkeypatch.setattr(postmark_email,'send_verification_email',lambda **kw: mail.append((SIGNUP,kw)))
     assert api.post('/api/signup/resend',json={'email':'new@example.com'}).status_code == 200
     assert api.post('/api/signup/verify',json=dict(email='new@example.com',code=mail[-1][1]['code'])).status_code == 201
 
@@ -190,15 +188,15 @@ def test_reset_changes_canonical_password_revokes_session_and_prevents_replay(se
     response=api.post('/api/password-reset/verify-code',json={'email':'new@example.com','code':code})
     assert response.status_code == 200 and 'resetToken' not in response.text
     assert api.post('/api/password-reset/verify-code',json={'email':'new@example.com','code':code}).status_code == 400
-    # A verified grant remains valid after the original code expires.
+    # A verified challenge remains valid after the original code expires.
     now[0] += timedelta(seconds=60)
-    challenge=api.cookies.get('camos_reset_challenge'); grant=api.cookies.get('camos_reset_grant')
+    challenge=api.cookies.get('camos_reset_challenge')
     assert api.post('/api/password-reset/set-password',json={'email':'new@example.com','password':'newpassword123','confirm_password':'newpassword123'}).status_code == 200
     assert api.get('/api/me').status_code == 401
     assert api.post('/api/login',json={'identifier':'new-user','password':'  secret123  '}).status_code == 401
     login(api,password='newpassword123')
     assert api.get('/api/me',headers={'Cookie':'camos_session='+old_cookie}).status_code == 401
-    assert api.post('/api/password-reset/set-password',headers={'Cookie':f'camos_reset_challenge={challenge}; camos_reset_grant={grant}'},json={'email':'new@example.com','password':'replayed123','confirm_password':'replayed123'}).status_code == 401
+    assert api.post('/api/password-reset/set-password',headers={'Cookie':f'camos_reset_challenge={challenge}'},json={'email':'new@example.com','password':'replayed123','confirm_password':'replayed123'}).status_code == 401
 
 
 def test_unknown_disabled_reset_and_provider_failure_are_generic(setup,monkeypatch):
@@ -229,25 +227,20 @@ def test_reset_wrong_expired_code_and_disabled_before_completion(setup):
     assert api.post('/api/password-reset/set-password',json={'email':'new@example.com','password':'password999','confirm_password':'password999'}).status_code==401
 
 
-def test_account_unlock_edit_phone_username_password_and_documents(setup):
+def test_account_unlock_edit_phone_username_and_password(setup):
     api,db,_,_,_,_=setup
     account=signup(setup,phone='+447700900123'); old_cookie=login(api)
     assert api.post('/api/settings/unlock/start',json={'current_password':'wrong'}).status_code==401
     token=unlock(setup)
-    upload=api.post('/api/documents/upload',files={'files':('account.csv',b'a,b\n1,2','text/csv')})
-    assert upload.status_code==200
-    document_id=upload.json()['documents'][0]['id']
     def update(**fields): return api.put('/api/me',json={'unlock_token':token,**fields})
     assert update(name='OWNER').status_code==409
     assert update(email='changed@example.com').status_code==422
-    response=update(name='renamed-user',account_version=account['account_version'])
+    response=update(name='renamed-user')
     assert response.status_code==200 and response.json()['user']['name']=='renamed-user'
-    assert update(phone='',account_version=0).status_code==409
+    assert api.get('/api/me').json()['user']['phone']=='+447700900123'
     assert update(phone='').status_code==200
     assert api.get('/api/me').json()['user']['phone'] is None
     assert update(phone='+15551234567').status_code==200
-    assert api.get('/api/documents').json()['documents'][0]['id']==document_id
-    assert api.get('/api/documents/'+document_id+'/download').content==b'a,b\n1,2'
     assert update(password='  changed123  ',confirm_password='  changed123  ').status_code==200
     assert api.get('/api/me').status_code==200
     assert api.get('/api/me',headers={'Cookie':'camos_session='+old_cookie}).status_code==401
@@ -256,15 +249,15 @@ def test_account_unlock_edit_phone_username_password_and_documents(setup):
     assert api.get('/api/me').json()['user']['phone']=='+15551234567'
     signup(setup,username='new-user',email='another@example.com')
     login(api,'new-user')
-    assert api.get('/api/documents/'+document_id+'/download').status_code==404
 
 
-def test_unlock_is_browser_bound_code_one_time_and_expires(setup):
-    api,_,_,mail,now,app=setup
+def test_unlock_is_user_scoped_code_one_time_and_expires(setup):
+    api,db,_,mail,now,app=setup
     signup(setup);login(api);token=unlock(setup)
     assert api.post('/api/settings/unlock/verify',json={'code':mail[-1][1]['code']}).status_code==400
     second=TestClient(app,headers={'X-Requested-With':'camOS'})
-    login(second)
+    db.query('UPDATE public.users SET password_hash=%s WHERE id=0',(passwords.hash_password('password123'),))
+    login(second,'owner','password123')
     second.cookies.set('camos_unlock_challenge',api.cookies.get('camos_unlock_challenge'))
     assert second.put('/api/me',json={'unlock_token':token,'phone':''}).status_code==401
     now[0]+=timedelta(seconds=300)
@@ -289,64 +282,47 @@ def test_retired_routes_and_validation_do_not_echo_secrets(setup):
     assert response.status_code==422 and secret not in response.text
 
 
-def test_existing_document_namespace_survives_rename(setup):
-    api,db,_,_,_,_=setup
-    db.query('UPDATE public.users SET password_hash=%s WHERE id=0',(passwords.hash_password('password123'),))
-    login(api,'owner','password123');token=unlock(setup,'password123')
-    from backend.app.data import documents_store
-    documents_store._save_all_documents([dict(id='historical',accountId='owner',name='original.csv',type='csv',mimeType='text/csv',sizeBytes=1,createdAt='2026-01-01T00:00:00Z',updatedAt='2026-01-01T00:00:00Z',status='active')])
-    assert api.put('/api/me',json={'unlock_token':token,'name':'renamed-owner'}).status_code==200
-    assert db.query('SELECT document_owner_key FROM public.users WHERE id=0')==[['owner']]
-    assert api.get('/api/documents').json()['documents'][0]['id']=='historical'
-    signup(setup,username='owner',email='replacement@example.com');login(api,'owner')
-    assert api.get('/api/documents').json()['documents']==[]
-
-
 def test_parallel_reset_completions_only_one_wins(setup):
     api,db,lifecycle,_,_,_=setup
     account=signup(setup)
-    grants=[]
+    handles=[]
     for _ in range(2):
-        handle,(_,code)=lifecycle.start('reset',account['email'])
-        grants.append((handle,lifecycle.verify('reset',handle,code)))
-    def finish(pair):
+        handle,(_,code)=lifecycle.start(RESET,account['email'])
+        lifecycle.verify(RESET,handle,code)
+        handles.append(handle)
+    def finish(handle):
         try:
-            lifecycle.reset_password(*pair,'newpassword123','newpassword123')
+            lifecycle.reset_password(handle,'newpassword123','newpassword123')
             return 200
         except LifecycleError as error:
             return error.status
     with ThreadPoolExecutor(max_workers=2) as pool:
-        assert sorted(pool.map(finish,grants))==[200,401]
+        assert sorted(pool.map(finish,handles))==[200,401]
     assert db.query('SELECT session_version FROM public.users WHERE id=%s',(int(account['id']),))==[[1]]
 
 
-def test_reset_grant_expiry_independent_of_code_and_wrong_grant(setup):
+def test_reset_verified_expiry_and_wrong_handle(setup):
     _,_,lifecycle,_,now,_=setup
     account=signup(setup)
-    handle,(_,code)=lifecycle.start('reset',account['email'])
-    grant=lifecycle.verify('reset',handle,code)
+    handle,(_,code)=lifecycle.start(RESET,account['email'])
+    lifecycle.verify(RESET,handle,code)
     with pytest.raises(LifecycleError):
-        lifecycle.reset_password(handle,'wrong','password123','password123')
+        lifecycle.reset_password('wrong','password123','password123')
     now[0]+=timedelta(seconds=600)
     with pytest.raises(LifecycleError) as error:
-        lifecycle.reset_password(handle,grant,'password123','password123')
+        lifecycle.reset_password(handle,'password123','password123')
     assert error.value.status==401
 
 
-def test_runtime_grants_are_sufficient_without_ddl_or_owner_updates(setup):
+def test_runtime_grants_support_lifecycle_and_cleanup_without_ddl(setup):
     from contextlib import closing, contextmanager
     from uuid import uuid4
     _,db,_,_,_,_=setup
     role='lifecycle_test_'+uuid4().hex
     db.query(f'CREATE ROLE "{role}"')
     try:
-        # Execute the exact statements from the reviewed grant source, including
-        # its dynamically resolved generated sequence name.
         grant_source=(Path(__file__).resolve().parents[1]/'migrations/002_canonical_user_lifecycle_grants.sql').read_text()
-        prefix=grant_source[:grant_source.index('SELECT format')].replace(':"portal_db_user"',f'"{role}"')
-        suffix=grant_source[grant_source.index('GRANT SELECT, INSERT, UPDATE ON'):].replace(':"portal_db_user"',f'"{role}"')
-        sequence=db.query("SELECT pg_get_serial_sequence('public.users','id')")[0][0]
-        db.query(prefix+f'GRANT USAGE ON SEQUENCE {sequence} TO "{role}";'+suffix)
+        db.query(grant_source.replace(':"portal_db_user"',f'"{role}"'))
         class LimitedDatabase:
             @contextmanager
             def transaction(self):
@@ -355,17 +331,19 @@ def test_runtime_grants_are_sufficient_without_ddl_or_owner_updates(setup):
                         cursor.execute(f'SET LOCAL ROLE "{role}"')
                     yield connection
         lifecycle=UserLifecycle(UserLifecycleRepository(LimitedDatabase()))
-        handle,(_,code)=lifecycle.start('signup','limited@example.com',username='limited-user',password='password123')
-        account=lifecycle.verify('signup',handle,code)
-        handle,(_,code)=lifecycle.start('unlock',account.email,user=account,session_binding='test-binding')
-        token=lifecycle.verify('unlock',handle,code,account,'test-binding')
-        updated=lifecycle.update_account(account,handle,token,'test-binding',{'name':'limited-renamed','phone':''})
+        handle,(_,code)=lifecycle.start(SIGNUP,'limited@example.com',username='limited-user',password='password123')
+        account=lifecycle.verify(SIGNUP,handle,code)
+        handle,(_,code)=lifecycle.start(UNLOCK,account.email,user=account)
+        token=lifecycle.verify(UNLOCK,handle,code,account)
+        updated=lifecycle.update_account(account,handle,{'name':'limited-renamed','phone':''})
         assert updated.username=='limited-renamed'
-        handle,(_,code)=lifecycle.start('reset',account.email)
-        token=lifecycle.verify('reset',handle,code)
-        lifecycle.reset_password(handle,token,'password999','password999')
+        handle,(_,code)=lifecycle.start(RESET,account.email)
+        token=lifecycle.verify(RESET,handle,code)
+        lifecycle.reset_password(handle,'password999','password999')
+        lifecycle.start(SIGNUP,'abandoned@example.com',username='abandoned-user',password='password123')
+        lifecycle.clock=lambda: datetime.now(timezone.utc)+timedelta(seconds=CHALLENGE_TTL+1)
+        assert lifecycle.cleanup_expired()==1
         for sql in ['ALTER TABLE public.users ADD COLUMN forbidden integer',
-                    "UPDATE public.users SET status=0", "UPDATE public.users SET document_owner_key='forbidden'",
                     'DELETE FROM public.users']:
             with pytest.raises(Exception):
                 lifecycle.repository.transact(lambda cursor: cursor.execute(sql))
@@ -379,3 +357,177 @@ def test_legacy_password_auth_is_disabled_in_production(monkeypatch):
     monkeypatch.setenv('NODE_ENV','production');monkeypatch.setenv('PORTAL_LEGACY_PASSWORD_AUTH','true')
     with pytest.raises(HTTPException) as error: require_legacy_password_auth()
     assert error.value.status_code==410
+
+
+def test_schema_matches_locked_live_contract(setup):
+    _, db, _, _, _, _ = setup
+    def columns(table):
+        return db.query('SELECT column_name,data_type FROM information_schema.columns '
+                        'WHERE table_schema=\'public\' AND table_name=%s ORDER BY ordinal_position', (table,))
+    assert columns('users') == [[name, kind] for name, kind in (
+        ('id','bigint'),('email','text'),('username','text'),('phone_number','text'),
+        ('password_hash','text'),('status','smallint'),('created_at','timestamp with time zone'),
+        ('session_version','bigint'))]
+    assert columns('user_lifecycle_challenges') == [[name, kind] for name, kind in (
+        ('id','text'),('purpose','smallint'),('user_id','bigint'),('payload','jsonb'),
+        ('code_hash','text'),('code_expires_at','timestamp with time zone'),('attempts','smallint'),
+        ('resends','smallint'),('last_sent_at','timestamp with time zone'),
+        ('verified_at','timestamp with time zone'),('consumed_at','timestamp with time zone'),
+        ('created_at','timestamp with time zone'))]
+    assert db.query("SELECT is_identity,identity_generation FROM information_schema.columns "
+                    "WHERE table_schema='public' AND table_name='users' AND column_name='id'") == [['YES','BY DEFAULT']]
+    assert db.query("SELECT pg_get_serial_sequence('public.users','id')") == [['public.users_id_seq']]
+    assert db.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'user_lifecycle_%' ORDER BY tablename") == [['user_lifecycle_challenges']]
+    assert db.query("SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='users' ORDER BY indexname") == [['uq_users_email_ci'],['uq_users_username_ci'],['users_pkey']]
+    with pytest.raises(Exception):
+        db.query("INSERT INTO public.user_lifecycle_challenges(id,purpose,code_hash,code_expires_at) VALUES ('bad',3,'bad',now())")
+
+
+def test_login_is_independent_of_temporary_lifecycle_storage(setup):
+    from backend.app.services.session_tokens import verify_session_claims
+    api, db, _, _, _, _ = setup
+    db.query('UPDATE public.users SET password_hash=%s,session_version=7 WHERE id=0',
+             (passwords.hash_password('password123'),))
+    db.query('DROP TABLE public.user_lifecycle_challenges')
+    for identifier in ('OWNER', 'OWNER@EXAMPLE.COM'):
+        cookie = login(api, identifier, 'password123')
+        assert verify_session_claims(cookie) == (0,7)
+        assert api.get('/api/me').status_code == 200
+    db.query('UPDATE public.users SET session_version=session_version+1 WHERE id=0')
+    assert api.get('/api/me').status_code == 401
+
+
+def test_signup_pending_payload_and_identity_sequence(setup):
+    api, db, _, mail, _, _ = setup
+    db.query("SELECT setval('public.users_id_seq',8000,false)")
+    assert api.post('/api/signup/start',json={'name':'chosen','email':'CHOSEN@example.com','phone':'+15551234567','password':'  password123  '}).status_code == 202
+    handle = api.cookies.get('camos_signup_challenge')
+    row = db.query('SELECT id,purpose,user_id,payload,code_hash,verified_at,consumed_at FROM public.user_lifecycle_challenges')[0]
+    assert row[0] == digest(handle) and handle not in str(row)
+    assert row[1:3] == [0,None]
+    payload = row[3]
+    assert set(payload) == {'email','username','phone','password_hash'}
+    assert payload['email']=='chosen@example.com' and payload['username']=='chosen' and payload['phone']=='+15551234567'
+    assert passwords.verify_password('  password123  ',payload['password_hash'])
+    assert '  password123  ' not in str(row) and mail[-1][1]['code'] not in row[4]
+    assert row[5:] == [None,None]
+    assert db.query('SELECT count(*) FROM public.users') == [[5]]
+    response = api.post('/api/signup/verify',json={'email':'chosen@example.com','code':mail[-1][1]['code']})
+    assert response.status_code == 201 and response.json()['user']['id']=='8000'
+    assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges') == [[0]]
+    assert db.query('SELECT created_at,session_version FROM public.users WHERE id=8000')[0][0] is not None
+
+
+def test_migration_preserves_identity_ids_and_a_sequence_already_ahead(setup):
+    _,db,_,_,_,_=setup
+    db.query("SELECT setval('public.users_id_seq',9000,false)")
+    source=(Path(__file__).resolve().parents[1]/'migrations/002_canonical_user_lifecycle.sql').read_text()
+    db.query(source)
+    assert db.query('SELECT id FROM public.users WHERE id IN (0,1) ORDER BY id')==[[0],[1]]
+    assert db.query("SELECT nextval('public.users_id_seq')")==[[9000]]
+
+
+@pytest.mark.parametrize('purpose', [RESET,UNLOCK])
+def test_reset_and_unlock_code_lifecycle_uses_existing_columns(setup,purpose,monkeypatch):
+    _, db, lifecycle, _, now, app = setup
+    account=signup(setup)
+    user=app.state.auth_repository.get_enabled_user(int(account['id']))
+    handle,(_,code)=lifecycle.start(purpose,account['email'],user=user if purpose==UNLOCK else None)
+    assert db.query('SELECT purpose,user_id,payload FROM public.user_lifecycle_challenges') == [[purpose,user.id,{}]]
+    wrong='000000' if code!='000000' else '000001'
+    with pytest.raises(LifecycleError): lifecycle.verify(purpose,handle,wrong,user if purpose==UNLOCK else None)
+    assert db.query('SELECT attempts FROM public.user_lifecycle_challenges') == [[1]]
+    now[0]+=timedelta(seconds=CODE_TTL)
+    with pytest.raises(LifecycleError) as error: lifecycle.verify(purpose,handle,code,user if purpose==UNLOCK else None)
+    assert error.value.status == 410
+    monkeypatch.setattr('backend.app.services.user_lifecycle.secrets.randbelow',lambda limit: 222222 if code!='222222' else 333333)
+    _,replacement,_=lifecycle.resend(purpose,handle,user if purpose==UNLOCK else None)
+    assert replacement != code
+    assert db.query('SELECT attempts,resends FROM public.user_lifecycle_challenges') == [[1,1]]
+    with pytest.raises(LifecycleError): lifecycle.verify(purpose,handle,code,user if purpose==UNLOCK else None)
+    assert lifecycle.verify(purpose,handle,replacement,user if purpose==UNLOCK else None) == handle
+    assert db.query('SELECT verified_at,consumed_at FROM public.user_lifecycle_challenges')[0] == [now[0],None]
+    with pytest.raises(LifecycleError): lifecycle.resend(purpose,handle,user if purpose==UNLOCK else None)
+    with pytest.raises(LifecycleError): lifecycle.verify(purpose,handle,replacement,user if purpose==UNLOCK else None)
+
+
+def test_reset_requires_verified_row_and_deletes_after_completion(setup):
+    _, db, lifecycle, _, _, _=setup
+    account=signup(setup)
+    handle,(_,code)=lifecycle.start(RESET,account['email'])
+    with pytest.raises(LifecycleError): lifecycle.reset_password(handle,'password123','password123')
+    lifecycle.verify(RESET,handle,code)
+    lifecycle.reset_password(handle,'password123','password123')
+    assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges') == [[0]]
+    row=db.query('SELECT password_hash,session_version FROM public.users WHERE id=%s',(int(account['id']),))[0]
+    assert row[0].startswith('$argon2id$') and row[1]==1
+    with pytest.raises(LifecycleError): lifecycle.reset_password(handle,'password999','password999')
+
+
+@pytest.mark.parametrize('ending', ['explicit','logout','password'])
+def test_unlock_ending_removes_authorization(setup,ending):
+    api,db,_,_,_,_=setup
+    signup(setup);login(api);handle=unlock(setup)
+    assert api.put('/api/me',json={'unlock_token':handle,'phone':'+15551234567'}).status_code==200
+    assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges WHERE purpose=2') == [[1]]
+    if ending=='explicit': assert api.post('/api/settings/unlock/end').status_code==204
+    elif ending=='logout': assert api.post('/api/logout').status_code==204
+    else: assert api.put('/api/me',json={'unlock_token':handle,'password':'newpassword123','confirm_password':'newpassword123'}).status_code==200
+    assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges WHERE purpose=2') == [[0]]
+    assert api.put('/api/me',json={'unlock_token':handle,'phone':''}).status_code==401
+
+
+def test_password_change_invalidates_pending_and_verified_reset_and_unlock_rows(setup):
+    api,db,lifecycle,_,_,app=setup
+    account=signup(setup);login(api);handle=unlock(setup)
+    user=app.state.auth_repository.get_enabled_user(int(account['id']))
+    pending,_=lifecycle.start(RESET,account['email'])
+    verified,(_,code)=lifecycle.start(RESET,account['email']);lifecycle.verify(RESET,verified,code)
+    lifecycle.start(UNLOCK,account['email'],user=user)
+    assert api.put('/api/me',json={'unlock_token':handle,'password':'newpassword123','confirm_password':'newpassword123'}).status_code==200
+    assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges WHERE user_id=%s',(user.id,)) == [[0]]
+    with pytest.raises(LifecycleError): lifecycle.reset_password(verified,'password999','password999')
+
+
+@pytest.mark.parametrize('purpose,verified', [(SIGNUP,False),(RESET,False),(UNLOCK,False),(RESET,True),(UNLOCK,True)])
+def test_cleanup_deletes_only_expired_journeys(setup,purpose,verified):
+    _,db,lifecycle,_,now,app=setup
+    account=signup(setup);user=app.state.auth_repository.get_enabled_user(int(account['id']))
+    def start(email,username):
+        return lifecycle.start(purpose,email,username=username,password='password123',user=user if purpose==UNLOCK else None)
+    expired,(_,code)=start('expired@example.com' if purpose==SIGNUP else account['email'],'expired-user')
+    if verified: lifecycle.verify(purpose,expired,code,user if purpose==UNLOCK else None)
+    now[0]+=timedelta(seconds=(600 if purpose==RESET else 300) if verified else CHALLENGE_TTL)
+    active,(_,code)=start('active@example.com' if purpose==SIGNUP else account['email'],'active-user')
+    if verified: lifecycle.verify(purpose,active,code,user if purpose==UNLOCK else None)
+    assert lifecycle.cleanup_expired() == 1
+    assert db.query('SELECT id FROM public.user_lifecycle_challenges') == [[digest(active)]]
+    assert lifecycle.cleanup_expired() == 0
+
+
+def test_cleanup_is_bounded_and_provider_calls_are_after_commit(setup,monkeypatch):
+    api,db,lifecycle,mail,now,_=setup
+    for i in range(4): lifecycle.start(SIGNUP,f'old{i}@example.com',username=f'old{i}',password='password123')
+    now[0]+=timedelta(seconds=CHALLENGE_TTL)
+    assert lifecycle.cleanup_expired(limit=2)==2
+    assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges')==[[2]]
+    assert lifecycle.cleanup_expired(limit=2)==2
+    def sent(**kw):
+        # A separate connection sees the challenge and can lock it immediately;
+        # therefore Postmark runs after commit, outside its transaction.
+        assert db.query('SELECT count(*) FROM public.user_lifecycle_challenges') == [[1]]
+        with db.database.transaction() as connection:
+            cursor=connection.cursor()
+            try: cursor.execute('SELECT id FROM public.user_lifecycle_challenges FOR UPDATE NOWAIT')
+            finally: cursor.close()
+        mail.append((SIGNUP,kw))
+    monkeypatch.setattr(postmark_email,'send_verification_email',sent)
+    assert api.post('/api/signup/start',json={'name':'provider','email':'provider@example.com','password':'password123'}).status_code==202
+
+
+def test_cleanup_failure_cannot_fail_a_valid_request(setup,monkeypatch):
+    api,_,lifecycle,_,_,_=setup
+    def unavailable(*args,**kwargs): raise RuntimeError('private SQL details')
+    monkeypatch.setattr(lifecycle.repository,'cleanup',unavailable)
+    account=signup(setup);assert account['name']=='new-user'
+    login(api)

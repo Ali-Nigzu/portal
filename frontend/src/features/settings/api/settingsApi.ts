@@ -122,3 +122,12 @@ export const updateMe = async (payload: UpdateMePayload): Promise<SettingsUser> 
   const data = await response.json() as { user: SettingsUser };
   return data.user;
 };
+
+export const endSettingsUnlock = async (): Promise<void> => {
+  const response = await fetch("/api/settings/unlock/end", {
+    method: "POST",
+    headers: { "X-Requested-With": "camOS" },
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Unable to lock editing. Please try again.");
+};

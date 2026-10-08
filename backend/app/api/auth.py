@@ -8,7 +8,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
-from backend.app.auth import clear_auth_cookie, get_session_user, set_auth_cookie
+from backend.app.auth import clear_auth_cookie, get_canonical_user, get_session_user, set_auth_cookie
 from backend.app.services import passwords
 from backend.app.services.session_tokens import create_session
 from backend.app.services.user_lifecycle import normalized_email
@@ -18,7 +18,10 @@ from backend.app.models import (AuthUser, AuthUserResponse, ContactResponse, Ide
     EmailLoginRequest, LoginRequest, RegisterInterestRequest, RegisterInterestResponse)
 from backend.app.services.postmark_email import (PostmarkConfigurationError, PostmarkDeliveryError,
     PostmarkAttachment, send_admin_contact_notification, send_contact_confirmation_email)
-from .user_lifecycle import router as lifecycle_router, LifecycleRoute
+from .user_lifecycle import (
+    router as lifecycle_router, LifecycleRoute, UNLOCK,
+    challenge_handle, clear_lifecycle_cookie,
+)
 from .organisation_memberships import mutation_origin
 router = APIRouter(route_class=LifecycleRoute)
 router.include_router(lifecycle_router)
@@ -51,7 +54,6 @@ def _safe_auth_user(user_data: dict) -> AuthUser:
         name=user_data["name"],
         email=user_data["email"],
         phone=user_data.get("phone"),
-        account_version=user_data.get("account_version", 0),
     )
 
 
@@ -271,12 +273,6 @@ def login(login_request: IdentifierLoginRequest | EmailLoginRequest | LoginReque
             login_request, "email", None
         ) or getattr(login_request, "username", "")
         identifier = identifier.strip()
-        lifecycle = getattr(request.app.state, 'user_lifecycle', None)
-        if lifecycle is not None:
-            try:
-                lifecycle.limit('login', identifier.lower(), 30)
-            except LifecycleError as error:
-                raise HTTPException(error.status, error.message) from None
         user = request.app.state.auth_repository.find_user(identifier)
         valid = user is not None and user.status == 1 and passwords.verify_password(login_request.password, user.password_hash)
         if not valid:
@@ -285,7 +281,7 @@ def login(login_request: IdentifierLoginRequest | EmailLoginRequest | LoginReque
         set_auth_cookie(response, session_token, expires_at)
         return AuthUserResponse(user=AuthUser(
             id=str(user.id), name=user.username, email=user.email,
-            phone=user.phone_number, account_version=user.account_version,
+            phone=user.phone_number,
         ))
 
     except HTTPException:
@@ -302,5 +298,16 @@ async def me(session_user: tuple[str, dict] = Depends(get_session_user)):
 
 
 @router.post("/api/logout", status_code=204, dependencies=[Depends(mutation_origin)])
-async def logout(response: Response):
+def logout(request: Request, response: Response):
+    lifecycle = getattr(request.app.state, 'user_lifecycle', None)
+    if lifecycle is not None:
+        try:
+            user = get_canonical_user(request, request.cookies.get('camos_session'))
+            lifecycle.end_unlock(user, challenge_handle(request, UNLOCK))
+        except HTTPException:
+            pass  # Logout remains available with an already expired session.
+        except Exception:
+            logger.warning('account.logout_unlock_cleanup_deferred')
+        lifecycle.cleanup_expired()
+    clear_lifecycle_cookie(response, UNLOCK)
     clear_auth_cookie(response)

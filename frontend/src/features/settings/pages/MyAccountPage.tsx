@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, PenLine, ShieldCheck } from "lucide-react";
 import { useAuthenticatedApplication } from "../../../context/AuthenticatedApplicationContext";
-import { getMe, resendSettingsUnlockCode, startSettingsUnlock, updateMe, verifySettingsUnlockCode } from "../api/settingsApi";
+import { endSettingsUnlock, getMe, resendSettingsUnlockCode, startSettingsUnlock, updateMe, verifySettingsUnlockCode } from "../api/settingsApi";
 import EditableFieldRow from "../components/EditableFieldRow";
 import ReenterPasswordModal from "../components/ReenterPasswordModal";
 import SettingsFrame from "../components/SettingsFrame";
@@ -86,10 +86,21 @@ export default function MyAccountPage() {
     setEditing(row);
   };
 
+  const lockEditing = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await endSettingsUnlock();
+      cancel(); setUnlock(null);
+    } catch (error) {
+      setErrors({ form: error instanceof Error ? error.message : "Unable to lock editing." });
+    } finally { setSaving(false); }
+  };
+
   const save = async (row: Row) => {
     if (!user || !unlock || !unlocked || saving) return;
     const next: Errors = {};
-    const payload: UpdateMePayload = { unlock_token: unlock.token, account_version: user.account_version };
+    const payload: UpdateMePayload = { unlock_token: unlock.token };
     if (row === "name") {
       if (!name.trim()) next.name = "Enter a username.";
       else payload.name = name.trim();
@@ -137,7 +148,7 @@ export default function MyAccountPage() {
   return <SettingsFrame>
     <SettingsPageHeader title="My Account" action={<div className="account-unlock-actions">
       {unlocked ? <><span className="account-unlocked"><ShieldCheck size={16} aria-hidden="true" /> Editing unlocked</span>
-        <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={() => { cancel(); setUnlock(null); }}>Lock editing</button></>
+        <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={lockEditing}>Lock editing</button></>
         : <button className="vrm-btn vrm-btn-sm" onClick={() => { setRequestedRow(null); setUnlockOpen(true); }}><LockKeyhole size={16} aria-hidden="true" /> Unlock to edit</button>}
     </div>} />
     <section className="vrm-card account-details" aria-labelledby="account-details-title" aria-busy={saving}>
@@ -183,7 +194,7 @@ export default function MyAccountPage() {
       </div>
     </section>
     <div className="account-feedback" aria-live="polite">
-      {errors.form && <p role="alert" className="settings-form-error">{errors.form} {/changed elsewhere/.test(errors.form) && <button className="account-text-button" onClick={() => { cancel(); setLoadRevision(value => value + 1); }}>Reload account</button>}</p>}
+      {errors.form && <p role="alert" className="settings-form-error">{errors.form}</p>}
       {message && <p role="status" className="settings-form-message">{message}</p>}
     </div>
     <ReenterPasswordModal isOpen={unlockOpen} onClose={() => { setUnlockOpen(false); setRequestedRow(null); }}

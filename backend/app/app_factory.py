@@ -86,6 +86,12 @@ def create_app() -> FastAPI:
             dashboard_database.close()
             bigquery_client.close()
 
+    @app.on_event("startup")
+    def cleanup_lifecycle_rows() -> None:
+        lifecycle = getattr(app.state, "user_lifecycle", None)
+        if lifecycle is not None:
+            lifecycle.cleanup_expired()
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,

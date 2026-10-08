@@ -3,7 +3,6 @@ export type SettingsUser = {
   name: string;
   email: string;
   phone?: string | null;
-  account_version?: number;
 };
 
 export type UpdateMePayload = {
@@ -12,7 +11,6 @@ export type UpdateMePayload = {
   password?: string;
   confirm_password?: string;
   unlock_token: string;
-  account_version?: number;
 };
 
 export type SettingsUnlockStartResult =

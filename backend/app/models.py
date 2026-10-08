@@ -22,7 +22,6 @@ class AuthUser(BaseModel):
     name: str
     email: str
     phone: Optional[str] = None
-    account_version: int = 0
 
 
 class CreateAccountRequest(BaseModel):
@@ -201,7 +200,6 @@ class UpdateMeRequest(BaseModel):
     password: Optional[str] = Field(default=None, max_length=1024)
     confirm_password: Optional[str] = Field(default=None, max_length=1024)
     unlock_token: str = Field(max_length=128)
-    account_version: Optional[int] = Field(default=None, ge=0)
 
     model_config = ConfigDict(extra="forbid")
 
