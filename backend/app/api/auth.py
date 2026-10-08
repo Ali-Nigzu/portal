@@ -13,9 +13,9 @@ from backend.app.services import passwords
 from backend.app.services.session_tokens import create_session
 from backend.app.services.user_lifecycle import normalized_email
 from backend.app.services.user_lifecycle_repository import LifecycleError
-from backend.app.config import CONTACT_SUBMISSIONS_FILE, INTEREST_SUBMISSIONS_FILE
+from backend.app.config import CONTACT_SUBMISSIONS_FILE
 from backend.app.models import (AuthUser, AuthUserResponse, ContactResponse, IdentifierLoginRequest,
-    EmailLoginRequest, LoginRequest, RegisterInterestRequest, RegisterInterestResponse)
+    EmailLoginRequest, LoginRequest)
 from backend.app.services.postmark_email import (PostmarkConfigurationError, PostmarkDeliveryError,
     PostmarkAttachment, send_admin_contact_notification, send_contact_confirmation_email)
 from .user_lifecycle import (
@@ -223,46 +223,6 @@ async def submit_contact(
     )
 
     return ContactResponse(message="Thanks for contacting us. We'll be in touch soon.")
-
-
-@router.post("/api/register-interest", response_model=RegisterInterestResponse)
-async def register_interest(submission: RegisterInterestRequest):
-    """Register interest form submission endpoint."""
-    try:
-        if os.path.exists(INTEREST_SUBMISSIONS_FILE):
-            with open(INTEREST_SUBMISSIONS_FILE, "r") as f:
-                submissions = json.load(f)
-        else:
-            submissions = []
-
-        submission_id = str(uuid.uuid4())
-        submission_data = {
-            "id": submission_id,
-            "name": submission.name,
-            "email": submission.email,
-            "company": submission.company,
-            "phone": submission.phone,
-            "business_type": submission.business_type,
-            "message": submission.message,
-            "submitted_at": datetime.now().isoformat(),
-        }
-
-        submissions.append(submission_data)
-
-        os.makedirs(os.path.dirname(INTEREST_SUBMISSIONS_FILE), exist_ok=True)
-        with open(INTEREST_SUBMISSIONS_FILE, "w") as f:
-            json.dump(submissions, f, indent=2)
-
-        logger.info("New interest submission from %s at %s", submission.email, submission.company)
-
-        return RegisterInterestResponse(
-            message="Thank you for your interest! We'll be in touch soon.",
-            submission_id=submission_id,
-        )
-
-    except Exception as exc:
-        logger.error("Interest submission error: %s", exc)
-        raise HTTPException(status_code=500, detail="Unable to process submission") from exc
 
 
 @router.post("/api/login", dependencies=[Depends(mutation_origin)])

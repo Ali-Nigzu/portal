@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from starlette.datastructures import UploadFile
 
 from backend.app.api import documents
-from backend.app.data.documents_store import MemoryDocumentsStore
+from backend.tests.support.memory_documents_store import MemoryDocumentsStore
 from backend.app.models_documents import DocumentError, document_id
 from backend.app.services.documents_service import DocumentsService, MAX_UPLOAD_BYTES
 from backend.app.services.session_tokens import create_session

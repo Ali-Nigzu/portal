@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.app.services.local_data import resolve_site_view, snapshot_db_for_site
-from backend.app.snapshots import fetch_latest_snapshot_from_sqlite
+from backend.app.compatibility.local_data import resolve_site_view, snapshot_db_for_site
+from backend.app.compatibility.snapshots import fetch_latest_snapshot_from_sqlite
 
 
 class LocalDataRoutingTests(unittest.TestCase):
@@ -145,7 +145,7 @@ class LocalSnapshotSQLiteTests(unittest.TestCase):
             conn.close()
 
             with patch(
-                "backend.app.snapshots.demo_now",
+                "backend.app.compatibility.snapshots.demo_now",
                 return_value=datetime(2026, 4, 20, 19, 56, 0),
             ):
                 row = fetch_latest_snapshot_from_sqlite(

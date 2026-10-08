@@ -17,12 +17,10 @@ logged after canonical account creation and cannot block verification completion
 
 ## Canonical authentication and Cloud SQL
 
-`PORTAL_BACKEND_MODE` defaults to `live`. For isolated local development while
-GCP is unavailable, set it explicitly to `local-new-account`. That mode loads
-`backend/fixtures/local_new_account.json`, provides the normal authenticated
-Portal API for `test` / `test`, and does not construct Cloud SQL or BigQuery
-clients for the authenticated journey. The application refuses to start in
-this mode when `NODE_ENV=production`.
+There is one production composition: canonical Cloud SQL, BigQuery and GCS.
+For isolated local development without GCP, use the explicit fixture runner in
+[development.md](../docs/development.md). It injects test services and is excluded
+from production images; no environment variable selects another product backend.
 
 - `PORTAL_SESSION_SECRET` is required for login and session validation. It must be
   a stable secret of at least 32 characters supplied by the runtime secret store.
@@ -46,7 +44,7 @@ The runtime needs SELECT/INSERT on organisations, USAGE on organisations_id_seq,
 SELECT/INSERT/UPDATE on memberships and SELECT on users. No DDL, organisation
 UPDATE/DELETE or membership DELETE is required. Invitations do not create users;
 signup creates a verified canonical user with zero memberships. The
-local-new-account fixture does not provide lifecycle or membership mutations.
+explicit development fixture does not provide lifecycle or membership mutations.
 
 The locked user lifecycle schema and runtime grants are already applied live.
 Migration/grant sources document that contract for future environments; do not
@@ -88,8 +86,15 @@ Downloads are authenticated backend attachments. Deletes use a generation
 precondition; GCS Soft Delete remains a bucket feature without Portal restore UI.
 Storage errors never fall back to local files.
 
-`local-new-account` explicitly selects an empty in-memory Documents adapter;
-its uploads disappear on process restart. This fixture is forbidden in production.
+The explicit dev/test runner injects an empty in-memory Documents adapter from
+`backend/tests/support`; uploads disappear on process restart. It is not shipped
+in the production image and is forbidden under `NODE_ENV=production`.
 Old local Documents data is not imported, migrated, synchronized or dual-written.
 Any required old files must be placed under canonical ID prefixes manually,
 separately from this deployment. See [Documents contract and acceptance](../docs/documents-gcs.md).
+
+## Retained compatibility contracts
+
+See [the exhaustive compatibility surface](../docs/compatibility-surface.md).
+Historical JSON/SQLite readers cannot supply canonical user or Admin sessions.
+Contact JSON journaling remains active product behavior and is unchanged.

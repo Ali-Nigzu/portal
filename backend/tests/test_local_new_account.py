@@ -5,7 +5,7 @@ import io
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.app_factory import create_app
+from backend.tests.support.portal_factory import create_fixture_app
 from backend.app.services.organisation_dashboard import (
     EntityNotFound,
     OrganisationDashboard,
@@ -140,10 +140,9 @@ def test_zero_site_services_return_empty_without_external_access():
 
 @pytest.fixture
 def local_client(monkeypatch):
-    monkeypatch.setenv("PORTAL_BACKEND_MODE", "local-new-account")
     monkeypatch.setenv("PORTAL_SESSION_SECRET", "local-development-secret-value-123456789")
     monkeypatch.delenv("NODE_ENV", raising=False)
-    with TestClient(create_app(), headers={"X-Requested-With": "camOS"}) as client:
+    with TestClient(create_fixture_app(), headers={"X-Requested-With": "camOS"}) as client:
         yield client
 
 
@@ -189,7 +188,6 @@ def test_local_mode_uses_normal_auth_session_catalogue_and_context(local_client)
 
 
 def test_local_mode_is_forbidden_in_production(monkeypatch):
-    monkeypatch.setenv("PORTAL_BACKEND_MODE", "local-new-account")
     monkeypatch.setenv("NODE_ENV", "production")
     with pytest.raises(RuntimeError, match="forbidden in production"):
-        create_app()
+        create_fixture_app()

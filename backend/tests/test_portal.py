@@ -546,7 +546,7 @@ def test_reports_endpoint_maps_missing_invalid_and_storage_errors_safely():
 
 
 def test_retires_legacy_event_endpoint_without_fallback():
-    from backend.app.api.analytics import router
+    from backend.app.compatibility.api.analytics import router
 
     app = FastAPI()
     app.include_router(router)

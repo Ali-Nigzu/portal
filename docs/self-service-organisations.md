@@ -202,11 +202,11 @@ grants. The browser suite holds requests to assert loading/submitting states,
 blocks repeated creation submissions and injects one recoverable storage failure;
 successful workflows always use the real canonical API and SQL.
 
-Existing `local-new-account` mode remains a read-only development fixture; new
+The explicit zero-site dev/test runner remains a read-only fixture; new
 membership mutations require canonical storage and deliberately return
 unavailable in that mode. It must never become a fake persistence implementation.
 The GitHub workflow runs the PostgreSQL suite, browser checks and production build.
-It also runs the existing local-new-account browser regression against that
+It also runs the existing zero-site fixture browser regression against that
 isolated fixture backend, after the real membership browser runner stops.
 
 ## Later live GCP acceptance
@@ -232,3 +232,6 @@ since organisation deletion is excluded.
 
 No Site/device/gateway/event/alarm creation is needed. Live GCP acceptance and
 deployment remain separate from disposable PostgreSQL test evidence.
+
+Production has one composition. See [development.md](development.md) for the
+explicit fixture runner; the fixture is excluded from the production image.

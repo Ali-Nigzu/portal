@@ -1,5 +1,11 @@
 # Internal canonical PostgreSQL Admin
 
+> Historical delivery record: branch names, file manifests and validation results
+> below refer to their original delivery. Current runtime/setup instructions are
+> [development.md](development.md); the only retained compatibility contracts are
+> listed in [compatibility-surface.md](compatibility-surface.md).
+
+
 Implementation base: `3437e3d0d8d155d148cd79218dc8517fdc54153f`.
 Branch: `feat/internal-camos-admin`. Separate Admin-only PR; stack on
 `feat/documents-gcs` while main lacks the base.

@@ -1,3 +1,6 @@
+HISTORICAL OFFLINE DATA-GENERATION NOTES; NOT CURRENT PORTAL SETUP.
+See docs/development.md and docs/compatibility-surface.md.
+
 {
   ts: TIMESTAMP,
 

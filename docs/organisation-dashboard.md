@@ -1,5 +1,11 @@
 # Real organisation Demo dashboard
 
+> Historical delivery record: branch names, file manifests and validation results
+> below refer to their original delivery. Current runtime/setup instructions are
+> [development.md](development.md); the only retained compatibility contracts are
+> listed in [compatibility-surface.md](compatibility-surface.md).
+
+
 Only the Demo dashboard uses PostgreSQL. The public wrapper supplies integer organisation ID `1` to a reusable read service; query parameters, cookies and view tokens cannot choose another organisation. A site read includes both its ID and organisation ownership in SQL. The service reads only `public.organisations`, `public.sites`, `public.devices`, `public.organisation_snapshots` and `public.site_snapshots`, using parameterized SELECTs. Snapshot `state` is neither queried nor returned.
 
 The frontend resolves name slugs through the context API. IDs are lossless decimal strings internally, never dashboard URL segments. Bare `/demo` selects owned Site ID `2` in the Demo wrapper and redirects using that site's current relational slug; there is no hardcoded site name or slug. If Site 2 is absent, Demo shows a configuration error with Retry. Existing `site-a`, `site-b` and `all` dashboard aliases still redirect to the organisation. Explicit organisation/site deep links retain their selection, and unknown slugs show not-found. Names and enabled flags come from context; disabled sites remain listed. Normalization collisions receive a deterministic name hash, without IDs or slug history.

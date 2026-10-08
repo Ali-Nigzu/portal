@@ -11,10 +11,6 @@ INSTANCE = "camosbase:europe-west2:camos-prod-postgres"
 DATABASE = "camos_prod"
 
 
-class DashboardStorageUnavailable(RuntimeError):
-    pass
-
-
 class DashboardPostgres:
     """Share connector certificate/token lifecycle, bound concurrent SQL reads.
 

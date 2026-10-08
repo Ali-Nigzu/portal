@@ -2,12 +2,11 @@
 Authentication utilities for camOS Analytics API
 """
 
-import hashlib
-import os
-import secrets
+from backend.app.services.cookie_policy import session_cookie_secure
+
 from datetime import datetime, timezone
 
-from fastapi import Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import Cookie, HTTPException, Request, Response
 
 from .services.session_tokens import InvalidSession, SESSION_SECONDS, verify_session_claims
 
@@ -15,9 +14,7 @@ SESSION_COOKIE_NAME = "camos_session"
 
 
 def set_auth_cookie(response: Response, token: str, expires_at: int | None = None) -> None:
-    secure = os.getenv("PORTAL_SESSION_SECURE", "").lower() == "true" or (
-        not os.getenv("PORTAL_SESSION_SECURE") and os.getenv("NODE_ENV") == "production"
-    )
+    secure = session_cookie_secure()
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
@@ -31,41 +28,11 @@ def set_auth_cookie(response: Response, token: str, expires_at: int | None = Non
 
 
 def clear_auth_cookie(response: Response) -> None:
-    secure = os.getenv("PORTAL_SESSION_SECURE", "").lower() == "true" or (
-        not os.getenv("PORTAL_SESSION_SECURE") and os.getenv("NODE_ENV") == "production"
-    )
+    secure = session_cookie_secure()
     response.delete_cookie(
         key=SESSION_COOKIE_NAME, path="/", httponly=True,
         samesite="lax", secure=secure,
     )
-
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify password against stored hash."""
-    try:
-        if stored_hash.startswith("pbkdf2_sha256$"):
-            _, iterations, salt, digest = stored_hash.split("$", 3)
-            computed = hashlib.pbkdf2_hmac(
-                "sha256",
-                password.encode("utf-8"),
-                salt.encode("utf-8"),
-                int(iterations),
-            ).hex()
-            return secrets.compare_digest(computed, digest)
-
-        if ':' not in stored_hash:
-            return password == stored_hash
-
-        salt, hash_part = stored_hash.split(':', 1)
-        password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
-        return secrets.compare_digest(password_hash, hash_part)
-    except Exception:
-        return False
-
-
-def require_legacy_password_auth():
-    if os.getenv("PORTAL_LEGACY_PASSWORD_AUTH", "").lower() != "true" or os.getenv("NODE_ENV") == "production":
-        raise HTTPException(410, "Legacy password authentication is disabled")
 
 
 def get_session_user(

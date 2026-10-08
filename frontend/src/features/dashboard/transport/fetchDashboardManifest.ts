@@ -1,3 +1,4 @@
+import { isAbortError } from "../../../common/utils/isAbortError";
 import { API_BASE_URL } from "../../../config";
 import { createAbortSignal } from "../../../common/utils/abort";
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";
@@ -8,16 +9,6 @@ export interface FetchDashboardManifestOptions {
   timeoutMs?: number;
   viewToken?: string;
 }
-const isAbortError = (error: unknown): boolean => {
-  if (error instanceof DOMException) {
-    return error.name === "AbortError";
-  }
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { name?: string }).name === "AbortError"
-  );
-};
 const sanitizeErrorDetail = (detail?: string | null): string => {
   if (!detail) {
     return "";

@@ -1,9 +1,10 @@
 """Reserved canonical identity and a separate eight-hour signed session purpose."""
 
+from backend.app.services.cookie_policy import session_cookie_secure
+
 import hashlib
 import hmac
 import json
-import os
 import secrets
 import time
 from datetime import datetime, timezone
@@ -92,9 +93,7 @@ def admin_user(
 
 
 def cookie_options():
-    secure = os.getenv("PORTAL_SESSION_SECURE", "").lower() == "true" or (
-        not os.getenv("PORTAL_SESSION_SECURE") and os.getenv("NODE_ENV") == "production"
-    )
+    secure = session_cookie_secure()
     return dict(httponly=True, secure=secure, samesite="lax", path="/")
 
 

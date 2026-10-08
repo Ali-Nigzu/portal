@@ -4,10 +4,6 @@ Configuration settings for camOS Analytics API
 
 import os
 
-GCS_BUCKET = 'camOS_cdata-testclient1'
-USERS_FILE = 'backend/data/users.json'
-ALARM_LOGS_FILE = 'backend/data/alarm_logs.json'
-DEVICE_LISTS_FILE = 'backend/data/device_lists.json'
 INTEREST_SUBMISSIONS_FILE = 'backend/data/interest_submissions.json'
 CONTACT_SUBMISSIONS_FILE = 'backend/data/contact_submissions.json'
 

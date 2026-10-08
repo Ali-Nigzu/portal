@@ -1,3 +1,4 @@
+import { isAbortError } from "../../../common/utils/isAbortError";
 import { API_BASE_URL } from "../../../config";
 import { createAbortSignal } from "../../../common/utils/abort";
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";
@@ -6,16 +7,6 @@ export interface DashboardMutationOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
 }
-const isAbortError = (error: unknown): boolean => {
-  if (error instanceof DOMException) {
-    return error.name === "AbortError";
-  }
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { name?: string }).name === "AbortError"
-  );
-};
 export async function unpinDashboardWidget(
   orgId: string,
   dashboardId: string,

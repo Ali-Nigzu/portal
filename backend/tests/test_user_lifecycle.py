@@ -32,7 +32,7 @@ def setup(monkeypatch, tmp_path):
         monkeypatch.setattr(postmark_email, sender, lambda purpose=purpose, **kw: mail.append((purpose, kw)))
     monkeypatch.setattr(postmark_email, 'send_admin_signup_notification', lambda **kw: None)
     # Every migrated path must work even when JSON identity access explodes.
-    from backend.app.data import json_store
+    from backend.app.compatibility import json_store
     monkeypatch.setattr(json_store, 'load_users', lambda: (_ for _ in ()).throw(AssertionError('JSON authority used')))
     monkeypatch.setattr(json_store, 'save_users', lambda value: (_ for _ in ()).throw(AssertionError('JSON identity write')))
     api = TestClient(app, headers={'X-Requested-With': 'camOS', 'Origin': 'http://testserver'})
@@ -352,7 +352,7 @@ def test_runtime_grants_support_lifecycle_and_cleanup_without_ddl(setup):
 
 
 def test_legacy_password_auth_is_disabled_in_production(monkeypatch):
-    from backend.app.auth import require_legacy_password_auth
+    from backend.app.compatibility.password_auth import require_legacy_password_auth
     from fastapi import HTTPException
     monkeypatch.setenv('NODE_ENV','production');monkeypatch.setenv('PORTAL_LEGACY_PASSWORD_AUTH','true')
     with pytest.raises(HTTPException) as error: require_legacy_password_auth()
