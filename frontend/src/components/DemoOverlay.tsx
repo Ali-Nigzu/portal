@@ -29,7 +29,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const closeTimeoutRef = useRef<number | null>(null);
   const closingRef = useRef(false);
   const shellRef = useRef<HTMLDivElement | null>(null);
-  const suppressOverlay = location.pathname === "/";
+  const suppressOverlay = location.pathname === "/" || location.pathname === "/home";
   const shouldRender = (isActive || isClosing) && !suppressOverlay;
   const overlayClassName = useMemo(() => {
     if (isClosing) {

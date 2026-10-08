@@ -68,6 +68,8 @@ def create_app() -> FastAPI:
         from backend.app.services.bigquery_client import bigquery_client
 
         dashboard_database = DashboardPostgres()
+        from backend.app.services.admin_repository import AdminRepository
+        app.state.admin_repository = AdminRepository(dashboard_database)
         services = type("LivePortalServices", (), {})()
         services.auth_repository = CanonicalAuthRepository(dashboard_database)
         app.state.user_lifecycle = UserLifecycle(UserLifecycleRepository(dashboard_database))

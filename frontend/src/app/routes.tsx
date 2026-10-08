@@ -28,7 +28,7 @@ const EventLogsPage = React.lazy(() => import("../pages/EventLogsPage"));
 const AlarmLogsPage = React.lazy(() => import("../pages/AlarmLogsPage"));
 const DeviceListPage = React.lazy(() => import("../pages/DeviceListPage"));
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
-const AdminPage = React.lazy(() => import("../pages/AdminPage"));
+const AdminApp = React.lazy(() => import("../features/internal-admin/AdminApp"));
 const HomePage = React.lazy(() => import("../pages/HomePage"));
 const DocumentsPage = React.lazy(() => import("../pages/DocumentsPage"));
 const MyAccountPage = React.lazy(() => import("../features/settings/pages/MyAccountPage"));
@@ -53,7 +53,7 @@ const AppRoutes: React.FC = () => {
     username: "",
     password: "",
   });
-  const [userRole, setUserRole] = useState<"client" | "admin">("client");
+  const userRole = "client" as const;
   const [organisations, setOrganisations] = useState<AuthenticatedOrganisation[]>([]);
   const [favouritesCatalogueReady, setFavouritesCatalogueReady] = useState(false);
   const catalogueRevision = useRef(0);
@@ -112,7 +112,6 @@ const AppRoutes: React.FC = () => {
     setOrganisations(nextOrganisations ?? []);
     setFavouritesCatalogueReady(nextOrganisations !== null);
     setCredentials({ username: "", password: "" });
-    setUserRole("client");
     setIsLoggedIn(true);
   };
 
@@ -122,7 +121,6 @@ const AppRoutes: React.FC = () => {
     setIsLoggedIn(false);
     setAuthenticatedUser(null);
     setCredentials({ username: "", password: "" });
-    setUserRole("client");
     setOrganisations([]);
     setFavouritesCatalogueReady(false);
   };
@@ -214,23 +212,23 @@ const AppRoutes: React.FC = () => {
     );
   };
 
+  if (location.pathname === "/admin" || location.pathname.startsWith("/admin/")) {
+    return <Suspense fallback={<p>Loading Admin…</p>}><AdminApp /></Suspense>;
+  }
+
   if (!isSessionChecked) {
     return null;
   }
 
   const isCanonicalPortalPath = location.pathname.startsWith("/sites/organisations/");
-  const isAccountAppPath = location.pathname === "/home" || location.pathname === "/documents" || location.pathname.startsWith("/settings");
+  const isAccountAppPath = location.pathname === "/documents" || location.pathname.startsWith("/settings");
   if (!authenticatedUser && (isCanonicalPortalPath || (appMode === "public" && isAccountAppPath))) {
     return <Navigate to="/login" replace />;
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
     <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout} authenticatedOrganisations={organisations}>
-      {userRole === "admin" && !hasViewToken ? (
-        <Navigate to="/admin" replace />
-      ) : (
-        element
-      )}
+      {element}
     </VRMLayout>
   );
 
@@ -256,18 +254,8 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          !isAuthenticatedMode ? (
-            lazyRoute(<LandingPage />)
-          ) : appMode === "view_token" || appMode === "demo" ? (
-            <Navigate to={appMode === "demo" ? appendParams(`/demo/${getDefaultSiteId()}/dashboard`) : appendViewToken("/sites/all/dashboard")} replace />
-          ) : (
-            <Navigate to="/home" replace />
-          )
-        }
-      />
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      {!isAuthenticatedMode && <Route path="/home" element={lazyRoute(<LandingPage />)} />}
       <Route path="/demo" element={lazyRoute(<DemoPage />)} />
       <Route path="/demo/:organisationSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
       <Route path="/demo/:organisationSlug/:siteSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
@@ -419,7 +407,6 @@ const AppRoutes: React.FC = () => {
           )}
           {!isAuthenticatedMode && (
             <>
-              <Route path="/home" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
               <Route path="/settings" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
               <Route path="/settings/account" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
               <Route path="/settings/access" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
@@ -472,16 +459,7 @@ const AppRoutes: React.FC = () => {
               lazyRoute(<ReportsPage credentials={credentials} />),
             )}
           />
-          {userRole === "admin" && (
-            <Route
-              path="/admin"
-              element={
-                <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout}>
-                  {lazyRoute(<AdminPage credentials={credentials} />)}
-                </VRMLayout>
-              }
-            />
-          )}
+
         </>
       )}
       <Route

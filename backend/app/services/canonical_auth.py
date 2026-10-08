@@ -51,6 +51,18 @@ class CanonicalAuthRepository:
         # collision. Never choose an identity ambiguously.
         return self._user(rows[0]) if len(rows) == 1 else None
 
+    def find_username(self, username: str) -> CanonicalUser | None:
+        with self.database.connection() as connection:
+            cursor = connection.cursor()
+            try:
+                cursor.execute(
+                    "SELECT id,email,username,phone_number,password_hash,status,session_version "
+                    "FROM public.users WHERE lower(username)=lower(%s)", (username,),
+                )
+                return self._user(cursor.fetchone())
+            finally:
+                cursor.close()
+
     def get_enabled_user(self, user_id: int) -> CanonicalUser | None:
         with self.database.connection() as connection:
             cursor = connection.cursor()

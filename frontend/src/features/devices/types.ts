@@ -21,7 +21,7 @@ export interface DataSource {
 }
 
 export interface DeviceUser {
-  role: "admin" | "client";
+  role: "client";
   name: string;
   csv_url?: string;
   data_sources?: DataSource[];

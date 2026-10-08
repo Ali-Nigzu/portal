@@ -32,7 +32,9 @@
     "typecheck:account": "tsc --noEmit -p tsconfig.account.json",
     "test:account-lifecycle": "node scripts/account-lifecycle-browser.mjs",
     "typecheck:documents": "tsc --noEmit -p tsconfig.documents.json",
-    "test:documents": "node scripts/documents-browser.mjs"
+    "test:documents": "node scripts/documents-browser.mjs",
+    "typecheck:admin": "tsc --noEmit -p tsconfig.admin.json",
+    "test:admin": "node scripts/admin-browser.mjs"
   },
   "browserslist": {
     "production": [

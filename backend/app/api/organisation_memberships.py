@@ -405,3 +405,8 @@ def disable(
     user=Depends(get_canonical_user),
 ):
     return decide(request, user, organisation_id, payload, "disable", target)
+
+
+@router.post("/organisations/{organisation_id}/disable", dependencies=mutations)
+def disable_organisation(organisation_id: str, payload: EmptyRequest, request: Request, user=Depends(get_canonical_user)):
+    return operation(request, lambda service: service.disable(user.id, organisation_id))

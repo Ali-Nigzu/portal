@@ -99,7 +99,7 @@ class UserLifecycle:
                     return conflict
             elif purpose == RESET:
                 target = self.repository.email_user(cursor, email)
-                if target is None or target.status != 1:
+                if target is None or target.status != 1 or target.id == 999999:
                     return None
             else:
                 target = self.repository.user(cursor, user.id)
@@ -135,6 +135,7 @@ class UserLifecycle:
         target = self.repository.user(cursor, record['user_id'])
         record = self.repository.challenge(cursor, challenge_id, purpose)
         if (not record or not target or target.status != 1
+                or (purpose == RESET and target.id == 999999)
                 or record['user_id'] != target.id
                 or (user and target.session_version != user.session_version)):
             return None, None

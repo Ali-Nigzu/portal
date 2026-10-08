@@ -1,4 +1,4 @@
-"""Production readers normalize only confirmed absence in authorised scopes."""
+"""Dashboard readers fall back on absent/unusable data; Reports remain strict."""
 
 from contextlib import contextmanager
 from copy import deepcopy
@@ -107,9 +107,9 @@ def test_existing_snapshots_are_preserved_even_with_fallback_enabled(site, popul
 
 
 @pytest.mark.parametrize("bad", [(42, "Site", NOW, []), (42, "Site", datetime(2026, 1, 2), {}), (42, "Site", None, {})])
-def test_invalid_rows_never_become_zero(bad):
-    with pytest.raises(InvalidSnapshot):
-        read_dashboard(Database(bad), scope("42"))
+def test_invalid_dashboard_rows_use_zero_but_reports_remain_strict(bad):
+    selected = scope("42")
+    assert read_dashboard(Database(bad), selected) == build_zero_scope_snapshot(selected)
     with pytest.raises(InvalidReportSnapshot):
         PortalReports(Database(bad)).read_snapshot(scope("42"), allow_empty=True)
 
@@ -143,3 +143,42 @@ def test_factory_rejects_naive_time_and_does_not_share_mutable_buckets():
     assert first["payload"]["capacity"][1] == [0, 0]
     assert first["payload"]["traffic_split_96"][1] == [0, 0]
     assert build_zero_scope_snapshot(scope())["payload"]["capacity"][0] == [0, 0]
+
+
+@pytest.mark.parametrize("site", [None, "42"])
+@pytest.mark.parametrize("mutation", [
+    lambda p: p.clear(),
+    lambda p: p.update(test=1) or p.pop("capacity"),
+    lambda p: p.update(capacity=[[0]] * 96),
+    lambda p: p.update(occupancy_96=[[0, 0]] * 96),
+    lambda p: p.update(entrances_96=[True] * 96),
+    lambda p: p.update(traffic_split_96=[[]] * 96),
+    lambda p: p["today"].update(age_pct=[0]),
+    lambda p: p["year"].update(occupancy=[[3, 4, 2]]),
+    lambda p: p["all_time"].update(sex_pct=[10, 10]),
+])
+def test_unusable_dashboard_payload_falls_back_without_writing(site, mutation):
+    selected = scope(site)
+    payload = build_zero_scope_snapshot(selected)["payload"]
+    mutation(payload)
+    stored = (int(site or OID), "Stored", NOW, payload)
+    before = deepcopy(stored)
+    db = Database(stored)
+    assert read_dashboard(db, selected) == build_zero_scope_snapshot(selected)
+    assert db.row == before
+    assert len(db.queries) == 1
+
+
+@pytest.mark.parametrize("site", [None, "42"])
+def test_usable_persisted_payload_preserves_existing_ranges_and_all_time(site):
+    selected = scope(site)
+    payload = build_zero_scope_snapshot(selected)["payload"]
+    payload["capacity"][95] = [125, 150]
+    payload["all_time"]["entrances"] = [0, 1, 2]
+    payload["all_time"]["exits"] = [0, 1, 2]
+    payload["all_time"]["occupancy"] = [[0, 0, 0], [1, 0, 2], [2, 1, 3]]
+    payload["additional_admin_data"] = {"kept": True}
+    stored = (int(site or OID), "Stored", NOW.replace(year=2025), payload)
+    result = read_dashboard(Database(stored), selected)
+    assert result["payload"] == payload
+    assert result["ts"] == stored[2].isoformat()

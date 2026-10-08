@@ -98,13 +98,6 @@ def authenticate_chart_data_request(
         )
 
     user_record = users[username]
-    if user_record.get("role") == "admin" and client_id:
-        if client_id not in users:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Client '{client_id}' not found",
-            )
-        return org_id_for_user_record(client_id, users[client_id])
     return org_id_for_user_record(username, user_record)
 
 
@@ -156,10 +149,5 @@ def resolve_client_from_request(
         )
 
     username, password = _decode_basic_auth(auth_header)
-    user_record = _load_user(username, password)
-    user_role = user_record.get("role")
-    if user_role == "client":
-        return username
-    if user_role == "admin" and client_id:
-        return client_id
+    _load_user(username, password)
     return username

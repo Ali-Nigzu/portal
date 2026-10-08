@@ -136,3 +136,5 @@ export const errorMessage = (error: unknown) =>
   error instanceof Error
     ? error.message
     : "Unable to complete this request. Please try again.";
+
+export const disableOrganisation = (id: string) => request<{ organisation_id: string; enabled: false }>(`${org(id)}/disable`, {});

@@ -4,7 +4,6 @@ const DEFAULT_ORG_ID = "client1";
 const USERNAME_TO_ORG_MAP: Record<string, string> = {
   client1: "client1",
   client2: "client2",
-  admin: "client1",
 };
 
 export const deriveOrgIdFromTableName = (

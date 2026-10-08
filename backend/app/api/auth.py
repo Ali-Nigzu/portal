@@ -274,7 +274,7 @@ def login(login_request: IdentifierLoginRequest | EmailLoginRequest | LoginReque
         ) or getattr(login_request, "username", "")
         identifier = identifier.strip()
         user = request.app.state.auth_repository.find_user(identifier)
-        valid = user is not None and user.status == 1 and passwords.verify_password(login_request.password, user.password_hash)
+        valid = user is not None and user.status == 1 and user.id != 999999 and passwords.verify_password(login_request.password, user.password_hash)
         if not valid:
             raise HTTPException(status_code=401, detail="Invalid identifier or password")
         session_token, expires_at = create_session(user.id, session_version=user.session_version)

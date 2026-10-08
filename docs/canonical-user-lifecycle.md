@@ -168,7 +168,7 @@ Relevant JSON lifecycle routes/helpers remain retired from the prior change;
 `/api/create-account` and `/api/password-reset/verify` return 410. Legacy JSON
 Basic/password paths remain disabled by default and always disabled with
 NODE_ENV=production. Explicit non-production compatibility, view-token mappings,
-admin support, demo/contact/register-interest storage and local fixtures remain
+demo/contact/register-interest storage and local fixtures remain
 outside this correction. View-token revocation is not claimed to follow canonical
 session_version. No JSON user import or new legacy identity authority is added.
 
