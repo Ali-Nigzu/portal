@@ -13,7 +13,7 @@ export const signupResend = async (email: string): Promise<SignupResendResult> =
   const response = await fetch("/api/signup/resend", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json", "X-Requested-With": "camOS",
     },
     credentials: "include",
     body: JSON.stringify({ email: email.trim().toLowerCase() }),

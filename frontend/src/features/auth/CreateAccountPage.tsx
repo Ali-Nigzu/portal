@@ -14,8 +14,8 @@ import './components/AuthPhoneField.css';
 const CreateAccountPage: React.FC = () => {
   const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
-  const form = useCreateAccountForm((email) => {
-    navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+  const form = useCreateAccountForm((email, warning) => {
+    navigate(`/verify-email?email=${encodeURIComponent(email)}`, { state: { warning } });
   });
 
   const [showPassword, setShowPassword] = useState(false);

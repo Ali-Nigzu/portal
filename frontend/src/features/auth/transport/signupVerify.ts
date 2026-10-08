@@ -20,7 +20,7 @@ export const signupVerify = async (
   const response = await fetch("/api/signup/verify", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json", "X-Requested-With": "camOS",
     },
     credentials: "include",
     body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim() }),

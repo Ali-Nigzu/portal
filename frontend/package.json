@@ -27,7 +27,10 @@
     "test:authenticated-shell": "node scripts/authenticated-shell-browser.mjs",
     "test:organisation-access": "node scripts/organisation-access-browser.mjs",
     "test:local-new-account": "node scripts/local-new-account-browser.mjs",
-    "test:auth-brand-assets": "node scripts/auth-brand-assets-browser.mjs"
+    "test:auth-brand-assets": "node scripts/auth-brand-assets-browser.mjs",
+    "typecheck": "tsc --noEmit",
+    "typecheck:account": "tsc --noEmit -p tsconfig.account.json",
+    "test:account-lifecycle": "node scripts/account-lifecycle-browser.mjs"
   },
   "browserslist": {
     "production": [
@@ -43,11 +46,13 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@types/node": "^22.20.5",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.57.0",
     "playwright": "^1.54.2",
+    "typescript": "^5.9.3",
     "vite": "^5.4.8"
   }
 }

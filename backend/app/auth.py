@@ -11,18 +11,10 @@ from fastapi import Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from .data.json_store import load_users, save_users
-from .services.session_tokens import InvalidSession, SESSION_SECONDS, verify_session
+from .services.session_tokens import InvalidSession, SESSION_SECONDS, verify_session_claims
 
 security = HTTPBasic()
 SESSION_COOKIE_NAME = "camos_session"
-
-
-def hash_session_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-
-def create_session_token() -> str:
-    return secrets.token_urlsafe(32)
 
 
 def set_auth_cookie(response: Response, token: str, expires_at: int | None = None) -> None:
@@ -74,8 +66,14 @@ def verify_password(password: str, stored_hash: str) -> bool:
         return False
 
 
+def require_legacy_password_auth():
+    if os.getenv("PORTAL_LEGACY_PASSWORD_AUTH", "").lower() != "true" or os.getenv("NODE_ENV") == "production":
+        raise HTTPException(410, "Legacy password authentication is disabled")
+
+
 def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
     """Authenticate user and update last login timestamp."""
+    require_legacy_password_auth()
     users = load_users()
 
     if credentials.username not in users:
@@ -107,17 +105,7 @@ def get_session_user(
     request: Request,
     session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
 ):
-    if not session_token:
-        raise HTTPException(status_code=401, detail="Unauthenticated")
-    try:
-        user_id = verify_session(session_token)
-        user = request.app.state.auth_repository.get_enabled_user(user_id)
-    except (InvalidSession, RuntimeError):
-        user = None
-    if user is None:
-        raise HTTPException(status_code=401, detail="Unauthenticated")
-    # Compatibility projection for unchanged account routes. Their legacy write
-    # authority remains Phase C Part B, while identity is canonical here.
+    user = get_canonical_user(request, session_token)
     return user.username, {
         "id": str(user.id), "name": user.username, "email": user.email,
         "phone": user.phone_number, "role": "client",
@@ -131,7 +119,10 @@ def get_canonical_user(
     if not session_token:
         raise HTTPException(status_code=401, detail="Unauthenticated")
     try:
-        user = request.app.state.auth_repository.get_enabled_user(verify_session(session_token))
+        user_id, version = verify_session_claims(session_token)
+        user = request.app.state.auth_repository.get_enabled_user(user_id)
+        if user is not None and user.session_version != version:
+            user = None
     except (InvalidSession, RuntimeError):
         user = None
     if user is None:

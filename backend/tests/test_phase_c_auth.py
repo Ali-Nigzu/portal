@@ -36,7 +36,7 @@ def client(monkeypatch):
     app = FastAPI()
     app.state.auth_repository = Repository()
     app.include_router(auth.router)
-    return TestClient(app), app.state.auth_repository
+    return TestClient(app, headers={"X-Requested-With": "camOS"}), app.state.auth_repository
 
 
 def test_email_and_username_argon_login_issue_one_year_cookie(monkeypatch):

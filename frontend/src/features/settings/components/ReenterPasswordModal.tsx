@@ -1,208 +1,90 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import AccessDialog from "../../organisation-access/AccessDialog";
 
-import styles from "./ReenterPasswordModal.module.css";
-
-type ReenterPasswordModalProps = {
+type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onVerified: (payload: { unlockToken: string; unlockExpiresInSeconds: number }) => void;
+  onVerified: (result: { unlockToken: string; unlockExpiresInSeconds: number }) => void;
   onStartUnlock: (password: string) => Promise<{ ok: true; resendCooldownSeconds: number } | { ok: false; message: string }>;
   onVerifyCode: (code: string) => Promise<{ ok: true; unlockToken: string; unlockExpiresInSeconds: number } | { ok: false; message: string }>;
   onResendCode: () => Promise<{ ok: true; resendCooldownSeconds: number } | { ok: false; message: string }>;
 };
 
-type UnlockStep = "password" | "code";
-
-const ReenterPasswordModal: React.FC<ReenterPasswordModalProps> = ({
-  isOpen,
-  onClose,
-  onVerified,
-  onStartUnlock,
-  onVerifyCode,
-  onResendCode,
-}) => {
-  const [step, setStep] = useState<UnlockStep>("password");
+export default function ReenterPasswordModal(props: Props) {
+  const [step, setStep] = useState<"password" | "code">("password");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [visible, setVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
+  const [cooldown, setCooldown] = useState(0);
+  const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.setTimeout(() => inputRef.current?.focus(), 0);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen, step]);
-
+    if (!props.isOpen) { setStep("password"); setPassword(""); setCode(""); setVisible(false); setBusy(false); setError(null); setMessage(null); setCooldown(0); }
+  }, [props.isOpen]);
+  useEffect(() => { if (props.isOpen) input.current?.focus(); }, [step, props.isOpen]);
   useEffect(() => {
-    if (cooldownRemaining <= 0) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      setCooldownRemaining((prev) => (prev <= 1 ? 0 : prev - 1));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [cooldownRemaining]);
+    if (!cooldown) return;
+    const timer = window.setTimeout(() => setCooldown(value => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
 
-  const title = useMemo(() => (step === "password" ? "Unlock to edit" : "Enter verification code"), [step]);
-
-  const handleClose = () => {
-    setPassword("");
-    setCode("");
-    setError(null);
-    setMessage(null);
-    setCooldownRemaining(0);
-    setStep("password");
-    setIsSubmitting(false);
-    onClose();
-  };
-
-  const handlePasswordSubmit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!password || isSubmitting) {
-      setError("Current password is required");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-    setMessage(null);
-
-    const result = await onStartUnlock(password);
-    if (!result.ok) {
-      setError(result.message);
-      setIsSubmitting(false);
-      return;
-    }
-
-    setStep("code");
-    setPassword("");
-    setCooldownRemaining(result.resendCooldownSeconds);
-    setMessage("We sent a 6-digit code to your account email.");
-    setIsSubmitting(false);
+    if (busy) return;
+    if (step === "password" && !password) { setError("Enter your current password."); return; }
+    if (step === "code" && !/^\d{6}$/.test(code)) { setError("Enter your 6-digit verification code."); return; }
+    setBusy(true); setError(null);
+    try {
+      if (step === "password") {
+        const result = await props.onStartUnlock(password);
+        if (!result.ok) { setError(result.message); return; }
+        setPassword(""); setStep("code"); setCooldown(result.resendCooldownSeconds);
+        setMessage("We sent a verification code to your account email.");
+      } else {
+        const result = await props.onVerifyCode(code);
+        if (!result.ok) { setError(result.message); return; }
+        props.onVerified(result);
+      }
+    } catch { setError("Unable to complete the request. Please try again."); }
+    finally { setBusy(false); }
   };
-
-  const handleCodeSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!/^\d{6}$/.test(code.trim()) || isSubmitting) {
-      setError("Enter your 6-digit verification code.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-    setMessage(null);
-
-    const result = await onVerifyCode(code);
-    if (!result.ok) {
-      setError(result.message);
-      setIsSubmitting(false);
-      return;
-    }
-
-    setCode("");
-    onVerified({ unlockToken: result.unlockToken, unlockExpiresInSeconds: result.unlockExpiresInSeconds });
+  const resend = async () => {
+    if (busy || cooldown) return;
+    setBusy(true); setError(null);
+    try {
+      const result = await props.onResendCode();
+      if (!result.ok) { setError(result.message); return; }
+      setCooldown(result.resendCooldownSeconds); setMessage("A new verification code was sent.");
+    } catch { setError("Unable to resend. Please try again."); }
+    finally { setBusy(false); }
   };
-
-  const handleResend = async () => {
-    if (cooldownRemaining > 0 || isSubmitting) {
-      return;
-    }
-    setIsSubmitting(true);
-    setError(null);
-    const result = await onResendCode();
-    if (!result.ok) {
-      setError(result.message);
-      setIsSubmitting(false);
-      return;
-    }
-    setCooldownRemaining(result.resendCooldownSeconds);
-    setMessage("A new verification code was sent.");
-    setIsSubmitting(false);
-  };
-
-  if (!isOpen) {
-    return null;
-  }
-
-  return (
-    <div className={styles.backdrop}>
-      <div className={`vrm-card ${styles.modal}`} role="dialog" aria-modal="true" aria-label={title}>
-        <div className="vrm-card-header">
-          <h3 className="vrm-card-title">{title}</h3>
-        </div>
-        <div className="vrm-card-body">
-          {step === "password" ? (
-            <form onSubmit={handlePasswordSubmit} className="settings-form-grid">
-              <div className="settings-form-field">
-                <label className="settings-form-label" htmlFor="current-password">Current password</label>
-                <input
-                  id="current-password"
-                  ref={inputRef}
-                  className="settings-input"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </div>
-              {error ? <div className="settings-form-error">{error}</div> : null}
-              <div className="settings-form-actions">
-                <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleClose}>
-                  Cancel
-                </button>
-                <button type="submit" className="vrm-btn vrm-btn-sm" disabled={isSubmitting}>
-                  {isSubmitting ? "Verifying..." : "Continue"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleCodeSubmit} className="settings-form-grid">
-              <div className="settings-form-field">
-                <label className="settings-form-label" htmlFor="unlock-code">Verification code</label>
-                <input
-                  id="unlock-code"
-                  ref={inputRef}
-                  className="settings-input"
-                  type="text"
-                  inputMode="numeric"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="123456"
-                />
-              </div>
-              {message ? <div className="settings-form-message">{message}</div> : null}
-              {error ? <div className="settings-form-error">{error}</div> : null}
-              <div className="settings-form-actions settings-form-actions--spread">
-                <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={handleClose}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="vrm-btn vrm-btn-secondary vrm-btn-sm"
-                  onClick={handleResend}
-                  disabled={cooldownRemaining > 0 || isSubmitting}
-                >
-                  {cooldownRemaining > 0 ? `Resend in ${cooldownRemaining}s` : "Resend code"}
-                </button>
-                <button type="submit" className="vrm-btn vrm-btn-sm" disabled={isSubmitting}>
-                  {isSubmitting ? "Unlocking..." : "Unlock"}
-                </button>
-              </div>
-            </form>
-          )}
+  if (!props.isOpen) return null;
+  return <AccessDialog title={step === "password" ? "Unlock to edit" : "Verify your account"}
+    description={step === "password" ? "Confirm your password, then verify the code sent to your email." : "Enter the 6-digit code. Editing stays unlocked for five minutes."}
+    busy={busy} onClose={props.onClose}>
+    <form className="settings-form-grid" onSubmit={submit}>
+      <div className="settings-form-field">
+        <label className="settings-form-label" htmlFor="account-unlock-input">{step === "password" ? "Current password" : "Verification code"}</label>
+        <div className={step === "password" ? "account-password-input" : undefined}>
+          <input ref={input} data-autofocus id="account-unlock-input" className="settings-input"
+            type={step === "password" && !visible ? "password" : "text"} inputMode={step === "code" ? "numeric" : undefined}
+            autoComplete={step === "password" ? "current-password" : "one-time-code"} disabled={busy}
+            value={step === "password" ? password : code} maxLength={step === "password" ? 1024 : 6}
+            onChange={event => step === "password" ? setPassword(event.target.value) : setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            aria-invalid={Boolean(error)} aria-describedby={error ? "account-unlock-error" : undefined} />
+          {step === "password" && <button type="button" disabled={busy} onClick={() => setVisible(value => !value)} aria-label={visible ? "Hide current password" : "Show current password"} aria-pressed={visible}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button>}
         </div>
       </div>
-    </div>
-  );
-};
-
-export default ReenterPasswordModal;
+      {error && <p id="account-unlock-error" className="settings-form-error" role="alert">{error}</p>}
+      {message && <p className="settings-form-message" role="status">{message}</p>}
+      <div className="settings-form-actions">
+        <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy} onClick={props.onClose}>Cancel</button>
+        {step === "code" && <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy || cooldown > 0} onClick={resend}>{cooldown ? `Resend in ${cooldown}s` : "Resend code"}</button>}
+        <button className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={busy}>{busy ? "Verifying…" : step === "password" ? "Continue" : "Unlock"}</button>
+      </div>
+    </form>
+  </AccessDialog>;
+}

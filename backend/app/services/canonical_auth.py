@@ -11,6 +11,7 @@ class CanonicalUser:
     phone_number: str | None
     password_hash: str
     status: int
+    session_version: int = 0
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class CanonicalAuthRepository:
         return CanonicalUser(
             id=int(row[0]), email=str(row[1]), username=str(row[2]),
             phone_number=row[3], password_hash=str(row[4]), status=int(row[5]),
+            session_version=int(row[6]),
         )
 
     def find_user(self, identifier: str) -> CanonicalUser | None:
@@ -37,7 +39,7 @@ class CanonicalAuthRepository:
             cursor = connection.cursor()
             try:
                 cursor.execute(
-                    "SELECT id, email, username, phone_number, password_hash, status "
+                    "SELECT id, email, username, phone_number, password_hash, status, session_version "
                     "FROM public.users WHERE lower(email) = lower(%s) "
                     "OR lower(username) = lower(%s) LIMIT 2",
                     (identifier, identifier),
@@ -54,7 +56,7 @@ class CanonicalAuthRepository:
             cursor = connection.cursor()
             try:
                 cursor.execute(
-                    "SELECT id, email, username, phone_number, password_hash, status "
+                    "SELECT id, email, username, phone_number, password_hash, status, session_version "
                     "FROM public.users WHERE id = %s AND status = 1",
                     (user_id,),
                 )

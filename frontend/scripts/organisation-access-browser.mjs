@@ -75,6 +75,7 @@ try {
   }
   async function apiLogin(page, identifier) {
     const response = await page.request.post(`${base}/api/login`, {
+      headers: { "X-Requested-With": "camOS" },
       data: { identifier, password: "canonical-browser-test" },
     });
     assert.equal(response.status(), 200);

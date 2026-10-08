@@ -143,7 +143,7 @@ def local_client(monkeypatch):
     monkeypatch.setenv("PORTAL_BACKEND_MODE", "local-new-account")
     monkeypatch.setenv("PORTAL_SESSION_SECRET", "local-development-secret-value-123456789")
     monkeypatch.delenv("NODE_ENV", raising=False)
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(), headers={"X-Requested-With": "camOS"}) as client:
         yield client
 
 

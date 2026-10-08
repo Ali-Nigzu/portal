@@ -7,7 +7,7 @@ const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 
 type FieldName = 'username' | 'email' | 'phone' | 'password' | 'confirmPassword';
 
-export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
+export const useCreateAccountForm = (onSuccess: (email: string, warning?: string) => void) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [selectedIso, setSelectedIso] = useState('GB');
@@ -94,11 +94,11 @@ export const useCreateAccountForm = (onSuccess: (email: string) => void) => {
       if (result.ok) {
         onSuccess(result.data.email);
       } else if (result.status === 409) {
-        setFormError('Email already in use.');
+        setFormError(result.message || 'Email or username already in use.');
       } else if (result.status === 503) {
         setFormError(result.message || 'Email service is not configured.');
       } else if (result.status === 502) {
-        setFormError(result.message || 'Failed to send verification email. Please try again.');
+        onSuccess(email.trim().toLowerCase(), result.message || 'Unable to send verification email. Please try resend.');
       } else {
         setFormError(result.message || 'Unable to complete request. Please try again.');
       }

@@ -146,7 +146,7 @@ export default function ManageAccessPage() {
         action={
           data?.can_manage ? (
             <button
-              className="vrm-btn vrm-btn-primary vrm-btn-sm"
+              className="vrm-btn vrm-btn-primary vrm-btn-sm access-primary-cta"
               onClick={() => setInvite(true)}
               disabled={busy}
             >
@@ -168,7 +168,7 @@ export default function ManageAccessPage() {
               </label>
               <select
                 id="access-organisation"
-                className="settings-select"
+                className="settings-select access-organisation-select"
                 value={eligible ? id! : ""}
                 disabled={busy}
                 onChange={(event) => {

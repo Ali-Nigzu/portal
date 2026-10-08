@@ -36,7 +36,7 @@ jobs:
       - working-directory: frontend
         run: npx playwright install --with-deps chromium
       - working-directory: frontend
-        run: npm run test:phase-c && npm run test:reports-engine && npm run build
+        run: npm run typecheck:account && npm run test:phase-c && npm run test:reports-engine && npm run build
       - working-directory: frontend
         run: |
           npm run dev > /tmp/portal-vite.log 2>&1 &
@@ -49,6 +49,7 @@ jobs:
           node scripts/authenticated-ui-polish-browser.mjs
           node scripts/authenticated-zero-data-browser.mjs
           npm run test:organisation-access
+          npm run test:account-lifecycle
       - run: |
           PORTAL_BACKEND_MODE=local-new-account PORTAL_SESSION_SECRET=ci-local-fixture-session-secret-only \
             python -m uvicorn backend.fastapi_app:app --host 127.0.0.1 --port 8000 > /tmp/portal-fixture.log 2>&1 &

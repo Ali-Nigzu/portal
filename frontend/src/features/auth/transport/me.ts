@@ -15,5 +15,5 @@ export const fetchMe = async () => {
 };
 
 export const logout = async () => {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  await fetch('/api/logout', { method: 'POST', headers: { 'X-Requested-With': 'camOS' }, credentials: 'include' });
 };

@@ -323,6 +323,23 @@
   padding: 0 16px 14px;
 }
 
+/* Keep the existing gold primary action comfortable on touch screens. */
+.access-primary-cta { min-height: 44px; }
+.access-organisation-select {
+  appearance: auto;
+  min-height: 44px;
+  padding-right: 36px;
+  border-color: var(--line-default);
+  cursor: pointer;
+}
+.access-organisation-select:hover:not(:disabled) { border-color: var(--signal-gold); }
+.access-organisation-select:focus-visible {
+  border-color: var(--signal-gold);
+  outline: 2px solid var(--signal-gold);
+  outline-offset: 2px;
+}
+.access-organisation-select:disabled { cursor: default; }
+
 .access-organisation-body { display: grid; gap: 14px; }
 .access-organisation-body .settings-form-field { max-width: 480px; }
 .access-organisation-id { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--vrm-text-muted); font-size: 14px; }

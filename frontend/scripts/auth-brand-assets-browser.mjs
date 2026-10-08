@@ -74,7 +74,7 @@ const routes = [
 try {
   await mkdir(screenshotsDir, { recursive: true });
   await waitForServer();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.PORTAL_BROWSER_EXECUTABLE ? { executablePath: process.env.PORTAL_BROWSER_EXECUTABLE } : {}) });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await context.route("**/api/me", (route) => route.fulfill({ status: 401, contentType: "application/json", body: "{}" }));
 

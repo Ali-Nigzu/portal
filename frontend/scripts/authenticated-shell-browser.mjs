@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { expect } from "@playwright/test";
 
 const baseUrl = process.env.PORTAL_BROWSER_BASE_URL ?? "http://127.0.0.1:3000";
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.PORTAL_BROWSER_EXECUTABLE ? { executablePath: process.env.PORTAL_BROWSER_EXECUTABLE } : {}) });
 
 const manySites = Array.from({ length: 28 }, (_, index) => ({
   id: String(100 + index),

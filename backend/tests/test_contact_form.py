@@ -90,60 +90,6 @@ async def test_contact_submission_sends_internal_and_confirmation_emails(tmp_pat
     assert submissions[0]["page_url"] == "https://camos.app/contact?source=test"
 
 
-@pytest.mark.anyio
-async def test_signup_verify_fails_loudly_when_admin_notification_fails(tmp_path, monkeypatch):
-    users_file = tmp_path / "users.json"
-    pending_file = tmp_path / "pending_signups.json"
-    monkeypatch.setattr(
-        auth,
-        "load_users",
-        lambda: json.loads(users_file.read_text()) if users_file.exists() else {},
-    )
-    monkeypatch.setattr(auth, "save_users", lambda users: users_file.write_text(json.dumps(users)))
-    monkeypatch.setattr(auth, "load_pending_signups", lambda: json.loads(pending_file.read_text()))
-    monkeypatch.setattr(
-        auth,
-        "save_pending_signups",
-        lambda pending: pending_file.write_text(json.dumps(pending)),
-    )
-
-    code = "123456"
-    email = "signup@example.com"
-    now = auth._utc_now()
-    pending_file.write_text(
-        json.dumps(
-            {
-                email: {
-                    "name": "Signup User",
-                    "email": email,
-                    "phone": "+15551234567",
-                    "password_hash": auth.hash_password("Password123!"),
-                    "verification_code_hash": auth.hash_password(code),
-                    "code_expires_at": auth._to_iso(
-                        now + auth.timedelta(seconds=auth.SIGNUP_CODE_TTL_SECONDS)
-                    ),
-                    "verify_attempts": 0,
-                    "resend_count": 0,
-                    "last_code_sent_at": auth._to_iso(now),
-                    "created_at": auth._to_iso(now),
-                    "updated_at": auth._to_iso(now),
-                }
-            }
-        )
-    )
-
-    def fail_admin_notification(**_kwargs):
-        raise PostmarkConfigurationError("Admin notification is unavailable")
-
-    monkeypatch.setattr(auth, "send_admin_signup_notification", fail_admin_notification)
-
-    with pytest.raises(HTTPException) as exc_info:
-        await auth.signup_verify(auth.SignupVerifyRequest(email=email, code=code))
-
-    assert exc_info.value.status_code == 503
-    assert "Admin notification is unavailable" in exc_info.value.detail
-    assert not users_file.exists()
-    assert email in json.loads(pending_file.read_text())
 
 
 @pytest.mark.anyio

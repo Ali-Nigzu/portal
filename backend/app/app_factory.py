@@ -23,6 +23,8 @@ from backend.app.services.portal_devices import PortalDevices
 from backend.app.services.portal_reports import PortalReports
 from backend.app.services.dashboard_postgres import DashboardPostgres
 from backend.app.services.canonical_auth import CanonicalAuthRepository
+from backend.app.services.user_lifecycle import UserLifecycle
+from backend.app.services.user_lifecycle_repository import UserLifecycleRepository
 from backend.app.services.organisation_dashboard import OrganisationDashboard
 from backend.app.services.local_new_account import LocalNewAccountServices
 from backend.app.config import get_allowed_origins
@@ -61,6 +63,7 @@ def create_app() -> FastAPI:
         dashboard_database = DashboardPostgres()
         services = type("LivePortalServices", (), {})()
         services.auth_repository = CanonicalAuthRepository(dashboard_database)
+        app.state.user_lifecycle = UserLifecycle(UserLifecycleRepository(dashboard_database))
         app.state.organisation_memberships = OrganisationMemberships(OrganisationMembershipRepository(dashboard_database))
         services.organisation_dashboard = OrganisationDashboard(dashboard_database)
         services.portal_metadata = PortalMetadata(dashboard_database, services.organisation_dashboard)
@@ -82,6 +85,12 @@ def create_app() -> FastAPI:
 
             dashboard_database.close()
             bigquery_client.close()
+
+    @app.on_event("startup")
+    def cleanup_lifecycle_rows() -> None:
+        lifecycle = getattr(app.state, "user_lifecycle", None)
+        if lifecycle is not None:
+            lifecycle.cleanup_expired()
 
     app.add_middleware(
         CORSMiddleware,

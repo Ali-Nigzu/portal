@@ -88,8 +88,8 @@ export default function AuthenticatedPrimaryNav({
           onClick={() => onShowScopes(organisation.id)}
         />
       ))}
-      <PrimaryRow label="+ Add Organisation" icon={<NavIcon icon={Plus} />} onPointerEnter={clearSecondary} onClick={openCreate} />
-      <PrimaryRow label="+ Request Access" icon={<NavIcon icon={UserPlus} />} onPointerEnter={clearSecondary} onClick={openRequest} />
+      <PrimaryRow label="Add Organisation" icon={<NavIcon icon={Plus} />} onPointerEnter={clearSecondary} onClick={openCreate} />
+      <PrimaryRow label="Request Access" icon={<NavIcon icon={UserPlus} />} onPointerEnter={clearSecondary} onClick={openRequest} />
       {pending.invitations.length > 0 && <div className="authenticated-navigation__pending-group" aria-label="Invitations">
         <span className="authenticated-navigation__section-label">Invitations</span>
         {pending.invitations.map(item => <button key={item.organisation_id} type="button" className="authenticated-navigation__row authenticated-navigation__pending-row"

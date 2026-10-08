@@ -1,0 +1,36 @@
+.account-card-heading { padding: 20px; }
+.account-details .settings-account-card-body { padding: 0; }
+.account-details > .account-card-heading, .account-security > .account-card-heading { padding: 20px; }
+.account-feedback .settings-form-message { color: var(--text-success, #256f42); }
+.account-card-heading h2 { margin: 0; }
+.account-card-heading p, .account-password-summary p { margin: 6px 0 0; color: var(--vrm-text-muted); font-size: 13px; line-height: 1.5; }
+.account-email { overflow-wrap: anywhere; }
+.account-empty { color: var(--vrm-text-muted); }
+.account-security-body { padding: 20px; }
+.account-password-summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.account-password-summary h3 { margin: 0; font-size: 14px; font-weight: 500; }
+.account-password-form { display: grid; gap: 16px; max-width: 480px; }
+.account-password-form p { margin: 0; }
+.account-password-input { position: relative; }
+.account-password-input input { padding-right: 48px; }
+.account-password-input button { position: absolute; right: 2px; top: 2px; height: 40px; width: 44px; background: none; color: var(--vrm-text-muted); border: none; border-radius: 6px; cursor: pointer; }
+.account-password-input button:focus-visible, .account-text-button:focus-visible { outline: 2px solid var(--vrm-accent-blue); outline-offset: 2px; }
+.account-unlock-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.account-unlock-actions .vrm-btn, .account-unlocked { display: inline-flex; align-items: center; gap: 8px; }
+.account-unlocked { color: var(--vrm-text-muted); font-size: 12px; }
+.account-text-button { background: none; border: 0; color: var(--vrm-accent-blue); padding: 0; text-align: left; width: fit-content; cursor: pointer; font-size: 13px; min-height: 32px; }
+.account-feedback { min-height: 24px; }
+.account-feedback p { margin: 0; }
+.account-loading { min-height: 260px; }
+.account-skeleton { height: 36px; max-width: 480px; border-radius: 8px; background: var(--vrm-surface-secondary); margin: 18px 0; }
+.account-details .settings-edit-icon-btn { min-width: 44px; min-height: 44px; }
+@media (max-width: 600px) {
+  .account-card-heading, .account-security-body { padding: 16px; }
+  .account-details .settings-field-row { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "label label" "main actions"; gap: 8px 12px; padding: 16px; }
+  .account-details .settings-field-label { grid-area: label; }
+  .account-details .settings-field-main { grid-area: main; }
+  .account-details .settings-field-actions { grid-area: actions; width: auto; }
+  .account-details .settings-field-row--editing { grid-template-areas: "label label" "main main" "actions actions"; }
+  .account-details .vrm-btn, .account-security .vrm-btn, .account-unlock-actions .vrm-btn { min-height: 44px; }
+  .account-password-summary { align-items: flex-start; flex-direction: column; gap: 16px; }
+}

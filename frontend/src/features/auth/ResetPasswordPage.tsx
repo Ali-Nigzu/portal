@@ -19,7 +19,6 @@ const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const email = (params.get("email") ?? "").trim().toLowerCase();
-  const resetToken = (params.get("resetToken") ?? "").trim();
   const validEmail = useMemo(() => EMAIL_RE.test(email), [email]);
   const isCodeStep = location.pathname === "/reset-password" || location.pathname === "/reset-password/code";
 
@@ -57,8 +56,8 @@ const ResetPasswordPage: React.FC = () => {
     setError(null);
     setMessage(null);
     try {
-      const result = await passwordResetVerifyCode({ email, code });
-      navigate(`/reset-password/new?email=${encodeURIComponent(email)}&resetToken=${encodeURIComponent(result.resetToken)}`);
+      await passwordResetVerifyCode({ email, code });
+      navigate(`/reset-password/new?email=${encodeURIComponent(email)}`, { replace: true });
     } catch (verifyError) {
       setError(verifyError instanceof Error ? verifyError.message : "Unable to verify reset code");
     } finally {
@@ -68,7 +67,7 @@ const ResetPasswordPage: React.FC = () => {
 
   const handleSetPassword = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!validEmail || !resetToken) {
+    if (!validEmail) {
       setError("Invalid or expired reset session. Please restart from login.");
       return;
     }
@@ -78,7 +77,6 @@ const ResetPasswordPage: React.FC = () => {
     try {
       await passwordResetSetPassword({
         email,
-        reset_token: resetToken,
         password,
         confirm_password: confirmPassword,
       });
@@ -120,7 +118,7 @@ const ResetPasswordPage: React.FC = () => {
             <p className="verify-email-copy">
               {isCodeStep
                 ? validEmail
-                  ? <>We sent a reset code to <strong>{email}</strong>.</>
+                  ? <>If this email belongs to an enabled account, a reset code will be sent to <strong>{email}</strong>.</>
                   : "Start from login to reset password."
                 : "Choose your new password."}
             </p>
@@ -129,23 +127,23 @@ const ResetPasswordPage: React.FC = () => {
               {isCodeStep ? (
                 <div className="vrm-field verify-email-field">
                   <label className="vrm-label" htmlFor="reset-code">Verification code</label>
-                  <input id="reset-code" className="vrm-input" value={code} onChange={(e) => setCode(e.target.value)} />
+                  <input id="reset-code" inputMode="numeric" autoComplete="one-time-code" aria-invalid={Boolean(error)} aria-describedby={error ? "reset-error" : undefined} className="vrm-input" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
                 </div>
               ) : (
                 <>
                   <div className="vrm-field verify-email-field">
                     <label className="vrm-label" htmlFor="reset-password">New password</label>
-                    <input id="reset-password" className="vrm-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <input id="reset-password" className="vrm-input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
                   </div>
                   <div className="vrm-field verify-email-field">
                     <label className="vrm-label" htmlFor="reset-confirm-password">Confirm password</label>
-                    <input id="reset-confirm-password" className="vrm-input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    <input id="reset-confirm-password" className="vrm-input" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                   </div>
                 </>
               )}
 
-              {error ? <div className="verify-email-error">{error}</div> : null}
-              {message ? <div className="verify-email-message">{message}</div> : null}
+              {error ? <div id="reset-error" className="verify-email-error" role="alert">{error}</div> : null}
+              {message ? <div className="verify-email-message" role="status">{message}</div> : null}
 
               <div className="verify-email-actions">
                 <button type="submit" className="vrm-btn vrm-btn-primary verify-email-submit" disabled={loading}>
