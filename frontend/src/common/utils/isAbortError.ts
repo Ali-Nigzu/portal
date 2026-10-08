@@ -8,4 +8,3 @@ export const isAbortError = (error: unknown): boolean => {
     (error as { name?: string }).name === "AbortError"
   );
 };
-

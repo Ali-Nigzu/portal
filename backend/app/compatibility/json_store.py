@@ -128,5 +128,3 @@ def load_device_lists():
         return {}
     with open(DEVICE_LISTS_FILE, 'r') as f:
         return json.load(f)
-
-

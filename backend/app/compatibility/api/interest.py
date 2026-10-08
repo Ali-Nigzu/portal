@@ -49,4 +49,3 @@ async def register_interest(submission: RegisterInterestRequest):
     except Exception as exc:
         logger.error("Interest submission error: %s", exc)
         raise HTTPException(status_code=500, detail="Unable to process submission") from exc
-
