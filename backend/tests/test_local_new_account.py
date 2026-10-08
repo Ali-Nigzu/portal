@@ -185,7 +185,7 @@ def test_local_mode_uses_normal_auth_session_catalogue_and_context(local_client)
     assert local_client.get(base + "/reports/snapshot?site_id=123").status_code == 404
     assert local_client.get(base + "/sites/123/snapshot").status_code == 404
     assert local_client.get(base + "/events?site_id=123").status_code == 404
-    assert local_client.get("/api/documents").status_code == 200
+    assert local_client.get("/api/documents").json() == {"documents": []}
 
 
 def test_local_mode_is_forbidden_in_production(monkeypatch):

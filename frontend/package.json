@@ -30,7 +30,9 @@
     "test:auth-brand-assets": "node scripts/auth-brand-assets-browser.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:account": "tsc --noEmit -p tsconfig.account.json",
-    "test:account-lifecycle": "node scripts/account-lifecycle-browser.mjs"
+    "test:account-lifecycle": "node scripts/account-lifecycle-browser.mjs",
+    "typecheck:documents": "tsc --noEmit -p tsconfig.documents.json",
+    "test:documents": "node scripts/documents-browser.mjs"
   },
   "browserslist": {
     "production": [

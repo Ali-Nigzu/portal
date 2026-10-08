@@ -1,58 +1,78 @@
-"""Documents API endpoints."""
+"""Private Documents APIs; ownership derives only from canonical sessions."""
 
-from __future__ import annotations
+from dataclasses import asdict
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
-from backend.app.auth import get_session_user
-from backend.app.services.documents_service import documents_service
+from backend.app.auth import get_canonical_user
+from backend.app.models_documents import DocumentError
+from .organisation_memberships import NoStoreRoute, mutation_origin
 
-router = APIRouter()
-
-
-@router.get("/api/documents")
-async def list_documents(session_user: tuple[str, dict] = Depends(get_session_user)):
-    account_id, _ = session_user
-    documents = documents_service.list(account_id)
-    return {"documents": [item.model_dump() for item in documents]}
+router = APIRouter(route_class=NoStoreRoute)
 
 
-@router.post("/api/documents/upload")
-async def upload_documents(
-    files: list[UploadFile] = File(default=[]),
-    session_user: tuple[str, dict] = Depends(get_session_user),
-):
+def service(request: Request):
+    return request.app.state.documents_service
+
+
+def operation(callback):
+    try:
+        return callback()
+    except DocumentError as error:
+        raise HTTPException(error.status, error.message) from None
+
+
+class DocumentStream(StreamingResponse):
+    """Close the remote reader even when the browser cancels its download."""
+    def __init__(self, *args, reader, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.reader = reader
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            await run_in_threadpool(self.reader.close)
+
+
+@router.get('/api/documents')
+def list_documents(request: Request, user=Depends(get_canonical_user)):
+    records = operation(lambda: service(request).list(user.id))
+    return {'documents': [record.model_dump() for record in records]}
+
+
+@router.post('/api/documents/upload', dependencies=[Depends(mutation_origin)])
+async def upload_documents(request: Request, files: list[UploadFile] = File(default=[]),
+                           user=Depends(get_canonical_user)):
     if not files:
-        raise HTTPException(status_code=400, detail="No files provided")
-
-    account_id, _ = session_user
-    result = await documents_service.upload_batch(account_id, files)
-
-    return {
-        "documents": [item.model_dump() for item in result.documents],
-        "errors": [error.__dict__ for error in result.errors],
-    }
+        raise HTTPException(400, 'No files provided')
+    try:
+        result = await service(request).upload_batch(user.id, files)
+    except DocumentError as error:
+        raise HTTPException(error.status, error.message) from None
+    return {'documents': [record.model_dump() for record in result.documents],
+            'errors': [asdict(error) for error in result.errors]}
 
 
-@router.get("/api/documents/{document_id}/download")
-async def download_document(document_id: str, session_user: tuple[str, dict] = Depends(get_session_user)):
-    account_id, _ = session_user
-    document, payload = documents_service.download(account_id, document_id)
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    if payload is None:
-        raise HTTPException(status_code=404, detail="Document blob missing")
-
+@router.get('/api/documents/{document_id}/download')
+def download_document(document_id: str, request: Request, user=Depends(get_canonical_user)):
+    document, reader, first = operation(lambda: service(request).download(user.id, document_id))
+    # ASCII fallback avoids header injection and Latin-1 encoding failures;
+    # filename* retains the exact Unicode name for modern browsers.
+    fallback = ''.join(char if char.isascii() and (char.isalnum() or char in ' ._-') else '_'
+                       for char in document.name) or 'document'
     headers = {
-        "Content-Disposition": f'attachment; filename="{document.name}"',
+        'Content-Disposition': f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{quote(document.name, safe="")}',
+        'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+        'Content-Length': str(document.sizeBytes),
     }
-    return Response(content=payload, media_type=document.mimeType, headers=headers)
+    return DocumentStream(service(request).chunks(reader, first), reader=reader,
+                          media_type=document.mimeType, headers=headers)
 
 
-@router.delete("/api/documents/{document_id}", status_code=204)
-async def delete_document(document_id: str, session_user: tuple[str, dict] = Depends(get_session_user)):
-    account_id, _ = session_user
-    deleted = documents_service.delete(account_id, document_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Document not found")
+@router.delete('/api/documents/{document_id}', status_code=204, dependencies=[Depends(mutation_origin)])
+def delete_document(document_id: str, request: Request, user=Depends(get_canonical_user)):
+    operation(lambda: service(request).delete(user.id, document_id))

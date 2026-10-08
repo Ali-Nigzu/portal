@@ -10,6 +10,8 @@ const DocumentsPage: React.FC = () => {
     documents,
     isLoading,
     error,
+    message,
+    deletingId,
     refresh,
     uploadBatch,
     downloadDocument,
@@ -23,10 +25,13 @@ const DocumentsPage: React.FC = () => {
       <div className="dashboard-v2__content documents-page__content">
         <header className="dashboard-v2__header documents-page__header">
           <h1 className="documents-page__title">My Documents</h1>
+          <button type="button" className="vrm-btn vrm-btn-secondary" disabled={isLoading || Boolean(deletingId)} onClick={() => void refresh()}>
+            {isLoading ? "Refreshing…" : "Refresh"}
+          </button>
         </header>
 
         {error && (
-          <div className="documents-page__banner">
+          <div className="documents-page__banner" role="alert">
             <span>{error}</span>
             <button type="button" className="documents-page__button documents-page__button--ghost" onClick={refresh}>
               Retry
@@ -35,10 +40,12 @@ const DocumentsPage: React.FC = () => {
         )}
 
         {deleteError && (
-          <div className="documents-page__banner documents-page__banner--danger">
+          <div className="documents-page__banner documents-page__banner--danger" role="alert">
             <span>{deleteError}</span>
           </div>
         )}
+
+        {message && <p className="documents-page__success" role="status">{message}</p>}
 
         <DocumentsGrid
           documents={documents}
@@ -53,6 +60,8 @@ const DocumentsPage: React.FC = () => {
             }
           }}
           loading={isLoading}
+          failed={Boolean(error)}
+          deletingId={deletingId}
         />
       </div>
 

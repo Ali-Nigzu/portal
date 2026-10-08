@@ -1,76 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  deleteDocument as deleteDocumentRequest,
-  getDownloadUrl,
-  listDocuments,
-  uploadDocuments,
-} from "../api/documentsApi";
+import { deleteDocument as deleteRequest, getDownloadUrl, listDocuments, uploadDocuments } from "../api/documentsApi";
 import { DocumentItem, UploadError } from "../types";
 
 export const useDocuments = () => {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [message, setMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const nextDocuments = await listDocuments();
-      setDocuments(nextDocuments);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load documents");
-    } finally {
-      setIsLoading(false);
-    }
+    setIsLoading(true); setError(null);
+    try { setDocuments(await listDocuments()); }
+    catch (failure) { setError(failure instanceof Error ? failure.message : "Unable to load documents. Try again."); }
+    finally { setIsLoading(false); }
   }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
+  useEffect(() => { void refresh(); }, [refresh]);
   const uploadBatch = useCallback(async (files: File[]) => {
+    setMessage(null);
     const result = await uploadDocuments(files);
-    setDocuments((prev) => {
-      const merged = [...result.documents, ...prev];
-      const dedupe = new Map(merged.map((item) => [item.id, item]));
-      return Array.from(dedupe.values()).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-    });
-    return result;
-  }, []);
-
-  const removeDocument = useCallback(async (documentId: string) => {
-    const previous = documents;
-    setDocuments((prev) => prev.filter((item) => item.id !== documentId));
-    try {
-      await deleteDocumentRequest(documentId);
-    } catch (deleteError) {
-      setDocuments(previous);
-      throw deleteError;
+    if (result.documents.length) {
+      // Confirmed writes remain visible if the catalogue refresh fails.
+      setDocuments(prev => Array.from(new Map([...prev, ...result.documents].map(item => [item.id, item])).values())
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setMessage(`${result.documents.length} document${result.documents.length === 1 ? "" : "s"} uploaded.`);
+      await refresh();
     }
-  }, [documents]);
-
-  const downloadDocument = useCallback((documentItem: DocumentItem) => {
-    window.open(getDownloadUrl(documentItem.id), "_blank", "noopener,noreferrer");
+    return result;
+  }, [refresh]);
+  const removeDocument = useCallback(async (id: string) => {
+    if (deletingId) return;
+    setDeletingId(id); setMessage(null);
+    try {
+      await deleteRequest(id);
+      setDocuments(prev => prev.filter(item => item.id !== id));
+      setMessage("Document deleted.");
+      await refresh();
+    } finally { setDeletingId(null); }
+  }, [deletingId, refresh]);
+  const downloadDocument = useCallback((item: DocumentItem) => {
+    window.open(getDownloadUrl(item.id), "_blank", "noopener,noreferrer");
   }, []);
-
-  return useMemo(
-    () => ({
-      documents,
-      isLoading,
-      error,
-      refresh,
-      uploadBatch,
-      removeDocument,
-      downloadDocument,
-    }),
-    [documents, isLoading, error, refresh, uploadBatch, removeDocument, downloadDocument],
-  );
+  return useMemo(() => ({ documents, isLoading, error, message, deletingId, refresh, uploadBatch, removeDocument, downloadDocument }),
+    [documents, isLoading, error, message, deletingId, refresh, uploadBatch, removeDocument, downloadDocument]);
 };
-
-export type UploadBatchResult = {
-  documents: DocumentItem[];
-  errors: UploadError[];
-};
+export type UploadBatchResult = { documents: DocumentItem[]; errors: UploadError[] };

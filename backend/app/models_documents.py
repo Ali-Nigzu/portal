@@ -1,12 +1,18 @@
-"""Documents domain models and helpers."""
+"""Document representations and safe, user-relative object identifiers."""
 
-from __future__ import annotations
-
-from datetime import datetime, timezone
+import base64
+import binascii
+import re
+import unicodedata
 from enum import Enum
-from uuid import uuid4
 
 from pydantic import BaseModel
+
+
+class DocumentError(Exception):
+    def __init__(self, status: int, code: str, message: str):
+        super().__init__(message)
+        self.status, self.code, self.message = status, code, message
 
 
 class DocumentType(str, Enum):
@@ -15,6 +21,14 @@ class DocumentType(str, Enum):
     XLSX = "xlsx"
     DOCX = "docx"
     OTHER = "other"
+
+
+MIME_TYPES = {
+    "pdf": "application/pdf",
+    "csv": "text/csv",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
 
 
 class DocumentRecord(BaseModel):
@@ -29,32 +43,34 @@ class DocumentRecord(BaseModel):
     status: str = "active"
 
 
-def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def new_doc_id() -> str:
-    return str(uuid4())
+def safe_filename(value: str) -> str:
+    # Do not strip paths: silently turning another path into a basename obscures
+    # errors and can collide with an existing administrative document.
+    if (not value or not value.strip() or value in {".", ".."}
+            or any(char in value for char in '/\\:')
+            or any(unicodedata.category(char).startswith('C') for char in value)
+            or len(value.encode('utf-8')) > 255):
+        raise DocumentError(422, 'unsafe_filename', 'Use a filename without paths or control characters (maximum 255 UTF-8 bytes).')
+    return value
 
 
 def infer_type(mime_type: str, filename: str) -> DocumentType:
-    normalized_mime = (mime_type or "").lower()
-    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    # The MIME supplied by a browser is not an authority for allowed uploads.
+    extension = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    return DocumentType(extension) if extension in MIME_TYPES else DocumentType.OTHER
 
-    if normalized_mime == "application/pdf" or extension == "pdf":
-        return DocumentType.PDF
-    if normalized_mime == "text/csv" or extension == "csv":
-        return DocumentType.CSV
-    if (
-        normalized_mime
-        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        or extension == "xlsx"
-    ):
-        return DocumentType.XLSX
-    if (
-        normalized_mime
-        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        or extension == "docx"
-    ):
-        return DocumentType.DOCX
-    return DocumentType.OTHER
+
+def document_id(filename: str) -> str:
+    return base64.urlsafe_b64encode(safe_filename(filename).encode('utf-8')).decode('ascii').rstrip('=')
+
+
+def filename_from_id(value: str) -> str:
+    try:
+        if not re.fullmatch(r'[A-Za-z0-9_-]{1,340}', value):
+            raise ValueError
+        filename = base64.b64decode(value + '=' * (-len(value) % 4), altchars=b'-_', validate=True).decode('utf-8')
+        if document_id(filename) != value:
+            raise ValueError
+        return filename
+    except (ValueError, UnicodeError, binascii.Error, DocumentError):
+        raise DocumentError(404, 'not_found', 'Document not found.') from None

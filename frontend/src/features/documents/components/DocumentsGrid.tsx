@@ -9,6 +9,8 @@ type DocumentsGridProps = {
   onDownload: (documentItem: DocumentItem) => void;
   onDelete: (documentId: string) => void | Promise<void>;
   loading?: boolean;
+  failed?: boolean;
+  deletingId?: string | null;
 };
 
 const DocumentsGrid: React.FC<DocumentsGridProps> = ({
@@ -17,6 +19,8 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
   onDownload,
   onDelete,
   loading,
+  failed,
+  deletingId,
 }) => {
   return (
     <div className="documents-page__grid" aria-live="polite">
@@ -34,12 +38,20 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
           <span>Loading documents...</span>
         </article>
       )}
+      {!loading && !failed && documents.length === 0 && (
+        <article className="documents-page__tile documents-page__tile--empty">
+          <h2>No documents yet</h2>
+          <p>Documents shared with you will appear here. You can also upload your own.</p>
+        </article>
+      )}
       {documents.map((documentItem) => (
         <DocumentTile
           key={documentItem.id}
           documentItem={documentItem}
           onDownload={onDownload}
           onDelete={onDelete}
+          deleting={deletingId === documentItem.id}
+          deleteDisabled={Boolean(deletingId)}
         />
       ))}
     </div>

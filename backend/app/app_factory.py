@@ -53,6 +53,13 @@ def create_app() -> FastAPI:
     if backend_mode == "local-new-account" and os.getenv("NODE_ENV", "").lower() == "production":
         raise RuntimeError("local-new-account backend mode is forbidden in production")
 
+    from backend.app.services.documents_service import DocumentsService
+    from backend.app.data.documents_store import MemoryDocumentsStore
+    from backend.app.data.gcs_documents_store import GcsDocumentsStore
+
+    documents_store = (MemoryDocumentsStore() if backend_mode == "local-new-account" else
+                       GcsDocumentsStore(os.getenv("PORTAL_DOCUMENTS_BUCKET", "camos-prod-1")))
+    app.state.documents_service = DocumentsService(documents_store)
     dashboard_database = None
     if backend_mode == "local-new-account":
         services = LocalNewAccountServices()
@@ -80,6 +87,8 @@ def create_app() -> FastAPI:
 
     @app.on_event("shutdown")
     def close_dashboard_database() -> None:
+        if isinstance(documents_store, GcsDocumentsStore):
+            documents_store.close()
         if dashboard_database is not None:
             from backend.app.services.bigquery_client import bigquery_client
 
