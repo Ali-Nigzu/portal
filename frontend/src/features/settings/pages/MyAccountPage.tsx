@@ -149,7 +149,7 @@ export default function MyAccountPage() {
     <SettingsPageHeader title="My Account" action={<div className="account-unlock-actions">
       {unlocked ? <><span className="account-unlocked"><ShieldCheck size={16} aria-hidden="true" /> Editing unlocked</span>
         <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={lockEditing}>Lock editing</button></>
-        : <button className="vrm-btn vrm-btn-sm" onClick={() => { setRequestedRow(null); setUnlockOpen(true); }}><LockKeyhole size={16} aria-hidden="true" /> Unlock to edit</button>}
+        : <button className="vrm-btn vrm-btn-primary vrm-btn-sm" onClick={() => { setRequestedRow(null); setUnlockOpen(true); }}><LockKeyhole size={16} aria-hidden="true" /> Unlock to edit</button>}
     </div>} />
     <section className="vrm-card account-details" aria-labelledby="account-details-title" aria-busy={saving}>
       <div className="vrm-card-header account-card-heading"><div><h2 id="account-details-title" className="vrm-card-title">Account details</h2><p>Your personal details across camOS.</p></div></div>
@@ -170,7 +170,7 @@ export default function MyAccountPage() {
               <button type="button" className="account-text-button" disabled={saving || !phone} onClick={() => setPhone("")}>Remove phone number</button></>
               : <><div className={`settings-field-value ${!user.phone ? "account-empty" : ""}`}>{user.phone || "Not added"}</div><div className="settings-field-help">Optional contact number.</div></>}
           </div><div className="settings-field-actions">
-            {editing === "phone" ? <><button className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={cancel}>Cancel</button><button className="vrm-btn vrm-btn-sm" disabled={saving || phone === (user.phone ?? "")} onClick={() => save("phone")}>{saving ? "Saving…" : "Save"}</button></>
+            {editing === "phone" ? <><button className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={cancel}>Cancel</button><button className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={saving || phone === (user.phone ?? "")} onClick={() => save("phone")}>{saving ? "Saving…" : "Save"}</button></>
               : <button ref={phoneButton} className="settings-edit-icon-btn" disabled={saving} onClick={() => edit("phone")} aria-label="Edit phone"><PenLine size={16} aria-hidden="true" /></button>}
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function MyAccountPage() {
     <section className="vrm-card account-security" aria-labelledby="account-security-title">
       <div className="vrm-card-header account-card-heading"><div><h2 id="account-security-title" className="vrm-card-title">Security</h2><p>Keep your account protected.</p></div></div>
       <div className="vrm-card-body account-security-body">
-        {editing !== "password" ? <div className="account-password-summary"><div><h3>Password</h3><p>Choose a unique password you do not use elsewhere.</p></div><button ref={passwordButton} className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={() => edit("password")}>Change password</button></div>
+        {editing !== "password" ? <div className="account-password-summary"><div><h3>Password</h3><p>Choose a unique password you do not use elsewhere.</p></div><button ref={passwordButton} className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={saving} onClick={() => edit("password")}>Change password</button></div>
           : <form className="account-password-form" onSubmit={event => { event.preventDefault(); save("password"); }} onKeyDown={event => { if (event.key === "Escape" && !saving) { event.preventDefault(); cancel(); } }}>
             <p className="settings-field-help">Use at least 8 characters. Changing your password signs out your other sessions.</p>
             {[{ id: "account-password", label: "New password", value: password, change: setPassword, visible: showPassword, toggle: () => setShowPassword(value => !value), error: errors.password },
@@ -189,7 +189,7 @@ export default function MyAccountPage() {
                 <button type="button" disabled={saving} onClick={field.toggle} aria-label={`${field.visible ? "Hide" : "Show"} ${field.label.toLowerCase()}`} aria-pressed={field.visible}>{field.visible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </div>{field.error && <p id={`${field.id}-error`} className="settings-inline-error">{field.error}</p>}
             </div>)}
-            <div className="settings-form-actions"><button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={cancel}>Cancel</button><button className="vrm-btn vrm-btn-sm" disabled={saving}>{saving ? "Saving…" : "Save password"}</button></div>
+            <div className="settings-form-actions"><button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={saving} onClick={cancel}>Cancel</button><button className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={saving}>{saving ? "Saving…" : "Save password"}</button></div>
           </form>}
       </div>
     </section>

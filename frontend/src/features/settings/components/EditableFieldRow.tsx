@@ -85,7 +85,7 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
             <button className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={onCancel} disabled={isSaving}>
               Cancel
             </button>
-            <button className="vrm-btn vrm-btn-sm" onClick={onSave} disabled={isSaving || value === displayValue}>
+            <button className="vrm-btn vrm-btn-primary vrm-btn-sm" onClick={onSave} disabled={isSaving || value === displayValue}>
               {isSaving ? "Saving..." : "Save"}
             </button>
           </>

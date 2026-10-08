@@ -83,7 +83,7 @@ export default function ReenterPasswordModal(props: Props) {
       <div className="settings-form-actions">
         <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy} onClick={props.onClose}>Cancel</button>
         {step === "code" && <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy || cooldown > 0} onClick={resend}>{cooldown ? `Resend in ${cooldown}s` : "Resend code"}</button>}
-        <button className="vrm-btn vrm-btn-sm" disabled={busy}>{busy ? "Verifying…" : step === "password" ? "Continue" : "Unlock"}</button>
+        <button className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={busy}>{busy ? "Verifying…" : step === "password" ? "Continue" : "Unlock"}</button>
       </div>
     </form>
   </AccessDialog>;
