@@ -102,14 +102,15 @@ object; bucket Soft Delete remains outside Portal functionality.
 ## Runtime and isolated development
 
 PORTAL_DOCUMENTS_BUCKET defaults to camos-prod-1. It is independent of the old
-unrelated GCS_BUCKET constant. google-cloud-storage==3.16.0 is installed through
+historical GCS bucket (the unused constant is removed). google-cloud-storage==3.16.0 is installed through
 backend/requirements.txt; requirements-dev and Docker inherit that requirement.
 The existing google-auth==2.33.0 pin is preserved. ADC uses the existing credential
 mount or production service identity in project camosbase. Client creation is lazy;
 SDK requests have a 15-second timeout and bounded retry policy, and shutdown closes
 the initialized client. Provider exception text/credential paths are never logged.
 
-Only explicit local-new-account mode selects the empty MemoryDocumentsStore, and
+Only the explicit dev/test factory injects MemoryDocumentsStore from
+`backend/tests/support/memory_documents_store.py`, and
 that existing mode remains forbidden in production. Tests inject adapters. The old
 file-backed store and its config/path patches are removed. No automatic migration,
 import, sync or dual write exists. Required legacy files are a separate manual task;

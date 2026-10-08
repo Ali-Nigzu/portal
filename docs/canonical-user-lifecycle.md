@@ -187,3 +187,7 @@ login; new signup/Postmark verification; generated ID/created_at/version 0/zero
 memberships; username/email login; reset with old password/session rejection;
 My Account unlock, username/phone/password persistence; no completed signup/reset
 rows; eventual abandoned-row cleanup; and unchanged organisation access flows.
+
+Current historical API boundaries are exhaustively listed in
+[compatibility-surface.md](compatibility-surface.md). They cannot create or validate
+canonical customer/Admin sessions. Contact journaling remains unchanged.

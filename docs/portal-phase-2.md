@@ -1,5 +1,11 @@
 # Portal Phase 2 implementation
 
+> Historical delivery record: branch names, file manifests and validation results
+> below refer to their original delivery. Current runtime/setup instructions are
+> [development.md](development.md); the only retained compatibility contracts are
+> listed in [compatibility-surface.md](compatibility-surface.md).
+
+
 ## Branch and boundary
 
 Started from freshly fetched PR #302 head `c1c1a7f8621005e74d7b9d5d465244ce01bf24e7` in a new clean worktree, on `feat/portal-phase-2-canonical-data`. PR #302 is unchanged. This is stacked against `fix/demo-dashboard-ui-status-phase-1`.

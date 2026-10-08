@@ -1,4 +1,4 @@
-"""Authentication context helpers for API routes."""
+"""Compatibility-only Basic/view-token context; never canonical sessions."""
 
 from __future__ import annotations
 

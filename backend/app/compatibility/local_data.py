@@ -1,4 +1,4 @@
-"""Local SQLite source selection for migrated demo flows."""
+"""SQLite paths for retained compatibility snapshot requests only."""
 
 from __future__ import annotations
 

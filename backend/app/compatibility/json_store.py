@@ -1,7 +1,5 @@
-"""
-Database operations for camOS Analytics API
-JSON file-based storage with atomic writes
-"""
+"""Historical JSON client records for compatibility APIs only.
+Never a canonical customer, lifecycle, membership or Admin authority."""
 
 import os
 import json

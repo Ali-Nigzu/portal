@@ -1,7 +1,4 @@
-"""
-View Token Management for camOS Analytics API
-Temporary access tokens for client dashboard viewing
-"""
+"""Historical in-memory view-token validation; no application token issuer."""
 
 import uuid
 import logging

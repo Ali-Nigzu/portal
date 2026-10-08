@@ -1,5 +1,11 @@
 # Delivery record: locked-contract lifecycle correction
 
+> Historical delivery record: branch names, file manifests and validation results
+> below refer to their original delivery. Current runtime/setup instructions are
+> [development.md](development.md); the only retained compatibility contracts are
+> listed in [compatibility-surface.md](compatibility-surface.md).
+
+
 Correction parent: `e3de572c9c9b89ba00d3a152e080d19b20bfc25b`.
 Original requested PR base: `ba965b21b7b928917b3ac14e777efd45677c70d1`.
 Branch: `feat/canonical-user-lifecycle`.

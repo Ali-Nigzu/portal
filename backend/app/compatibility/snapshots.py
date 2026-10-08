@@ -1,4 +1,4 @@
-"""Snapshot access helpers for snapshots-only deployments."""
+"""Historical positional snapshots for the retained compatibility API only."""
 
 from __future__ import annotations
 
