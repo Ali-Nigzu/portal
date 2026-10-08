@@ -908,3 +908,233 @@ def test_restricted_row_role_needs_no_schema_rights(setup):
     finally:
         db.query(f'DROP OWNED BY "{role}"')
         db.query(f'DROP ROLE "{role}"')
+
+
+@pytest.mark.parametrize("site_scope", [False, True])
+def test_customer_snapshot_resolution_and_raw_admin_json(
+    setup, monkeypatch, site_scope
+):
+    from backend.app.services.organisation_dashboard import OrganisationDashboard
+    from backend.app.services.portal_context import PortalMetadata
+    from backend.app.services.zero_snapshot import build_zero_snapshot
+
+    api, db, app = setup
+    login(api)
+    org, site, _, _ = topology(api)
+    create(
+        api,
+        "memberships",
+        {
+            "user_id": "0",
+            "organisation_id": org["id"],
+            "role": 0,
+            "status": 1,
+            "created_at": STAMP,
+        },
+    )
+    app.state.organisation_dashboard = OrganisationDashboard(db.database)
+    app.state.portal_metadata = PortalMetadata(
+        db.database, app.state.organisation_dashboard
+    )
+    api.cookies.set("camos_session", create_session(0)[0])
+    path = f'/api/portal/organisations/{org["id"]}/' + (
+        f'sites/{site["id"]}/snapshot' if site_scope else "snapshot"
+    )
+    t = "site_snapshots" if site_scope else "organisation_snapshots"
+    key = {"site_id": site["id"]} if site_scope else {"organisation_id": org["id"]}
+    scope = "site" if site_scope else "organisation"
+    missing = api.get(path)
+    assert missing.status_code == 200, missing.text
+    assert missing.json()["payload"]["entrances_96"] == [0] * 96
+    usable = build_zero_snapshot(
+        scope, next(iter(key.values())), "Selected", datetime.now(timezone.utc)
+    )["payload"]
+    usable["entrances_96"][95] = 17
+    create(
+        api,
+        t,
+        {**key, "ts": STAMP, "payload": usable, "state": {}, "updated_at": STAMP},
+    )
+    original_zero = app.state.organisation_dashboard._zero_snapshot
+
+    def forbidden_zero(*args):
+        raise AssertionError("Valid persisted snapshot lost precedence")
+
+    monkeypatch.setattr(
+        app.state.organisation_dashboard, "_zero_snapshot", forbidden_zero
+    )
+    persisted = api.get(path)
+    assert persisted.status_code == 200, persisted.text
+    assert persisted.json()["payload"]["entrances_96"][95] == 17
+    usable["entrances_96"][95] = 29
+    update = api.put(
+        f"/api/admin/tables/{t}/row",
+        json={
+            "key": key,
+            "changes": {"payload": usable, "ts": "2026-10-09T13:14:15.654321Z"},
+        },
+    )
+    assert update.status_code == 200
+    assert api.get(path).json()["payload"]["entrances_96"][95] == 29
+    assert api.get(path).json()["ts"] == "2026-10-09T13:14:15.654321+00:00"
+    monkeypatch.setattr(
+        app.state.organisation_dashboard, "_zero_snapshot", original_zero
+    )
+    for raw in ({}, [], {"test": 1}, None):
+        update = api.put(
+            f"/api/admin/tables/{t}/row",
+            json={"key": key, "changes": {"payload": raw, "state": raw}},
+        )
+        assert update.status_code == 200 and update.json()["payload"] == raw
+        before = db.query(f"SELECT * FROM public.{t}")
+        fallback = api.get(path)
+        assert fallback.status_code == 200, fallback.text
+        assert fallback.json()["payload"]["entrances_96"] == [0] * 96
+        assert db.query(f"SELECT * FROM public.{t}") == before
+
+
+def test_admin_server_now_create_update_and_existing_modes(setup, monkeypatch):
+    import backend.app.services.admin_registry as registry_module
+
+    fixed = datetime(2031, 2, 3, 4, 5, 6, 123456, tzinfo=timezone.utc)
+
+    class ServerClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            assert tz is timezone.utc
+            return fixed
+
+    monkeypatch.setattr(registry_module, "datetime", ServerClock)
+    api, db, _ = setup
+    login(api)
+    r = api.post(
+        "/api/admin/tables/organisation_snapshots/rows",
+        json={
+            "values": {"organisation_id": "1", "payload": {}, "state": None},
+            "server_now": ["ts", "updated_at"],
+        },
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["ts"] == r.json()["updated_at"] == fixed.isoformat()
+    assert db.query("SELECT ts,updated_at FROM public.organisation_snapshots")[0] == [
+        fixed,
+        fixed,
+    ]
+    fixed = fixed.replace(day=4)
+    r = api.put(
+        "/api/admin/tables/organisation_snapshots/row",
+        json={
+            "key": {"organisation_id": "1"},
+            "changes": {},
+            "server_now": ["updated_at"],
+        },
+    )
+    assert r.status_code == 200 and r.json()["updated_at"] == fixed.isoformat()
+    assert r.json()["ts"] != r.json()["updated_at"]
+    r = api.put(
+        "/api/admin/tables/organisation_snapshots/row",
+        json={
+            "key": {"organisation_id": "1"},
+            "changes": {"ts": "2026-10-08T15:42:10.123456Z"},
+        },
+    )
+    assert r.status_code == 200 and r.json()["ts"] == "2026-10-08T15:42:10.123456+00:00"
+    assert r.json()["updated_at"] == fixed.isoformat()
+    r = api.put(
+        "/api/admin/tables/organisation_snapshots/row",
+        json={
+            "key": {"organisation_id": "1"},
+            "changes": {"ts": "2026-10-08T15:42:10"},
+        },
+    )
+    assert r.status_code == 422
+    org, site, device, _ = topology(api)
+    r = api.put(
+        "/api/admin/tables/devices/row",
+        json={
+            "key": {"id": device["id"]},
+            "changes": {},
+            "server_now": ["last_seen_at"],
+        },
+    )
+    assert r.status_code == 422  # Unknown name: no inference from similar timestamps.
+    r = api.put(
+        "/api/admin/tables/devices/row",
+        json={
+            "key": {"id": device["id"]},
+            "changes": {},
+            "server_now": ["analyzed_until"],
+        },
+    )
+    assert r.status_code == 200 and r.json()["analyzed_until"] == fixed.isoformat()
+    r = api.put(
+        "/api/admin/tables/devices/row",
+        json={"key": {"id": device["id"]}, "changes": {"analyzed_until": None}},
+    )
+    assert r.status_code == 200 and r.json()["analyzed_until"] is None
+    # Omitted/default organisation timestamp is DB-owned, not our frozen Now clock.
+    assert org["created_at"] != fixed.isoformat()
+
+
+@pytest.mark.parametrize(
+    "table_name,column",
+    [
+        ("organisations", "name"),
+        ("sites", "organisation_id"),
+        ("devices", "analysis_interval_minutes"),
+        ("devices", "capture_fps"),
+        ("organisations", "enabled"),
+        ("alarms", "gateway_id"),
+        ("site_snapshots", "payload"),
+        ("gateways", "commission_hash"),
+    ],
+)
+def test_server_now_rejected_for_every_other_type(setup, table_name, column):
+    api, _, _ = setup
+    login(api)
+    key = {name: "1" for name in TABLES[table_name].pk}
+    if "gateway_id" in key:
+        key["gateway_id"] = str(uuid4())
+    r = api.put(
+        f"/api/admin/tables/{table_name}/row",
+        json={"key": key, "changes": {}, "server_now": [column]},
+    )
+    assert r.status_code == 422, r.text
+
+
+@pytest.mark.parametrize(
+    "intent",
+    [
+        {"server_now": None},
+        {"server_now": "updated_at"},
+        {"server_now": [{}]},
+        {"server_now": ["updated_at", "updated_at"]},
+        {"server_now": ["unknown"]},
+        {"server_now": ["id"]},
+        {"server_now": ["updated_at"], "changes": {"updated_at": STAMP}},
+        {"server_now": ["updated_at"], "type": "text"},
+    ],
+)
+def test_invalid_server_now_intents_and_metadata_rejected(setup, intent):
+    api, _, _ = setup
+    login(api)
+    r = api.put(
+        "/api/admin/tables/organisations/row",
+        json={"key": {"id": "1"}, "changes": {}, **intent},
+    )
+    assert r.status_code == 422, r.text
+
+
+def test_now_is_generic_and_raw_values_are_not_tokens():
+    from backend.app.services.admin_registry import values
+
+    for t in TABLES.values():
+        for col in t.columns:
+            if col.type == "timestamptz" and col.name not in t.pk:
+                result = values(t, {}, server_now=[col.name])
+                assert result[col.name].tzinfo is timezone.utc
+    assert values(TABLES["organisations"], {"name": "now"})["name"] == "now"
+    raw = {"$admin_value": "now"}
+    assert (
+        json.loads(values(TABLES["site_snapshots"], {"payload": raw})["payload"]) == raw
+    )

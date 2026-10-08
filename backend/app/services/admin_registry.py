@@ -303,7 +303,7 @@ def decode(column, value):
         ) from None
 
 
-def values(t, data, *, create=False, key=False):
+def values(t, data, *, create=False, key=False, server_now=()):
     if type(data) is not dict:
         raise AdminError(422, "Expected a row object")
     allowed = (
@@ -315,6 +315,20 @@ def values(t, data, *, create=False, key=False):
             if not col.identity and (create or col.name not in t.pk)
         }
     )
+    if not isinstance(server_now, (list, tuple)) or any(
+        type(n) is not str for n in server_now
+    ):
+        raise AdminError(422, "server_now must be a list of timestamp column names")
+    if len(server_now) != len(set(server_now)):
+        raise AdminError(422, "Duplicate server_now column")
+    if key and server_now:
+        raise AdminError(422, "Primary keys cannot request server_now")
+    for name in server_now:
+        if name not in allowed or t.fields[name].type != "timestamptz":
+            raise AdminError(422, "server_now requires an editable timestamptz column")
+        if name in data:
+            raise AdminError(422, "Column cannot supply both a value and server_now")
+    supplied = set(data) | set(server_now)
     if set(data) - allowed:
         raise AdminError(422, "Unknown or immutable column")
     if key and set(data) != set(t.pk):
@@ -323,11 +337,11 @@ def values(t, data, *, create=False, key=False):
         missing = [
             col.name
             for col in t.columns
-            if not col.default and not col.nullable and col.name not in data
+            if not col.default and not col.nullable and col.name not in supplied
         ]
         if missing:
             raise AdminError(422, "Required fields: " + ", ".join(missing))
-    if not data:
+    if not supplied:
         raise AdminError(422, "No fields supplied")
     result = {}
     for name, v in data.items():
@@ -336,6 +350,10 @@ def values(t, data, *, create=False, key=False):
             result[name] = "null"
         else:
             result[name] = decode(col, v)
+    if server_now:
+        # One server UTC instant for all Now fields, never client time or SQL text.
+        now = datetime.now(timezone.utc)
+        result.update({name: now for name in server_now})
     return result
 
 

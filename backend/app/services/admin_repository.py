@@ -148,9 +148,9 @@ class AdminRepository:
             (f"camos:memberships:{oid}",),
         )
 
-    def mutate(self, name, data, key=None):
+    def mutate(self, name, data, key=None, *, server_now=()):
         t = table(name)
-        checked = values(t, data, create=key is None)
+        checked = values(t, data, create=key is None, server_now=server_now)
         k = values(t, key, key=True) if key is not None else None
         try:
             with self.database.transaction() as con, closing(con.cursor()) as cur:

@@ -254,3 +254,41 @@ old routes return404 and Basic credentials alone return401 for canonical Admin.
 - `frontend/src/features/admin/types.ts`
 - `frontend/src/features/admin/utils/formatLastLogin.ts`
 - `frontend/src/pages/AdminPage.tsx`
+
+## Focused follow-up: snapshot resolution and timestamp Now
+
+Starting SHA: `9de2fdbf07a49df06d86e98c026426c2b9a68ddc`. This follow-up stays on `feat/internal-camos-admin` and contains exactly the two approved behavior changes.
+
+Previously a persisted snapshot already took precedence over zero, but authenticated Dashboard reads could return incomplete object payloads or fail on non-object payloads. Both Organisation and Site authenticated Dashboard reads now use persisted data only when its envelope and payload are usable. Missing or unusable data selects the existing transient zero builder. Each request reads the canonical row, so a usable Admin-created or updated snapshot appears on the next request. Invalid rows, timestamps and state remain untouched; no persisted zero, repair, copying or synchronization is introduced. Demo/strict reads and the separate Reports reader retain their existing behavior.
+
+The small read-time predicate follows the existing Dashboard projection/types and ReportsEngine domain checks: timezone-aware envelope timestamp; object payload; finite numeric rolling arrays of length 96; occupancy triples with minimum ≤ average ≤ maximum; 96 capacity pairs; named traffic entities with valid scope-specific IDs and matching 96 traffic-split widths; all seven period objects with numeric entrances/exits and occupancy triples; six age and two sex percentages totaling zero or 100. Additional JSON keys, capacity above 100, old timestamps and variable-length all-time buckets remain legal. No freshness rule or new validation framework was added. Admin writes still accept arbitrary syntactically valid JSONB, including `{}`, `[]`, `{"test":1}` and JSON `null`, without Dashboard shape validation.
+
+Now uses an optional top-level `server_now` list of column names, separate from ordinary values, preserving arbitrary JSON objects and literal text. For example:
+
+```json
+{"values":{"organisation_id":"1","payload":{},"state":{}},"server_now":["ts","updated_at"]}
+```
+
+Updates use `{"key":...,"changes":...,"server_now":["updated_at"]}`. Omitting the list preserves the old API. Only editable, registered `timestamptz` fields may appear; unknown/immutable fields, duplicate names, other datatypes, malformed lists and simultaneous ordinary values for the same field are rejected. The typed pipeline obtains one `datetime.now(timezone.utc)` per mutation and binds the resulting real aware datetime through the existing parameterized SQL. No browser timestamp, string coercion or SQL-expression mechanism is involved. Frozen registry metadata and PK rules are unchanged.
+
+RowEditor derives Now availability from each column's datatype. Selecting it hides manual entry and explains that server UTC time will be set on save; switching back restores the manual text. Manual timestamps retain microseconds, naive timestamps remain rejected, and existing SQL NULL, create default/omit and update unchanged modes are preserved. The snapshot editor note now describes the authenticated fallback behavior.
+
+Validation completed before the follow-up commit:
+
+- Backend suite: **382 passed**, nine existing deprecation warnings. Focused snapshot/Admin suite: **116 passed**. Added 40 cases across the two existing test modules, including real PostgreSQL API tests for both scopes, row preservation, raw JSONB, fixed server-clock create/update, all registered timestamps, eight rejected non-timestamp types and malformed intents.
+- Extended existing Admin Chromium acceptance: all ten table editors expose Now only for editable timestamps; create/update requests send explicit Now intent without timestamp values; backend timestamps persist; manual text survives mode switching. Both customer Dashboard scopes render Admin-created snapshots, see next-request updates and render zero after invalid JSON while Admin data remains unchanged. Existing Admin authentication, grids, raw JSON precision, context, tablet, normal customer login, Owner soft disable, Member denial and final-organisation zero-state checks pass.
+- Existing Documents browser regression passes, including adapter-based object isolation, duplicate protection, upload/download/delete and outage behavior.
+- `typecheck:admin`, `typecheck:account`, `typecheck:documents` and production frontend build pass. Global typecheck retains exactly the base's **62 existing diagnostics** with no new diagnostics.
+- `git diff --check` passes. No production database operations, schema/migration, grants, GCP, Cloud Run or IAM changes. Local tests use the pre-existing disposable PostgreSQL fixture infrastructure. No unrelated production behavior was changed.
+
+Exact follow-up files:
+
+- `backend/app/api/admin/__init__.py`
+- `backend/app/services/admin_registry.py`
+- `backend/app/services/admin_repository.py`
+- `backend/app/services/organisation_dashboard.py`
+- `backend/tests/test_admin.py`
+- `backend/tests/test_zero_snapshot.py`
+- `frontend/scripts/admin-browser.mjs`
+- `frontend/src/features/internal-admin/RowEditor.tsx`
+- `docs/internal-camos-admin.md`

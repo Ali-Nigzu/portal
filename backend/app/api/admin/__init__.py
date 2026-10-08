@@ -69,8 +69,8 @@ async def body(request):
         raise HTTPException(422, "Expected valid JSON object") from None
 
 
-def exact(value, fields):
-    if set(value) != set(fields):
+def exact(value, fields, optional=()):
+    if not set(fields) <= set(value) or set(value) - set(fields) - set(optional):
         raise HTTPException(422, "Unexpected or missing request fields")
 
 
@@ -178,12 +178,15 @@ def read_row(name: str, request: Request, user=Depends(admin_user)):
 @router.post("/tables/{name}/rows", dependencies=mutations)
 async def create(name: str, request: Request, user=Depends(admin_user)):
     value = await body(request)
-    exact(value, ("values",))
+    exact(value, ("values",), ("server_now",))
     from starlette.concurrency import run_in_threadpool
 
     return response(
         await run_in_threadpool(
-            result, lambda: repository(request).mutate(name, value["values"])
+            result,
+            lambda: repository(request).mutate(
+                name, value["values"], server_now=value.get("server_now", [])
+            ),
         ),
         201,
     )
@@ -192,13 +195,18 @@ async def create(name: str, request: Request, user=Depends(admin_user)):
 @router.put("/tables/{name}/row", dependencies=mutations)
 async def update(name: str, request: Request, user=Depends(admin_user)):
     value = await body(request)
-    exact(value, ("key", "changes"))
+    exact(value, ("key", "changes"), ("server_now",))
     from starlette.concurrency import run_in_threadpool
 
     return response(
         await run_in_threadpool(
             result,
-            lambda: repository(request).mutate(name, value["changes"], value["key"]),
+            lambda: repository(request).mutate(
+                name,
+                value["changes"],
+                value["key"],
+                server_now=value.get("server_now", []),
+            ),
         )
     )
 

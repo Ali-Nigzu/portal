@@ -70,6 +70,9 @@ try {
   await expect(
     page.getByRole("navigation", { name: "Admin tables" }).getByRole("button"),
   ).toHaveCount(11);
+  const registry = await (
+    await page.request.get(base + "/api/admin/tables")
+  ).json();
   for (const name of [
     "Organisations",
     "Sites",
@@ -90,6 +93,19 @@ try {
       page.getByRole("heading", { name, exact: true }),
     ).toBeVisible();
     await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
+    const table = registry.tables.find(
+      (t) => t.name.replaceAll("_", " ").toLowerCase() === name.toLowerCase(),
+    );
+    assert(table);
+    await page.getByRole("button", { name: "+ Add Row", exact: true }).click();
+    for (const column of table.columns.filter((c) => !c.identity)) {
+      await expect(
+        page
+          .getByLabel(`${column.name} value mode`, { exact: true })
+          .locator('option[value="now"]'),
+      ).toHaveCount(column.type === "timestamptz" ? 1 : 0);
+    }
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
   }
   await page
     .getByRole("navigation", { name: "Admin tables" })
@@ -102,14 +118,12 @@ try {
   await expect(
     page.getByRole("cell", { name: "Browser Organisation", exact: true }),
   ).toBeVisible();
-  let tr = page
-    .getByRole("row")
-    .filter({
-      has: page.getByRole("cell", {
-        name: "Browser Organisation",
-        exact: true,
-      }),
-    });
+  let tr = page.getByRole("row").filter({
+    has: page.getByRole("cell", {
+      name: "Browser Organisation",
+      exact: true,
+    }),
+  });
   await tr.getByRole("button", { name: "Context", exact: true }).click();
   await expect(page.getByText("MISSING", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "+ Site", exact: true }).click();
@@ -131,12 +145,31 @@ try {
     .getByRole("button", { name: "+ Create Site Snapshot", exact: true })
     .click();
   await page.locator("#field-ts").fill("2026-10-08T12:00:00.123456Z");
-  await page.locator("#field-updated_at").fill("2026-10-08T12:00:00.123456Z");
+  await page.getByLabel("ts value mode", { exact: true }).selectOption("now");
+  await expect(page.locator("#field-ts")).toHaveCount(0);
+  await page.getByLabel("ts value mode", { exact: true }).selectOption("value");
+  await expect(page.locator("#field-ts")).toHaveValue(
+    "2026-10-08T12:00:00.123456Z",
+  );
+  await page.getByLabel("ts value mode", { exact: true }).selectOption("now");
+  await page
+    .getByLabel("updated_at value mode", { exact: true })
+    .selectOption("now");
+  const createNow = page.waitForRequest(
+    (r) =>
+      r.method() === "POST" && r.url().endsWith("/tables/site_snapshots/rows"),
+  );
+  const beforeNow = Date.now();
   await page
     .locator("#field-payload")
     .fill('{"precise":12345678901234567890.1234567890123456789}');
   await page.locator("#field-state").fill("null");
   await page.getByRole("button", { name: "Create", exact: true }).click();
+  const createIntent = (await createNow).postDataJSON();
+  assert.deepEqual(createIntent.server_now, ["ts", "updated_at"]);
+  assert(
+    !("ts" in createIntent.values) && !("updated_at" in createIntent.values),
+  );
   await expect(
     page.getByRole("button", { name: "Edit Site Snapshot", exact: true }),
   ).toBeVisible();
@@ -146,8 +179,25 @@ try {
   await expect(page.locator("#field-payload")).toHaveValue(
     /12345678901234567890\.1234567890123456789/,
   );
+  const persistedTs = await page.locator("#field-ts").inputValue();
+  assert(
+    Date.parse(persistedTs) >= beforeNow &&
+      Date.parse(persistedTs) <= Date.now(),
+  );
+  await page
+    .getByLabel("updated_at value mode", { exact: true })
+    .selectOption("now");
+  const updateNow = page.waitForRequest(
+    (r) =>
+      r.method() === "PUT" && r.url().endsWith("/tables/site_snapshots/row"),
+  );
   await page.locator("#field-state").fill('{"updated":true}');
   await page.getByRole("button", { name: "Update", exact: true }).click();
+  const updateIntent = (await updateNow).postDataJSON();
+  assert.deepEqual(updateIntent.server_now, ["updated_at"]);
+  assert(
+    !("ts" in updateIntent.changes) && !("updated_at" in updateIntent.changes),
+  );
   await expect(
     page.getByRole("button", { name: "Edit Site Snapshot", exact: true }),
   ).toBeVisible();
@@ -194,6 +244,102 @@ try {
     fullPage: true,
   });
   await mobile.close();
+  // Both customer scopes consume Admin-created snapshots on the next request.
+  const dashboardContext = await browser.newContext();
+  const dashboardPage = await dashboardContext.newPage();
+  dashboardPage.on("pageerror", (e) => errors.push(e.message));
+  await customer(dashboardPage, "owner");
+  const siteResponse = await page.request.post(
+    base + "/api/admin/tables/sites/rows",
+    {
+      headers,
+      data: {
+        values: {
+          name: "Dashboard Acceptance",
+          organisation_id: "1",
+          max_capacity: 50,
+        },
+      },
+    },
+  );
+  assert.equal(siteResponse.status(), 201);
+  const dashboardSite = await siteResponse.json();
+  for (const scope of ["organisation", "site"]) {
+    const isSite = scope === "site";
+    const table = isSite ? "site_snapshots" : "organisation_snapshots";
+    const key = isSite
+      ? { site_id: dashboardSite.id }
+      : { organisation_id: "1" };
+    const endpoint =
+      base +
+      "/api/portal/organisations/1" +
+      (isSite ? `/sites/${dashboardSite.id}` : "") +
+      "/snapshot";
+    const route =
+      base +
+      "/sites/organisations/1" +
+      (isSite ? `/sites/${dashboardSite.id}` : "") +
+      "/dashboard";
+    const absent = await dashboardPage.request.get(endpoint);
+    assert.equal(absent.status(), 200);
+    const payload = (await absent.json()).payload;
+    assert.equal(payload.entrances_96[95], 0);
+    payload.entrances_96[95] = 17;
+    const created = await page.request.post(
+      base + `/api/admin/tables/${table}/rows`,
+      {
+        headers,
+        data: {
+          values: { ...key, payload, state: {} },
+          server_now: ["ts", "updated_at"],
+        },
+      },
+    );
+    assert.equal(created.status(), 201);
+    const stored = await created.json();
+    assert.equal(
+      (await (await dashboardPage.request.get(endpoint)).json()).payload
+        .entrances_96[95],
+      17,
+    );
+    await dashboardPage.goto(route);
+    await expect(dashboardPage.locator(".dashboard-v2")).toHaveAttribute(
+      "data-snapshot-ts",
+      stored.ts,
+    );
+    payload.entrances_96[95] = 29;
+    const updated = await page.request.put(
+      base + `/api/admin/tables/${table}/row`,
+      {
+        headers,
+        data: { key, changes: { payload }, server_now: ["ts"] },
+      },
+    );
+    assert.equal(updated.status(), 200);
+    assert.equal(
+      (await (await dashboardPage.request.get(endpoint)).json()).payload
+        .entrances_96[95],
+      29,
+    );
+    const invalid = await page.request.put(
+      base + `/api/admin/tables/${table}/row`,
+      {
+        headers,
+        data: { key, changes: { payload: {} } },
+      },
+    );
+    assert.equal(invalid.status(), 200);
+    const fallback = await dashboardPage.request.get(endpoint);
+    assert.equal(fallback.status(), 200);
+    assert.equal((await fallback.json()).payload.entrances_96[95], 0);
+    await dashboardPage.reload();
+    await expect(dashboardPage.locator(".dashboard-v2")).toBeVisible();
+    const raw = await page.request.get(
+      base + `/api/admin/tables/${table}/row?` + new URLSearchParams(key),
+    );
+    assert.deepEqual(await raw.json(), await invalid.json());
+  }
+  await dashboardContext.close();
   await page.getByRole("button", { name: "Logout", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/login$/);
   assert.equal((await page.request.get(base + "/api/admin/me")).status(), 401);
@@ -245,7 +391,7 @@ try {
   });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS canonical Admin login/table/editor/context/JSON fidelity/tablet + Owner soft delete/Member denial/zero-org browser acceptance",
+    "PASS canonical Admin + generic timestamp Now + Organisation/Site Dashboard persisted/update/invalid fallback + Owner soft delete/Member denial/zero-org browser acceptance",
   );
 } finally {
   await browser?.close();

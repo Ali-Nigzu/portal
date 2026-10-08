@@ -16,7 +16,7 @@ const labels: Record<string, Record<string, string>> = {
   },
 };
 type Field = {
-  mode: "value" | "null" | "omit";
+  mode: "value" | "now" | "null" | "omit";
   text: string;
   bool: boolean;
 };
@@ -72,10 +72,15 @@ export default function RowEditor({
     setError("");
     try {
       const values: Row = {};
+      const serverNow: string[] = [];
       for (const c of table.columns) {
         if (c.identity || (row && !c.mutable)) continue;
         const field = fields[c.name];
         if (field.mode === "omit") continue;
+        if (field.mode === "now") {
+          serverNow.push(c.name);
+          continue;
+        }
         if (field.mode === "null") {
           values[c.name] = null;
           continue;
@@ -106,13 +111,15 @@ export default function RowEditor({
         if (row && stringifyJson(v) === stringifyJson(row[c.name])) continue;
         values[c.name] = v;
       }
-      if (!Object.keys(values).length)
+      if (!Object.keys(values).length && !serverNow.length)
         throw Error("No changed fields to update");
       setBusy(true);
       const saved = await request<Row>(
         `/tables/${table.name}/${row ? "row" : "rows"}`,
         row ? "PUT" : "POST",
-        row ? { key: keyOf(table, row), changes: values } : { values },
+        row
+          ? { key: keyOf(table, row), changes: values, server_now: serverNow }
+          : { values, server_now: serverNow },
       );
       onSaved(saved);
     } catch (e) {
@@ -139,9 +146,9 @@ export default function RowEditor({
       )}
       {snapshot && (
         <p className="admin-note">
-          Raw JSON is permitted. Dashboard rendering expects its complete
-          payload shape; missing arrays or rollups can prevent it from
-          rendering.
+          Raw JSON is permitted. Authenticated Dashboards use a transient zero
+          snapshot when the stored payload is unusable; the stored JSON is
+          preserved.
         </p>
       )}
       <form onSubmit={save}>
@@ -175,6 +182,9 @@ export default function RowEditor({
                       }
                     >
                       <option value="value">Value</option>
+                      {c.type === "timestamptz" && (
+                        <option value="now">Now</option>
+                      )}
                       {c.nullable && c.type !== "jsonb" && (
                         <option value="null">SQL NULL</option>
                       )}
@@ -186,6 +196,9 @@ export default function RowEditor({
                         </option>
                       )}
                     </select>
+                    {field.mode === "now" && (
+                      <small>Server UTC time will be set when saved.</small>
+                    )}
                     {field.mode === "value" &&
                       (c.type === "boolean" ? (
                         <input
