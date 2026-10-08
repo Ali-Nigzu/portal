@@ -365,3 +365,5 @@
   .access-personal-row { flex-direction: column; align-items: flex-start; }
   .access-personal-body .vrm-btn, .access-page-actions .vrm-btn, .access-table .vrm-btn { min-height: 44px; }
 }
+
+.access-organisation-danger{margin-top:32px;padding-top:20px;border-top:1px solid #ddd}.access-danger-button{color:#932b28!important;background:#fff!important;border:1px solid #932b28!important;min-height:44px}.access-danger-button:focus-visible{outline:3px solid #932b28;outline-offset:3px}

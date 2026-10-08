@@ -75,6 +75,16 @@ class OrganisationMemberships:
             )
         return membership
 
+    def disable(self, actor, value):
+        oid = organisation_id(value)
+        with self.database.transaction() as connection:
+            self.repository.lock(connection, oid)
+            self._actor(connection, actor)
+            self._organisation(connection, oid)
+            self._member(connection, actor, oid, owner=True)
+            self.repository.disable_organisation(connection, oid)
+        return {"organisation_id": str(oid), "enabled": False}
+
     def create(self, actor, name):
         name = name.strip()
         if (

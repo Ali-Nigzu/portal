@@ -13,25 +13,6 @@ logger = logging.getLogger(__name__)
 view_tokens: Dict[str, Dict[str, Any]] = {}
 
 
-def create_view_token(client_id: str) -> Dict[str, Any]:
-    """Create a view token for a client"""
-    token = str(uuid.uuid4())
-    expires_at = datetime.now() + timedelta(hours=24)
-    
-    view_tokens[token] = {
-        'client_id': client_id,
-        'expires_at': expires_at,
-        'used_count': 0
-    }
-    
-    logger.info(f"Created view token for client: {client_id}")
-    return {
-        'token': token,
-        'expires_at': expires_at.isoformat(),
-        'client_id': client_id
-    }
-
-
 def validate_view_token(token: str) -> Optional[Dict[str, Any]]:
     """Validate a view token and return client info if valid"""
     clean_expired_tokens()

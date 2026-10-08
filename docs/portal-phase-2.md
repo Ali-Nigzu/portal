@@ -48,7 +48,7 @@ Reproduction: `ANALYTICS_OFFLINE_MODE=true python -m pytest backend/tests -q`; f
 
 Removed canonical-path SQLite Event reader, synthetic Event transport/proofs, old source token arrays, frontend Alarm fixtures/JSON loaders and fabricated Device loaders. Legacy Event search now returns 410 instead of fake fallback. Removed files remain recoverable in Git.
 
-Intentionally retained unrelated admin/account JSON storage and routes, authenticated/view-token legacy Dashboard paths, Reports strict SQLite analytics and compatibility utilities. No conversion of admin writes into Postgres writes.
+At that historical phase, retained unrelated account JSON storage and routes, authenticated/view-token legacy Dashboard paths, Reports strict SQLite analytics and compatibility utilities. The legacy Admin was subsequently removed and replaced by canonical row operations; see `internal-camos-admin.md`.
 
 Canonical Event UI/API/types/export contain no Race or Track ID. Existing Reports demographic semantics were deliberately preserved. No fake gateway devices, browser BigQuery access, Event-to-Dashboard coupling, Alarm writes, or hidden synthetic Event/Alarm fallback.
 

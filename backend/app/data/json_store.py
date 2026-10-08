@@ -81,14 +81,6 @@ def load_users():
     if not os.path.exists(USERS_FILE):
         os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
         users_data = {
-            "admin": {
-                "password": hash_password("admin123"),
-                "role": "admin",
-                "name": "System Administrator",
-                "orgId": "client1",
-                "last_login": None,
-                "data_sources": []
-            },
             "client1": {
                 "password": hash_password("client123"),
                 "role": "client",

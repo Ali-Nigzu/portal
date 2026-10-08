@@ -8,12 +8,9 @@ import secrets
 from datetime import datetime, timezone
 
 from fastapi import Cookie, Depends, HTTPException, Request, Response, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from .data.json_store import load_users, save_users
 from .services.session_tokens import InvalidSession, SESSION_SECONDS, verify_session_claims
 
-security = HTTPBasic()
 SESSION_COOKIE_NAME = "camos_session"
 
 
@@ -71,36 +68,6 @@ def require_legacy_password_auth():
         raise HTTPException(410, "Legacy password authentication is disabled")
 
 
-def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
-    """Authenticate user and update last login timestamp."""
-    require_legacy_password_auth()
-    users = load_users()
-
-    if credentials.username not in users:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
-        )
-
-    user = users[credentials.username]
-    password_hash = user.get("password_hash") or user.get("password", "")
-
-    if not verify_password(credentials.password, password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
-        )
-
-    users[credentials.username]['last_login'] = datetime.now(timezone.utc).isoformat()
-    save_users(users)
-
-    return {
-        'username': credentials.username,
-        'role': user['role'],
-        'name': user.get('name', credentials.username)
-    }
-
-
 def get_session_user(
     request: Request,
     session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
@@ -125,6 +92,6 @@ def get_canonical_user(
             user = None
     except (InvalidSession, RuntimeError):
         user = None
-    if user is None:
+    if user is None or user.id == 999999:
         raise HTTPException(status_code=401, detail="Unauthenticated")
     return user

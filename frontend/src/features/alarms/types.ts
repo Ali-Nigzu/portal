@@ -18,7 +18,7 @@ export type AlarmResult = {
   };
 };
 export interface AlarmUser {
-  role: "admin" | "client";
+  role: "client";
   name: string;
   csv_url?: string;
 }

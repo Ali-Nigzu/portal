@@ -9,6 +9,7 @@ import PersonalAccess, {
 import AccessDialog from "../../organisation-access/AccessDialog";
 import {
   getManageAccess,
+  disableOrganisation,
   inviteMember,
   manageMembership,
   errorMessage,
@@ -50,6 +51,8 @@ export default function ManageAccessPage() {
     member: ManagedRelationship;
     action: "disable" | "withdraw";
   } | null>(null);
+  const [deleteOrganisation, setDeleteOrganisation] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null),
     [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -62,6 +65,8 @@ export default function ManageAccessPage() {
     setCopied(false);
     setInvite(false);
     setConfirmation(null);
+    setDeleteOrganisation(false);
+    setDeleteError(null);
     if (!id || !eligible) {
       setLoading(false);
       return;
@@ -386,6 +391,33 @@ export default function ManageAccessPage() {
           + Request Access
         </button>
       </div>
+      {data?.can_manage && (
+        <section className="access-organisation-danger" aria-label="Delete Organisation">
+          <p>Disable customer access to this organisation while keeping its data.</p>
+          <button className="vrm-btn access-danger-button" disabled={busy} onClick={() => { setDeleteError(null); setDeleteOrganisation(true); }}>Delete Organisation</button>
+        </section>
+      )}
+      {deleteOrganisation && data?.can_manage && id && (
+        <AccessDialog title="Delete Organisation" description={`Delete ${data.organisation.name}? Customer access will stop. Sites, devices and all other data remain. Internal camOS Admin can re-enable it.`} busy={busy} onClose={() => setDeleteOrganisation(false)}>
+          {deleteError && <p role="alert" className="settings-form-error">{deleteError}</p>}
+          <div className="settings-form-actions">
+            <button data-autofocus className="vrm-btn vrm-btn-secondary" disabled={busy} onClick={() => setDeleteOrganisation(false)}>Cancel</button>
+            <button className="vrm-btn access-danger-button" disabled={busy} onClick={async () => {
+              if (busy) return;
+              const deletingId = id;
+              setBusy(true); setDeleteError(null);
+              try {
+                await disableOrganisation(deletingId);
+                setDeleteOrganisation(false); setData(null);
+                const next = new URLSearchParams(search); next.delete("organisation_id"); setSearch(next, { replace: true });
+                setMessage("Organisation deleted. Its data has been kept.");
+                try { await refreshAccess(); } catch { setError("Organisation deleted, but access refresh failed. Refresh access to update navigation."); }
+              } catch (failure) { if (currentId.current === deletingId) setDeleteError(errorMessage(failure)); }
+              finally { setBusy(false); }
+            }}>{busy ? "Deleting…" : "Delete Organisation"}</button>
+          </div>
+        </AccessDialog>
+      )}
       {invite && data?.can_manage && id && (
         <InviteUserModal
           organisations={organisations}

@@ -44,6 +44,10 @@ class OrganisationMembershipRepository:
             row = cursor.fetchone()
         return {"id": str(row[0]), "name": row[1]} if row else None
 
+    def disable_organisation(self, connection, organisation_id):
+        with cursor_for(connection) as cursor:
+            cursor.execute("UPDATE public.organisations SET enabled=FALSE WHERE id=%s", (organisation_id,))
+
     def create_organisation(self, connection, name):
         with cursor_for(connection) as cursor:
             cursor.execute(

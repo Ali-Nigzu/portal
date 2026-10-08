@@ -37,7 +37,7 @@ Authenticated mode is selected when `appMode === "authenticated"`. In this mode,
 | `/sites/:siteId/alarm-logs` | Y | Y | Y | Renders Alarm Logs page. | Reachable from secondary `Alarm Logs` and Home `Monitor Fleet`. |
 | `/sites/:siteId/device-list` | Y | Y | Y | Renders Device List page. | Reachable from secondary `Device List`. |
 | `/sites/:siteId/reports` | Y | Y | Y | Renders Reports page. | Reachable from secondary `Reports`. |
-| `/admin` | Conditional | Conditional | Conditional | Only declared for `userRole === "admin"`; client users fall through to wildcard `/home`. | Current login flow sets client role, so this is not part of normal client auth navigation. |
+| `/admin`, `/admin/login` | Separate Admin session | Separate Admin session | Separate Admin session | Reserved canonical user ID 999999; no customer navigation link. | See `docs/internal-camos-admin.md`. |
 | `*` | Y | N | Y | Redirects to `/home` in authenticated mode. | Catch-all fallback. |
 
 ## Auth Primary Navigation Map

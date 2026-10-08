@@ -47,35 +47,6 @@ class AuthUserResponse(BaseModel):
     user: AuthUser
 
 
-class CreateUserRequest(BaseModel):
-    username: str
-    password: str
-    name: str
-    role: str
-    org_id: Optional[str] = Field(default=None, alias="orgId")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class UpdateUserRequest(BaseModel):
-    name: Optional[str] = None
-    password: Optional[str] = None
-    role: Optional[str] = None
-    org_id: Optional[str] = Field(default=None, alias="orgId")
-
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CreateViewTokenRequest(BaseModel):
-    client_id: str
-
-
-class ViewTokenResponse(BaseModel):
-    token: str
-    expires_at: str
-    client_id: str
-
-
 class SignupStartResponse(BaseModel):
     ok: bool
     email: str
@@ -220,46 +191,6 @@ class RegisterInterestResponse(BaseModel):
 
 class ContactResponse(BaseModel):
     message: str
-
-
-class CreateAlarmRequest(BaseModel):
-    instance: str
-    device: str
-    description: str
-    alarmStartedAt: str
-    alarmClearedAfter: Optional[str] = None
-    severity: str
-    client_id: str
-
-
-class UpdateAlarmRequest(BaseModel):
-    instance: Optional[str] = None
-    device: Optional[str] = None
-    description: Optional[str] = None
-    alarmStartedAt: Optional[str] = None
-    alarmClearedAfter: Optional[str] = None
-    severity: Optional[str] = None
-
-
-class CreateDeviceRequest(BaseModel):
-    name: str
-    type: str
-    status: str
-    lastSeen: str
-    dataSource: Optional[str] = None
-    location: Optional[str] = None
-    recordCount: Optional[int] = None
-    client_id: str
-
-
-class UpdateDeviceRequest(BaseModel):
-    name: Optional[str] = None
-    type: Optional[str] = None
-    status: Optional[str] = None
-    lastSeen: Optional[str] = None
-    dataSource: Optional[str] = None
-    location: Optional[str] = None
-    recordCount: Optional[int] = None
 
 
 class DashboardWidget(BaseModel):

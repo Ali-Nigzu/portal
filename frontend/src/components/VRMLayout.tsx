@@ -55,7 +55,7 @@ type MobileDrawer =
 interface VRMLayoutProps {
   dashboardNavigation?: {organisation: {id:string;label:string;path?:string}; sites: {id:string;label:string;path?:string}[]; selectedKey:string; selectedLabel:string};
   authenticatedOrganisations?: {id:string;name:string;role:0|1}[];
-  userRole?: "client" | "admin";
+  userRole?: "client";
   isAuthenticated?: boolean;
   onLogout?: () => void;
   children?: React.ReactNode;
@@ -416,16 +416,6 @@ const LegacyVRMLayout: React.FC<VRMLayoutProps> = ({
     ],
     [activeScopePath],
   );
-  const adminNavigationItems = useMemo(
-    () => [
-      {
-        path: "/admin",
-        label: "Admin",
-        icon: <NavIcon icon={Shield} />,
-      },
-    ],
-    [],
-  );
   // Derived state
   const isActiveRoute = (path: string) => {
     return (
@@ -488,8 +478,6 @@ const LegacyVRMLayout: React.FC<VRMLayoutProps> = ({
   const shouldRenderSecondaryPanel = isAuthenticated
     ? isSitesRoute || isSettingsRoute
     : demoShouldRenderSecondaryPanel;
-  const shouldShowAdminMenu =
-    userRole === "admin" && location.pathname.startsWith("/admin");
   const showLogout = isAuthenticated;
   const handleLogoutClick = async () => {
     await logout();
@@ -1642,7 +1630,7 @@ const LegacyVRMLayout: React.FC<VRMLayoutProps> = ({
             </NavList>
             </div>
           )}
-          {(isMobileViewport ? showSiteMenuMobile : showSiteMenu) && !shouldShowAdminMenu && (
+          {(isMobileViewport ? showSiteMenuMobile : showSiteMenu) && (
             <div data-mobile-sidebar-protected="true">
             <NavList className="vrm-secondary-list">
               {clientNavigationItems.map((item) => {
@@ -1721,45 +1709,7 @@ const LegacyVRMLayout: React.FC<VRMLayoutProps> = ({
             </NavList>
             </div>
           )}
-          {shouldShowAdminMenu && (
-            <div data-mobile-sidebar-protected="true">
-            <NavList className="vrm-secondary-list">
-              {adminNavigationItems.map((item) =>
-                isMobileViewport ? (
-                  <MobileSidebarRow
-                    key={item.path}
-                    icon={item.icon}
-                    label={item.label}
-                    active={item.path ? isActiveRoute(item.path) : false}
-                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
-                    onTap={(event) =>
-                      handleMobileActionRowClick(
-                        event,
-                        getNavigationPath(item.path),
-                        "site",
-                        item.path ? isActiveRoute(item.path) : false,
-                      )
-                    }
-                  />
-                ) : (
-                  <NavRow
-                    key={item.path}
-                    to={getNavigationPath(item.path)}
-                    replace={isDemoSession}
-                    leftIcon={item.icon}
-                    label={item.label}
-                    active={item.path ? isActiveRoute(item.path) : false}
-                    ariaLabel={!isSecondaryExpanded ? item.label : undefined}
-                    onClick={(event) =>
-                      handleMobileActionRowClick(event, getNavigationPath(item.path), "site", item.path ? isActiveRoute(item.path) : false)
-                    }
-                    mobileSidebarAction="site"
-                  />
-                ),
-              )}
-            </NavList>
-            </div>
-          )}
+
             </>
           )}
           {isMobileViewport && mobileSidebarOpen === "site" && (

@@ -85,7 +85,7 @@ passed. Backend warning count includes the added startup event registration.
 
 Canonical signup/login/reset/account writes have no JSON fallback or dual writes.
 Explicit non-production legacy Basic support, legacy view-token mappings and
-admin/demo/contact/register-interest/local-fixture paths remain outside scope;
+demo/contact/register-interest/local-fixture paths remain outside scope;
 view-token revocation is not claimed to follow session_version. Legacy lifecycle
 endpoints remain retired as in the parent implementation. There are no deviations
 from the approved locked-schema brief. Cleanup timing and per-challenge-only
