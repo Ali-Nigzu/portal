@@ -221,7 +221,7 @@ const AppRoutes: React.FC = () => {
   }
 
   const isCanonicalPortalPath = location.pathname.startsWith("/sites/organisations/");
-  const isAccountAppPath = location.pathname === "/home" || location.pathname === "/documents" || location.pathname.startsWith("/settings");
+  const isAccountAppPath = location.pathname === "/documents" || location.pathname.startsWith("/settings");
   if (!authenticatedUser && (isCanonicalPortalPath || (appMode === "public" && isAccountAppPath))) {
     return <Navigate to="/login" replace />;
   }
@@ -254,18 +254,8 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          !isAuthenticatedMode ? (
-            lazyRoute(<LandingPage />)
-          ) : appMode === "view_token" || appMode === "demo" ? (
-            <Navigate to={appMode === "demo" ? appendParams(`/demo/${getDefaultSiteId()}/dashboard`) : appendViewToken("/sites/all/dashboard")} replace />
-          ) : (
-            <Navigate to="/home" replace />
-          )
-        }
-      />
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      {!isAuthenticatedMode && <Route path="/home" element={lazyRoute(<LandingPage />)} />}
       <Route path="/demo" element={lazyRoute(<DemoPage />)} />
       <Route path="/demo/:organisationSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
       <Route path="/demo/:organisationSlug/:siteSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
@@ -417,7 +407,6 @@ const AppRoutes: React.FC = () => {
           )}
           {!isAuthenticatedMode && (
             <>
-              <Route path="/home" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
               <Route path="/settings" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
               <Route path="/settings/account" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
               <Route path="/settings/access" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
