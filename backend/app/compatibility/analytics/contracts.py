@@ -1,7 +1,7 @@
-"""Lightweight runtime validators for ChartSpec and ChartResult payloads."""
+"""Runtime ChartSpec validation for retained Dashboard manifests."""
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable
+from typing import Any, Dict
 
 CHART_TYPES = {"composed_time", "categorical", "heatmap", "retention", "single_value"}
 TIME_BUCKETS = {"RAW", "5_MIN", "15_MIN", "30_MIN", "HOUR", "6_HOUR", "DAY", "WEEK", "MONTH"}
@@ -30,8 +30,6 @@ FILTER_OPERATORS = {
     "ends_with",
 }
 INTERACTION_EXPORTS = {"png", "csv", "xlsx"}
-AXES = {"Y1", "Y2", "Y3"}
-GEOMETRIES = {"line", "area", "column", "bar", "heatmap", "scatter", "metric"}
 
 
 class ValidationError(ValueError):
@@ -107,48 +105,3 @@ def validate_chart_spec(payload: Dict[str, Any]) -> None:
         if exports is not None:
             _ensure(isinstance(exports, list), "interactions.export must be list")
             _ensure(all(item in INTERACTION_EXPORTS for item in exports), "Unsupported export type")
-
-
-def _validate_series_data(data: Iterable[Any]) -> None:
-    """Validate series points.
-
-    For categorical charts, x values are always serialised as strings even when the
-    underlying bucket is numeric (for example hour-of-day).
-    """
-    _ensure(isinstance(data, list), "Series data must be list")
-    for point in data:
-        _ensure(isinstance(point, dict), "Series point must be object")
-        _ensure(isinstance(point.get("x"), str), "Series point requires x value")
-        if "y" in point:
-            _ensure(point["y"] is None or isinstance(point["y"], (int, float)), "y must be numeric or null")
-        if "value" in point:
-            _ensure(point["value"] is None or isinstance(point["value"], (int, float)), "value must be numeric or null")
-        if "coverage" in point and point["coverage"] is not None:
-            _ensure(isinstance(point["coverage"], (int, float)), "coverage must be numeric")
-            _ensure(0 <= float(point["coverage"]) <= 1, "coverage must be 0..1")
-        if "rawCount" in point and point["rawCount"] is not None:
-            _ensure(isinstance(point["rawCount"], (int, float)), "rawCount must be numeric")
-
-
-def validate_chart_result(payload: Dict[str, Any]) -> None:
-    _ensure(payload.get("chartType") in CHART_TYPES, "Invalid chart result type")
-    x_dimension = payload.get("xDimension")
-    _ensure(isinstance(x_dimension, dict), "xDimension required")
-    _ensure(isinstance(x_dimension.get("id"), str), "xDimension id required")
-    _ensure(x_dimension.get("type") in {"time", "category", "matrix", "index"}, "Invalid xDimension type")
-    bucket = x_dimension.get("bucket")
-    if bucket is not None:
-        _ensure(isinstance(bucket, str), "xDimension bucket must be string")
-    _ensure(isinstance(payload.get("series"), list) and payload["series"], "Series required")
-    for series in payload["series"]:
-        _ensure(isinstance(series.get("id"), str), "Series id required")
-        _ensure(series.get("geometry") in GEOMETRIES, "Invalid series geometry")
-        axis = series.get("axis")
-        if axis is not None:
-            _ensure(axis in AXES, "Invalid axis")
-        _validate_series_data(series.get("data", []))
-    meta = payload.get("meta")
-    _ensure(isinstance(meta, dict), "Meta section required")
-    _ensure(isinstance(meta.get("timezone"), str), "Timezone must be string")
-    if "coverage" in meta:
-        _validate_series_data(meta["coverage"])

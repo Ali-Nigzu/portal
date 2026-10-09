@@ -245,9 +245,3 @@ def update_me(payload: UpdateMeRequest, request: Request, response: Response, us
 def end_settings_unlock(request: Request, response: Response, user=Depends(get_canonical_user)):
     operation(request, lambda lifecycle: lifecycle.end_unlock(user, challenge_handle(request, UNLOCK)))
     clear_lifecycle_cookie(response, UNLOCK)
-
-
-@router.post('/api/create-account', dependencies=mutations)
-@router.post('/api/password-reset/verify', dependencies=mutations)
-def retired_lifecycle_route():
-    raise HTTPException(410, 'This endpoint is retired. Please use the current account flow.')

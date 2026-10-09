@@ -1,9 +1,9 @@
 import { ArrowLeft, Bell, ClipboardList, Cpu, FileBarChart2, LayoutDashboard } from "lucide-react";
-import type { AuthenticatedOrganisation } from "../../features/auth/transport/organisations";
+import type { AuthenticatedOrganisation } from "../../features/organisation-dashboard/api";
 import { PORTAL_MODULES, type PortalModule } from "../../features/organisation-dashboard/authenticatedPortalRoutes";
-import { NavIcon } from "../../common/components/icons";
+import NavIcon from "../../common/components/icons/NavIcon";
 import type { AuthenticatedRouteContext } from "./authenticatedNavigationModel";
-import { PORTAL_MODULE_LABELS } from "../../features/organisation-dashboard/portalModuleLabels";
+import { PORTAL_MODULE_LABELS } from "../../features/organisation-dashboard/authenticatedPortalRoutes";
 
 const details = {
   dashboard: { icon: LayoutDashboard },

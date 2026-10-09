@@ -542,102 +542,12 @@
   max-width: 196px;
 }
 
-.mockTile {
-  min-height: 112px;
-  border: 1px solid color-mix(in srgb, #73849a 52%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, #d9e1e9 56%, white 44%), color-mix(in srgb, #bcc7d3 56%, white 44%));
-  box-shadow: 0 2px 8px rgba(62, 72, 88, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.66), inset 0 -1px 0 rgba(98, 111, 128, 0.22);
-  padding: 14px 12px;
-}
-
-
-.mockTrafficTile {
-  min-height: 154px;
-}
-
-.mockTrafficContent {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.mockTrafficDonut {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: conic-gradient(
-    #cfd8e2 0 48%,
-    #afbbc9 48% 80%,
-    #8f9db0 80% 100%
-  );
-  position: relative;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56), 0 2px 6px rgba(62, 72, 88, 0.14);
-}
-
-.mockTrafficDonut::after {
-  content: "";
-  position: absolute;
-  inset: 16px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--surface-page) 82%, white 18%);
-}
-
-.mockTrafficLegend {
-  display: grid;
-  gap: 5px;
-  font-size: 0.72rem;
-  color: var(--sys-text-2);
-}
-
-.mockTrafficLegend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mockTrafficLegend strong {
-  margin-left: 2px;
-  font-size: 0.72rem;
-  color: var(--sys-text-1);
-}
-
-.mockTrafficLegend i {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.mockTrafficSwatchA { background: #cfd8e2; }
-.mockTrafficSwatchB { background: #afbbc9; }
-.mockTrafficSwatchC { background: #8f9db0; }
-
-
-.trafficTile .mockTrafficDonut,
-.trafficTile .mockTrafficLegend,
 .trafficTile :global(.dashboard-v2__kpi-renderer svg),
 .trafficTile :global(.dashboard-v2__kpi-renderer .recharts-sector),
 .trafficTile :global(.dashboard-v2__kpi-renderer .recharts-line),
 .trafficTile :global(.dashboard-v2__kpi-renderer .recharts-area) {
   opacity: 0.9;
   filter: saturate(0.88) contrast(0.98);
-}
-
-.mockTile p {
-  margin: 0;
-  color: color-mix(in srgb, #75859a 72%, #c8d2dd 28%);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.mockTile strong {
-  display: block;
-  margin-top: 8px;
-  color: color-mix(in srgb, #546171 76%, #bcc6d2 24%);
-  font-size: 1.25rem;
-  font-weight: 580;
 }
 
 .wireSvg {

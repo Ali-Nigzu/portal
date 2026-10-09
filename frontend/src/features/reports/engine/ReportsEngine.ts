@@ -92,9 +92,6 @@ const timestamp = (value: string) => {
     throw new Error("Snapshot timestamp is invalid.");
   return result;
 };
-export function validateCanonicalSnapshot(snapshot: SelectedSnapshot): void {
-  validateSnapshot(snapshot);
-}
 function validateSnapshot(snapshot: SelectedSnapshot, selected?: Period) {
   const p = snapshot.payload;
   if (

@@ -38,3 +38,14 @@ export const createAbortSignal = ({
   }
   return { signal: controller.signal, cleanup };
 };
+
+export const isAbortError = (error: unknown): boolean => {
+  if (error instanceof DOMException) {
+    return error.name === "AbortError";
+  }
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { name?: string }).name === "AbortError"
+  );
+};

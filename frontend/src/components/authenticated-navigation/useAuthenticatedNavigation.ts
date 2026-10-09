@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { AuthenticatedOrganisation } from "../../features/auth/transport/organisations";
+import type { AuthenticatedOrganisation } from "../../features/organisation-dashboard/api";
 import {
   authenticatedPortalPath,
   parseAuthenticatedPortalPath,
@@ -194,3 +194,5 @@ export function useAuthenticatedNavigation(organisations: AuthenticatedOrganisat
     selectDestination,
   };
 }
+
+export type ReturnTypeOfAuthenticatedNavigation = ReturnType<typeof useAuthenticatedNavigation>;

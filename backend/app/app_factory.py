@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import admin, auth
-from backend.app.compatibility.api import analytics, client_data, dashboards, snapshots, interest
+from backend.app.compatibility.api import dashboards, snapshots
 from backend.app.api import demo, documents
 from backend.app.api import demo_dashboard
 from backend.app.api import portal
@@ -37,7 +37,37 @@ ANALYTICS_OFFLINE_MODE = os.getenv("ANALYTICS_OFFLINE_MODE", "").lower() == "tru
 
 
 def create_app() -> FastAPI:
-    app = create_http_app()
+    app = FastAPI(
+        title="camOS Analytics API",
+        description="Intelligent CCTV data analytics with auto-scaling insights",
+        version="2.0.0",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
+
+    allowed_origins = get_allowed_origins()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    )
+
+    app.include_router(auth.router)
+    app.include_router(demo.router)
+    app.include_router(demo_dashboard.router)
+    app.include_router(portal.router)
+    app.include_router(authenticated_portal.router)
+    app.include_router(organisation_memberships.router)
+    app.include_router(admin.router)
+    app.include_router(snapshots.router)
+    app.include_router(dashboards.router)
+    app.include_router(documents.router)
+
+    configure_spa(app)
+
     from backend.app.services.documents_service import DocumentsService
     from backend.app.data.gcs_documents_store import GcsDocumentsStore
     from backend.app.services.bigquery_client import bigquery_client
@@ -90,48 +120,5 @@ def create_app() -> FastAPI:
         except Exception as exc:
             logger.error("BigQuery startup health check failed: %s", exc)
             return
-
-    return app
-
-
-def create_http_app() -> FastAPI:
-    """Same HTTP contract, with storage supplied explicitly by the caller.
-
-    create_app is the sole production composition. Isolated development/tests
-    attach fixture services to this HTTP shell outside the production package.
-    """
-    app = FastAPI(
-        title="camOS Analytics API",
-        description="Intelligent CCTV data analytics with auto-scaling insights",
-        version="2.0.0",
-        docs_url=None,
-        redoc_url=None,
-        openapi_url=None,
-    )
-
-    allowed_origins = get_allowed_origins()
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-    )
-
-    app.include_router(auth.router)
-    app.include_router(interest.router)
-    app.include_router(demo.router)
-    app.include_router(demo_dashboard.router)
-    app.include_router(portal.router)
-    app.include_router(authenticated_portal.router)
-    app.include_router(organisation_memberships.router)
-    app.include_router(admin.router)
-    app.include_router(client_data.router)
-    app.include_router(analytics.router)
-    app.include_router(snapshots.router)
-    app.include_router(dashboards.router)
-    app.include_router(documents.router)
-
-    configure_spa(app)
 
     return app

@@ -17,7 +17,6 @@ import type { ChartPrimitiveProps } from "./types";
 import { buildCartesianDataset } from "./utils";
 import { ChartTooltip } from "../ui/ChartTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
-import { formatBrushTimestamp } from "../utils/formatBrushTimestamp";
 import { formatSnapshotTick } from "../../../../features/organisation-dashboard/projection";
 import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
 import { useCoarsePointer } from "./useCoarsePointer";
@@ -298,4 +297,24 @@ export const TimeSeriesChart = ({
       />
     </div>
   );
+};
+
+type FormatBrushTimestampOptions = { compact?: boolean };
+export const formatBrushTimestamp = (
+  label: string,
+  options: FormatBrushTimestampOptions = {},
+): string => {
+  const parsed = new Date(label);
+  if (Number.isNaN(parsed.getTime())) {
+    return label;
+  }
+  const { compact = false } = options;
+  return parsed.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    ...(compact ? {} : { year: "numeric" }),
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 };

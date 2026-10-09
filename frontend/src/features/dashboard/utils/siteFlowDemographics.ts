@@ -108,13 +108,6 @@ export const buildDemographicsWidget = (
     },
   };
 };
-export const resolveDemographicsTimeWindow = (
-  timeRange: DashboardTimeRangeOption | null | undefined,
-  timezone: string | undefined,
-  anchor: Date = new Date(),
-  bucketOverride?: TimeBucket,
-): ChartSpec["timeWindow"] =>
-  resolveTimeWindow(timeRange, timezone, anchor, bucketOverride);
 export const resolveDemographicsTimeWindowFromRange = (
   range: Pick<TimeWindow, "from" | "to">,
   timezone: string | undefined,

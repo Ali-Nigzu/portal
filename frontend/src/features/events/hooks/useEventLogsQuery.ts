@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { usePortalQuery } from "../../../context/usePortalQuery";
-import type { EventResult } from "../utils/eventTypes";
 export function useEventLogsQuery(filters: string) {
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [page, setPage] = useState(0);
@@ -28,3 +27,18 @@ export function useEventLogsQuery(filters: string) {
     },
   };
 }
+
+export type EventData = {
+  event_id: string;
+  site: { id: string; name: string };
+  source: { ref: string; kind: "device"; label: string };
+  timestamp: string;
+  event: { value: string; label: string };
+  sex: { value: string; label: string };
+  age: { value: string; label: string };
+};
+export type EventResult = {
+  items: EventData[];
+  total: number | null;
+  page: { size: number; next_cursor: string | null };
+};

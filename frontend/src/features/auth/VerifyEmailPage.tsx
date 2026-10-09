@@ -4,9 +4,9 @@ import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
-import { signupResend } from "./transport/signupResend";
-import { signupVerify } from "./transport/signupVerify";
+import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
+import { signupResend } from "./transport/signup";
+import { signupVerify } from "./transport/signup";
 import "./VerifyEmailPage.css";
 
 const VerifyEmailPage: React.FC = () => {

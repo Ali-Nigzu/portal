@@ -38,11 +38,11 @@ import {
   SecondaryPinnedRow,
   SecondarySearch,
 } from "../common/components/navigation";
-import { NavIcon } from "../common/components/icons";
+import NavIcon from "../common/components/icons/NavIcon";
 import SettingsSecondaryNav from "../features/settings/components/SettingsSecondaryNav";
 import MobileSidebarRow from "./MobileSidebarRow";
 import AuthenticatedVRMLayout from "./AuthenticatedVRMLayout";
-import type { AuthenticatedOrganisation } from "../features/auth/transport/organisations";
+import type { AuthenticatedOrganisation } from "../features/organisation-dashboard/api";
 
 type MobileSidebarOpen = null | "primary" | "site";
 const CALENDLY_SITE_SETUP_URL = "https://calendly.com/cameraoperatingsystems/camos-site-setup-appointment";

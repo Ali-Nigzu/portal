@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChartResult, ChartSeries } from "../../schemas/charting";
-import { AxisManager, PaletteManager, SeriesManager } from "./managers";
-import type { SeriesVisibilityMap } from "./managers";
-import {
-  TimeSeriesChart,
-  BarChart,
-  KpiTile,
-  TrafficDistribution,
-  CapacityDonut,
-} from "./primitives";
+import { AxisManager } from "./managers/AxisManager";
+import { PaletteManager } from "./managers/PaletteManager";
+import { SeriesManager } from "./managers/SeriesManager";
+import type { SeriesVisibilityMap } from "./managers/SeriesManager";
+import { TimeSeriesChart } from "./primitives/TimeSeriesChart";
+import { BarChartPrimitive as BarChart } from "./primitives/BarChart";
+import { KpiTile } from "./primitives/KpiTile";
+import { TrafficDistribution } from "./primitives/TrafficDistribution";
+import { CapacityDonut } from "./primitives/CapacityDonut";
 import { ChartErrorState } from "./ui/ChartErrorState";
-import { ChartEmptyState } from "./ui/ChartEmptyState";
 import { validateChartResult } from "./validation";
 import { SITE_FLOW_ACTIVITY_COLORS } from "../../../lib/siteFlowActivityColors";
 import "./styles.css";
@@ -193,7 +192,7 @@ export const ChartRenderer = ({
     return <CapacityDonut {...chartProps} height={height} />;
   }
   if (isEmpty) {
-    return <ChartEmptyState height={height} className={resolvedClassName} />;
+    return null;
   }
   if (result.chartType === "single_value") {
     return <KpiTile {...chartProps} />;

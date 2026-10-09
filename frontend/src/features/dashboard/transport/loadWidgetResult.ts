@@ -1,11 +1,11 @@
-import { isAbortError } from "../../../common/utils/isAbortError";
+import { isAbortError } from "../../../common/utils/abort";
 import { API_BASE_URL } from "../../../config";
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";
 import type { ChartResult } from "../../../analytics/schemas/charting";
 import { validateChartResult } from "../../../analytics/components/ChartRenderer/validation";
 import type { DashboardWidget, DashboardTimeRangeOption } from "../types";
 import { buildSnapshotWidgetResult } from "../utils/snapshotPayload";
-import type { SnapshotResponse } from "../../../lib/snapshots";
+import type { SnapshotResponse } from "../types";
 import type { SiteFlowTimeframe } from "../../../lib/siteFlowTimeframe";
 import type { SiteView } from "../../../lib/siteView";
 
@@ -24,7 +24,7 @@ export interface LoadWidgetOptions {
 
 const SNAPSHOT_ENDPOINT = "/api/snapshots/latest";
 
-export { isAbortError } from "../../../common/utils/isAbortError";
+export { isAbortError } from "../../../common/utils/abort";
 
 async function loadSnapshotPayload(options: {
   signal?: AbortSignal;

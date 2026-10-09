@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { AuthUser } from "../features/auth/transport/me";
-import type { AuthenticatedOrganisation } from "../features/auth/transport/organisations";
+import type { AuthenticatedOrganisation } from "../features/organisation-dashboard/api";
 import { favouriteScopeKey, readFavouriteScopes, writeFavouriteScopes } from "../features/organisation-dashboard/favouriteScopesStorage";
 
 type AuthenticatedApplicationInput = {

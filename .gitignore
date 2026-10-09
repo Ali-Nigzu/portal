@@ -2,13 +2,25 @@ sa.json
 **/sa.json
 __pycache__/
 *.pyc
-.pytest_cache/
-pytest-cache-files-*/
 .venv/
 node_modules/
 frontend/build/
 backend/frontend_build/
-test-results/
-playwright-report/
-frontend/.tmp/
-frontend/artifacts/
+
+# Frontend packaging and local overrides
+frontend/node_modules
+frontend/.pnp
+frontend/.pnp.js
+frontend/build
+frontend/.DS_Store
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Runtime persistence and provider files
+backend/data/contact_submissions.json
+backend/data/contact_submissions.json.tmp
+*.db

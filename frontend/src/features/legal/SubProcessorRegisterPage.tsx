@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import { useIsPhoneLayout } from "../auth/hooks/useIsPhoneLayout";
+import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
 import "./SubProcessorRegisterPage.css";
 
 const REGISTER_INTRO_PARAGRAPHS = [

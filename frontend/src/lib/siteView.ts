@@ -18,13 +18,6 @@ export const resolveSiteViewFromPathname = (
   return normalizeSiteToken(match[1]);
 };
 
-export const resolveSiteViewFromLocation = (): SiteView | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  return resolveSiteViewFromPathname(window.location.pathname);
-};
-
 export const resolveSiteViewOrDefault = (
   pathname: string | null | undefined,
   fallback: SiteView = "site-b",

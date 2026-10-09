@@ -66,7 +66,3 @@ def verify_session_claims(token: str, now: int | None = None) -> tuple[int, int]
         return user_id, version
     except (ValueError, TypeError, KeyError, json.JSONDecodeError, UnicodeDecodeError):
         raise InvalidSession() from None
-
-
-def verify_session(token: str, now: int | None = None) -> int:
-    return verify_session_claims(token, now)[0]

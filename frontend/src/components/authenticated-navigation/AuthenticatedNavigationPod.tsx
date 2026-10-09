@@ -1,13 +1,13 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { FileText, Home, LogOut, MapPin, Menu, Settings, X } from "lucide-react";
-import type { AuthenticatedOrganisation } from "../../features/auth/transport/organisations";
+import type { AuthenticatedOrganisation } from "../../features/organisation-dashboard/api";
 import type { PortalModule } from "../../features/organisation-dashboard/authenticatedPortalRoutes";
-import { NavIcon } from "../../common/components/icons";
+import NavIcon from "../../common/components/icons/NavIcon";
 import AuthenticatedPrimaryNav from "./AuthenticatedPrimaryNav";
 import OrganisationScopePanel from "./OrganisationScopePanel";
 import PortalModulePanel from "./PortalModulePanel";
 import AuthenticatedSettingsPanel from "./AuthenticatedSettingsPanel";
-import type { ReturnTypeOfAuthenticatedNavigation } from "./types";
+import type { ReturnTypeOfAuthenticatedNavigation } from "./useAuthenticatedNavigation";
 
 type Props = {
   organisations: AuthenticatedOrganisation[];
