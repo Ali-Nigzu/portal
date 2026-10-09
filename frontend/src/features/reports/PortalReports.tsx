@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   scopeParams,
   usePortal,
@@ -10,6 +10,10 @@ import type { ReportSnapshotResponse } from "./types";
 
 export default function PortalReports() {
   const portal = usePortal();
+  const effectiveNow = useMemo(
+    () => new Date(portal.context!.clock.effective_now),
+    [portal.context?.clock.effective_now],
+  );
   const [state, setState] = useState<{
     key: string;
     snapshot?: ReportSnapshotResponse["snapshot"];
@@ -78,7 +82,7 @@ export default function PortalReports() {
     <ReportsPage
       identity={identity}
       snapshot={current.snapshot}
-      effectiveNow={new Date(portal.context!.clock.effective_now)}
+      effectiveNow={effectiveNow}
       loading={!current.snapshot && !current.error}
       error={current.error}
       missing={current.missing}

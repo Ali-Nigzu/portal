@@ -98,6 +98,20 @@ for (const [timeframe, length] of Object.entries({
   );
   assert.equal(data.metrics.dwellAvg, 7);
 }
+// Each builder reads every rollup once, including the selected rollup.
+for (const timeframe of ["today", "yesterday", "last_week", "last_month", "last_quarter", "last_year", "all_time"]) {
+  for (const type of ["site-activity", "visitor-profile"]) {
+    const input = snapshot();
+    let reads = 0;
+    for (const value of Object.values(input.payload)) {
+      if (!value || !Object.hasOwn(value, "sex_pct")) continue;
+      const sex = value.sex_pct;
+      Object.defineProperty(value, "sex_pct", { get() { reads++; return sex; } });
+    }
+    engine.buildReportData(input, type, timeframe);
+    assert.equal(reads, 7, `${type}/${timeframe}: all rollups parsed exactly once`);
+  }
+}
 const activity = engine.buildSiteActivityReportData(
   snapshot(),
   "today",

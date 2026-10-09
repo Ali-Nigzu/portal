@@ -4,6 +4,7 @@ import hashlib
 import math
 import re
 import unicodedata
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -44,8 +45,9 @@ def slug(name: str) -> str:
 def site_slugs(sites):
     """Resolve normalization collisions using names, never database IDs/history."""
     bases = [slug(site["name"]) for site in sites]
+    frequencies = Counter(bases)
     for site, base in zip(sites, bases):
-        site["slug"] = base if bases.count(base) == 1 else (
+        site["slug"] = base if frequencies[base] == 1 else (
             base + "-" + hashlib.sha256(site["name"].encode("utf-8")).hexdigest()
         )
     return sites

@@ -122,3 +122,48 @@ def test_admin_read_page_and_missing_row_contract():
     with pytest.raises(AdminError) as error:
         AdminRepository(AdminReads(0)).get('organisations', {'id': '99'})
     assert error.value.status == 404 and error.value.message == 'Row not found'
+
+
+def test_admin_converts_visible_rows_after_checkout(monkeypatch):
+    from backend.app.services import admin_repository
+    original = admin_repository.row
+    database = AdminReads()
+    converted = []
+    def convert(table, data):
+        assert not database.active
+        converted.append(data)
+        return original(table, data)
+    monkeypatch.setattr(admin_repository, 'row', convert)
+    repository = AdminRepository(database)
+    assert len(repository.list('organisations', 50)['items']) == 50
+    assert len(converted) == 50
+    assert repository.get('organisations', {'id': '1'})['id'] == '1'
+    database.rows = []
+    with pytest.raises(AdminError) as caught:
+        repository.get('organisations', {'id': '99'})
+    assert caught.value.status == 404
+    assert not database.active
+
+
+def test_admin_missing_get_keeps_real_pool_connection_healthy():
+    from unittest.mock import Mock
+    from sqlalchemy.pool import QueuePool
+    from backend.app.services.dashboard_postgres import DashboardPostgres
+    driver = Mock(autocommit=True)
+    cursor = driver.cursor.return_value
+    cursor.fetchone.side_effect = [None, (1, 'Org', NOW, NOW, True)]
+    connections = []
+    def connect():
+        connections.append(driver)
+        return driver
+    database = DashboardPostgres()
+    database._pool = QueuePool(connect, pool_size=1, max_overflow=0)
+    repository = AdminRepository(database)
+    with pytest.raises(AdminError) as caught:
+        repository.get('organisations', {'id': '99'})
+    assert caught.value.status == 404
+    assert database._pool.checkedout() == 0
+    assert repository.get('organisations', {'id': '1'})['id'] == '1'
+    assert connections == [driver]
+    driver.close.assert_not_called()
+    database.close()

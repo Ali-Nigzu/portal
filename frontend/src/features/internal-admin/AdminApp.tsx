@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   AdminFailure,
@@ -28,6 +28,8 @@ type Context = {
   next_cursor: string | null;
   next_membership_cursor: string | null;
 };
+const cell = (value: unknown) =>
+  value === null ? "NULL" : typeof value === "object" ? stringifyJson(value) : String(value);
 export default function AdminApp() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +59,10 @@ export default function AdminApp() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
+  const table = tables.find((t) => t.name === selected);
+  const cells = useMemo(() => data?.items.map(row => Object.fromEntries(
+    (table?.columns ?? []).map(column => [column.name, cell(row[column.name])]),
+  )) ?? [], [data, table]);
   const generation = useRef(0);
   const fail = useCallback(
     (e: unknown) => {
@@ -241,13 +247,6 @@ export default function AdminApp() {
         </form>
       </main>
     );
-  const table = tables.find((t) => t.name === selected);
-  const cell = (value: unknown) =>
-    value === null
-      ? "NULL"
-      : typeof value === "object"
-        ? stringifyJson(value)
-        : String(value);
   return (
     <div className="admin-app">
       <header>
@@ -545,7 +544,7 @@ export default function AdminApp() {
                           </tr>
                         </thead>
                         <tbody>
-                          {data.items.map((r) => (
+                          {data.items.map((r, rowIndex) => (
                             <tr key={rowQuery(table, r)}>
                               <td>
                                 <button
@@ -564,12 +563,12 @@ export default function AdminApp() {
                                 )}
                               </td>
                               {table.columns.map((c) => (
-                                <td key={c.name} title={cell(r[c.name])}>
+                                <td key={c.name} title={cells[rowIndex][c.name]}>
                                   {c.name.includes("password") ||
                                   c.name === "code_hash" ||
                                   c.name === "commission_hash"
                                     ? "Open editor to inspect"
-                                    : cell(r[c.name])}
+                                    : cells[rowIndex][c.name]}
                                 </td>
                               ))}
                             </tr>

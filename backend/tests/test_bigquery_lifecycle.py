@@ -75,13 +75,17 @@ def test_startup_health_failure_is_nonfatal(monkeypatch):
 
 def test_simultaneous_first_use_constructs_one_client(monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
-    from threading import Barrier
+    from threading import Barrier, Event
     reader = BigQueryClient()
     start = Barrier(2)
     calls = []
     client = object()
-    monkeypatch.setattr('backend.app.services.bigquery_client.bigquery.Client',
-                        lambda **kw: calls.append(kw) or client)
+    def construct(**kwargs):
+        calls.append(kwargs)
+        # Release the GIL so simultaneous callers overlap during construction.
+        Event().wait(0.05)
+        return client
+    monkeypatch.setattr('backend.app.services.bigquery_client.bigquery.Client', construct)
     def first_use(_):
         start.wait(timeout=3)
         return reader._ensure_client()
