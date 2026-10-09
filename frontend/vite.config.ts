@@ -11,6 +11,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Keep the shared bootstrap helper outside the PDF dependency subtree.
+          if (id === "\0vite/preload-helper.js") return "vite-preload-helper";
           if (!id.includes("node_modules")) {
             return undefined;
           }
