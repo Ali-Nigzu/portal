@@ -93,6 +93,9 @@ const timestamp = (value: string) => {
   return result;
 };
 export function validateCanonicalSnapshot(snapshot: SelectedSnapshot): void {
+  validateSnapshot(snapshot);
+}
+function validateSnapshot(snapshot: SelectedSnapshot, selected?: Period) {
   const p = snapshot.payload;
   if (
     !snapshot ||
@@ -109,8 +112,12 @@ export function validateCanonicalSnapshot(snapshot: SelectedSnapshot): void {
   );
   if (!Array.isArray(p.occupancy_96) || p.occupancy_96.length !== 96)
     throw new Error("Snapshot data is invalid: occupancy_96.");
-  Object.values(PERIOD_MAP).forEach((period) => parseRollup(p[period], period));
-  timestamp(snapshot.ts);
+  let rollup: ReturnType<typeof parseRollup> | undefined;
+  Object.values(PERIOD_MAP).forEach((period) => {
+    const parsed = parseRollup(p[period], period);
+    if (period === selected) rollup = parsed;
+  });
+  return { ts: timestamp(snapshot.ts), rollup };
 }
 function parseRollup(value: Rollup, label: string) {
   if (!value || typeof value !== "object")
@@ -188,9 +195,8 @@ export function buildSiteActivityReportData(
   timeframe: ReportTimeframe,
   now = new Date(),
 ): SiteActivityReportData {
-  validateCanonicalSnapshot(snapshot);
-  const ts = timestamp(snapshot.ts);
-  const raw = parseRollup(snapshot.payload[PERIOD_MAP[timeframe]], timeframe);
+  const { ts, rollup } = validateSnapshot(snapshot, PERIOD_MAP[timeframe]);
+  const raw = rollup ?? parseRollup(snapshot.payload[PERIOD_MAP[timeframe]], timeframe);
   const rawFoot = raw.entrances.map((v, i) => v + (raw.exits[i] ?? 0));
   const rawDwell = aggregateDwell(
     finite(snapshot.payload.dwell_time_96, "dwell_time_96"),
@@ -246,9 +252,8 @@ export function buildVisitorProfileReportData(
   timeframe: ReportTimeframe,
   now = new Date(),
 ): VisitorProfileReportData {
-  validateCanonicalSnapshot(snapshot);
-  const ts = timestamp(snapshot.ts);
-  const rollup = parseRollup(
+  const { ts, rollup: selected } = validateSnapshot(snapshot, PERIOD_MAP[timeframe]);
+  const rollup = selected ?? parseRollup(
     snapshot.payload[PERIOD_MAP[timeframe]],
     timeframe,
   );

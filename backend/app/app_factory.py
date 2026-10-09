@@ -59,9 +59,15 @@ def create_app() -> FastAPI:
 
     @app.on_event("shutdown")
     def close_dashboard_database() -> None:
-        documents_store.close()
-        dashboard_database.close()
-        bigquery_client.close()
+        first_error = None
+        for resource in (documents_store, dashboard_database, bigquery_client):
+            try:
+                resource.close()
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+        if first_error is not None:
+            raise first_error
 
     @app.on_event("startup")
     def cleanup_lifecycle_rows() -> None:

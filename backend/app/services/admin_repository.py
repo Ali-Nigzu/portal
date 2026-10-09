@@ -82,7 +82,8 @@ class AdminRepository:
                 f'SELECT {select_columns(t)} FROM public."{t.name}" WHERE {where(key)}',
                 tuple(key.values()),
             )
-            return row(t, cur.fetchone())
+            data = cur.fetchone()
+        return row(t, data)
 
     def list(self, name, page_size=50, cursor=None, filters=None):
         t = table(name)
@@ -123,9 +124,10 @@ class AdminRepository:
         sql += " ORDER BY " + ",".join(f'"{n}"' for n in t.pk) + " LIMIT %s"
         with self.database.connection() as con, closing(con.cursor()) as cur:
             cur.execute(sql, tuple(params + [page_size + 1]))
-            items = [row(t, r) for r in cur.fetchall()]
+            data = cur.fetchall()
+        items = [row(t, r) for r in data[:page_size]]
         next_cursor = None
-        if len(items) > page_size:
+        if len(data) > page_size:
             last = items[page_size - 1]
             data = {
                 "table": name,
@@ -139,7 +141,7 @@ class AdminRepository:
                 .decode()
                 .rstrip("=")
             )
-        return {"items": items[:page_size], "next_cursor": next_cursor}
+        return {"items": items, "next_cursor": next_cursor}
 
     @staticmethod
     def lock(cur, oid):

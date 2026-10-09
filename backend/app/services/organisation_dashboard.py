@@ -4,6 +4,7 @@ import hashlib
 import math
 import re
 import unicodedata
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -44,8 +45,9 @@ def slug(name: str) -> str:
 def site_slugs(sites):
     """Resolve normalization collisions using names, never database IDs/history."""
     bases = [slug(site["name"]) for site in sites]
+    frequencies = Counter(bases)
     for site, base in zip(sites, bases):
-        site["slug"] = base if bases.count(base) == 1 else (
+        site["slug"] = base if frequencies[base] == 1 else (
             base + "-" + hashlib.sha256(site["name"].encode("utf-8")).hexdigest()
         )
     return sites
@@ -142,35 +144,38 @@ class OrganisationDashboard:
 
     def load_organisation_context(self, organisation_id: int):
         with self.database.connection() as connection:
-            cursor = connection.cursor()
-            try:
-                cursor.execute(
-                    "SELECT id, name, enabled FROM public.organisations WHERE id = %s",
-                    (organisation_id,),
-                )
-                organisation = cursor.fetchone()
-                if organisation is None:
-                    raise EntityNotFound()
-                cursor.execute(
-                    "SELECT s.id, s.name, s.organisation_id, s.enabled, s.max_capacity, "
-                    "EXISTS (SELECT 1 FROM public.devices AS d WHERE d.site_id = s.id "
-                    "AND d.analyzed_until >= CURRENT_TIMESTAMP - INTERVAL '15 minutes') AS realtime "
-                    "FROM public.sites AS s WHERE s.organisation_id = %s ORDER BY s.id",
-                    (organisation_id,),
-                )
-                sites = [
-                    dict(id=entity_id(row[0]), name=row[1], organisation_id=entity_id(row[2]),
-                         enabled=row[3], max_capacity=row[4], realtime=bool(row[5]))
-                    for row in cursor.fetchall()
-                ]
-                return {
-                    "organisation": dict(id=entity_id(organisation[0]), name=organisation[1],
-                                         enabled=organisation[2], slug=slug(organisation[1]),
-                                         realtime=any(site["realtime"] for site in sites)),
-                    "sites": site_slugs(sites),
-                }
-            finally:
-                cursor.close()
+            return self._load_organisation_context(connection, organisation_id)
+
+    def _load_organisation_context(self, connection, organisation_id: int):
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "SELECT id, name, enabled FROM public.organisations WHERE id = %s",
+                (organisation_id,),
+            )
+            organisation = cursor.fetchone()
+            if organisation is None:
+                raise EntityNotFound()
+            cursor.execute(
+                "SELECT s.id, s.name, s.organisation_id, s.enabled, s.max_capacity, "
+                "EXISTS (SELECT 1 FROM public.devices AS d WHERE d.site_id = s.id "
+                "AND d.analyzed_until >= CURRENT_TIMESTAMP - INTERVAL '15 minutes') AS realtime "
+                "FROM public.sites AS s WHERE s.organisation_id = %s ORDER BY s.id",
+                (organisation_id,),
+            )
+            sites = [
+                dict(id=entity_id(row[0]), name=row[1], organisation_id=entity_id(row[2]),
+                     enabled=row[3], max_capacity=row[4], realtime=bool(row[5]))
+                for row in cursor.fetchall()
+            ]
+            return {
+                "organisation": dict(id=entity_id(organisation[0]), name=organisation[1],
+                                     enabled=organisation[2], slug=slug(organisation[1]),
+                                     realtime=any(site["realtime"] for site in sites)),
+                "sites": site_slugs(sites),
+            }
+        finally:
+            cursor.close()
 
     def load_organisation_snapshot(self, organisation_id: int, *, zero_scope=None):
         try:

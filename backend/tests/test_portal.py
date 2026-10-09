@@ -404,7 +404,7 @@ def test_metadata_bulk_projection_and_private_gateway_mapping():
 
     db = DB()
     dashboard = SimpleNamespace(
-        load_organisation_context=lambda org: {
+        _load_organisation_context=lambda connection, org: {
             "organisation": {"id": str(org)},
             "sites": [{"id": "11"}],
         }
