@@ -7,22 +7,18 @@ import pytest
 from backend.app.services.bigquery_client import BigQueryClient
 
 
-class Rows(list):
-    # The base uses a DataFrame only to count rows. No pandas test dependency.
-    def to_dataframe(self, **kwargs):
-        return self
-
-
 def test_health_keeps_connectivity_query_and_location(monkeypatch):
     reader = BigQueryClient()
     reader.settings.location = 'europe-west2'
     calls = []
-    job = SimpleNamespace(result=lambda **kw: Rows([{'ok': 1}]))
+    result_calls = []
+    job = SimpleNamespace(result=lambda **kw: result_calls.append(kw) or [{'ok': 1}])
     client = SimpleNamespace(query=lambda sql, **kw: calls.append((sql, kw)) or job)
     monkeypatch.setattr(reader, '_ensure_client', lambda: client)
     reader.run_health_check()
     assert calls[0][0] == 'SELECT 1 AS ok'
-    assert calls[0][1]['location'] == 'europe-west2'
+    assert calls[0][1] == {'location': 'europe-west2', 'timeout': 10}
+    assert result_calls == [{'timeout': 30, 'page_size': 1, 'max_results': 1}]
 
 
 def test_health_failure_retains_original_exception(monkeypatch):
@@ -115,3 +111,34 @@ def test_shutdown_attempts_every_close_in_order_and_preserves_first(monkeypatch,
     else:
         app.router.on_shutdown[0]()
     assert calls == [0, 1, 2]
+
+
+@pytest.mark.parametrize('failure_phase', ['submit', 'result', 'iterate'])
+@pytest.mark.parametrize('cancel_fails', [False, True])
+def test_health_failure_cancels_created_job_and_retains_original(monkeypatch, failure_phase, cancel_fails):
+    reader = BigQueryClient()
+    error = TimeoutError('isolated timeout')
+    cancellations = []
+    def fail(*args, **kwargs):
+        raise error
+    def rows():
+        raise error
+        yield  # exercise lazy REST iteration failure
+    def cancel():
+        cancellations.append(True)
+        if cancel_fails:
+            raise RuntimeError('isolated cancellation failure')
+    job = SimpleNamespace(result=fail if failure_phase == 'result' else lambda **kw: rows(), cancel=cancel)
+    client = SimpleNamespace(query=fail if failure_phase == 'submit' else lambda *a, **kw: job)
+    monkeypatch.setattr(reader, '_ensure_client', lambda: client)
+    with pytest.raises(TimeoutError) as caught:
+        reader.run_health_check()
+    assert caught.value is error
+    assert cancellations == ([] if failure_phase == 'submit' else [True])
+
+
+def test_empty_health_result_remains_successful(monkeypatch):
+    reader = BigQueryClient()
+    job = SimpleNamespace(result=lambda **kw: iter(()))
+    monkeypatch.setattr(reader, '_ensure_client', lambda: SimpleNamespace(query=lambda *a, **kw: job))
+    reader.run_health_check()

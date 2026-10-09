@@ -9,15 +9,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from threading import Lock
 
-import pandas as pd
 from google.cloud import bigquery
-
-try:  # pragma: no cover - informational logging only
-    import db_dtypes  # type: ignore
-    DB_DTYPES_VERSION = getattr(db_dtypes, "__version__", "unknown")
-except Exception:  # pragma: no cover - defensive logging
-    DB_DTYPES_VERSION = None
-
 
 logger = logging.getLogger(__name__)
 
@@ -124,19 +116,18 @@ class BigQueryClient:
 
 
     def run_health_check(self) -> None:
+        job = None
         try:
             client = self._ensure_client()
-            job = client.query("SELECT 1 AS ok", location=self.settings.location)
-            result = job.result()
-            df = result.to_dataframe(create_bqstorage_client=False)
-            logger.info(
-                "✅ BigQuery connectivity check succeeded (rows=%d, pandas=%s, db-dtypes=%s)",
-                len(df),
-                pd.__version__,
-                DB_DTYPES_VERSION or "unavailable",
-            )
-        except Exception as exc:
-            logger.exception("❌ BigQuery connectivity check failed: %s", exc)
+            job = client.query("SELECT 1 AS ok", location=self.settings.location, timeout=10)
+            rows = list(job.result(timeout=30, page_size=1, max_results=1))
+            logger.info("BigQuery connectivity check succeeded (rows=%d)", len(rows))
+        except Exception:
+            if job is not None:
+                try:
+                    job.cancel()
+                except Exception:
+                    pass
             raise
 
 
