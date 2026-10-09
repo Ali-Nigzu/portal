@@ -182,3 +182,58 @@ def test_control_characters_rejected_before_storage():
     for name in ('\r\nx.csv', 'x\x00.csv', 'x\u202e.csv'):
         with pytest.raises(DocumentError) as error: safe_filename(name)
         assert error.value.code == 'unsafe_filename'
+
+
+@pytest.mark.parametrize('disk', [False, True], ids=['memory-spool', 'disk-spool'])
+@pytest.mark.parametrize('size', [0, MAX_UPLOAD_BYTES, MAX_UPLOAD_BYTES + 1])
+def test_existing_upload_spool_boundaries_and_lifetime(disk, size):
+    import asyncio
+    from tempfile import SpooledTemporaryFile
+    source = SpooledTemporaryFile(max_size=1 if disk else MAX_UPLOAD_BYTES + 2)
+    source.write(b'x' * size)
+    source.seek(0)
+    if disk:
+        source.rollover()
+    calls = []
+    store = MemoryDocumentsStore()
+    create = store.create
+    def observed(name, uploaded, mime):
+        assert not source.closed and not uploaded.closed
+        calls.append(uploaded)
+        return create(name, uploaded, mime)
+    store.create = observed
+    result = asyncio.run(DocumentsService(store).upload_batch(0, [UploadFile(source, filename='file.csv')]))
+    assert source.closed
+    if size > MAX_UPLOAD_BYTES:
+        assert not calls and result.errors[0].code == 'too_large'
+    else:
+        assert len(calls) == 1 and result.documents[0].sizeBytes == size
+        assert not result.errors
+
+
+def test_upload_validation_order_batch_order_and_cancel_cleanup():
+    import asyncio
+    files = [UploadFile(BytesIO(b'x'), filename=name) for name in
+             ['../unsafe.exe', 'unsupported.exe', 'good.csv', 'good.csv', 'last.pdf']]
+    store = MemoryDocumentsStore()
+    calls = []
+    create = store.create
+    def observed(name, source, mime):
+        calls.append(name)
+        return create(name, source, mime)
+    store.create = observed
+    result = asyncio.run(DocumentsService(store).upload_batch(0, files))
+    assert calls == ['0/good.csv', '0/good.csv', '0/last.pdf']
+    assert [(error.index, error.code) for error in result.errors] == [
+        (0, 'unsafe_filename'), (1, 'unsupported_type'), (3, 'duplicate_filename')]
+    assert all(upload.file.closed for upload in files)
+
+    class CancelledUpload(UploadFile):
+        async def read(self, size=-1):
+            raise asyncio.CancelledError()
+    cancelled = CancelledUpload(BytesIO(b'x'), filename='cancel.csv')
+    remaining = UploadFile(BytesIO(b'x'), filename='remaining.csv')
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(DocumentsService(store).upload_batch(0, [cancelled, remaining]))
+    assert cancelled.file.closed and remaining.file.closed
+    assert '0/cancel.csv' not in calls

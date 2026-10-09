@@ -61,6 +61,20 @@ const snapshot = (scope = "site", name = "Tokis Takeout") => ({
   ts: "2026-02-20T12:00:00Z",
   payload: payload(),
 });
+// Full validation is mandatory even when an invalid rollup is not selected.
+for (const period of ["today", "yesterday", "week", "month", "quarter", "year", "all_time"]) {
+  for (const type of ["site-activity", "visitor-profile"]) {
+    const bad = snapshot();
+    bad.payload[period].sex_pct = [100];
+    assert.throws(() => engine.buildReportData(bad, type, "today"),
+      new RegExp(`Snapshot data is invalid: ${period}\\.sex_pct`));
+  }
+}
+const precedence = snapshot();
+precedence.ts = "invalid";
+precedence.payload.week.occupancy = null;
+assert.throws(() => engine.buildReportData(precedence, "visitor-profile", "today"),
+  /Snapshot data is invalid: week\.occupancy/);
 for (const [timeframe, length] of Object.entries({
   today: 13,
   yesterday: 24,
