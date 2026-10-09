@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from threading import Lock
 
 import pandas as pd
 from google.cloud import bigquery
@@ -46,21 +47,23 @@ class BigQueryClient:
         # ADC resolves the attached runtime identity; never load a bundled key.
         self._credentials = None
         self._client: Optional[bigquery.Client] = None
+        self._lock = Lock()
 
     def _ensure_client(self) -> bigquery.Client:
-        if self._client is None:
-            self._client = bigquery.Client(
-                project=self.settings.project,
-                credentials=self._credentials,
-                location=self.settings.location,
-            )
-            logger.info(
-                "Initialized BigQuery client (project=%s, dataset=%s, location=%s)",
-                self.settings.project,
-                self.settings.dataset,
-                self.settings.location,
-            )
-        return self._client
+        with self._lock:
+            if self._client is None:
+                self._client = bigquery.Client(
+                    project=self.settings.project,
+                    credentials=self._credentials,
+                    location=self.settings.location,
+                )
+                logger.info(
+                    "Initialized BigQuery client (project=%s, dataset=%s, location=%s)",
+                    self.settings.project,
+                    self.settings.dataset,
+                    self.settings.location,
+                )
+            return self._client
 
 
     def _build_query_parameters(self, params: Dict[str, Any]) -> List[bigquery.ScalarQueryParameter]:
