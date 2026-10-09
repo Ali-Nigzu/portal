@@ -207,7 +207,7 @@ def test_existing_upload_spool_boundaries_and_lifetime(disk, size):
     if size > MAX_UPLOAD_BYTES:
         assert not calls and result.errors[0].code == 'too_large'
     else:
-        assert len(calls) == 1 and result.documents[0].sizeBytes == size
+        assert calls == [source] and result.documents[0].sizeBytes == size
         assert not result.errors
 
 
@@ -237,3 +237,20 @@ def test_upload_validation_order_batch_order_and_cancel_cleanup():
         asyncio.run(DocumentsService(store).upload_batch(0, [cancelled, remaining]))
     assert cancelled.file.closed and remaining.file.closed
     assert '0/cancel.csv' not in calls
+
+
+@pytest.mark.parametrize('failure', [RuntimeError('provider failed'), __import__('asyncio').CancelledError()])
+def test_upload_storage_failure_retains_error_and_closes_files(failure):
+    import asyncio
+    uploads = [UploadFile(BytesIO(b'body'), filename='first.csv'),
+               UploadFile(BytesIO(b'later'), filename='later.csv')]
+    store = MemoryDocumentsStore()
+    def fail(name, source, mime):
+        assert not source.closed and not uploads[0].file.closed
+        assert source.read() == b'body'
+        raise failure
+    store.create = fail
+    with pytest.raises(type(failure)) as caught:
+        asyncio.run(DocumentsService(store).upload_batch(0, uploads))
+    assert caught.value is failure
+    assert all(upload.file.closed for upload in uploads)

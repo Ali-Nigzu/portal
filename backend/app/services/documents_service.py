@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from tempfile import SpooledTemporaryFile
 
 from fastapi import UploadFile
 from starlette.concurrency import run_in_threadpool
@@ -72,21 +71,19 @@ class DocumentsService:
                     kind = infer_type('', name)
                     if kind.value not in MIME_TYPES:
                         raise DocumentError(422, 'unsupported_type', 'Accepted types: PDF, CSV, XLSX and DOCX.')
-                    # Temporary request spool is not document persistence. Reading
-                    # stops at the limit; at most one bounded chunk is in memory.
-                    with SpooledTemporaryFile(max_size=1024 * 1024) as source:
-                        size = 0
-                        while True:
-                            chunk = await upload.read(CHUNK_SIZE)
-                            if not chunk:
-                                break
-                            size += len(chunk)
-                            if size > MAX_UPLOAD_BYTES:
-                                raise DocumentError(422, 'too_large', 'File exceeds maximum size of 25 MiB.')
-                            await run_in_threadpool(source.write, chunk)
-                        source.seek(0)
-                        item = await run_in_threadpool(self.store.create, self.prefix(user_id) + name,
-                                                       source, MIME_TYPES[kind.value])
+                    # Validate the existing request spool before any storage write.
+                    # Reading stops at the limit; only one bounded chunk is in memory.
+                    size = 0
+                    while True:
+                        chunk = await upload.read(CHUNK_SIZE)
+                        if not chunk:
+                            break
+                        size += len(chunk)
+                        if size > MAX_UPLOAD_BYTES:
+                            raise DocumentError(422, 'too_large', 'File exceeds maximum size of 25 MiB.')
+                    await upload.seek(0)
+                    item = await run_in_threadpool(self.store.create, self.prefix(user_id) + name,
+                                                   upload.file, MIME_TYPES[kind.value])
                     created.append(self.record(user_id, item))
                 except DocumentError as error:
                     errors.append(UploadError(filename, error.code, error.message, index))
