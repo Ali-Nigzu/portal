@@ -61,6 +61,7 @@ def test_metadata_preserves_four_queries_and_scoped_shapes(cutoff, site):
     database = ReadDatabase()
     scope = PortalScope.resolve(PortalIdentity(1, cutoff), metadata(database), site)
     assert len(database.queries) == 4 and database.closes == 2
+    assert database.checkouts == 1
     for (sql, _), prefix in zip(database.queries, [
         'SELECT id, name, enabled', 'SELECT s.id, s.name',
         'SELECT d.id, d.site_id', 'SELECT g.gateway_id, g.site_id']):

@@ -39,8 +39,8 @@ class PortalMetadata:
         self.database, self.dashboard = database, dashboard
 
     def load(self, identity):
-        context = self.dashboard.load_organisation_context(identity.organisation_id)
         with self.database.connection() as connection:
+            context = self.dashboard._load_organisation_context(connection, identity.organisation_id)
             cursor = connection.cursor()
             try:
                 cursor.execute(
