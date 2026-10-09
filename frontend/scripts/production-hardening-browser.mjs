@@ -55,6 +55,41 @@ try {
     await context.close();
   }
 
+  // The production Portal feature keeps its existing eager Reports/PDF
+  // dependency. Navigate into it and verify both real PDF downloads still work.
+  const portalPage = await browser.newPage({ acceptDownloads: true });
+  const portalErrors = [];
+  portalPage.on("pageerror", error => portalErrors.push(error.message));
+  const anchor = "2026-09-14T13:30:00Z";
+  await portalPage.route("https://consent.cookiebot.com/**", r => r.abort());
+  await portalPage.route("**/api/**", r => {
+    const url = new URL(r.request().url()), route = url.pathname;
+    if (route === "/api/me") return r.fulfill({ json: { user: { id: "1", name: "Tester", email: "tester@example.com" } } });
+    if (route === "/api/portal/organisations") return r.fulfill({ json: { organisations: [{ id: "1", name: "Org", role: 0, sites: [] }] } });
+    if (route.endsWith("/context")) return r.fulfill({ json: { organisation: { id: "1", name: "Org", slug: "org", enabled: true, realtime: false }, sites: [], sources: [], clock: { server_now: anchor, effective_now: anchor, time_zone: "Europe/London" } } });
+    if (route.endsWith("/reports/snapshot")) return r.fulfill({ json: { scope: { organisation_id: "1", site_id: null }, snapshot: fixture() } });
+    if (route.endsWith("/snapshot")) return r.fulfill({ json: fixture() });
+    return r.fulfill({ json: { documents: [] } });
+  });
+  await portalPage.goto(base + "/home", { waitUntil: "networkidle" });
+  await expect(portalPage.getByRole("heading", { name: "Welcome Tester" })).toBeVisible();
+  await portalPage.goto(base + "/sites/organisations/1/dashboard", { waitUntil: "networkidle" });
+  await portalPage.locator(".authenticated-navigation__rail").hover({ position: { x: 10, y: 250 } });
+  await portalPage.locator(".authenticated-navigation__secondary").getByRole("button", { name: "Reports", exact: true }).click();
+  await expect(portalPage.getByRole("combobox", { name: "Period" })).toBeVisible();
+  let downloads = 0;
+  for (const type of ["Site Activity", "Visitor Profile"]) {
+    await portalPage.getByRole("button", { name: new RegExp(type) }).click();
+    const pending = portalPage.waitForEvent("download");
+    await portalPage.getByRole("button", { name: "Download Report", exact: true }).click();
+    const download = await pending;
+    const file = await download.path();
+    assert.equal((await readFile(file)).subarray(0, 5).toString(), "%PDF-");
+    downloads++;
+  }
+  assert.deepEqual(portalErrors, []);
+  await portalPage.close();
+
   // Instrument only the test bundle's public Reports builder; production source
   // and assets stay untouched. Exercise the real PortalReports/ReportsPage pair.
   const snapshot = fixture();
@@ -92,7 +127,7 @@ try {
   await page.getByRole("combobox", { name: "Period" }).selectOption("last_week");
   assert.equal(await page.evaluate(() => window.__reportBuilds), repeatedBuilds + 2, "selected period must recompute");
   assert.deepEqual(errors, []);
-  const result = { baseline, closure, coldLoads, reports: { initialBuilds: 1, afterUnrelatedRender: repeatedBuilds, clockChangeBuilds: 1, periodChangeBuilds: 1 } };
+  const result = { baseline, closure, coldLoads, portal: { navigation: "Home → Dashboard → Reports", pdfDownloads: downloads }, reports: { initialBuilds: 1, afterUnrelatedRender: repeatedBuilds, clockChangeBuilds: 1, periodChangeBuilds: 1 } };
   await writeFile(path.join(output, "measurements.json"), JSON.stringify(result, null, 2) + "\n");
   console.log(JSON.stringify(result, null, 2));
   console.log("Production hardening graph, cold routes and Reports render checks passed");

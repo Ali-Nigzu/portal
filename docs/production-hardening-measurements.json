@@ -1,0 +1,783 @@
+{
+  "api_schema_sha256": "5f00187899f2d88548b9415f14d1b27ef37ed65a11f89f28d90d8eea9415f1c1",
+  "branch": "perf/production-hardening",
+  "environment": {
+    "gzip": "Node zlib gzip level 9, sum of independent emitted chunks",
+    "image_network_checks": "none; no startup hooks/live providers",
+    "image_node": "20",
+    "image_python": "3.11",
+    "image_retained_dependency_versions": "identical; temporary build-only constraints, not repository/runtime pin changes",
+    "import_samples": "median of 5 fresh Python processes in each Docker image; application factory import only",
+    "local_node": "24.19.0",
+    "local_python": "3.12.14",
+    "slug_samples": "median of 7; unique names; fresh mutable input each sample"
+  },
+  "frontend": {
+    "base": {
+      "baseline": true,
+      "closure": {
+        "chunks": 14,
+        "files": [
+          "/static/index-PdGkU0_B.js",
+          "/static/vendor-babel-runtime-CayUH5pS.js",
+          "/static/vendor-fast-png-BbYGfi8E.js",
+          "/static/vendor-fflate-XZmX483V.js",
+          "/static/vendor-iobuffer-DZ1zOcUT.js",
+          "/static/vendor-jspdf-b3cFpN0l.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/vendor-pako-B9FS3IR_.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-scheduler-DYLXRpC5.js"
+        ],
+        "gzip": 217480,
+        "raw": 672436
+      },
+      "coldLoads": {
+        "/admin/login": [
+          "/uc.js",
+          "/static/index-PdGkU0_B.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-scheduler-DYLXRpC5.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vendor-babel-runtime-CayUH5pS.js",
+          "/static/vendor-fflate-XZmX483V.js",
+          "/static/vendor-iobuffer-DZ1zOcUT.js",
+          "/static/vendor-pako-B9FS3IR_.js",
+          "/static/vendor-fast-png-BbYGfi8E.js",
+          "/static/vendor-jspdf-b3cFpN0l.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/AdminApp-zQ2ad_iw.js"
+        ],
+        "/home": [
+          "/uc.js",
+          "/static/index-PdGkU0_B.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-scheduler-DYLXRpC5.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vendor-babel-runtime-CayUH5pS.js",
+          "/static/vendor-fflate-XZmX483V.js",
+          "/static/vendor-iobuffer-DZ1zOcUT.js",
+          "/static/vendor-pako-B9FS3IR_.js",
+          "/static/vendor-fast-png-BbYGfi8E.js",
+          "/static/vendor-jspdf-b3cFpN0l.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/LandingPage-BBZejuJw.js",
+          "/static/useDashboardWidgets-DuuHh3j2.js",
+          "/static/DashboardKpiSection-BRy2MxHs.js",
+          "/static/vendor-recharts-BUbTKih-.js",
+          "/static/vendor-es-toolkit-BHggK5Mn.js",
+          "/static/vendor-clsx-B-dksMZM.js",
+          "/static/vendor-reselect-CiXCCDx7.js",
+          "/static/vendor-tiny-invariant-BaFNuDhB.js",
+          "/static/vendor-d3-shape-UAiSD6R2.js",
+          "/static/vendor-d3-path-CimkQT29.js",
+          "/static/vendor-d3-scale-CvtCn0os.js",
+          "/static/vendor-internmap-BkD7Hj8s.js",
+          "/static/vendor-d3-array-g_qRI3rN.js",
+          "/static/vendor-d3-time-format-8BLUG52v.js",
+          "/static/vendor-d3-time-Bu5S_Fai.js",
+          "/static/vendor-d3-interpolate-D3DfYzZD.js",
+          "/static/vendor-d3-color-9lF95FHy.js",
+          "/static/vendor-d3-format-CzD4bSOQ.js",
+          "/static/vendor-reduxjs-toolkit-Ll93DG1r.js",
+          "/static/vendor-redux-DITMfSWq.js",
+          "/static/vendor-redux-thunk-ClJT1hhx.js",
+          "/static/vendor-react-redux-slayUMfr.js",
+          "/static/vendor-use-sync-external-store-CZ8uxERm.js",
+          "/static/vendor-victory-vendor-CYjxyK07.js",
+          "/static/vendor-decimal.js-light-ZKFLnszB.js",
+          "/static/vendor-react-is-BYrSoCLP.js",
+          "/static/vendor-eventemitter3-DaWMuGmO.js"
+        ],
+        "/login": [
+          "/uc.js",
+          "/static/index-PdGkU0_B.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-scheduler-DYLXRpC5.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vendor-babel-runtime-CayUH5pS.js",
+          "/static/vendor-fflate-XZmX483V.js",
+          "/static/vendor-iobuffer-DZ1zOcUT.js",
+          "/static/vendor-pako-B9FS3IR_.js",
+          "/static/vendor-fast-png-BbYGfi8E.js",
+          "/static/vendor-jspdf-b3cFpN0l.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/LoginPage-BylrLZ1Y.js",
+          "/static/useIsPhoneLayout-Df7KoJKA.js",
+          "/static/AuthDesktopArtwork-mHlwLz1u.js"
+        ]
+      },
+      "portal": {
+        "navigation": "Home \u2192 Dashboard \u2192 Reports",
+        "pdfDownloads": 2
+      },
+      "reports": {
+        "afterUnrelatedRender": 2,
+        "clockChangeBuilds": 1,
+        "initialBuilds": 1,
+        "periodChangeBuilds": 1
+      }
+    },
+    "final": {
+      "baseline": false,
+      "closure": {
+        "chunks": 9,
+        "files": [
+          "/static/index-DvrFE5SN.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-scheduler-DYLXRpC5.js",
+          "/static/vite-preload-helper-D7HrI6pR.js"
+        ],
+        "gzip": 89227,
+        "raw": 283768
+      },
+      "coldLoads": {
+        "/admin/login": [
+          "/uc.js",
+          "/static/index-DvrFE5SN.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-scheduler-DYLXRpC5.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vite-preload-helper-D7HrI6pR.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/AdminApp-BTvTmWKS.js"
+        ],
+        "/home": [
+          "/uc.js",
+          "/static/index-DvrFE5SN.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-scheduler-DYLXRpC5.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vite-preload-helper-D7HrI6pR.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/LandingPage-DPugMcS7.js",
+          "/static/useDashboardWidgets-DnqiPj8R.js",
+          "/static/DashboardKpiSection-D1zM5_vF.js",
+          "/static/vendor-recharts-BUbTKih-.js",
+          "/static/vendor-es-toolkit-BHggK5Mn.js",
+          "/static/vendor-clsx-B-dksMZM.js",
+          "/static/vendor-reselect-CiXCCDx7.js",
+          "/static/vendor-tiny-invariant-BaFNuDhB.js",
+          "/static/vendor-d3-shape-UAiSD6R2.js",
+          "/static/vendor-d3-path-CimkQT29.js",
+          "/static/vendor-d3-scale-CvtCn0os.js",
+          "/static/vendor-internmap-BkD7Hj8s.js",
+          "/static/vendor-d3-array-g_qRI3rN.js",
+          "/static/vendor-d3-time-format-8BLUG52v.js",
+          "/static/vendor-d3-time-Bu5S_Fai.js",
+          "/static/vendor-d3-interpolate-D3DfYzZD.js",
+          "/static/vendor-d3-color-9lF95FHy.js",
+          "/static/vendor-d3-format-CzD4bSOQ.js",
+          "/static/vendor-reduxjs-toolkit-Ll93DG1r.js",
+          "/static/vendor-redux-DITMfSWq.js",
+          "/static/vendor-redux-thunk-ClJT1hhx.js",
+          "/static/vendor-react-redux-slayUMfr.js",
+          "/static/vendor-use-sync-external-store-CZ8uxERm.js",
+          "/static/vendor-victory-vendor-CYjxyK07.js",
+          "/static/vendor-decimal.js-light-ZKFLnszB.js",
+          "/static/vendor-react-is-BYrSoCLP.js",
+          "/static/vendor-eventemitter3-DaWMuGmO.js"
+        ],
+        "/login": [
+          "/uc.js",
+          "/static/index-DvrFE5SN.js",
+          "/static/vendor-react-CNvHvvCs.js",
+          "/static/vendor-scheduler-DYLXRpC5.js",
+          "/static/vendor-react-dom-bBRAxwka.js",
+          "/static/vendor-remix-run-router-CeDW-7A3.js",
+          "/static/vendor-react-router-DwUEGp7j.js",
+          "/static/vendor-react-router-dom-D58HpS7i.js",
+          "/static/vite-preload-helper-D7HrI6pR.js",
+          "/static/vendor-lucide-react-C9DYCtgs.js",
+          "/static/LoginPage-Dx4AAYCk.js",
+          "/static/useIsPhoneLayout-DarUj1sx.js",
+          "/static/AuthDesktopArtwork-mHlwLz1u.js"
+        ]
+      },
+      "portal": {
+        "navigation": "Home \u2192 Dashboard \u2192 Reports",
+        "pdfDownloads": 2
+      },
+      "reports": {
+        "afterUnrelatedRender": 1,
+        "clockChangeBuilds": 1,
+        "initialBuilds": 1,
+        "periodChangeBuilds": 1
+      }
+    }
+  },
+  "image_sizes_bytes": {
+    "base": 563238082,
+    "final": 242301805
+  },
+  "images": {
+    "portal-production-hardening:base": {
+      "median_import_seconds": 1.5699564420065144,
+      "median_maxrss_kib": 196984,
+      "packages": {
+        "SQLAlchemy": "2.0.36",
+        "aiohappyeyeballs": "2.7.1",
+        "aiohttp": "3.14.4",
+        "aiosignal": "1.4.0",
+        "annotated-types": "0.8.0",
+        "anyio": "4.15.1",
+        "argon2-cffi": "23.1.0",
+        "argon2-cffi-bindings": "26.1.0",
+        "asn1crypto": "1.5.1",
+        "attrs": "26.1.0",
+        "cachetools": "5.5.2",
+        "certifi": "2026.7.22",
+        "cffi": "2.1.1",
+        "charset-normalizer": "3.5.2",
+        "click": "8.5.0",
+        "cloud-sql-python-connector": "1.22.0",
+        "cryptography": "50.0.2",
+        "db-dtypes": "1.2.0",
+        "dnspython": "2.9.0",
+        "fastapi": "0.115.0",
+        "frozenlist": "1.8.0",
+        "google-api-core": "2.42.0",
+        "google-auth": "2.33.0",
+        "google-cloud-bigquery": "3.25.0",
+        "google-cloud-core": "2.8.0",
+        "google-cloud-storage": "3.16.0",
+        "google-crc32c": "1.9.0",
+        "google-resumable-media": "2.11.0",
+        "googleapis-common-protos": "1.75.5",
+        "greenlet": "3.5.6",
+        "grpcio": "1.84.0",
+        "grpcio-status": "1.84.0",
+        "h11": "0.16.0",
+        "idna": "3.20",
+        "multidict": "6.9.1",
+        "numpy": "2.4.6",
+        "opentelemetry-api": "1.45.1",
+        "packaging": "26.3",
+        "pandas": "2.2.3",
+        "pg8000": "1.31.5",
+        "pip": "24.0",
+        "propcache": "0.5.4",
+        "proto-plus": "1.29.0",
+        "protobuf": "7.36.2",
+        "pyarrow": "26.0.0",
+        "pyasn1": "0.6.4",
+        "pyasn1_modules": "0.4.2",
+        "pycparser": "3.1",
+        "pydantic": "2.8.2",
+        "pydantic_core": "2.20.1",
+        "python-dateutil": "2.9.0.post0",
+        "python-multipart": "0.0.32",
+        "pytz": "2026.5",
+        "requests": "2.34.2",
+        "rsa": "4.9.1",
+        "scramp": "1.4.17",
+        "setuptools": "79.0.1",
+        "six": "1.17.0",
+        "starlette": "0.38.6",
+        "typing_extensions": "4.16.0",
+        "tzdata": "2026.5",
+        "urllib3": "2.8.0",
+        "uvicorn": "0.30.6",
+        "wheel": "0.46.3",
+        "yarl": "1.25.1"
+      },
+      "removed_modules": {
+        "db_dtypes": true,
+        "numpy": true,
+        "pandas": true,
+        "pyarrow": true
+      },
+      "samples": [
+        {
+          "maxrss_kib": 196700,
+          "seconds": 1.6175872400053777
+        },
+        {
+          "maxrss_kib": 196984,
+          "seconds": 1.4621057340118568
+        },
+        {
+          "maxrss_kib": 197204,
+          "seconds": 1.506914533994859
+        },
+        {
+          "maxrss_kib": 197408,
+          "seconds": 1.5699564420065144
+        },
+        {
+          "maxrss_kib": 196720,
+          "seconds": 1.576234485997702
+        }
+      ]
+    },
+    "portal-production-hardening:review": {
+      "median_import_seconds": 1.2906558679969748,
+      "median_maxrss_kib": 109932,
+      "packages": {
+        "SQLAlchemy": "2.0.36",
+        "aiohappyeyeballs": "2.7.1",
+        "aiohttp": "3.14.4",
+        "aiosignal": "1.4.0",
+        "annotated-types": "0.8.0",
+        "anyio": "4.15.1",
+        "argon2-cffi": "23.1.0",
+        "argon2-cffi-bindings": "26.1.0",
+        "asn1crypto": "1.5.1",
+        "attrs": "26.1.0",
+        "cachetools": "5.5.2",
+        "certifi": "2026.7.22",
+        "cffi": "2.1.1",
+        "charset-normalizer": "3.5.2",
+        "click": "8.5.0",
+        "cloud-sql-python-connector": "1.22.0",
+        "cryptography": "50.0.2",
+        "dnspython": "2.9.0",
+        "fastapi": "0.115.0",
+        "frozenlist": "1.8.0",
+        "google-api-core": "2.42.0",
+        "google-auth": "2.33.0",
+        "google-cloud-bigquery": "3.25.0",
+        "google-cloud-core": "2.8.0",
+        "google-cloud-storage": "3.16.0",
+        "google-crc32c": "1.9.0",
+        "google-resumable-media": "2.11.0",
+        "googleapis-common-protos": "1.75.5",
+        "greenlet": "3.5.6",
+        "grpcio": "1.84.0",
+        "grpcio-status": "1.84.0",
+        "h11": "0.16.0",
+        "idna": "3.20",
+        "multidict": "6.9.1",
+        "opentelemetry-api": "1.45.1",
+        "packaging": "26.3",
+        "pg8000": "1.31.5",
+        "pip": "24.0",
+        "propcache": "0.5.4",
+        "proto-plus": "1.29.0",
+        "protobuf": "7.36.2",
+        "pyasn1": "0.6.4",
+        "pyasn1_modules": "0.4.2",
+        "pycparser": "3.1",
+        "pydantic": "2.8.2",
+        "pydantic_core": "2.20.1",
+        "python-dateutil": "2.9.0.post0",
+        "python-multipart": "0.0.32",
+        "requests": "2.34.2",
+        "rsa": "4.9.1",
+        "scramp": "1.4.17",
+        "setuptools": "79.0.1",
+        "six": "1.17.0",
+        "starlette": "0.38.6",
+        "typing_extensions": "4.16.0",
+        "urllib3": "2.8.0",
+        "uvicorn": "0.30.6",
+        "wheel": "0.46.3",
+        "yarl": "1.25.1"
+      },
+      "removed_modules": {
+        "db_dtypes": false,
+        "numpy": false,
+        "pandas": false,
+        "pyarrow": false
+      },
+      "samples": [
+        {
+          "maxrss_kib": 108980,
+          "seconds": 1.2906558679969748
+        },
+        {
+          "maxrss_kib": 110012,
+          "seconds": 1.1436840329988627
+        },
+        {
+          "maxrss_kib": 110088,
+          "seconds": 1.3292215109977406
+        },
+        {
+          "maxrss_kib": 109932,
+          "seconds": 1.172870195005089
+        },
+        {
+          "maxrss_kib": 109664,
+          "seconds": 1.3472712300135754
+        }
+      ]
+    }
+  },
+  "read_paths": {
+    "base": {
+      "admin": {
+        "conversion_ns": 151260,
+        "conversions": 51,
+        "conversions_inside_checkout": 51,
+        "response_sha256": "8813f7e36b15492e69638dda9751676e23449588940de6440117ad2310a1a1c1"
+      },
+      "bigquery": {
+        "constructions": 2
+      },
+      "documents": {
+        "closed": true,
+        "extra_copy_bytes": 26214400,
+        "extra_copy_writes": 100,
+        "size": 26214400,
+        "spools": 2
+      },
+      "metadata": {
+        "checkouts": 2,
+        "normalized_context_sha256": "5efdd27433ef50549e7afca312e52148b8ea3ebd4c4b3afb9c0defe130ee9bb0",
+        "queries": [
+          [
+            "SELECT id, name, enabled FROM public.organisations WHERE id = %s",
+            [
+              1
+            ]
+          ],
+          [
+            "SELECT s.id, s.name, s.organisation_id, s.enabled, s.max_capacity, EXISTS (SELECT 1 FROM public.devices AS d WHERE d.site_id = s.id AND d.analyzed_until >= CURRENT_TIMESTAMP - INTERVAL '15 minutes') AS realtime FROM public.sites AS s WHERE s.organisation_id = %s ORDER BY s.id",
+            [
+              1
+            ]
+          ],
+          [
+            "SELECT d.id, d.site_id, d.name, d.analyzed_until FROM public.devices d JOIN public.sites s ON s.id = d.site_id WHERE s.organisation_id = %s ORDER BY d.id",
+            [
+              1
+            ]
+          ],
+          [
+            "SELECT g.gateway_id, g.site_id FROM public.gateways g JOIN public.sites s ON s.id = g.site_id WHERE s.organisation_id = %s ORDER BY g.site_id",
+            [
+              1
+            ]
+          ]
+        ],
+        "sql_count": 4
+      },
+      "slugs": {
+        "100": {
+          "median_ms": 0.232169,
+          "output_sha256": "b2cc2910759cfeb2ba025551ff8dc11e2d6db27b405e89e0afb0a768f4d3c3b9"
+        },
+        "1000": {
+          "median_ms": 10.671913,
+          "output_sha256": "7371480d9077813c61b7bf1a61dce1ae3c387aa1dde62e50d19d01c066eb29b7"
+        },
+        "5000": {
+          "median_ms": 247.11577,
+          "output_sha256": "8806916841184dc4a2fc92b1a4a8770cf2397db5413cedbe9b837fc1cb61ca07"
+        }
+      }
+    },
+    "final": {
+      "admin": {
+        "conversion_ns": 178743,
+        "conversions": 50,
+        "conversions_inside_checkout": 0,
+        "response_sha256": "8813f7e36b15492e69638dda9751676e23449588940de6440117ad2310a1a1c1"
+      },
+      "bigquery": {
+        "constructions": 1
+      },
+      "documents": {
+        "closed": true,
+        "extra_copy_bytes": 0,
+        "extra_copy_writes": 0,
+        "size": 26214400,
+        "spools": 1
+      },
+      "metadata": {
+        "checkouts": 1,
+        "normalized_context_sha256": "5efdd27433ef50549e7afca312e52148b8ea3ebd4c4b3afb9c0defe130ee9bb0",
+        "queries": [
+          [
+            "SELECT id, name, enabled FROM public.organisations WHERE id = %s",
+            [
+              1
+            ]
+          ],
+          [
+            "SELECT s.id, s.name, s.organisation_id, s.enabled, s.max_capacity, EXISTS (SELECT 1 FROM public.devices AS d WHERE d.site_id = s.id AND d.analyzed_until >= CURRENT_TIMESTAMP - INTERVAL '15 minutes') AS realtime FROM public.sites AS s WHERE s.organisation_id = %s ORDER BY s.id",
+            [
+              1
+            ]
+          ],
+          [
+            "SELECT d.id, d.site_id, d.name, d.analyzed_until FROM public.devices d JOIN public.sites s ON s.id = d.site_id WHERE s.organisation_id = %s ORDER BY d.id",
+            [
+              1
+            ]
+          ],
+          [
+            "SELECT g.gateway_id, g.site_id FROM public.gateways g JOIN public.sites s ON s.id = g.site_id WHERE s.organisation_id = %s ORDER BY g.site_id",
+            [
+              1
+            ]
+          ]
+        ],
+        "sql_count": 4
+      },
+      "slugs": {
+        "100": {
+          "median_ms": 0.175273,
+          "output_sha256": "b2cc2910759cfeb2ba025551ff8dc11e2d6db27b405e89e0afb0a768f4d3c3b9"
+        },
+        "1000": {
+          "median_ms": 1.985363,
+          "output_sha256": "7371480d9077813c61b7bf1a61dce1ae3c387aa1dde62e50d19d01c066eb29b7"
+        },
+        "5000": {
+          "median_ms": 10.035277,
+          "output_sha256": "8806916841184dc4a2fc92b1a4a8770cf2397db5413cedbe9b837fc1cb61ca07"
+        }
+      }
+    }
+  },
+  "reports_exact_base_equivalence": {
+    "matched": true,
+    "pdf_text_and_filenames": 28,
+    "report_outputs": 84
+  },
+  "starting_sha": "e6846455bf64a4a874824154128cf13d7e668757",
+  "visual": [
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1024-admin",
+      "size": [
+        1024,
+        900
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1024-customer-home",
+      "size": [
+        1024,
+        900
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1024-dashboard",
+      "size": [
+        1024,
+        900
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1024-documents",
+      "size": [
+        1024,
+        900
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1024-home",
+      "size": [
+        1024,
+        1492
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1024-login",
+      "size": [
+        1024,
+        900
+      ]
+    },
+    {
+      "changed_pixels": 47,
+      "max_channel_difference": 8,
+      "scenario": "1024-reports",
+      "size": [
+        1024,
+        900
+      ]
+    },
+    {
+      "changed_pixels": 47,
+      "max_channel_difference": 8,
+      "scenario": "1024-site-reports",
+      "size": [
+        1024,
+        900
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1440-admin",
+      "size": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1440-customer-home",
+      "size": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "changed_pixels": 13,
+      "max_channel_difference": 7,
+      "scenario": "1440-dashboard",
+      "size": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1440-documents",
+      "size": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1440-home",
+      "size": [
+        1440,
+        1482
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "1440-login",
+      "size": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "changed_pixels": 57,
+      "max_channel_difference": 8,
+      "scenario": "1440-reports",
+      "size": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "changed_pixels": 57,
+      "max_channel_difference": 8,
+      "scenario": "1440-site-reports",
+      "size": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "390-admin",
+      "size": [
+        390,
+        844
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "390-customer-home",
+      "size": [
+        390,
+        844
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "390-dashboard",
+      "size": [
+        390,
+        844
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "390-documents",
+      "size": [
+        390,
+        844
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "390-home",
+      "size": [
+        399,
+        2182
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "390-login",
+      "size": [
+        390,
+        844
+      ]
+    },
+    {
+      "changed_pixels": 0,
+      "max_channel_difference": 0,
+      "scenario": "390-reports",
+      "size": [
+        390,
+        844
+      ]
+    },
+    {
+      "changed_pixels": 50,
+      "max_channel_difference": 7,
+      "scenario": "390-site-reports",
+      "size": [
+        390,
+        844
+      ]
+    }
+  ]
+}

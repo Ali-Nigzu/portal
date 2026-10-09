@@ -254,3 +254,35 @@ def test_upload_storage_failure_retains_error_and_closes_files(failure):
         asyncio.run(DocumentsService(store).upload_batch(0, uploads))
     assert caught.value is failure
     assert all(upload.file.closed for upload in uploads)
+
+
+def test_upload_scope_cancellation_waits_for_storage_worker_before_closing():
+    import anyio
+    from threading import Event
+    from tempfile import SpooledTemporaryFile
+    source = SpooledTemporaryFile(max_size=1024)
+    source.write(b'body')
+    source.seek(0)
+    upload = UploadFile(source, filename='first.csv')
+    store = MemoryDocumentsStore()
+    create = store.create
+    release = Event()
+    completed = []
+    async def scenario():
+        started = anyio.Event()
+        def observed(name, source, mime):
+            anyio.from_thread.run_sync(started.set)
+            assert release.wait(timeout=5)
+            assert not source.closed and not upload.file.closed
+            result = create(name, source, mime)
+            completed.append(True)
+            return result
+        store.create = observed
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(DocumentsService(store).upload_batch, 0, [upload])
+            await started.wait()
+            tasks.cancel_scope.cancel()
+            release.set()
+    anyio.run(scenario)
+    assert completed == [True]
+    assert upload.file.closed
