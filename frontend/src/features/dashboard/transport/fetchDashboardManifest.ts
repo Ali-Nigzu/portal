@@ -1,4 +1,4 @@
-import { isAbortError } from "../../../common/utils/isAbortError";
+import { isAbortError } from "../../../common/utils/abort";
 import { API_BASE_URL } from "../../../config";
 import { createAbortSignal } from "../../../common/utils/abort";
 import { logError, logInfo, logWarn } from "../../../common/utils/logger";

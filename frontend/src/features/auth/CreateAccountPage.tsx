@@ -6,7 +6,7 @@ import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
-import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
+import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
 import AuthPhoneField from './components/AuthPhoneField';
 import './CreateAccountPage.css';
 import './components/AuthPhoneField.css';

@@ -29,3 +29,18 @@ export const demoDashboardSource: DashboardSource = {
     selection.scope === "organisation" ? "/snapshot" : `/sites/${encodeURIComponent(selection.id)}/snapshot`, signal,
   )),
 };
+
+export type AuthenticatedSite = { id: string; name: string };
+export type AuthenticatedOrganisation = {
+  id: string;
+  name: string;
+  role: 0 | 1;
+  sites: AuthenticatedSite[];
+};
+
+export async function fetchOrganisations(): Promise<AuthenticatedOrganisation[]> {
+  const response = await fetch("/api/portal/organisations", { credentials: "include", cache: "no-store" });
+  if (!response.ok) throw new Error("Unable to load organisations");
+  const body = await response.json() as { organisations: AuthenticatedOrganisation[] };
+  return body.organisations;
+}

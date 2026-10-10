@@ -52,3 +52,14 @@ export interface DashboardWidgetState {
   status: "idle" | "loading" | "ready" | "error";
   error?: string;
 }
+
+import type { SiteView } from "../../lib/siteView";
+
+export interface SnapshotResponse {
+  ts: string;
+  payload: unknown[];
+  mode: "snapshots";
+  orgId?: string;
+  siteView?: SiteView;
+  fallback?: boolean;
+}

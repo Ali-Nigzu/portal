@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { ChevronRight, FileText, Home, LogOut, MapPin, Settings, Plus, UserPlus } from "lucide-react";
 import { useOrganisationAccess } from "../../features/organisation-access/OrganisationAccessContext";
-import type { AuthenticatedOrganisation } from "../../features/auth/transport/organisations";
-import { NavIcon } from "../../common/components/icons";
+import type { AuthenticatedOrganisation } from "../../features/organisation-dashboard/api";
+import NavIcon from "../../common/components/icons/NavIcon";
 import type { AuthenticatedRouteContext, NavigationStage } from "./authenticatedNavigationModel";
 
 type PrimaryRowProps = {

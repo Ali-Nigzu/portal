@@ -12,49 +12,10 @@
     "recharts": "^3.2.1"
   },
   "scripts": {
-    "start": "vite --host 0.0.0.0 --port 3000",
-    "dev": "vite --host 0.0.0.0 --port 3000",
-    "build": "vite build && if [ -d ../backend ]; then rm -rf ../backend/frontend_build && cp -R build ../backend/frontend_build; fi",
-    "preview": "vite preview --host 0.0.0.0 --port 3000",
-    "ci": "npm run build",
-    "verify:topology": "node scripts/topology-check.mjs",
-    "test:landing-visual": "node scripts/landing-visual-regression.mjs",
-    "verify:phone-countries": "node scripts/verify-phone-country-data.mjs",
-    "proof:eventlogs:closed-loop": "node scripts/eventlogs_closed_loop_proof.mjs",
-    "test:reports-engine": "node scripts/reports-engine-tests.mjs",
-    "test:phase-c": "node scripts/phase-c-tests.mjs",
-    "test:authenticated-shell": "node scripts/authenticated-shell-browser.mjs",
-    "test:organisation-access": "node scripts/organisation-access-browser.mjs",
-    "test:local-new-account": "node scripts/local-new-account-browser.mjs",
-    "test:auth-brand-assets": "node scripts/auth-brand-assets-browser.mjs",
-    "typecheck": "tsc --noEmit",
-    "typecheck:account": "tsc --noEmit -p tsconfig.account.json",
-    "test:account-lifecycle": "node scripts/account-lifecycle-browser.mjs",
-    "typecheck:documents": "tsc --noEmit -p tsconfig.documents.json",
-    "test:documents": "node scripts/documents-browser.mjs",
-    "typecheck:admin": "tsc --noEmit -p tsconfig.admin.json",
-    "test:admin": "node scripts/admin-browser.mjs"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "build": "vite build && if [ -d ../backend ]; then rm -rf ../backend/frontend_build && cp -R build ../backend/frontend_build; fi"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
-    "@types/node": "^22.20.5",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "playwright": "^1.54.2",
-    "typescript": "^5.9.3",
     "vite": "^5.4.8"
   }
 }

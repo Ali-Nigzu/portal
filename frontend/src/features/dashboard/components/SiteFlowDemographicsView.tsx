@@ -1,7 +1,5 @@
-import {
-  AxisManager,
-  SeriesManager,
-} from "../../../analytics/components/ChartRenderer/managers";
+import { AxisManager } from "../../../analytics/components/ChartRenderer/managers/AxisManager";
+import { SeriesManager } from "../../../analytics/components/ChartRenderer/managers/SeriesManager";
 import { TrafficDistribution } from "../../../analytics/components/ChartRenderer/primitives/TrafficDistribution";
 import type {
   ChartResult,

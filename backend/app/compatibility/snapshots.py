@@ -13,7 +13,7 @@ from typing import Any, Iterable, Optional
 from google.cloud import bigquery
 
 from backend.app.services.bigquery_client import bigquery_client
-from backend.app.services.demo_time import demo_now, format_demo_timestamp
+from zoneinfo import ZoneInfo
 
 SNAPSHOT_ORG_IDS = {"client1", "client2"}
 
@@ -218,3 +218,17 @@ def fetch_latest_snapshot(
         ts=_format_timestamp(row["ts"]),
         payload=_coerce_payload(row["payload"]),
     )
+
+def format_demo_timestamp(value: datetime) -> str:
+    """Format demo clock timestamp in stable SQL-comparable form."""
+    return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def demo_now() -> datetime:
+    """Return demo 'now' in local wall-clock terms (naive datetime)."""
+    configured_tz = os.getenv("DEMO_NOW_TIMEZONE", "Europe/London")
+    try:
+        tz = ZoneInfo(configured_tz)
+    except Exception:
+        tz = timezone.utc
+    return datetime.now(tz).replace(tzinfo=None)

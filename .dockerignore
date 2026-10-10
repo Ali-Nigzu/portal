@@ -3,13 +3,7 @@ sa.json
 **/sa.json
 **/node_modules
 **/__pycache__
-.pytest_cache
-test-results
 frontend/build
 backend/frontend_build
 
-backend/tests
-backend/dev
 .venv
-frontend/artifacts
-frontend/test-results

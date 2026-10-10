@@ -31,9 +31,6 @@ export function sitePortalPath(
   return `/sites/organisations/${encodeURIComponent(organisationId)}/sites/${encodeURIComponent(siteId)}/${module}`;
 }
 
-export const organisationDashboardPath = (organisationId: string) =>
-  organisationPortalPath(organisationId, "dashboard");
-
 export function parseAuthenticatedPortalPath(pathname: string): AuthenticatedPortalLocation | null {
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] !== "sites" || parts[1] !== "organisations" || !canonicalId(parts[2] ?? "")) {
@@ -58,15 +55,16 @@ export const authenticatedPortalPath = (location: AuthenticatedPortalLocation) =
     ? sitePortalPath(location.organisationId, location.siteId, location.module)
     : organisationPortalPath(location.organisationId, location.module);
 
-export const replaceScope = (
-  location: AuthenticatedPortalLocation,
-  siteId?: string,
-) => authenticatedPortalPath({ ...location, siteId });
-
 export const replaceModule = (
   location: AuthenticatedPortalLocation,
   module: PortalModule,
 ) => authenticatedPortalPath({ ...location, module });
 
-export const isAuthenticatedPortalPath = (pathname: string) =>
-  parseAuthenticatedPortalPath(pathname) !== null;
+
+export const PORTAL_MODULE_LABELS = {
+  dashboard: "Dashboard",
+  "event-logs": "Event Logs",
+  "alarm-logs": "Alarm Logs",
+  "device-list": "Device List",
+  reports: "Reports",
+} satisfies Record<PortalModule, string>;

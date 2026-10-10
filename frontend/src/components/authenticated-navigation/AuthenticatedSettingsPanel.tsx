@@ -1,5 +1,5 @@
 import { ArrowLeft, Bell, Settings, Shield } from "lucide-react";
-import { NavIcon } from "../../common/components/icons";
+import NavIcon from "../../common/components/icons/NavIcon";
 import type { AuthenticatedRouteContext } from "./authenticatedNavigationModel";
 
 type Props = {

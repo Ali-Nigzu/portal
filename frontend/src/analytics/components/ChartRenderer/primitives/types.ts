@@ -1,5 +1,6 @@
 import type { ChartResult, ChartSeries } from "../../../schemas/charting";
-import type { AxisConfig, SeriesVisibilityMap } from "../managers";
+import type { AxisConfig } from "../managers/AxisManager";
+import type { SeriesVisibilityMap } from "../managers/SeriesManager";
 export interface ChartPrimitiveProps {
   result: ChartResult;
   series: ChartSeries[];

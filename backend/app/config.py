@@ -4,7 +4,6 @@ Configuration settings for camOS Analytics API
 
 import os
 
-INTEREST_SUBMISSIONS_FILE = 'backend/data/interest_submissions.json'
 CONTACT_SUBMISSIONS_FILE = 'backend/data/contact_submissions.json'
 
 

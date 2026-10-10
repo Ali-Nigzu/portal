@@ -1,6 +1,6 @@
 import { ArrowLeft, MapPin, Plus } from "lucide-react";
-import type { AuthenticatedOrganisation } from "../../features/auth/transport/organisations";
-import { NavIcon } from "../../common/components/icons";
+import type { AuthenticatedOrganisation } from "../../features/organisation-dashboard/api";
+import NavIcon from "../../common/components/icons/NavIcon";
 import type { AuthenticatedRouteContext } from "./authenticatedNavigationModel";
 
 type Props = {

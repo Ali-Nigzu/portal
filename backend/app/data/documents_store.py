@@ -1,4 +1,4 @@
-"""Production Documents adapter contract; fixture stores live under backend/tests."""
+"""Documents service-to-storage contract."""
 
 from dataclasses import dataclass
 from typing import BinaryIO, Iterable, Protocol

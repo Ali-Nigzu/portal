@@ -21,21 +21,6 @@ const generatedLabel = (date: Date) =>
     minute: "2-digit",
     hour12: false,
   });
-export function reportDocumentText(
-  data: ReportData,
-  identity: ReportIdentity,
-  generationTime: Date,
-) {
-  const title =
-    data.reportType === "site-activity" ? "Site Activity" : "Visitor Profile";
-  return [
-    identity.heading,
-    `${title} Report`,
-    `Generated: ${generatedLabel(generationTime)}`,
-    data.subtitle,
-    "Camos Reports",
-  ];
-}
 export const reportLayoutSpec = {
   headerAlignment: "center" as const,
   footerBrand: "Camos Reports",

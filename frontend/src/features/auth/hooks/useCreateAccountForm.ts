@@ -1,5 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react';
-import { signupStart } from '../transport/signupStart';
+import { signupStart } from '../transport/signup';
 import { classifyOptionalPhoneInput, inferIsoFromPhoneText, PHONE_OPTION_BY_ISO, replaceDialCodeInPhoneText, sanitizePhoneText } from '../countryPhoneData';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

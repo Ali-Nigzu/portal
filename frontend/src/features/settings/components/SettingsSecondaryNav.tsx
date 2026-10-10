@@ -3,7 +3,7 @@ import { Bell, Settings, Shield } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 import { NavList, NavRow, SecondaryDivider } from "../../../common/components/navigation";
-import { NavIcon } from "../../../common/components/icons";
+import NavIcon from "../../../common/components/icons/NavIcon";
 
 const SettingsSecondaryNav: React.FC = () => {
   const location = useLocation();

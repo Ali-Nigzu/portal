@@ -1,5 +1,5 @@
-import type { AuthenticatedOrganisation } from "../auth/transport/organisations";
-import { PORTAL_MODULE_LABELS } from "./portalModuleLabels";
+import type { AuthenticatedOrganisation } from "./api";
+import { PORTAL_MODULE_LABELS } from "./authenticatedPortalRoutes";
 import {
   authenticatedPortalPath,
   isPortalModule,

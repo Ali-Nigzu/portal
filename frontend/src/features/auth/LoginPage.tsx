@@ -4,9 +4,9 @@ import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
+import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
 import { useLoginForm } from "./hooks/useLoginForm";
-import { passwordResetStart } from "./transport/passwordResetStart";
+import { passwordResetStart } from "./transport/passwordReset";
 import "./LoginPage.css";
 
 interface LoginPageProps {

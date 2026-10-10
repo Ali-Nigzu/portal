@@ -67,7 +67,6 @@ const CAPACITY_PERCENT = 68;
 
 const NOOP_REMOVE = () => undefined;
 const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
-const TOPOLOGY_MOCK_PARAM = "topologyMock";
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
 const BUS_CORRIDOR_GAP_TOP = 20;
@@ -102,7 +101,7 @@ const initialWireLayout: WireLayout = {
 };
 
 
-const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDemo: () => void; previewOrgId?: string }> = ({ forceMockTopology, onAccessDemo, previewOrgId }) => {
+const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?: string }> = ({ onAccessDemo, previewOrgId }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -168,23 +167,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
   const hasTopWidgets = topWidgets.every((item) => Boolean(item.widget));
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
   const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
-  const hasKpis = forceMockTopology || (hasTopWidgets && Boolean(dwellWidget));
+  const hasKpis = hasTopWidgets && Boolean(dwellWidget);
   const hasError = manifestStatus === "error" || widgetStatus === "error";
-  const trafficUnavailable = !forceMockTopology && (!trafficWidget || trafficWidget.status === "error");
+  const trafficUnavailable = !trafficWidget || trafficWidget.status === "error";
 
-  const renderMockTrafficSplit = () => (
-    <article className={`${styles.mockTile} ${styles.mockTrafficTile}`}>
-      <p>Traffic Split</p>
-      <div className={styles.mockTrafficContent}>
-        <div className={styles.mockTrafficDonut} aria-hidden="true" />
-        <div className={styles.mockTrafficLegend}>
-          <span><i className={styles.mockTrafficSwatchA} />Cam 1 <strong>48%</strong></span>
-          <span><i className={styles.mockTrafficSwatchB} />Cam 2 <strong>32%</strong></span>
-          <span><i className={styles.mockTrafficSwatchC} />Cam 3 <strong>20%</strong></span>
-        </div>
-      </div>
-    </article>
-  );
 
 
   useLayoutEffect(() => {
@@ -192,7 +178,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
       if (!dockHost) {
         return null;
       }
-      const surface = dockHost.querySelector<HTMLElement>(".kpi-panel, .mockTile, .inlineNotice");
+      const surface = dockHost.querySelector<HTMLElement>(".kpi-panel, .inlineNotice");
       return (surface ?? dockHost).getBoundingClientRect();
     };
 
@@ -467,7 +453,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
         rafRef.current = null;
       }
     };
-  }, [forceMockTopology, hasTopWidgets, dwellWidget, trafficWidget, widgetStatus]);
+  }, [hasTopWidgets, dwellWidget, trafficWidget, widgetStatus]);
 
   const nodeLayerStyle = {
     "--node-anchor-x": wire.nodeX > 0 ? `${wire.nodeX}px` : "50%",
@@ -564,18 +550,12 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
     [nodeRadius, nodeX, nodeY, wire],
   );
 
-  const renderMockTile = (label: string, value: string) => (
-    <article className={styles.mockTile}>
-      <p>{label}</p>
-      <strong>{value}</strong>
-    </article>
-  );
 
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
       <div className={styles.consoleSurface}>
         <div className={styles.gatedContent}>
-          <div className={styles.canvas} ref={containerRef} data-topology-mock={forceMockTopology ? "true" : "false"}>
+          <div className={styles.canvas} ref={containerRef} data-topology-mock="false">
             {wire.width > 0 && wire.height > 0 ? (
               <svg ref={wireSvgRef} className={styles.wireSvg} width={wire.width} height={wire.height} viewBox={`0 0 ${wire.width} ${wire.height}`} aria-hidden="true">
                 <line className={styles.busLine} data-testid="topology-bus" x1={wire.busX1} y1={wire.busY} x2={wire.busX2} y2={wire.busY} />
@@ -665,9 +645,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                           topDockRefs.current[item.key] = node;
                         }}
                       >
-                        {forceMockTopology
-                          ? renderMockTile(item.key, item.key === "occupancy" ? "67%" : "2,481")
-                          : <DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
+                        {<DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
                       </div>
                       <span
                         className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorBottom}`}
@@ -699,16 +677,12 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
                 ) : (
                   <div className={styles.wireAnchorSlot} ref={leftSlotRef}>
                     <div className={styles.dockSurface} ref={trafficDockRef}>
-                      {forceMockTopology
-                        ? renderMockTrafficSplit()
-                        : (
-                          <DashboardKpiSection
+                      {<DashboardKpiSection
                             mode="preview"
                             kpiWidgets={[trafficWidget!]}
                             onRemoveWidget={NOOP_REMOVE}
                             rendererClassName="dashboard-v2__kpi-renderer--landing-preview-traffic"
-                          />
-                        )}
+                          />}
                     </div>
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-traffic" />
                   </div>
@@ -716,12 +690,10 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
               </article>
 
               <div className={`${styles.kpiSlot} ${styles.tileT5}`}>
-                {dwellWidget || forceMockTopology ? (
+                {dwellWidget ? (
                   <div className={styles.wireAnchorSlot} ref={dwellSlotRef}>
                     <div className={styles.dockSurface} ref={dwellDockRef}>
-                      {forceMockTopology
-                        ? renderMockTile("Dwell Minutes", "18.2")
-                        : <DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                      {<DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
                     </div>
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-dwell" />
                   </div>
@@ -774,7 +746,7 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
 
       </div>
-      {!forceMockTopology && (manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
+      {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
         <p className={styles.errorNote}>Preview unavailable.</p>
       ) : null}
     </section>
@@ -783,74 +755,13 @@ const SystemOverviewLiveKpis: React.FC<{ forceMockTopology: boolean; onAccessDem
 
 const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAccessDemo }) => {
   const location = useLocation();
-  const forceMockTopology = useMemo(() => {
-    if (!import.meta.env.DEV && !import.meta.env.MODE.includes("test")) {
-      return false;
-    }
-    return new URLSearchParams(location.search).get(TOPOLOGY_MOCK_PARAM) === "1";
-  }, [location.search]);
   const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
   const shouldUsePublicPreviewOrg = !hasViewToken && !isDemoSessionActive();
-  const [bootstrapState, setBootstrapState] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [bootstrapDegraded, setBootstrapDegraded] = useState(false);
-  const bootstrapStartedRef = useRef(false);
 
-  const runBootstrap = async () => {
-    if (forceMockTopology || hasViewToken || isDemoSessionActive() || shouldUsePublicPreviewOrg) {
-      setBootstrapState("ready");
-      return;
-    }
-
-    setBootstrapState("loading");
-    setBootstrapState("ready");
-  };
-
-  useEffect(() => {
-    if (bootstrapStartedRef.current) {
-      return;
-    }
-    bootstrapStartedRef.current = true;
-    void runBootstrap();
-  }, [hasViewToken, forceMockTopology, shouldUsePublicPreviewOrg]);
-
-  const handleRetry = () => {
-    bootstrapStartedRef.current = false;
-    setBootstrapDegraded(false);
-    setBootstrapState("idle");
-  };
-
-  useEffect(() => {
-    if (bootstrapState !== "idle" || bootstrapStartedRef.current) {
-      return;
-    }
-    bootstrapStartedRef.current = true;
-    void runBootstrap();
-  }, [bootstrapState]);
-
-  if (bootstrapState === "loading") {
-    return <section className={styles.preview}><div className={styles.inlineNotice}>Loading live KPI preview…</div></section>;
-  }
-  if (bootstrapState === "error") {
-    return (
-      <section className={styles.preview}>
-        <div className={styles.inlineNotice}>
-          <span>Preview unavailable.</span>
-          <button type="button" className={styles.retryButton} onClick={handleRetry}>Retry</button>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <>
-      <SystemOverviewLiveKpis
-        forceMockTopology={forceMockTopology}
-        onAccessDemo={onAccessDemo}
-        previewOrgId={shouldUsePublicPreviewOrg ? "client1" : undefined}
-      />
-      {bootstrapDegraded ? <p className={styles.errorNote}>Demo bootstrap unavailable; preview is using direct live data flow.</p> : null}
-    </>
-  );
+  return <SystemOverviewLiveKpis
+    onAccessDemo={onAccessDemo}
+    previewOrgId={shouldUsePublicPreviewOrg ? "client1" : undefined}
+  />;
 };
 
 export default SystemOverviewPreview;

@@ -1,4 +1,4 @@
-import type { AuthenticatedOrganisation } from "../auth/transport/organisations";
+import type { AuthenticatedOrganisation } from "./api";
 
 export type FavouriteScope = {
   organisationId: string;

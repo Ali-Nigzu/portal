@@ -1,7 +1,7 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { logout } from "../features/auth/transport/me";
-import type { AuthenticatedOrganisation } from "../features/auth/transport/organisations";
+import type { AuthenticatedOrganisation } from "../features/organisation-dashboard/api";
 import AuthenticatedNavigationPod from "./authenticated-navigation/AuthenticatedNavigationPod";
 import { useAuthenticatedNavigation } from "./authenticated-navigation/useAuthenticatedNavigation";
 import "../styles/VRMTheme.css";

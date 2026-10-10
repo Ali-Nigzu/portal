@@ -5,10 +5,10 @@ import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
-import { useIsPhoneLayout } from "./hooks/useIsPhoneLayout";
-import { passwordResetResend } from "./transport/passwordResetResend";
-import { passwordResetSetPassword } from "./transport/passwordResetSetPassword";
-import { passwordResetVerifyCode } from "./transport/passwordResetVerifyCode";
+import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
+import { passwordResetResend } from "./transport/passwordReset";
+import { passwordResetSetPassword } from "./transport/passwordReset";
+import { passwordResetVerifyCode } from "./transport/passwordReset";
 import "./VerifyEmailPage.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

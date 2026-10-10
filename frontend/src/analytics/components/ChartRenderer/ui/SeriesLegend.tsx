@@ -1,5 +1,5 @@
 import type { ChartSeries } from "../../../schemas/charting";
-import type { SeriesVisibilityMap } from "../managers";
+import type { SeriesVisibilityMap } from "../managers/SeriesManager";
 import { SITE_FLOW_ACTIVITY_COLORS } from "../../../../lib/siteFlowActivityColors";
 interface SeriesLegendProps {
   series: ChartSeries[];

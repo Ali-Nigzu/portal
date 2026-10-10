@@ -172,19 +172,6 @@ class UpdateMeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class RegisterInterestRequest(BaseModel):
-    name: str
-    email: str
-    company: str
-    phone: Optional[str] = None
-    business_type: Optional[str] = None
-    message: Optional[str] = None
-
-
-class RegisterInterestResponse(BaseModel):
-    message: str
-    submission_id: str
-
 
 class ContactResponse(BaseModel):
     message: str

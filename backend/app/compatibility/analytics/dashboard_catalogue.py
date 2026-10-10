@@ -1,9 +1,9 @@
-"""Dashboard manifest + spec catalogue for Phase 5."""
+"""Manifest and chart specifications for the live public preview and older URLs."""
 
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, Iterable, Mapping, MutableMapping, Optional, Protocol, Tuple
+from typing import Any, Dict, Iterable, Mapping, MutableMapping, Optional, Tuple
 
 from .contracts import validate_chart_spec
 
@@ -367,21 +367,9 @@ class ManifestValidationError(ValueError):
     """Raised when a manifest or widget payload violates the schema contract."""
 
 
-class ManifestRepository(Protocol):
-    """Storage abstraction for dashboard manifests."""
-
-    def load(self, org_id: str, dashboard_id: str) -> Manifest:
-        """Return the stored manifest for the dashboard, bootstrapping from template if needed."""
-
-    def save(self, org_id: str, dashboard_id: str, manifest: Manifest) -> None:
-        """Persist the manifest for the dashboard."""
-
-    def list(self) -> Dict[str, Manifest]:
-        """Return all manifests keyed by repository identifier."""
-
 
 class InMemoryManifestRepository:
-    """Default in-memory repository used during Phase 6 rollout."""
+    """Process-local manifest state for the existing widget-removal contract."""
 
     def __init__(self, templates: Mapping[str, Manifest]):
         self._templates = {key: deepcopy(value) for key, value in templates.items()}
@@ -413,11 +401,9 @@ class InMemoryManifestRepository:
         key = self._key(org_id, dashboard_id)
         self._store[key] = deepcopy(manifest)
 
-    def list(self) -> Dict[str, Manifest]:
-        return {"::".join(key): deepcopy(value) for key, value in self._store.items()}
 
 
-MANIFEST_REPOSITORY: ManifestRepository = InMemoryManifestRepository(_MANIFEST_TEMPLATES)
+MANIFEST_REPOSITORY: InMemoryManifestRepository = InMemoryManifestRepository(_MANIFEST_TEMPLATES)
 
 
 def _clone_for_response(manifest: Manifest, org_id: str) -> Manifest:
@@ -429,12 +415,6 @@ def _clone_for_response(manifest: Manifest, org_id: str) -> Manifest:
     return clone
 
 
-def _load_manifest(org_id: str, dashboard_id: str) -> Manifest:
-    return MANIFEST_REPOSITORY.load(org_id, dashboard_id)
-
-
-def _save_manifest(org_id: str, dashboard_id: str, manifest: Manifest) -> None:
-    MANIFEST_REPOSITORY.save(org_id, dashboard_id, manifest)
 
 
 def _validate_widget(widget: Widget) -> None:
@@ -541,7 +521,7 @@ def get_dashboard_spec(spec_id: str) -> ChartSpec:
 
 
 def get_dashboard_manifest(org_id: str, dashboard_id: str = "dashboard-default") -> Manifest:
-    manifest = _load_manifest(org_id, dashboard_id)
+    manifest = MANIFEST_REPOSITORY.load(org_id, dashboard_id)
     return _clone_for_response(manifest, org_id)
 
 
@@ -551,7 +531,7 @@ def remove_widget_from_manifest(
     widget_id: str,
     dashboard_id: str = "dashboard-default",
 ) -> Manifest:
-    manifest = _load_manifest(org_id, dashboard_id)
+    manifest = MANIFEST_REPOSITORY.load(org_id, dashboard_id)
     _ensure_layout_scaffolding(manifest)
 
     widgets = manifest.get("widgets", [])
@@ -571,13 +551,5 @@ def remove_widget_from_manifest(
         placements.pop(widget_id)
 
     _validate_manifest(manifest)
-    _save_manifest(org_id, dashboard_id, manifest)
+    MANIFEST_REPOSITORY.save(org_id, dashboard_id, manifest)
     return get_dashboard_manifest(org_id, dashboard_id)
-
-
-def list_dashboard_specs() -> Dict[str, ChartSpec]:
-    return {key: get_dashboard_spec(key) for key in DASHBOARD_SPEC_CATALOGUE.keys()}
-
-
-def list_manifests() -> Dict[str, Manifest]:
-    return MANIFEST_REPOSITORY.list()

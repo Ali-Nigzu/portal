@@ -72,28 +72,11 @@ export const clearDemoSessionServer = async (): Promise<void> => {
   }
 };
 
-export const clearDemoSession = async (): Promise<void> => {
-  await clearDemoSessionServer();
-  clearDemoSessionLocal();
-};
-
 export const applyDemoDefaultsOnce = (): void => {
   if (typeof window === "undefined") {
     return;
   }
   if (window.sessionStorage.getItem(DEMO_DEFAULTS_APPLIED_KEY) === "true") {
-    return;
-  }
-  window.sessionStorage.setItem(SELECTED_SITE_KEY, DEFAULT_DEMO_SITE_ID);
-  window.localStorage.setItem(KEEP_MENU_EXPANDED_KEY, "false");
-  window.sessionStorage.setItem(DEMO_TIME_RANGE_KEY, "today");
-  window.sessionStorage.setItem(DEMO_SITEFLOW_TIMEFRAME_KEY, "today");
-  window.sessionStorage.setItem(DEMO_SITEFLOW_MODE_KEY, "activity");
-  window.sessionStorage.setItem(DEMO_DEFAULTS_APPLIED_KEY, "true");
-};
-
-export const applyDemoEntryDefaults = (): void => {
-  if (typeof window === "undefined") {
     return;
   }
   window.sessionStorage.setItem(SELECTED_SITE_KEY, DEFAULT_DEMO_SITE_ID);
@@ -111,17 +94,6 @@ export const consumeDemoTimeRangeOverride = (): string | null => {
   const value = window.sessionStorage.getItem(DEMO_TIME_RANGE_KEY);
   if (value) {
     window.sessionStorage.removeItem(DEMO_TIME_RANGE_KEY);
-  }
-  return value;
-};
-
-export const consumeDemoSiteFlowTimeframeOverride = (): string | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const value = window.sessionStorage.getItem(DEMO_SITEFLOW_TIMEFRAME_KEY);
-  if (value) {
-    window.sessionStorage.removeItem(DEMO_SITEFLOW_TIMEFRAME_KEY);
   }
   return value;
 };
