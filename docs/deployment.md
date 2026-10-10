@@ -66,7 +66,7 @@ Frontend build inputs are `VITE_API_URL` and `VITE_ENVIRONMENT`. Production
 requests on the deployed domain default to same-origin; an explicit API URL
 retains its configured behavior. Browser API configuration is public, never secret.
 
-The isolated Landing-channel/customer-alias snapshot exception also reads `BQ_DATASET`,
+The isolated customer-alias snapshot exception also reads `BQ_DATASET`,
 `LOCAL_COMBINED_SNAPSHOTS_DB` (default `combined_logs_snapshots.db`),
 `LOCAL_SITE_A_SNAPSHOTS_DB` (default `user0_snapshots.db`) and
 `LOCAL_SITE_B_SNAPSHOTS_DB` (default `user1_snapshots.db`). Source absence and
@@ -101,7 +101,7 @@ GCP/IAM, Cloud Run, database schema or production rows.
 The working directory is `/app`. Contact retains
 `backend/data/contact_submissions.json` and atomic `.tmp` replacement. Preserve
 the deployment's current storage/lifetime policy for that path; email delivery
-does not roll back a saved journal record. The isolated channel/alias payload is
+does not roll back a saved journal record. The isolated customer-alias payload is
 `backend/data/demo_snapshot.json`.
 
 The application serves SPA assets and browser deep links from the same process.

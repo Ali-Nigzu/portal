@@ -1,8 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { demoDashboardSource } from "../../organisation-dashboard/api";
-import { historicalTraffic, loadHistoricalSnapshot } from "../../organisation-dashboard/compatibility";
-import { consumeDemoTimeRangeOverride, isDemoSessionActive } from "../../organisation-dashboard/demoSession";
-import { projectLandingScalars, VRM_KPI_IDS, VRM_KPI_TITLES } from "../../organisation-dashboard/projection";
+import { consumeDemoTimeRangeOverride } from "../../organisation-dashboard/demoSession";
+import { projectKpis, projectLandingScalars, VRM_KPI_IDS } from "../../organisation-dashboard/projection";
 import { DashboardKpiSection, type KpiState } from "../../organisation-dashboard/components/KpiBand";
 import camOSLogo from "../../../assets/brand/camos-logo.svg";
 import "../../../styles/Dashboard.css";
@@ -138,33 +137,22 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
       setWidgetError("Invalid or expired view token");
       return () => { active = false; controller.abort(); };
     }
-    const scalars = demoDashboardSource.snapshot({scope:"organisation",id:"1"}, controller.signal)
+    demoDashboardSource.snapshot({scope:"organisation",id:"1"}, controller.signal)
       .then(snapshot => {
         if (!active) return;
-        const widgets = projectLandingScalars(snapshot).map(({id,title,result}) => ({widget:{id,title},status:"ready" as const,result}));
-        setKpiWidgets(current => [...widgets,...current.filter(x => x.widget.id === VRM_KPI_IDS.traffic)]);
+        const kpis = [
+          ...projectLandingScalars(snapshot),
+          ...projectKpis(snapshot).filter(kpi => kpi.id === VRM_KPI_IDS.traffic),
+        ];
+        setKpiWidgets(kpis.map(({id,title,result}) => ({widget:{id,title},status:"ready" as const,result})));
+        setWidgetStatus("ready");
       }).catch(error => {
         if (!active) return;
         setWidgetStatus("error");
         setWidgetError(error instanceof Error ? error.message : "Preview unavailable.");
+      }).finally(() => {
+        window.clearTimeout(timer);
       });
-    // The channel identity is unresolved: retain only this one historical card.
-    // Do not infer Main/Delivery/Back from unrelated organisation Site IDs.
-    const traffic = loadHistoricalSnapshot("site-b", controller.signal, isDemoSessionActive())
-      .then(snapshot => {
-        if (!active) return;
-        const result = historicalTraffic(snapshot,"site-b");
-        setKpiWidgets(current => [...current.filter(x => x.widget.id !== VRM_KPI_IDS.traffic),
-          {widget:{id:VRM_KPI_IDS.traffic,title:VRM_KPI_TITLES[VRM_KPI_IDS.traffic]},status:"ready",result}]);
-      }).catch(error => {
-        if (!active) return;
-        setWidgetStatus("error");
-        setWidgetError(error instanceof Error ? error.message : "Preview unavailable.");
-      });
-    Promise.all([scalars,traffic]).then(() => {
-      window.clearTimeout(timer);
-      if (active) setWidgetStatus(current => current === "error" ? current : "ready");
-    });
     return () => { active = false; window.clearTimeout(timer); controller.abort(); };
   }, []);
 

@@ -1,4 +1,4 @@
-/** Only unresolved historical surfaces: Landing channel identity and zeroed customer aliases.
+/** Only unresolved historical surfaces: zeroed customer Dashboard aliases.
  * Never use this source in canonical Portal/Demo/Reports or as authentication.
  */
 import { API_BASE_URL } from "../../config";
@@ -66,10 +66,9 @@ function payloadContract(snapshot: HistoricalSnapshot) {
     return "legacy";
   throw new Error("Unsupported snapshot payload contract for demo site flow");
 }
-export function historicalTraffic(
+function historicalZeroTraffic(
   snapshot: HistoricalSnapshot,
   siteView: SiteView,
-  zero = false,
 ): ChartResult {
   const values = numbers(
     snapshot.payload[payloadContract(snapshot) === "target" ? 5 : 6],
@@ -79,8 +78,8 @@ export function historicalTraffic(
     { length: Math.max(values.length, names.length) },
     (_, i) => ({
       x: names[i] ?? `Segment ${i + 1}`,
-      value: zero ? 0 : Number.isFinite(values[i]) ? values[i] : 0,
-      y: zero ? 0 : Number.isFinite(values[i]) ? values[i] : 0,
+      value: 0,
+      y: 0,
     }),
   );
   let top = data[0];
@@ -178,7 +177,7 @@ export function historicalZeroKpis(
   kpis.push({
     id: VRM_KPI_IDS.traffic,
     title: "Traffic Split",
-    result: historicalTraffic(snapshot, siteView, true),
+    result: historicalZeroTraffic(snapshot, siteView),
   });
   kpis.push({
     id: VRM_KPI_IDS.capacity,

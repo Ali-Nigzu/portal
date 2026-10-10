@@ -1,4 +1,4 @@
-"""Isolated snapshot exception for Landing channels and zeroed customer aliases.
+"""Isolated snapshot exception for zeroed customer Dashboard aliases.
 
 Canonical Dashboard, Portal, Reports and authentication never read this source.
 """

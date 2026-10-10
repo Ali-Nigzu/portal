@@ -92,15 +92,16 @@ product adapters and do not authorize customer writes.
 
 ## Landing and supported aliases
 
-Landing requests the public canonical Demo Organisation 1 snapshot once for its
-five scalar cards. `projectLandingScalars` shares canonical calculation with the
-Dashboard, retaining Landing's titles, order, formatting and token colours.
+Landing requests the public canonical Demo Organisation 1 snapshot once for all
+six data cards. `projectLandingScalars` retains the five scalar cards' titles,
+order, formatting and token colours; `projectKpis` supplies Traffic Split from
+the snapshot's Site names and latest traffic-share bucket.
 The topology and decorative 68% Capacity remain Landing presentation.
 
-Two unresolved identity mappings remain isolated in
+The unresolved customer-alias identity mapping remains isolated in
 `frontend/src/features/organisation-dashboard/compatibility.ts` and
-`backend/app/compatibility`: Landing's Main/Delivery/Back traffic channels and
-customer `/sites/:siteId/dashboard` aliases. Those aliases deliberately display
+`backend/app/compatibility` for customer `/sites/:siteId/dashboard` aliases.
+Those aliases deliberately display
 zero values; they contain no canonical organisation identity. Their zero
 projection is separate from canonical natural empty-state snapshots. Neither
 source can authenticate a customer/Admin or feed canonical Portal, Demo or
