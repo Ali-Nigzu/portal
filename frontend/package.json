@@ -12,7 +12,7 @@
     "recharts": "^3.2.1"
   },
   "scripts": {
-    "build": "vite build && if [ -d ../backend ]; then rm -rf ../backend/frontend_build && cp -R build ../backend/frontend_build; fi"
+    "build": "vite build"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

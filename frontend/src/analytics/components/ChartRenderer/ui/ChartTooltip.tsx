@@ -8,8 +8,8 @@ import {
   shouldShowRawCount,
 } from "../utils/format";
 import { formatSnapshotTick } from "../../../../features/organisation-dashboard/projection";
-import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
-import { SITE_FLOW_ACTIVITY_COLORS } from "../../../../lib/siteFlowActivityColors";
+import { formatSiteFlowTick } from "../../../../features/reports/utils/reportUtils";
+import { SITE_FLOW_ACTIVITY_COLORS } from "../../../schemas/charting";
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;

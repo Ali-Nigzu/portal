@@ -1,24 +1,3 @@
-export type RangePreset =
-  | "last_2_days"
-  | "last_7_days"
-  | "last_30_days"
-  | "last_12_weeks"
-  | "last_6_months"
-  | "last_12_months"
-  | "today"
-  | "yesterday"
-  | "this_week"
-  | "this_month"
-  | "this_year"
-  | "previous_week"
-  | "previous_month"
-  | "last_hour"
-  | "last_3_hours"
-  | "last_6_hours"
-  | "last_12_hours"
-  | "last_24_hours"
-  | "last_48_hours"
-  | "custom";
 export const designTokens = {
   color: {
     "surface-0": "#f7f7f3",
@@ -148,11 +127,3 @@ export const applyDesignTokens = () => {
     });
   });
 };
-export type GranularityOption = "auto" | "5m" | "15m" | "hour" | "day" | "week";
-export type CompareOption =
-  | "off"
-  | "previous_period"
-  | "same_day_last_week"
-  | "same_period_last_year";
-export type SegmentOption = "sex" | "age";
-export type ScopeOption = "all_cameras" | "per_camera";

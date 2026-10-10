@@ -6,7 +6,7 @@ from .organisation_dashboard import entity_id
 from .portal_context import instant, iso
 
 
-from .event_source import EVENTS_TABLE
+from .bigquery_client import EVENTS_TABLE
 
 
 class InvalidGatewayState(RuntimeError):

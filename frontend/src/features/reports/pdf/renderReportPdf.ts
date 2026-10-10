@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import type { ReportData } from "../engine/ReportsEngine";
-import type { ReportIdentity } from "../types";
+import type { ReportIdentity } from "../ReportsPage";
 import { AGE_BUCKET_LABELS, SEX_BUCKET_LABELS } from "../utils/reportUtils";
 
 const safePart = (value: string) =>

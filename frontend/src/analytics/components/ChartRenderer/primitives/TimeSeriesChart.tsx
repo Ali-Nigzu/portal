@@ -18,7 +18,7 @@ import { buildCartesianDataset } from "./utils";
 import { ChartTooltip } from "../ui/ChartTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
 import { formatSnapshotTick } from "../../../../features/organisation-dashboard/projection";
-import { formatSiteFlowTick } from "../utils/formatSiteFlowTick";
+import { formatSiteFlowTick } from "../../../../features/reports/utils/reportUtils";
 import { useCoarsePointer } from "./useCoarsePointer";
 export const TimeSeriesChart = ({
   series,

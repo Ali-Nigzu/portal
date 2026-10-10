@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "../config";
-import { DEFAULT_DEMO_SITE_ID } from "./sites";
+import { API_BASE_URL } from "../../config";
+import { DEFAULT_DEMO_SITE_ID } from "./selection";
 import { clearDemoDeviceOverrides } from "./demoDeviceControls";
 
 const DEMO_SESSION_KEY = "camOS_demo_session";
@@ -103,13 +103,6 @@ export const getDemoSiteFlowTimeframe = (): string | null => {
     return null;
   }
   return window.sessionStorage.getItem(DEMO_SITEFLOW_TIMEFRAME_KEY);
-};
-
-export const setDemoSiteFlowTimeframe = (value: string): void => {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.sessionStorage.setItem(DEMO_SITEFLOW_TIMEFRAME_KEY, value);
 };
 
 export const consumeDemoSiteFlowModeOverride = (): string | null => {

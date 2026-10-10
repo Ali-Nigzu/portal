@@ -8,7 +8,6 @@ import {
 } from "../../components/PortalFilters";
 import { useAlarmLogs } from "./hooks/useAlarmLogs";
 import type { AlarmEvent } from "./types";
-import type { Credentials } from "../../types/credentials";
 import "./AlarmLogsPage.css";
 import "../../styles/PortalLogs.css";
 
@@ -238,7 +237,7 @@ function CanonicalAlarms() {
     </div>
   );
 }
-export default function AlarmLogsPage(_props: { credentials?: Credentials }) {
+export default function AlarmLogsPage() {
   return useOptionalPortal() ? (
     <CanonicalAlarms />
   ) : (

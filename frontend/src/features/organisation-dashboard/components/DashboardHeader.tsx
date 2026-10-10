@@ -1,7 +1,9 @@
 import React, { useMemo } from "react";
 import { useParams } from "react-router-dom";
-import HeaderStatusStrip, { type DashboardStatus } from "../../../components/HeaderStatusStrip";
-import { findSiteById, getStoredSiteId } from "../../../lib/sites";
+import HeaderStatusStrip, {
+  type DashboardStatus,
+} from "../../../components/HeaderStatusStrip";
+import { findSiteById, getStoredSiteId } from "../selection";
 
 type DashboardHeaderProps = {
   clientId?: string;
@@ -30,7 +32,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const Title = status ? "h1" : "div";
 
   return (
-    <header className={`dashboard-v2__header vrm-section vrm-section--header${status ? " dashboard-v2__header--canonical" : ""}`}>
+    <header
+      className={`dashboard-v2__header vrm-section vrm-section--header${status ? " dashboard-v2__header--canonical" : ""}`}
+    >
       <div className="vrm-dashboard-header vrm-dashboard-header--desktop">
         <div className="vrm-dashboard-header-left">
           <div className="vrm-dashboard-identity">
@@ -39,16 +43,37 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </div>
         {mode === "full" ? (
           <div className="vrm-dashboard-header-right">
-            <HeaderStatusStrip className="vrm-dashboard-header-meta" isAuthenticatedView={isAuthenticatedView} status={status} trailingAction={metadataAction} />
+            <HeaderStatusStrip
+              className="vrm-dashboard-header-meta"
+              isAuthenticatedView={isAuthenticatedView}
+              status={status}
+              trailingAction={metadataAction}
+            />
           </div>
         ) : null}
       </div>
       {mode === "full" ? (
-        <div className="vrm-dashboard-header-mobile" role="group" aria-label={status ? "Dashboard status summary" : "Site status summary"}>
-          <Title className="vrm-dashboard-header-mobile__site">{siteLabel}</Title>
-          <div className="vrm-dashboard-header-mobile__divider" aria-hidden="true" />
+        <div
+          className="vrm-dashboard-header-mobile"
+          role="group"
+          aria-label={
+            status ? "Dashboard status summary" : "Site status summary"
+          }
+        >
+          <Title className="vrm-dashboard-header-mobile__site">
+            {siteLabel}
+          </Title>
+          <div
+            className="vrm-dashboard-header-mobile__divider"
+            aria-hidden="true"
+          />
           <div className="vrm-dashboard-header-mobile__status">
-            <HeaderStatusStrip layout="mobile" isAuthenticatedView={isAuthenticatedView} status={status} trailingAction={metadataAction} />
+            <HeaderStatusStrip
+              layout="mobile"
+              isAuthenticatedView={isAuthenticatedView}
+              status={status}
+              trailingAction={metadataAction}
+            />
           </div>
         </div>
       ) : null}

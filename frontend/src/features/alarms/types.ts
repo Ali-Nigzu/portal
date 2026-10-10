@@ -17,8 +17,3 @@ export type AlarmResult = {
     has_more: boolean;
   };
 };
-export interface AlarmUser {
-  role: "client";
-  name: string;
-  csv_url?: string;
-}

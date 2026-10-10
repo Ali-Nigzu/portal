@@ -5,7 +5,7 @@ import { Card } from "../../analytics/components/Card/Card";
 import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
 import { organisationPortalPath, sitePortalPath } from "../organisation-dashboard/authenticatedPortalRoutes";
 import { readRecentPortalDestinations } from "../organisation-dashboard/recentPortalDestinations";
-import "../dashboard/styles/DashboardPage.css";
+import "../../styles/Dashboard.css";
 import "./HomePage.css";
 
 const HomePage: React.FC = () => {

@@ -10,7 +10,7 @@ import {
   clearDemoSessionLocal,
   clearDemoSessionServer,
   isDemoSessionActive,
-} from "../lib/demoSession";
+} from "../features/organisation-dashboard/demoSession";
 import "../styles/DemoOverlay.css";
 
 interface DemoOverlayProps {

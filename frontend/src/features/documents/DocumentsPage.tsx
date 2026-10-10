@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import DocumentsGrid from "./components/DocumentsGrid";
 import UploadDocumentModal from "./components/UploadDocumentModal";
 import { useDocuments } from "./hooks/useDocuments";
-import "../dashboard/styles/DashboardPage.css";
+import "../../styles/Dashboard.css";
 import "./DocumentsPage.css";
 
 const DocumentsPage: React.FC = () => {

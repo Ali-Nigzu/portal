@@ -1,14 +1,11 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
-import type { Credentials } from "../../../types/credentials";
-import { getViewTokenFromLocation } from "../../../lib/viewToken";
-import { isDemoSessionActive } from "../../../lib/demoSession";
-import { useDashboardManifest } from "../../dashboard/hooks/useDashboardManifest";
-import { useDashboardWidgets } from "../../dashboard/hooks/useDashboardWidgets";
-import { VRM_KPI_IDS } from "../../dashboard/utils/applyVRMOverrides";
-import DashboardKpiSection from "../../dashboard/components/DashboardKpiSection";
+import { demoDashboardSource } from "../../organisation-dashboard/api";
+import { historicalTraffic, loadHistoricalSnapshot } from "../../organisation-dashboard/compatibility";
+import { consumeDemoTimeRangeOverride, isDemoSessionActive } from "../../organisation-dashboard/demoSession";
+import { projectLandingScalars, VRM_KPI_IDS, VRM_KPI_TITLES } from "../../organisation-dashboard/projection";
+import { DashboardKpiSection, type KpiState } from "../../organisation-dashboard/components/KpiBand";
 import camOSLogo from "../../../assets/brand/camos-logo.svg";
-import "../../dashboard/styles/DashboardPage.css";
+import "../../../styles/Dashboard.css";
 import styles from "./SystemOverviewPreview.module.css";
 
 type TopTileId = "entrances" | "occupancy" | "exits" | "footfall";
@@ -65,8 +62,6 @@ const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
 
 const CAPACITY_PERCENT = 68;
 
-const NOOP_REMOVE = () => undefined;
-const PREVIEW_CREDENTIALS: Credentials = { username: "", password: "" };
 const BUS_GAP_BELOW_TOP = 18;
 const BUS_GAP_ABOVE_NODE = 28;
 const BUS_CORRIDOR_GAP_TOP = 20;
@@ -101,7 +96,7 @@ const initialWireLayout: WireLayout = {
 };
 
 
-const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?: string }> = ({ onAccessDemo, previewOrgId }) => {
+const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
   const bottomClusterRef = useRef<HTMLDivElement | null>(null);
@@ -128,35 +123,50 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?
   const rafRef = useRef<number | null>(null);
   const [wire, setWire] = useState<WireLayout>(initialWireLayout);
 
-  const {
-    manifest,
-    status: manifestStatus,
-    error: manifestError,
-    selectedTimeRange,
-    orgId,
-    viewToken,
-    resolvedDashboardId,
-    resolvedUiClient,
-    setManifest,
-  } = useDashboardManifest({ credentials: PREVIEW_CREDENTIALS, orgIdOverride: previewOrgId });
-
-  const previewDataMode = previewOrgId && !viewToken ? "public_preview" : "demo";
-
-  const {
-    status: widgetStatus,
-    error: widgetError,
-    kpiWidgets,
-  } = useDashboardWidgets({
-    manifest,
-    selectedTimeRange,
-    orgId,
-    viewToken,
-    clientContextId: resolvedUiClient,
-    resolvedDashboardId,
-    setManifest,
-    dataMode: previewDataMode,
-    siteView: "site-b",
-  });
+  const [kpiWidgets, setKpiWidgets] = useState<KpiState[]>([]);
+  const [widgetStatus, setWidgetStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [widgetError, setWidgetError] = useState<string | null>(null);
+  useEffect(() => {
+    consumeDemoTimeRangeOverride();
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 15000);
+    let active = true;
+    const rejectedToken = Boolean(new URLSearchParams(window.location.search).get("view_token"));
+    if (rejectedToken) {
+      window.clearTimeout(timer);
+      setWidgetStatus("error");
+      setWidgetError("Invalid or expired view token");
+      return () => { active = false; controller.abort(); };
+    }
+    const scalars = demoDashboardSource.snapshot({scope:"organisation",id:"1"}, controller.signal)
+      .then(snapshot => {
+        if (!active) return;
+        const widgets = projectLandingScalars(snapshot).map(({id,title,result}) => ({widget:{id,title},status:"ready" as const,result}));
+        setKpiWidgets(current => [...widgets,...current.filter(x => x.widget.id === VRM_KPI_IDS.traffic)]);
+      }).catch(error => {
+        if (!active) return;
+        setWidgetStatus("error");
+        setWidgetError(error instanceof Error ? error.message : "Preview unavailable.");
+      });
+    // The channel identity is unresolved: retain only this one historical card.
+    // Do not infer Main/Delivery/Back from unrelated organisation Site IDs.
+    const traffic = loadHistoricalSnapshot("site-b", controller.signal, isDemoSessionActive())
+      .then(snapshot => {
+        if (!active) return;
+        const result = historicalTraffic(snapshot,"site-b");
+        setKpiWidgets(current => [...current.filter(x => x.widget.id !== VRM_KPI_IDS.traffic),
+          {widget:{id:VRM_KPI_IDS.traffic,title:VRM_KPI_TITLES[VRM_KPI_IDS.traffic]},status:"ready",result}]);
+      }).catch(error => {
+        if (!active) return;
+        setWidgetStatus("error");
+        setWidgetError(error instanceof Error ? error.message : "Preview unavailable.");
+      });
+    Promise.all([scalars,traffic]).then(() => {
+      window.clearTimeout(timer);
+      if (active) setWidgetStatus(current => current === "error" ? current : "ready");
+    });
+    return () => { active = false; window.clearTimeout(timer); controller.abort(); };
+  }, []);
 
   const kpiLookup = useMemo(() => new Map(kpiWidgets.map((item) => [item.widget.id, item])), [kpiWidgets]);
 
@@ -168,7 +178,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?
   const dwellWidget = kpiLookup.get(VRM_KPI_IDS.dwell) ?? null;
   const trafficWidget = kpiLookup.get(VRM_KPI_IDS.traffic) ?? null;
   const hasKpis = hasTopWidgets && Boolean(dwellWidget);
-  const hasError = manifestStatus === "error" || widgetStatus === "error";
+  const hasError = widgetStatus === "error";
   const trafficUnavailable = !trafficWidget || trafficWidget.status === "error";
 
 
@@ -645,7 +655,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?
                           topDockRefs.current[item.key] = node;
                         }}
                       >
-                        {<DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} onRemoveWidget={NOOP_REMOVE} />}
+                        {<DashboardKpiSection mode="preview" kpiWidgets={[item.widget!]} />}
                       </div>
                       <span
                         className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorBottom}`}
@@ -680,7 +690,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?
                       {<DashboardKpiSection
                             mode="preview"
                             kpiWidgets={[trafficWidget!]}
-                            onRemoveWidget={NOOP_REMOVE}
+
                             rendererClassName="dashboard-v2__kpi-renderer--landing-preview-traffic"
                           />}
                     </div>
@@ -693,7 +703,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?
                 {dwellWidget ? (
                   <div className={styles.wireAnchorSlot} ref={dwellSlotRef}>
                     <div className={styles.dockSurface} ref={dwellDockRef}>
-                      {<DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} onRemoveWidget={NOOP_REMOVE} />}
+                      {<DashboardKpiSection mode="preview" kpiWidgets={[dwellWidget!]} />}
                     </div>
                     <span className={`${styles.wireEdgeAnchor} ${styles.wireEdgeAnchorTop}`} data-anchor-id="bottom-dwell" />
                   </div>
@@ -746,22 +756,15 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void; previewOrgId?
 
 
       </div>
-      {(manifestStatus === "error" || widgetStatus === "error") && (manifestError || widgetError) ? (
+      {(widgetStatus === "error") && widgetError ? (
         <p className={styles.errorNote}>Preview unavailable.</p>
       ) : null}
     </section>
   );
 };
 
-const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAccessDemo }) => {
-  const location = useLocation();
-  const hasViewToken = Boolean(getViewTokenFromLocation(location.search));
-  const shouldUsePublicPreviewOrg = !hasViewToken && !isDemoSessionActive();
-
-  return <SystemOverviewLiveKpis
-    onAccessDemo={onAccessDemo}
-    previewOrgId={shouldUsePublicPreviewOrg ? "client1" : undefined}
-  />;
-};
+const SystemOverviewPreview: React.FC<{ onAccessDemo: () => void }> = ({ onAccessDemo }) => (
+  <SystemOverviewLiveKpis onAccessDemo={onAccessDemo} />
+);
 
 export default SystemOverviewPreview;

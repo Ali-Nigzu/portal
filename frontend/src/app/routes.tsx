@@ -1,4 +1,10 @@
-import React, { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import React, {
+  Suspense,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import {
   Navigate,
   Route,
@@ -11,51 +17,94 @@ import VRMLayout from "../components/VRMLayout";
 import {
   clearDemoSessionLocal,
   isDemoSessionActive,
-} from "../lib/demoSession";
-import { getDefaultSiteId, getStoredSiteId } from "../lib/sites";
-import { getViewTokenFromLocation } from "../lib/viewToken";
+} from "../features/organisation-dashboard/demoSession";
+import {
+  getDefaultSiteId,
+  getStoredSiteId,
+} from "../features/organisation-dashboard/selection";
 import { fetchMe } from "../features/auth/transport/me";
 import type { AuthUser } from "../features/auth/transport/me";
-import { fetchOrganisations, type AuthenticatedOrganisation } from "../features/organisation-dashboard/api";
+import {
+  fetchOrganisations,
+  type AuthenticatedOrganisation,
+} from "../features/organisation-dashboard/api";
 import { AuthenticatedApplicationProvider } from "../context/AuthenticatedApplicationContext";
 import AuthenticatedAppShell from "../components/AuthenticatedAppShell";
-import { Credentials } from "../types/credentials";
-import { loadEmptyWidgetResult } from "../features/dashboard/transport/loadEmptyWidgetResult";
-import type { DashboardDataMode } from "../features/dashboard/transport/loadWidgetResult";
 
-const DashboardPage = React.lazy(() => import("../features/dashboard/DashboardPage"));
-const EventLogsPage = React.lazy(() => import("../features/events/EventLogsPage"));
-const AlarmLogsPage = React.lazy(() => import("../features/alarms/AlarmLogsPage"));
-const DeviceListPage = React.lazy(() => import("../features/devices/DeviceListPage"));
+const HistoricalDashboardRoute = React.lazy(() =>
+  import("../features/organisation-dashboard/OrganisationDashboardPage").then(
+    (module) => ({ default: module.HistoricalDashboardRoute }),
+  ),
+);
+const EventLogsPage = React.lazy(
+  () => import("../features/events/EventLogsPage"),
+);
+const AlarmLogsPage = React.lazy(
+  () => import("../features/alarms/AlarmLogsPage"),
+);
+const DeviceListPage = React.lazy(
+  () => import("../features/devices/DeviceListPage"),
+);
 const ReportsPage = React.lazy(() => import("../features/reports/ReportsPage"));
-const AdminApp = React.lazy(() => import("../features/internal-admin/AdminApp"));
+const AdminApp = React.lazy(
+  () => import("../features/internal-admin/AdminApp"),
+);
 const HomePage = React.lazy(() => import("../features/home/HomePage"));
-const DocumentsPage = React.lazy(() => import("../features/documents/DocumentsPage"));
-const MyAccountPage = React.lazy(() => import("../features/settings/pages/MyAccountPage"));
-const ManageAccessPage = React.lazy(() => import("../features/organisation-access/ManageAccessPage"));
+const DocumentsPage = React.lazy(
+  () => import("../features/documents/DocumentsPage"),
+);
+const MyAccountPage = React.lazy(
+  () => import("../features/settings/pages/MyAccountPage"),
+);
+const ManageAccessPage = React.lazy(
+  () => import("../features/organisation-access/ManageAccessPage"),
+);
 const LandingPage = React.lazy(() => import("../features/landing/LandingPage"));
 const LoginPage = React.lazy(() => import("../features/auth/LoginPage"));
-const CreateAccountPage = React.lazy(() => import("../features/auth/CreateAccountPage"));
-const VerifyEmailPage = React.lazy(() => import("../features/auth/VerifyEmailPage"));
-const ResetPasswordPage = React.lazy(() => import("../features/auth/ResetPasswordPage"));
+const CreateAccountPage = React.lazy(
+  () => import("../features/auth/CreateAccountPage"),
+);
+const VerifyEmailPage = React.lazy(
+  () => import("../features/auth/VerifyEmailPage"),
+);
+const ResetPasswordPage = React.lazy(
+  () => import("../features/auth/ResetPasswordPage"),
+);
 const ContactPage = React.lazy(() => import("../features/contact/ContactPage"));
-const DemoDashboardRoute = React.lazy(() => import("../features/organisation-dashboard/DemoDashboardRoute"));
-const DemoPage = React.lazy(() => import("../features/organisation-dashboard/DemoDashboardRoute"));
-const AuthenticatedOrganisationPortalRoute = React.lazy(() => import("../features/organisation-dashboard/AuthenticatedOrganisationPortalRoute"));
-const TermsAndConditionsPage = React.lazy(() => import("../features/legal/TermsAndConditionsPage"));
-const PrivacyPolicyPage = React.lazy(() => import("../features/legal/PrivacyPolicyPage"));
-const SubProcessorRegisterPage = React.lazy(() => import("../features/legal/SubProcessorRegisterPage"));
+const DemoDashboardRoute = React.lazy(
+  () => import("../features/organisation-dashboard/DemoDashboardRoute"),
+);
+const DemoPage = React.lazy(
+  () => import("../features/organisation-dashboard/DemoDashboardRoute"),
+);
+const AuthenticatedOrganisationPortalRoute = React.lazy(
+  () =>
+    import("../features/organisation-dashboard/AuthenticatedOrganisationPortalRoute"),
+);
+const TermsAndConditionsPage = React.lazy(
+  () => import("../features/legal/TermsAndConditionsPage"),
+);
+const PrivacyPolicyPage = React.lazy(
+  () => import("../features/legal/PrivacyPolicyPage"),
+);
+const SubProcessorRegisterPage = React.lazy(
+  () => import("../features/legal/SubProcessorRegisterPage"),
+);
+
+const getViewTokenFromLocation = (search: string) =>
+  new URLSearchParams(search).get("view_token") ?? undefined;
 
 const AppRoutes: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(null);
-  const [credentials, setCredentials] = useState<Credentials>({
-    username: "",
-    password: "",
-  });
+  const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(
+    null,
+  );
   const userRole = "client" as const;
-  const [organisations, setOrganisations] = useState<AuthenticatedOrganisation[]>([]);
-  const [favouritesCatalogueReady, setFavouritesCatalogueReady] = useState(false);
+  const [organisations, setOrganisations] = useState<
+    AuthenticatedOrganisation[]
+  >([]);
+  const [favouritesCatalogueReady, setFavouritesCatalogueReady] =
+    useState(false);
   const catalogueRevision = useRef(0);
   const refreshOrganisations = useCallback(async () => {
     const revision = ++catalogueRevision.current;
@@ -68,7 +117,8 @@ const AppRoutes: React.FC = () => {
   const location = useLocation();
   const viewToken = getViewTokenFromLocation(location.search);
   const hasViewToken = Boolean(viewToken);
-  const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
+  const isDemoRoute =
+    location.pathname === "/demo" || location.pathname.startsWith("/demo/");
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
 
   useEffect(() => {
@@ -111,7 +161,6 @@ const AppRoutes: React.FC = () => {
     setAuthenticatedUser(me.data.user);
     setOrganisations(nextOrganisations ?? []);
     setFavouritesCatalogueReady(nextOrganisations !== null);
-    setCredentials({ username: "", password: "" });
     setIsLoggedIn(true);
   };
 
@@ -120,25 +169,20 @@ const AppRoutes: React.FC = () => {
     clearDemoSessionLocal();
     setIsLoggedIn(false);
     setAuthenticatedUser(null);
-    setCredentials({ username: "", password: "" });
     setOrganisations([]);
     setFavouritesCatalogueReady(false);
   };
 
   const isDemoSession = isDemoSessionActive();
-  const appMode: "public" | "authenticated" | "view_token" | "demo" = hasViewToken
+  const appMode: "public" | "authenticated" | "view_token" | "demo" =
+    hasViewToken
       ? "view_token"
-      : (isDemoSession || isDemoRoute)
+      : isDemoSession || isDemoRoute
         ? "demo"
         : isLoggedIn
           ? "authenticated"
           : "public";
   const isAuthenticatedMode = appMode === "authenticated";
-  const dashboardDataMode: DashboardDataMode = appMode === "authenticated"
-    ? "authenticated"
-    : appMode === "demo"
-      ? "demo"
-      : "view_token";
   const resolvedRole = appMode === "view_token" ? "client" : userRole;
   const shouldAllowAppRoutes = appMode !== "public";
   const appendParams = (
@@ -161,7 +205,9 @@ const AppRoutes: React.FC = () => {
   const appendViewToken = (path: string) =>
     viewToken ? appendParams(path, { view_token: viewToken }) : path;
   const demoAwareSitePath = (siteId: string, subPath = "dashboard") =>
-    appMode === "demo" ? `/demo/${siteId}/${subPath}` : `/sites/${siteId}/${subPath}`;
+    appMode === "demo"
+      ? `/demo/${siteId}/${subPath}`
+      : `/sites/${siteId}/${subPath}`;
   const resolveLegacySiteId = () => {
     const stored = getStoredSiteId();
     if (!stored || stored === "all") {
@@ -173,10 +219,7 @@ const AppRoutes: React.FC = () => {
     const { siteId } = useParams();
     const resolvedSiteId = siteId ?? resolveLegacySiteId();
     return (
-      <Navigate
-        to={appendParams(demoAwareSitePath(resolvedSiteId))}
-        replace
-      />
+      <Navigate to={appendParams(demoAwareSitePath(resolvedSiteId))} replace />
     );
   };
   const DemoSiteIndexRedirect: React.FC = () => {
@@ -212,22 +255,41 @@ const AppRoutes: React.FC = () => {
     );
   };
 
-  if (location.pathname === "/admin" || location.pathname.startsWith("/admin/")) {
-    return <Suspense fallback={<p>Loading Admin…</p>}><AdminApp /></Suspense>;
+  if (
+    location.pathname === "/admin" ||
+    location.pathname.startsWith("/admin/")
+  ) {
+    return (
+      <Suspense fallback={<p>Loading Admin…</p>}>
+        <AdminApp />
+      </Suspense>
+    );
   }
 
   if (!isSessionChecked) {
     return null;
   }
 
-  const isCanonicalPortalPath = location.pathname.startsWith("/sites/organisations/");
-  const isAccountAppPath = location.pathname === "/documents" || location.pathname.startsWith("/settings");
-  if (!authenticatedUser && (isCanonicalPortalPath || (appMode === "public" && isAccountAppPath))) {
+  const isCanonicalPortalPath = location.pathname.startsWith(
+    "/sites/organisations/",
+  );
+  const isAccountAppPath =
+    location.pathname === "/documents" ||
+    location.pathname.startsWith("/settings");
+  if (
+    !authenticatedUser &&
+    (isCanonicalPortalPath || (appMode === "public" && isAccountAppPath))
+  ) {
     return <Navigate to="/login" replace />;
   }
 
   const renderClientRoute = (element: React.ReactNode) => (
-    <VRMLayout userRole={resolvedRole} isAuthenticated={isAuthenticatedMode} onLogout={handleLogout} authenticatedOrganisations={organisations}>
+    <VRMLayout
+      userRole={resolvedRole}
+      isAuthenticated={isAuthenticatedMode}
+      onLogout={handleLogout}
+      authenticatedOrganisations={organisations}
+    >
       {element}
     </VRMLayout>
   );
@@ -237,7 +299,10 @@ const AppRoutes: React.FC = () => {
   );
   const refreshAccount = async () => {
     const me = await fetchMe();
-    if (!me.ok) { handleLogout(); return; }
+    if (!me.ok) {
+      handleLogout();
+      return;
+    }
     setAuthenticatedUser(me.data.user);
   };
   const authenticatedShell = authenticatedUser ? (
@@ -250,15 +315,25 @@ const AppRoutes: React.FC = () => {
     >
       <AuthenticatedAppShell onLogout={handleLogout} />
     </AuthenticatedApplicationProvider>
-  ) : <Navigate to="/login" replace />;
+  ) : (
+    <Navigate to="/login" replace />
+  );
 
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/home" replace />} />
-      {!isAuthenticatedMode && <Route path="/home" element={lazyRoute(<LandingPage />)} />}
+      {!isAuthenticatedMode && (
+        <Route path="/home" element={lazyRoute(<LandingPage />)} />
+      )}
       <Route path="/demo" element={lazyRoute(<DemoPage />)} />
-      <Route path="/demo/:organisationSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
-      <Route path="/demo/:organisationSlug/:siteSlug/:module" element={lazyRoute(<DemoDashboardRoute />)} />
+      <Route
+        path="/demo/:organisationSlug/:module"
+        element={lazyRoute(<DemoDashboardRoute />)}
+      />
+      <Route
+        path="/demo/:organisationSlug/:siteSlug/:module"
+        element={lazyRoute(<DemoDashboardRoute />)}
+      />
       <Route
         path="/create-account"
         element={
@@ -319,10 +394,7 @@ const AppRoutes: React.FC = () => {
           )
         }
       />
-      <Route
-        path="/contact"
-        element={lazyRoute(<ContactPage />)}
-      />
+      <Route path="/contact" element={lazyRoute(<ContactPage />)} />
       <Route
         path="/terms-and-conditions"
         element={
@@ -357,7 +429,10 @@ const AppRoutes: React.FC = () => {
         path="/dashboard"
         element={
           shouldAllowAppRoutes ? (
-            <Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />
+            <Navigate
+              to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))}
+              replace
+            />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -369,7 +444,15 @@ const AppRoutes: React.FC = () => {
             <>
               <Route
                 path="/sites"
-                element={<Navigate to={appendParams(`/demo/${resolveLegacySiteId()}/dashboard`, { panel: "sites" })} replace />}
+                element={
+                  <Navigate
+                    to={appendParams(
+                      `/demo/${resolveLegacySiteId()}/dashboard`,
+                      { panel: "sites" },
+                    )}
+                    replace
+                  />
+                }
               />
               <Route
                 path="/sites/:siteId/*"
@@ -377,24 +460,34 @@ const AppRoutes: React.FC = () => {
               />
               <Route
                 path="/demo/:siteId"
-                element={renderClientRoute(
-                  <DemoSiteIndexRedirect />,
-                )}
+                element={renderClientRoute(<DemoSiteIndexRedirect />)}
               />
             </>
           )}
           <Route
             path="/sites"
-            element={isAuthenticatedMode ? <Navigate to="/home" replace /> : <SitesSelectorRedirect />}
+            element={
+              isAuthenticatedMode ? (
+                <Navigate to="/home" replace />
+              ) : (
+                <SitesSelectorRedirect />
+              )
+            }
           />
           {isAuthenticatedMode && (
             <Route element={authenticatedShell}>
               <Route path="/home" element={<HomePage />} />
               <Route path="/documents" element={<DocumentsPage />} />
-              <Route path="/settings" element={<Navigate to="/settings/account" replace />} />
+              <Route
+                path="/settings"
+                element={<Navigate to="/settings/account" replace />}
+              />
               <Route path="/settings/account" element={<MyAccountPage />} />
               <Route path="/settings/access" element={<ManageAccessPage />} />
-              <Route path="/settings/alarms" element={<Navigate to="/settings/account" replace />} />
+              <Route
+                path="/settings/alarms"
+                element={<Navigate to="/settings/account" replace />}
+              />
               <Route
                 path="/sites/organisations/:organisationId/:module"
                 element={<AuthenticatedOrganisationPortalRoute />}
@@ -407,59 +500,86 @@ const AppRoutes: React.FC = () => {
           )}
           {!isAuthenticatedMode && (
             <>
-              <Route path="/settings" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
-              <Route path="/settings/account" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
-              <Route path="/settings/access" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
-              <Route path="/settings/alarms" element={<Navigate to="/settings/account" replace />} />
-              <Route path="/documents" element={<Navigate to={appendViewToken(demoAwareSitePath(resolveLegacySiteId()))} replace />} />
+              <Route
+                path="/settings"
+                element={
+                  <Navigate
+                    to={appendViewToken(
+                      demoAwareSitePath(resolveLegacySiteId()),
+                    )}
+                    replace
+                  />
+                }
+              />
+              <Route
+                path="/settings/account"
+                element={
+                  <Navigate
+                    to={appendViewToken(
+                      demoAwareSitePath(resolveLegacySiteId()),
+                    )}
+                    replace
+                  />
+                }
+              />
+              <Route
+                path="/settings/access"
+                element={
+                  <Navigate
+                    to={appendViewToken(
+                      demoAwareSitePath(resolveLegacySiteId()),
+                    )}
+                    replace
+                  />
+                }
+              />
+              <Route
+                path="/settings/alarms"
+                element={<Navigate to="/settings/account" replace />}
+              />
+              <Route
+                path="/documents"
+                element={
+                  <Navigate
+                    to={appendViewToken(
+                      demoAwareSitePath(resolveLegacySiteId()),
+                    )}
+                    replace
+                  />
+                }
+              />
             </>
           )}
           <Route
             path="/sites/:siteId"
-            element={renderClientRoute(
-              <SiteIndexRedirect />,
-            )}
+            element={renderClientRoute(<SiteIndexRedirect />)}
           />
           <Route
             path="/sites/:siteId/dashboard"
             element={renderClientRoute(
               lazyRoute(
-                <DashboardPage
-                  credentials={credentials}
-                  dataMode={dashboardDataMode}
-                  donutTooltipMode="legacy"
-                  widgetResultLoader={
-                    isAuthenticatedMode ? loadEmptyWidgetResult : undefined
-                  }
+                <HistoricalDashboardRoute
+                  isAuthenticatedView={isAuthenticatedMode}
                 />,
               ),
             )}
           />
           <Route
             path="/sites/:siteId/event-logs"
-            element={renderClientRoute(
-              lazyRoute(<EventLogsPage credentials={credentials} />),
-            )}
+            element={renderClientRoute(lazyRoute(<EventLogsPage />))}
           />
           <Route
             path="/sites/:siteId/alarm-logs"
-            element={renderClientRoute(
-              lazyRoute(<AlarmLogsPage credentials={credentials} />),
-            )}
+            element={renderClientRoute(lazyRoute(<AlarmLogsPage />))}
           />
           <Route
             path="/sites/:siteId/device-list"
-            element={renderClientRoute(
-              lazyRoute(<DeviceListPage credentials={credentials} />),
-            )}
+            element={renderClientRoute(lazyRoute(<DeviceListPage />))}
           />
           <Route
             path="/sites/:siteId/reports"
-            element={renderClientRoute(
-              lazyRoute(<ReportsPage credentials={credentials} />),
-            )}
+            element={renderClientRoute(lazyRoute(<ReportsPage />))}
           />
-
         </>
       )}
       <Route
@@ -468,7 +588,14 @@ const AppRoutes: React.FC = () => {
           !isAuthenticatedMode ? (
             <Navigate to="/" replace />
           ) : appMode === "view_token" || appMode === "demo" ? (
-            <Navigate to={appMode === "demo" ? appendParams(`/demo/${getDefaultSiteId()}/dashboard`) : appendViewToken("/sites/all/dashboard")} replace />
+            <Navigate
+              to={
+                appMode === "demo"
+                  ? appendParams(`/demo/${getDefaultSiteId()}/dashboard`)
+                  : appendViewToken("/sites/all/dashboard")
+              }
+              replace
+            />
           ) : (
             <Navigate to="/home" replace />
           )

@@ -1,111 +1,4 @@
-export type ChartDatasetId = "events";
-export type MeasureAggregation =
-  | "occupancy_recursion"
-  | "count"
-  | "activity_rate"
-  | "dwell_mean"
-  | "dwell_p90"
-  | "sessions"
-  | "demographic_count";
-export type EventType = 0 | 1;
-export interface ChartMeasure {
-  id: string;
-  label?: string;
-  aggregation: MeasureAggregation;
-  eventTypes?: EventType[];
-  options?: Record<string, unknown>;
-}
-export type TimeBucket =
-  | "RAW"
-  | "5_MIN"
-  | "15_MIN"
-  | "30_MIN"
-  | "HOUR"
-  | "6_HOUR"
-  | "DAY"
-  | "WEEK"
-  | "MONTH"
-  | "YEAR";
-export interface ChartDimension {
-  id: string;
-  column: string;
-  bucket?: TimeBucket;
-  sort?: "asc" | "desc";
-}
-export interface ChartSplit {
-  id: string;
-  column: string;
-  limit?: number;
-  sort?: "asc" | "desc";
-}
-export type FilterComparisonOperator =
-  | "equals"
-  | "not_equals"
-  | "in"
-  | "not_in"
-  | "between"
-  | "gte"
-  | "lte"
-  | "gt"
-  | "lt"
-  | "contains"
-  | "starts_with"
-  | "ends_with";
-export interface FilterCondition {
-  field: string;
-  op: FilterComparisonOperator;
-  value?: string | number | boolean | Array<string | number>;
-}
-export interface FilterGroup {
-  logic: "AND" | "OR";
-  conditions: Array<FilterCondition | FilterGroup>;
-}
-export interface TimeWindow {
-  from: string;
-  to: string;
-  bucket?: TimeBucket;
-  timezone?: string;
-  compareTo?: string;
-}
-export type ComparisonMode =
-  | "none"
-  | "previous_period"
-  | "year_over_year"
-  | "custom";
-export interface ComparisonConfig {
-  mode: ComparisonMode;
-  periodOffset?: string;
-}
-export interface InteractionConfig {
-  zoom?: boolean;
-  hoverSync?: boolean;
-  seriesToggle?: boolean;
-  export?: Array<"png" | "csv" | "xlsx">;
-}
-export type StackMode = "none" | "normalized" | "absolute";
-export interface DisplayHints {
-  carryForward?: boolean;
-  stack?: StackMode;
-  y1Label?: string;
-  y2Label?: string;
-}
 export type ChartType = "composed_time" | "categorical" | "single_value";
-export interface ChartSpec {
-  id: string;
-  dataset: ChartDatasetId;
-  version?: string;
-  measures: ChartMeasure[];
-  dimensions: ChartDimension[];
-  splits?: ChartSplit[];
-  filters?: FilterGroup[];
-  timeWindow: TimeWindow;
-  comparison?: ComparisonConfig;
-  interactions?: InteractionConfig;
-  displayHints?: DisplayHints;
-  chartType: ChartType;
-  description?: string;
-  notes?: string[];
-}
 export type AxisBinding = "Y1" | "Y2" | "Y3";
 export type Geometry = "line" | "area" | "column" | "bar";
 export interface Annotation {
@@ -177,3 +70,9 @@ export interface ChartResult {
   series: ChartSeries[];
   meta: ResultMeta;
 }
+
+export const SITE_FLOW_ACTIVITY_COLORS = {
+  entrances: "#47c96f",
+  exits: "#ff5964",
+  occupancy: "#2685ff",
+} as const;

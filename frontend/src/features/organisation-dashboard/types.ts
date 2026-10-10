@@ -32,6 +32,5 @@ export type SelectedSnapshot = {
   payload: SnapshotPayload;
 };
 export type DashboardSource = {
-  context(signal: AbortSignal): Promise<OrganisationContext>;
   snapshot(selection: Selection, signal: AbortSignal): Promise<SelectedSnapshot>;
 };

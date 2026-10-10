@@ -1,9 +1,9 @@
 import { Star } from "lucide-react";
 import { useAuthenticatedApplication } from "../context/AuthenticatedApplicationContext";
 import { usePortal } from "../context/PortalContext";
-import DashboardHeader from "../features/dashboard/components/DashboardHeader";
+import DashboardHeader from "../features/organisation-dashboard/components/DashboardHeader";
 import NavIcon from "../common/components/icons/NavIcon";
-import "../features/dashboard/styles/DashboardPage.css";
+import "../styles/Dashboard.css";
 import "../styles/AuthenticatedPortalScopeHeader.css";
 
 export default function AuthenticatedPortalScopeHeader() {

@@ -13,7 +13,6 @@ import {
   type Filters,
 } from "../../components/PortalFilters";
 import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
-import type { Credentials } from "../../types/credentials";
 import "./EventLogsPage.css";
 import "../../styles/PortalLogs.css";
 
@@ -241,7 +240,7 @@ function CanonicalEvents() {
     </div>
   );
 }
-export default function EventLogsPage(_props: { credentials?: Credentials }) {
+export default function EventLogsPage() {
   return useOptionalPortal() ? (
     <CanonicalEvents />
   ) : (

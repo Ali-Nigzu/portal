@@ -5,7 +5,7 @@ import { endSettingsUnlock, getMe, resendSettingsUnlockCode, startSettingsUnlock
 import EditableFieldRow from "../components/EditableFieldRow";
 import ReenterPasswordModal from "../components/ReenterPasswordModal";
 import SettingsFrame from "../components/SettingsFrame";
-import SettingsPageHeader from "../components/SettingsPageHeader";
+import { SettingsPageHeader } from "../components/SettingsFrame";
 import type { SettingsUser, UpdateMePayload } from "../types";
 import AuthPhoneField from "../../auth/components/AuthPhoneField";
 import { PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "../../auth/countryPhoneData";

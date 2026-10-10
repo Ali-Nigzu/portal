@@ -1,4 +1,7 @@
-"""Snapshot endpoints."""
+"""Isolated snapshot exception for Landing channels and zeroed customer aliases.
+
+Canonical Dashboard, Portal, Reports and authentication never read this source.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +11,6 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from backend.app.compatibility.auth_context import resolve_snapshot_org
 from backend.app.compatibility.snapshots import (
     SNAPSHOT_ORG_IDS,
     SnapshotLookupError,
@@ -16,13 +18,40 @@ from backend.app.compatibility.snapshots import (
     fetch_latest_snapshot_from_sqlite,
     is_snapshot_org,
 )
-from backend.app.services.demo_session import resolve_demo_org_id
-from backend.app.compatibility.local_data import (
+from backend.app.api.demo import DEMO_COOKIE_NAME
+from backend.app.compatibility.snapshots import (
     LocalDataError,
     ensure_local_db_exists,
     resolve_site_view,
     snapshot_db_for_site,
 )
+
+def resolve_demo_org_id(request: Request) -> Optional[str]:
+    cookie_value = request.cookies.get(DEMO_COOKIE_NAME)
+    header_value = request.headers.get("X-Demo-Session")
+    if cookie_value == "1" or header_value == "1":
+        return "client1"
+    return None
+
+
+def resolve_snapshot_org(*, request: Request, org_id: Optional[str], view_token: Optional[str]) -> str:
+    explicit_org = org_id or request.query_params.get("org") or request.query_params.get("orgId")
+    if explicit_org:
+        return explicit_org
+
+    resolved_view_token = view_token or request.query_params.get("viewToken") or request.query_params.get("view_token")
+    if resolved_view_token:
+        raise HTTPException(status_code=401, detail="Invalid or expired view token")
+
+    demo_org = resolve_demo_org_id(request)
+    if demo_org:
+        return demo_org
+
+    raise HTTPException(
+        status_code=422,
+        detail={"error": "missing_org", "message": "org or viewToken is required"},
+    )
+
 
 router = APIRouter(prefix="/api")
 logger = logging.getLogger(__name__)

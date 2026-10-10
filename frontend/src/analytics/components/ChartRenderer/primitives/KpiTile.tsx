@@ -17,7 +17,7 @@ import {
   formatValue,
   shouldShowRawCount,
 } from "../utils/format";
-import { parseDemoTimestamp } from "../../../../lib/demoTime";
+import { parseDemoTimestamp } from "../utils/format";
 import { useCoarsePointer } from "./useCoarsePointer";
 const formatKpiValue = (value: number | null | undefined, unit?: string) => {
   const numeric = formatNumeric(value);
