@@ -3,8 +3,8 @@ import type {
   Rollup,
   SelectedSnapshot,
 } from "../../organisation-dashboard/types";
-import { buildSiteFlowBucketLabels } from "../../../lib/siteFlowBuckets";
-import { startOfYear } from "../../../lib/timeWindows";
+import { buildSiteFlowBucketLabels } from "../utils/reportUtils";
+import { startOfYear } from "../utils/reportUtils";
 import {
   AGE_BUCKET_LABELS,
   formatReportDateRange,

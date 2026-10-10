@@ -1,8 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import App from "./app/App";
-import "./index.css";
+import { BrowserRouter as Router } from "react-router-dom";
+import { GlobalControlsProvider } from "./components/HeaderStatusStrip";
+import DemoOverlay from "./components/DemoOverlay";
+import AppRoutes from "./app/routes";
+import "./styles/VRMTheme.css";
 import { applyDesignTokens } from "./styles/designTokens";
 
 applyDesignTokens();
@@ -12,6 +15,12 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <React.StrictMode>
-    <App />
+    <Router>
+      <GlobalControlsProvider>
+        <DemoOverlay>
+          <AppRoutes />
+        </DemoOverlay>
+      </GlobalControlsProvider>
+    </Router>
   </React.StrictMode>,
 );

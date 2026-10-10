@@ -35,11 +35,6 @@ def read(operation):
         raise HTTPException(503, detail={"error": "dashboard_unavailable", "message": "Dashboard storage is unavailable.", "request_id": request_id}) from None
 
 
-@router.get("/context")
-def context(reader=Depends(service)):
-    return read(lambda: reader.load_organisation_context(DEMO_ORGANISATION_ID))
-
-
 @router.get("/snapshot")
 def organisation_snapshot(reader=Depends(service)):
     return read(lambda: reader.load_organisation_snapshot(DEMO_ORGANISATION_ID))

@@ -21,7 +21,7 @@ import PendingInvitesTable from "./PendingInvitesTable";
 import AccessRequestsTable from "./AccessRequestsTable";
 import UsersTable from "./UsersTable";
 import SettingsFrame from "../settings/components/SettingsFrame";
-import SettingsPageHeader from "../settings/components/SettingsPageHeader";
+import { SettingsPageHeader } from "../settings/components/SettingsFrame";
 import "../settings/SettingsPages.css";
 
 export default function ManageAccessPage() {

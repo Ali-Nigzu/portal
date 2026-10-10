@@ -129,9 +129,9 @@ precondition; duplicate names do not overwrite. Download/delete resolve the
 authenticated user prefix and use the observed object generation. List ordering
 is creation timestamp then filename descending.
 
-## Retained positional preview snapshots
+## Isolated customer-alias snapshot exception
 
-Only the public preview/older Dashboard contract uses this representation:
+Only zeroed customer Dashboard aliases use this representation:
 
 ```text
 { ts, payload: positional-array, mode: "snapshots", orgId,
@@ -149,7 +149,7 @@ requested time. These reads are not canonical customer snapshot authority.
 Strict site requests require a supported `siteView` and retain source-unavailable
 errors instead of silently falling back. Demo SQLite fallback marks `fallback`
 as currently specified; the ordinary JSON fallback retains its existing flag.
-Positional decoding, fixed alias traffic labels and wall-clock timestamp parsing
+The isolated zero-alias projections and wall-clock timestamp parsing
 remain distinct from canonical object snapshots. Supplied view tokens fail with
 the existing 401 response; explicit snapshot org selection retains precedence.
 
@@ -161,3 +161,19 @@ notification and then customer confirmation. Journal failure prevents mail;
 mail failure does not roll back the saved submission. Records include attachment
 names; email payloads carry attachment contents. This order and failure contract
 remain part of the product.
+
+## Landing snapshot projection
+
+| Landing card | Canonical Demo Org 1 field | Formatting |
+| --- | --- | --- |
+| Entrances | `entrances_96[95]` and its rolling series | Existing numeric headline/sparkline |
+| Occupancy | `occupancy_96[95][0]` and bucket averages | Average, never minimum/maximum |
+| Exits | `exits_96[95]` and its rolling series | Existing numeric headline/sparkline |
+| Footfall | `footfall_96[95]` and its rolling series | Supplied footfall, not a recomputed sum |
+| Dwell Minutes | `dwell_time_96[95]` and its rolling series | Existing numeric format, no artificial decimals |
+| Traffic Split | `traffic_devices` Site names paired with `traffic_split_96[95]` | Existing donut/legend and percentage formatting |
+
+Scalar projections use the canonical 96 buckets and snapshot time. The fixed 68%
+Capacity decoration is independent of snapshot capacity. No scalar fixture value
+is retained or manufactured. All six cards use the same canonical Org 1 response;
+Landing makes no historical snapshot request and does not hard-code Site names.

@@ -88,12 +88,6 @@
   border-radius: var(--sys-radius-sm, 8px);
 }
 
-.dashboard-v2__error-banner--preview {
-  background: transparent;
-  border-color: var(--sys-line-soft, var(--line-soft));
-  color: var(--sys-text-3, var(--vrm-text-muted));
-}
-
 .dashboard-v2__kpi-band {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -165,20 +159,6 @@
   flex: 0 0 36px;
 }
 
-.dashboard-v2__kpi-controls,
-.dashboard-v2__widget-footer { display: flex; justify-content: flex-end; }
-
-.dashboard-v2__remove-button {
-  border: none;
-  border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(139,58,47,0.16);
-  color: #8b3a2f;
-  cursor: pointer;
-}
-
 .dashboard-v2__grid { display: grid; gap: var(--vrm-spacing-6); }
 .dashboard-v2__grid-item { min-width: 0; }
 
@@ -245,17 +225,6 @@
   background: linear-gradient(90deg, rgba(120,112,96,0.1), rgba(255, 255, 255, 0.13), rgba(120,112,96,0.1));
 }
 
-.dashboard-v2__skeleton-line--short { width: 58%; }
-
-.dashboard-v2--preview {
-  padding: 0;
-  background: transparent;
-}
-
-.dashboard-v2--preview .dashboard-v2__header,
-.dashboard-v2--preview .dashboard-v2__chart-card {
-  box-shadow: none;
-}
 
 @media (max-width: 768px) {
   .vrm-layout--mobile .vrm-main--mobile-lane:has(.dashboard-v2) {

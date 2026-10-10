@@ -1,4 +1,4 @@
-import "../dashboard/styles/DashboardPage.css";
+import "../../styles/Dashboard.css";
 
 export default function DashboardLoadingState({ label = "Loading dashboard…" }: { label?: string }) {
   return <div className="dashboard-loading" role="status">

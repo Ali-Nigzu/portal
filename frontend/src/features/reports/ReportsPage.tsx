@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import type { SelectedSnapshot } from "../organisation-dashboard/types";
 import { buildReportData, type ReportType } from "./engine/ReportsEngine";
 import { renderReportPdf } from "./pdf/renderReportPdf";
-import type { ReportIdentity } from "./types";
 import { TIMEFRAME_OPTIONS, type ReportTimeframe } from "./utils/reportUtils";
 import "./ReportsPage.css";
 
@@ -174,3 +173,5 @@ export default function ReportsPage({
     </main>
   );
 }
+
+export type ReportIdentity = { organisationName: string; siteName?: string; heading: string };

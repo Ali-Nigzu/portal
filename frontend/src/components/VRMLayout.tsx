@@ -29,8 +29,8 @@ import {
   getDefaultSiteId,
   getStoredSiteId,
   setStoredSiteId,
-} from "../lib/sites";
-import { isDemoSessionActive } from "../lib/demoSession";
+} from "../features/organisation-dashboard/selection";
+import { isDemoSessionActive } from "../features/organisation-dashboard/demoSession";
 import {
   NavList,
   NavRow,

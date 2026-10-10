@@ -24,7 +24,6 @@ export function parseSnapshot(value: unknown): SelectedSnapshot {
 }
 
 export const demoDashboardSource: DashboardSource = {
-  context: signal => get("/context", signal),
   snapshot: async (selection, signal) => parseSnapshot(await get(
     selection.scope === "organisation" ? "/snapshot" : `/sites/${encodeURIComponent(selection.id)}/snapshot`, signal,
   )),

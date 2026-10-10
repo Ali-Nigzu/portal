@@ -1,4 +1,4 @@
-import type { PortalDeviceControl } from "../context/PortalContext";
+import type { PortalDeviceControl } from "../../context/PortalContext";
 
 export const DEMO_DEVICE_OVERRIDES_KEY = "camOS_demo_device_enabled_overrides";
 const SOURCE_REF = /^(device|gateway):[1-9][0-9]*$/;
@@ -12,7 +12,8 @@ export function readDemoDeviceOverrides(): Record<string, boolean> {
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return Object.fromEntries(
       Object.entries(value).filter(
-        ([ref, enabled]) => SOURCE_REF.test(ref) && typeof enabled === "boolean",
+        ([ref, enabled]) =>
+          SOURCE_REF.test(ref) && typeof enabled === "boolean",
       ),
     );
   } catch {

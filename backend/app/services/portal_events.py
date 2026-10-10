@@ -4,7 +4,7 @@ import csv
 import io
 from .portal_context import date_filters, decode_cursor, encode_cursor, iso, query_key
 
-from .event_source import EVENTS_TABLE as TABLE
+from .bigquery_client import EVENTS_TABLE as TABLE
 AGES = ["0–4", "5–13", "14–25", "26–45", "46–65", "66+"]
 EVENTS = [("exit", "Exit"), ("entrance", "Entrance")]
 SEXES = [("male", "Male"), ("female", "Female")]

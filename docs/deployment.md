@@ -7,6 +7,11 @@ docker build -t camos .
 docker run --env-file /path/to/runtime.env -p 8080:8080 camos
 ```
 
+Docker uses BuildKit. Networks with an additional certificate authority may pass
+an existing trusted CA bundle with `--secret id=build_ca,src=/path/to/ca-bundle.pem`.
+The optional mount is used only during package installation; it is absent from
+the application image. Without that input, npm and pip use their normal trust.
+
 The Node 20 build stage runs `npm ci` and `npm run build`. Vite compiles React/
 TypeScript with its build pipeline and writes `frontend/build`. The Python 3.11
 stage installs `backend/requirements.txt`, copies backend code and embeds the
@@ -49,8 +54,9 @@ in tracked files or the frontend bundle.
 | `ADMIN_NOTIFY_EMAIL` | Notification recipients; existing default `ali@camos.app` |
 | `POSTMARK_EMAIL_ENDPOINT` | Optional provider endpoint, default Postmark `/email` |
 | `CLOUD_RUN_SERVICE_URL`, `PRODUCTION_DOMAIN`, `REPLIT_DOMAINS` | Existing configured origin inputs |
+| `PORTAL_DEMO_NOW` | Optional canonical Demo effective cutoff; preserves current Demo clock behaviour |
 | `DEMO_SESSION_SECURE` | Existing Demo bootstrap Secure-cookie setting |
-| `DEMO_NOW_TIMEZONE` | Positional preview wall clock, default Europe/London |
+| `DEMO_NOW_TIMEZONE` | Canonical Demo clock and isolated snapshot wall clock, default Europe/London |
 
 Signup notification environment labels retain the existing precedence of
 `REACT_APP_ENVIRONMENT`, `ENVIRONMENT`, `APP_ENV`, `RAILWAY_ENVIRONMENT`.
@@ -58,10 +64,9 @@ These are backend notification labels, not alternate application composition.
 
 Frontend build inputs are `VITE_API_URL` and `VITE_ENVIRONMENT`. Production
 requests on the deployed domain default to same-origin; an explicit API URL
-retains its configured behavior. Vite does not consume the removed CRA
-`.env.production` settings. Browser API configuration is public, never secret.
+retains its configured behavior. Browser API configuration is public, never secret.
 
-The retained positional preview contract also reads `BQ_DATASET`,
+The isolated customer-alias snapshot exception also reads `BQ_DATASET`,
 `LOCAL_COMBINED_SNAPSHOTS_DB` (default `combined_logs_snapshots.db`),
 `LOCAL_SITE_A_SNAPSHOTS_DB` (default `user0_snapshots.db`) and
 `LOCAL_SITE_B_SNAPSHOTS_DB` (default `user1_snapshots.db`). Source absence and
@@ -91,40 +96,16 @@ direct REVOKE does not override inherited permissions. Inspect effective grants
 before deployment. No command in this repository automatically changes live
 GCP/IAM, Cloud Run, database schema or production rows.
 
-## PostgreSQL operator sources
-
-`ops/postgres/internal_admin_audit.sql` is read-only. It prints columns,
-constraints/indexes, effective table/sequence rights and suggested missing GRANT
-statements. It does not execute those generated statements.
-
-```sh
-psql "$OPERATOR_DATABASE_URL" -f ops/postgres/internal_admin_audit.sql
-```
-
-The remaining SQL sources have specific provisioning applicability:
-
-| Source | Applicability |
-| --- | --- |
-| `001_organisation_membership_states.sql` | Administrator transition from the old two-status constraint; deliberately rejects an already-migrated/unexpected schema |
-| `002_canonical_user_lifecycle.sql` | Future-environment identity/index/session-version/challenge provisioning; not application startup |
-| `002_canonical_user_lifecycle_grants.sql` | Future-environment user/sequence/challenge grants for an explicit principal |
-
-Inspect the target schema first; do not replay a one-time transition on an
-already-current database. These files are executable provisioning sources,
-not a complete empty-database bootstrap. The complete current field/type
-contract is the static registry and [data-contracts.md](data-contracts.md).
-
 ## Persistence paths and operational checks
 
 The working directory is `/app`. Contact retains
 `backend/data/contact_submissions.json` and atomic `.tmp` replacement. Preserve
 the deployment's current storage/lifetime policy for that path; email delivery
-does not roll back a saved journal record. The retained preview payload is
+does not roll back a saved journal record. The isolated customer-alias payload is
 `backend/data/demo_snapshot.json`.
 
 The application serves SPA assets and browser deep links from the same process.
 `/health` currently follows the SPA fallback and is not a provider-health API.
 Public OpenAPI/Swagger/ReDoc routes are disabled. Static availability alone does
 not verify provider permissions or lifecycle delivery.
-Use the read-only database audit and the actual provider configuration to assess
-those dependencies. Build automation performs only the container build.
+Assess provider configuration and effective database permissions before deployment.

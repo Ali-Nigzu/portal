@@ -6,7 +6,8 @@ import {
 } from "../../context/PortalContext";
 import { parseSnapshot } from "../organisation-dashboard/api";
 import ReportsPage from "./ReportsPage";
-import type { ReportSnapshotResponse } from "./types";
+import type { SelectedSnapshot } from "../organisation-dashboard/types";
+type ReportSnapshotResponse = { scope: { organisation_id: string; site_id: string | null }; snapshot: SelectedSnapshot };
 
 export default function PortalReports() {
   const portal = usePortal();

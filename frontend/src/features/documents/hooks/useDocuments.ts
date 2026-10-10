@@ -43,4 +43,3 @@ export const useDocuments = () => {
   return useMemo(() => ({ documents, isLoading, error, message, deletingId, refresh, uploadBatch, removeDocument, downloadDocument }),
     [documents, isLoading, error, message, deletingId, refresh, uploadBatch, removeDocument, downloadDocument]);
 };
-export type UploadBatchResult = { documents: DocumentItem[]; errors: UploadError[] };

@@ -11,7 +11,7 @@ import { TrafficDistribution } from "./primitives/TrafficDistribution";
 import { CapacityDonut } from "./primitives/CapacityDonut";
 import { ChartErrorState } from "./ui/ChartErrorState";
 import { validateChartResult } from "./validation";
-import { SITE_FLOW_ACTIVITY_COLORS } from "../../../lib/siteFlowActivityColors";
+import { SITE_FLOW_ACTIVITY_COLORS } from "../../schemas/charting";
 import "./styles.css";
 export interface ChartRendererProps {
   result: ChartResult;

@@ -11,6 +11,8 @@ from threading import Lock
 
 from google.cloud import bigquery
 
+EVENTS_TABLE = "`camosbase.camos_prod.events`"
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +25,6 @@ def _normalize_project(project: Optional[str]) -> Optional[str]:
 @dataclass
 class BigQuerySettings:
     project: Optional[str]
-    dataset: Optional[str]
     location: Optional[str]
 
 
@@ -33,7 +34,6 @@ class BigQueryClient:
     def __init__(self) -> None:
         self.settings = BigQuerySettings(
             project=_normalize_project(os.getenv("BQ_PROJECT")),
-            dataset=os.getenv("BQ_DATASET"),
             location=os.getenv("BQ_LOCATION") or os.getenv("GOOGLE_CLOUD_LOCATION"),
         )
         # ADC resolves the attached runtime identity; never load a bundled key.
@@ -50,9 +50,8 @@ class BigQueryClient:
                     location=self.settings.location,
                 )
                 logger.info(
-                    "Initialized BigQuery client (project=%s, dataset=%s, location=%s)",
+                    "Initialized BigQuery client (project=%s, location=%s)",
                     self.settings.project,
-                    self.settings.dataset,
                     self.settings.location,
                 )
             return self._client

@@ -7,7 +7,7 @@ import os
 
 from fastapi import APIRouter, Response
 
-from backend.app.services.demo_session import DEMO_COOKIE_NAME
+DEMO_COOKIE_NAME = "demo_session"
 
 router = APIRouter(prefix="/api/demo")
 logger = logging.getLogger(__name__)
