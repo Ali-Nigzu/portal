@@ -15,7 +15,7 @@ from backend.app.auth import get_canonical_user, set_auth_cookie
 from backend.app.models import (
     AuthUser, AuthUserResponse, CreateAccountRequest, SignupStartResponse,
     SignupResendRequest, SignupResendResponse, SignupVerifyRequest,
-    PasswordResetStartRequest, PasswordResetStartResponse, PasswordResetResendRequest,
+    PasswordResetStartRequest, PasswordResetStartResponse,
     PasswordResetResendResponse, PasswordResetVerifyRequest, PasswordResetVerifyResponse,
     PasswordResetSetPasswordRequest, PasswordResetSetPasswordResponse,
     SettingsUnlockStartRequest, SettingsUnlockStartResponse, SettingsUnlockResendResponse,
@@ -156,15 +156,15 @@ def signup_verify(payload: SignupVerifyRequest, request: Request, response: Resp
 
 @router.post('/api/password-reset/start', response_model=PasswordResetStartResponse, status_code=202, dependencies=mutations)
 def password_reset_start(payload: PasswordResetStartRequest, request: Request, response: Response):
-    handle, delivery = operation(request, lambda lifecycle: lifecycle.start(RESET, payload.email))
+    handle, delivery = operation(request, lambda lifecycle: lifecycle.start(RESET, payload.identifier))
     lifecycle_cookie(response, RESET, handle)
     deliver(service(request), RESET, delivery)
-    return PasswordResetStartResponse(ok=True, email=payload.email.strip().lower(),
+    return PasswordResetStartResponse(ok=True,
         expiresInSeconds=CODE_TTL, resendCooldownSeconds=RESEND_COOLDOWN)
 
 
 @router.post('/api/password-reset/resend', response_model=PasswordResetResendResponse, dependencies=mutations)
-def password_reset_resend(payload: PasswordResetResendRequest, request: Request):
+def password_reset_resend(request: Request):
     try:
         delivery = operation(request, lambda lifecycle: lifecycle.resend(RESET, challenge_handle(request, RESET)))
     except HTTPException as error:
@@ -173,7 +173,7 @@ def password_reset_resend(payload: PasswordResetResendRequest, request: Request)
         delivery = None
     deliver(service(request), RESET, delivery)
     return PasswordResetResendResponse(ok=True, expiresInSeconds=CODE_TTL,
-        resendCooldownSeconds=RESEND_COOLDOWN, resendsRemaining=5)
+        resendCooldownSeconds=RESEND_COOLDOWN)
 
 
 @router.post('/api/password-reset/verify-code', response_model=PasswordResetVerifyResponse, dependencies=mutations)

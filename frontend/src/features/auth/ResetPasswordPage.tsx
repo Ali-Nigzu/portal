@@ -1,108 +1,124 @@
-import React, { useEffect, useMemo, useState } from "react";
-
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
-import { AuthDesktopArtwork, AuthLogoHeader } from "../../components/auth/AuthLogoHeader";
-
+import {
+  AuthDesktopArtwork,
+  AuthLogoHeader,
+} from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
-import { passwordResetResend, passwordResetSetPassword, passwordResetVerifyCode } from "./transport/passwordReset";
-
+import {
+  passwordResetStart,
+  passwordResetResend,
+  passwordResetSetPassword,
+  passwordResetVerifyCode,
+} from "./transport/passwordReset";
 import "./VerifyEmailPage.css";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const ResetPasswordPage: React.FC = () => {
   const isPhoneLayout = useIsPhoneLayout();
-  const [params] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const email = (params.get("email") ?? "").trim().toLowerCase();
-  const validEmail = useMemo(() => EMAIL_RE.test(email), [email]);
-  const isCodeStep = location.pathname === "/reset-password" || location.pathname === "/reset-password/code";
-
+  const isIdentifyStep = location.pathname === "/reset-password";
+  const isCodeStep = location.pathname === "/reset-password/code";
+  const [identifier, setIdentifier] = useState(() => {
+    const prefill = (location.state as { identifier?: unknown } | null)
+      ?.identifier;
+    return typeof prefill === "string" ? prefill : "";
+  });
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cooldownRemaining, setCooldownRemaining] = useState(30);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const inFlight = useRef(false);
+  const firstInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!isCodeStep || cooldownRemaining <= 0) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      setCooldownRemaining((current) => {
-        if (current <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
+    setError(null);
+    setMessage(null);
+    setCode("");
+    setPassword("");
+    setConfirmPassword("");
+    if (!isIdentifyStep) setIdentifier("");
+    firstInput.current?.focus();
+  }, [location.pathname, isIdentifyStep]);
+
+  const coolingDown = isCodeStep && cooldownRemaining > 0;
+  useEffect(() => {
+    if (!coolingDown) return;
+    const timer = window.setInterval(
+      () => setCooldownRemaining((current) => Math.max(0, current - 1)),
+      1000,
+    );
     return () => window.clearInterval(timer);
-  }, [cooldownRemaining, isCodeStep]);
+  }, [coolingDown]);
 
-  const handleVerifyCode = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!validEmail) {
-      setError("Please start from the login page with a valid email.");
+    if (inFlight.current) return;
+    if (isIdentifyStep && !identifier.trim()) {
+      setError("Enter your email or username.");
+      firstInput.current?.focus();
       return;
     }
+    inFlight.current = true;
     setLoading(true);
     setError(null);
     setMessage(null);
     try {
-      await passwordResetVerifyCode({ email, code });
-      navigate(`/reset-password/new?email=${encodeURIComponent(email)}`, { replace: true });
-    } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : "Unable to verify reset code");
+      if (isIdentifyStep) {
+        const result = await passwordResetStart(identifier);
+        setCooldownRemaining(result.resendCooldownSeconds);
+        navigate("/reset-password/code", { replace: true });
+      } else if (isCodeStep) {
+        await passwordResetVerifyCode({ code });
+        navigate("/reset-password/new", { replace: true });
+      } else {
+        await passwordResetSetPassword({
+          password,
+          confirm_password: confirmPassword,
+        });
+        navigate("/login", {
+          replace: true,
+          state: { message: "Password reset successful. Please sign in." },
+        });
+      }
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to complete password reset.",
+      );
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSetPassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!validEmail) {
-      setError("Invalid or expired reset session. Please restart from login.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    try {
-      await passwordResetSetPassword({
-        email,
-        password,
-        confirm_password: confirmPassword,
-      });
-      navigate("/login", { replace: true, state: { message: "Password reset successful. Please sign in." } });
-    } catch (setPasswordError) {
-      setError(setPasswordError instanceof Error ? setPasswordError.message : "Unable to reset password");
-    } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   };
 
   const resendCode = async () => {
-    if (!validEmail) {
-      setError("Please start from the login page with a valid email.");
-      return;
-    }
+    if (inFlight.current || cooldownRemaining > 0) return;
+    inFlight.current = true;
     setLoading(true);
     setError(null);
     setMessage(null);
     try {
-      await passwordResetResend(email);
-      setMessage("A new verification code was sent.");
-      setCooldownRemaining(30);
+      const result = await passwordResetResend();
+      setMessage(
+        "If your recovery request is still valid, we'll send another code.",
+      );
+      setCooldownRemaining(result.resendCooldownSeconds);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to resend code");
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to resend code.",
+      );
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   };
@@ -111,47 +127,141 @@ const ResetPasswordPage: React.FC = () => {
     <div className="verify-email-page">
       {isPhoneLayout ? <AuthLogoHeader /> : <AuthTopBar />}
       <div className="verify-email-shell">
-        <section className="verify-email-left-pane" aria-label="Password reset panel">
+        <section
+          className="verify-email-left-pane"
+          aria-label="Password reset panel"
+        >
           <div className="verify-email-content">
             <p className="verify-email-title">Reset Password</p>
-            <h1 className="verify-email-hero">{isCodeStep ? "Enter verification code" : "Set new password"}</h1>
+            <h1 className="verify-email-hero">
+              {isIdentifyStep
+                ? "Find your account"
+                : isCodeStep
+                  ? "Enter verification code"
+                  : "Set new password"}
+            </h1>
             <p className="verify-email-copy">
-              {isCodeStep
-                ? validEmail
-                  ? <>If this email belongs to an enabled account, a reset code will be sent to <strong>{email}</strong>.</>
-                  : "Start from login to reset password."
-                : "Choose your new password."}
+              {isIdentifyStep
+                ? "Enter the email address or username you use to sign in."
+                : isCodeStep
+                  ? "If an account is associated with those details, we'll send a password reset code to the email address registered to the account."
+                  : "Choose your new password."}
             </p>
-
-            <form className="verify-email-form" onSubmit={isCodeStep ? handleVerifyCode : handleSetPassword}>
-              {isCodeStep ? (
+            <form
+              className="verify-email-form"
+              onSubmit={submit}
+              aria-busy={loading}
+            >
+              {isIdentifyStep ? (
                 <div className="vrm-field verify-email-field">
-                  <label className="vrm-label" htmlFor="reset-code">Verification code</label>
-                  <input id="reset-code" inputMode="numeric" autoComplete="one-time-code" aria-invalid={Boolean(error)} aria-describedby={error ? "reset-error" : undefined} className="vrm-input" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+                  <label className="vrm-label" htmlFor="reset-identifier">
+                    Email or username
+                  </label>
+                  <input
+                    ref={firstInput}
+                    id="reset-identifier"
+                    className="vrm-input"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    maxLength={320}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? "reset-error" : undefined}
+                  />
+                </div>
+              ) : isCodeStep ? (
+                <div className="vrm-field verify-email-field">
+                  <label className="vrm-label" htmlFor="reset-code">
+                    Verification code
+                  </label>
+                  <input
+                    ref={firstInput}
+                    id="reset-code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? "reset-error" : undefined}
+                    className="vrm-input"
+                    value={code}
+                    onChange={(e) =>
+                      setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                  />
                 </div>
               ) : (
                 <>
                   <div className="vrm-field verify-email-field">
-                    <label className="vrm-label" htmlFor="reset-password">New password</label>
-                    <input id="reset-password" className="vrm-input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <label className="vrm-label" htmlFor="reset-password">
+                      New password
+                    </label>
+                    <input
+                      ref={firstInput}
+                      id="reset-password"
+                      className="vrm-input"
+                      type="password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      aria-invalid={Boolean(error)}
+                      aria-describedby={error ? "reset-error" : undefined}
+                    />
                   </div>
                   <div className="vrm-field verify-email-field">
-                    <label className="vrm-label" htmlFor="reset-confirm-password">Confirm password</label>
-                    <input id="reset-confirm-password" className="vrm-input" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    <label
+                      className="vrm-label"
+                      htmlFor="reset-confirm-password"
+                    >
+                      Confirm password
+                    </label>
+                    <input
+                      id="reset-confirm-password"
+                      className="vrm-input"
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      aria-invalid={Boolean(error)}
+                      aria-describedby={error ? "reset-error" : undefined}
+                    />
                   </div>
                 </>
               )}
-
-              {error ? <div id="reset-error" className="verify-email-error" role="alert">{error}</div> : null}
-              {message ? <div className="verify-email-message" role="status">{message}</div> : null}
-
+              {error ? (
+                <div
+                  id="reset-error"
+                  className="verify-email-error"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              ) : null}
+              {message ? (
+                <div
+                  className="verify-email-message"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {message}
+                </div>
+              ) : null}
               <div className="verify-email-actions">
-                <button type="submit" className="vrm-btn vrm-btn-primary verify-email-submit" disabled={loading}>
-                  {loading ? "Submitting…" : isCodeStep ? "Verify code" : "Set new password"}
+                <button
+                  type="submit"
+                  className="vrm-btn vrm-btn-primary verify-email-submit"
+                  disabled={loading}
+                >
+                  {loading
+                    ? "Submitting…"
+                    : isIdentifyStep
+                      ? "Continue"
+                      : isCodeStep
+                        ? "Verify code"
+                        : "Set new password"}
                 </button>
               </div>
             </form>
-
             {isCodeStep ? (
               <div className="verify-email-resend-row">
                 <button
@@ -160,19 +270,30 @@ const ResetPasswordPage: React.FC = () => {
                   onClick={resendCode}
                   disabled={loading || cooldownRemaining > 0}
                 >
-                  {cooldownRemaining > 0 ? `Resend in ${cooldownRemaining}s` : "Resend code"}
+                  {cooldownRemaining > 0
+                    ? `Resend in ${cooldownRemaining}s`
+                    : "Resend code"}
                 </button>
               </div>
             ) : null}
-
-            <p className="verify-email-back-row"><Link to="/login" className="verify-email-link">Back to login</Link></p>
+            {!isIdentifyStep ? (
+              <p className="verify-email-back-row">
+                <Link to="/reset-password" className="verify-email-link">
+                  Restart password reset
+                </Link>
+              </p>
+            ) : null}
+            <p className="verify-email-back-row">
+              <Link to="/login" className="verify-email-link">
+                Back to login
+              </Link>
+            </p>
           </div>
         </section>
         <aside className="verify-email-right-pane" aria-hidden="true">
           <AuthDesktopArtwork />
         </aside>
       </div>
-
       {isPhoneLayout ? <AuthBottomNav /> : null}
     </div>
   );

@@ -10,6 +10,7 @@ type Props = {
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
+  className?: string;
 };
 
 export default function AccessDialog({
@@ -18,6 +19,7 @@ export default function AccessDialog({
   children,
   onClose,
   busy = false,
+  className = "",
 }: Props) {
   const titleId = useId(),
     descriptionId = useId();
@@ -109,7 +111,7 @@ export default function AccessDialog({
       <div
         ref={root}
         tabIndex={-1}
-        className="vrm-card access-dialog"
+        className={`vrm-card access-dialog${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

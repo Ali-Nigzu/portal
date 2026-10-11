@@ -117,67 +117,106 @@
   margin-top: 4px;
 }
 
-.contact-success {
-  margin-top: 4px;
-  color: #44644b;
-  font-size: 13px;
-}
-
-.contact-success-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(79, 72, 60, 0.42);
-  z-index: 1000;
+.contact-name-organisation {
   display: grid;
-  place-items: center;
-  padding: 20px;
-}
-
-.contact-success-modal {
-  width: min(520px, 100%);
-  border: 1px solid var(--line-default);
-  background: var(--surface-panel);
-  border-radius: 12px;
-  padding: 20px;
-  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+  align-items: start;
+}
+
+.contact-name-organisation .contact-field {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: minmax(40px, auto) auto auto;
+}
+
+.contact-name-organisation .vrm-label {
+  align-self: end;
+}
+
+.contact-name-organisation .vrm-input {
+  min-width: 0;
+  width: 100%;
+}
+
+.access-dialog.contact-success-dialog {
+  width: min(420px, 100%);
   position: relative;
+  background: var(--surface-page);
+  border: 1px solid var(--line-default);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(47, 55, 66, 0.16);
 }
 
-.contact-success-modal h2 {
-  margin: 0;
-  font-size: 24px;
+.contact-success-dialog .vrm-card-header {
+  padding: 24px 56px 12px 24px;
+  border: 0;
+  background: transparent;
 }
 
-.contact-success-modal p {
+.contact-success-dialog .vrm-card-title {
   margin: 0;
+  font-size: 22px;
+  color: var(--text-strong);
+}
+
+.contact-success-dialog .vrm-card-body {
+  padding: 0 24px 24px;
+}
+
+.contact-success-dialog .access-description {
   color: var(--text-default);
+  font-size: 15px;
+  line-height: 1.6;
 }
 
-.contact-success-modal-actions {
+.contact-success-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
+.contact-success-dialog .vrm-btn {
+  min-height: 44px;
+  box-shadow: none !important;
+  background: var(--surface-elevated) !important;
+  color: var(--text-default) !important;
+  border: 1px solid var(--line-default) !important;
+  transform: none;
+}
+
+.contact-success-dialog .vrm-btn-primary {
+  background: var(--signal-gold-strong) !important;
+  border-color: var(--signal-gold-strong) !important;
+  color: #fff !important;
+}
+
+.contact-success-dialog .vrm-btn:hover,
+.contact-success-dialog .vrm-btn:focus-visible {
+  background: var(--surface-panel) !important;
+}
+
+.contact-success-dialog .vrm-btn-primary:hover,
+.contact-success-dialog .vrm-btn-primary:focus-visible {
+  background: var(--signal-gold-strong) !important;
+}
+
 .contact-success-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 999px;
-  background: var(--cta-secondary-bg);
-  color: var(--cta-secondary-text);
-  box-shadow: 0 3px 9px rgba(52, 61, 74, 0.12), 0 1px 1px rgba(52, 61, 74, 0.08),
-    inset 0 8px 12px rgba(255, 255, 255, 0.28);
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.contact-success-close:hover {
+  color: var(--text-strong);
 }
 
 .contact-actions {
@@ -240,8 +279,11 @@
   }
 }
 
-.contact-success-close:hover,
-.contact-success-close:focus-visible {
-  background: var(--cta-secondary-bg-hover);
-  color: var(--cta-secondary-text);
+@media (max-width: 600px) {
+  .contact-success-dialog .vrm-card-header {
+    padding: 20px 56px 12px 20px;
+  }
+  .contact-success-dialog .vrm-card-body {
+    padding: 0 20px 20px;
+  }
 }

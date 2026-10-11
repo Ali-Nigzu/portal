@@ -79,26 +79,34 @@ class UserLifecycle:
             logger.warning('account.cleanup_deferred')
             return 0
 
-    def start(self, purpose, email, *, username=None, phone=None, password=None, user=None):
+    def start(self, purpose, identity, *, username=None, phone=None, password=None, user=None):
         if purpose not in (SIGNUP, RESET, UNLOCK):
             raise ValueError('Unknown lifecycle purpose')
-        email = normalized_email(email)
+        identity = identity.strip()
+        if purpose == RESET:
+            if not identity or len(identity) > 320:
+                raise LifecycleError(422, 'Enter your email or username')
+        else:
+            identity = normalized_email(identity)
         payload = {}
         if purpose == SIGNUP:
-            payload = dict(email=email, username=username_value(username), phone=phone_value(phone),
+            payload = dict(email=identity, username=username_value(username), phone=phone_value(phone),
                            password_hash=passwords.hash_password(password_value(password)))
         handle = secrets.token_urlsafe(32)
         challenge_id = digest(handle)
         code = f'{secrets.randbelow(1_000_000):06d}'
+        # Check shared signing configuration before resolving eligibility, so a
+        # missing secret is a common service failure, not an identity signal.
+        code_hash = keyed_digest(challenge_id + ':' + code)
 
         def operation(cursor):
             target = None
             if purpose == SIGNUP:
-                conflict = self.repository.identifiers(cursor, email, payload['username'])
+                conflict = self.repository.identifiers(cursor, identity, payload['username'])
                 if conflict:
                     return conflict
             elif purpose == RESET:
-                target = self.repository.email_user(cursor, email)
+                target = CanonicalAuthRepository.resolve_identifier(cursor, identity, lock=True)
                 if target is None or target.status != 1 or target.id == 999999:
                     return None
             else:
@@ -108,11 +116,11 @@ class UserLifecycle:
             now = self.clock()
             self.repository.insert_challenge(cursor, dict(
                 id=challenge_id, purpose=purpose, user_id=target.id if target else None,
-                payload=payload, code_hash=keyed_digest(challenge_id + ':' + code),
+                payload=payload, code_hash=code_hash,
                 code_expires_at=now + timedelta(seconds=CODE_TTL),
                 last_sent_at=now, created_at=now,
             ))
-            return (target.email if target else email), code
+            return (target.email if target else identity), code
 
         return handle, self.repository.transact(operation)
 
@@ -144,9 +152,11 @@ class UserLifecycle:
     def pending(self, cursor, handle, purpose, user=None):
         record, target = self.locked_challenge(cursor, handle, purpose, user)
         if not record or record['consumed_at'] is not None or record['verified_at'] is not None:
-            return LifecycleError(400, 'This code is unavailable. Please restart the request.')
+            return LifecycleError(400, 'This password reset is unavailable or has expired.' if purpose == RESET
+                                  else 'This code is unavailable. Please restart the request.')
         if record['created_at'] + timedelta(seconds=CHALLENGE_TTL) <= self.clock():
-            return LifecycleError(410, 'This request expired. Please restart.')
+            return LifecycleError(410, 'This password reset is unavailable or has expired.' if purpose == RESET
+                                  else 'This request expired. Please restart.')
         if record['attempts'] >= 5:
             return LifecycleError(429, 'Too many verification attempts. Please restart.')
         return record, target
@@ -221,10 +231,10 @@ class UserLifecycle:
         def operation(cursor):
             record, target = self.locked_challenge(cursor, handle, RESET)
             if not self.verified(record, RESET):
-                return LifecycleError(401, 'Reset session expired or unavailable. Please restart.')
+                return LifecycleError(401, 'This password reset is unavailable or has expired.')
             password_hash = passwords.hash_password(password)
             if not self.verified(record, RESET):
-                return LifecycleError(401, 'Reset session expired or unavailable. Please restart.')
+                return LifecycleError(401, 'This password reset is unavailable or has expired.')
             cursor.execute('UPDATE public.users SET password_hash=%s, session_version=session_version+1 '
                            'WHERE id=%s', (password_hash, target.id))
             self.repository.invalidate_user_challenges(cursor, target.id)

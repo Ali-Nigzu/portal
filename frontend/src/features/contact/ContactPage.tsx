@@ -12,6 +12,7 @@ import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
+import AccessDialog from "../../common/components/AccessDialog";
 import AuthPhoneField from "../auth/components/AuthPhoneField";
 import "./ContactPage.css";
 import "../auth/components/AuthPhoneField.css";
@@ -41,6 +42,7 @@ const ACCEPTED_EXTENSIONS = [
 const ContactPage: React.FC = () => {
   const isPhoneLayout = useIsPhoneLayout();
   const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [phoneSelectedIso, setPhoneSelectedIso] = useState("GB");
   const [phoneText, setPhoneText] = useState("+44");
@@ -48,7 +50,8 @@ const ContactPage: React.FC = () => {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const inFlight = useRef(false);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -98,7 +101,6 @@ const ContactPage: React.FC = () => {
     const selected = Array.from(event.target.files ?? []);
     setAttachments(selected);
     setSubmitError(null);
-    setSubmitSuccess(null);
 
     if (selected.length > MAX_ATTACHMENTS) {
       setErrors((prev) => ({
@@ -119,10 +121,15 @@ const ContactPage: React.FC = () => {
     setErrors((prev) => ({ ...prev, attachments: undefined }));
   };
 
+  const closeConfirmation = () => {
+    setShowSuccessModal(false);
+    requestAnimationFrame(() => submitButtonRef.current?.focus());
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (inFlight.current) return;
     setSubmitError(null);
-    setSubmitSuccess(null);
 
     const validationErrors = validate();
     setErrors(validationErrors);
@@ -130,6 +137,7 @@ const ContactPage: React.FC = () => {
       return;
     }
 
+    inFlight.current = true;
     setSubmitting(true);
     try {
       const phoneState = classifyOptionalPhoneInput(
@@ -138,6 +146,7 @@ const ContactPage: React.FC = () => {
       );
       const result = await submitContact({
         name: name.trim(),
+        company: company.trim() || undefined,
         email: email.trim().toLowerCase(),
         phone: phoneState.effectivePhone || undefined,
         message: message.trim(),
@@ -150,8 +159,8 @@ const ContactPage: React.FC = () => {
         return;
       }
 
-      setSubmitSuccess("Message sent");
       setName("");
+      setCompany("");
       setEmail("");
       setPhoneSelectedIso("GB");
       setPhoneText("+44");
@@ -165,6 +174,7 @@ const ContactPage: React.FC = () => {
     } catch {
       setSubmitError("Unable to send your message. Please try again.");
     } finally {
+      inFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -182,31 +192,46 @@ const ContactPage: React.FC = () => {
             <div className="contact-content">
               <h1 className="contact-hero">Get in Touch</h1>
 
-              <div className="vrm-field contact-field">
-                <label className="vrm-label" htmlFor="contact-name">
-                  Name
-                </label>
-                <input
-                  id="contact-name"
-                  className="vrm-input"
-                  value={name}
-                  onChange={(event) => {
-                    setName(event.target.value);
-                    if (errors.name)
-                      setErrors((prev) => ({ ...prev, name: undefined }));
-                  }}
-                  autoComplete="name"
-                  aria-invalid={Boolean(errors.name)}
-                  aria-describedby={
-                    errors.name ? "contact-name-error" : undefined
-                  }
-                />
-                <div className="contact-error-slot" aria-live="polite">
-                  {errors.name && (
-                    <div id="contact-name-error" className="contact-error">
-                      {errors.name}
-                    </div>
-                  )}
+              <div className="contact-name-organisation">
+                <div className="vrm-field contact-field">
+                  <label className="vrm-label" htmlFor="contact-name">
+                    Name
+                  </label>
+                  <input
+                    id="contact-name"
+                    className="vrm-input"
+                    value={name}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      if (errors.name)
+                        setErrors((prev) => ({ ...prev, name: undefined }));
+                    }}
+                    autoComplete="name"
+                    aria-invalid={Boolean(errors.name)}
+                    aria-describedby={
+                      errors.name ? "contact-name-error" : undefined
+                    }
+                  />
+                  <div className="contact-error-slot" aria-live="polite">
+                    {errors.name && (
+                      <div id="contact-name-error" className="contact-error">
+                        {errors.name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="vrm-field contact-field">
+                  <label className="vrm-label" htmlFor="contact-company">
+                    Organisation (optional)
+                  </label>
+                  <input
+                    id="contact-company"
+                    className="vrm-input"
+                    autoComplete="organization"
+                    value={company}
+                    onChange={(event) => setCompany(event.target.value)}
+                  />
                 </div>
               </div>
 
@@ -281,7 +306,10 @@ const ContactPage: React.FC = () => {
               </div>
 
               <p className="contact-under-cta contact-under-cta--desktop">
-                Why not create an account? <Link to="/create-account" className="contact-inline-link">Create Account</Link>
+                Why not create an account?{" "}
+                <Link to="/create-account" className="contact-inline-link">
+                  Create Account
+                </Link>
               </p>
             </div>
           </section>
@@ -374,19 +402,10 @@ const ContactPage: React.FC = () => {
                 </div>
               )}
 
-              {submitSuccess && (
-                <div
-                  className="contact-success"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {submitSuccess}
-                </div>
-              )}
-
               <div className="contact-actions">
                 <button
                   type="submit"
+                  ref={submitButtonRef}
                   className="vrm-btn vrm-btn-primary contact-submit"
                   disabled={submitting}
                 >
@@ -395,7 +414,10 @@ const ContactPage: React.FC = () => {
               </div>
 
               <p className="contact-under-cta contact-under-cta--phone">
-                Why not create an account? <Link to="/create-account" className="contact-inline-link">Create Account</Link>
+                Why not create an account?{" "}
+                <Link to="/create-account" className="contact-inline-link">
+                  Create Account
+                </Link>
               </p>
             </div>
           </section>
@@ -403,44 +425,38 @@ const ContactPage: React.FC = () => {
         {isPhoneLayout ? <AuthBottomNav /> : null}
       </div>
       {showSuccessModal ? (
-        <div className="contact-success-modal-backdrop" role="presentation">
-          <div
-            className="contact-success-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="contact-success-title"
+        <AccessDialog
+          title="Message sent"
+          description="Thanks for getting in touch. We've received your message and a member of the camOS team will get back to you within 24 hours."
+          className="contact-success-dialog"
+          onClose={closeConfirmation}
+        >
+          <button
+            type="button"
+            className="contact-success-close"
+            data-autofocus
+            onClick={closeConfirmation}
+            aria-label="Close confirmation"
           >
-            <button
-              type="button"
-              className="contact-success-close"
-              onClick={() => setShowSuccessModal(false)}
-              aria-label="Close success modal"
+            ×
+          </button>
+          <div className="contact-success-actions">
+            <Link
+              className="vrm-btn vrm-btn-secondary"
+              to="/home"
+              onClick={closeConfirmation}
             >
-              ×
-            </button>
-            <h2 id="contact-success-title">Message sent</h2>
-            <p>
-              Thanks for contacting camOS. Our team will get back to you within
-              24 Hours.
-            </p>
-            <div className="contact-success-modal-actions">
-              <Link
-                className="vrm-btn vrm-btn-secondary"
-                to="/"
-                onClick={() => setShowSuccessModal(false)}
-              >
-                Learn more about camOS
-              </Link>
-              <Link
-                className="vrm-btn vrm-btn-primary"
-                to="/create-account"
-                onClick={() => setShowSuccessModal(false)}
-              >
-                Create Account
-              </Link>
-            </div>
+              Learn about camOS
+            </Link>
+            <Link
+              className="vrm-btn vrm-btn-primary"
+              to="/create-account"
+              onClick={closeConfirmation}
+            >
+              Create Account
+            </Link>
           </div>
-        </div>
+        </AccessDialog>
       ) : null}
     </>
   );
@@ -458,9 +474,7 @@ type ContactPayload = {
   attachments: File[];
 };
 
-type ContactResult =
-  | { ok: true; message: string }
-  | { ok: false; status: number; message: string };
+type ContactResult = { ok: true } | { ok: false; message: string };
 
 const submitContact = async (
   payload: ContactPayload,
@@ -496,13 +510,9 @@ const submitContact = async (
   if (!response.ok) {
     return {
       ok: false,
-      status: response.status,
       message,
     };
   }
 
-  return {
-    ok: true,
-    message,
-  };
+  return { ok: true };
 };

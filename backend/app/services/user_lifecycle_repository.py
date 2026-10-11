@@ -47,11 +47,6 @@ class UserLifecycleRepository:
         return CanonicalAuthRepository._user(cursor.fetchone())
 
     @staticmethod
-    def email_user(cursor, email):
-        cursor.execute(f"SELECT {USER_COLUMNS} FROM public.users WHERE lower(email)=lower(%s) FOR UPDATE", (email,))
-        return CanonicalAuthRepository._user(cursor.fetchone())
-
-    @staticmethod
     def identifiers(cursor, email, username, user_id=None):
         # Serialize cross-column races as well as ordinary unique-index races.
         for identifier in sorted({email.lower(), username.lower()}):

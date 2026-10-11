@@ -168,10 +168,15 @@ Verification rechecks identifier uniqueness, inserts the user and deletes the
 challenge atomically. User creation grants no memberships. Admin notification
 failure after creation cannot invalidate successful verification.
 
-Reset acknowledges eligible/ineligible/temporarily undeliverable accounts
-generically. A verified reset updates the Argon2 hash, increments session version
-and removes reset/unlock challenges atomically. Prior cookies cease to authorize.
-Reset returns to Login; password change replaces the current browser cookie.
+Reset starts from an email or username using the same case-insensitive,
+ambiguity-rejecting canonical resolver as Login. Delivery uses `public.users.email`;
+after start, the HttpOnly RESET challenge cookie alone identifies recovery.
+Eligible/ineligible/temporarily undeliverable accounts receive the same generic
+acknowledgement. Synchronous delivery timing can still differ; this is not a
+constant-time account-existence guarantee. A verified reset updates the Argon2 hash,
+increments session version and removes reset/unlock challenges atomically. Prior cookies cease to authorize.
+Reset clears the recovery cookie and returns to Login; an authenticated My Account
+password change replaces the current browser session cookie.
 
 Account unlock requires current customer session, password and Postmark code.
 The verified challenge authorizes edits for five minutes. Username/phone/password
@@ -248,7 +253,16 @@ Contact accepts up to three attachments, each at most 10 MiB, with the current
 extension/content-type rules. It validates fields, saves the atomic JSON journal,
 notifies Admin, then confirms to the customer. Persistence failure returns 500
 before mail; configuration/delivery errors retain 503/502 behavior. Saved records
-survive delivery failure. Contact is public product functionality; its journal stores submissions only.
+survive delivery failure. The optional Organisation input uses the existing `company`
+transport/journal field. Contact is public product functionality; its journal stores
+submissions only. Journal replacement and sequential emails are not a single
+transaction; retries after partial delivery can repeat earlier effects.
+
+`postmark_email.py` owns one customer HTML/text shell, static inline PNG logo,
+company/legal footer, and four explicit bodies: signup verification, password
+reset, account unlock and Contact acknowledgement. The existing Postmark sender
+transports them. Internal signup/Contact notifications remain separate plain
+operational messages; Contact attachments remain on the internal notification.
 
 ## Demo and Admin
 

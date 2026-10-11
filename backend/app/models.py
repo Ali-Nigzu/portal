@@ -59,29 +59,21 @@ class SignupResendResponse(BaseModel):
     resendsRemaining: int
 
 class PasswordResetStartRequest(BaseModel):
-    email: str = Field(max_length=320)
+    identifier: str = Field(min_length=1, max_length=320)
 
     model_config = ConfigDict(extra="forbid")
 
 class PasswordResetStartResponse(BaseModel):
     ok: bool
-    email: str
     expiresInSeconds: int
     resendCooldownSeconds: int
-
-class PasswordResetResendRequest(BaseModel):
-    email: str = Field(max_length=320)
-
-    model_config = ConfigDict(extra="forbid")
 
 class PasswordResetResendResponse(BaseModel):
     ok: bool
     expiresInSeconds: int
     resendCooldownSeconds: int
-    resendsRemaining: int
 
 class PasswordResetVerifyRequest(BaseModel):
-    email: str = Field(max_length=320)
     code: str = Field(max_length=16)
 
     model_config = ConfigDict(extra="forbid")
@@ -91,7 +83,6 @@ class PasswordResetVerifyResponse(BaseModel):
     resetExpiresInSeconds: int
 
 class PasswordResetSetPasswordRequest(BaseModel):
-    email: str = Field(max_length=320)
     password: str = Field(max_length=1024)
     confirm_password: str = Field(max_length=1024)
 
