@@ -10,3 +10,8 @@ SQLAlchemy==2.0.36
 argon2-cffi==23.1.0
 
 python-multipart>=0.0.9
+
+Authlib==1.8.0
+joserfc==1.7.5
+cryptography==50.0.2
+requests==2.34.2

@@ -9,7 +9,7 @@ read-only PostgreSQL queries before deployment.
 
 | Table | Primary key | Relationships and purpose |
 | --- | --- | --- |
-| `users` | `id` bigint identity | Canonical email/username/Argon2 credentials, enabled status and session version |
+| `users` | `id` bigint identity | Canonical email, profile username, optional Argon2 credential, enabled status and session version |
 | `organisations` | `id` bigint identity | Named organisation, timestamps and enabled state |
 | `sites` | `id` bigint identity | `organisation_id`, name, maximum capacity, enabled state and timestamps |
 | `devices` | `id` bigint identity | `site_id`, enabled/analysis/capture configuration and activity timestamps |
@@ -18,6 +18,7 @@ read-only PostgreSQL queries before deployment.
 | `organisation_snapshots` | `organisation_id` | `ts`, object `payload`, internal `state`, `updated_at` |
 | `site_snapshots` | `site_id` | `ts`, object `payload`, internal `state`, `updated_at` |
 | `alarms` | `id` bigint identity | Organisation/site, optional Device/Gateway, type/severity/start/clear timestamps |
+| `user_auth_identities` | `id` bigint identity | Stable Google/Microsoft identity mapping to canonical user |
 | `user_lifecycle_challenges` | `id` text | Temporary signup/reset/unlock challenge and nullable canonical user reference |
 
 Bigint identities are serialized as lossless decimal strings in browser/API
@@ -41,11 +42,45 @@ Unknown persisted Gateway state is an error, not silently coerced to On/Off.
 organisation; pending statuses require `status_changed_at`. Original
 `created_at` survives later membership transitions.
 
-Users require case-insensitive unique indexes on `lower(email)` and
-`lower(username)` and a BY DEFAULT identity sequence. Signup explicitly supplies
+Users require the case-insensitive unique index `uq_users_email_ci` on
+`lower(email)` and a BY DEFAULT identity sequence. `username` is required,
+editable, non-unique profile data. `password_hash` is nullable: NULL means no
+camOS password; a populated hash enables password authentication. Signup explicitly supplies
 `created_at`; that column does not need a database default. Devices require
 positive analysis and frame-package intervals. Admin primary keys are immutable.
 Table names, writable columns and filters come only from the static registry.
+
+## Authentication contracts
+
+Customer password login is strictly `POST /api/login {email,password}`; recovery
+starts with `POST /api/password-reset/start {email}`. Username and identifier
+request shapes are rejected. Customer user DTOs include `has_password`, derived
+only from hash presence; hashes and provider subjects never appear in these DTOs.
+
+`user_auth_identities` has `user_id` referencing users with ON DELETE CASCADE,
+`provider` smallint (`0` Google, `1` Microsoft), non-null `issuer` and `subject`,
+and creation timestamp. Its existing constraints are CHECK provider IN (0,1),
+UNIQUE(provider,issuer,subject), and UNIQUE(user_id,provider). Mappings are
+immutable in v1; only SELECT/INSERT are used. No OAuth tokens or codes are stored.
+
+Known provider identities resolve by provider/issuer/subject, not email. Unknown
+identities from Login never create accounts. Google Signup requires a validated
+verified email and creates the user/mapping atomically. New Microsoft Signup
+uses the suggested mailbox only after the existing camOS code proves ownership;
+its user/mapping are then created atomically. Both use NULL password and phone,
+status 1, and a seeded non-unique name. Subsequent provider logins never sync profiles.
+
+An unknown provider matching an existing password account requires that camOS
+password before inserting a mapping. A matching passwordless account requires
+its existing connected provider; anonymous second-provider attachment is denied.
+Passwordless Login/Reset returns a provider-aware result. Reset never creates a
+first password, including through stale reset challenges. An authenticated
+passwordless user unlocks settings with the existing email code and may set their
+first password through PUT /api/me; normal version increment/invalidation applies.
+
+Username invitations resolve zero/one/multiple candidates. Multiple matches
+return only "Please use the user's email address." and never select a recipient.
+Admin username lookup is constrained to ID 999999; Admin sessions remain separate.
 
 ## Lifecycle challenge records
 
@@ -54,7 +89,9 @@ Columns are `id`, `purpose`, `user_id`, `payload`, `code_hash`,
 `consumed_at`, `created_at`. Incoming opaque random handles are SHA-256-digested
 for lookup. Codes are HMAC-digested with the session secret; plaintext codes are
 not stored. Signup payload holds normalized email, username, optional phone and
-Argon2 password hash. Reset/unlock payloads are empty and reference a current user.
+Argon2 password hash. Microsoft pending signup instead stores a NULL hash,
+NULL phone, and the already-validated stable provider identity in the same
+purpose-0 payload; no provider tokens are retained. Reset/unlock payloads are empty and reference a current user.
 
 Pending challenges last one hour, codes 15 minutes, with five wrong attempts,
 five resends and a 30-second resend cooldown. Verified reset authorization lasts
@@ -132,12 +169,14 @@ is creation timestamp then filename descending.
 ## Password reset API
 
 All endpoints retain the current origin/marker safeguards and no-store responses.
-`POST /api/password-reset/start` accepts `{identifier}` (email or username), returns
-202 with `{ok, expiresInSeconds: 900, resendCooldownSeconds: 30}`, and sets the
-HttpOnly RESET cookie. Matching follows Login: case-insensitive email OR username,
-exactly one row, enabled and excluding Admin ID 999999. Delivery uses its canonical
-email. Unknown/ineligible/ambiguous identities get the same acknowledgement and a
-fresh cookie without account authority; delivery failures remain generic.
+`POST /api/password-reset/start` accepts strictly `{email}` and resolves only
+case-insensitive canonical email. Enabled password-bearing users receive 202 with
+`{ok, expiresInSeconds: 900, resendCooldownSeconds: 30}` and the HttpOnly RESET
+cookie. Unknown/ineligible users get the same acknowledgement and a fresh cookie
+without account authority; delivery failures remain generic. Enabled passwordless
+customers receive 409 `{error:"provider_required",message,providers}` with their
+stored provider names, no challenge/email, and a cleared previous RESET cookie.
+Disabled accounts and reserved Admin ID 999999 never receive recovery authority.
 
 After start, no browser identity is accepted as recovery authority:
 

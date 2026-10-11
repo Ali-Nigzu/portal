@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
 import { AuthDesktopArtwork, AuthLogoHeader } from "../../components/auth/AuthLogoHeader";
 
@@ -10,11 +10,14 @@ import { useCreateAccountForm } from './hooks/useCreateAccountForm';
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
 import AuthPhoneField from './components/AuthPhoneField';
 import './CreateAccountPage.css';
+import ProviderAuth from './components/ProviderAuth';
 import './components/AuthPhoneField.css';
 
 const CreateAccountPage: React.FC = () => {
   const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
+  const location = useLocation();
+  const verifyingProvider = new URLSearchParams(location.search).get("auth") === "verify-provider-email";
   const form = useCreateAccountForm((email, warning) => {
     navigate(`/verify-email?email=${encodeURIComponent(email)}`, { state: { warning } });
   });
@@ -43,19 +46,21 @@ const CreateAccountPage: React.FC = () => {
 
             <h1 className="create-account-hero">Join Us &amp; See More</h1>
 
-            {form.formError && (
+            <ProviderAuth intent="signup" />
+
+            {!verifyingProvider && form.formError && (
               <div className="create-account-error create-account-form-error" role="alert">
                 {form.formError}
               </div>
             )}
 
-            <form className="create-account-form" onSubmit={form.submit}>
+            {!verifyingProvider && <form className="create-account-form" onSubmit={form.submit}>
               <div className="vrm-field create-account-field">
                 <label className="vrm-label" htmlFor="create-username">Username</label>
                 <input
                   id="create-username"
                   className="vrm-input"
-                  autoComplete="username"
+                  autoComplete="nickname"
                   value={form.username}
                   onChange={(e) => form.setUsername(e.target.value)}
                   onBlur={() => form.markTouched('username')}
@@ -206,7 +211,7 @@ const CreateAccountPage: React.FC = () => {
                   Already have an Account? <Link to="/login">Login here</Link>
                 </p>
               </div>
-            </form>
+            </form>}
           </div>
         </section>
 

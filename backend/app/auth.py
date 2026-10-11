@@ -43,6 +43,7 @@ def get_session_user(
     return user.username, {
         "id": str(user.id), "name": user.username, "email": user.email,
         "phone": user.phone_number, "role": "client",
+        "has_password": user.password_hash is not None,
     }
 
 

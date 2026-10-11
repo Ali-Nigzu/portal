@@ -11,6 +11,7 @@ type Props = {
   onClose: () => void;
   busy?: boolean;
   className?: string;
+  fallbackFocus?: () => HTMLElement | null;
 };
 
 export default function AccessDialog({
@@ -20,10 +21,13 @@ export default function AccessDialog({
   onClose,
   busy = false,
   className = "",
+  fallbackFocus,
 }: Props) {
   const titleId = useId(),
     descriptionId = useId();
   const root = useRef<HTMLDivElement>(null);
+  const fallback = useRef(fallbackFocus);
+  fallback.current = fallbackFocus;
   const close = useRef(onClose),
     submitting = useRef(busy);
   close.current = onClose;
@@ -101,9 +105,7 @@ export default function AccessDialog({
       });
       if (previous?.isConnected) previous.focus();
       else
-        document
-          .querySelector<HTMLElement>(".authenticated-navigation__rail-trigger")
-          ?.focus();
+        (fallback.current?.() ?? document.querySelector<HTMLElement>(".authenticated-navigation__rail-trigger"))?.focus();
     };
   }, []);
   return createPortal(

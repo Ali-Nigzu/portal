@@ -47,9 +47,9 @@ def translate(error):
     state = info.get("C") if isinstance(info, dict) else None
     if state == "23505":
         constraint = info.get("n", "")
-        if constraint in ("uq_users_email_ci", "uq_users_username_ci"):
+        if constraint == "uq_users_email_ci":
             return AdminError(
-                409, "Email or username already exists (case-insensitive)"
+                409, "Email already exists (case-insensitive)"
             )
         return AdminError(
             409,

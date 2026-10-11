@@ -1,3 +1,4 @@
+import { AuthRequestError } from "./providerAuth";
 type ResetCodeResponse = {
   ok: boolean;
   expiresInSeconds: number;
@@ -18,15 +19,13 @@ async function postReset<T>(action: string, payload?: object): Promise<T> {
     const error = (await response.json().catch(() => null)) as {
       detail?: string;
     } | null;
-    throw new Error(
-      error?.detail ?? "Unable to complete password reset. Please try again.",
-    );
+    throw new AuthRequestError(response.status, error);
   }
   return response.json() as Promise<T>;
 }
 
-export const passwordResetStart = (identifier: string) =>
-  postReset<ResetCodeResponse>("start", { identifier: identifier.trim() });
+export const passwordResetStart = (email: string) =>
+  postReset<ResetCodeResponse>("start", { email: email.trim() });
 
 export const passwordResetResend = () => postReset<ResetCodeResponse>("resend");
 

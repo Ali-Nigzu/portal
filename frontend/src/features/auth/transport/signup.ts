@@ -1,3 +1,4 @@
+import { type AuthUser } from "./me";
 
 
 type SignupStartPayload = {
@@ -45,13 +46,6 @@ export const signupStart = async (
 
   const data = (await response.json()) as SignupStartData;
   return { ok: true, data };
-};
-
-type AuthUser = {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string | null;
 };
 
 type SignupVerifyData = {

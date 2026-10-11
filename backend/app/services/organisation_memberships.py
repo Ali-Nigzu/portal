@@ -172,6 +172,8 @@ class OrganisationMemberships:
                         "invite_target_unavailable",
                         "This user doesn't have a camOS account yet. Ask them to create a camOS account first. If you're having issues, contact us.",
                     )
+                if found.get("ambiguous"):
+                    raise MembershipError(409, "invite_target_unavailable", "Please use the user's email address.")
                 if found["user_status"] != ACTIVE:
                     raise MembershipError(
                         409,

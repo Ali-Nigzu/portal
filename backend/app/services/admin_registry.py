@@ -134,7 +134,7 @@ TABLES = MappingProxyType(
                     c("email", "text"),
                     c("username", "text"),
                     c("phone_number", "text", nullable=True),
-                    c("password_hash", "text"),
+                    c("password_hash", "text", nullable=True),
                     c("status", "smallint", enum=(0, 1)),
                     c("created_at", "timestamptz"),
                     c("session_version", "bigint", default=True, minimum=0),

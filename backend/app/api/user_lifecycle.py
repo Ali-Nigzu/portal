@@ -113,7 +113,7 @@ def deliver(lifecycle, purpose, delivery):
 
 def safe_user(user):
     return AuthUserResponse(user=AuthUser(id=str(user.id), name=user.username,
-        email=user.email, phone=user.phone_number))
+        email=user.email, phone=user.phone_number, has_password=user.password_hash is not None))
 
 
 @router.post('/api/signup/start', response_model=SignupStartResponse, status_code=202, dependencies=mutations)
@@ -156,7 +156,12 @@ def signup_verify(payload: SignupVerifyRequest, request: Request, response: Resp
 
 @router.post('/api/password-reset/start', response_model=PasswordResetStartResponse, status_code=202, dependencies=mutations)
 def password_reset_start(payload: PasswordResetStartRequest, request: Request, response: Response):
-    handle, delivery = operation(request, lambda lifecycle: lifecycle.start(RESET, payload.identifier))
+    handle, delivery = operation(request, lambda lifecycle: lifecycle.start(RESET, payload.email))
+    if hasattr(delivery, 'password_hash') and delivery.password_hash is None:
+        from .provider_auth import provider_required
+        result = provider_required(request, delivery)
+        clear_lifecycle_cookie(result, RESET)
+        return result
     lifecycle_cookie(response, RESET, handle)
     deliver(service(request), RESET, delivery)
     return PasswordResetStartResponse(ok=True,
@@ -196,7 +201,8 @@ def password_reset_set_password(payload: PasswordResetSetPasswordRequest, reques
 def settings_unlock_start(payload: SettingsUnlockStartRequest, request: Request, response: Response,
                           user=Depends(get_canonical_user)):
     def start(lifecycle):
-        if not passwords.verify_password(payload.current_password, user.password_hash):
+        if user.password_hash is not None and (payload.current_password is None or
+                not passwords.verify_password(payload.current_password, user.password_hash)):
             raise LifecycleError(401, 'Incorrect password')
         return lifecycle.start(UNLOCK, user.email, user=user)
     handle, delivery = operation(request, start)

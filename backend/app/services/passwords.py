@@ -10,7 +10,9 @@ def hash_password(password: str) -> str:
     return hasher.hash(password)
 
 
-def verify_password(password: str, stored_hash: str) -> bool:
+def verify_password(password: str, stored_hash: str | None) -> bool:
+    if stored_hash is None:
+        return False
     try:
         return hasher.verify(stored_hash, password)
     except (InvalidHashError, VerificationError):

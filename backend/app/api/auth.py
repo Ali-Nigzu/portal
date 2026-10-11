@@ -14,8 +14,7 @@ from backend.app.services.session_tokens import create_session
 from backend.app.services.user_lifecycle import normalized_email
 from backend.app.services.user_lifecycle_repository import LifecycleError
 from backend.app.config import CONTACT_SUBMISSIONS_FILE
-from backend.app.models import (AuthUser, AuthUserResponse, ContactResponse, IdentifierLoginRequest,
-    EmailLoginRequest, LoginRequest)
+from backend.app.models import AuthUser, AuthUserResponse, ContactResponse, EmailLoginRequest
 from backend.app.services.postmark_email import (PostmarkConfigurationError, PostmarkDeliveryError,
     PostmarkAttachment, send_admin_contact_notification, send_contact_confirmation_email)
 from .user_lifecycle import (
@@ -54,6 +53,7 @@ def _safe_auth_user(user_data: dict) -> AuthUser:
         name=user_data["name"],
         email=user_data["email"],
         phone=user_data.get("phone"),
+        has_password=user_data["has_password"],
     )
 
 
@@ -226,22 +226,21 @@ async def submit_contact(
 
 
 @router.post("/api/login", dependencies=[Depends(mutation_origin)])
-def login(login_request: IdentifierLoginRequest | EmailLoginRequest | LoginRequest, response: Response, request: Request):
+def login(login_request: EmailLoginRequest, response: Response, request: Request):
     """Authentication endpoint for user login."""
     try:
-        identifier = getattr(login_request, "identifier", None) or getattr(
-            login_request, "email", None
-        ) or getattr(login_request, "username", "")
-        identifier = identifier.strip()
-        user = request.app.state.auth_repository.find_user(identifier)
+        user = request.app.state.auth_repository.find_email(login_request.email.strip())
+        if user is not None and user.status == 1 and user.id != 999999 and user.password_hash is None:
+            from .provider_auth import provider_required
+            return provider_required(request, user)
         valid = user is not None and user.status == 1 and user.id != 999999 and passwords.verify_password(login_request.password, user.password_hash)
         if not valid:
-            raise HTTPException(status_code=401, detail="Invalid identifier or password")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
         session_token, expires_at = create_session(user.id, session_version=user.session_version)
         set_auth_cookie(response, session_token, expires_at)
         return AuthUserResponse(user=AuthUser(
             id=str(user.id), name=user.username, email=user.email,
-            phone=user.phone_number,
+            phone=user.phone_number, has_password=user.password_hash is not None,
         ))
 
     except HTTPException:
@@ -271,3 +270,5 @@ def logout(request: Request, response: Response):
         lifecycle.cleanup_expired()
     clear_lifecycle_cookie(response, UNLOCK)
     clear_auth_cookie(response)
+    from .provider_auth import clear_provider_cookies
+    clear_provider_cookies(response)
