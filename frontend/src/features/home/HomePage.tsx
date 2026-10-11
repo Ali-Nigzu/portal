@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+
 import { Activity, Building2, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../analytics/components/Card/Card";

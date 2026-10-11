@@ -1,161 +1,51 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-type SystemStatus = "ok" | "warning" | "critical";
-interface CustomRange {
-  from: string;
-  to: string;
-}
+import React, { createContext, useContext, useEffect, useState } from "react";
+
 const formatLocalTime = () =>
   new Date().toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
-const STORAGE_KEY = "camOS.globalControls";
-interface PersistedState {
-  rangePreset: string;
-  customRange?: CustomRange;
-  granularity: string;
-  scope: string;
-  segments: string[];
-  compare: string;
-  realtime: boolean;
-  lastUpdated?: string;
-  systemStatus: SystemStatus;
-}
-const getInitialState = (): PersistedState => {
-  if (typeof window === "undefined") {
-    return {
-      rangePreset: "last_7_days",
-      customRange: undefined,
-      granularity: "auto",
-      scope: "all_cameras",
-      segments: [],
-      compare: "off",
-      realtime: false,
-      lastUpdated: new Date().toISOString(),
-      systemStatus: "ok",
-    };
-  }
-  const defaultState: PersistedState = {
-    rangePreset: "last_7_days",
-    customRange: undefined,
-    granularity: "auto",
-    scope: "all_cameras",
-    segments: [],
-    compare: "off",
-    realtime: false,
-    lastUpdated: new Date().toISOString(),
-    systemStatus: "ok",
-  };
-  const persisted = window.sessionStorage.getItem(STORAGE_KEY);
-  if (!persisted) {
-    return defaultState;
-  }
-  try {
-    const parsed = JSON.parse(persisted) as Partial<PersistedState> | undefined;
-    if (!parsed) {
-      return defaultState;
-    }
-    return {
-      rangePreset: parsed.rangePreset ?? defaultState.rangePreset,
-      customRange: parsed.customRange,
-      granularity: parsed.granularity ?? defaultState.granularity,
-      scope: parsed.scope ?? defaultState.scope,
-      segments: Array.isArray(parsed.segments)
-        ? parsed.segments
-        : defaultState.segments,
-      compare: parsed.compare ?? defaultState.compare,
-      realtime:
-        typeof parsed.realtime === "boolean"
-          ? parsed.realtime
-          : defaultState.realtime,
-      lastUpdated: parsed.lastUpdated ?? defaultState.lastUpdated,
-      systemStatus: parsed.systemStatus ?? defaultState.systemStatus,
-    };
-  } catch (error) {
-    return defaultState;
-  }
-};
-const GlobalControlsContext = createContext<
-  { systemStatus: SystemStatus; localTime: string } | undefined
->(undefined);
-export function GlobalControlsProvider({
+const LocalClockContext = createContext<string | undefined>(undefined);
+export function LocalClockProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const initialState = useMemo(getInitialState, []);
-  const [localTime, setLocalTime] = useState(formatLocalTime());
-  const [lastUpdated, setLastUpdated] = useState(initialState.lastUpdated);
+  const [localTime, setLocalTime] = useState(formatLocalTime);
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setLocalTime(formatLocalTime());
-      setLastUpdated(new Date().toISOString());
-    }, 1000 * 60);
+    const timer = window.setInterval(
+      () => setLocalTime(formatLocalTime()),
+      60000,
+    );
     return () => window.clearInterval(timer);
   }, []);
-  useEffect(() => {
-    window.sessionStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...initialState, lastUpdated }),
-    );
-  }, [initialState, lastUpdated]);
-  const value = useMemo(
-    () => ({ systemStatus: initialState.systemStatus, localTime }),
-    [initialState, localTime],
-  );
   return (
-    <GlobalControlsContext.Provider value={value}>
+    <LocalClockContext.Provider value={localTime}>
       {children}
-    </GlobalControlsContext.Provider>
+    </LocalClockContext.Provider>
   );
 }
-const useGlobalControls = () => {
-  const context = useContext(GlobalControlsContext);
-  if (!context)
-    throw new Error(
-      "useGlobalControls must be used within a GlobalControlsProvider",
-    );
-  return context;
+export type DashboardStatus = {
+  realtime: boolean;
+  enabled: boolean;
 };
-
-const statusCopy: Record<SystemStatus, string> = {
-  ok: "System status: OK",
-  warning: "System status: Warning",
-  critical: "System status: Attention required",
-};
-
-export type DashboardStatus = { realtime: boolean; enabled: boolean };
-
 interface HeaderStatusStripProps {
   className?: string;
-  isAuthenticatedView?: boolean;
   layout?: "desktop" | "mobile";
-  status?: DashboardStatus;
+  status: DashboardStatus;
   trailingAction?: React.ReactNode;
 }
-
 const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
   className,
-  isAuthenticatedView = false,
   layout = "desktop",
   status,
   trailingAction,
 }) => {
-  const { systemStatus, localTime } = useGlobalControls();
-  // Relational status overrides the shared clock/status presentation.
-  const placeholder = !status && isAuthenticatedView;
-  const realtime = status ? status.realtime : true;
-  const systemLabel = status
-    ? `System status: ${status.enabled ? "ON" : "OFF"}`
-    : statusCopy[systemStatus];
-  const indicator = status ? (status.enabled ? "on" : "off") : systemStatus;
+  const localTime = useContext(LocalClockContext);
+  const realtime = status.realtime;
+  const systemLabel = `System status: ${status.enabled ? "ON" : "OFF"}`;
+  const indicator = status.enabled ? "on" : "off";
   const RealtimeWaveIcon = () => {
     const wave = (
       <svg
@@ -186,7 +76,6 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
         </g>
       </svg>
     );
-    if (!status) return wave;
     return (
       <span
         className={`vrm-status-wave${realtime ? "" : " vrm-status-wave--offline"}`}
@@ -211,7 +100,6 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
       </span>
     );
   };
-
   if (layout === "mobile") {
     return (
       <div
@@ -224,22 +112,15 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
           <span
             className={`vrm-header-chip-highlight${realtime ? "" : " vrm-header-chip-highlight--offline"}`}
           >
-            {placeholder ? (
-              <span style={{ color: "var(--vrm-text-muted)" }}>-</span>
-            ) : (
+            {
               <>
                 <RealtimeWaveIcon /> {realtime ? "Realtime" : "Offline"}
               </>
-            )}
+            }
           </span>
         </div>
         <div className="vrm-header-meta-mobile__row">
-          {placeholder ? (
-            <>
-              System status:{" "}
-              <span style={{ color: "var(--vrm-text-muted)" }}>NA</span>
-            </>
-          ) : (
+          {
             <>
               <span
                 className={`vrm-status-indicator ${indicator}`}
@@ -247,7 +128,7 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
               />{" "}
               {systemLabel}
             </>
-          )}
+          }
         </div>
         <div className="vrm-header-meta-mobile__row">
           Local time: {localTime}
@@ -256,7 +137,6 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
       </div>
     );
   }
-
   return (
     <div
       className={`vrm-header-meta ${className ?? ""}`.trim()}
@@ -266,33 +146,24 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
       <div className="vrm-header-meta-group">
         <span
           className="vrm-header-chip"
-          title={
-            status ? "Analysed device data freshness" : "Last updated timestamp"
-          }
+          title={"Analysed device data freshness"}
         >
           Last updated:{" "}
           <span
             className={`vrm-header-chip-highlight${realtime ? "" : " vrm-header-chip-highlight--offline"}`}
           >
-            {placeholder ? (
-              <span style={{ color: "var(--vrm-text-muted)" }}>-</span>
-            ) : (
+            {
               <>
                 <RealtimeWaveIcon /> {realtime ? "Realtime" : "Offline"}
               </>
-            )}
+            }
           </span>
         </span>
       </div>
       <span className="vrm-header-meta-divider" aria-hidden="true" />
       <div className="vrm-header-meta-group">
-        <span
-          className="vrm-header-chip"
-          title={placeholder ? "System status unavailable" : systemLabel}
-        >
-          {placeholder ? (
-            <span style={{ color: "var(--vrm-text-muted)" }}>NA</span>
-          ) : (
+        <span className="vrm-header-chip" title={systemLabel}>
+          {
             <>
               <span
                 className={`vrm-status-indicator ${indicator}`}
@@ -300,7 +171,7 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
               />{" "}
               {systemLabel}
             </>
-          )}
+          }
         </span>
       </div>
       <span className="vrm-header-meta-divider" aria-hidden="true" />
@@ -313,5 +184,4 @@ const HeaderStatusStrip: React.FC<HeaderStatusStripProps> = ({
     </div>
   );
 };
-
 export default HeaderStatusStrip;

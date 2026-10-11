@@ -1,8 +1,5 @@
-import type {
-  ChartResult,
-  ChartSeries,
-  ChartType,
-} from "../../schemas/charting";
+import { type ChartResult, type ChartSeries } from "../../schemas/charting";
+
 export interface ValidationIssue {
   code: string;
   message: string;
@@ -41,7 +38,6 @@ const isSplitTimeSeries = (result: ChartResult): boolean => {
 };
 function validateSeriesData(
   series: ChartSeries[],
-  chartType: ChartType,
   options: ValidationOptions = {},
 ): ValidationIssue[] {
   if (series.length === 0) {
@@ -155,7 +151,7 @@ export function validateChartResult(result: ChartResult): ValidationIssue[] {
       },
     ];
   }
-  const issues = validateSeriesData(result.series, result.chartType, {
+  const issues = validateSeriesData(result.series, {
     allowMisalignedBuckets: isSplitTimeSeries(result),
     // Canonical Site Flow omits only the future occupancy tail. Keep order,
     // bar lengths, values and all other chart validation unchanged.

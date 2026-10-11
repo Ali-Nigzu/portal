@@ -1,17 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
+import { type UpdateMePayload, endSettingsUnlock, getMe, resendSettingsUnlockCode, startSettingsUnlock, updateMe, verifySettingsUnlockCode } from "../api/settingsApi";
+import type { AuthUser } from "../../auth/transport/me";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, PenLine, ShieldCheck } from "lucide-react";
 import { useAuthenticatedApplication } from "../../../context/AuthenticatedApplicationContext";
-import { endSettingsUnlock, getMe, resendSettingsUnlockCode, startSettingsUnlock, updateMe, verifySettingsUnlockCode } from "../api/settingsApi";
+
 import EditableFieldRow from "../components/EditableFieldRow";
 import ReenterPasswordModal from "../components/ReenterPasswordModal";
-import SettingsFrame from "../components/SettingsFrame";
-import { SettingsPageHeader } from "../components/SettingsFrame";
-import type { SettingsUser, UpdateMePayload } from "../types";
+import SettingsFrame, { SettingsPageHeader } from "../../../components/SettingsFrame";
+
 import AuthPhoneField from "../../auth/components/AuthPhoneField";
 import { PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText } from "../../auth/countryPhoneData";
 import "../../auth/components/AuthPhoneField.css";
 import "../SettingsPages.css";
-import "../MyAccount.css";
 
 type Row = "name" | "phone" | "password";
 type Errors = Partial<Record<Row | "confirmPassword" | "form", string>>;
@@ -19,7 +19,7 @@ const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 
 export default function MyAccountPage() {
   const { refreshAccount } = useAuthenticatedApplication();
-  const [user, setUser] = useState<SettingsUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadRevision, setLoadRevision] = useState(0);
   const [editing, setEditing] = useState<Row | null>(null);
@@ -41,7 +41,7 @@ export default function MyAccountPage() {
   const phoneButton = useRef<HTMLButtonElement>(null);
   const unlocked = Boolean(unlock && unlock.expires > Date.now());
 
-  const resetDrafts = (account: SettingsUser) => {
+  const resetDrafts = (account: AuthUser) => {
     setName(account.name); setPhone(account.phone ?? "");
     setPhoneIso(inferIsoFromPhoneText(account.phone ?? "") ?? "GB");
     setPassword(""); setConfirmPassword(""); setShowPassword(false); setShowConfirmation(false);

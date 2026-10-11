@@ -1,3 +1,4 @@
+import { type AlarmEvent, type AlarmResult } from "../types";
 import { useEffect, useRef, useState } from "react";
 import {
   responseJson,
@@ -6,7 +7,7 @@ import {
   verifyScope,
 } from "../../../context/PortalContext";
 import { usePortalQuery } from "../../../context/usePortalQuery";
-import type { AlarmResult, AlarmEvent } from "../types";
+
 export function useAlarmLogs(filters: string) {
   const portal = usePortal();
   const query = usePortalQuery<AlarmResult>("/alarms", filters);

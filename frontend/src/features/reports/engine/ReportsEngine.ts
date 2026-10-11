@@ -1,18 +1,8 @@
-import type {
-  Period,
-  Rollup,
-  SelectedSnapshot,
-} from "../../organisation-dashboard/types";
-import { buildSiteFlowBucketLabels } from "../utils/reportUtils";
-import { startOfYear } from "../utils/reportUtils";
-import {
-  AGE_BUCKET_LABELS,
-  formatReportDateRange,
-  type ReportTimeframe,
-} from "../utils/reportUtils";
+import { type SelectedSnapshot, type Period, type Rollup } from "../../organisation-dashboard/types";
+import { type ReportTimeframe, buildSiteFlowBucketLabels, startOfYear, AGE_BUCKET_LABELS, formatReportDateRange } from "../utils/reportUtils";
 
 export type ReportType = "site-activity" | "visitor-profile";
-export interface SiteActivityMetrics {
+interface SiteActivityMetrics {
   entrancesSeries: number[];
   exitsSeries: number[];
   footfallSeries: number[];
@@ -31,7 +21,7 @@ export interface SiteActivityMetrics {
   dwellAvg: number;
   dwellMax: number;
 }
-export interface SiteActivityReportData {
+interface SiteActivityReportData {
   reportType: "site-activity";
   snapshot: SelectedSnapshot;
   snapshotTs: Date;
@@ -40,14 +30,14 @@ export interface SiteActivityReportData {
   bucketLabels: string[];
   metrics: SiteActivityMetrics;
 }
-export interface VisitorProfileMetrics {
+interface VisitorProfileMetrics {
   agePct: number[];
   sexPct: number[];
   totalEntrances: number;
   dominantAgeBucket: string | null;
   sexSplit: { Male: number; Female: number };
 }
-export interface VisitorProfileReportData {
+interface VisitorProfileReportData {
   reportType: "visitor-profile";
   snapshot: SelectedSnapshot;
   snapshotTs: Date;
@@ -187,7 +177,7 @@ const subtitle = (
   }
   return formatReportDateRange(ts, timeframe, now, start).subtitle;
 };
-export function buildSiteActivityReportData(
+function buildSiteActivityReportData(
   snapshot: SelectedSnapshot,
   timeframe: ReportTimeframe,
   now = new Date(),
@@ -244,7 +234,7 @@ export function buildSiteActivityReportData(
     },
   };
 }
-export function buildVisitorProfileReportData(
+function buildVisitorProfileReportData(
   snapshot: SelectedSnapshot,
   timeframe: ReportTimeframe,
   now = new Date(),

@@ -1,15 +1,18 @@
-export type ChartType = "composed_time" | "categorical" | "single_value";
-export type AxisBinding = "Y1" | "Y2" | "Y3";
-export type Geometry = "line" | "area" | "column" | "bar";
-export interface Annotation {
+import type { AxisConfig } from "../components/ChartRenderer/managers/AxisManager";
+export type SeriesVisibilityMap = Record<string, boolean>;
+
+type ChartType = "composed_time" | "categorical" | "single_value";
+type AxisBinding = "Y1" | "Y2" | "Y3";
+type Geometry = "line" | "area" | "column" | "bar";
+interface Annotation {
   x: string;
   text: string;
   severity?: "info" | "warning" | "critical";
 }
-export interface SeriesSummary {
+interface SeriesSummary {
   [key: string]: number | string | null | undefined;
 }
-export interface DataPoint {
+interface DataPoint {
   x: string;
   label?: string;
   y?: number | null;
@@ -39,24 +42,24 @@ export interface ChartSeries {
   summary?: SeriesSummary;
   annotations?: Annotation[];
 }
-export type DimensionType = "time" | "category";
-export interface DimensionDescriptor {
+type DimensionType = "time" | "category";
+interface DimensionDescriptor {
   id: string;
   type: DimensionType;
   bucket?: string;
   timezone?: string;
   label?: string;
 }
-export interface CoveragePoint {
+interface CoveragePoint {
   x: string;
   value: number | null;
 }
-export interface SurgePoint {
+interface SurgePoint {
   x: string;
   reason: string;
   measure?: string;
 }
-export interface ResultMeta {
+interface ResultMeta {
   bucketMinutes?: number;
   timezone: string;
   coverage?: CoveragePoint[];
@@ -71,8 +74,28 @@ export interface ChartResult {
   meta: ResultMeta;
 }
 
-export const SITE_FLOW_ACTIVITY_COLORS = {
+export const SITE_FLOW_ACTIVITY_COLORS: Readonly<Record<string, string>> = {
   entrances: "#47c96f",
   exits: "#ff5964",
   occupancy: "#2685ff",
 } as const;
+
+export interface ChartPrimitiveProps {
+  result: ChartResult;
+  series: ChartSeries[];
+  axisConfig: AxisConfig;
+  visibility: SeriesVisibilityMap;
+  onToggleSeries?: (seriesId: string) => void;
+  height: number;
+  className?: string;
+  widgetId?: string;
+  useRawLabels?: boolean;
+  labelKey?: string;
+  showBrush?: boolean;
+  tooltipVariant?: "site_flow_activity";
+  siteFlowTimeframe?: string;
+  hideInactiveLegend?: boolean;
+  siteFlowActivity?: boolean;
+  donutTooltipMode?: "standard" | "demo_cursor_hover";
+  donutTooltipOwnerId?: string;
+}

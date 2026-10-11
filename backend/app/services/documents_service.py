@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from fastapi import UploadFile
 from starlette.concurrency import run_in_threadpool
 
-from backend.app.data.documents_store import CHUNK_SIZE, DocumentsStore
+from backend.app.models_documents import CHUNK_SIZE
 from backend.app.models_documents import (
     DocumentError, DocumentRecord, MIME_TYPES, document_id, filename_from_id,
     infer_type, safe_filename,
@@ -31,7 +31,7 @@ class UploadBatchResult:
 
 
 class DocumentsService:
-    def __init__(self, store: DocumentsStore):
+    def __init__(self, store):
         self.store = store
 
     @staticmethod
@@ -46,7 +46,7 @@ class DocumentsService:
         if not item.name.startswith(prefix):
             raise ValueError('Unexpected object prefix')
         name = safe_filename(item.name[len(prefix):])
-        kind = infer_type('', name)
+        kind = infer_type(name)
         return DocumentRecord(id=document_id(name), accountId=str(user_id), name=name,
             type=kind, mimeType=MIME_TYPES.get(kind.value, 'application/octet-stream'),
             sizeBytes=item.size, createdAt=item.created_at, updatedAt=item.updated_at)
@@ -68,7 +68,7 @@ class DocumentsService:
                 filename = upload.filename or ''
                 try:
                     name = safe_filename(filename)
-                    kind = infer_type('', name)
+                    kind = infer_type(name)
                     if kind.value not in MIME_TYPES:
                         raise DocumentError(422, 'unsupported_type', 'Accepted types: PDF, CSV, XLSX and DOCX.')
                     # Validate the existing request spool before any storage write.

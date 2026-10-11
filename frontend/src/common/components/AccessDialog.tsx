@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { type ReactNode, useEffect, useId, useRef } from "react";
+
 import { createPortal } from "react-dom";
-import "./OrganisationAccess.css";
-import "../settings/SettingsPages.css";
+import "../../features/organisation-access/OrganisationAccess.css";
+import "../../features/settings/SettingsPages.css";
 
 type Props = {
   title: string;

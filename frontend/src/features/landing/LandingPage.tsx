@@ -26,7 +26,6 @@ const LandingPage: React.FC = () => {
     navigate("/contact");
   };
 
-
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
 
@@ -46,10 +45,6 @@ const LandingPage: React.FC = () => {
     { key: "privacy", label: "Privacy Policy", run: goToFooterLegal },
     { key: "cookies", label: "Cookies Policy", run: goToFooterLegal },
   ] as const;
-  const openSearch = () => {
-    setMobileSearchQuery("");
-    setIsMobileSearchOpen((prev) => !prev);
-  };
 
   const closeSearch = () => {
     setMobileSearchQuery("");
@@ -502,7 +497,6 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-
         <section className="landing-axis-layout-mobile" aria-label="Platform capabilities and system deployment">
           <div className="landing-container landing-axis-mobile-inner">
             <header className="landing-axis-mobile-headings" aria-hidden="true">
@@ -523,12 +517,12 @@ const LandingPage: React.FC = () => {
                     {row.metric.map((line, index) => (
                       <span
                         key={`${row.key}-metric-${line}`}
-                        className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                        className={line === "&" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
                         ref={(node) => {
                           const list = mobileAxisMetricLineRefs.current[row.key] ?? [];
                           list[index] = node;
                           mobileAxisMetricLineRefs.current[row.key] = list;
-                          if (line === "&" || line === "@") {
+                          if (line === "&") {
                             mobileAxisMetricConnectorRefs.current[row.key] = node;
                           }
                         }}
@@ -549,7 +543,7 @@ const LandingPage: React.FC = () => {
                   {row.action ? (
                     <div className="landing-axis-mobile-item-access landing-axis-mobile-stack landing-axis-mobile-stack-access" aria-label={row.access.join(" ")}>
                       {row.access.map((line, index) => {
-                        const lineClassName = line === "&" || line === "@"
+                        const lineClassName = line === "@"
                           ? "landing-axis-mobile-stack-line landing-axis-mobile-connector"
                           : index === 0
                             ? "landing-axis-mobile-stack-line landing-axis-mobile-stack-line-cta"
@@ -570,7 +564,7 @@ const LandingPage: React.FC = () => {
                             key={`${row.key}-access-${line}`}
                             className={lineClassName}
                             ref={(node) => {
-                              if (line === "&" || line === "@") {
+                              if (line === "@") {
                                 mobileAxisAccessConnectorRefs.current[row.key] = node;
                               }
                             }}
@@ -585,9 +579,9 @@ const LandingPage: React.FC = () => {
                       {row.access.map((line) => (
                         <span
                           key={`${row.key}-access-${line}`}
-                          className={line === "&" || line === "@" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
+                          className={line === "&" ? "landing-axis-mobile-stack-line landing-axis-mobile-connector" : "landing-axis-mobile-stack-line"}
                           ref={(node) => {
-                            if (line === "&" || line === "@") {
+                            if (line === "&") {
                               mobileAxisAccessConnectorRefs.current[row.key] = node;
                             }
                           }}

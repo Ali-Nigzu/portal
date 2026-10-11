@@ -1,7 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { demoDashboardSource } from "../../organisation-dashboard/api";
-import { consumeDemoTimeRangeOverride } from "../../organisation-dashboard/demoSession";
-import { projectKpis, projectLandingScalars, VRM_KPI_IDS } from "../../organisation-dashboard/projection";
+import { projectTraffic, projectLandingScalars, VRM_KPI_IDS } from "../../organisation-dashboard/projection";
 import { DashboardKpiSection, type KpiState } from "../../organisation-dashboard/components/KpiBand";
 import camOSLogo from "../../../assets/brand/camos-logo.svg";
 import "../../../styles/Dashboard.css";
@@ -59,6 +58,7 @@ const FLOW_ROUTE_DEFINITIONS: RouteDefinition[] = [
   { id: "dwell", direction: "fromNode" },
 ];
 
+// Fixed central-node artwork fill; unrelated to snapshot/business capacity.
 const CAPACITY_PERCENT = 68;
 
 const BUS_GAP_BELOW_TOP = 18;
@@ -94,7 +94,6 @@ const initialWireLayout: WireLayout = {
   trafficSocketY: 0,
 };
 
-
 const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAccessDemo }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const topClusterRef = useRef<HTMLDivElement | null>(null);
@@ -126,7 +125,6 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
   const [widgetStatus, setWidgetStatus] = useState<"loading" | "ready" | "error">("loading");
   const [widgetError, setWidgetError] = useState<string | null>(null);
   useEffect(() => {
-    consumeDemoTimeRangeOverride();
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 15000);
     let active = true;
@@ -142,7 +140,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
         if (!active) return;
         const kpis = [
           ...projectLandingScalars(snapshot),
-          ...projectKpis(snapshot).filter(kpi => kpi.id === VRM_KPI_IDS.traffic),
+          projectTraffic(snapshot),
         ];
         setKpiWidgets(kpis.map(({id,title,result}) => ({widget:{id,title},status:"ready" as const,result})));
         setWidgetStatus("ready");
@@ -168,8 +166,6 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
   const hasKpis = hasTopWidgets && Boolean(dwellWidget);
   const hasError = widgetStatus === "error";
   const trafficUnavailable = !trafficWidget || trafficWidget.status === "error";
-
-
 
   useLayoutEffect(() => {
     const getSurfaceRect = (dockHost: HTMLElement | null): DOMRect | null => {
@@ -548,7 +544,6 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
     [nodeRadius, nodeX, nodeY, wire],
   );
 
-
   return (
     <section className={styles.preview} aria-label="System overview topology preview">
       <div className={styles.consoleSurface}>
@@ -667,7 +662,6 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
               </article>
             </div>
 
-
             <div className={styles.bottomCluster} ref={bottomClusterRef}>
               <article className={styles.trafficTile} data-testid="traffic-split-module">
                 {trafficUnavailable ? (
@@ -741,7 +735,6 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
             </div>
           </div>
         </div>
-
 
       </div>
       {(widgetStatus === "error") && widgetError ? (

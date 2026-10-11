@@ -1,4 +1,5 @@
 import type { ChartSeries } from "../../../schemas/charting";
+
 interface CartesianDatum {
   x: string;
   [key: string]: unknown;
@@ -7,7 +8,7 @@ export interface SeriesMetaEntry {
   coverage?: number | null;
   rawCount?: number | null;
 }
-export interface CartesianDataset {
+interface CartesianDataset {
   data: CartesianDatum[];
   meta: Record<string, Record<string, SeriesMetaEntry>>;
 }

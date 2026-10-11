@@ -1,8 +1,8 @@
+import type { AuthenticatedOrganisation } from "../organisation-dashboard/api";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import AccessDialog from "./AccessDialog";
+import AccessDialog from "../../common/components/AccessDialog";
 import { AccessError, errorMessage } from "./api";
-import type { AuthenticatedOrganisation } from "../organisation-dashboard/api";
 
 type Props = {
   organisations: AuthenticatedOrganisation[];

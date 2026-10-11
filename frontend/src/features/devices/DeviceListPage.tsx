@@ -1,7 +1,7 @@
-import { useOptionalPortal } from "../../context/PortalContext";
+import { type DeviceView, useCanonicalDeviceList } from "./hooks/useCanonicalDeviceList";
+import { useOptionalPortal, usePortal } from "../../context/PortalContext";
 import { Link, useLocation } from "react-router-dom";
-import { usePortal } from "../../context/PortalContext";
-import { useCanonicalDeviceList, type DeviceView } from "./hooks/useCanonicalDeviceList";
+
 import "./DeviceListPage.css";
 import { parseAuthenticatedPortalPath, replaceModule } from "../organisation-dashboard/authenticatedPortalRoutes";
 
@@ -9,7 +9,7 @@ function SourceCard({ item, refresh, setEnabled, controlMode }: {
   item: DeviceView;
   refresh: () => void;
   setEnabled: (item: DeviceView, enabled: boolean) => Promise<void>;
-  controlMode?: "simulated" | "canonical" | "read-only";
+  controlMode: "simulated" | "canonical";
 }) {
   const location = useLocation();
   const administrativeState = item.displayed_enabled ? "Enabled" : "Disabled";

@@ -1,10 +1,6 @@
+import { type PendingRelationship, decideInvitation, errorMessage } from "./api";
 import { useState } from "react";
 import { useOrganisationAccess } from "./OrganisationAccessContext";
-import {
-  decideInvitation,
-  errorMessage,
-  type PendingRelationship,
-} from "./api";
 
 export function usePersonalAccess() {
   const { pending, pendingLoading, pendingError, refreshAccess } =

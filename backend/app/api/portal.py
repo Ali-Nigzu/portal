@@ -5,18 +5,18 @@ import logging
 import os
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 
 from backend.app.services.portal_context import PortalIdentity, PortalScope, instant
 from backend.app.services.portal_events import InvalidEventData
-from backend.app.services.organisation_dashboard import EntityNotFound
+from backend.app.services.organisation_dashboard import EntityNotFound, InvalidSnapshot, entity_id
 from backend.app.services.portal_reports import (
     InvalidReportSnapshot,
     ReportSnapshotNotFound,
 )
 
-router = APIRouter(prefix="/api/demo/portal")
+router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
@@ -123,7 +123,7 @@ def scope_and_filters(request, allowed):
     }
 
 
-@router.get("/context")
+@router.get("/api/demo/portal/context")
 def context(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
 
@@ -135,7 +135,7 @@ def context(request: Request, response: Response):
     return read(operation)
 
 
-@router.get("/devices")
+@router.get("/api/demo/portal/devices")
 def devices(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
 
@@ -149,7 +149,7 @@ def devices(request: Request, response: Response):
 EVENT_FILTERS = {"start", "end", "event", "sex", "age", "event_id"}
 
 
-@router.get("/events")
+@router.get("/api/demo/portal/events")
 def events(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
 
@@ -167,7 +167,7 @@ def events(request: Request, response: Response):
     return read(operation)
 
 
-@router.get("/events/export")
+@router.get("/api/demo/portal/events/export")
 def export_events(request: Request):
     def operation():
         scope, filters = scope_and_filters(request, EVENT_FILTERS)
@@ -184,7 +184,7 @@ def export_events(request: Request):
     return read(operation)
 
 
-@router.get("/alarms")
+@router.get("/api/demo/portal/alarms")
 def alarms(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
 
@@ -199,7 +199,7 @@ def alarms(request: Request, response: Response):
     return read(operation)
 
 
-@router.get("/reports/snapshot")
+@router.get("/api/demo/portal/reports/snapshot")
 def report_snapshot(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
 
@@ -208,3 +208,41 @@ def report_snapshot(request: Request, response: Response):
         return request.app.state.portal_reports.read_snapshot(scope)
 
     return read(operation)
+
+
+DEMO_ORGANISATION_ID = 1
+
+
+def dashboard_reader(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    if request.query_params:
+        raise HTTPException(422, detail={"error": "invalid_parameters", "message": "Dashboard query parameters are not supported."})
+    return request.app.state.organisation_dashboard
+
+
+def read_dashboard(operation):
+    try:
+        return operation()
+    except EntityNotFound:
+        raise HTTPException(404, detail={"error": "not_found", "message": "Dashboard data not found."}) from None
+    except InvalidSnapshot:
+        raise HTTPException(502, detail={"error": "invalid_snapshot", "message": "Snapshot data is invalid."}) from None
+    except Exception as exc:
+        request_id = uuid4().hex
+        # Do not log exception text/tracebacks: connector errors may contain key paths.
+        logger.warning("demo.dashboard.storage_unavailable request_id=%s type=%s", request_id, type(exc).__name__)
+        raise HTTPException(503, detail={"error": "dashboard_unavailable", "message": "Dashboard storage is unavailable.", "request_id": request_id}) from None
+
+
+@router.get("/api/demo/dashboard/snapshot")
+def demo_organisation_snapshot(reader=Depends(dashboard_reader)):
+    return read_dashboard(lambda: reader.load_organisation_snapshot(DEMO_ORGANISATION_ID))
+
+
+@router.get("/api/demo/dashboard/sites/{site_id}/snapshot")
+def demo_site_snapshot(site_id: str, reader=Depends(dashboard_reader)):
+    try:
+        selected_id = int(entity_id(site_id))
+    except ValueError:
+        raise HTTPException(422, detail={"error": "invalid_site", "message": "Invalid site identifier."}) from None
+    return read_dashboard(lambda: reader.load_site_snapshot(DEMO_ORGANISATION_ID, selected_id))

@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 
 import NavIcon from "./icons/NavIcon";
 
-export type NavRowProps = {
+type NavRowProps = {
   label: React.ReactNode;
   leftIcon?: React.ReactNode;
   rightSlot?: React.ReactNode;

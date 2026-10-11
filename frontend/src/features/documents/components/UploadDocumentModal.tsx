@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { UploadError, ACCEPTED_EXTENSIONS, PendingUploadItem } from "../types";
+
 import { createPortal } from "react-dom";
 import { Loader2, Trash2, Upload, X } from "lucide-react";
-import { ACCEPTED_EXTENSIONS, PendingUploadItem, UploadError } from "../types";
 
 type UploadDocumentModalProps = {
   isOpen: boolean;
@@ -141,16 +142,12 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
         return;
       }
 
-      // Multipart transports can escape quotes in filenames. Match failures by
-      // batch index, retaining filename fallback for the existing envelope.
-      const errorMap = new Map(uploadResult.errors.filter(entry => entry.index !== undefined)
-        .map(entry => [entry.index!, entry.message]));
-      const legacyErrors = new Map(uploadResult.errors.filter(entry => entry.index === undefined)
-        .map(entry => [entry.filename, entry.message]));
+      // Batch indices preserve identity even when transport quoting changes names.
+      const errorMap = new Map(uploadResult.errors.map(entry => [entry.index, entry.message]));
       setPendingFiles((prev) => {
         const failed: PendingUploadItem[] = [];
         for (const [index, item] of prev.entries()) {
-          const message = errorMap.get(index) ?? legacyErrors.get(item.file.name);
+          const message = errorMap.get(index);
           if (message) failed.push({ ...item, status: "failed", error: message });
         }
         return failed;

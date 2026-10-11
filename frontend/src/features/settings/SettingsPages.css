@@ -1,5 +1,4 @@
-.settings-account-card-body,
-.settings-table-card-body {
+.settings-account-card-body {
   padding: 0;
 }
 
@@ -85,62 +84,6 @@
   align-items: center;
 }
 
-.settings-multiselect {
-  position: relative;
-}
-
-.settings-multiselect-trigger {
-  width: 100%;
-  min-height: 40px;
-  border: 1px solid var(--vrm-border-subtle);
-  border-radius: 8px;
-  background: var(--vrm-surface-secondary);
-  color: var(--vrm-text-primary);
-  padding: 8px 12px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.settings-multiselect-menu {
-  position: fixed;
-  z-index: 1200;
-  background: var(--surface-elevated);
-  border: 1px solid var(--vrm-border-subtle);
-  border-radius: 8px;
-  padding: 6px;
-  display: grid;
-  gap: 2px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-}
-
-.settings-multiselect-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  color: var(--vrm-text-primary);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.settings-multiselect-option:hover {
-  background: rgba(255,255,255,0.06);
-}
-
-.settings-multiselect-option input {
-  accent-color: var(--vrm-accent-blue);
-}
-
-.settings-multiselect-error {
-  margin-top: 6px;
-}
-
-.settings-current-user-site-cell {
-  display: grid;
-  gap: 8px;
-  min-width: 220px;
-}
-
 .settings-inline-error,
 .settings-form-error {
   color: #ff8b8b;
@@ -162,28 +105,11 @@
   width: 100%;
 }
 
-.settings-table th {
+.settings-frame-frame .settings-table th {
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-}
-
-.settings-empty-row {
-  text-align: left;
-  padding: 24px;
-}
-
-.settings-empty-title {
-  color: var(--vrm-text-primary);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.settings-empty-hint {
-  margin-top: 4px;
-  color: var(--vrm-text-muted);
-  font-size: 13px;
 }
 
 .settings-form-grid {
@@ -206,10 +132,6 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
-}
-
-.settings-form-actions--spread {
-  justify-content: space-between;
 }
 
 @media (max-width: 900px) {
@@ -269,58 +191,7 @@
   font-size: 12px;
 }
 
-.settings-password-group {
-  display: grid;
-  gap: 8px;
-}
-
-.settings-account-header-actions {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.settings-unlock-chip {
-  display: inline-flex;
-  align-items: center;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(138, 217, 162, 0.4);
-  color: #8ad9a2;
-  font-size: 12px;
-}
-
-.settings-account-global-error,
-.settings-account-global-message {
-  padding: 0 20px 18px;
-}
-
 @media (max-width: 900px) {
-  .settings-account-header-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-}
-
-.settings-users-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.settings-save-cta--active {
-  box-shadow: 0 0 0 2px rgba(137, 180, 255, 0.28);
-}
-
-.settings-save-cta--inactive {
-  opacity: 0.7;
-}
-
-.settings-manage-access-save-message {
-  padding: 0 16px 14px;
 }
 
 /* Keep the existing gold primary action comfortable on touch screens. */
@@ -360,10 +231,94 @@
 .access-feedback { display: grid; gap: 8px; justify-items: start; }
 .access-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 600px) {
-  .access-table th, .access-table td { padding: 12px; }
+  .settings-frame-frame .access-table th, .settings-frame-frame .access-table td { padding: 12px; }
   .access-table { min-width: 480px; }
   .access-personal-row { flex-direction: column; align-items: flex-start; }
   .access-personal-body .vrm-btn, .access-page-actions .vrm-btn, .access-table .vrm-btn { min-height: 44px; }
 }
 
 .access-organisation-danger{margin-top:32px;padding-top:20px;border-top:1px solid #ddd}.access-danger-button{color:#932b28!important;background:#fff!important;border:1px solid #932b28!important;min-height:44px}.access-danger-button:focus-visible{outline:3px solid #932b28;outline-offset:3px}
+
+.account-card-heading { padding: 20px; }
+.account-details .settings-account-card-body { padding: 0; }
+.account-details > .account-card-heading, .account-security > .account-card-heading { padding: 20px; }
+.account-feedback .settings-form-message { color: var(--text-success, #256f42); }
+.account-card-heading h2 { margin: 0; }
+.account-card-heading p, .account-password-summary p { margin: 6px 0 0; color: var(--vrm-text-muted); font-size: 13px; line-height: 1.5; }
+.account-email { overflow-wrap: anywhere; }
+.account-empty { color: var(--vrm-text-muted); }
+.account-security .account-security-body { padding: 20px; }
+.account-password-summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.account-password-summary h3 { margin: 0; font-size: 14px; font-weight: 500; }
+.account-password-form { display: grid; gap: 16px; max-width: 480px; }
+.account-password-form p { margin: 0; }
+.account-password-input { position: relative; }
+.account-password-input input { padding-right: 48px; }
+.account-password-input button { position: absolute; right: 2px; top: 2px; height: 40px; width: 44px; background: none; color: var(--vrm-text-muted); border: none; border-radius: 6px; cursor: pointer; }
+.account-password-input button:focus-visible, .account-text-button:focus-visible { outline: 2px solid var(--vrm-accent-blue); outline-offset: 2px; }
+.account-unlock-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.account-unlock-actions .vrm-btn, .account-unlocked { display: inline-flex; align-items: center; gap: 8px; }
+.account-unlocked { color: var(--vrm-text-muted); font-size: 12px; }
+.account-text-button { background: none; border: 0; color: var(--vrm-accent-blue); padding: 0; text-align: left; width: fit-content; cursor: pointer; font-size: 13px; min-height: 32px; }
+.account-feedback { min-height: 24px; }
+.account-feedback p { margin: 0; }
+.account-loading { min-height: 260px; }
+.account-skeleton { height: 36px; max-width: 480px; border-radius: 8px; background: var(--vrm-surface-secondary); margin: 18px 0; }
+.account-details .settings-edit-icon-btn { min-width: 44px; min-height: 44px; }
+@media (max-width: 600px) {
+  .account-card-heading, .account-security .account-security-body { padding: 16px; }
+  .account-details .settings-field-row { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "label label" "main actions"; gap: 8px 12px; padding: 16px; }
+  .account-details .settings-field-label { grid-area: label; }
+  .account-details .settings-field-main { grid-area: main; }
+  .account-details .settings-field-actions { grid-area: actions; width: auto; }
+  .account-details .settings-field-row--editing { grid-template-areas: "label label" "main main" "actions actions"; }
+  .account-details .vrm-btn, .account-security .vrm-btn, .account-unlock-actions .vrm-btn { min-height: 44px; }
+  .account-password-summary { align-items: flex-start; flex-direction: column; gap: 16px; }
+}
+
+.settings-frame-frame {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 20px;
+}
+
+.settings-frame-frame > * { min-width: 0; }
+
+@media (max-width: 960px) {
+  .settings-frame-frame {
+    gap: 16px;
+  }
+}
+
+.settings-frame-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.settings-frame-title {
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--vrm-text-primary);
+}
+
+.settings-frame-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .settings-frame-action {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

@@ -1,6 +1,7 @@
-import { jsPDF } from "jspdf";
-import type { ReportData } from "../engine/ReportsEngine";
 import type { ReportIdentity } from "../ReportsPage";
+import type { ReportData } from "../engine/ReportsEngine";
+import { jsPDF } from "jspdf";
+
 import { AGE_BUCKET_LABELS, SEX_BUCKET_LABELS } from "../utils/reportUtils";
 
 const safePart = (value: string) =>
@@ -9,7 +10,7 @@ const safePart = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "Report";
-export function reportFilename(identity: ReportIdentity, title: string) {
+function reportFilename(identity: ReportIdentity, title: string) {
   return `${safePart(identity.heading)}-${safePart(title)}-Report.pdf`;
 }
 const generatedLabel = (date: Date) =>
@@ -21,17 +22,17 @@ const generatedLabel = (date: Date) =>
     minute: "2-digit",
     hour12: false,
   });
-export const reportLayoutSpec = {
+const reportLayoutSpec = {
   headerAlignment: "center" as const,
   footerBrand: "Camos Reports",
 };
-export const chartLabelAngle = (data: ReportData) =>
+const chartLabelAngle = (data: ReportData) =>
   data.reportType === "site-activity" && data.timeframe === "last_quarter"
     ? 45
     : 0;
-export const formatChartValue = (value: number, percentage = false) =>
+const formatChartValue = (value: number, percentage = false) =>
   `${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}${percentage ? "%" : ""}`;
-export function chartPresentation(
+function chartPresentation(
   data: ReportData,
   values: number[],
   percentage = false,
@@ -68,7 +69,7 @@ function bars(
   doc.setDrawColor(225, 225, 222);
   doc.setFont("helvetica", "normal");
   for (let tick = 0; tick <= 2; tick += 1) {
-    const tickValue = (peak / 2) * tick;
+
     const tickY = y + h - (tick / 2) * (h - 8);
     doc.setLineWidth(0.15);
     doc.line(plotX, tickY, plotX + plotWidth, tickY);

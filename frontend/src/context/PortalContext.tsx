@@ -1,26 +1,17 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import type {
-  OrganisationContext,
-  Selection,
-  SelectedSnapshot,
-} from "../features/organisation-dashboard/types";
+import { type Selection, type SelectedSnapshot, type OrganisationContext } from "../features/organisation-dashboard/types";
+
+import { type ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
+
 import { resolveSelection } from "../features/organisation-dashboard/selection";
 
-export type Source = {
+type Source = {
   ref: string;
   kind: "device" | "gateway";
   site_id: string;
   label: string;
   analyzed_until: string | null;
 };
-export type PortalMetadata = OrganisationContext & {
+type PortalMetadata = OrganisationContext & {
   sources: Source[];
   clock: { server_now: string; effective_now: string; time_zone: string };
 };
@@ -38,7 +29,7 @@ export type PortalSource = {
   deviceControl: PortalDeviceControl;
 };
 export type PortalDeviceControl = {
-  mode: "simulated" | "canonical" | "read-only";
+  mode: "simulated" | "canonical";
   getOverrides(): Record<string, boolean>;
   setSourceEnabled(
     ref: string,

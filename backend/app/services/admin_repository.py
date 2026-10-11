@@ -2,7 +2,7 @@
 
 import base64
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import timezone
 from decimal import Decimal
 import json
 from .admin_registry import TABLES, AdminError, table, values

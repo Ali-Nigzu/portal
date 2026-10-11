@@ -1,8 +1,7 @@
-import { API_BASE_URL } from "../../config";
-import type { DashboardSource, SelectedSnapshot } from "./types";
+import { type DashboardSource, type SelectedSnapshot } from "./types";
 
 async function get(path: string, signal: AbortSignal) {
-  const response = await fetch(`${API_BASE_URL}/api/demo/dashboard${path}`, { signal, cache: "no-store" });
+  const response = await fetch(`/api/demo/dashboard${path}`, { signal, cache: "no-store" });
   if (!response.ok) {
     throw new Error(response.status === 404 ? "Dashboard data not found." : "Dashboard is temporarily unavailable. Please retry.");
   }
@@ -29,7 +28,7 @@ export const demoDashboardSource: DashboardSource = {
   )),
 };
 
-export type AuthenticatedSite = { id: string; name: string };
+type AuthenticatedSite = { id: string; name: string };
 export type AuthenticatedOrganisation = {
   id: string;
   name: string;

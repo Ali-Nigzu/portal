@@ -1,6 +1,6 @@
 """Canonical signup, recovery and password-plus-email account unlock routes."""
 
-from backend.app.services.cookie_policy import session_cookie_secure
+from backend.app.services.session_tokens import session_cookie_secure
 
 import logging
 import hmac

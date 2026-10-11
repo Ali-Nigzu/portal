@@ -110,14 +110,6 @@
   font-weight: 750;
 }
 
-.device-runtime-section-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .device-runtime-groups {
   display: grid;
   gap: 18px;
@@ -364,10 +356,6 @@
   transform: translateX(2px);
 }
 
-.device-runtime-table-wrap {
-  overflow-x: auto;
-}
-
 .device-runtime-state {
   display: grid;
   justify-items: start;
@@ -445,16 +433,11 @@
     flex-direction: column;
   }
 
-  .device-runtime-section-actions,
+
   .device-runtime-scope-pill,
   .device-runtime-section-header .vrm-btn {
     width: 100%;
     justify-content: center;
-  }
-
-  .device-runtime-section-actions {
-    display: grid;
-    grid-template-columns: 1fr;
   }
 
   .device-runtime-summary-grid,

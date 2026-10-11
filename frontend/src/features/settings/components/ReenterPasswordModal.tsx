@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
+
 import { Eye, EyeOff } from "lucide-react";
-import AccessDialog from "../../organisation-access/AccessDialog";
+import AccessDialog from "../../../common/components/AccessDialog";
 
 type Props = {
   isOpen: boolean;

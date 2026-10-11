@@ -2,8 +2,8 @@
 
 The application reads the existing production schema. The Admin registry in
 `backend/app/services/admin_registry.py` is the executable field/type allowlist;
-it is not a schema migration. Use the read-only operator audit to inspect actual
-columns, constraints, indexes and effective privileges.
+it is not a schema migration. Inspect actual columns, constraints, indexes and effective privileges with
+read-only PostgreSQL queries before deployment.
 
 ## PostgreSQL
 
@@ -129,30 +129,6 @@ precondition; duplicate names do not overwrite. Download/delete resolve the
 authenticated user prefix and use the observed object generation. List ordering
 is creation timestamp then filename descending.
 
-## Isolated customer-alias snapshot exception
-
-Only zeroed customer Dashboard aliases use this representation:
-
-```text
-{ ts, payload: positional-array, mode: "snapshots", orgId,
-  siteView: "all" | "site-a" | "site-b", fallback: boolean }
-```
-
-Supported org aliases remain `client1`/`client2`. SQLite source selection uses
-`LOCAL_COMBINED_SNAPSHOTS_DB`, `LOCAL_SITE_A_SNAPSHOTS_DB` and
-`LOCAL_SITE_B_SNAPSHOTS_DB`. Without applicable configured BigQuery access,
-`backend/data/demo_snapshot.json` supplies the existing payload/timestamp.
-Configured BigQuery uses `<BQ_PROJECT>.<BQ_DATASET>.snapshots`, discovers the
-supported timestamp/payload columns and reads the latest row at or before the
-requested time. These reads are not canonical customer snapshot authority.
-
-Strict site requests require a supported `siteView` and retain source-unavailable
-errors instead of silently falling back. Demo SQLite fallback marks `fallback`
-as currently specified; the ordinary JSON fallback retains its existing flag.
-The isolated zero-alias projections and wall-clock timestamp parsing
-remain distinct from canonical object snapshots. Supplied view tokens fail with
-the existing 401 response; explicit snapshot org selection retains precedence.
-
 ## Contact persistence
 
 `backend/data/contact_submissions.json` is an active append journal, not user
@@ -176,4 +152,4 @@ remain part of the product.
 Scalar projections use the canonical 96 buckets and snapshot time. The fixed 68%
 Capacity decoration is independent of snapshot capacity. No scalar fixture value
 is retained or manufactured. All six cards use the same canonical Org 1 response;
-Landing makes no historical snapshot request and does not hard-code Site names.
+Landing reads Site names and traffic shares from that response.

@@ -1,4 +1,4 @@
-export const designTokens = {
+const designTokens = {
   color: {
     "surface-0": "#f7f7f3",
     "surface-1": "#fbfbf8",

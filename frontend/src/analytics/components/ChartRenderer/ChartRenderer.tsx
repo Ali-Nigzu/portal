@@ -1,25 +1,23 @@
+import { type SeriesVisibilityMap, type ChartPrimitiveProps, type ChartResult, type ChartSeries, SITE_FLOW_ACTIVITY_COLORS } from "../../schemas/charting";
+
+import { type ValidationIssue, validateChartResult } from "./validation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChartResult, ChartSeries } from "../../schemas/charting";
+
 import { AxisManager } from "./managers/AxisManager";
-import { PaletteManager } from "./managers/PaletteManager";
-import { SeriesManager } from "./managers/SeriesManager";
-import type { SeriesVisibilityMap } from "./managers/SeriesManager";
 import { TimeSeriesChart } from "./primitives/TimeSeriesChart";
-import { BarChartPrimitive as BarChart } from "./primitives/BarChart";
 import { KpiTile } from "./primitives/KpiTile";
 import { TrafficDistribution } from "./primitives/TrafficDistribution";
 import { CapacityDonut } from "./primitives/CapacityDonut";
-import { ChartErrorState } from "./ui/ChartErrorState";
-import { validateChartResult } from "./validation";
-import { SITE_FLOW_ACTIVITY_COLORS } from "../../schemas/charting";
+
 import "./styles.css";
-export interface ChartRendererProps {
+
+interface ChartRendererProps {
   result: ChartResult;
   height?: number;
   className?: string;
   onVisibilityChange?: (visibility: SeriesVisibilityMap) => void;
   widgetId?: string;
-  donutTooltipMode?: "legacy" | "demo_cursor_hover";
+  donutTooltipMode?: "standard" | "demo_cursor_hover";
   donutTooltipOwnerId?: string;
 }
 function buildInitialVisibility(series: ChartSeries[]): SeriesVisibilityMap {
@@ -34,7 +32,7 @@ export const ChartRenderer = ({
   className,
   onVisibilityChange,
   widgetId,
-  donutTooltipMode = "legacy",
+  donutTooltipMode = "standard",
   donutTooltipOwnerId,
 }: ChartRendererProps) => {
   const [visibility, setVisibility] = useState<SeriesVisibilityMap>(() =>
@@ -84,23 +82,13 @@ export const ChartRenderer = ({
     paletteRef.current = new PaletteManager();
   }, [paletteKey]);
   const summary = result.meta?.summary as
-    | { presentation?: string; chartStyle?: string; chartSubType?: string }
-    | undefined;
+    { presentation?: string; chartStyle?: string } | undefined;
   const summaryRecord = summary as Record<string, unknown> | undefined;
-  const summaryTitle =
-    typeof summaryRecord?.title === "string"
-      ? (summaryRecord.title as string)
-      : undefined;
   const siteFlowTimeframe =
     typeof summaryRecord?.siteFlowTimeframe === "string"
-      ? (summaryRecord.siteFlowTimeframe as string)
+      ? summaryRecord.siteFlowTimeframe
       : undefined;
-  const summaryTitleNormalized = summaryTitle?.toLowerCase().trim();
-  const isSiteFlowActivity =
-    widgetId === "live-flow" ||
-    widgetId === "site-flow" ||
-    widgetId === "dashboard.site_flow.activity" ||
-    summaryTitleNormalized === "site flow";
+  const isSiteFlowActivity = summary?.chartStyle === "site_flow_activity";
   const palette = paletteRef.current;
   const decoratedSeries = useMemo(() => {
     return result.series.map((series) => {
@@ -141,7 +129,7 @@ export const ChartRenderer = ({
       return next;
     });
   };
-  const chartProps = {
+  const chartProps: ChartPrimitiveProps = {
     result,
     series: decoratedSeries,
     axisConfig,
@@ -158,24 +146,8 @@ export const ChartRenderer = ({
     donutTooltipMode,
     donutTooltipOwnerId,
   };
-  const chartStyle =
-    summary?.chartStyle ||
-    (result as unknown as { chartStyle?: string }).chartStyle;
-  const chartSubType =
-    summary?.chartSubType ||
-    (result as unknown as { chartSubType?: string }).chartSubType;
-  const isVrmTrafficByTitle =
-    summary?.presentation === "vrm" &&
-    summaryTitleNormalized === "traffic by camera";
-  const isVrmPresentation = summary?.presentation === "vrm";
-  const isTrafficWidgetId = isVrmPresentation && widgetId === "kpi-vrm-traffic";
-  const hasTrafficStyle =
-    chartStyle === "traffic_distribution" ||
-    chartSubType === "traffic_distribution";
-  const isTrafficDistribution =
-    hasTrafficStyle || isVrmTrafficByTitle || isTrafficWidgetId;
-  const isCapacityUsage =
-    chartStyle === "capacity_usage" || chartSubType === "capacity_usage";
+  const isTrafficDistribution = summary?.chartStyle === "traffic_distribution";
+  const isCapacityUsage = summary?.chartStyle === "capacity_usage";
   if (validationIssues.length > 0) {
     return (
       <ChartErrorState
@@ -188,7 +160,7 @@ export const ChartRenderer = ({
   if (isTrafficDistribution) {
     return <TrafficDistribution {...chartProps} height={height} />;
   }
-  if (isCapacityUsage && isVrmPresentation) {
+  if (isCapacityUsage) {
     return <CapacityDonut {...chartProps} height={height} />;
   }
   if (isEmpty) {
@@ -197,11 +169,156 @@ export const ChartRenderer = ({
   if (result.chartType === "single_value") {
     return <KpiTile {...chartProps} />;
   }
-  if (result.chartType === "categorical") {
-    return <BarChart {...chartProps} />;
-  }
-  if (result.chartType === "composed_time") {
-    return <TimeSeriesChart {...chartProps} />;
-  }
   return <TimeSeriesChart {...chartProps} />;
+};
+
+const RESERVED_SERIES_COLORS: Record<string, string> = {
+  occupancy: "var(--chart-signal, #a77a21)",
+  entrances: "var(--chart-series-2, #647080)",
+  exits: "var(--chart-series-3, #7b8796)",
+  throughput: "var(--chart-series-4, #8b887d)",
+  dwell_mean: "var(--chart-series-5, #9f8a61)",
+  dwell_p90: "var(--chart-series-6, #b49d74)",
+};
+
+const DEFAULT_PALETTE = [
+  "var(--chart-series-2, #647080)",
+  "var(--chart-series-3, #7b8796)",
+  "var(--chart-series-4, #8f9aaa)",
+  "var(--chart-series-5, #6f7c8d)",
+  "var(--chart-series-6, #9ba5b2)",
+  "var(--chart-series-7, #7a8798)",
+  "var(--chart-series-8, #a9b3bf)",
+  "var(--chart-series-9, #8793a3)",
+  "var(--chart-series-10, #b5bdc7)",
+  "var(--chart-signal, #a77a21)",
+];
+
+class PaletteManager {
+  private palette: string[];
+  private reserved: Record<string, string>;
+  private assignments = new Map<string, string>();
+  private paletteIndex = 0;
+
+  constructor(
+    palette: string[] = DEFAULT_PALETTE,
+    reserved: Record<string, string> = RESERVED_SERIES_COLORS,
+  ) {
+    this.palette = palette;
+    this.reserved = reserved;
+  }
+
+  getColor(seriesId: string): string {
+    if (this.assignments.has(seriesId)) {
+      return this.assignments.get(seriesId)!;
+    }
+
+    const reservedMatch = this.getReservedColor(seriesId);
+    if (reservedMatch) {
+      this.assignments.set(seriesId, reservedMatch);
+      return reservedMatch;
+    }
+
+    const color = this.palette[this.paletteIndex % this.palette.length];
+    this.assignments.set(seriesId, color);
+    this.paletteIndex += 1;
+    return color;
+  }
+
+  private getReservedColor(seriesId: string): string | undefined {
+    const normalized = seriesId.toLowerCase();
+    const direct = this.reserved[normalized];
+    if (direct) {
+      return direct;
+    }
+    const key = Object.keys(this.reserved).find((reservedKey) =>
+      normalized.includes(reservedKey),
+    );
+    return key ? this.reserved[key] : undefined;
+  }
+}
+
+class SeriesManager {
+  private visibility: Map<string, boolean>;
+  private seriesById: Map<string, ChartSeries>;
+  private seriesByGroup: Map<string, string[]>;
+  constructor(series: ChartSeries[], initial?: SeriesVisibilityMap) {
+    this.seriesById = new Map(series.map((item) => [item.id, item]));
+    this.seriesByGroup = new Map();
+    series.forEach((item) => {
+      if (!item.seriesGroup) {
+        return;
+      }
+      const ids = this.seriesByGroup.get(item.seriesGroup) ?? [];
+      ids.push(item.id);
+      this.seriesByGroup.set(item.seriesGroup, ids);
+    });
+    this.visibility = new Map(
+      series.map((s) => [s.id, initial?.[s.id] ?? true] as const),
+    );
+  }
+  toggle(seriesId: string): void {
+    const series = this.seriesById.get(seriesId);
+    if (!series || !this.visibility.has(seriesId)) {
+      return;
+    }
+    const group = series.seriesGroup;
+    if (group && this.seriesByGroup.has(group)) {
+      const nextVisibility = !this.visibility.get(seriesId);
+      (this.seriesByGroup.get(group) ?? []).forEach((id) => {
+        if (this.visibility.has(id)) {
+          this.visibility.set(id, nextVisibility);
+        }
+      });
+      return;
+    }
+    this.visibility.set(seriesId, !this.visibility.get(seriesId));
+  }
+  getVisibleSeries(): Set<string> {
+    return new Set(
+      Array.from(this.visibility.entries())
+        .filter(([, visible]) => visible)
+        .map(([id]) => id),
+    );
+  }
+  toObject(): SeriesVisibilityMap {
+    const result: SeriesVisibilityMap = {};
+    this.visibility.forEach((visible, id) => {
+      result[id] = visible;
+    });
+    return result;
+  }
+}
+
+interface ChartErrorStateProps {
+  issues: ValidationIssue[];
+  height: number;
+  className?: string;
+}
+const ChartErrorState = ({
+  issues,
+  height,
+  className,
+}: ChartErrorStateProps) => {
+  return (
+    <div
+      className={`analytics-chart-error ${className ?? ""}`}
+      style={{ minHeight: height }}
+    >
+      <div className="analytics-chart-error__icon" aria-hidden="true">
+        {" "}
+        ⚠️{" "}
+      </div>
+      <div className="analytics-chart-error__content">
+        <h4>Unable to render chart</h4>
+        <p>Backend chart payload violated the Phase 2 contract:</p>
+        <ul>
+          {" "}
+          {issues.map((issue) => (
+            <li key={`${issue.code}-${issue.message}`}>{issue.message}</li>
+          ))}{" "}
+        </ul>
+      </div>
+    </div>
+  );
 };

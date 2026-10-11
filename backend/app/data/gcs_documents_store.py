@@ -10,7 +10,7 @@ from google.cloud import storage
 from google.cloud.storage.retry import DEFAULT_RETRY
 from google.cloud.storage.exceptions import DataCorruption
 
-from backend.app.data.documents_store import CHUNK_SIZE, StoredDocument
+from backend.app.models_documents import CHUNK_SIZE, StoredDocument
 from backend.app.models_documents import DocumentError
 
 logger = logging.getLogger(__name__)

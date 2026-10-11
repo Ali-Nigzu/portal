@@ -1,12 +1,12 @@
-import React from "react";
-import type { CSSProperties, ReactNode } from "react";
+import React, { type ReactNode, type CSSProperties } from "react";
+
 import { ChartRenderer } from "../../../analytics/components/ChartRenderer/ChartRenderer";
 
 type KpiBandProps = {
   mode?: "full" | "preview";
   kpiWidgets: KpiState[];
   rendererClassName?: string;
-  donutTooltipMode?: "legacy" | "demo_cursor_hover";
+  donutTooltipMode?: "standard" | "demo_cursor_hover";
 };
 
 type KpiTileProps = {
@@ -16,7 +16,7 @@ type KpiTileProps = {
   state: KpiState;
   widgetId: string;
   rendererClassName?: string;
-  donutTooltipMode?: "legacy" | "demo_cursor_hover";
+  donutTooltipMode?: "standard" | "demo_cursor_hover";
   donutTooltipOwnerId?: string;
 };
 
@@ -29,7 +29,7 @@ const KpiTile: React.FC<KpiTileProps> = ({
   state,
   widgetId,
   rendererClassName,
-  donutTooltipMode = "legacy",
+  donutTooltipMode = "standard",
   donutTooltipOwnerId,
 }) => {
   const summary = result?.meta?.summary ?? {};
@@ -113,7 +113,7 @@ const KpiBand: React.FC<KpiBandProps> = ({
   mode = "full",
   kpiWidgets,
   rendererClassName,
-  donutTooltipMode = "legacy",
+  donutTooltipMode = "standard",
 }) => {
   if (kpiWidgets.length === 0) {
     return null;
@@ -169,7 +169,7 @@ type DashboardKpiSectionProps = {
   kpiWidgets: KpiState[];
   className?: string;
   rendererClassName?: string;
-  donutTooltipMode?: "legacy" | "demo_cursor_hover";
+  donutTooltipMode?: "standard" | "demo_cursor_hover";
 };
 
 const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
@@ -177,7 +177,7 @@ const DashboardKpiSection: React.FC<DashboardKpiSectionProps> = ({
   kpiWidgets,
   className,
   rendererClassName,
-  donutTooltipMode = "legacy",
+  donutTooltipMode = "standard",
 }) => {
   if (kpiWidgets.length === 0) {
     return null;

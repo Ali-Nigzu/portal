@@ -1,5 +1,6 @@
-import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { ChartPrimitiveProps } from "../../../schemas/charting";
+
 import {
   ResponsiveContainer,
   AreaChart,
@@ -9,15 +10,9 @@ import {
   YAxis,
   ReferenceDot,
 } from "recharts";
-import type { ChartPrimitiveProps } from "./types";
-import {
-  formatCoverage,
-  formatNumeric,
-  formatTimeOfDay,
-  formatValue,
-  shouldShowRawCount,
-} from "../utils/format";
-import { parseDemoTimestamp } from "../utils/format";
+
+import { formatCoverage, formatNumeric, formatTimeOfDay, formatValue, shouldShowRawCount, parseDemoTimestamp } from "../utils/format";
+
 import { useCoarsePointer } from "./useCoarsePointer";
 const formatKpiValue = (value: number | null | undefined, unit?: string) => {
   const numeric = formatNumeric(value);

@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import admin, auth
-from backend.app.compatibility.api import snapshots
 from backend.app.api import demo, documents
-from backend.app.api import demo_dashboard
 from backend.app.api import portal
 from backend.app.api import authenticated_portal
 from backend.app.api import organisation_memberships
@@ -28,12 +28,10 @@ from backend.app.services.user_lifecycle import UserLifecycle
 from backend.app.services.user_lifecycle_repository import UserLifecycleRepository
 from backend.app.services.organisation_dashboard import OrganisationDashboard
 from backend.app.config import get_allowed_origins
-from backend.app.spa import configure_spa
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-ANALYTICS_OFFLINE_MODE = os.getenv("ANALYTICS_OFFLINE_MODE", "").lower() == "true"
 
 
 def create_app() -> FastAPI:
@@ -57,12 +55,10 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(demo.router)
-    app.include_router(demo_dashboard.router)
     app.include_router(portal.router)
     app.include_router(authenticated_portal.router)
     app.include_router(organisation_memberships.router)
     app.include_router(admin.router)
-    app.include_router(snapshots.router)
     app.include_router(documents.router)
 
     configure_spa(app)
@@ -107,11 +103,6 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup_health_check() -> None:
         """Run a lightweight BigQuery connectivity check on startup."""
-        if ANALYTICS_OFFLINE_MODE:
-            logger.info(
-                "Analytics offline mode enabled; skipping BigQuery startup health check"
-            )
-            return
         try:
             from backend.app.services.bigquery_client import bigquery_client
 
@@ -121,3 +112,27 @@ def create_app() -> FastAPI:
             return
 
     return app
+
+
+def configure_spa(app: FastAPI) -> None:
+    static_dir = os.path.join("backend", "frontend_build", "static")
+    if os.path.isdir(static_dir):
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    else:
+        logger.warning("Static assets directory not found: %s", static_dir)
+
+    @app.get("/")
+    async def serve_index():
+        index_path = os.path.join("backend/frontend_build", "index.html")
+        if not os.path.exists(index_path):
+            raise HTTPException(status_code=500, detail="index.html not found")
+        return FileResponse(index_path)
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api") or full_path.startswith("static"):
+            raise HTTPException(status_code=404, detail="API or static route not found")
+        index_path = os.path.join("backend/frontend_build", "index.html")
+        if not os.path.exists(index_path):
+            raise HTTPException(status_code=500, detail="index.html not found")
+        return FileResponse(index_path)

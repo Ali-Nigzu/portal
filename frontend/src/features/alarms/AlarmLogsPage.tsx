@@ -1,3 +1,4 @@
+import type { AlarmEvent } from "./types";
 import { useState } from "react";
 import { useOptionalPortal } from "../../context/PortalContext";
 import {
@@ -7,7 +8,7 @@ import {
   type Filters,
 } from "../../components/PortalFilters";
 import { useAlarmLogs } from "./hooks/useAlarmLogs";
-import type { AlarmEvent } from "./types";
+
 import "./AlarmLogsPage.css";
 import "../../styles/PortalLogs.css";
 

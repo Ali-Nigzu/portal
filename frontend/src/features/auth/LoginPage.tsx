@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { type FormEvent, useMemo, useState, useCallback } from "react";
+
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
-import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
-import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import {
+  AuthDesktopArtwork,
+  AuthLogoHeader,
+} from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
-import { useLoginForm } from "./hooks/useLoginForm";
 import { passwordResetStart } from "./transport/passwordReset";
 import "./LoginPage.css";
 
@@ -21,7 +23,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const isPhoneLayout = useIsPhoneLayout();
   const navigate = useNavigate();
   const location = useLocation();
-  const successMessage = (location.state as { message?: string } | null)?.message;
+  const successMessage = (location.state as { message?: string } | null)
+    ?.message;
   const {
     email,
     password,
@@ -36,7 +39,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [emailStepError, setEmailStepError] = useState<string | null>(null);
   const [staySignedIn, setStaySignedIn] = useState(true);
 
-  const emailValid = useMemo(() => EMAIL_RE.test(email.trim().toLowerCase()), [email]);
+  const emailValid = useMemo(
+    () => EMAIL_RE.test(email.trim().toLowerCase()),
+    [email],
+  );
 
   const onPrimaryAction = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -54,7 +60,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     await handleSubmit(event);
   };
 
-  const handleResetPasswordClick: React.MouseEventHandler<HTMLAnchorElement> = async (event) => {
+  const handleResetPasswordClick: React.MouseEventHandler<
+    HTMLAnchorElement
+  > = async (event) => {
     event.preventDefault();
     if (!email.trim()) {
       setEmailStepError("Enter your email before resetting your password");
@@ -72,9 +80,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
     try {
       await passwordResetStart(email.trim().toLowerCase());
-      navigate(`/reset-password/code?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      navigate(
+        `/reset-password/code?email=${encodeURIComponent(email.trim().toLowerCase())}`,
+      );
     } catch (resetError) {
-      setEmailStepError(resetError instanceof Error ? resetError.message : "Unable to start password reset.");
+      setEmailStepError(
+        resetError instanceof Error
+          ? resetError.message
+          : "Unable to start password reset.",
+      );
     }
   };
 
@@ -86,11 +100,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <section className="login-left-pane" aria-label="Login form panel">
           <div className="login-content">
             <h1 className="login-hero">Welcome Back</h1>
-            {successMessage && <p role="status" className="verify-email-message">{successMessage}</p>}
+            {successMessage && (
+              <p role="status" className="verify-email-message">
+                {successMessage}
+              </p>
+            )}
 
             <form className="login-form" onSubmit={onPrimaryAction}>
               <div className="vrm-field login-field">
-                <label className="vrm-label" htmlFor="login-email">Email or username</label>
+                <label className="vrm-label" htmlFor="login-email">
+                  Email or username
+                </label>
                 <input
                   id="login-email"
                   className="vrm-input"
@@ -105,16 +125,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   placeholder="Enter email or username"
                   autoComplete="username"
                   aria-invalid={Boolean(emailStepError)}
-                  aria-describedby={emailStepError ? "login-email-error" : undefined}
+                  aria-describedby={
+                    emailStepError ? "login-email-error" : undefined
+                  }
                 />
                 <div className="login-error-slot" aria-live="polite">
-                  {emailStepError && <div id="login-email-error" className="login-error">{emailStepError}</div>}
+                  {emailStepError && (
+                    <div id="login-email-error" className="login-error">
+                      {emailStepError}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {step === "password" && (
                 <div className="vrm-field login-field">
-                  <label className="vrm-label" htmlFor="login-password">Password</label>
+                  <label className="vrm-label" htmlFor="login-password">
+                    Password
+                  </label>
                   <input
                     id="login-password"
                     className="vrm-input"
@@ -128,19 +156,34 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               )}
 
               {error && step === "password" && (
-                <div className="vrm-status vrm-status-warning login-request-error" role="alert" aria-live="assertive">
+                <div
+                  className="vrm-status vrm-status-warning login-request-error"
+                  role="alert"
+                  aria-live="assertive"
+                >
                   {error}
                 </div>
               )}
 
               <div className="login-actions">
-                <button type="submit" className="vrm-btn vrm-btn-primary login-submit" disabled={loading}>
-                  {step === "email" ? "Continue" : loading ? "Signing in…" : "Login"}
+                <button
+                  type="submit"
+                  className="vrm-btn vrm-btn-primary login-submit"
+                  disabled={loading}
+                >
+                  {step === "email"
+                    ? "Continue"
+                    : loading
+                      ? "Signing in…"
+                      : "Login"}
                 </button>
               </div>
 
               <div className="login-under-cta">
-                <label className="login-utility-row login-checkbox-row" htmlFor="login-stay-signed-in">
+                <label
+                  className="login-utility-row login-checkbox-row"
+                  htmlFor="login-stay-signed-in"
+                >
                   <input
                     id="login-stay-signed-in"
                     type="checkbox"
@@ -151,12 +194,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </label>
 
                 <p className="login-utility-row login-muted-row">
-                  Don’t have an account yet? <Link to="/create-account" className="login-inline-link">Sign up</Link>
+                  Don’t have an account yet?{" "}
+                  <Link to="/create-account" className="login-inline-link">
+                    Sign up
+                  </Link>
                 </p>
 
                 {step === "password" && (
                   <p className="login-utility-row login-muted-row">
-                    Forgot your password? <a href="#" onClick={handleResetPasswordClick} className="login-inline-link">Reset password</a>
+                    Forgot your password?{" "}
+                    <a
+                      href="#"
+                      onClick={handleResetPasswordClick}
+                      className="login-inline-link"
+                    >
+                      Reset password
+                    </a>
                   </p>
                 )}
               </div>
@@ -175,3 +228,92 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 };
 
 export default LoginPage;
+
+type UseLoginFormResult = {
+  email: string;
+  password: string;
+  error: string | null;
+  loading: boolean;
+  setEmail: (value: string) => void;
+  setPassword: (value: string) => void;
+  handleSubmit: (event: FormEvent) => Promise<void>;
+};
+
+const useLoginForm = (
+  onLogin: () => void | Promise<void>,
+): UseLoginFormResult => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent) => {
+      event.preventDefault();
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await login(email, password);
+        if (result.ok) {
+          await onLogin();
+        } else if (result.status === 401) {
+          setError("Invalid email or username or password");
+        } else {
+          setError("Unable to complete request. Please try again.");
+        }
+      } catch {
+        setError("Unable to complete request. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [email, onLogin, password],
+  );
+
+  return {
+    email,
+    password,
+    error,
+    loading,
+    setEmail,
+    setPassword,
+    handleSubmit,
+  };
+};
+
+type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+};
+
+type LoginResponse = {
+  user: AuthUser;
+};
+
+type LoginResult =
+  { ok: true; data: LoginResponse } | { ok: false; status: number };
+
+const login = async (
+  identifier: string,
+  password: string,
+): Promise<LoginResult> => {
+  const response = await fetch("/api/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "camOS",
+    },
+    credentials: "include",
+    body: JSON.stringify({ identifier: identifier.trim(), password }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, status: response.status };
+  }
+
+  const data = (await response.json()) as LoginResponse;
+  return { ok: true, data };
+};

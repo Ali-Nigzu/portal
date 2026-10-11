@@ -1,9 +1,15 @@
-import { useMemo, useState } from "react";
 import type { SelectedSnapshot } from "../organisation-dashboard/types";
+import { useMemo, useState, useEffect } from "react";
+
 import { buildReportData, type ReportType } from "./engine/ReportsEngine";
-import { renderReportPdf } from "./pdf/renderReportPdf";
 import { TIMEFRAME_OPTIONS, type ReportTimeframe } from "./utils/reportUtils";
 import "./ReportsPage.css";
+import {
+  scopeParams,
+  usePortal,
+  verifyScope,
+} from "../../context/PortalContext";
+import { parseSnapshot } from "../organisation-dashboard/api";
 
 type Props = {
   identity?: ReportIdentity;
@@ -33,7 +39,7 @@ const templates: Array<{
     eyebrow: "Demographics report",
   },
 ];
-export default function ReportsPage({
+function ReportsView({
   identity = { organisationName: "Reports", heading: "Reports" },
   snapshot,
   effectiveNow = new Date(),
@@ -57,12 +63,14 @@ export default function ReportsPage({
     }
   }, [snapshot, type, period, effectiveNow]);
   const invalid = valid instanceof Error ? valid.message : undefined;
-  const download = () => {
+  const download = async () => {
     if (!valid || valid instanceof Error) return;
     setGenerating(true);
     setGenerationError(undefined);
+    const generatedAt = new Date();
     try {
-      const { doc, filename } = renderReportPdf(valid, identity, new Date());
+      const { renderReportPdf } = await import("./pdf/renderReportPdf");
+      const { doc, filename } = renderReportPdf(valid, identity, generatedAt);
       doc.save(filename);
     } catch (error) {
       setGenerationError(
@@ -101,13 +109,17 @@ export default function ReportsPage({
               <h3>
                 {missing ? "No report data yet" : "Reports are unavailable"}
               </h3>
-              <p>{missing
-                ? "Reports will become available after a Site is connected and analytics data has been collected."
-                : invalid ?? error}</p>
+              <p>
+                {missing
+                  ? "Reports will become available after a Site is connected and analytics data has been collected."
+                  : (invalid ?? error)}
+              </p>
             </div>
-            {!missing && <button className="portal-reports-secondary" onClick={retry}>
-              Retry
-            </button>}
+            {!missing && (
+              <button className="portal-reports-secondary" onClick={retry}>
+                Retry
+              </button>
+            )}
           </div>
         )}
         {!loading && !snapshot && !error && (
@@ -174,4 +186,100 @@ export default function ReportsPage({
   );
 }
 
-export type ReportIdentity = { organisationName: string; siteName?: string; heading: string };
+export type ReportIdentity = {
+  organisationName: string;
+  siteName?: string;
+  heading: string;
+};
+
+type ReportSnapshotResponse = {
+  scope: { organisation_id: string; site_id: string | null };
+  snapshot: SelectedSnapshot;
+};
+
+function ReportsPage() {
+  const portal = usePortal();
+  const effectiveNow = useMemo(
+    () => new Date(portal.context!.clock.effective_now),
+    [portal.context?.clock.effective_now],
+  );
+  const [state, setState] = useState<{
+    key: string;
+    snapshot?: ReportSnapshotResponse["snapshot"];
+    error?: string;
+    missing?: boolean;
+  }>({ key: "" });
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const abort = new AbortController();
+    setState({ key: portal.key });
+    Promise.resolve().then(async () => {
+      if (!portal.selection || !portal.context) return;
+      try {
+        const response = await portal.source.request(
+          "/reports/snapshot",
+          scopeParams(portal),
+          abort.signal,
+        );
+        const body = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message =
+            body?.detail?.message ??
+            "Reports are temporarily unavailable. Please retry.";
+          if (!abort.signal.aborted)
+            setState({
+              key: portal.key,
+              error: message,
+              missing:
+                response.status === 404 &&
+                body?.detail?.error === "report_snapshot_not_found",
+            });
+          return;
+        }
+        verifyScope(portal, body);
+        const snapshot = parseSnapshot(body?.snapshot);
+        if (
+          snapshot.scope !== portal.selection.scope ||
+          snapshot.entity_id !== portal.selection.id
+        )
+          throw new Error("Report snapshot selection mismatch.");
+        if (!abort.signal.aborted) setState({ key: portal.key, snapshot });
+      } catch (error) {
+        if (!abort.signal.aborted)
+          setState({
+            key: portal.key,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Reports are temporarily unavailable. Please retry.",
+          });
+      }
+    });
+    return () => abort.abort();
+  }, [portal.key, portal.source, portal.context, revision]);
+  const site =
+    portal.selection?.scope === "site"
+      ? portal.context?.sites.find((s) => s.id === portal.selection?.id)
+      : undefined;
+  const identity = {
+    organisationName: portal.context!.organisation.name,
+    siteName: site?.name,
+    heading: site
+      ? `${portal.context!.organisation.name} - ${site.name}`
+      : portal.context!.organisation.name,
+  };
+  const current = state.key === portal.key ? state : { key: portal.key };
+  return (
+    <ReportsView
+      identity={identity}
+      snapshot={current.snapshot}
+      effectiveNow={effectiveNow}
+      loading={!current.snapshot && !current.error}
+      error={current.error}
+      missing={current.missing}
+      retry={() => setRevision((v) => v + 1)}
+    />
+  );
+}
+
+export default ReportsPage;

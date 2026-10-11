@@ -1,6 +1,7 @@
 import { ChartSeries } from "../../../schemas/charting";
-export type AxisBindingConfig = Record<string, "Y1" | "Y2" | "Y3">;
-export interface AxisDescriptor {
+
+type AxisBindingConfig = Record<string, "Y1" | "Y2" | "Y3">;
+interface AxisDescriptor {
   id: "Y1" | "Y2" | "Y3";
   unit: string;
   label?: string;

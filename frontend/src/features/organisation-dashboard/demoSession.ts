@@ -1,13 +1,7 @@
-import { API_BASE_URL } from "../../config";
-import { DEFAULT_DEMO_SITE_ID } from "./selection";
-import { clearDemoDeviceOverrides } from "./demoDeviceControls";
+import type { PortalDeviceControl } from "../../context/PortalContext";
 
 const DEMO_SESSION_KEY = "camOS_demo_session";
 const DEMO_DEFAULTS_APPLIED_KEY = "camOS_demo_defaults_applied";
-const DEMO_TIME_RANGE_KEY = "camOS_demo_time_range";
-const DEMO_SITEFLOW_TIMEFRAME_KEY = "camOS_demo_siteflow_timeframe";
-const DEMO_SITEFLOW_MODE_KEY = "camOS_demo_siteflow_mode";
-const SELECTED_SITE_KEY = "camOS_selected_site";
 const KEEP_MENU_EXPANDED_KEY = "vrm_keep_menu_expanded";
 
 const notifyDemoSessionChanged = () => {
@@ -28,7 +22,7 @@ export const enableDemoSession = async (): Promise<void> => {
   if (isDemoSessionActive()) {
     return;
   }
-  const response = await fetch(`${API_BASE_URL}/api/demo/session`, {
+  const response = await fetch(`/api/demo/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -51,10 +45,6 @@ export const clearDemoSessionLocal = (): void => {
     clearDemoDeviceOverrides();
     window.sessionStorage.removeItem(DEMO_SESSION_KEY);
     window.sessionStorage.removeItem(DEMO_DEFAULTS_APPLIED_KEY);
-    window.sessionStorage.removeItem(DEMO_TIME_RANGE_KEY);
-    window.sessionStorage.removeItem(DEMO_SITEFLOW_TIMEFRAME_KEY);
-    window.sessionStorage.removeItem(DEMO_SITEFLOW_MODE_KEY);
-    window.sessionStorage.removeItem(SELECTED_SITE_KEY);
     window.localStorage.removeItem(KEEP_MENU_EXPANDED_KEY);
   }
   notifyDemoSessionChanged();
@@ -62,7 +52,7 @@ export const clearDemoSessionLocal = (): void => {
 
 export const clearDemoSessionServer = async (): Promise<void> => {
   try {
-    await fetch(`${API_BASE_URL}/api/demo/session/clear`, {
+    await fetch(`/api/demo/session/clear`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -79,39 +69,49 @@ export const applyDemoDefaultsOnce = (): void => {
   if (window.sessionStorage.getItem(DEMO_DEFAULTS_APPLIED_KEY) === "true") {
     return;
   }
-  window.sessionStorage.setItem(SELECTED_SITE_KEY, DEFAULT_DEMO_SITE_ID);
   window.localStorage.setItem(KEEP_MENU_EXPANDED_KEY, "false");
-  window.sessionStorage.setItem(DEMO_TIME_RANGE_KEY, "today");
-  window.sessionStorage.setItem(DEMO_SITEFLOW_TIMEFRAME_KEY, "today");
-  window.sessionStorage.setItem(DEMO_SITEFLOW_MODE_KEY, "activity");
   window.sessionStorage.setItem(DEMO_DEFAULTS_APPLIED_KEY, "true");
 };
 
-export const consumeDemoTimeRangeOverride = (): string | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const value = window.sessionStorage.getItem(DEMO_TIME_RANGE_KEY);
-  if (value) {
-    window.sessionStorage.removeItem(DEMO_TIME_RANGE_KEY);
-  }
-  return value;
-};
+const DEMO_DEVICE_OVERRIDES_KEY = "camOS_demo_device_enabled_overrides";
+const SOURCE_REF = /^(device|gateway):[1-9][0-9]*$/;
 
-export const getDemoSiteFlowTimeframe = (): string | null => {
-  if (typeof window === "undefined") {
-    return null;
+function readDemoDeviceOverrides(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const value = JSON.parse(
+      window.sessionStorage.getItem(DEMO_DEVICE_OVERRIDES_KEY) ?? "{}",
+    );
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(
+      Object.entries(value).filter(
+        ([ref, enabled]) =>
+          SOURCE_REF.test(ref) && typeof enabled === "boolean",
+      ),
+    ) as Record<string, boolean>;
+  } catch {
+    return {};
   }
-  return window.sessionStorage.getItem(DEMO_SITEFLOW_TIMEFRAME_KEY);
-};
+}
 
-export const consumeDemoSiteFlowModeOverride = (): string | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const value = window.sessionStorage.getItem(DEMO_SITEFLOW_MODE_KEY);
-  if (value) {
-    window.sessionStorage.removeItem(DEMO_SITEFLOW_MODE_KEY);
-  }
-  return value;
+function clearDemoDeviceOverrides() {
+  if (typeof window !== "undefined")
+    window.sessionStorage.removeItem(DEMO_DEVICE_OVERRIDES_KEY);
+}
+
+export const demoDeviceControl: PortalDeviceControl = {
+  mode: "simulated",
+  getOverrides: readDemoDeviceOverrides,
+  async setSourceEnabled(ref, enabled, signal) {
+    if (!SOURCE_REF.test(ref)) throw new Error("Invalid source identity.");
+    await Promise.resolve();
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    const overrides = readDemoDeviceOverrides();
+    overrides[ref] = enabled;
+    window.sessionStorage.setItem(
+      DEMO_DEVICE_OVERRIDES_KEY,
+      JSON.stringify(overrides),
+    );
+    return { ref, enabled };
+  },
 };

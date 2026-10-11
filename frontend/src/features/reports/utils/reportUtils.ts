@@ -117,11 +117,11 @@ const startOfWeekBucketRange = (
   return { start, endWeekStart };
 };
 
-export const getTimeframeOption = (timeframe: ReportTimeframe) =>
+const getTimeframeOption = (timeframe: ReportTimeframe) =>
   TIMEFRAME_OPTIONS.find((option) => option.id === timeframe) ??
   TIMEFRAME_OPTIONS[0];
 
-export const getReportHeaderRange = (
+const getReportHeaderRange = (
   timeframe: ReportTimeframe,
   snapshotTs: Date,
   now: Date = new Date(),
@@ -209,19 +209,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 type TimeWindowKey = ReportTimeframe;
 
-export const startOfDay = (date: Date): Date => {
+const startOfDay = (date: Date): Date => {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
   return next;
 };
 
-export const endOfDay = (date: Date): Date => {
+const endOfDay = (date: Date): Date => {
   const next = new Date(date);
   next.setHours(23, 59, 59, 999);
   return next;
 };
 
-export const startOfWeek = (date: Date): Date => {
+const startOfWeek = (date: Date): Date => {
   const next = startOfDay(date);
   const day = next.getDay();
   const diff = (day + 6) % 7;
@@ -229,24 +229,24 @@ export const startOfWeek = (date: Date): Date => {
   return next;
 };
 
-export const endOfWeek = (date: Date): Date => {
+const endOfWeek = (date: Date): Date => {
   const next = startOfWeek(date);
   next.setDate(next.getDate() + 6);
   return endOfDay(next);
 };
 
-export const startOfMonth = (date: Date): Date =>
+const startOfMonth = (date: Date): Date =>
   new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
 
-export const endOfMonth = (date: Date): Date =>
+const endOfMonth = (date: Date): Date =>
   new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
 
-export const startOfQuarter = (date: Date): Date => {
+const startOfQuarter = (date: Date): Date => {
   const quarterStartMonth = Math.floor(date.getMonth() / 3) * 3;
   return new Date(date.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0);
 };
 
-export const endOfQuarter = (date: Date): Date => {
+const endOfQuarter = (date: Date): Date => {
   const quarterStart = startOfQuarter(date);
   return new Date(
     quarterStart.getFullYear(),
@@ -262,10 +262,10 @@ export const endOfQuarter = (date: Date): Date => {
 export const startOfYear = (date: Date): Date =>
   new Date(date.getFullYear(), 0, 1, 0, 0, 0, 0);
 
-export const endOfYear = (date: Date): Date =>
+const endOfYear = (date: Date): Date =>
   new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
 
-export const resolveSiteFlowWindow = (
+const resolveSiteFlowWindow = (
   timeframe: TimeWindowKey,
   anchor: Date,
 ): { from: Date; to: Date } => {
@@ -305,9 +305,8 @@ const formatMonth = (date: Date, withYear = false): string =>
     month: "short",
     year: withYear ? "numeric" : undefined,
   });
-export const formatSiteFlowTick = (
+const formatSiteFlowTick = (
   timeframe: string | undefined,
-  bucket: string | undefined,
   label: string,
 ): string => {
   const parsed = toDate(label);
@@ -347,7 +346,7 @@ const addYears = (date: Date, years: number): Date =>
   new Date(date.getFullYear() + years, 0, 1, 0, 0, 0, 0);
 const addMonths = (date: Date, months: number): Date =>
   new Date(date.getFullYear(), date.getMonth() + months, 1, 0, 0, 0, 0);
-export const inferSiteFlowBucket = (
+const inferSiteFlowBucket = (
   timeframe: ReportTimeframe,
   _length: number,
 ): "RAW" | "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR" => {
@@ -368,7 +367,7 @@ export const inferSiteFlowBucket = (
   }
   return "YEAR";
 };
-export const resolveSiteFlowSliceCount = (
+const resolveSiteFlowSliceCount = (
   timeframe: ReportTimeframe,
   anchor: Date,
   seriesList: number[][],
@@ -398,7 +397,7 @@ export const resolveSiteFlowSliceCount = (
                 : length;
   return { length, sliceCount, dayStart };
 };
-export const buildAnchoredTimestamps = (
+const buildAnchoredTimestamps = (
   timeframe: ReportTimeframe,
   anchor: Date,
   length: number,
@@ -450,7 +449,7 @@ export const buildSiteFlowBucketLabels = (
   timestamps: Date[];
   sliceCount: number;
 } => {
-  const { length, sliceCount, dayStart } = resolveSiteFlowSliceCount(
+  const { sliceCount, dayStart } = resolveSiteFlowSliceCount(
     timeframe,
     anchor,
     seriesList,
@@ -463,7 +462,7 @@ export const buildSiteFlowBucketLabels = (
       : buildAnchoredTimestamps(timeframe, anchor, sliceCount);
   const bucket = inferSiteFlowBucket(timeframe, sliceCount);
   const labels = timestamps.map((timestamp) =>
-    formatSiteFlowTick(timeframe, bucket, formatDemoTimestamp(timestamp)),
+    formatSiteFlowTick(timeframe, formatDemoTimestamp(timestamp)),
   );
   return { labels, bucket, timestamps, sliceCount };
 };
