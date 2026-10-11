@@ -1,4 +1,4 @@
-import React, { type FormEvent, useMemo, useState, useCallback } from "react";
+import React, { type FormEvent, useState, useCallback } from "react";
 
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
@@ -8,7 +8,6 @@ import {
 } from "../../components/auth/AuthLogoHeader";
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
-import { passwordResetStart } from "./transport/passwordReset";
 import "./LoginPage.css";
 
 interface LoginPageProps {
@@ -16,8 +15,6 @@ interface LoginPageProps {
 }
 
 type LoginStep = "email" | "password";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const isPhoneLayout = useIsPhoneLayout();
@@ -39,11 +36,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [emailStepError, setEmailStepError] = useState<string | null>(null);
   const [staySignedIn, setStaySignedIn] = useState(true);
 
-  const emailValid = useMemo(
-    () => EMAIL_RE.test(email.trim().toLowerCase()),
-    [email],
-  );
-
   const onPrimaryAction = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -60,36 +52,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     await handleSubmit(event);
   };
 
-  const handleResetPasswordClick: React.MouseEventHandler<
-    HTMLAnchorElement
-  > = async (event) => {
+  const handleResetPasswordClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
     event.preventDefault();
-    if (!email.trim()) {
-      setEmailStepError("Enter your email before resetting your password");
-      if (step !== "email") {
-        setStep("email");
-      }
-      return;
-    }
-    if (!emailValid) {
-      setEmailStepError("Not a valid email address");
-      if (step !== "email") {
-        setStep("email");
-      }
-      return;
-    }
-    try {
-      await passwordResetStart(email.trim().toLowerCase());
-      navigate(
-        `/reset-password/code?email=${encodeURIComponent(email.trim().toLowerCase())}`,
-      );
-    } catch (resetError) {
-      setEmailStepError(
-        resetError instanceof Error
-          ? resetError.message
-          : "Unable to start password reset.",
-      );
-    }
+    navigate("/reset-password", { state: { identifier: email.trim() } });
   };
 
   return (

@@ -38,18 +38,24 @@ class CanonicalAuthRepository:
         with self.database.connection() as connection:
             cursor = connection.cursor()
             try:
-                cursor.execute(
-                    "SELECT id, email, username, phone_number, password_hash, status, session_version "
-                    "FROM public.users WHERE lower(email) = lower(%s) "
-                    "OR lower(username) = lower(%s) LIMIT 2",
-                    (identifier, identifier),
-                )
-                rows = cursor.fetchall()
+                return self.resolve_identifier(cursor, identifier)
             finally:
                 cursor.close()
+
+    @staticmethod
+    def resolve_identifier(cursor, identifier: str, *, lock: bool = False) -> CanonicalUser | None:
+        """One Login/recovery matching rule, optionally in a locked transaction."""
+        cursor.execute(
+            "SELECT id, email, username, phone_number, password_hash, status, session_version "
+            "FROM public.users WHERE lower(email) = lower(%s) "
+            "OR lower(username) = lower(%s) ORDER BY id LIMIT 2"
+            + (" FOR UPDATE" if lock else ""),
+            (identifier, identifier),
+        )
+        rows = cursor.fetchall()
         # Separate case-insensitive unique indexes do not prevent a cross-column
         # collision. Never choose an identity ambiguously.
-        return self._user(rows[0]) if len(rows) == 1 else None
+        return CanonicalAuthRepository._user(rows[0]) if len(rows) == 1 else None
 
     def find_username(self, username: str) -> CanonicalUser | None:
         with self.database.connection() as connection:

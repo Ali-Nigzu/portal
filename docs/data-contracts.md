@@ -129,11 +129,36 @@ precondition; duplicate names do not overwrite. Download/delete resolve the
 authenticated user prefix and use the observed object generation. List ordering
 is creation timestamp then filename descending.
 
+## Password reset API
+
+All endpoints retain the current origin/marker safeguards and no-store responses.
+`POST /api/password-reset/start` accepts `{identifier}` (email or username), returns
+202 with `{ok, expiresInSeconds: 900, resendCooldownSeconds: 30}`, and sets the
+HttpOnly RESET cookie. Matching follows Login: case-insensitive email OR username,
+exactly one row, enabled and excluding Admin ID 999999. Delivery uses its canonical
+email. Unknown/ineligible/ambiguous identities get the same acknowledgement and a
+fresh cookie without account authority; delivery failures remain generic.
+
+After start, no browser identity is accepted as recovery authority:
+
+- `/api/password-reset/resend`: POST without a body; returns
+  `{ok, expiresInSeconds: 900, resendCooldownSeconds: 30}` generically.
+- `/api/password-reset/verify-code`: `{code}`; returns
+  `{ok, resetExpiresInSeconds: 600}` after verifying the cookie-bound challenge.
+- `/api/password-reset/set-password`: `{password, confirm_password}`; returns `{ok}`.
+
+The challenge's canonical user ID owns mutation. Completion increments session
+version and invalidates RESET/UNLOCK challenges atomically. Existing five-attempt,
+five-resend, 30-second cooldown and expiry rules remain. Browser routes contain no
+identity query parameters. Synchronous provider timing can differ by eligibility.
+
 ## Contact persistence
 
 `backend/data/contact_submissions.json` is an active append journal, not user
-authority. Contact atomically replaces the journal before delivering the Admin
-notification and then customer confirmation. Journal failure prevents mail;
+authority. The visible Organisation (optional) field maps to `company` in multipart
+transport, the journal, and the internal email function; its displayed email label
+is Organisation. Blank values remain optional. Contact atomically replaces the
+journal before delivering the Admin notification and then customer confirmation. Journal failure prevents mail;
 mail failure does not roll back the saved submission. Records include attachment
 names; email payloads carry attachment contents. This order and failure contract
 remain part of the product.
