@@ -347,7 +347,7 @@ def send_admin_contact_notification(
 
 # Customer brand/legal ownership stays here; operational emails above bypass it.
 COMPANY_NAME = "Camera Operating Systems Limited"
-COMPANY_ADDRESS = "71-75 Shelton Street\nCovent Garden\nLondon\nWC2H 9FD\nEngland"
+COMPANY_ADDRESS = "71-75 Shelton Street, Covent Garden, London, WC2H 9FD, England"
 COMPANY_NUMBER = "Registered Company Number: 16937639"
 EMAIL_LEGAL_TEXT = (
     "This message contains confidential information and is intended only for the individual named. "
@@ -391,8 +391,8 @@ def _render_customer_email(*, title: str, preheader: str, body_html: str, body_t
     footer_text = f"{EMAIL_LEGAL_TEXT}\n\n{COMPANY_NAME}\n{COMPANY_ADDRESS}\n\n{COMPANY_NUMBER}"
     legal_html = (
         f'<p style="margin:0 0 16px;">{escape(EMAIL_LEGAL_TEXT)}</p>'
-        f'<p style="margin:0 0 16px;">{escape(COMPANY_NAME)}<br>'
-        f'{escape(COMPANY_ADDRESS).replace(chr(10), "<br>")}</p>'
+        f'<p style="margin:0 0 8px;">{escape(COMPANY_NAME)}</p>'
+        f'<p style="margin:0 0 16px;">{escape(COMPANY_ADDRESS)}</p>'
         f'<p style="margin:0;">{escape(COMPANY_NUMBER)}</p>'
     )
     html = f'''<!doctype html>
@@ -405,19 +405,18 @@ def _render_customer_email(*, title: str, preheader: str, body_html: str, body_t
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #c2cbd6;">
 <tr><td class="camos-content" style="padding:32px;">
-<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;"><tr>
-<td width="72"><img src="cid:{LOGO_CID}" width="72" height="72" alt="camOS" style="display:block;border:0;"></td>
-<td style="padding-left:12px;font-size:20px;font-weight:bold;color:#16181b;">camOS</td></tr></table>
-<table role="presentation" width="40" cellpadding="0" cellspacing="0"><tr><td height="3" bgcolor="#9b7420" style="font-size:0;line-height:0;">&nbsp;</td></tr></table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td align="center" style="padding:0 0 28px;"><img src="cid:{LOGO_CID}" width="72" height="72" alt="camOS" style="display:block;border:0;"></td>
+</tr><tr><td style="border-top:1px solid #c2cbd6;font-size:0;line-height:0;">&nbsp;</td></tr></table>
 <h1 style="margin:20px 0;font-size:28px;line-height:34px;font-weight:bold;color:#16181b;">{escape(title)}</h1>
 {body_html}
-<p style="margin:28px 0 0;line-height:24px;">The camOS Team<br><span style="color:#5e6876;font-size:14px;">Camera Operating Systems</span></p>
+<p style="margin:28px 0 0;line-height:24px;">camOS Team<br><span style="color:#5e6876;font-size:14px;">Camera Operating Systems</span></p>
 </td></tr><tr><td class="camos-content" style="padding:24px 32px;border-top:1px solid #c2cbd6;color:#5e6876;font-size:12px;line-height:18px;overflow-wrap:anywhere;">
 {legal_html}
 </td></tr></table>
 <!--[if mso]></td></tr></table><![endif]-->
 </td></tr></table></body></html>'''
-    text = f"camOS\n----\n\n{title}\n\n{body_text}\n\nThe camOS Team\nCamera Operating Systems\n\n---\n{footer_text}\n"
+    text = f"camOS\n----\n\n{title}\n\n{body_text}\n\ncamOS Team\nCamera Operating Systems\n\n---\n{footer_text}\n"
     return html, text
 
 
@@ -447,10 +446,7 @@ def send_verification_email(*, to_email: str, code: str) -> PostmarkSendResult:
 def send_password_reset_code_email(*, to_email: str, code: str) -> PostmarkSendResult:
     explanation = "We received a request to reset the password for your camOS account."
     next_step = "Enter this code in the reset screen, then choose your new password."
-    security = (
-        "If you did not request this reset, you can safely ignore this email. "
-        "Your password will not change unless the verification process is completed."
-    )
+    security = "If you did not request this reset, you can safely ignore this email."
     return _send_customer_email(
         to_email=to_email, subject="Reset your camOS password", title="Reset your password",
         preheader="Use this code to reset your camOS password.",
