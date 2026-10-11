@@ -188,13 +188,6 @@
   justify-content: center;
 }
 
-.home-page__card-body--text p {
-  margin: 0;
-  color: var(--sys-text-2, var(--vrm-text-secondary));
-  font-size: var(--vrm-typography-font-size-subtitle);
-  line-height: 1.4;
-}
-
 .home-page__card-body--recent {
   display: flex;
   flex-direction: column;

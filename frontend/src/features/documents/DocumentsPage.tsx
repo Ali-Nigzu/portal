@@ -1,9 +1,17 @@
-import React, { useState } from "react";
-import DocumentsGrid from "./components/DocumentsGrid";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
+
 import UploadDocumentModal from "./components/UploadDocumentModal";
-import { useDocuments } from "./hooks/useDocuments";
 import "../../styles/Dashboard.css";
 import "./DocumentsPage.css";
+import { Plus } from "lucide-react";
+import { DocumentItem } from "./types";
+import DocumentTile from "./components/DocumentTile";
+import {
+  deleteDocument as deleteRequest,
+  getDownloadUrl,
+  listDocuments,
+  uploadDocuments,
+} from "./api/documentsApi";
 
 const DocumentsPage: React.FC = () => {
   const {
@@ -25,7 +33,12 @@ const DocumentsPage: React.FC = () => {
       <div className="dashboard-v2__content documents-page__content">
         <header className="dashboard-v2__header documents-page__header">
           <h1 className="documents-page__title">My Documents</h1>
-          <button type="button" className="vrm-btn vrm-btn-secondary" disabled={isLoading || Boolean(deletingId)} onClick={() => void refresh()}>
+          <button
+            type="button"
+            className="vrm-btn vrm-btn-secondary"
+            disabled={isLoading || Boolean(deletingId)}
+            onClick={() => void refresh()}
+          >
             {isLoading ? "Refreshing…" : "Refresh"}
           </button>
         </header>
@@ -33,19 +46,30 @@ const DocumentsPage: React.FC = () => {
         {error && (
           <div className="documents-page__banner" role="alert">
             <span>{error}</span>
-            <button type="button" className="documents-page__button documents-page__button--ghost" onClick={refresh}>
+            <button
+              type="button"
+              className="documents-page__button documents-page__button--ghost"
+              onClick={refresh}
+            >
               Retry
             </button>
           </div>
         )}
 
         {deleteError && (
-          <div className="documents-page__banner documents-page__banner--danger" role="alert">
+          <div
+            className="documents-page__banner documents-page__banner--danger"
+            role="alert"
+          >
             <span>{deleteError}</span>
           </div>
         )}
 
-        {message && <p className="documents-page__success" role="status">{message}</p>}
+        {message && (
+          <p className="documents-page__success" role="status">
+            {message}
+          </p>
+        )}
 
         <DocumentsGrid
           documents={documents}
@@ -56,7 +80,11 @@ const DocumentsPage: React.FC = () => {
             try {
               await removeDocument(documentId);
             } catch (removeError) {
-              setDeleteError(removeError instanceof Error ? removeError.message : "Failed to delete document");
+              setDeleteError(
+                removeError instanceof Error
+                  ? removeError.message
+                  : "Failed to delete document",
+              );
             }
           }}
           loading={isLoading}
@@ -75,3 +103,152 @@ const DocumentsPage: React.FC = () => {
 };
 
 export default DocumentsPage;
+
+type DocumentsGridProps = {
+  documents: DocumentItem[];
+  onUploadClick: () => void;
+  onDownload: (documentItem: DocumentItem) => void;
+  onDelete: (documentId: string) => void | Promise<void>;
+  loading?: boolean;
+  failed?: boolean;
+  deletingId?: string | null;
+};
+
+const DocumentsGrid: React.FC<DocumentsGridProps> = ({
+  documents,
+  onUploadClick,
+  onDownload,
+  onDelete,
+  loading,
+  failed,
+  deletingId,
+}) => {
+  return (
+    <div className="documents-page__grid" aria-live="polite">
+      <button
+        type="button"
+        className="documents-page__tile documents-page__tile--upload"
+        onClick={onUploadClick}
+        aria-label="Upload document"
+      >
+        <Plus size={28} aria-hidden="true" />
+        <span>Upload</span>
+      </button>
+      {loading && documents.length === 0 && (
+        <article className="documents-page__tile documents-page__tile--loading">
+          <span>Loading documents...</span>
+        </article>
+      )}
+      {!loading && !failed && documents.length === 0 && (
+        <article className="documents-page__tile documents-page__tile--empty">
+          <h2>No documents yet</h2>
+          <p>
+            Documents shared with you will appear here. You can also upload your
+            own.
+          </p>
+        </article>
+      )}
+      {documents.map((documentItem) => (
+        <DocumentTile
+          key={documentItem.id}
+          documentItem={documentItem}
+          onDownload={onDownload}
+          onDelete={onDelete}
+          deleting={deletingId === documentItem.id}
+          deleteDisabled={Boolean(deletingId)}
+        />
+      ))}
+    </div>
+  );
+};
+
+const useDocuments = () => {
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      setDocuments(await listDocuments());
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Unable to load documents. Try again.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+  const uploadBatch = useCallback(
+    async (files: File[]) => {
+      setMessage(null);
+      const result = await uploadDocuments(files);
+      if (result.documents.length) {
+        // Confirmed writes remain visible if the catalogue refresh fails.
+        setDocuments((prev) =>
+          Array.from(
+            new Map(
+              [...prev, ...result.documents].map((item) => [item.id, item]),
+            ).values(),
+          ).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        );
+        setMessage(
+          `${result.documents.length} document${result.documents.length === 1 ? "" : "s"} uploaded.`,
+        );
+        await refresh();
+      }
+      return result;
+    },
+    [refresh],
+  );
+  const removeDocument = useCallback(
+    async (id: string) => {
+      if (deletingId) return;
+      setDeletingId(id);
+      setMessage(null);
+      try {
+        await deleteRequest(id);
+        setDocuments((prev) => prev.filter((item) => item.id !== id));
+        setMessage("Document deleted.");
+        await refresh();
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [deletingId, refresh],
+  );
+  const downloadDocument = useCallback((item: DocumentItem) => {
+    window.open(getDownloadUrl(item.id), "_blank", "noopener,noreferrer");
+  }, []);
+  return useMemo(
+    () => ({
+      documents,
+      isLoading,
+      error,
+      message,
+      deletingId,
+      refresh,
+      uploadBatch,
+      removeDocument,
+      downloadDocument,
+    }),
+    [
+      documents,
+      isLoading,
+      error,
+      message,
+      deletingId,
+      refresh,
+      uploadBatch,
+      removeDocument,
+      downloadDocument,
+    ],
+  );
+};

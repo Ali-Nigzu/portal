@@ -1,5 +1,5 @@
 /** JSON numbers retain their original spelling when JS Number would lose precision. */
-export class JsonNumber {
+class JsonNumber {
   constructor(readonly raw: string) {}
 }
 export function parseJson(text: string): unknown {

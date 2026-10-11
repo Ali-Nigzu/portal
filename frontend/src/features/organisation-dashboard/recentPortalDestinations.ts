@@ -1,15 +1,11 @@
 import type { AuthenticatedOrganisation } from "./api";
-import { PORTAL_MODULE_LABELS } from "./authenticatedPortalRoutes";
-import {
-  authenticatedPortalPath,
-  isPortalModule,
-  type AuthenticatedPortalLocation,
-} from "./authenticatedPortalRoutes";
+
+import { PORTAL_MODULE_LABELS, authenticatedPortalPath, isPortalModule, type AuthenticatedPortalLocation } from "./authenticatedPortalRoutes";
 
 const STORAGE_KEY = "camos_authenticated_portal_recent_v1";
 const LIMIT = 5;
 
-export type RecentPortalDestination = AuthenticatedPortalLocation & { viewedAt: number };
+type RecentPortalDestination = AuthenticatedPortalLocation & { viewedAt: number };
 
 function parseStored(): unknown[] {
   try {

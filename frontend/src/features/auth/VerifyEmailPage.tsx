@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
+
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
-import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
-import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import { AuthDesktopArtwork, AuthLogoHeader } from "../../components/auth/AuthLogoHeader";
+
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
-import { signupResend } from "./transport/signup";
-import { signupVerify } from "./transport/signup";
+import { signupResend, signupVerify } from "./transport/signup";
+
 import "./VerifyEmailPage.css";
 
 const VerifyEmailPage: React.FC = () => {

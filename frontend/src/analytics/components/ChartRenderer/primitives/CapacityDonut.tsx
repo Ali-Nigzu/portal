@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { ChartPrimitiveProps } from "../../../schemas/charting";
+import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import type { ChartPrimitiveProps } from "./types";
+
 import { useDonutHoverController } from "./useDonutHoverController";
 import { DonutTooltipCard, type DonutTooltipRow } from "./DonutTooltipCard";
 import { useDemoDonutTooltipOwner } from "./DemoDonutTooltipOwnerContext";
@@ -29,7 +30,7 @@ export const CapacityDonut = ({
   series,
   height,
   className,
-  donutTooltipMode = "legacy",
+  donutTooltipMode = "standard",
   donutTooltipOwnerId,
 }: ChartPrimitiveProps) => {
   const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
@@ -94,7 +95,7 @@ export const CapacityDonut = ({
   const donutInnerRadius = 48;
   const donutOuterRadius = 68;
   const donutChartHeight = 140;
-  const [legacyHoverLabel, setLegacyHoverLabel] = useState<{
+  const [standardHoverLabel, setStandardHoverLabel] = useState<{
     text: string;
     x: number;
     y: number;
@@ -158,11 +159,11 @@ export const CapacityDonut = ({
       const rounded = canonical ? value : Math.max(0, Math.round(value));
       return hoveredSlice.label === "Peak extra" ? `${peakLabel} ${rounded}%` : `${usageLabel} ${rounded}%`;
     }
-    if (!legacyHoverLabel) {
+    if (!standardHoverLabel) {
       return "";
     }
-    return legacyHoverLabel.text;
-  }, [hoveredSlice, isDemoCursorHover, isTooltipVisible, legacyHoverLabel]);
+    return standardHoverLabel.text;
+  }, [hoveredSlice, isDemoCursorHover, isTooltipVisible, standardHoverLabel]);
   const getHoverBounds = useCallback(() => {
     const surface = chartSurfaceRef.current;
     if (!surface) {
@@ -381,10 +382,10 @@ export const CapacityDonut = ({
         },
       );
     }
-    return legacyHoverLabel
-      ? { x: legacyHoverLabel.x, y: legacyHoverLabel.y }
+    return standardHoverLabel
+      ? { x: standardHoverLabel.x, y: standardHoverLabel.y }
       : null;
-  }, [getTooltipPosition, isDemoCursorHover, legacyHoverLabel]);
+  }, [getTooltipPosition, isDemoCursorHover, standardHoverLabel]);
   const placeHoverLabel = (
     entryIndex: number,
     shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
@@ -394,7 +395,7 @@ export const CapacityDonut = ({
     }
     const hovered = normalizedData[entryIndex];
     if (!hovered || hovered.label === "Remaining") {
-      setLegacyHoverLabel(null);
+      setStandardHoverLabel(null);
       return;
     }
     const value = typeof hovered.displayValue === "number" ? hovered.displayValue : hovered.value;
@@ -402,7 +403,7 @@ export const CapacityDonut = ({
     const text = hovered.label === "Peak extra" ? `${peakLabel} ${rounded}%` : `${usageLabel} ${rounded}%`;
     const container = containerRef.current;
     if (!container) {
-      setLegacyHoverLabel({ text, x: 0, y: 0 });
+      setStandardHoverLabel({ text, x: 0, y: 0 });
       return;
     }
     const cx = typeof shape.cx === "number" ? shape.cx : container.clientWidth / 2;
@@ -439,7 +440,7 @@ export const CapacityDonut = ({
       nextX = Math.min(maxX, Math.max(edgePadding, nextX));
       nextY = Math.min(maxY, Math.max(edgePadding, nextY));
     }
-    setLegacyHoverLabel({ text, x: nextX, y: nextY });
+    setStandardHoverLabel({ text, x: nextX, y: nextY });
   };
   return (
     <div
@@ -579,7 +580,7 @@ export const CapacityDonut = ({
                 placeHoverLabel(index, shape ?? {});
               }}
               onMouseLeave={() => {
-                setLegacyHoverLabel(null);
+                setStandardHoverLabel(null);
               }}
               style={{ cursor: "default" }}
             >

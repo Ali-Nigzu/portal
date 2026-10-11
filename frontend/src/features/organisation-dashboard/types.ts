@@ -1,11 +1,11 @@
-export type EntityId = string; // Lossless decimal PostgreSQL bigint, never a URL slug.
-export type Organisation = { id: EntityId; name: string; slug: string; enabled: boolean; realtime: boolean };
-export type Site = Organisation & { organisation_id: EntityId; max_capacity: number };
+type EntityId = string; // Lossless decimal PostgreSQL bigint, never a URL slug.
+type Organisation = { id: EntityId; name: string; slug: string; enabled: boolean; realtime: boolean };
+type Site = Organisation & { organisation_id: EntityId; max_capacity: number };
 export type OrganisationContext = { organisation: Organisation; sites: Site[] };
 export type Selection = { scope: "organisation"; id: EntityId } | { scope: "site"; id: EntityId };
-export const PERIODS = ["today", "yesterday", "week", "month", "quarter", "year", "all_time"] as const;
+const PERIODS = ["today", "yesterday", "week", "month", "quarter", "year", "all_time"] as const;
 export type Period = typeof PERIODS[number];
-export type OccupancyTriple = [number, number, number];
+type OccupancyTriple = [number, number, number];
 export type Rollup = {
   entrances: number[];
   occupancy: OccupancyTriple[];
@@ -13,8 +13,8 @@ export type Rollup = {
   age_pct: number[];
   sex_pct: number[];
 };
-export type TrafficEntity = { name: string } & ({ site_id: EntityId } | { device_id: EntityId });
-export type SnapshotPayload = Record<Period, Rollup> & {
+type TrafficEntity = { name: string } & ({ site_id: EntityId } | { device_id: EntityId });
+type SnapshotPayload = Record<Period, Rollup> & {
   entrances_96: number[];
   occupancy_96: OccupancyTriple[];
   exits_96: number[];

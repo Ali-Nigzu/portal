@@ -46,7 +46,7 @@ class PortalReports:
                 cursor.close()
         if row is None:
             if allow_empty:
-                from .zero_snapshot import build_zero_scope_snapshot
+                from .organisation_dashboard import build_zero_scope_snapshot
 
                 return {"scope": scope.dto, "snapshot": build_zero_scope_snapshot(scope)}
             raise ReportSnapshotNotFound()

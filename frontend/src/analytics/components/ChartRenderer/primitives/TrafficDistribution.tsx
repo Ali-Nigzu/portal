@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { ChartPrimitiveProps } from "../../../schemas/charting";
+import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import type { ChartPrimitiveProps } from "./types";
+
 import { formatNumeric } from "../utils/format";
 import { useDonutHoverController } from "./useDonutHoverController";
 import { DonutTooltipCard, type DonutTooltipRow } from "./DonutTooltipCard";
@@ -29,7 +30,7 @@ export const TrafficDistribution = ({
   widgetId,
   useRawLabels = false,
   labelKey,
-  donutTooltipMode = "legacy",
+  donutTooltipMode = "standard",
   donutTooltipOwnerId,
 }: ChartPrimitiveProps) => {
   const isDemoCursorHover = donutTooltipMode === "demo_cursor_hover";
@@ -185,7 +186,7 @@ export const TrafficDistribution = ({
     ? [centerLabelWords[0], centerLabelWords.slice(1).join(" ")]
     : [topCameraLabel];
   const hasMultilineCenterLabel = centerLabelLines.length > 1;
-  const [legacyHoverLabel, setLegacyHoverLabel] = useState<{
+  const [standardHoverLabel, setStandardHoverLabel] = useState<{
     text: string;
     x: number;
     y: number;
@@ -218,11 +219,11 @@ export const TrafficDistribution = ({
           : hoveredSlice.value;
       return `${hoveredSlice.label} ${formatNumeric(Math.max(0, Number(value) || 0))}%`.trim();
     }
-    if (!legacyHoverLabel) {
+    if (!standardHoverLabel) {
       return "";
     }
-    return legacyHoverLabel.text;
-  }, [hasPositiveTraffic, hoveredSlice, isDemoCursorHover, isTooltipVisible, legacyHoverLabel]);
+    return standardHoverLabel.text;
+  }, [hasPositiveTraffic, hoveredSlice, isDemoCursorHover, isTooltipVisible, standardHoverLabel]);
   const getHoverBounds = useCallback(() => {
     const surface = chartSurfaceRef.current;
     if (!surface) {
@@ -447,10 +448,10 @@ export const TrafficDistribution = ({
         },
       );
     }
-    return legacyHoverLabel
-      ? { x: legacyHoverLabel.x, y: legacyHoverLabel.y }
+    return standardHoverLabel
+      ? { x: standardHoverLabel.x, y: standardHoverLabel.y }
       : null;
-  }, [getTooltipPosition, isDemoCursorHover, legacyHoverLabel]);
+  }, [getTooltipPosition, isDemoCursorHover, standardHoverLabel]);
   const placeHoverLabel = (
     entryIndex: number,
     shape: { cx?: unknown; cy?: unknown; outerRadius?: unknown; midAngle?: unknown },
@@ -460,7 +461,7 @@ export const TrafficDistribution = ({
     }
     const hovered = pieLegend[entryIndex];
     if (!hovered) {
-      setLegacyHoverLabel(null);
+      setStandardHoverLabel(null);
       return;
     }
     const value = typeof hovered.displayValue === "number" ? hovered.displayValue : hovered.value;
@@ -468,7 +469,7 @@ export const TrafficDistribution = ({
     const text = `${hovered.label} ${formatNumeric(Math.max(0, safeValue))}%`.trim();
     const container = containerRef.current;
     if (!container) {
-      setLegacyHoverLabel({ text, x: 0, y: 0 });
+      setStandardHoverLabel({ text, x: 0, y: 0 });
       return;
     }
     const cx = typeof shape.cx === "number" ? shape.cx : container.clientWidth / 2;
@@ -505,7 +506,7 @@ export const TrafficDistribution = ({
       nextX = Math.min(maxX, Math.max(edgePadding, nextX));
       nextY = Math.min(maxY, Math.max(edgePadding, nextY));
     }
-    setLegacyHoverLabel({ text, x: nextX, y: nextY });
+    setStandardHoverLabel({ text, x: nextX, y: nextY });
   };
 
   return (
@@ -650,7 +651,7 @@ export const TrafficDistribution = ({
                 placeHoverLabel(index, shape ?? {});
               }}
               onMouseLeave={() => {
-                setLegacyHoverLabel(null);
+                setStandardHoverLabel(null);
               }}
               style={{ cursor: "default" }}
             >

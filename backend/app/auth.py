@@ -2,7 +2,7 @@
 Authentication utilities for camOS Analytics API
 """
 
-from backend.app.services.cookie_policy import session_cookie_secure
+from backend.app.services.session_tokens import session_cookie_secure
 
 from datetime import datetime, timezone
 

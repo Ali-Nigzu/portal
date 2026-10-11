@@ -1,9 +1,6 @@
-import type {
-  ChartResult,
-  ChartSeries,
-} from "../../analytics/schemas/charting";
-import { SITE_FLOW_ACTIVITY_COLORS } from "../../analytics/schemas/charting";
-import type { Period, Rollup, SelectedSnapshot } from "./types";
+import { type Period, type SelectedSnapshot, type Rollup } from "./types";
+
+import { type ChartSeries, type ChartResult, SITE_FLOW_ACTIVITY_COLORS } from "../../analytics/schemas/charting";
 
 const QUARTER_HOUR = 900000;
 const DAY = 86400000;
@@ -17,14 +14,14 @@ export const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
   { value: "all_time", label: "All Time" },
 ];
 
-export function rollingTimestamps(ts: string) {
+function rollingTimestamps(ts: string) {
   const end = Math.floor(Date.parse(ts) / QUARTER_HOUR) * QUARTER_HOUR;
   return Array.from({ length: 96 }, (_, i) =>
     new Date(end - (95 - i) * QUARTER_HOUR).toISOString(),
   );
 }
 
-export function periodTimestamps(
+function periodTimestamps(
   period: Period,
   ts: string,
   length: number,
@@ -130,13 +127,10 @@ function projectScalarKpis(
   return result;
 }
 
-export function projectKpis(
-  snapshot: SelectedSnapshot,
-): Array<{ id: string; title: string; result: ChartResult }> {
+export function projectTraffic(snapshot: SelectedSnapshot): { id: string; title: string; result: ChartResult } {
   const p = snapshot.payload;
-  const result = projectScalarKpis(snapshot);
   const trafficId = VRM_KPI_IDS.traffic;
-  result.push({
+  return {
     id: trafficId,
     title: VRM_KPI_TITLES[trafficId],
     result: {
@@ -164,7 +158,15 @@ export function projectKpis(
       ],
       meta: metadata("Traffic Split", { chartStyle: "traffic_distribution" }),
     },
-  });
+  };
+}
+
+export function projectKpis(
+  snapshot: SelectedSnapshot,
+): Array<{ id: string; title: string; result: ChartResult }> {
+  const p = snapshot.payload;
+  const result = projectScalarKpis(snapshot);
+  result.push(projectTraffic(snapshot));
   const [average, peak] = p.capacity[95];
   // Geometry is bounded; raw supplied percentages remain headline/tooltip values.
   const usageArc = Math.min(average, 100);
@@ -204,6 +206,7 @@ export function projectActivity(
   period: Period,
 ): ChartResult {
   const r = snapshot.payload[period];
+  const snapshotTime = Date.parse(snapshot.ts);
   const timestamps = periodTimestamps(period, snapshot.ts, r.entrances.length);
   const series: ChartSeries[] = ["entrances", "exits"].map((id) => ({
     id,
@@ -232,7 +235,7 @@ export function projectActivity(
         occupancy_min: minimum,
         occupancy_max: maximum,
       }))
-      .filter((point) => Date.parse(point.x) <= Date.parse(snapshot.ts)),
+      .filter((point) => Date.parse(point.x) <= snapshotTime),
   });
   return {
     chartType: "composed_time",
@@ -309,7 +312,7 @@ export const VRM_KPI_IDS = {
   capacity: "kpi-vrm-capacity",
 } as const;
 // VRM_KPI_TITLES is the canonical source of KPI card titles (e.g., Dwell Minutes).
-export const VRM_KPI_TITLES: Record<string, string> = {
+const VRM_KPI_TITLES: Record<string, string> = {
   [VRM_KPI_IDS.entrances]: "Entrances",
   [VRM_KPI_IDS.occupancy]: "Occupancy",
   [VRM_KPI_IDS.exits]: "Exits",

@@ -26,12 +26,6 @@
   gap: 2px;
 }
 
-.contact-title {
-  color: var(--text-default);
-  font-size: 16px;
-  font-weight: 500;
-}
-
 .contact-hero {
   font-size: 41px;
   line-height: 1.14;

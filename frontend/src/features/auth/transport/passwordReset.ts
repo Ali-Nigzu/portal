@@ -1,6 +1,6 @@
 
 
-export type PasswordResetStartResponse = {
+type PasswordResetStartResponse = {
   ok: boolean;
   email: string;
   expiresInSeconds: number;
@@ -23,7 +23,7 @@ export const passwordResetStart = async (email: string): Promise<PasswordResetSt
   return response.json() as Promise<PasswordResetStartResponse>;
 };
 
-export type PasswordResetResendResponse = {
+type PasswordResetResendResponse = {
   ok: boolean;
   expiresInSeconds: number;
   resendCooldownSeconds: number;
@@ -46,7 +46,7 @@ export const passwordResetResend = async (email: string): Promise<PasswordResetR
   return response.json() as Promise<PasswordResetResendResponse>;
 };
 
-export type PasswordResetVerifyCodeResponse = {
+type PasswordResetVerifyCodeResponse = {
   ok: boolean;
   resetExpiresInSeconds: number;
 };
@@ -70,7 +70,7 @@ export const passwordResetVerifyCode = async (payload: {
   return response.json() as Promise<PasswordResetVerifyCodeResponse>;
 };
 
-export type PasswordResetSetPasswordResponse = { ok: boolean };
+type PasswordResetSetPasswordResponse = { ok: boolean };
 
 export const passwordResetSetPassword = async (payload: {
   email: string;

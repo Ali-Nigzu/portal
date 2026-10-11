@@ -66,3 +66,9 @@ def verify_session_claims(token: str, now: int | None = None) -> tuple[int, int]
         return user_id, version
     except (ValueError, TypeError, KeyError, json.JSONDecodeError, UnicodeDecodeError):
         raise InvalidSession() from None
+
+
+def session_cookie_secure() -> bool:
+    return os.getenv("PORTAL_SESSION_SECURE", "").lower() == "true" or (
+        not os.getenv("PORTAL_SESSION_SECURE") and os.getenv("NODE_ENV") == "production"
+    )

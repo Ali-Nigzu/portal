@@ -1,20 +1,20 @@
 
 
-export type SignupStartPayload = {
+type SignupStartPayload = {
   name: string;
   email: string;
   phone?: string;
   password: string;
 };
 
-export type SignupStartData = {
+type SignupStartData = {
   ok: boolean;
   email: string;
   expiresInSeconds: number;
   resendCooldownSeconds: number;
 };
 
-export type SignupStartResult =
+type SignupStartResult =
   | { ok: true; data: SignupStartData }
   | { ok: false; status: number; message?: string };
 
@@ -54,11 +54,11 @@ type AuthUser = {
   phone?: string | null;
 };
 
-export type SignupVerifyData = {
+type SignupVerifyData = {
   user: AuthUser;
 };
 
-export type SignupVerifyResult =
+type SignupVerifyResult =
   | { ok: true; data: SignupVerifyData }
   | { ok: false; status: number; message?: string };
 
@@ -90,14 +90,14 @@ export const signupVerify = async (
   return { ok: true, data };
 };
 
-export type SignupResendData = {
+type SignupResendData = {
   ok: boolean;
   expiresInSeconds: number;
   resendCooldownSeconds: number;
   resendsRemaining: number;
 };
 
-export type SignupResendResult =
+type SignupResendResult =
   | { ok: true; data: SignupResendData }
   | { ok: false; status: number; message?: string };
 

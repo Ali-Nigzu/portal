@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  responseJson,
-  scopeParams,
-  usePortal,
-  verifyScope,
-} from "../../../context/PortalContext";
-import type { CanonicalDevice, DeviceListResponse } from "../types";
+import { responseJson, scopeParams, usePortal, verifyScope } from "../../../context/PortalContext";
 
 export type DeviceView = CanonicalDevice & {
   displayed_enabled: boolean;
@@ -101,3 +95,22 @@ export function useCanonicalDeviceList() {
     },
   };
 }
+
+type CanonicalDevice = {
+  ref: string;
+  kind: "device" | "gateway";
+  site_id: string;
+  site_name: string;
+  name: string;
+  canonical_enabled: boolean;
+  last_activity: string | null;
+  runtime_state: "online" | "offline";
+  records: number | null;
+  records_status: "available" | "unavailable";
+};
+
+type DeviceListResponse = {
+  scope: { organisation_id: string; site_id: string | null };
+  records_status: "available" | "unavailable";
+  items: CanonicalDevice[];
+};

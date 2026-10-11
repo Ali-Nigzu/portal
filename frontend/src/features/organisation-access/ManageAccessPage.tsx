@@ -1,3 +1,4 @@
+import { type ManagedRelationship, getManageAccess, disableOrganisation, inviteMember, manageMembership, errorMessage, type ManageAccess } from "./api";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
@@ -6,22 +7,14 @@ import { useOrganisationAccess } from "./OrganisationAccessContext";
 import PersonalAccess, {
   usePersonalAccess,
 } from "./PersonalAccess";
-import AccessDialog from "./AccessDialog";
-import {
-  getManageAccess,
-  disableOrganisation,
-  inviteMember,
-  manageMembership,
-  errorMessage,
-  type ManageAccess,
-  type ManagedRelationship,
-} from "./api";
+import AccessDialog from "../../common/components/AccessDialog";
+
 import InviteUserModal from "./InviteUserModal";
 import PendingInvitesTable from "./PendingInvitesTable";
 import AccessRequestsTable from "./AccessRequestsTable";
 import UsersTable from "./UsersTable";
-import SettingsFrame from "../settings/components/SettingsFrame";
-import { SettingsPageHeader } from "../settings/components/SettingsFrame";
+import SettingsFrame, { SettingsPageHeader } from "../../components/SettingsFrame";
+
 import "../settings/SettingsPages.css";
 
 export default function ManageAccessPage() {

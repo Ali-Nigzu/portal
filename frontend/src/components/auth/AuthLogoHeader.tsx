@@ -1,8 +1,9 @@
 import React from "react";
-import { Link } from "react-router-dom";
 
+import { Link } from "react-router-dom";
 import camOSLogo from "../../assets/brand/camos-logo.svg";
 import styles from "./AuthLogoHeader.module.css";
+import authDesktopArtwork from "../../assets/backgrounds/auth-desktop-artwork.png";
 
 const AuthLogoHeader: React.FC = () => (
   <header className={styles.header}>
@@ -13,3 +14,16 @@ const AuthLogoHeader: React.FC = () => (
 );
 
 export default AuthLogoHeader;
+
+const AuthDesktopArtwork: React.FC = () => (
+  <img
+    src={authDesktopArtwork}
+    data-testid="auth-desktop-artwork"
+    alt=""
+    aria-hidden="true"
+    draggable={false}
+    className={styles.image}
+  />
+);
+
+export { AuthDesktopArtwork, AuthLogoHeader };

@@ -1,14 +1,16 @@
+import { type PortalSource, PortalProvider, usePortal, responseJson } from "../../context/PortalContext";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import VRMLayout from "../../components/VRMLayout";
-import PortalModuleContent from "../../components/PortalModuleContent";
-import { applyDemoDefaultsOnce, enableDemoSession } from "./demoSession";
-import { PortalProvider, usePortal } from "../../context/PortalContext";
-import DashboardLoadingState from "./DashboardLoadingState";
-import { demoPortalSource } from "./demoPortalSource";
+import PortalModuleContent, {
+  DashboardLoadingState,
+} from "../../components/PortalModuleContent";
+import { applyDemoDefaultsOnce, enableDemoSession, demoDeviceControl } from "./demoSession";
+
 import { dashboardSearch } from "./selection";
 
-// Demo retains its own shell; authenticated routes render PortalModuleContent in the app shell.
+import { demoDashboardSource } from "./api";
+
 function PortalApplication({ module }: { module: string }) {
   const { context, selection } = usePortal();
   if (!context) return null;
@@ -76,9 +78,13 @@ function PortalShell() {
     "site-b": "2",
     all: null,
   };
-  if (!siteSlug && organisationSlug in aliases) {
-    const site = context.sites.find((s) => s.id === aliases[organisationSlug]);
-    if (aliases[organisationSlug] && !site)
+  const selectedSiteId =
+    organisationSlug in aliases
+      ? aliases[organisationSlug]
+      : context.sites.find((site) => site.id === organisationSlug)?.id;
+  if (!siteSlug && selectedSiteId !== undefined) {
+    const site = context.sites.find((s) => s.id === selectedSiteId);
+    if (selectedSiteId && !site)
       return <div role="alert">Site unavailable.</div>;
     return (
       <Navigate
@@ -125,3 +131,17 @@ export default function DemoDashboardRoute() {
     </PortalProvider>
   );
 }
+
+const request: PortalSource["request"] = (path, params, signal) =>
+  fetch(`/api/demo/portal${path}${params.size ? `?${params}` : ""}`, {
+    signal,
+    cache: "no-store",
+    credentials: "include",
+  });
+const demoPortalSource: PortalSource = {
+  context: async (signal) =>
+    responseJson(await request("/context", new URLSearchParams(), signal)),
+  snapshot: demoDashboardSource.snapshot,
+  request,
+  deviceControl: demoDeviceControl,
+};

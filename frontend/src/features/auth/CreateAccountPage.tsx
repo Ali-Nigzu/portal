@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
+
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
-import AuthDesktopArtwork from "../../components/auth/AuthDesktopArtwork";
-import AuthLogoHeader from "../../components/auth/AuthLogoHeader";
+import { AuthDesktopArtwork, AuthLogoHeader } from "../../components/auth/AuthLogoHeader";
+
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useCreateAccountForm } from './hooks/useCreateAccountForm';
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";

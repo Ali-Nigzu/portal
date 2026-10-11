@@ -16,7 +16,7 @@ selector, fixture composition or alternate launcher.
 | Shared presentation | `frontend/src/common/components/`, `components/`, `styles/` |
 | Customer identity/catalogue projection | `AuthenticatedApplicationContext` |
 | Selected Portal identity, sources, scope and clock | `PortalContext` |
-| Dashboard snapshot observation | `OrganisationDashboardProvider` |
+| Dashboard snapshot observation | `OrganisationDashboardPage` |
 | HTTP validation, guards and response contracts | `backend/app/api/` |
 | Business rules and authorised projections | `backend/app/services/` |
 | Cloud SQL pooling/transactions | `DashboardPostgres` |
@@ -50,7 +50,7 @@ Browser storage and React state are projections, never membership or user author
 | Unmatched route | Access-state-dependent redirect defined by the router |
 
 Portal modules are `dashboard`, `event-logs`, `alarm-logs`, `device-list` and
-`reports`. Page imports remain lazy. Query preservation, selected-site storage,
+`reports`. Page imports remain lazy. Query preservation,
 Demo aliases and redirect replacement semantics belong to `app/routes.tsx`.
 Feature composition must preserve stylesheet evaluation order, DOM classes,
 responsive geometry and accessibility. Shared rail geometry comes from product
@@ -81,8 +81,8 @@ runtime behavior. Session secrets and cookie settings are described in
 Customer and Demo adapters use the same Portal context, module components and
 canonical backend domain services. A scope change remounts module state, resets
 filters/cursors and aborts obsolete requests. Responses are checked against the
-selected scope. Dashboard and Portal providers retain their distinct observation
-boundaries; they must not be collapsed into a freshness-changing cache.
+selected scope. Dashboard observation lives in its page; the Portal context owns scope and
+clock. Their independent fetch boundaries preserve snapshot freshness.
 
 Public Demo deliberately fixes organisation ID `1`; bare `/demo` selects owned
 Site ID `2`. Name slugs come from relational context, with deterministic hash
@@ -94,22 +94,17 @@ product adapters and do not authorize customer writes.
 
 Landing requests the public canonical Demo Organisation 1 snapshot once for all
 six data cards. `projectLandingScalars` retains the five scalar cards' titles,
-order, formatting and token colours; `projectKpis` supplies Traffic Split from
+order, formatting and token colours; `projectTraffic` supplies Traffic Split from
 the snapshot's Site names and latest traffic-share bucket.
 The topology and decorative 68% Capacity remain Landing presentation.
 
-The unresolved customer-alias identity mapping remains isolated in
-`frontend/src/features/organisation-dashboard/compatibility.ts` and
-`backend/app/compatibility` for customer `/sites/:siteId/dashboard` aliases.
-Those aliases deliberately display
-zero values; they contain no canonical organisation identity. Their zero
-projection is separate from canonical natural empty-state snapshots. Neither
-source can authenticate a customer/Admin or feed canonical Portal, Demo or
-Reports. The sole retained HTTP contract is GET `/api/snapshots/latest`.
+Unscoped `/sites/:siteId/:module` links resolve exactly one real site in the
+authenticated catalogue and redirect into the canonical organisation route.
+Unknown or ambiguous scope is rejected. Demo URL aliases translate to canonical
+Site IDs 1 and 2 through the relational Demo context. They supply no business values.
 
-A nonempty `view_token` on a supported Dashboard alias retains its existing
-rejection text/shell locally and makes no data request. No token issuer exists.
-Canonical authentication never interprets these rejected tokens.
+A nonempty `view_token` on Dashboard paths is rejected with the existing error
+text and makes no data request. It establishes neither identity nor scope.
 
 ## Resource lifecycle
 
@@ -253,16 +248,14 @@ Contact accepts up to three attachments, each at most 10 MiB, with the current
 extension/content-type rules. It validates fields, saves the atomic JSON journal,
 notifies Admin, then confirms to the customer. Persistence failure returns 500
 before mail; configuration/delivery errors retain 503/502 behavior. Saved records
-survive delivery failure. Contact is public product functionality, not legacy
-authentication or organisation authority.
+survive delivery failure. Contact is public product functionality; its journal stores submissions only.
 
 ## Demo and Admin
 
 View Demo uses the normal Portal components and canonical domain services with
 the deliberate fixed public organisation and relational Site selection. Bare
 entry Site 2, old aliases, slug collisions, cutoff clock and public control
-transformations retain their existing semantics. Old positional preview clock
-values preserve wall-clock components rather than gaining UTC conversion.
+transformations retain their existing semantics.
 
 Admin uses the same PostgreSQL rows through a fixed ten-table registry. Typed
 create/update preserves bigint/numeric precision, UUIDs, JSONB and enum checks.

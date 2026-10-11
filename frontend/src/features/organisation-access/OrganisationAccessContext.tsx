@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { type ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
 import { organisationPortalPath } from "../organisation-dashboard/authenticatedPortalRoutes";
@@ -19,7 +12,7 @@ import {
   type PendingAccess,
   type ResolvedOrganisation,
 } from "./api";
-import AccessDialog from "./AccessDialog";
+import AccessDialog from "../../common/components/AccessDialog";
 
 type Value = {
   pending: PendingAccess;

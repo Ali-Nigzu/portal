@@ -5,6 +5,7 @@ import binascii
 import re
 import unicodedata
 from enum import Enum
+from dataclasses import dataclass
 
 from pydantic import BaseModel
 
@@ -54,7 +55,7 @@ def safe_filename(value: str) -> str:
     return value
 
 
-def infer_type(mime_type: str, filename: str) -> DocumentType:
+def infer_type(filename: str) -> DocumentType:
     # The MIME supplied by a browser is not an authority for allowed uploads.
     extension = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
     return DocumentType(extension) if extension in MIME_TYPES else DocumentType.OTHER
@@ -74,3 +75,15 @@ def filename_from_id(value: str) -> str:
         return filename
     except (ValueError, UnicodeError, binascii.Error, DocumentError):
         raise DocumentError(404, 'not_found', 'Document not found.') from None
+
+
+CHUNK_SIZE = 256 * 1024
+
+
+@dataclass(frozen=True)
+class StoredDocument:
+    name: str
+    size: int
+    created_at: str
+    updated_at: str
+    generation: int

@@ -1,14 +1,8 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
 import { createPortal } from "react-dom";
 
-import {
-  COUNTRY_PHONE_OPTIONS,
-  PHONE_OPTION_BY_ISO,
-  inferIsoFromPhoneText,
-  replaceDialCodeInPhoneText,
-  sanitizePhoneText,
-} from "../countryPhoneData";
-import { filterPhoneCountries } from "../phoneCountrySearch";
+import { COUNTRY_PHONE_OPTIONS, PHONE_OPTION_BY_ISO, inferIsoFromPhoneText, replaceDialCodeInPhoneText, sanitizePhoneText, filterPhoneCountries } from "../countryPhoneData";
 
 type AuthPhoneFieldProps = {
   idPrefix: string;

@@ -1,13 +1,6 @@
-import { fetchMe } from "../../auth/transport/me";
-import type {
-  SettingsUnlockStartResult,
-  SettingsUnlockVerifyResult,
-  SettingsUnlockResendResult,
-  SettingsUser,
-  UpdateMePayload,
-} from "../types";
+import { type AuthUser, fetchMe } from "../../auth/transport/me";
 
-export const getMe = async (): Promise<SettingsUser> => {
+export const getMe = async (): Promise<AuthUser> => {
   const response = await fetchMe();
   if (!response.ok) {
     throw new Error("Unable to load account details");
@@ -98,7 +91,7 @@ export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUn
   return { ok: true, data };
 };
 
-export const updateMe = async (payload: UpdateMePayload): Promise<SettingsUser> => {
+export const updateMe = async (payload: UpdateMePayload): Promise<AuthUser> => {
   const response = await fetch("/api/me", {
     method: "PUT",
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
@@ -119,7 +112,7 @@ export const updateMe = async (payload: UpdateMePayload): Promise<SettingsUser> 
     throw new Error(message);
   }
 
-  const data = await response.json() as { user: SettingsUser };
+  const data = await response.json() as { user: AuthUser };
   return data.user;
 };
 
@@ -131,3 +124,45 @@ export const endSettingsUnlock = async (): Promise<void> => {
   });
   if (!response.ok) throw new Error("Unable to lock editing. Please try again.");
 };
+
+export type UpdateMePayload = {
+  name?: string;
+  phone?: string;
+  password?: string;
+  confirm_password?: string;
+  unlock_token: string;
+};
+
+type SettingsUnlockStartResult =
+  | {
+      ok: true;
+      data: {
+        ok: boolean;
+        expiresInSeconds: number;
+        resendCooldownSeconds: number;
+      };
+    }
+  | { ok: false; status: number; message?: string };
+
+type SettingsUnlockResendResult =
+  | {
+      ok: true;
+      data: {
+        ok: boolean;
+        expiresInSeconds: number;
+        resendCooldownSeconds: number;
+        resendsRemaining: number;
+      };
+    }
+  | { ok: false; status: number; message?: string };
+
+type SettingsUnlockVerifyResult =
+  | {
+      ok: true;
+      data: {
+        ok: boolean;
+        unlockToken: string;
+        unlockExpiresInSeconds: number;
+      };
+    }
+  | { ok: false; status: number; message?: string };

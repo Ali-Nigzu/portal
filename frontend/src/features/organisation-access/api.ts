@@ -1,4 +1,4 @@
-export type Relationship = {
+type Relationship = {
   user_id: string;
   organisation_id: string;
   role: 0 | 1;

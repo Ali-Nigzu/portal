@@ -1,6 +1,7 @@
-import type { TooltipContentProps } from "recharts";
-import type { ChartSeries } from "../../../schemas/charting";
 import type { SeriesMetaEntry } from "../primitives/utils";
+import { type ChartSeries, SITE_FLOW_ACTIVITY_COLORS } from "../../../schemas/charting";
+import type { TooltipContentProps } from "recharts";
+
 import {
   formatCoverage,
   formatNumeric,
@@ -8,15 +9,12 @@ import {
   shouldShowRawCount,
 } from "../utils/format";
 import { formatSnapshotTick } from "../../../../features/organisation-dashboard/projection";
-import { formatSiteFlowTick } from "../../../../features/reports/utils/reportUtils";
-import { SITE_FLOW_ACTIVITY_COLORS } from "../../../schemas/charting";
+
 type ChartTooltipProps = Partial<TooltipContentProps<number, string>> & {
   meta: Record<string, Record<string, SeriesMetaEntry>>;
   seriesMap: Map<string, ChartSeries>;
   variant?: "site_flow_activity";
   siteFlowTimeframe?: string;
-  bucket?: string;
-  canonicalSnapshot?: boolean;
 };
 export const ChartTooltip = ({
   active,
@@ -26,8 +24,6 @@ export const ChartTooltip = ({
   seriesMap,
   variant,
   siteFlowTimeframe,
-  bucket,
-  canonicalSnapshot,
 }: ChartTooltipProps) => {
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -108,7 +104,7 @@ export const ChartTooltip = ({
       return null;
     }
     const headerLabel = siteFlowTimeframe
-      ? canonicalSnapshot ? formatSnapshotTick(siteFlowTimeframe, xKey) : formatSiteFlowTick(siteFlowTimeframe, bucket, xKey)
+      ? formatSnapshotTick(siteFlowTimeframe, xKey)
       : xKey;
     return (
       <div className="analytics-chart-tooltip">

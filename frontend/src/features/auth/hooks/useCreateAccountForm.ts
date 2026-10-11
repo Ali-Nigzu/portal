@@ -1,4 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react';
+
 import { signupStart } from '../transport/signup';
 import { classifyOptionalPhoneInput, inferIsoFromPhoneText, PHONE_OPTION_BY_ISO, replaceDialCodeInPhoneText, sanitizePhoneText } from '../countryPhoneData';
 
@@ -108,7 +109,6 @@ export const useCreateAccountForm = (onSuccess: (email: string, warning?: string
       setSubmitting(false);
     }
   };
-
 
   const handleSelectedIsoChange = (iso2: string) => {
     const option = PHONE_OPTION_BY_ISO.get(iso2);

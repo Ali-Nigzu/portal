@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useMemo, useState } from "react";
-import type { ReactElement } from "react";
+import { type ChartPrimitiveProps, type ChartSeries } from "../../../schemas/charting";
+import type { ActiveDotProps } from "recharts/types/util/types";
+import { type ReactElement, useCallback, useEffect, useRef, useMemo, useState } from "react";
+
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -11,14 +13,11 @@ import {
   Bar,
   Brush,
 } from "recharts";
-import type { ActiveDotProps } from "recharts/types/util/types";
-import type { ChartSeries } from "../../../schemas/charting";
-import type { ChartPrimitiveProps } from "./types";
+
 import { buildCartesianDataset } from "./utils";
 import { ChartTooltip } from "../ui/ChartTooltip";
 import { SeriesLegend } from "../ui/SeriesLegend";
 import { formatSnapshotTick } from "../../../../features/organisation-dashboard/projection";
-import { formatSiteFlowTick } from "../../../../features/reports/utils/reportUtils";
 import { useCoarsePointer } from "./useCoarsePointer";
 export const TimeSeriesChart = ({
   series,
@@ -30,7 +29,6 @@ export const TimeSeriesChart = ({
   showBrush = true,
   tooltipVariant,
   siteFlowTimeframe,
-  result,
   hideInactiveLegend,
   siteFlowActivity = false,
 }: ChartPrimitiveProps) => {
@@ -65,9 +63,8 @@ export const TimeSeriesChart = ({
     ? formatBrushTimestamp(endTimestamp, { compact: true })
     : "—";
   const isSiteFlowActivity = tooltipVariant === "site_flow_activity";
-  const bucket = result.xDimension?.bucket;
   const tickFormatter = siteFlowTimeframe
-    ? (value: string) => result.meta?.summary?.canonicalSnapshot === 1 ? formatSnapshotTick(siteFlowTimeframe, value) : formatSiteFlowTick(siteFlowTimeframe, bucket, value)
+    ? (value: string) => formatSnapshotTick(siteFlowTimeframe, value)
     : undefined;
   const resolveTouchIndex = useCallback((clientX: number) => {
     const rect = chartRef.current?.getBoundingClientRect();
@@ -151,12 +148,11 @@ export const TimeSeriesChart = ({
             active={isCoarsePointer && touchTooltipIndex !== null ? true : undefined}
             defaultIndex={isCoarsePointer && touchTooltipIndex !== null ? touchTooltipIndex : undefined}
             content={
-              <ChartTooltip canonicalSnapshot={result.meta?.summary?.canonicalSnapshot === 1}
+              <ChartTooltip
                 meta={dataset.meta}
                 seriesMap={seriesMap}
                 variant={tooltipVariant}
                 siteFlowTimeframe={siteFlowTimeframe}
-                bucket={bucket}
               />
             }
             cursor={isSiteFlowActivity ? false : { stroke: "var(--border-strong, #d0d5dd)" }}
@@ -300,7 +296,7 @@ export const TimeSeriesChart = ({
 };
 
 type FormatBrushTimestampOptions = { compact?: boolean };
-export const formatBrushTimestamp = (
+const formatBrushTimestamp = (
   label: string,
   options: FormatBrushTimestampOptions = {},
 ): string => {

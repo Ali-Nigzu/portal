@@ -1,4 +1,4 @@
-"""Canonical PostgreSQL Admin; no legacy authority or schema operations."""
+"""Canonical PostgreSQL Admin with a closed table and field registry."""
 
 import json
 import logging

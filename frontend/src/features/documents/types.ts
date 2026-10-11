@@ -1,4 +1,4 @@
-export type DocumentType = "pdf" | "csv" | "xlsx" | "docx" | "other";
+type DocumentType = "pdf" | "csv" | "xlsx" | "docx" | "other";
 
 export type DocumentItem = {
   id: string;
@@ -13,7 +13,7 @@ export type DocumentItem = {
 };
 
 export type UploadError = {
-  index?: number;
+  index: number;
   filename: string;
   code: "unsupported_type" | "too_large" | "unsafe_filename" | "duplicate_filename" | "storage_unavailable";
   message: string;

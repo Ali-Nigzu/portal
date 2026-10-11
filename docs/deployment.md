@@ -48,30 +48,20 @@ in tracked files or the frontend bundle.
 | `BQ_PROJECT`, `GOOGLE_CLOUD_PROJECT` | BigQuery client project selection |
 | `BQ_LOCATION`, `GOOGLE_CLOUD_LOCATION` | BigQuery client location selection |
 | `PORTAL_BQ_MAX_BYTES` | Canonical query maximum bytes billed; default 1,000,000,000 |
-| `ANALYTICS_OFFLINE_MODE=true` | Skips only startup BigQuery health check; does not replace Event services |
 | `POSTMARK_SERVER_TOKEN` | Required email provider secret |
 | `POSTMARK_FROM_EMAIL` | Required verified sender |
 | `ADMIN_NOTIFY_EMAIL` | Notification recipients; existing default `ali@camos.app` |
 | `POSTMARK_EMAIL_ENDPOINT` | Optional provider endpoint, default Postmark `/email` |
-| `CLOUD_RUN_SERVICE_URL`, `PRODUCTION_DOMAIN`, `REPLIT_DOMAINS` | Existing configured origin inputs |
+| `CLOUD_RUN_SERVICE_URL`, `PRODUCTION_DOMAIN` | Existing configured origin inputs |
 | `PORTAL_DEMO_NOW` | Optional canonical Demo effective cutoff; preserves current Demo clock behaviour |
 | `DEMO_SESSION_SECURE` | Existing Demo bootstrap Secure-cookie setting |
-| `DEMO_NOW_TIMEZONE` | Canonical Demo clock and isolated snapshot wall clock, default Europe/London |
+| `DEMO_NOW_TIMEZONE` | Canonical Demo clock, default Europe/London |
 
 Signup notification environment labels retain the existing precedence of
 `REACT_APP_ENVIRONMENT`, `ENVIRONMENT`, `APP_ENV`, `RAILWAY_ENVIRONMENT`.
 These are backend notification labels, not alternate application composition.
 
-Frontend build inputs are `VITE_API_URL` and `VITE_ENVIRONMENT`. Production
-requests on the deployed domain default to same-origin; an explicit API URL
-retains its configured behavior. Browser API configuration is public, never secret.
-
-The isolated customer-alias snapshot exception also reads `BQ_DATASET`,
-`LOCAL_COMBINED_SNAPSHOTS_DB` (default `combined_logs_snapshots.db`),
-`LOCAL_SITE_A_SNAPSHOTS_DB` (default `user0_snapshots.db`) and
-`LOCAL_SITE_B_SNAPSHOTS_DB` (default `user1_snapshots.db`). Source absence and
-strict-request failure/fallback behavior are defined in
-[data-contracts.md](data-contracts.md). They do not select another application.
+Frontend requests use same-origin URLs. The container serves the SPA and API together.
 
 ## Provider permissions
 
@@ -85,8 +75,7 @@ devices/alarms inserts. Organisation soft deletion requires UPDATE on
 `organisations`. Do not replace these specific rights with ownership, superuser,
 schema-creation, blanket DELETE or default privileges on future tables.
 
-BigQuery requires job creation and reads on the actual Event dataset/table and
-any configured retained preview snapshot table. GCS requires private object
+BigQuery requires job creation and reads on the actual Event dataset/table only. GCS requires private object
 list/read/create/delete access for the Documents service with generation
 preconditions. Documents do not use public ACLs, public links or signed URLs.
 Postmark requires a verified sender and valid server token.
@@ -101,8 +90,7 @@ GCP/IAM, Cloud Run, database schema or production rows.
 The working directory is `/app`. Contact retains
 `backend/data/contact_submissions.json` and atomic `.tmp` replacement. Preserve
 the deployment's current storage/lifetime policy for that path; email delivery
-does not roll back a saved journal record. The isolated customer-alias payload is
-`backend/data/demo_snapshot.json`.
+does not roll back a saved journal record.
 
 The application serves SPA assets and browser deep links from the same process.
 `/health` currently follows the SPA fallback and is not a provider-health API.

@@ -12,9 +12,9 @@ import {
   filterParams,
   type Filters,
 } from "../../components/PortalFilters";
-import { useEventLogsQuery } from "./hooks/useEventLogsQuery";
 import "./EventLogsPage.css";
 import "../../styles/PortalLogs.css";
+import { usePortalQuery } from "../../context/usePortalQuery";
 
 function Results({ filters }: { filters: string }) {
   const query = useEventLogsQuery(filters);
@@ -104,7 +104,9 @@ function Results({ filters }: { filters: string }) {
                   Site
                 </th>
                 <th className="event-logs-col-source" scope="col">
-                  {portal.source.deviceControl.mode === "canonical" ? "Device" : "Source"}
+                  {portal.source.deviceControl.mode === "canonical"
+                    ? "Device"
+                    : "Source"}
                 </th>
                 <th className="event-logs-col-id" scope="col">
                   Event ID
@@ -182,13 +184,21 @@ function Results({ filters }: { filters: string }) {
 function CanonicalEvents() {
   const portal = usePortal();
   const location = useLocation();
-  const requestedSources = new URLSearchParams(location.search).getAll("source");
+  const requestedSources = new URLSearchParams(location.search).getAll(
+    "source",
+  );
   const allowedSources = new Set(
-    portal.context!.sources
-      .filter((source) => portal.selection?.scope !== "site" || source.site_id === portal.selection.id)
+    portal
+      .context!.sources.filter(
+        (source) =>
+          portal.selection?.scope !== "site" ||
+          source.site_id === portal.selection.id,
+      )
       .map((source) => source.ref),
   );
-  const validSources = requestedSources.filter((source) => allowedSources.has(source));
+  const validSources = requestedSources.filter((source) =>
+    allowedSources.has(source),
+  );
   const invalidDeepLink = requestedSources.length !== validSources.length;
   const initialFilters = { ...emptyFilters, sources: validSources };
   const initialApplied = filterParams(initialFilters).toString();
@@ -196,7 +206,9 @@ function CanonicalEvents() {
   const [applied, setApplied] = useState(initialApplied);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState(
-    invalidDeepLink ? `The requested ${portal.source.deviceControl.mode === "canonical" ? "device" : "source"} is unavailable in this Portal scope.` : "",
+    invalidDeepLink
+      ? `The requested ${portal.source.deviceControl.mode === "canonical" ? "device" : "source"} is unavailable in this Portal scope.`
+      : "",
   );
   return (
     <div className="event-logs-page">
@@ -220,7 +232,11 @@ function CanonicalEvents() {
           <h2>Filters</h2>
         </div>
         <div className="portal-log-filter-body">
-          <PortalFilters value={draft} onChange={setDraft} deviceTerminology={portal.source.deviceControl.mode === "canonical"} />
+          <PortalFilters
+            value={draft}
+            onChange={setDraft}
+            deviceTerminology={portal.source.deviceControl.mode === "canonical"}
+          />
         </div>
         <div className="portal-log-filter-actions">
           {error && (
@@ -247,3 +263,46 @@ export default function EventLogsPage() {
     <div role="alert">An authorised Portal context is required.</div>
   );
 }
+
+function useEventLogsQuery(filters: string) {
+  const [cursors, setCursors] = useState<(string | null)[]>([null]);
+  const [page, setPage] = useState(0);
+  const [count, setCount] = useState<{ filters: string; total: number }>();
+  const params = new URLSearchParams(filters);
+  if (cursors[page]) params.set("cursor", cursors[page]!);
+  const query = usePortalQuery<EventResult>("/events", params.toString());
+  useEffect(() => {
+    if (query.data?.total != null)
+      setCount({ filters, total: query.data.total });
+  }, [query.data, filters]);
+  return {
+    ...query,
+    page,
+    total:
+      query.data?.total ??
+      (count?.filters === filters ? count.total : undefined),
+    previous: () => setPage((p) => Math.max(0, p - 1)),
+    next: () => {
+      const cursor = query.data?.page.next_cursor;
+      if (cursor) {
+        setCursors((v) => [...v.slice(0, page + 1), cursor]);
+        setPage((p) => p + 1);
+      }
+    },
+  };
+}
+
+type EventData = {
+  event_id: string;
+  site: { id: string; name: string };
+  source: { ref: string; kind: "device"; label: string };
+  timestamp: string;
+  event: { value: string; label: string };
+  sex: { value: string; label: string };
+  age: { value: string; label: string };
+};
+type EventResult = {
+  items: EventData[];
+  total: number | null;
+  page: { size: number; next_cursor: string | null };
+};

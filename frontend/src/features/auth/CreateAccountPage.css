@@ -44,12 +44,6 @@
   text-decoration: underline;
 }
 
-.create-account-title {
-  color: var(--text-default);
-  font-size: 16px;
-  font-weight: 500;
-}
-
 .create-account-hero {
   font-size: 41px;
   line-height: 1.14;

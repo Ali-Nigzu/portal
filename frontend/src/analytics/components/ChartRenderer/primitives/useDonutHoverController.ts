@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import type { PointerEvent } from "react";
+import { type PointerEvent, useCallback, useMemo, useRef, useState } from "react";
 
 type PointerPosition = { x: number; y: number };
 

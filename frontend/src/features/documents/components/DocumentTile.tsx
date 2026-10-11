@@ -1,6 +1,7 @@
 import React from "react";
-import { Download, FileSpreadsheet, FileText, FileType2, Trash2 } from "lucide-react";
 import { DocumentItem } from "../types";
+
+import { Download, FileSpreadsheet, FileText, FileType2, Trash2 } from "lucide-react";
 
 type DocumentTileProps = {
   documentItem: DocumentItem;

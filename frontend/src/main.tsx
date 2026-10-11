@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import { BrowserRouter as Router } from "react-router-dom";
-import { GlobalControlsProvider } from "./components/HeaderStatusStrip";
+import { LocalClockProvider } from "./components/HeaderStatusStrip";
 import DemoOverlay from "./components/DemoOverlay";
 import AppRoutes from "./app/routes";
 import "./styles/VRMTheme.css";
@@ -16,11 +16,11 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <Router>
-      <GlobalControlsProvider>
+      <LocalClockProvider>
         <DemoOverlay>
           <AppRoutes />
         </DemoOverlay>
-      </GlobalControlsProvider>
+      </LocalClockProvider>
     </Router>
   </React.StrictMode>,
 );

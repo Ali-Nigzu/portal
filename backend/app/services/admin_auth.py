@@ -1,6 +1,6 @@
 """Reserved canonical identity and a separate eight-hour signed session purpose."""
 
-from backend.app.services.cookie_policy import session_cookie_secure
+from backend.app.services.session_tokens import session_cookie_secure
 
 import hashlib
 import hmac

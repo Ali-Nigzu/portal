@@ -1,10 +1,5 @@
-import React, {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
 import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   clearDemoSessionLocal,
@@ -16,8 +11,6 @@ import "../styles/DemoOverlay.css";
 interface DemoOverlayProps {
   children: React.ReactNode;
 }
-
-const CLOSE_ANIMATION_MS = 220;
 
 const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const [isActive, setIsActive] = useState(isDemoSessionActive());
@@ -85,7 +78,6 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     const frame = window.requestAnimationFrame(() => setIsVisible(true));
     return () => window.cancelAnimationFrame(frame);
   }, [shouldRender, isClosing]);
-
 
   useEffect(() => {
     if (!isActive || isClosing) {
