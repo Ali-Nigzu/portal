@@ -122,7 +122,7 @@ export default function MyAccountPage() {
       const account = await updateMe(payload);
       setUser(account); resetDrafts(account); setEditing(null);
       if (row === "password") setUnlock(null);
-      setMessage(row === "password" ? "Password changed. Your other sessions have been signed out." : "Account details saved.");
+      setMessage(row === "password" ? (user.has_password ? "Password changed. Your other sessions have been signed out." : "Password set.") : "Account details saved.");
       await refreshAccount?.();
       requestAnimationFrame(() => {
         if (row === "phone") phoneButton.current?.focus();
@@ -179,7 +179,7 @@ export default function MyAccountPage() {
     <section className="vrm-card account-security" aria-labelledby="account-security-title">
       <div className="vrm-card-header account-card-heading"><div><h2 id="account-security-title" className="vrm-card-title">Security</h2><p>Keep your account protected.</p></div></div>
       <div className="vrm-card-body account-security-body">
-        {editing !== "password" ? <div className="account-password-summary"><div><h3>Password</h3><p>Choose a unique password you do not use elsewhere.</p></div><button ref={passwordButton} className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={saving} onClick={() => edit("password")}>Change password</button></div>
+        {editing !== "password" ? <div className="account-password-summary"><div><h3>Password</h3><p>{user.has_password ? "Choose a unique password you do not use elsewhere." : "Not set"}</p></div><button ref={passwordButton} className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={saving} onClick={() => edit("password")}>{user.has_password ? "Change password" : "Set password"}</button></div>
           : <form className="account-password-form" onSubmit={event => { event.preventDefault(); save("password"); }} onKeyDown={event => { if (event.key === "Escape" && !saving) { event.preventDefault(); cancel(); } }}>
             <p className="settings-field-help">Use at least 8 characters. Changing your password signs out your other sessions.</p>
             {[{ id: "account-password", label: "New password", value: password, change: setPassword, visible: showPassword, toggle: () => setShowPassword(value => !value), error: errors.password },
@@ -197,9 +197,9 @@ export default function MyAccountPage() {
       {errors.form && <p role="alert" className="settings-form-error">{errors.form}</p>}
       {message && <p role="status" className="settings-form-message">{message}</p>}
     </div>
-    <ReenterPasswordModal isOpen={unlockOpen} onClose={() => { setUnlockOpen(false); setRequestedRow(null); }}
+    <ReenterPasswordModal fallbackFocus={() => passwordInput.current} hasPassword={user.has_password} isOpen={unlockOpen} onClose={() => { setUnlockOpen(false); setRequestedRow(null); }}
       onVerified={result => { setUnlock({ token: result.unlockToken, expires: Date.now() + result.unlockExpiresInSeconds * 1000 }); setUnlockOpen(false); setErrors({}); setEditing(requestedRow); setRequestedRow(null); }}
-      onStartUnlock={async value => { const result = await startSettingsUnlock(value); return result.ok ? { ok: true, resendCooldownSeconds: result.data.resendCooldownSeconds } : { ok: false, message: result.message || "Unable to verify password" }; }}
+      onStartUnlock={async value => { const result = await startSettingsUnlock(user.has_password ? value : undefined); return result.ok ? { ok: true, resendCooldownSeconds: result.data.resendCooldownSeconds } : { ok: false, message: result.message || "Unable to verify password" }; }}
       onVerifyCode={async value => { const result = await verifySettingsUnlockCode(value); return result.ok ? { ok: true, unlockToken: result.data.unlockToken, unlockExpiresInSeconds: result.data.unlockExpiresInSeconds } : { ok: false, message: result.message || "Unable to verify code" }; }}
       onResendCode={async () => { const result = await resendSettingsUnlockCode(); return result.ok ? { ok: true, resendCooldownSeconds: result.data.resendCooldownSeconds } : { ok: false, message: result.message || "Unable to resend code" }; }} />
   </SettingsFrame>;

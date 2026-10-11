@@ -62,10 +62,13 @@ class OrganisationMembershipRepository:
         column = {"email": "email", "username": "username"}[identifier_type]
         with cursor_for(connection) as cursor:
             cursor.execute(
-                f"SELECT id, username, email, status FROM public.users WHERE lower({column}) = lower(%s)",
+                f"SELECT id, username, email, status FROM public.users WHERE lower({column}) = lower(%s) ORDER BY id LIMIT 2",
                 (identifier,),
             )
-            row = cursor.fetchone()
+            rows = cursor.fetchall()
+        if len(rows) > 1:
+            return {"ambiguous": True}
+        row = rows[0] if rows else None
         return (
             dict(user_id=str(row[0]), username=row[1], email=row[2], user_status=row[3])
             if row

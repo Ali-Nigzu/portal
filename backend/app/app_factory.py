@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api import admin, auth
+from backend.app.api import admin, auth, provider_auth
 from backend.app.api import demo, documents
 from backend.app.api import portal
 from backend.app.api import authenticated_portal
@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
     )
 
     allowed_origins = get_allowed_origins()
+    app.add_middleware(provider_auth.CallbackPrivacyMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth.router)
+    app.include_router(provider_auth.router)
     app.include_router(demo.router)
     app.include_router(portal.router)
     app.include_router(authenticated_portal.router)
@@ -73,6 +75,10 @@ def create_app() -> FastAPI:
     dashboard_database = DashboardPostgres()
     app.state.admin_repository = AdminRepository(dashboard_database)
     app.state.auth_repository = CanonicalAuthRepository(dashboard_database)
+    from backend.app.services.provider_auth import ProviderAuth
+    from backend.app.services.provider_auth_repository import ProviderAuthRepository
+    from backend.app.services.provider_oidc import ProviderOIDC
+    app.state.provider_auth = ProviderAuth(ProviderAuthRepository(dashboard_database), ProviderOIDC())
     app.state.user_lifecycle = UserLifecycle(UserLifecycleRepository(dashboard_database))
     app.state.organisation_memberships = OrganisationMemberships(OrganisationMembershipRepository(dashboard_database))
     app.state.organisation_dashboard = OrganisationDashboard(dashboard_database)

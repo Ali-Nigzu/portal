@@ -37,8 +37,8 @@ class UserLifecycleRepository:
             return result
         except Exception as error:
             detail = error.args[0] if error.args else None
-            if isinstance(detail, dict) and detail.get('C') == '23505':
-                raise LifecycleError(409, 'Email or username already in use') from None
+            if isinstance(detail, dict) and detail.get('C') == '23505' and detail.get('n') == 'uq_users_email_ci':
+                raise LifecycleError(409, 'Email already in use') from None
             raise
 
     @staticmethod
@@ -47,23 +47,11 @@ class UserLifecycleRepository:
         return CanonicalAuthRepository._user(cursor.fetchone())
 
     @staticmethod
-    def identifiers(cursor, email, username, user_id=None):
-        # Serialize cross-column races as well as ordinary unique-index races.
-        for identifier in sorted({email.lower(), username.lower()}):
-            cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(lower(%s),0))", (identifier,))
-        cursor.execute(
-            "SELECT email,username FROM public.users WHERE "
-            "(lower(email) IN (lower(%s),lower(%s)) OR lower(username) IN (lower(%s),lower(%s))) "
-            "AND (%s::bigint IS NULL OR id<>%s)",
-            (email, username, email, username, user_id, user_id),
-        )
-        for existing_email, existing_username in cursor.fetchall():
-            if email.lower() == existing_email.lower():
-                return LifecycleError(409, 'Email already in use')
-            if username.lower() == existing_username.lower():
-                return LifecycleError(409, 'Username already in use')
-            return LifecycleError(409, 'Email or username conflicts with an existing login identifier')
-        return None
+    def reserve_email(cursor, email):
+        # PostgreSQL normalization matches the live unique expression index.
+        cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(lower(%s),0))", (email,))
+        cursor.execute("SELECT id FROM public.users WHERE lower(email)=lower(%s)", (email,))
+        return LifecycleError(409, 'Email already in use') if cursor.fetchone() else None
 
     @staticmethod
     def insert_challenge(cursor, record):

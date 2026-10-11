@@ -23,6 +23,7 @@
   width: 100%;
   max-width: 520px;
   display: grid;
+  align-content: start;
   gap: 4px;
 }
 
@@ -37,6 +38,7 @@
 
 .login-form {
   display: grid;
+  align-content: start;
   gap: 4px;
 }
 
@@ -141,6 +143,7 @@
   .login-page {
     --auth-footer-offset: calc(68px + env(safe-area-inset-bottom));
     grid-template-rows: auto auto;
+    align-content: start;
     padding-bottom: var(--auth-footer-offset);
   }
 

@@ -3,6 +3,7 @@ export type AuthUser = {
   name: string;
   email: string;
   phone?: string | null;
+  has_password: boolean;
 };
 
 export const fetchMe = async () => {

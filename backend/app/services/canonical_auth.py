@@ -9,7 +9,7 @@ class CanonicalUser:
     email: str
     username: str
     phone_number: str | None
-    password_hash: str
+    password_hash: str | None
     status: int
     session_version: int = 0
 
@@ -30,32 +30,28 @@ class CanonicalAuthRepository:
             return None
         return CanonicalUser(
             id=int(row[0]), email=str(row[1]), username=str(row[2]),
-            phone_number=row[3], password_hash=str(row[4]), status=int(row[5]),
+            phone_number=row[3], password_hash=row[4], status=int(row[5]),
             session_version=int(row[6]),
         )
 
-    def find_user(self, identifier: str) -> CanonicalUser | None:
+    def find_email(self, email: str) -> CanonicalUser | None:
         with self.database.connection() as connection:
             cursor = connection.cursor()
             try:
-                return self.resolve_identifier(cursor, identifier)
+                return self.resolve_email(cursor, email)
             finally:
                 cursor.close()
 
     @staticmethod
-    def resolve_identifier(cursor, identifier: str, *, lock: bool = False) -> CanonicalUser | None:
-        """One Login/recovery matching rule, optionally in a locked transaction."""
+    def resolve_email(cursor, email: str, *, lock: bool = False) -> CanonicalUser | None:
+        """Email is the sole customer authentication identifier."""
         cursor.execute(
             "SELECT id, email, username, phone_number, password_hash, status, session_version "
-            "FROM public.users WHERE lower(email) = lower(%s) "
-            "OR lower(username) = lower(%s) ORDER BY id LIMIT 2"
+            "FROM public.users WHERE lower(email) = lower(%s)"
             + (" FOR UPDATE" if lock else ""),
-            (identifier, identifier),
+            (email,),
         )
-        rows = cursor.fetchall()
-        # Separate case-insensitive unique indexes do not prevent a cross-column
-        # collision. Never choose an identity ambiguously.
-        return CanonicalAuthRepository._user(rows[0]) if len(rows) == 1 else None
+        return CanonicalAuthRepository._user(cursor.fetchone())
 
     def find_username(self, username: str) -> CanonicalUser | None:
         with self.database.connection() as connection:
@@ -63,7 +59,7 @@ class CanonicalAuthRepository:
             try:
                 cursor.execute(
                     "SELECT id,email,username,phone_number,password_hash,status,session_version "
-                    "FROM public.users WHERE lower(username)=lower(%s)", (username,),
+                    "FROM public.users WHERE id=999999 AND lower(username)=lower(%s)", (username,),
                 )
                 return self._user(cursor.fetchone())
             finally:

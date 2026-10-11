@@ -5,6 +5,8 @@ import AccessDialog from "../../../common/components/AccessDialog";
 
 type Props = {
   isOpen: boolean;
+  hasPassword: boolean;
+  fallbackFocus?: () => HTMLElement | null;
   onClose: () => void;
   onVerified: (result: { unlockToken: string; unlockExpiresInSeconds: number }) => void;
   onStartUnlock: (password: string) => Promise<{ ok: true; resendCooldownSeconds: number } | { ok: false; message: string }>;
@@ -14,6 +16,7 @@ type Props = {
 
 export default function ReenterPasswordModal(props: Props) {
   const [step, setStep] = useState<"password" | "code">("password");
+  const needsPassword = props.hasPassword;
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [visible, setVisible] = useState(false);
@@ -35,7 +38,7 @@ export default function ReenterPasswordModal(props: Props) {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busy) return;
-    if (step === "password" && !password) { setError("Enter your current password."); return; }
+    if (step === "password" && needsPassword && !password) { setError("Enter your current password."); return; }
     if (step === "code" && !/^\d{6}$/.test(code)) { setError("Enter your 6-digit verification code."); return; }
     setBusy(true); setError(null);
     try {
@@ -64,10 +67,10 @@ export default function ReenterPasswordModal(props: Props) {
   };
   if (!props.isOpen) return null;
   return <AccessDialog title={step === "password" ? "Unlock to edit" : "Verify your account"}
-    description={step === "password" ? "Confirm your password, then verify the code sent to your email." : "Enter the 6-digit code. Editing stays unlocked for five minutes."}
-    busy={busy} onClose={props.onClose}>
+    description={step === "password" ? (needsPassword ? "Confirm your password, then verify the code sent to your email." : "Send a verification code to your account email to unlock editing.") : "Enter the 6-digit code. Editing stays unlocked for five minutes."}
+    busy={busy} onClose={props.onClose} fallbackFocus={props.fallbackFocus}>
     <form className="settings-form-grid" onSubmit={submit}>
-      <div className="settings-form-field">
+      {(step === "code" || needsPassword) && <div className="settings-form-field">
         <label className="settings-form-label" htmlFor="account-unlock-input">{step === "password" ? "Current password" : "Verification code"}</label>
         <div className={step === "password" ? "account-password-input" : undefined}>
           <input ref={input} data-autofocus id="account-unlock-input" className="settings-input"
@@ -78,13 +81,13 @@ export default function ReenterPasswordModal(props: Props) {
             aria-invalid={Boolean(error)} aria-describedby={error ? "account-unlock-error" : undefined} />
           {step === "password" && <button type="button" disabled={busy} onClick={() => setVisible(value => !value)} aria-label={visible ? "Hide current password" : "Show current password"} aria-pressed={visible}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button>}
         </div>
-      </div>
+      </div>}
       {error && <p id="account-unlock-error" className="settings-form-error" role="alert">{error}</p>}
       {message && <p className="settings-form-message" role="status">{message}</p>}
       <div className="settings-form-actions">
         <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy} onClick={props.onClose}>Cancel</button>
         {step === "code" && <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy || cooldown > 0} onClick={resend}>{cooldown ? `Resend in ${cooldown}s` : "Resend code"}</button>}
-        <button className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={busy}>{busy ? "Verifying…" : step === "password" ? "Continue" : "Unlock"}</button>
+        <button className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={busy}>{busy ? "Verifying…" : step === "password" ? (needsPassword ? "Continue" : "Send verification code") : "Unlock"}</button>
       </div>
     </form>
   </AccessDialog>;

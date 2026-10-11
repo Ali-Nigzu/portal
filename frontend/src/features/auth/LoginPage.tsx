@@ -9,6 +9,9 @@ import {
 import AuthTopBar from "../../components/auth/AuthTopBar";
 import { useIsPhoneLayout } from "../../common/hooks/useIsPhoneLayout";
 import "./LoginPage.css";
+import ProviderAuth from "./components/ProviderAuth";
+import { isProviderRequired, type Provider } from "./transport/providerAuth";
+import { type AuthUser } from "./transport/me";
 
 interface LoginPageProps {
   onLogin: () => void | Promise<void>;
@@ -27,10 +30,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     password,
     error,
     loading,
+    providers,
     setEmail,
     setPassword,
     handleSubmit,
-  } = useLoginForm(onLogin);
+  } = useLoginForm(onLogin, (location.state as { email?: string } | null)?.email || "");
 
   const [step, setStep] = useState<LoginStep>("email");
   const [emailStepError, setEmailStepError] = useState<string | null>(null);
@@ -54,7 +58,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   const handleResetPasswordClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
     event.preventDefault();
-    navigate("/reset-password", { state: { identifier: email.trim() } });
+    navigate("/reset-password", { state: { email: email.trim() } });
   };
 
   return (
@@ -71,15 +75,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </p>
             )}
 
+            <ProviderAuth intent="login" disabled={loading} requiredProviders={providers.length ? providers : (location.state as { providers?: Provider[] } | null)?.providers} />
+
             <form className="login-form" onSubmit={onPrimaryAction}>
               <div className="vrm-field login-field">
                 <label className="vrm-label" htmlFor="login-email">
-                  Email or username
+                  Email
                 </label>
                 <input
                   id="login-email"
                   className="vrm-input"
-                  type="text"
+                  type="email"
                   value={email}
                   onChange={(event) => {
                     setEmail(event.target.value);
@@ -87,8 +93,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       setEmailStepError(null);
                     }
                   }}
-                  placeholder="Enter email or username"
-                  autoComplete="username"
+                  placeholder="Enter email"
+                  autoComplete="email"
                   aria-invalid={Boolean(emailStepError)}
                   aria-describedby={
                     emailStepError ? "login-email-error" : undefined
@@ -199,6 +205,7 @@ type UseLoginFormResult = {
   password: string;
   error: string | null;
   loading: boolean;
+  providers: Provider[];
   setEmail: (value: string) => void;
   setPassword: (value: string) => void;
   handleSubmit: (event: FormEvent) => Promise<void>;
@@ -206,11 +213,13 @@ type UseLoginFormResult = {
 
 const useLoginForm = (
   onLogin: () => void | Promise<void>,
+  initialEmail: string,
 ): UseLoginFormResult => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [providers, setProviders] = useState<Provider[]>([]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent) => {
@@ -222,8 +231,11 @@ const useLoginForm = (
         const result = await login(email, password);
         if (result.ok) {
           await onLogin();
+        } else if (isProviderRequired(result.data)) {
+          setProviders(result.data.providers); setPassword("");
+          setError("Please sign in with your provider.");
         } else if (result.status === 401) {
-          setError("Invalid email or username or password");
+          setError("Invalid email or password");
         } else {
           setError("Unable to complete request. Please try again.");
         }
@@ -241,17 +253,11 @@ const useLoginForm = (
     password,
     error,
     loading,
-    setEmail,
+    providers,
+    setEmail: value => { setEmail(value); setProviders([]); setError(null); },
     setPassword,
     handleSubmit,
   };
-};
-
-type AuthUser = {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string | null;
 };
 
 type LoginResponse = {
@@ -259,10 +265,10 @@ type LoginResponse = {
 };
 
 type LoginResult =
-  { ok: true; data: LoginResponse } | { ok: false; status: number };
+  { ok: true; data: LoginResponse } | { ok: false; status: number; data: unknown };
 
 const login = async (
-  identifier: string,
+  email: string,
   password: string,
 ): Promise<LoginResult> => {
   const response = await fetch("/api/login", {
@@ -272,11 +278,11 @@ const login = async (
       "X-Requested-With": "camOS",
     },
     credentials: "include",
-    body: JSON.stringify({ identifier: identifier.trim(), password }),
+    body: JSON.stringify({ email: email.trim(), password }),
   });
 
   if (!response.ok) {
-    return { ok: false, status: response.status };
+    return { ok: false, status: response.status, data: await response.json().catch(() => null) };
   }
 
   const data = (await response.json()) as LoginResponse;

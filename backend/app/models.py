@@ -6,15 +6,12 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-class LoginRequest(BaseModel):
-    username: str = Field(max_length=320)
-    password: str = Field(max_length=1024)
-
 class AuthUser(BaseModel):
     id: str
     name: str
     email: str
     phone: Optional[str] = None
+    has_password: bool
 
 class CreateAccountRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
@@ -27,10 +24,7 @@ class CreateAccountRequest(BaseModel):
 class EmailLoginRequest(BaseModel):
     email: str = Field(max_length=320)
     password: str = Field(max_length=1024)
-
-class IdentifierLoginRequest(BaseModel):
-    identifier: str = Field(max_length=320)
-    password: str = Field(max_length=1024)
+    model_config = ConfigDict(extra="forbid")
 
 class AuthUserResponse(BaseModel):
     user: AuthUser
@@ -59,7 +53,7 @@ class SignupResendResponse(BaseModel):
     resendsRemaining: int
 
 class PasswordResetStartRequest(BaseModel):
-    identifier: str = Field(min_length=1, max_length=320)
+    email: str = Field(min_length=1, max_length=320)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -92,7 +86,7 @@ class PasswordResetSetPasswordResponse(BaseModel):
     ok: bool
 
 class SettingsUnlockStartRequest(BaseModel):
-    current_password: str = Field(max_length=1024)
+    current_password: Optional[str] = Field(default=None, max_length=1024)
 
     model_config = ConfigDict(extra="forbid")
 

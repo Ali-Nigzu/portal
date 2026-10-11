@@ -76,6 +76,44 @@ parameterised SQL, closed identifier allowlists and generation guards remain
 runtime behavior. Session secrets and cookie settings are described in
 [deployment.md](deployment.md).
 
+## Customer authentication
+
+Email/password, Google, and Microsoft feed the same canonical PostgreSQL user
+and `camos_session`. `provider_oidc.py` owns fixed provider endpoints, Authlib
+code exchange, JOSE validation, bounded key refresh, state/nonce/PKCE, and
+purpose-separated encrypted transient cookies. `provider_auth.py` owns intent
+and linking decisions; its repository owns immutable identity mapping transactions.
+Provider HTTP never runs while holding database locks. Identity/email advisory
+locks and live uniqueness constraints serialize creation and attachment.
+
+Protected browser transactions last ten minutes and use host-only, HttpOnly,
+SameSite=Lax cookies under /api/auth. Pending password-confirmed linking lasts
+five minutes and binds canonical email/version/identity; it grants no customer
+session. Callback queries are removed from Uvicorn response access logging.
+Normal session token format/lifetime and canonical status/version checks remain.
+
+Provider start is a same-origin marked POST returning an authorization URL;
+the browser performs top-level navigation. Callback is server-side GET and
+redirects only to /home or existing Login/Create Account surfaces. Closed query
+markers select presentation, never authority. Provider buttons and confirmation
+use one shared component and the existing accessible dialog. The local Google
+mark comes from Google's FirebaseUI brand asset; Microsoft uses its standard
+four-color sign-in mark. Follow provider branding guidance; no remote images.
+
+New Google Signup completes directly. New Microsoft Signup remains in Create
+Account with inline camOS email-code verification because Microsoft email/UPN
+claims do not universally prove mailbox control. Existing purpose-0 lifecycle
+rows hold this pending signup, with the same code/attempt/resend/expiry rules.
+Account and mapping insertion plus challenge consumption share one transaction.
+Known Microsoft mappings do not repeat email verification.
+
+First-party signup and its verification completion remain. Customer credential
+and recovery input is email-only; profile names are required but non-unique.
+Passwordless settings unlock omits the impossible current-password step and
+retains authenticated email-code authority. Setting a first password uses the
+existing account update and session-version invalidation. No provider management,
+Admin/Demo provider auth, alternate memberships or schema changes are introduced.
+
 ## Portal and Demo composition
 
 Customer and Demo adapters use the same Portal context, module components and
@@ -163,27 +201,28 @@ Other customers immediately lose normal access; Admin may re-enable the row.
 
 ## Customer lifecycle and account
 
-Signup normalizes email, validates identifiers/phone and preserves password bytes.
-Verification rechecks identifier uniqueness, inserts the user and deletes the
+Signup normalizes email, validates the profile name/phone and preserves password bytes.
+Verification rechecks email uniqueness, inserts the user and deletes the
 challenge atomically. User creation grants no memberships. Admin notification
 failure after creation cannot invalidate successful verification.
 
-Reset starts from an email or username using the same case-insensitive,
-ambiguity-rejecting canonical resolver as Login. Delivery uses `public.users.email`;
+Reset starts from email using the same case-insensitive email resolver as Login. Delivery uses `public.users.email`;
 after start, the HttpOnly RESET challenge cookie alone identifies recovery.
-Eligible/ineligible/temporarily undeliverable accounts receive the same generic
-acknowledgement. Synchronous delivery timing can still differ; this is not a
+Password-bearing eligible/ineligible/temporarily undeliverable accounts receive
+the same generic acknowledgement. Enabled passwordless customers instead receive
+the requested provider-aware state without challenge/email authority. Synchronous delivery timing can still differ; this is not a
 constant-time account-existence guarantee. A verified reset updates the Argon2 hash,
 increments session version and removes reset/unlock challenges atomically. Prior cookies cease to authorize.
 Reset clears the recovery cookie and returns to Login; an authenticated My Account
 password change replaces the current browser session cookie.
 
-Account unlock requires current customer session, password and Postmark code.
+Account unlock requires current customer session and Postmark code; password-bearing
+accounts also require the current password.
 The verified challenge authorizes edits for five minutes. Username/phone/password
 remain editable under existing rules; email is read-only. Removing phone writes
 NULL. Lock editing/logout end the current unlock; password changes invalidate
 that user's reset/unlock challenges. Existing-user operations lock the user
-before its challenge; identifier locks preserve cross-column login uniqueness.
+before its challenge; signup uses email-only advisory locks and the live email index.
 
 ## Dashboard and snapshots
 

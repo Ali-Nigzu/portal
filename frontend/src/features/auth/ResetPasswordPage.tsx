@@ -15,6 +15,7 @@ import {
   passwordResetVerifyCode,
 } from "./transport/passwordReset";
 import "./VerifyEmailPage.css";
+import { AuthRequestError, isProviderRequired } from "./transport/providerAuth";
 
 const ResetPasswordPage: React.FC = () => {
   const isPhoneLayout = useIsPhoneLayout();
@@ -22,9 +23,9 @@ const ResetPasswordPage: React.FC = () => {
   const location = useLocation();
   const isIdentifyStep = location.pathname === "/reset-password";
   const isCodeStep = location.pathname === "/reset-password/code";
-  const [identifier, setIdentifier] = useState(() => {
-    const prefill = (location.state as { identifier?: unknown } | null)
-      ?.identifier;
+  const [email, setEmail] = useState(() => {
+    const prefill = (location.state as { email?: unknown } | null)
+      ?.email;
     return typeof prefill === "string" ? prefill : "";
   });
   const [code, setCode] = useState("");
@@ -43,7 +44,7 @@ const ResetPasswordPage: React.FC = () => {
     setCode("");
     setPassword("");
     setConfirmPassword("");
-    if (!isIdentifyStep) setIdentifier("");
+    if (!isIdentifyStep) setEmail("");
     firstInput.current?.focus();
   }, [location.pathname, isIdentifyStep]);
 
@@ -60,8 +61,8 @@ const ResetPasswordPage: React.FC = () => {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (inFlight.current) return;
-    if (isIdentifyStep && !identifier.trim()) {
-      setError("Enter your email or username.");
+    if (isIdentifyStep && !email.trim()) {
+      setError("Enter your email address.");
       firstInput.current?.focus();
       return;
     }
@@ -71,7 +72,7 @@ const ResetPasswordPage: React.FC = () => {
     setMessage(null);
     try {
       if (isIdentifyStep) {
-        const result = await passwordResetStart(identifier);
+        const result = await passwordResetStart(email);
         setCooldownRemaining(result.resendCooldownSeconds);
         navigate("/reset-password/code", { replace: true });
       } else if (isCodeStep) {
@@ -88,6 +89,10 @@ const ResetPasswordPage: React.FC = () => {
         });
       }
     } catch (requestError) {
+      if (requestError instanceof AuthRequestError && isProviderRequired(requestError.data)) {
+        navigate("/login", { replace: true, state: { email: email.trim(), providers: requestError.data.providers, message: "Please sign in with your provider." } });
+        return;
+      }
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -142,7 +147,7 @@ const ResetPasswordPage: React.FC = () => {
             </h1>
             <p className="verify-email-copy">
               {isIdentifyStep
-                ? "Enter the email address or username you use to sign in."
+                ? "Enter the email address you use to sign in."
                 : isCodeStep
                   ? "If an account is associated with those details, we'll send a password reset code to the email address registered to the account."
                   : "Choose your new password."}
@@ -154,19 +159,20 @@ const ResetPasswordPage: React.FC = () => {
             >
               {isIdentifyStep ? (
                 <div className="vrm-field verify-email-field">
-                  <label className="vrm-label" htmlFor="reset-identifier">
-                    Email or username
+                  <label className="vrm-label" htmlFor="reset-email">
+                    Email
                   </label>
                   <input
                     ref={firstInput}
-                    id="reset-identifier"
+                    id="reset-email"
                     className="vrm-input"
-                    autoComplete="username"
+                    type="email"
+                    autoComplete="email"
                     autoCapitalize="none"
                     spellCheck={false}
                     maxLength={320}
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     aria-invalid={Boolean(error)}
                     aria-describedby={error ? "reset-error" : undefined}
                   />

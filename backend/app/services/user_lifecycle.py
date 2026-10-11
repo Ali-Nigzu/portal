@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from . import passwords, postmark_email
 from .user_lifecycle_repository import LifecycleError, USER_COLUMNS
 from .canonical_auth import CanonicalAuthRepository
+from .provider_auth_repository import ProviderAuthRepository
 
 CODE_TTL = 900
 CHALLENGE_TTL = 3600
@@ -79,19 +80,19 @@ class UserLifecycle:
             logger.warning('account.cleanup_deferred')
             return 0
 
-    def start(self, purpose, identity, *, username=None, phone=None, password=None, user=None):
+    def start(self, purpose, identity, *, username=None, phone=None, password=None, user=None, provider_identity=None):
         if purpose not in (SIGNUP, RESET, UNLOCK):
             raise ValueError('Unknown lifecycle purpose')
-        identity = identity.strip()
-        if purpose == RESET:
-            if not identity or len(identity) > 320:
-                raise LifecycleError(422, 'Enter your email or username')
-        else:
-            identity = normalized_email(identity)
+        identity = normalized_email(identity)
         payload = {}
         if purpose == SIGNUP:
-            payload = dict(email=identity, username=username_value(username), phone=phone_value(phone),
-                           password_hash=passwords.hash_password(password_value(password)))
+            payload = dict(email=identity, username=username_value(username),
+                           phone=None if provider_identity else phone_value(phone),
+                           password_hash=None if provider_identity else passwords.hash_password(password_value(password)))
+            if provider_identity:
+                if provider_identity['provider'] != 1:
+                    raise ValueError('Only Microsoft signup requires camOS verification')
+                payload['provider_identity'] = provider_identity
         handle = secrets.token_urlsafe(32)
         challenge_id = digest(handle)
         code = f'{secrets.randbelow(1_000_000):06d}'
@@ -102,16 +103,23 @@ class UserLifecycle:
         def operation(cursor):
             target = None
             if purpose == SIGNUP:
-                conflict = self.repository.identifiers(cursor, identity, payload['username'])
+                if provider_identity:
+                    ProviderAuthRepository.lock_identity(cursor, provider_identity)
+                    if ProviderAuthRepository.mapped_user(cursor, provider_identity) is not None:
+                        return LifecycleError(409, 'Please restart provider sign-in.')
+                conflict = self.repository.reserve_email(cursor, identity)
                 if conflict:
                     return conflict
             elif purpose == RESET:
-                target = CanonicalAuthRepository.resolve_identifier(cursor, identity, lock=True)
+                target = CanonicalAuthRepository.resolve_email(cursor, identity, lock=True)
                 if target is None or target.status != 1 or target.id == 999999:
                     return None
+                if target.password_hash is None:
+                    return target
             else:
                 target = self.repository.user(cursor, user.id)
-                if target is None or target.status != 1 or target.session_version != user.session_version:
+                if (target is None or target.status != 1 or target.id == 999999
+                        or target.session_version != user.session_version or target.password_hash != user.password_hash):
                     return LifecycleError(401, 'Unauthenticated')
             now = self.clock()
             self.repository.insert_challenge(cursor, dict(
@@ -143,7 +151,8 @@ class UserLifecycle:
         target = self.repository.user(cursor, record['user_id'])
         record = self.repository.challenge(cursor, challenge_id, purpose)
         if (not record or not target or target.status != 1
-                or (purpose == RESET and target.id == 999999)
+                or target.id == 999999
+                or (purpose == RESET and target.password_hash is None)
                 or record['user_id'] != target.id
                 or (user and target.session_version != user.session_version)):
             return None, None
@@ -161,7 +170,21 @@ class UserLifecycle:
             return LifecycleError(429, 'Too many verification attempts. Please restart.')
         return record, target
 
-    def resend(self, purpose, handle, user=None):
+    def signup_context(self, handle):
+        """Safe presentation for the inline provider code state; no identity DTO."""
+        def operation(cursor):
+            result = self.pending(cursor, handle, SIGNUP)
+            if isinstance(result, LifecycleError):
+                return result
+            record, _ = result
+            if record['payload'].get('provider_identity', {}).get('provider') != 1:
+                return LifecycleError(410, 'Please restart provider sign-in.')
+            return dict(email=record['payload']['email'],
+                expiresInSeconds=max(0, int((record['code_expires_at'] - self.clock()).total_seconds())),
+                resendCooldownSeconds=max(0, RESEND_COOLDOWN - int((self.clock() - record['last_sent_at']).total_seconds())))
+        return self.repository.transact(operation)
+
+    def resend(self, purpose, handle, user=None, *, provider_signup=False):
         code = f'{secrets.randbelow(1_000_000):06d}'
 
         def operation(cursor):
@@ -169,6 +192,8 @@ class UserLifecycle:
             if isinstance(result, LifecycleError):
                 return result
             record, target = result
+            if purpose == SIGNUP and bool(record['payload'].get('provider_identity')) != provider_signup:
+                return LifecycleError(410, 'Please restart the request.')
             now = self.clock()
             if (now - record['last_sent_at']).total_seconds() < RESEND_COOLDOWN:
                 return LifecycleError(429, 'Please wait before requesting another code.')
@@ -183,8 +208,19 @@ class UserLifecycle:
 
         return self.repository.transact(operation)
 
-    def verify(self, purpose, handle, code, user=None):
+    def verify(self, purpose, handle, code, user=None, *, provider_signup=False):
         def operation(cursor):
+            # For signup, acquire identity/email before the challenge row. The
+            # immutable payload is rechecked under its lock below.
+            if purpose == SIGNUP:
+                peek = self.repository.challenge(cursor, digest(handle or ''), SIGNUP, lock=False)
+                if peek:
+                    mapping = peek['payload'].get('provider_identity')
+                    if bool(mapping) != provider_signup:
+                        return LifecycleError(410, 'Please restart the request.')
+                    if mapping:
+                        ProviderAuthRepository.lock_identity(cursor, mapping)
+                    ProviderAuthRepository.lock_email(cursor, peek['payload']['email'])
             result = self.pending(cursor, handle, purpose, user)
             if isinstance(result, LifecycleError):
                 return result
@@ -201,7 +237,9 @@ class UserLifecycle:
                     'Too many verification attempts. Please restart.' if attempts >= 5 else 'Invalid verification code.')
             if purpose == SIGNUP:
                 details = record['payload']
-                conflict = self.repository.identifiers(cursor, details['email'], details['username'])
+                if details.get('provider_identity') and ProviderAuthRepository.mapped_user(cursor, details['provider_identity']) is not None:
+                    return LifecycleError(409, 'Please restart provider sign-in.')
+                conflict = self.repository.reserve_email(cursor, details['email'])
                 if conflict:
                     return conflict
                 cursor.execute(
@@ -210,6 +248,12 @@ class UserLifecycle:
                     (details['email'], details['username'], details['phone'], details['password_hash']),
                 )
                 account = CanonicalAuthRepository._user(cursor.fetchone())
+                if details.get('provider_identity'):
+                    if account.id == 999999:
+                        raise LifecycleError(409, 'Please restart provider sign-in.')
+                    # A conflict raises inside the same transaction, rolling back
+                    # the user insert and preserving no orphan account.
+                    ProviderAuthRepository.insert(cursor, account.id, details['provider_identity'])
                 self.repository.update_challenge(cursor, record['id'], verified_at=now, consumed_at=now)
                 self.repository.delete_challenge(cursor, record['id'], SIGNUP)
                 return account
@@ -261,12 +305,7 @@ class UserLifecycle:
             raise LifecycleError(422, 'No account changes supplied')
 
         def operation(cursor):
-            # Acquire identifier locks before the user lock, matching signup's
-            # uniqueness path. Column names below come only from this whitelist.
-            if 'username' in changes:
-                conflict = self.repository.identifiers(cursor, user.email, changes['username'], user.id)
-                if conflict:
-                    return conflict
+            # Profile names have no uniqueness or authentication authority.
             record, target = self.locked_challenge(cursor, handle, UNLOCK, user)
             if not self.verified(record, UNLOCK):
                 return LifecycleError(401, 'Unlock expired. Please unlock again.')

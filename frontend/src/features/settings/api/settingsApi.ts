@@ -8,12 +8,12 @@ export const getMe = async (): Promise<AuthUser> => {
   return response.data.user;
 };
 
-export const startSettingsUnlock = async (currentPassword: string): Promise<SettingsUnlockStartResult> => {
+export const startSettingsUnlock = async (currentPassword?: string): Promise<SettingsUnlockStartResult> => {
   const response = await fetch("/api/settings/unlock/start", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
-    body: JSON.stringify({ current_password: currentPassword }),
+    body: JSON.stringify(currentPassword === undefined ? {} : { current_password: currentPassword }),
   });
 
   if (!response.ok) {

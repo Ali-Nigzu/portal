@@ -95,7 +95,7 @@ export const useCreateAccountForm = (onSuccess: (email: string, warning?: string
       if (result.ok) {
         onSuccess(result.data.email);
       } else if (result.status === 409) {
-        setFormError(result.message || 'Email or username already in use.');
+        setFormError(result.message || 'Email already in use.');
       } else if (result.status === 503) {
         setFormError(result.message || 'Email service is not configured.');
       } else if (result.status === 502) {
