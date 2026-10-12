@@ -1,3 +1,4 @@
+import { optionalLocalStorage } from "../../common/optionalStorage";
 import type { AuthenticatedOrganisation } from "./api";
 
 import { PORTAL_MODULE_LABELS, authenticatedPortalPath, isPortalModule, type AuthenticatedPortalLocation } from "./authenticatedPortalRoutes";
@@ -9,8 +10,8 @@ type RecentPortalDestination = AuthenticatedPortalLocation & { viewedAt: number 
 
 function parseStored(): unknown[] {
   try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-    return Array.isArray(value) ? value : [];
+    const value = JSON.parse(optionalLocalStorage.getItem(STORAGE_KEY) ?? "[]");
+    return Array.isArray(value) ? value.slice(0, 50) : [];
   } catch {
     return [];
   }
@@ -19,11 +20,12 @@ function parseStored(): unknown[] {
 export function recordRecentPortalLocation(location: AuthenticatedPortalLocation) {
   const record: RecentPortalDestination = { ...location, viewedAt: Date.now() };
   const remaining = parseStored().filter((item) => {
+    if (!item || typeof item !== "object") return false;
     const candidate = item as Partial<RecentPortalDestination>;
     return !(candidate.organisationId === location.organisationId &&
       candidate.siteId === location.siteId && candidate.module === location.module);
   });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([record, ...remaining].slice(0, LIMIT)));
+  optionalLocalStorage.setItem(STORAGE_KEY, JSON.stringify([record, ...remaining].slice(0, LIMIT)));
 }
 
 export function readRecentPortalDestinations(

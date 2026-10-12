@@ -1,3 +1,4 @@
+import { rollingBucketTimes, dayBucketTimes } from "../../organisation-dashboard/snapshotTime";
 import { type SelectedSnapshot, type Period, type Rollup } from "../../organisation-dashboard/types";
 import { type ReportTimeframe, buildSiteFlowBucketLabels, startOfYear, AGE_BUCKET_LABELS, formatReportDateRange } from "../utils/reportUtils";
 
@@ -13,13 +14,13 @@ interface SiteActivityMetrics {
   netFlow: number;
   peakEntrancesBucket: number;
   peakExitsBucket: number;
-  peakDwellBucket: number;
+  peakDwellBucket: number | null;
   peakOccupancyBucket: number;
   occupancyMin: number;
   occupancyMax: number;
   occupancyAvg: number;
-  dwellAvg: number;
-  dwellMax: number;
+  dwellAvg: number | null;
+  dwellMax: number | null;
 }
 interface SiteActivityReportData {
   reportType: "site-activity";
@@ -140,26 +141,27 @@ function parseRollup(value: Rollup, label: string) {
     sexPct: percent(value.sex_pct, 2, `${label}.sex_pct`),
   };
 }
-const aggregateDwell = (values: number[], length: number) =>
-  Array.from({ length }, (_, i) => {
-    const from = Math.floor((i * values.length) / length),
-      to = Math.max(Math.floor(((i + 1) * values.length) / length), from + 1);
-    const bucket = values.slice(from, to),
-      active = bucket.filter((v) => v > 0);
-    return Math.round(mean(active.length ? active : bucket));
+function currentDayDwell(values: number[], ts: Date, count: number): number[] {
+  const times = rollingBucketTimes(ts.toISOString());
+  const start = dayBucketTimes(ts.toISOString(), 1)[0];
+  return Array.from({ length: count }, (_, hour) => {
+    const buckets = values.filter((_, i) => times[i] >= start + hour * 3600000 && times[i] < start + (hour + 1) * 3600000);
+    const active = buckets.filter(value => value > 0);
+    return Math.round(mean(active.length ? active : buckets));
   });
+}
 const frame = (timeframe: ReportTimeframe, ts: Date, series: number[][]) => {
   const data = buildSiteFlowBucketLabels(timeframe, ts, series);
   return {
     labels:
       timeframe === "all_time"
-        ? data.timestamps.map((d) => String(d.getFullYear()))
+        ? data.timestamps.map((d) => String(d.getUTCFullYear()))
         : data.labels,
     count: data.sliceCount,
   };
 };
-const normalize = (v: number[], count: number, timeframe: ReportTimeframe) => {
-  const selected = timeframe === "today" ? v.slice(-count) : v.slice(0, count);
+const normalize = (v: number[], count: number) => {
+  const selected = v.slice(0, count);
   return [...selected, ...Array(Math.max(0, count - selected.length)).fill(0)];
 };
 const subtitle = (
@@ -172,7 +174,7 @@ const subtitle = (
   if (timeframe === "all_time") {
     const length = Math.max(...series.map((s) => s.length), 0);
     start = length
-      ? new Date(ts.getFullYear() - length + 1, 0, 1)
+      ? new Date(Date.UTC(ts.getUTCFullYear() - length + 1, 0, 1))
       : startOfYear(ts);
   }
   return formatReportDateRange(ts, timeframe, now, start).subtitle;
@@ -185,21 +187,13 @@ function buildSiteActivityReportData(
   const { ts, rollup } = validateSnapshot(snapshot, PERIOD_MAP[timeframe]);
   const raw = rollup ?? parseRollup(snapshot.payload[PERIOD_MAP[timeframe]], timeframe);
   const rawFoot = raw.entrances.map((v, i) => v + (raw.exits[i] ?? 0));
-  const rawDwell = aggregateDwell(
-    finite(snapshot.payload.dwell_time_96, "dwell_time_96"),
-    Math.max(raw.entrances.length, raw.exits.length, raw.occupancyAvg.length),
-  );
-  const f = frame(timeframe, ts, [
-    raw.entrances,
-    raw.exits,
-    rawFoot,
-    raw.occupancyAvg,
-    rawDwell,
-  ]);
-  const entrances = normalize(raw.entrances, f.count, timeframe),
-    exits = normalize(raw.exits, f.count, timeframe),
-    occupancy = normalize(raw.occupancyAvg, f.count, timeframe),
-    dwell = normalize(rawDwell, f.count, timeframe),
+  const f = frame(timeframe, ts, [raw.entrances, raw.exits, rawFoot, raw.occupancyAvg]);
+  // The repository owns only rolling dwell. Historical periods must not rebin
+  // the latest 24 hours into fictional month/year history.
+  const dwell = timeframe === "today" ? currentDayDwell(snapshot.payload.dwell_time_96, ts, f.count) : [];
+  const entrances = normalize(raw.entrances, f.count),
+    exits = normalize(raw.exits, f.count),
+    occupancy = raw.occupancyAvg.slice(0, f.count),
     footfall = entrances.map((v, i) => v + (exits[i] ?? 0));
   return {
     reportType: "site-activity",
@@ -224,13 +218,13 @@ function buildSiteActivityReportData(
       netFlow: sum(entrances) - sum(exits),
       peakEntrancesBucket: indexOfMax(entrances),
       peakExitsBucket: indexOfMax(exits),
-      peakDwellBucket: indexOfMax(dwell),
+      peakDwellBucket: dwell.length ? indexOfMax(dwell) : null,
       peakOccupancyBucket: indexOfMax(occupancy),
-      occupancyMin: min(raw.occupancyMin),
-      occupancyMax: max(raw.occupancyMax),
+      occupancyMin: min(raw.occupancyMin.slice(0, f.count)),
+      occupancyMax: max(raw.occupancyMax.slice(0, f.count)),
       occupancyAvg: Math.round(mean(occupancy)),
-      dwellAvg: Math.round(mean(dwell)),
-      dwellMax: max(dwell),
+      dwellAvg: dwell.length ? Math.round(mean(dwell)) : null,
+      dwellMax: dwell.length ? max(dwell) : null,
     },
   };
 }
@@ -254,7 +248,7 @@ function buildVisitorProfileReportData(
     metrics: {
       agePct: rollup.agePct,
       sexPct: rollup.sexPct,
-      totalEntrances: sum(rollup.entrances),
+      totalEntrances: sum(normalize(rollup.entrances, frame(timeframe, ts, [rollup.entrances]).count)),
       dominantAgeBucket: sum(rollup.agePct) > 0 ? AGE_BUCKET_LABELS[dominant] : null,
       sexSplit: { Male: rollup.sexPct[0] ?? 0, Female: rollup.sexPct[1] ?? 0 },
     },

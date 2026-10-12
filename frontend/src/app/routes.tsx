@@ -17,7 +17,7 @@ import {
   isDemoSessionActive,
 } from "../features/organisation-dashboard/demoSession";
 import { dashboardSearch } from "../features/organisation-dashboard/selection";
-import { fetchMe, type AuthUser } from "../features/auth/transport/me";
+import { fetchMe, logout, type AuthUser } from "../features/auth/transport/me";
 import {
   fetchOrganisations,
   type AuthenticatedOrganisation,
@@ -126,6 +126,15 @@ const AppRoutes: React.FC = () => {
   const [favouritesCatalogueReady, setFavouritesCatalogueReady] =
     useState(false);
   const catalogueRevision = useRef(0);
+  const accountRevision = useRef(0);
+  const actorEpoch = useRef(0);
+  const accountController = useRef(new AbortController());
+  const [accountSignal, setAccountSignal] = useState(accountController.current.signal);
+  const renewAccountSignal = () => {
+    accountController.current.abort();
+    accountController.current = new AbortController();
+    setAccountSignal(accountController.current.signal);
+  };
   const refreshOrganisations = useCallback(async () => {
     const revision = ++catalogueRevision.current;
     const catalogue = await fetchOrganisations();
@@ -147,40 +156,61 @@ const AppRoutes: React.FC = () => {
       return;
     }
 
+    const abort = new AbortController();
+    const revision = ++accountRevision.current;
+    const catalogueVersion = ++catalogueRevision.current;
+    const current = () => !abort.signal.aborted && revision === accountRevision.current;
     const checkSession = async () => {
       try {
-        const me = await fetchMe();
+        const me = await fetchMe(abort.signal);
+        if (!current()) return;
         if (me.ok) {
-          setAuthenticatedUser(me.data.user);
           clearDemoSessionLocal();
-          const catalogue = await fetchOrganisations().catch(() => null);
-          setOrganisations(catalogue ?? []);
-          setFavouritesCatalogueReady(catalogue !== null);
-        } else {
+          const catalogue = await fetchOrganisations(abort.signal).catch(() => null);
+          if (!current()) return;
+          setAuthenticatedUser(me.data.user);
+          if (catalogueVersion === catalogueRevision.current) {
+            setOrganisations(catalogue ?? []);
+            setFavouritesCatalogueReady(catalogue !== null);
+          }
+        } else if (me.status === 401) {
           setAuthenticatedUser(null);
           setOrganisations([]);
+          setFavouritesCatalogueReady(false);
         }
       } catch {
-        setAuthenticatedUser(null);
+        // Availability failures do not invalidate an already confirmed session.
       } finally {
-        setIsSessionChecked(true);
+        if (current()) setIsSessionChecked(true);
       }
     };
+    void checkSession();
+    return () => abort.abort();
 
-    checkSession();
   }, [hasViewToken]);
 
   const handleLogin = async () => {
+    actorEpoch.current += 1;
+    renewAccountSignal();
+    const revision = ++accountRevision.current;
+    const catalogueVersion = ++catalogueRevision.current;
     clearDemoSessionLocal();
     const me = await fetchMe();
-    if (!me.ok) return;
+    if (!me.ok) throw new Error("Unable to confirm sign-in. Please try again.");
     const nextOrganisations = await fetchOrganisations().catch(() => null);
+    if (revision !== accountRevision.current) return;
     setAuthenticatedUser(me.data.user);
-    setOrganisations(nextOrganisations ?? []);
-    setFavouritesCatalogueReady(nextOrganisations !== null);
+    setIsSessionChecked(true);
+    if (catalogueVersion === catalogueRevision.current) {
+      setOrganisations(nextOrganisations ?? []);
+      setFavouritesCatalogueReady(nextOrganisations !== null);
+    }
   };
 
-  const handleLogout = () => {
+  const clearAccount = () => {
+    actorEpoch.current += 1;
+    accountController.current.abort();
+    accountRevision.current += 1;
     catalogueRevision.current += 1;
     clearDemoSessionLocal();
 
@@ -188,23 +218,42 @@ const AppRoutes: React.FC = () => {
     setOrganisations([]);
     setFavouritesCatalogueReady(false);
   };
+  const handleLogout = async () => {
+    // Cancel cookie-bearing account writes before acknowledging logout.
+    accountController.current.abort();
+    try {
+      await logout();
+    } catch (error) {
+      renewAccountSignal();
+      throw error;
+    }
+    clearAccount();
+  };
 
   const demo = isDemoSessionActive() || isDemoRoute;
   const authenticated = Boolean(authenticatedUser) && !demo && !hasViewToken;
   const lazyRoute = (element: React.ReactNode) => (
     <Suspense fallback={null}>{element}</Suspense>
   );
-  const refreshAccount = async () => {
+  const renderedEpoch = actorEpoch.current;
+  const refreshAccount = async (confirmed?: AuthUser) => {
+    if (renderedEpoch !== actorEpoch.current || accountController.current.signal.aborted) return;
+    const revision = ++accountRevision.current;
+    if (confirmed) { setAuthenticatedUser(confirmed); return; }
     const me = await fetchMe();
+    if (revision !== accountRevision.current || renderedEpoch !== actorEpoch.current) return;
     if (!me.ok) {
-      handleLogout();
+      if (me.status === 401) clearAccount();
+      else throw new Error("Unable to refresh account. Please try again.");
       return;
     }
     setAuthenticatedUser(me.data.user);
   };
   const authenticatedShell = authenticatedUser ? (
     <AuthenticatedApplicationProvider
+      key={authenticatedUser.id}
       user={authenticatedUser}
+      accountSignal={accountSignal}
       refreshAccount={refreshAccount}
       organisations={organisations}
       refreshOrganisations={refreshOrganisations}

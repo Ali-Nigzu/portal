@@ -1,4 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react';
+import { usernameError } from '../usernameValidation';
 
 import { signupStart } from '../transport/signup';
 import { classifyOptionalPhoneInput, inferIsoFromPhoneText, PHONE_OPTION_BY_ISO, replaceDialCodeInPhoneText, sanitizePhoneText } from '../countryPhoneData';
@@ -38,7 +39,7 @@ export const useCreateAccountForm = (onSuccess: (email: string, warning?: string
       confirmPassword: undefined,
     };
 
-    if (!username.trim()) errors.username = 'This field is required';
+    errors.username = usernameError(username);
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) errors.email = 'This field is required';
@@ -87,7 +88,7 @@ export const useCreateAccountForm = (onSuccess: (email: string, warning?: string
     setSubmitting(true);
     try {
       const result = await signupStart({
-        name: username.trim(),
+        name: username,
         email: email.trim().toLowerCase(),
         phone: phone || undefined,
         password,

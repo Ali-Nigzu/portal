@@ -17,6 +17,8 @@ export function useCanonicalDeviceList() {
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [controlErrors, setControlErrors] = useState<Record<string, string>>({});
   const controllers = useRef(new Map<string, AbortController>());
+  const writeVersion = useRef(0);
+  const acknowledgements = useRef(new Map<string, { version: number; enabled: boolean }>());
   const scopeKey = `${portal.key}:${portal.context?.clock.effective_now}`;
   const key = `${scopeKey}:${revision}`;
 
@@ -24,11 +26,22 @@ export function useCanonicalDeviceList() {
     const abort = new AbortController();
     Promise.resolve().then(async () => {
       try {
+        const readVersion = writeVersion.current;
         const data = await responseJson(
           await portal.source.request("/devices", scopeParams(portal), abort.signal),
         );
         verifyScope(portal, data);
-        if (!abort.signal.aborted) setResult({ key, scopeKey, data });
+        if (!abort.signal.aborted) {
+          if (portal.source.deviceControl.mode === "canonical") {
+            const retained: Record<string, boolean> = {};
+            for (const [ref, acknowledgement] of acknowledgements.current) {
+              if (acknowledgement.version > readVersion) retained[ref] = acknowledgement.enabled;
+              else acknowledgements.current.delete(ref);
+            }
+            setOverrides(retained);
+          }
+          setResult({ key, scopeKey, data });
+        }
       } catch (error) {
         if (!abort.signal.aborted)
           setResult((previous) => ({
@@ -42,7 +55,16 @@ export function useCanonicalDeviceList() {
     return () => abort.abort();
   }, [key, portal.source]);
 
-  useEffect(() => () => controllers.current.forEach((controller) => controller.abort()), []);
+  useEffect(() => {
+    acknowledgements.current.clear();
+    setOverrides(portal.source.deviceControl.getOverrides());
+    setPending({});
+    setControlErrors({});
+    return () => {
+      controllers.current.forEach((controller) => controller.abort());
+      controllers.current.clear();
+    };
+  }, [portal.key, portal.source]);
   const data = result?.scopeKey === scopeKey ? result.data : undefined;
   const items: DeviceView[] = (data?.items ?? []).map((item) => ({
     ...item,
@@ -68,12 +90,17 @@ export function useCanonicalDeviceList() {
     setControlErrors((value) => ({ ...value, [item.ref]: "" }));
     try {
       const confirmed = await portal.source.deviceControl.setSourceEnabled(item.ref, enabled, abort.signal);
-      if (!abort.signal.aborted) setOverrides((value) => ({ ...value, [confirmed.ref]: confirmed.enabled }));
+      if (!abort.signal.aborted) {
+        if (portal.source.deviceControl.mode === "canonical")
+          acknowledgements.current.set(confirmed.ref, { version: ++writeVersion.current, enabled: confirmed.enabled });
+        setOverrides((value) => ({ ...value, [confirmed.ref]: confirmed.enabled }));
+      }
     } catch (error) {
       if (!abort.signal.aborted)
         setControlErrors((value) => ({ ...value, [item.ref]: error instanceof Error ? error.message : "State change failed." }));
     } finally {
       if (!abort.signal.aborted) setPending((value) => ({ ...value, [item.ref]: false }));
+      if (controllers.current.get(item.ref) === abort) controllers.current.delete(item.ref);
     }
   }
 

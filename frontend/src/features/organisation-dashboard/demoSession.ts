@@ -1,3 +1,4 @@
+import { optionalLocalStorage, optionalSessionStorage } from "../../common/optionalStorage";
 import type { PortalDeviceControl } from "../../context/PortalContext";
 
 const DEMO_SESSION_KEY = "camOS_demo_session";
@@ -15,7 +16,7 @@ export const isDemoSessionActive = (): boolean => {
   if (typeof window === "undefined") {
     return false;
   }
-  return window.sessionStorage.getItem(DEMO_SESSION_KEY) === "true";
+  return optionalSessionStorage.getItem(DEMO_SESSION_KEY) === "true";
 };
 
 export const enableDemoSession = async (): Promise<void> => {
@@ -35,7 +36,7 @@ export const enableDemoSession = async (): Promise<void> => {
   }
   if (typeof window !== "undefined") {
     clearDemoDeviceOverrides();
-    window.sessionStorage.setItem(DEMO_SESSION_KEY, "true");
+    optionalSessionStorage.setItem(DEMO_SESSION_KEY, "true");
   }
   notifyDemoSessionChanged();
 };
@@ -43,9 +44,9 @@ export const enableDemoSession = async (): Promise<void> => {
 export const clearDemoSessionLocal = (): void => {
   if (typeof window !== "undefined") {
     clearDemoDeviceOverrides();
-    window.sessionStorage.removeItem(DEMO_SESSION_KEY);
-    window.sessionStorage.removeItem(DEMO_DEFAULTS_APPLIED_KEY);
-    window.localStorage.removeItem(KEEP_MENU_EXPANDED_KEY);
+    optionalSessionStorage.removeItem(DEMO_SESSION_KEY);
+    optionalSessionStorage.removeItem(DEMO_DEFAULTS_APPLIED_KEY);
+    optionalLocalStorage.removeItem(KEEP_MENU_EXPANDED_KEY);
   }
   notifyDemoSessionChanged();
 };
@@ -66,11 +67,11 @@ export const applyDemoDefaultsOnce = (): void => {
   if (typeof window === "undefined") {
     return;
   }
-  if (window.sessionStorage.getItem(DEMO_DEFAULTS_APPLIED_KEY) === "true") {
+  if (optionalSessionStorage.getItem(DEMO_DEFAULTS_APPLIED_KEY) === "true") {
     return;
   }
-  window.localStorage.setItem(KEEP_MENU_EXPANDED_KEY, "false");
-  window.sessionStorage.setItem(DEMO_DEFAULTS_APPLIED_KEY, "true");
+  optionalLocalStorage.setItem(KEEP_MENU_EXPANDED_KEY, "false");
+  optionalSessionStorage.setItem(DEMO_DEFAULTS_APPLIED_KEY, "true");
 };
 
 const DEMO_DEVICE_OVERRIDES_KEY = "camOS_demo_device_enabled_overrides";
@@ -80,7 +81,7 @@ function readDemoDeviceOverrides(): Record<string, boolean> {
   if (typeof window === "undefined") return {};
   try {
     const value = JSON.parse(
-      window.sessionStorage.getItem(DEMO_DEVICE_OVERRIDES_KEY) ?? "{}",
+      optionalSessionStorage.getItem(DEMO_DEVICE_OVERRIDES_KEY) ?? "{}",
     );
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return Object.fromEntries(
@@ -96,7 +97,7 @@ function readDemoDeviceOverrides(): Record<string, boolean> {
 
 function clearDemoDeviceOverrides() {
   if (typeof window !== "undefined")
-    window.sessionStorage.removeItem(DEMO_DEVICE_OVERRIDES_KEY);
+    optionalSessionStorage.removeItem(DEMO_DEVICE_OVERRIDES_KEY);
 }
 
 export const demoDeviceControl: PortalDeviceControl = {
@@ -108,7 +109,7 @@ export const demoDeviceControl: PortalDeviceControl = {
     if (signal.aborted) throw new DOMException("Aborted", "AbortError");
     const overrides = readDemoDeviceOverrides();
     overrides[ref] = enabled;
-    window.sessionStorage.setItem(
+    optionalSessionStorage.setItem(
       DEMO_DEVICE_OVERRIDES_KEY,
       JSON.stringify(overrides),
     );

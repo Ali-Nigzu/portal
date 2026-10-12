@@ -1,9 +1,11 @@
-import {
-  formatDemoTimestamp,
-  parseDemoTimestamp,
-  getDemoHour,
-  startOfDemoDay,
-} from "../../../analytics/components/ChartRenderer/utils/format";
+import { dayBucketTimes, elapsedDayBuckets, periodBucketTimes } from "../../organisation-dashboard/snapshotTime";
+const formatDemoTimestamp = (value: Date) => value.toISOString();
+const parseDemoTimestamp = (value: string) => {
+  const result = new Date(value);
+  return Number.isFinite(result.valueOf()) ? result : null;
+};
+const startOfDemoDay = (value: Date) => new Date(dayBucketTimes(value.toISOString(), 1)[0]);
+
 
 export type ReportTimeframe =
   | "today"
@@ -47,14 +49,14 @@ const collapseIfInverted = (
   end.getTime() < start.getTime() ? { start: end, end } : { start, end };
 
 const formatDay = (value: Date): string =>
-  value.toLocaleDateString("en-GB", {
+  value.toLocaleDateString("en-GB", { timeZone: "UTC",
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 
 const formatTime = (value: Date): string =>
-  value.toLocaleTimeString("en-GB", {
+  value.toLocaleTimeString("en-GB", { timeZone: "UTC",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -65,16 +67,16 @@ const formatDayRange = (start: Date, end: Date): string => {
     return formatDay(end);
   }
   if (
-    start.getFullYear() === end.getFullYear() &&
-    start.getMonth() === end.getMonth()
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth()
   ) {
-    return `${start.getDate()}–${formatDay(end)}`;
+    return `${start.getUTCDate()}–${formatDay(end)}`;
   }
   return `${formatDay(start)}–${formatDay(end)}`;
 };
 
 const formatMonthYear = (value: Date): string =>
-  value.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  value.toLocaleDateString("en-GB", { timeZone: "UTC", month: "short", year: "numeric" });
 
 const formatMonthRange = (start: Date, end: Date): string => {
   if (start.getTime() === end.getTime()) {
@@ -91,22 +93,22 @@ const formatWeekOfRange = (start: Date, end: Date): string =>
 
 const startOfPreviousDay = (value: Date): Date => {
   const next = new Date(value);
-  next.setDate(next.getDate() - 1);
-  next.setHours(0, 0, 0, 0);
+  next.setUTCDate(next.getUTCDate() - 1);
+  next.setUTCHours(0, 0, 0, 0);
   return next;
 };
 
 const addDays = (value: Date, days: number): Date => {
   const next = new Date(value);
-  next.setDate(next.getDate() + days);
+  next.setUTCDate(next.getUTCDate() + days);
   return next;
 };
 
 const startOfTrailingYear = (end: Date): Date =>
-  new Date(end.getFullYear() - 1, end.getMonth() + 1, 1, 0, 0, 0, 0);
+  new Date(Date.UTC(end.getUTCFullYear() - 1, end.getUTCMonth() + 1, 1));
 
 const startOfAllTimeCoverage = (end: Date): Date =>
-  new Date(end.getFullYear() - 2, 0, 1, 0, 0, 0, 0);
+  new Date(Date.UTC(end.getUTCFullYear() - 2, 0, 1));
 
 const startOfWeekBucketRange = (
   end: Date,
@@ -185,7 +187,7 @@ const getReportHeaderRange = (
     };
   }
   const allTimeStart = startOverride ?? startOfAllTimeCoverage(clampedEnd);
-  const yearLabel = `${allTimeStart.getFullYear()} – ${clampedEnd.getFullYear()}`;
+  const yearLabel = `${allTimeStart.getUTCFullYear()} – ${clampedEnd.getUTCFullYear()}`;
   return { start: allTimeStart, end: clampedEnd, labelLine: yearLabel };
 };
 
@@ -211,59 +213,59 @@ type TimeWindowKey = ReportTimeframe;
 
 const startOfDay = (date: Date): Date => {
   const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
+  next.setUTCHours(0, 0, 0, 0);
   return next;
 };
 
 const endOfDay = (date: Date): Date => {
   const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
+  next.setUTCHours(23, 59, 59, 999);
   return next;
 };
 
 const startOfWeek = (date: Date): Date => {
   const next = startOfDay(date);
-  const day = next.getDay();
+  const day = next.getUTCDay();
   const diff = (day + 6) % 7;
-  next.setDate(next.getDate() - diff);
+  next.setUTCDate(next.getUTCDate() - diff);
   return next;
 };
 
 const endOfWeek = (date: Date): Date => {
   const next = startOfWeek(date);
-  next.setDate(next.getDate() + 6);
+  next.setUTCDate(next.getUTCDate() + 6);
   return endOfDay(next);
 };
 
 const startOfMonth = (date: Date): Date =>
-  new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 
 const endOfMonth = (date: Date): Date =>
-  new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 
 const startOfQuarter = (date: Date): Date => {
-  const quarterStartMonth = Math.floor(date.getMonth() / 3) * 3;
-  return new Date(date.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0);
+  const quarterStartMonth = Math.floor(date.getUTCMonth() / 3) * 3;
+  return new Date(Date.UTC(date.getUTCFullYear(), quarterStartMonth, 1));
 };
 
 const endOfQuarter = (date: Date): Date => {
   const quarterStart = startOfQuarter(date);
-  return new Date(
-    quarterStart.getFullYear(),
-    quarterStart.getMonth() + 3,
+  return new Date(Date.UTC(
+    quarterStart.getUTCFullYear(),
+    quarterStart.getUTCMonth() + 3,
     0,
     23,
     59,
     59,
     999,
-  );
+  ));
 };
 
 export const startOfYear = (date: Date): Date =>
-  new Date(date.getFullYear(), 0, 1, 0, 0, 0, 0);
+  new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
 
 const endOfYear = (date: Date): Date =>
-  new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
+  new Date(Date.UTC(date.getUTCFullYear(), 11, 31, 23, 59, 59, 999));
 
 const resolveSiteFlowWindow = (
   timeframe: TimeWindowKey,
@@ -292,16 +294,16 @@ const resolveSiteFlowWindow = (
 
 const toDate = (value: string): Date | null => parseDemoTimestamp(value);
 const formatHour = (date: Date, withMinutes: boolean): string => {
-  const hour = date.getHours().toString().padStart(2, "0");
+  const hour = date.getUTCHours().toString().padStart(2, "0");
   return withMinutes ? `${hour}:00` : hour;
 };
 const formatWeekday = (date: Date): string =>
-  date.toLocaleDateString("en-US", { weekday: "short" });
+  date.toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short" });
 const formatMonthDay = (date: Date): string =>
-  date.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+  date.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "2-digit" });
 const formatWeekLabel = (date: Date): string => `Wk of ${formatMonthDay(date)}`;
 const formatMonth = (date: Date, withYear = false): string =>
-  date.toLocaleDateString("en-US", {
+  date.toLocaleDateString("en-US", { timeZone: "UTC",
     month: "short",
     year: withYear ? "numeric" : undefined,
   });
@@ -326,26 +328,12 @@ const formatSiteFlowTick = (
     case "last_year":
       return formatMonth(parsed, false);
     case "all_time":
-      return String(parsed.getFullYear());
+      return String(parsed.getUTCFullYear());
     default:
       return label;
   }
 };
 
-const addHours = (date: Date, hours: number): Date => {
-  const next = new Date(date);
-  next.setHours(next.getHours() + hours);
-  return next;
-};
-const addBucketDays = (date: Date, days: number): Date => {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-};
-const addYears = (date: Date, years: number): Date =>
-  new Date(date.getFullYear() + years, 0, 1, 0, 0, 0, 0);
-const addMonths = (date: Date, months: number): Date =>
-  new Date(date.getFullYear(), date.getMonth() + months, 1, 0, 0, 0, 0);
 const inferSiteFlowBucket = (
   timeframe: ReportTimeframe,
   _length: number,
@@ -380,10 +368,7 @@ const resolveSiteFlowSliceCount = (
   const dayStart = startOfDemoDay(anchor);
   const sliceCount =
     timeframe === "today"
-      ? Math.min(
-          length > 0 ? length : 24,
-          Math.min(getDemoHour(anchor) + 1, 24),
-        )
+      ? elapsedDayBuckets(anchor, length)
       : timeframe === "yesterday"
         ? 24
         : timeframe === "last_week"
@@ -402,42 +387,8 @@ const buildAnchoredTimestamps = (
   anchor: Date,
   length: number,
 ): Date[] => {
-  if (length <= 0) {
-    return [];
-  }
-  if (timeframe === "today" || timeframe === "yesterday") {
-    const start =
-      timeframe === "today"
-        ? startOfDemoDay(anchor)
-        : startOfDemoDay(new Date(anchor.getTime() - DAY_MS));
-    return Array.from({ length }, (_, index) => addHours(start, index));
-  }
-  if (timeframe === "last_week") {
-    const start = addBucketDays(startOfDay(anchor), -6);
-    return Array.from({ length }, (_, index) => addBucketDays(start, index));
-  }
-  if (timeframe === "last_month") {
-    const mostRecentMonday = startOfWeek(anchor);
-    const start = addBucketDays(mostRecentMonday, -7 * (length - 1));
-    return Array.from({ length }, (_, index) =>
-      addBucketDays(start, index * 7),
-    );
-  }
-  if (timeframe === "last_quarter") {
-    const endWeekStart = startOfWeek(anchor);
-    const start = addBucketDays(endWeekStart, -7 * (length - 1));
-    return Array.from({ length }, (_, index) =>
-      addBucketDays(start, index * 7),
-    );
-  }
-  if (timeframe === "last_year") {
-    const endMonthStart = startOfMonth(anchor);
-    const start = addMonths(endMonthStart, -(length - 1));
-    return Array.from({ length }, (_, index) => addMonths(start, index));
-  }
-  const endYearStart = startOfYear(anchor);
-  const start = addYears(endYearStart, -(length - 1));
-  return Array.from({ length }, (_, index) => addYears(start, index));
+  const periods: Record<ReportTimeframe, string> = { today: 'today', yesterday: 'yesterday', last_week: 'week', last_month: 'month', last_quarter: 'quarter', last_year: 'year', all_time: 'all_time' };
+  return periodBucketTimes(periods[timeframe], anchor.toISOString(), length).map(value => new Date(value));
 };
 export const buildSiteFlowBucketLabels = (
   timeframe: ReportTimeframe,
@@ -449,16 +400,14 @@ export const buildSiteFlowBucketLabels = (
   timestamps: Date[];
   sliceCount: number;
 } => {
-  const { sliceCount, dayStart } = resolveSiteFlowSliceCount(
+  const { sliceCount } = resolveSiteFlowSliceCount(
     timeframe,
     anchor,
     seriesList,
   );
   const timestamps =
     timeframe === "today"
-      ? Array.from({ length: sliceCount }, (_, index) =>
-          addHours(dayStart, index),
-        )
+      ? dayBucketTimes(anchor.toISOString(), sliceCount).map(value => new Date(value))
       : buildAnchoredTimestamps(timeframe, anchor, sliceCount);
   const bucket = inferSiteFlowBucket(timeframe, sliceCount);
   const labels = timestamps.map((timestamp) =>

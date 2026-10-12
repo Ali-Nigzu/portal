@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 import UploadDocumentModal from "./components/UploadDocumentModal";
 import "../../styles/Dashboard.css";
@@ -163,34 +163,51 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
 };
 
 const useDocuments = () => {
+  const generation = useRef(0);
+  const controller = useRef<AbortController>();
+  const mounted = useRef(true);
+  const invalidate = useCallback(() => {
+    generation.current += 1;
+    controller.current?.abort();
+  }, []);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const refresh = useCallback(async () => {
+    invalidate();
+    const current = generation.current;
+    const abort = new AbortController();
+    controller.current = abort;
     setIsLoading(true);
     setError(null);
     try {
-      setDocuments(await listDocuments());
+      const documents = await listDocuments(abort.signal);
+      if (mounted.current && current === generation.current) setDocuments(documents);
     } catch (failure) {
+      if (!mounted.current || abort.signal.aborted || current !== generation.current) return;
       setError(
         failure instanceof Error
           ? failure.message
           : "Unable to load documents. Try again.",
       );
     } finally {
-      setIsLoading(false);
+      if (mounted.current && current === generation.current) setIsLoading(false);
     }
-  }, []);
+  }, [invalidate]);
   useEffect(() => {
+    mounted.current = true;
     void refresh();
-  }, [refresh]);
+    return () => { mounted.current = false; invalidate(); };
+  }, [refresh, invalidate]);
   const uploadBatch = useCallback(
     async (files: File[]) => {
       setMessage(null);
       const result = await uploadDocuments(files);
+      if (!mounted.current) return result;
       if (result.documents.length) {
+        invalidate();
         // Confirmed writes remain visible if the catalogue refresh fails.
         setDocuments((prev) =>
           Array.from(
@@ -206,7 +223,7 @@ const useDocuments = () => {
       }
       return result;
     },
-    [refresh],
+    [refresh, invalidate],
   );
   const removeDocument = useCallback(
     async (id: string) => {
@@ -215,14 +232,16 @@ const useDocuments = () => {
       setMessage(null);
       try {
         await deleteRequest(id);
+        if (!mounted.current) return;
+        invalidate();
         setDocuments((prev) => prev.filter((item) => item.id !== id));
         setMessage("Document deleted.");
         await refresh();
       } finally {
-        setDeletingId(null);
+        if (mounted.current) setDeletingId(null);
       }
     },
-    [deletingId, refresh],
+    [deletingId, refresh, invalidate],
   );
   const downloadDocument = useCallback((item: DocumentItem) => {
     window.open(getDownloadUrl(item.id), "_blank", "noopener,noreferrer");

@@ -66,7 +66,7 @@ function authenticatedPortalSource(organisationId: string): PortalSource {
         method: "PUT",
         signal,
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
         body: JSON.stringify({ enabled }),
       });
       const body = await responseJson(response);

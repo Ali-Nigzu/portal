@@ -1,6 +1,7 @@
 import { Column, Table, Row, keyOf, request, title } from "./api";
 
 import { useState } from "react";
+import { usernameError } from "../auth/usernameValidation";
 
 import { parseJson, stringifyJson } from "./json";
 const labels: Record<string, Record<string, string>> = {
@@ -111,6 +112,10 @@ export default function RowEditor({
         if (c.type === "bigint" && !/^(0|-?[1-9]\d*)$/.test(field.text))
           throw Error(`${c.name}: enter a decimal integer`);
         if (row && stringifyJson(v) === stringifyJson(row[c.name])) continue;
+        if (table.name === "users" && c.name === "username" && row?.id !== "999999") {
+          const error = usernameError(String(v));
+          if (error) throw Error(error);
+        }
         values[c.name] = v;
       }
       if (!Object.keys(values).length && !serverNow.length)

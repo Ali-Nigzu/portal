@@ -1,3 +1,4 @@
+import { optionalSessionStorage } from "../../common/optionalStorage";
 import React from "react";
 
 import { NavLink, useLocation } from "react-router-dom";
@@ -19,7 +20,7 @@ const AuthBottomNav: React.FC = () => {
   const demoTarget = `/demo?returnTo=${encodeURIComponent(returnTo)}`;
 
   const handleDemoClick = () => {
-    sessionStorage.setItem("demo:returnTo", returnTo);
+    optionalSessionStorage.setItem("demo:returnTo", returnTo);
   };
 
   return (

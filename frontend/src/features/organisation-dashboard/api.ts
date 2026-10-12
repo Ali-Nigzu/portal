@@ -36,8 +36,8 @@ export type AuthenticatedOrganisation = {
   sites: AuthenticatedSite[];
 };
 
-export async function fetchOrganisations(): Promise<AuthenticatedOrganisation[]> {
-  const response = await fetch("/api/portal/organisations", { credentials: "include", cache: "no-store" });
+export async function fetchOrganisations(signal?: AbortSignal): Promise<AuthenticatedOrganisation[]> {
+  const response = await fetch("/api/portal/organisations", { signal, credentials: "include", cache: "no-store" });
   if (!response.ok) throw new Error("Unable to load organisations");
   const body = await response.json() as { organisations: AuthenticatedOrganisation[] };
   return body.organisations;

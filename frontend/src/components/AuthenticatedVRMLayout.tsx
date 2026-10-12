@@ -1,7 +1,6 @@
 import { OrganisationAccessProvider } from "../features/organisation-access/OrganisationAccessContext";
 import { Suspense, useEffect, useMemo } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { logout } from "../features/auth/transport/me";
 import AuthenticatedNavigationPod from "./authenticated-navigation/AuthenticatedNavigationPod";
 import { useAuthenticatedNavigation } from "./authenticated-navigation/useAuthenticatedNavigation";
 import "../styles/VRMTheme.css";
@@ -11,7 +10,7 @@ import { useAuthenticatedApplication } from "../context/AuthenticatedApplication
 export default function AuthenticatedVRMLayout({
   onLogout,
 }: {
-  onLogout?: () => void;
+  onLogout?: () => void | Promise<void>;
 }) {
   const { organisations, favouritesCatalogueReady } =
     useAuthenticatedApplication();
@@ -42,8 +41,7 @@ export default function AuthenticatedVRMLayout({
   ]);
 
   const handleLogout = async () => {
-    await logout();
-    onLogout?.();
+    await onLogout?.();
     navigate("/login", { replace: true });
   };
 

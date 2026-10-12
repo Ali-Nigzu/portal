@@ -1,5 +1,6 @@
 import { type UpdateMePayload, endSettingsUnlock, getMe, resendSettingsUnlockCode, startSettingsUnlock, updateMe, verifySettingsUnlockCode } from "../api/settingsApi";
 import type { AuthUser } from "../../auth/transport/me";
+import { usernameError } from "../../auth/usernameValidation";
 import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, PenLine, ShieldCheck } from "lucide-react";
 import { useAuthenticatedApplication } from "../../../context/AuthenticatedApplicationContext";
@@ -18,7 +19,13 @@ type Errors = Partial<Record<Row | "confirmPassword" | "form", string>>;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
 
 export default function MyAccountPage() {
-  const { refreshAccount } = useAuthenticatedApplication();
+  const { refreshAccount, accountSignal } = useAuthenticatedApplication();
+  const mounted = useRef(true);
+  const mutation = useRef<AbortController>();
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; mutation.current?.abort(); };
+  }, []);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadRevision, setLoadRevision] = useState(0);
@@ -102,8 +109,9 @@ export default function MyAccountPage() {
     const next: Errors = {};
     const payload: UpdateMePayload = { unlock_token: unlock.token };
     if (row === "name") {
-      if (!name.trim()) next.name = "Enter a username.";
-      else payload.name = name.trim();
+      const error = name === user.name ? undefined : usernameError(name);
+      if (error) next.name = error;
+      else payload.name = name;
     }
     if (row === "phone") {
       const value = sanitizePhoneText(phone);
@@ -118,21 +126,31 @@ export default function MyAccountPage() {
     setErrors(next);
     if (Object.keys(next).length) return;
     setSaving(true); setMessage(null);
+    const abort = new AbortController();
+    mutation.current = abort;
+    const cancel = () => abort.abort();
+    accountSignal?.addEventListener('abort', cancel, { once: true });
+    if (accountSignal?.aborted) abort.abort();
     try {
-      const account = await updateMe(payload);
+      const account = await updateMe(payload, abort.signal);
+      if (!mounted.current || abort.signal.aborted) return;
       setUser(account); resetDrafts(account); setEditing(null);
       if (row === "password") setUnlock(null);
       setMessage(row === "password" ? (user.has_password ? "Password changed. Your other sessions have been signed out." : "Password set.") : "Account details saved.");
-      await refreshAccount?.();
+      await refreshAccount?.(account);
       requestAnimationFrame(() => {
         if (row === "phone") phoneButton.current?.focus();
         if (row === "password") passwordButton.current?.focus();
       });
     } catch (error) {
+      if (!mounted.current || abort.signal.aborted) return;
       const detail = error instanceof Error ? error.message : "Unable to save. Please try again.";
       if (/unlock|unauthenticated/i.test(detail)) { setUnlock(null); setEditing(null); setPassword(""); setConfirmPassword(""); }
       setErrors({ form: detail });
-    } finally { setSaving(false); }
+    } finally {
+      accountSignal?.removeEventListener('abort', cancel);
+      if (mounted.current) setSaving(false);
+    }
   };
 
   if (!user || loadError) return <SettingsFrame>
@@ -154,7 +172,7 @@ export default function MyAccountPage() {
     <section className="vrm-card account-details" aria-labelledby="account-details-title" aria-busy={saving}>
       <div className="vrm-card-header account-card-heading"><div><h2 id="account-details-title" className="vrm-card-title">Account details</h2><p>Your personal details across camOS.</p></div></div>
       <div className="vrm-card-body settings-account-card-body">
-        <EditableFieldRow label="Username" displayValue={user.name} value={name} isEditing={editing === "name"}
+        <EditableFieldRow label="Username" maxLength={30} displayValue={user.name} value={name} isEditing={editing === "name"}
           isSaving={saving} error={errors.name} onEdit={() => edit("name")} onCancel={cancel} onSave={() => save("name")} onChange={setName} />
         <div className="settings-field-row settings-field-row--readonly">
           <div className="settings-field-label">Email</div><div className="settings-field-main">
