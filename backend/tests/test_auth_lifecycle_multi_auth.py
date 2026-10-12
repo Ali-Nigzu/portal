@@ -53,16 +53,16 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(self.login('John Smith').status_code,401)
 
     def test_first_party_duplicate_names_and_cross_column(self):
-        self.database.add_user(email='first@example.com',name='second@example.com',password_hash=self.hash)
-        handle,delivery=self.lifecycle.start(SIGNUP,'second@example.com',username='second@example.com',password='new-password')
+        self.database.add_user(email='first@example.com',name='second@x.co',password_hash=self.hash)
+        handle,delivery=self.lifecycle.start(SIGNUP,'second@x.co',username='second@x.co',password='new-password')
         user=self.lifecycle.verify(SIGNUP,handle,delivery[1]); self.assertIsNotNone(user.password_hash)
-        self.assertEqual(user.username,'second@example.com')
+        self.assertEqual(user.username,'second@x.co')
         with self.assertRaises(LifecycleError): self.lifecycle.verify(SIGNUP,handle,delivery[1])
-        with self.assertRaises(LifecycleError): self.lifecycle.start(SIGNUP,'SECOND@EXAMPLE.COM',username='Other',password='new-password')
+        with self.assertRaises(LifecycleError): self.lifecycle.start(SIGNUP,'SECOND@X.CO',username='Other',password='new-password')
 
     def test_signup_api_retains_completion(self):
         with patch('backend.app.services.postmark_email.send_admin_signup_notification'):
-            response=self.client.post('/api/signup/start',json={'email':'new@example.com','name':'John Smith','password':'new-password'})
+            response=self.client.post('/api/signup/start',json={'email':'new@example.com','name':'JohnSmith','password':'new-password'})
             self.assertEqual(response.status_code,202)
             code=self.delivery.call_args.args[2]
             response=self.client.post('/api/signup/verify',json={'email':'new@example.com','code':code})
@@ -150,8 +150,9 @@ class LifecycleTests(unittest.TestCase):
         self.database.add_user(email='other@example.com',password_hash=self.hash)
         user=self.database.add_user(email='person@example.com',name='Other',password_hash=self.hash)
         handle,delivery=self.lifecycle.start(UNLOCK,user.email,user=user); self.lifecycle.verify(UNLOCK,handle,delivery[1],user)
-        updated=self.lifecycle.update_account(user,handle,{'name':'John Smith'})
-        self.assertEqual(updated.username,'John Smith')
+        self.database.add_user(email='duplicate@example.com',name='JohnSmith',password_hash=self.hash)
+        updated=self.lifecycle.update_account(user,handle,{'name':'JohnSmith'})
+        self.assertEqual(updated.username,'JohnSmith')
 
     def test_admin_and_disabled_login(self):
         self.database.add_user(password_hash=self.hash,user_id=999999)

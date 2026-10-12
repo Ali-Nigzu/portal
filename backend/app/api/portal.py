@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 import logging
 import os
-from uuid import uuid4
+from backend.app.diagnostics import request_id as current_request_id
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
@@ -79,7 +79,7 @@ def read(operation):
             },
         ) from None
     except Exception as exc:
-        request_id = uuid4().hex
+        request_id = current_request_id()
         logger.warning(
             "portal.unavailable request_id=%s type=%s", request_id, type(exc).__name__
         )
@@ -228,7 +228,7 @@ def read_dashboard(operation):
     except InvalidSnapshot:
         raise HTTPException(502, detail={"error": "invalid_snapshot", "message": "Snapshot data is invalid."}) from None
     except Exception as exc:
-        request_id = uuid4().hex
+        request_id = current_request_id()
         # Do not log exception text/tracebacks: connector errors may contain key paths.
         logger.warning("demo.dashboard.storage_unavailable request_id=%s type=%s", request_id, type(exc).__name__)
         raise HTTPException(503, detail={"error": "dashboard_unavailable", "message": "Dashboard storage is unavailable.", "request_id": request_id}) from None

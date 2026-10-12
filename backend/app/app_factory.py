@@ -28,13 +28,20 @@ from backend.app.services.user_lifecycle import UserLifecycle
 from backend.app.services.user_lifecycle_repository import UserLifecycleRepository
 from backend.app.services.organisation_dashboard import OrganisationDashboard
 from backend.app.config import get_allowed_origins
+from backend.app.services.session_tokens import _secret
+from backend.app.request_limits import RequestLimitsMiddleware
+from backend.app.diagnostics import RequestDiagnosticsMiddleware, RequestLogFilter
+from starlette.concurrency import run_in_threadpool
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(levelname)s %(name)s request_id=%(request_id)s %(message)s')
+for handler in logging.getLogger().handlers:
+    handler.addFilter(RequestLogFilter())
 logger = logging.getLogger(__name__)
 
 
 
 def create_app() -> FastAPI:
+    _secret()  # Critical signing configuration must fail before serving traffic.
     app = FastAPI(
         title="camOS Analytics API",
         description="Intelligent CCTV data analytics with auto-scaling insights",
@@ -53,6 +60,8 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
     )
+    app.add_middleware(RequestLimitsMiddleware)
+    app.add_middleware(RequestDiagnosticsMiddleware)
 
     app.include_router(auth.router)
     app.include_router(provider_auth.router)
@@ -112,9 +121,9 @@ def create_app() -> FastAPI:
         try:
             from backend.app.services.bigquery_client import bigquery_client
 
-            bigquery_client.run_health_check()
+            await run_in_threadpool(bigquery_client.run_health_check)
         except Exception as exc:
-            logger.error("BigQuery startup health check failed: %s", exc)
+            logger.error("startup.integration_unavailable provider=bigquery category=%s", type(exc).__name__)
             return
 
     return app

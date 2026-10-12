@@ -9,8 +9,9 @@ from backend.app.api.portal import EVENT_FILTERS, read
 from backend.app.services.organisation_dashboard import EntityNotFound, entity_id
 from backend.app.services.portal_context import PortalIdentity, PortalScope
 from backend.app.services.portal_devices import SourceNotFound
+from .organisation_memberships import NoStoreRoute, mutation_origin
 
-router = APIRouter(prefix="/api/portal")
+router = APIRouter(prefix="/api/portal", route_class=NoStoreRoute)
 
 
 class SetEnabledRequest(BaseModel):
@@ -74,9 +75,8 @@ def context(organisation: str, request: Request, response: Response, user=Depend
 def organisation_snapshot(organisation: str, request: Request, user=Depends(get_canonical_user)):
     def operation():
         identity, _ = authorised_identity(request, user, organisation)
-        resolved = PortalScope.resolve(identity, request.app.state.portal_metadata)
         return request.app.state.organisation_dashboard.load_organisation_snapshot(
-            identity.organisation_id, zero_scope=resolved
+            identity.organisation_id, zero_scope=lambda: PortalScope.resolve(identity, request.app.state.portal_metadata)
         )
     return read(operation)
 
@@ -85,9 +85,9 @@ def organisation_snapshot(organisation: str, request: Request, user=Depends(get_
 def site_snapshot(organisation: str, site: str, request: Request, user=Depends(get_canonical_user)):
     def operation():
         identity, _ = authorised_identity(request, user, organisation)
-        resolved = PortalScope.resolve(identity, request.app.state.portal_metadata, site)
         return request.app.state.organisation_dashboard.load_site_snapshot(
-            identity.organisation_id, int(resolved.site_id), zero_scope=resolved
+            identity.organisation_id, int(entity_id(site)),
+            zero_scope=lambda: PortalScope.resolve(identity, request.app.state.portal_metadata, site)
         )
     return read(operation)
 
@@ -140,7 +140,7 @@ def reports(organisation: str, request: Request, response: Response, user=Depend
     ))
 
 
-@router.put("/organisations/{organisation}/devices/{device}/enabled")
+@router.put("/organisations/{organisation}/devices/{device}/enabled", dependencies=[Depends(mutation_origin)])
 def set_device_enabled(organisation: str, device: str, payload: SetEnabledRequest, request: Request, user=Depends(get_canonical_user)):
     def operation():
         identity, _ = authorised_identity(request, user, organisation)
@@ -152,7 +152,7 @@ def set_device_enabled(organisation: str, device: str, payload: SetEnabledReques
     return read(operation)
 
 
-@router.put("/organisations/{organisation}/gateways/by-site/{site}/enabled")
+@router.put("/organisations/{organisation}/gateways/by-site/{site}/enabled", dependencies=[Depends(mutation_origin)])
 def set_gateway_enabled(organisation: str, site: str, payload: SetEnabledRequest, request: Request, user=Depends(get_canonical_user)):
     def operation():
         identity, _ = authorised_identity(request, user, organisation)

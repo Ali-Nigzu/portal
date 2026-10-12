@@ -3,7 +3,9 @@
 import json
 from contextlib import closing
 
-from .canonical_auth import CanonicalAuthRepository
+from .canonical_auth import CanonicalAuthRepository, ReservedCustomerId
+from .user_policy import InvalidUsername
+from .auth_budgets import consume_budget
 
 USER_COLUMNS = (
     "id, email, username, phone_number, password_hash, status, "
@@ -36,6 +38,8 @@ class UserLifecycleRepository:
                 raise result
             return result
         except Exception as error:
+            if isinstance(error, (ReservedCustomerId, InvalidUsername)):
+                raise LifecycleError(409 if isinstance(error, ReservedCustomerId) else 422, str(error)) from None
             detail = error.args[0] if error.args else None
             if isinstance(detail, dict) and detail.get('C') == '23505' and detail.get('n') == 'uq_users_email_ci':
                 raise LifecycleError(409, 'Email already in use') from None
@@ -61,6 +65,8 @@ class UserLifecycleRepository:
             'INSERT INTO public.user_lifecycle_challenges (' + ','.join(columns) + ') VALUES ('
             + ','.join(['%s'] * len(columns)) + ')', tuple(values),
         )
+
+    consume_start_budget = staticmethod(consume_budget)
 
     @staticmethod
     def challenge(cursor, challenge_id, purpose, *, lock=True):
@@ -103,11 +109,12 @@ class UserLifecycleRepository:
         cursor.execute(
             'DELETE FROM public.user_lifecycle_challenges WHERE id IN ('
             'SELECT id FROM public.user_lifecycle_challenges WHERE consumed_at IS NOT NULL OR '
+            '(id LIKE \'budget:%\' AND code_expires_at <= %s::timestamptz) OR '
             '(verified_at IS NULL AND created_at <= %s::timestamptz - %s * INTERVAL \'1 second\') OR '
             '(verified_at IS NOT NULL AND (purpose=0 OR '
             '(purpose=1 AND verified_at <= %s::timestamptz - %s * INTERVAL \'1 second\') OR '
             '(purpose=2 AND verified_at <= %s::timestamptz - %s * INTERVAL \'1 second\'))) '
             'ORDER BY created_at,id LIMIT %s FOR UPDATE SKIP LOCKED) RETURNING id',
-            (now, pending_seconds, now, reset_seconds, now, unlock_seconds, limit),
+            (now, now, pending_seconds, now, reset_seconds, now, unlock_seconds, limit),
         )
         return len(cursor.fetchall())

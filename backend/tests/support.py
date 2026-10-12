@@ -15,6 +15,8 @@ from backend.app.services.provider_auth_repository import ProviderAuthRepository
 from backend.app.services.provider_oidc import ProviderOIDC
 from backend.app.services.user_lifecycle import UserLifecycle
 from backend.app.services.user_lifecycle_repository import UserLifecycleRepository
+from backend.app.request_limits import RequestLimitsMiddleware
+from backend.app.diagnostics import RequestDiagnosticsMiddleware
 
 
 class TestDatabase:
@@ -95,6 +97,8 @@ class TestDatabase:
 
 def application(database):
     app = FastAPI()
+    app.add_middleware(RequestLimitsMiddleware)
+    app.add_middleware(RequestDiagnosticsMiddleware)
     app.add_middleware(provider_auth.CallbackPrivacyMiddleware)
     app.include_router(auth.router)
     app.include_router(provider_auth.router)

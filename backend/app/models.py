@@ -14,7 +14,7 @@ class AuthUser(BaseModel):
     has_password: bool
 
 class CreateAccountRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    name: str = Field(min_length=3, max_length=15)
     email: str = Field(max_length=320)
     phone: Optional[str] = Field(default=None, max_length=32)
     password: str = Field(max_length=1024)

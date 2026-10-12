@@ -8,8 +8,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from threading import Lock
+from time import monotonic
 
 from google.cloud import bigquery
+from google.cloud.bigquery.retry import DEFAULT_RETRY
+
+RPC_RETRY = DEFAULT_RETRY.with_deadline(10)
 
 EVENTS_TABLE = "`camosbase.camos_prod.events`"
 
@@ -98,12 +102,19 @@ class BigQueryClient:
             use_query_cache=True,
         )
         job = self._ensure_client().query(sql, job_config=config, location=self.settings.location,
-                                          timeout=10)
+                                          timeout=10, retry=RPC_RETRY, job_retry=None)
         try:
-            return list(job.result(timeout=30, page_size=min(limit, 1000), max_results=limit))
+            deadline = monotonic() + 40
+            rows = []
+            for row in job.result(timeout=30, page_size=min(limit, 1000), max_results=limit,
+                                  retry=RPC_RETRY, job_retry=None):
+                if monotonic() > deadline:
+                    raise TimeoutError('BigQuery row deadline exceeded')
+                rows.append(row)
+            return rows
         except Exception:
             try:
-                job.cancel()
+                job.cancel(timeout=5, retry=None)
             except Exception:
                 pass
             raise
@@ -118,13 +129,14 @@ class BigQueryClient:
         job = None
         try:
             client = self._ensure_client()
-            job = client.query("SELECT 1 AS ok", location=self.settings.location, timeout=10)
-            rows = list(job.result(timeout=30, page_size=1, max_results=1))
+            job = client.query("SELECT 1 AS ok", location=self.settings.location, timeout=10,
+                               retry=RPC_RETRY, job_retry=None)
+            rows = list(job.result(timeout=30, page_size=1, max_results=1, retry=RPC_RETRY, job_retry=None))
             logger.info("BigQuery connectivity check succeeded (rows=%d)", len(rows))
         except Exception:
             if job is not None:
                 try:
-                    job.cancel()
+                    job.cancel(timeout=5, retry=None)
                 except Exception:
                     pass
             raise

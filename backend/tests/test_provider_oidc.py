@@ -122,9 +122,9 @@ class OIDCTests(unittest.TestCase):
         self.assertFalse(verify_password('password','malformed'))
 
     def test_username_seed(self):
-        self.assertEqual(seed_username(' John Smith\n','john@example.com'),'John Smith')
+        self.assertEqual(seed_username(' John Smith\n','john@example.com'),'JohnSmith')
         self.assertEqual(seed_username('', 'john.smith@example.com'),'john.smith')
-        self.assertEqual(len(seed_username('x'*200,'x@example.com')),120)
+        self.assertEqual(len(seed_username('x'*200,'x@example.com')),15)
 
     def test_code_exchange_uses_pkce_timeout_and_fixed_endpoint(self):
         token=self.encoded(self.claims())

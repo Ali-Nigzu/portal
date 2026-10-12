@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from .canonical_auth import CanonicalAuthRepository
 from . import passwords
 from .provider_oidc import ProviderError
-from .user_lifecycle import normalized_email, username_value
+from .user_lifecycle import normalized_email
+from .user_policy import seed_username
 from .user_lifecycle_repository import LifecycleError
 
 
@@ -21,11 +22,6 @@ def enabled(user):
     if user is None or user.status != 1 or user.id == 999999:
         raise ProviderError('provider-error', 403)
     return user
-
-
-def seed_username(name, email):
-    clean = ''.join(c for c in (name or '') if ord(c) >= 32 and ord(c) != 127).strip()[:120]
-    return username_value(clean or email.split('@', 1)[0][:120])
 
 
 class ProviderAuth:
@@ -76,6 +72,9 @@ class ProviderAuth:
         if (candidate.session_version != ticket['version'] or candidate.email != ticket['email']
                 or candidate.password_hash is None):
             raise ProviderError('provider-expired', 410)
+        if not CanonicalAuthRepository(self.repository.database).password_attempt_allowed(
+                str(candidate.id), namespace='provider-link'):
+            raise ProviderError('provider-unavailable', 429)
         if not passwords.verify_password(password, candidate.password_hash):
             raise ProviderError('incorrect-password', 401)
 

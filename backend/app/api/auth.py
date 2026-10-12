@@ -1,12 +1,14 @@
 """Public contact, login and canonical session reads. Lifecycle routes are separate."""
 from __future__ import annotations
 import base64
-import json
 import logging
 import os
 import re
-import uuid
 from datetime import datetime, timezone
+from starlette.concurrency import run_in_threadpool
+from backend.app.diagnostics import request_id as current_request_id
+from backend.app.services import contact_journal
+from backend.app.services.contact_limits import ATTACHMENT_ENVELOPE_BYTES, CONTACT_ENVELOPE_MESSAGE, encoded_attachment_bytes
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from backend.app.auth import clear_auth_cookie, get_canonical_user, get_session_user, set_auth_cookie
 from backend.app.services import passwords
@@ -69,22 +71,11 @@ def _raise_contact_mail_delivery_error(exc: Exception, *, request_id: str) -> No
         )
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     if isinstance(exc, PostmarkDeliveryError):
-        logger.error(
-            "contact.email.delivery_error request_id=%s status_code=%s error_code=%s message=%s from_email=%s to_email=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s response_body=%s",
-            request_id,
-            exc.status_code,
-            exc.error_code,
-            exc.error_message,
-            exc.from_email,
-            exc.to_email_masked,
-            bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
-            bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
-            bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
-            exc.response_body,
-        )
-        raise HTTPException(status_code=502, detail="Failed to send contact message.") from exc
-    logger.exception("contact.email.unknown_error request_id=%s", request_id)
-    raise HTTPException(status_code=502, detail="Failed to send contact message.") from exc
+        logger.error("contact.email.delivery_error request_id=%s provider=postmark status=%s category=%s",
+                     request_id, exc.status_code, exc.error_code)
+        raise HTTPException(status_code=502, detail="Failed to send contact message.") from None
+    logger.error("contact.email.unknown_error request_id=%s category=%s", request_id, type(exc).__name__)
+    raise HTTPException(status_code=502, detail="Failed to send contact message.") from None
 
 
 def _validate_contact_fields(name: str, email: str, phone: str | None, message: str) -> tuple[str, str, str | None, str]:
@@ -106,24 +97,7 @@ def _validate_contact_fields(name: str, email: str, phone: str | None, message: 
 
 
 def _append_contact_submission_record(record: dict) -> None:
-    os.makedirs(os.path.dirname(CONTACT_SUBMISSIONS_FILE), exist_ok=True)
-    if os.path.exists(CONTACT_SUBMISSIONS_FILE):
-        with open(CONTACT_SUBMISSIONS_FILE, "r") as f:
-            try:
-                submissions = json.load(f)
-            except json.JSONDecodeError:
-                submissions = []
-    else:
-        submissions = []
-
-    if not isinstance(submissions, list):
-        submissions = []
-
-    submissions.append(record)
-    tmp_path = f"{CONTACT_SUBMISSIONS_FILE}.tmp"
-    with open(tmp_path, "w") as f:
-        json.dump(submissions, f, indent=2)
-    os.replace(tmp_path, CONTACT_SUBMISSIONS_FILE)
+    contact_journal.append(CONTACT_SUBMISSIONS_FILE, record)
 
 
 def _validate_contact_upload(content_type: str | None, filename: str, payload: bytes) -> None:
@@ -150,27 +124,40 @@ async def submit_contact(
     page_url: str | None = Form(default=None),
     attachments: list[UploadFile] = File(default=[]),
 ):
-    request_id = str(uuid.uuid4())
+    request_id = current_request_id()
     safe_name, safe_email, safe_phone, safe_message = _validate_contact_fields(name, email, phone, message)
     safe_company = company.strip() if company and company.strip() else None
     safe_page_url = page_url.strip() if page_url and page_url.strip() else None
 
+    for value, maximum in ((safe_name, 1024), (safe_message, 65536), (safe_company or '', 4096), (safe_page_url or '', 4096)):
+        if len(value.encode()) > maximum:
+            raise HTTPException(422, 'Contact details are too long.')
     if len(attachments) > CONTACT_MAX_FILES:
         raise HTTPException(status_code=422, detail="Upload up to 3 attachments.")
 
     postmark_attachments: list[PostmarkAttachment] = []
     attachment_names: list[str] = []
 
+    envelope = 0
     for attachment in attachments:
         filename = (attachment.filename or "attachment").strip()
-        payload = await attachment.read()
+        content_type = attachment.content_type or "application/octet-stream"
+        if len(filename.encode()) > 1024 or len(content_type.encode()) > 256:
+            raise HTTPException(422, 'Attachment metadata is too long.')
+        if attachment.size is not None and attachment.size > CONTACT_MAX_FILE_BYTES:
+            raise HTTPException(422, f"File exceeds 10MB limit: {filename}")
+        remaining = max(0, (ATTACHMENT_ENVELOPE_BYTES - envelope - encoded_attachment_bytes(0, filename, content_type)) // 4 * 3)
+        payload = await attachment.read(min(CONTACT_MAX_FILE_BYTES, remaining) + 1)
         _validate_contact_upload(attachment.content_type, filename, payload)
 
+        envelope += encoded_attachment_bytes(len(payload), filename, content_type)
+        if envelope > ATTACHMENT_ENVELOPE_BYTES:
+            raise HTTPException(422, CONTACT_ENVELOPE_MESSAGE)
         postmark_attachments.append(
             PostmarkAttachment(
                 name=filename,
                 content_type=attachment.content_type or "application/octet-stream",
-                content_base64=base64.b64encode(payload).decode("ascii"),
+                content_base64=await run_in_threadpool(lambda data: base64.b64encode(data).decode("ascii"), payload),
             )
         )
         attachment_names.append(filename)
@@ -187,40 +174,25 @@ async def submit_contact(
         "page_url": safe_page_url,
         "attachments": attachment_names,
     }
-    try:
-        _append_contact_submission_record(submission_record)
-    except Exception as exc:
-        logger.exception("contact.submission.persist_failed request_id=%s", request_id)
-        raise HTTPException(status_code=500, detail="Failed to save contact message.") from exc
-
-    logger.info(
-        "contact.email.trigger_start request_id=%s contact_email=%s attachment_count=%s",
-        request_id,
-        safe_email,
-        len(attachment_names),
-    )
-    try:
-        admin_result = send_admin_contact_notification(
-            name=safe_name,
-            email=safe_email,
-            phone=safe_phone,
-            company=safe_company,
-            message=safe_message,
-            submitted_at=submitted_at,
-            page_url=safe_page_url,
-            attachment_names=attachment_names,
-            attachments=postmark_attachments,
-        )
-        confirmation_result = send_contact_confirmation_email(to_email=safe_email, name=safe_name, message=safe_message)
-    except Exception as exc:
-        _raise_contact_mail_delivery_error(exc, request_id=request_id)
-
-    logger.info(
-        "contact.email.sent request_id=%s admin_message_id=%s confirmation_message_id=%s",
-        request_id,
-        admin_result.message_id,
-        confirmation_result.message_id,
-    )
+    def persist_and_deliver():
+        try:
+            _append_contact_submission_record(submission_record)
+        except Exception as exc:
+            logger.error("contact.submission.persist_failed request_id=%s category=%s", request_id, type(exc).__name__)
+            raise HTTPException(status_code=500, detail="Failed to save contact message.") from None
+        logger.info("contact.email.trigger_start request_id=%s attachment_count=%s", request_id, len(attachment_names))
+        try:
+            admin_result = send_admin_contact_notification(
+                name=safe_name, email=safe_email, phone=safe_phone, company=safe_company,
+                message=safe_message, submitted_at=submitted_at, page_url=safe_page_url,
+                attachment_names=attachment_names, attachments=postmark_attachments,
+            )
+            confirmation_result = send_contact_confirmation_email(to_email=safe_email, name=safe_name, message=safe_message)
+        except Exception as exc:
+            _raise_contact_mail_delivery_error(exc, request_id=request_id)
+        logger.info("contact.email.sent request_id=%s admin_message_id=%s confirmation_message_id=%s",
+                    request_id, admin_result.message_id, confirmation_result.message_id)
+    await run_in_threadpool(persist_and_deliver)
 
     return ContactResponse(message="Thanks for contacting us. We'll be in touch soon.")
 
@@ -229,6 +201,8 @@ async def submit_contact(
 def login(login_request: EmailLoginRequest, response: Response, request: Request):
     """Authentication endpoint for user login."""
     try:
+        if not request.app.state.auth_repository.password_attempt_allowed(login_request.email):
+            raise HTTPException(429, 'Too many sign-in attempts. Please try again later.')
         user = request.app.state.auth_repository.find_email(login_request.email.strip())
         if user is not None and user.status == 1 and user.id != 999999 and user.password_hash is None:
             from .provider_auth import provider_required
@@ -245,6 +219,8 @@ def login(login_request: EmailLoginRequest, response: Response, request: Request
 
     except HTTPException:
         raise
+    except passwords.PasswordCapacityError:
+        raise HTTPException(503, "Sign-in is temporarily unavailable. Please retry.") from None
     except Exception as exc:
         logger.error("Login storage unavailable")
         raise HTTPException(status_code=500, detail="Internal server error") from exc

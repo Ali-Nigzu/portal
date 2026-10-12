@@ -47,6 +47,16 @@ class DashboardPostgres:
             timeout=10,
         )
         connection.autocommit = True
+        cursor = connection.cursor()
+        try:
+            cursor.execute("SET statement_timeout = '10s'")
+            cursor.execute("SET lock_timeout = '3s'")
+            cursor.execute("SET idle_in_transaction_session_timeout = '15s'")
+        except BaseException:
+            connection.close()
+            raise
+        finally:
+            cursor.close()
         return connection
 
     @contextmanager

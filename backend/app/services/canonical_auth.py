@@ -1,6 +1,26 @@
 """Canonical Postgres user, membership, and organisation access reads."""
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
+import logging
+from threading import Lock
+from time import monotonic
+from .auth_budgets import consume_budget
+from .user_policy import username_value
+
+ADMIN_ID = 999999
+USER_COLUMNS = 'id,email,username,phone_number,password_hash,status,session_version'
+_budget_cleanup_lock = Lock()
+_last_budget_cleanup = 0
+
+
+class ReservedCustomerId(ValueError):
+    pass
+
+
+def require_customer_id(user_id):
+    if int(user_id) == ADMIN_ID:
+        raise ReservedCustomerId('Reserved Admin ID cannot be allocated to a customer. Please retry.')
 
 
 @dataclass(frozen=True)
@@ -23,6 +43,51 @@ class Membership:
 class CanonicalAuthRepository:
     def __init__(self, database):
         self.database = database
+
+    def password_attempt_allowed(self, identifier, *, namespace='customer'):
+        self._cleanup_password_budgets()
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            try:
+                return consume_budget(cursor, 2, identifier.strip().lower(), datetime.now(timezone.utc),
+                                      namespace='password-' + namespace, limit=30, window_seconds=900)
+            finally:
+                cursor.close()
+
+    def _cleanup_password_budgets(self):
+        # Opportunistic maintenance only; the row lock/expiry remains the
+        # cross-instance authority. Login-only traffic must also retire rows.
+        global _last_budget_cleanup
+        with _budget_cleanup_lock:
+            if monotonic() - _last_budget_cleanup < 60:
+                return
+            _last_budget_cleanup = monotonic()
+        try:
+            with self.database.transaction() as connection:
+                cursor = connection.cursor()
+                try:
+                    cursor.execute("SET LOCAL statement_timeout = '250ms'")
+                    cursor.execute("SET LOCAL lock_timeout = '100ms'")
+                    cursor.execute("DELETE FROM public.user_lifecycle_challenges WHERE id IN ("
+                                   "SELECT id FROM public.user_lifecycle_challenges WHERE id >= 'budget:' AND id < 'budget;' "
+                                   "AND code_expires_at <= CURRENT_TIMESTAMP ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED)")
+                finally:
+                    cursor.close()
+        except Exception:
+            logging.getLogger(__name__).warning('account.budget_cleanup_deferred')
+
+    @staticmethod
+    def create_customer(cursor, email, username, phone=None, password_hash=None):
+        """Caller owns the transaction. Exceptions must roll back this insertion."""
+        username = username_value(username)
+        cursor.execute(
+            'INSERT INTO public.users(email,username,phone_number,password_hash,status,created_at) '
+            f'VALUES(%s,%s,%s,%s,1,CURRENT_TIMESTAMP) RETURNING {USER_COLUMNS}',
+            (email, username, phone, password_hash),
+        )
+        user = CanonicalAuthRepository._user(cursor.fetchone())
+        require_customer_id(user.id)
+        return user
 
     @staticmethod
     def _user(row) -> CanonicalUser | None:

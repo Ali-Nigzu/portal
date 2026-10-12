@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from html import escape
 from pathlib import Path
+from datetime import datetime
+from uuid import UUID
 from urllib import error, request
 
 DEFAULT_POSTMARK_EMAIL_ENDPOINT = "https://api.postmarkapp.com/email"
@@ -135,7 +137,7 @@ def _admin_notify_recipients() -> list[str]:
         if not email:
             continue
         if not EMAIL_RE.match(email):
-            logger.warning("postmark.admin_notify.invalid_recipient_ignored recipient=%s", email)
+            logger.warning("postmark.admin_notify.invalid_recipient_ignored")
             continue
         if email.lower() not in {item.lower() for item in recipients}:
             recipients.append(email)
@@ -149,90 +151,41 @@ def _require_admin_notify_email() -> str:
 def _postmark_send(
     *, token: str, payload: dict, from_email: str, to_email: str, endpoint: str
 ) -> PostmarkSendResult:
-    req = request.Request(
-        endpoint,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Postmark-Server-Token": token,
-        },
-        method="POST",
-    )
-    to_email_masked = _mask_email(to_email)
+    # Leave MIME/header overhead below the provider's complete 10 MB limit.
+    encoded = json.dumps(payload).encode('utf-8')
+    if len(encoded) + 65536 > 10_000_000:
+        raise PostmarkDeliveryError(status_code=None, response_body='', error_code=None,
+            error_message='Message exceeds provider envelope', from_email=from_email, to_email_masked=_mask_email(to_email))
+    req = request.Request(endpoint, data=encoded, headers={
+        'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Postmark-Server-Token': token,
+    }, method='POST')
+    masked = _mask_email(to_email)
+    def failed(status, code=None):
+        logger.error('postmark.send.failed provider=postmark status=%s category=%s', status, code)
+        return PostmarkDeliveryError(status_code=status, response_body='', error_code=code,
+            error_message='Email delivery failed', from_email=from_email, to_email_masked=masked)
     try:
         with request.urlopen(req, timeout=10) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            if response.status >= 300:
-                error_code, error_message = _parse_postmark_error(body)
-                logger.error(
-                    "postmark.send.failed status=%s error_code=%s from_email=%s to_email=%s",
-                    response.status,
-                    error_code,
-                    from_email,
-                    to_email_masked,
-                )
-                raise PostmarkDeliveryError(
-                    status_code=response.status,
-                    response_body=body,
-                    error_code=error_code,
-                    error_message=error_message,
-                    from_email=from_email,
-                    to_email_masked=to_email_masked,
-                )
-            message_id = None
-            submitted_at = None
+            body = response.read(65537)
+            if response.status != 200 or len(body) > 65536:
+                raise failed(response.status)
             try:
-                data = json.loads(body) if body else {}
-                message_id = data.get("MessageID") if isinstance(data.get("MessageID"), str) else None
-                submitted_at = data.get("SubmittedAt") if isinstance(data.get("SubmittedAt"), str) else None
-            except Exception:
-                pass
-            logger.info(
-                "postmark.send.success status=%s message_id=%s from_email=%s to_email=%s",
-                response.status,
-                message_id,
-                from_email,
-                to_email_masked,
-            )
-            return PostmarkSendResult(
-                message_id=message_id,
-                submitted_at=submitted_at,
-                to_email_masked=to_email_masked,
-            )
+                data = json.loads(body)
+                if (not isinstance(data, dict) or type(data.get('ErrorCode')) is not int or data['ErrorCode'] != 0
+                        or any(not isinstance(data.get(k), str) or not data[k] for k in ('MessageID', 'SubmittedAt', 'Message', 'To'))):
+                    raise ValueError()
+                UUID(data['MessageID'])
+                if datetime.fromisoformat(data['SubmittedAt'].replace('Z', '+00:00')).tzinfo is None:
+                    raise ValueError()
+            except (ValueError, TypeError, KeyError):
+                raise failed(response.status) from None
+            logger.info('postmark.send.success provider=postmark message_id=%s', data['MessageID'])
+            return PostmarkSendResult(data['MessageID'], data['SubmittedAt'], masked)
     except error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        error_code, error_message = _parse_postmark_error(body)
-        logger.error(
-            "postmark.send.http_error status=%s error_code=%s from_email=%s to_email=%s",
-            exc.code,
-            error_code,
-            from_email,
-            to_email_masked,
-        )
-        raise PostmarkDeliveryError(
-            status_code=exc.code,
-            response_body=body,
-            error_code=error_code,
-            error_message=error_message,
-            from_email=from_email,
-            to_email_masked=to_email_masked,
-        ) from exc
-    except error.URLError as exc:
-        logger.error(
-            "postmark.send.url_error from_email=%s to_email=%s reason=%s",
-            from_email,
-            to_email_masked,
-            exc,
-        )
-        raise PostmarkDeliveryError(
-            status_code=None,
-            response_body=str(exc),
-            error_code=None,
-            error_message=str(exc),
-            from_email=from_email,
-            to_email_masked=to_email_masked,
-        ) from exc
+        code, _ = _parse_postmark_error(exc.read(65536).decode('utf-8', errors='replace'))
+        raise failed(exc.code, code) from None
+    except (error.URLError, TimeoutError, OSError):
+        raise failed(None) from None
 
 
 def send_admin_signup_notification(

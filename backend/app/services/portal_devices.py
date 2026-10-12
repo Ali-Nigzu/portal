@@ -1,6 +1,9 @@
 """Canonical, scoped Device List read projection."""
 
 from datetime import timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .organisation_dashboard import entity_id
 from .portal_context import instant, iso
@@ -95,24 +98,32 @@ class PortalDevices:
             if scope.identity.cutoff:
                 clauses.append("timestamp <= @cutoff")
                 params["cutoff"] = scope.identity.cutoff
+            # One scan returns site totals (including historical devices) and
+            # only current device/site pairs. Historical group cardinality cannot
+            # silently exhaust the response cap.
+            pairs = [f'{sid}:{did}' for did, sid, *_ in devices]
+            params['sites'] = [int(sid) for sid in site_names]
+            having = 'GROUPING(device_id) = 1'
+            if pairs:
+                params['pairs'] = pairs
+                having += " OR CONCAT(CAST(site_id AS STRING), ':', CAST(device_id AS STRING)) IN UNNEST(@pairs)"
+            limit = len(devices) + len(site_names)
             rows = self.bigquery.portal_rows(
-                f"SELECT site_id, device_id, COUNT(*) AS record_count FROM {EVENTS_TABLE} "
-                f"WHERE {' AND '.join(clauses)} GROUP BY site_id, device_id",
-                params,
-                # One bounded aggregate result set, including historical device ids
-                # that still contribute to the canonical gateway/site population.
-                limit=10_000,
+                f"SELECT site_id, device_id, GROUPING(device_id) AS site_total, COUNT(*) AS record_count FROM {EVENTS_TABLE} "
+                f"WHERE {' AND '.join(clauses)} GROUP BY GROUPING SETS ((site_id), (site_id, device_id)) "
+                f"HAVING site_id IN UNNEST(@sites) AND ({having})",
+                params, limit=limit + 1,
             )
-            counts = {
-                (str(row["site_id"]), str(row["device_id"])): int(row["record_count"])
-                for row in rows
-            }
-        except Exception:
+            if len(rows) > limit:
+                raise ValueError('Device aggregate overflow')
+            site_totals = {str(row['site_id']): int(row['record_count']) for row in rows if row['site_total'] == 1}
+            counts = {(str(row['site_id']), str(row['device_id'])): int(row['record_count'])
+                      for row in rows if row['site_total'] == 0}
+        except Exception as error:
+            logger.warning('portal.devices.records_unavailable provider=bigquery category=%s', type(error).__name__)
             records_status = "unavailable"
+            site_totals = {}
 
-        site_totals = {}
-        for (site_id, _), count in counts.items():
-            site_totals[site_id] = site_totals.get(site_id, 0) + count
         effective_now = scope.identity.cutoff or instant(
             scope.context["clock"]["effective_now"]
         )

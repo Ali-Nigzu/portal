@@ -180,7 +180,7 @@ class OrganisationDashboard:
             snapshot = self._snapshot(
                 "SELECT o.id, o.name, os.ts, os.payload FROM public.organisations AS o "
                 "JOIN public.organisation_snapshots AS os ON os.organisation_id = o.id "
-                "WHERE o.id = %s", (organisation_id,), "organisation", missing_ok=True, validate_payload=zero_scope is not None,
+                "WHERE o.id = %s", (organisation_id,), "organisation", missing_ok=True, validate_payload=True,
             )
         except InvalidSnapshot:
             if zero_scope is None:
@@ -202,7 +202,7 @@ class OrganisationDashboard:
                 "SELECT s.id, s.name, ss.ts, ss.payload FROM public.sites AS s "
                 "JOIN public.site_snapshots AS ss ON ss.site_id = s.id "
                 "WHERE s.id = %s AND s.organisation_id = %s",
-                (site_id, organisation_id), "site", missing_ok=zero_scope is not None, validate_payload=zero_scope is not None,
+                (site_id, organisation_id), "site", missing_ok=zero_scope is not None, validate_payload=True,
             )
         except InvalidSnapshot:
             if zero_scope is None:
@@ -214,6 +214,8 @@ class OrganisationDashboard:
 
     @staticmethod
     def _zero_snapshot(organisation_id, site_id, scope):
+        if callable(scope):
+            scope = scope()
         if (scope.identity.organisation_id != organisation_id
                 or scope.site_id != (entity_id(site_id) if site_id is not None else None)):
             raise EntityNotFound()
