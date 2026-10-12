@@ -12,7 +12,7 @@ an existing trusted CA bundle with `--secret id=build_ca,src=/path/to/ca-bundle.
 The optional mount is used only during package installation; it is absent from
 the application image. Without that input, npm and pip use their normal trust.
 
-The Node 20 build stage runs `npm ci` and `npm run build`. Vite compiles React/
+The pinned Node 24 build stage runs `npm ci` and `npm run build`. Vite compiles React/
 TypeScript with its build pipeline and writes `frontend/build`. The Python 3.11
 stage installs `backend/requirements.txt`, copies backend code and embeds the
 SPA as `backend/frontend_build`. Build-only dependencies are absent from the
@@ -90,7 +90,11 @@ proxy, runtime bindings, actual schema/privileges, both provider round trips,
 cancellation, first signup, known login, linking, and canonical Portal access.
 Local mocks are not live provider E2E evidence.
 
-Verify deployment-level password-attempt abuse controls before public rollout.
+Application password attempts now have a shared account/namespace budget of 30
+per 15 minutes. Challenge starts have five per account/purpose per hour. These
+use non-credential `budget:` rows in the existing lifecycle table with advisory
+transaction/row locks; no schema change or username uniqueness is required.
+Verify deployment-level broad traffic controls before public rollout.
 Check for enabled NULL-password users with no identity mapping. Reverse-proxy
 access logs must also redact query strings for provider callbacks; the application
 redacts its own Uvicorn callback queries and never logs provider payloads.
@@ -145,3 +149,67 @@ Without that opt-in the integration tests report skipped, not passed. Never poin
 the test helper at production; it has no configurable production host or ADC path.
 Run frontend `npm ci && npm run build` and the complete Docker build separately.
 Vite transpilation is not a full TypeScript type check.
+
+## Production candidate resource settings
+
+The image pins maintained Node 24 and Python 3.11 base digests, uses `npm ci`
+and a complete pinned Python runtime closure. `requirements.in` records direct
+requirements; refresh the closure in a clean Python 3.11 environment and rerun
+quality gates when changing it. Test tooling stays out of the runtime closure.
+Uvicorn is the single process/PID 1, with 64 admitted connections and a nine-second
+graceful shutdown. Keep Cloud Run concurrency at or below 32 and memory at least
+512 MiB; select maximum instances against PostgreSQL capacity: each instance can
+hold four SQL connections, so reserve `4 × maximum instances` plus operator/other
+service headroom. Do not raise concurrency or instance count without measuring
+memory and provider/database quotas in the actual deployment.
+
+`PORTAL_SESSION_SECRET` must have at least 32 characters and fails construction
+when missing. Google/Microsoft config remains optional. `PORTAL_HASH_CONCURRENCY`
+defaults to two (1–8); Argon2 strength is unchanged. Capacity is checked against
+cgroup memory, and excess work fails safely after one second rather than growing
+an unbounded hashing queue. SQL checkout/connect/statement bounds are 10 seconds,
+lock wait three seconds, idle transaction 15 seconds; transactions still roll
+back on failure and return healthy connections to the four-slot pool.
+
+Contact requests are limited before parsing to 8 MiB, with two simultaneous
+upload/delivery operations. Documents retains 25 MiB per file and has a 32 MiB
+request bound matching the current Cloud Run HTTP/1 container limit. Ordinary
+JSON bodies are bounded to 32 KiB, Admin bodies to the existing 32 MiB platform bound (one concurrent write). Contact attachments
+reserve an 8,000,000-byte base64/metadata envelope plus provider body/MIME headroom;
+normal type/count rules remain. The current JSON journal stays synchronous in
+request order but runs in workers, with process/file locks and atomic replacement.
+Corrupt history is preserved. Memory does not grow with total history, though
+validation/copy cost does: retain an operator-reviewed journal retention/disk
+budget. Cloud Run local disk is still ephemeral and instance-local; no new durable
+Contact authority is implied. Postmark sends are not automatically retried.
+
+BQ queries keep the 1 GB billed-byte limit, 10-second RPC/retry deadlines,
+30-second result wait and bounded REST result counts. Device counts use one
+aggregate for site totals plus required current device pairs, preserving historical
+contributions without returning every historical device group. Row collection
+checks a 40-second deadline (an in-progress RPC can finish up to its 10-second
+bound). Event exports admit two concurrent bounded results. Private Portal responses,
+including failures, use no-store; mutations retain the existing origin/marker guard.
+
+Before promotion verify real IAM/SQL grants and sequence rights, GCS ownership and
+generation preconditions, actual BQ schema/location/query execution and billed bytes,
+Google/Microsoft registered callbacks and browser cookie behavior, Postmark sender
+and customer delivery, Cloud Run quotas/scaling/termination window, and the external
+snapshot producer's calendar/historical dwell contract. Local mocks, a successful
+container build, and this scorecard do not establish these live facts.
+
+## Reproducible quality gates
+
+Use a disposable localhost PostgreSQL `camos_auth_test` with synthetic `camos_test`
+credentials; never production ADC/database for tests. Set
+`CAMOS_TEST_POSTGRES_PORT=55439` and a nonexistent test-only
+`GOOGLE_APPLICATION_CREDENTIALS` path. Install `backend/tests/requirements.txt`
+in an isolated environment, then run `python -m unittest discover -s backend/tests -v`
+and `pip check`. The database helper refuses a production host/database.
+At `frontend`, run `npm ci`, `npm run typecheck`, `npm test`, and
+`npm run test:browser` after `npx playwright install --with-deps chromium`.
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` optionally selects an existing local Chromium;
+CI uses the Playwright-pinned browser. Harness files are test-only and are absent
+from the SPA bundle. The lean GitHub quality workflow repeats these gates and
+builds/checks the production image. Keep secrets in secure injected environment
+settings; pass names to Docker with `-e NAME`, never copy their values into files.

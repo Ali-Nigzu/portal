@@ -6,8 +6,8 @@ export type AuthUser = {
   has_password: boolean;
 };
 
-export const fetchMe = async () => {
-  const response = await fetch('/api/me', { credentials: 'include' });
+export const fetchMe = async (signal?: AbortSignal) => {
+  const response = await fetch('/api/me', { signal, credentials: 'include' });
   if (!response.ok) {
     return { ok: false as const, status: response.status };
   }
@@ -16,5 +16,6 @@ export const fetchMe = async () => {
 };
 
 export const logout = async () => {
-  await fetch('/api/logout', { method: 'POST', headers: { 'X-Requested-With': 'camOS' }, credentials: 'include' });
+  const response = await fetch('/api/logout', { method: 'POST', headers: { 'X-Requested-With': 'camOS' }, credentials: 'include' });
+  if (response.status !== 204) throw new Error('Unable to log out. Please try again.');
 };

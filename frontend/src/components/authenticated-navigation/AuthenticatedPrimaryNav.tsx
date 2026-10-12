@@ -47,6 +47,7 @@ type Props = {
   onShowSettings: () => void;
   onDestination: (path: string) => void;
   onLogout: () => void;
+  logoutFailed?: boolean;
 };
 
 export default function AuthenticatedPrimaryNav({
@@ -60,6 +61,7 @@ export default function AuthenticatedPrimaryNav({
   onShowSettings,
   onDestination,
   onLogout,
+  logoutFailed = false,
 }: Props) {
   const { pending, openCreate, openRequest } = useOrganisationAccess();
   const stageOrganisationId = stage.kind === "organisation-scopes" || stage.kind === "scope-modules"
@@ -124,7 +126,8 @@ export default function AuthenticatedPrimaryNav({
           onClick={onShowSettings}
         />
         <PrimaryRow
-          label="Logout"
+          label={logoutFailed ? "Retry logout" : "Logout"}
+          title={logoutFailed ? "Unable to log out. Please try again." : undefined}
           icon={<NavIcon icon={LogOut} />}
           onPointerEnter={clearSecondary}
           onClick={onLogout}

@@ -60,6 +60,13 @@ function bars(
   h: number,
   options: { percentage?: boolean; rotateLabels?: boolean } = {},
 ) {
+  if (!values.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text('Unavailable', x + w / 2, y + h / 2, { align: 'center' });
+    return;
+  }
   const presentation = chartPresentation(data, values, options.percentage);
   const peak = options.percentage ? 100 : Math.max(...values, 1);
   const axisWidth = 12;
@@ -164,7 +171,7 @@ export function renderReportPdf(
   const title =
     data.reportType === "site-activity" ? "Site Activity" : "Visitor Profile";
   let y = header(doc, identity, title, generationTime, data.subtitle);
-  const number = (n: number) => n.toLocaleString("en-GB");
+  const number = (n: number | null | undefined) => n == null ? "—" : n.toLocaleString("en-GB");
   if (data.reportType === "site-activity") {
     const m = data.metrics;
     const tiles: [
@@ -257,8 +264,8 @@ export function renderReportPdf(
         label,
         number(m.entrancesSeries[i] ?? 0),
         number(m.exitsSeries[i] ?? 0),
-        number(m.occupancySeries[i] ?? 0),
-        number(m.dwellSeries[i] ?? 0),
+        number(m.occupancySeries[i]),
+        number(m.dwellSeries[i]),
       ].forEach((v, c) => doc.text(String(v), 23 + c * 34, y + 4));
       y += 7;
     });

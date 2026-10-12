@@ -37,7 +37,7 @@ class ProviderAuthTests(unittest.TestCase):
         self.assertIsNone(decision.user.password_hash); self.assertIsNone(decision.user.phone_number)
         changed=ProviderIdentity('google',self.google.issuer,self.google.subject,'changed@example.com','Changed Name',False)
         known=self.auth.resolve(changed,'login').user
-        self.assertEqual(known.id,decision.user.id); self.assertEqual(known.email,'person@example.com'); self.assertEqual(known.username,'John Smith')
+        self.assertEqual(known.id,decision.user.id); self.assertEqual(known.email,'person@example.com'); self.assertEqual(known.username,'JohnSmith')
 
     def test_unknown_login_never_creates(self):
         for identity in (self.google,self.microsoft): self.assertEqual(self.auth.resolve(identity,'login').kind,'signup-required')
@@ -169,7 +169,7 @@ class ProviderAuthTests(unittest.TestCase):
         self.assertEqual(self.database.execute('SELECT count(*) FROM user_auth_identities')[0][0],1)
 
     def test_first_party_and_google_creation_race(self):
-        handle,delivery=self.lifecycle.start(0,self.google.email,username='John Smith',password='new-password')
+        handle,delivery=self.lifecycle.start(0,self.google.email,username='JohnSmith',password='new-password')
         def attempt(action):
             try: return action()
             except (LifecycleError,ProviderError): return None

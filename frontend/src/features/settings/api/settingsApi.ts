@@ -91,9 +91,10 @@ export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUn
   return { ok: true, data };
 };
 
-export const updateMe = async (payload: UpdateMePayload): Promise<AuthUser> => {
+export const updateMe = async (payload: UpdateMePayload, signal?: AbortSignal): Promise<AuthUser> => {
   const response = await fetch("/api/me", {
     method: "PUT",
+    signal,
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify(payload),

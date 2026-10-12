@@ -269,8 +269,11 @@ All Time, mapped to the stored today/yesterday/week/month/quarter/year/all_time
 rollups. Site Activity and Visitor Profile retain their separate calculations.
 
 Totals sum the selected series; occupancy/dwell statistics and rounding remain
-owned by `ReportsEngine.ts`. No new averaging, rebucketing or time-zone rule is
-introduced. Demographic percentages, period comparisons, charts, table ordering,
+owned by `ReportsEngine.ts`. The shared UTC bucket mapping drives Dashboard and
+Reports; Today uses the
+elapsed prefix from UTC midnight, including partial arrays and excluding future
+tails. Only actual occupancy buckets enter statistics. Rolling dwell can describe
+Today, but has no month/year history: historical dwell is explicitly unavailable. Demographic percentages, period comparisons, charts, table ordering,
 PDF text/layout/filename and download behavior are stable. An unchanged parent
 render reuses its current report calculation without freezing advancing clocks.
 

@@ -1,3 +1,5 @@
+import { demoReturnPath } from "../features/organisation-dashboard/demoReturnPath";
+import { optionalSessionStorage } from "../common/optionalStorage";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
@@ -112,21 +114,10 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
   const resolveReturnPath = () => {
     const params = new URLSearchParams(location.search);
     const fromQuery = params.get("returnTo");
-    const fromStorage = sessionStorage.getItem("demo:returnTo");
+    const fromStorage = optionalSessionStorage.getItem("demo:returnTo");
     const candidate = fromQuery ?? fromStorage ?? "/";
 
-    let decoded = candidate;
-    try {
-      decoded = decodeURIComponent(candidate);
-    } catch {
-      decoded = candidate;
-    }
-
-    if (!decoded.startsWith("/")) {
-      return "/";
-    }
-
-    return decoded;
+    return demoReturnPath(candidate);
   };
 
   const startClose = () => {
@@ -138,7 +129,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     setIsClosing(true);
     setIsVisible(false);
     clearDemoSessionLocal();
-    sessionStorage.removeItem("demo:returnTo");
+    optionalSessionStorage.removeItem("demo:returnTo");
     navigate(targetPath, { replace: true, state: { fromDemo: true } });
     closeTimeoutRef.current = window.setTimeout(finishClose, 240);
   };

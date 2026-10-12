@@ -201,6 +201,9 @@ def password_reset_set_password(payload: PasswordResetSetPasswordRequest, reques
 def settings_unlock_start(payload: SettingsUnlockStartRequest, request: Request, response: Response,
                           user=Depends(get_canonical_user)):
     def start(lifecycle):
+        if user.password_hash is not None and not request.app.state.auth_repository.password_attempt_allowed(
+                str(user.id), namespace='settings-unlock'):
+            raise LifecycleError(429, 'Too many requests. Please try again later.')
         if user.password_hash is not None and (payload.current_password is None or
                 not passwords.verify_password(payload.current_password, user.password_hash)):
             raise LifecycleError(401, 'Incorrect password')

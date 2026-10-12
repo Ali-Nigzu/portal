@@ -5,8 +5,8 @@ const responseError = async (response: Response, fallback: string) => {
   return new Error(typeof body?.detail === "string" ? body.detail : fallback);
 };
 
-export const listDocuments = async (): Promise<DocumentItem[]> => {
-  const response = await fetch("/api/documents", { credentials: "include", cache: "no-store" });
+export const listDocuments = async (signal?: AbortSignal): Promise<DocumentItem[]> => {
+  const response = await fetch("/api/documents", { signal, credentials: "include", cache: "no-store" });
   if (!response.ok) {
     throw await responseError(response, "Unable to load documents. Please try again.");
   }

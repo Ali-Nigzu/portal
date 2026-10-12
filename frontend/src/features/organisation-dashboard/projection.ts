@@ -1,9 +1,8 @@
 import { type Period, type SelectedSnapshot, type Rollup } from "./types";
+import { rollingBucketTimes, periodBucketTimes } from "./snapshotTime";
 
 import { type ChartSeries, type ChartResult, SITE_FLOW_ACTIVITY_COLORS } from "../../analytics/schemas/charting";
 
-const QUARTER_HOUR = 900000;
-const DAY = 86400000;
 export const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
@@ -15,10 +14,7 @@ export const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
 ];
 
 function rollingTimestamps(ts: string) {
-  const end = Math.floor(Date.parse(ts) / QUARTER_HOUR) * QUARTER_HOUR;
-  return Array.from({ length: 96 }, (_, i) =>
-    new Date(end - (95 - i) * QUARTER_HOUR).toISOString(),
-  );
+  return rollingBucketTimes(ts).map(value => new Date(value).toISOString());
 }
 
 function periodTimestamps(
@@ -26,35 +22,7 @@ function periodTimestamps(
   ts: string,
   length: number,
 ): string[] {
-  const date = new Date(ts);
-  const year = date.getUTCFullYear();
-  const midnight = Date.UTC(year, date.getUTCMonth(), date.getUTCDate());
-  const monday = midnight - ((date.getUTCDay() + 6) % 7) * DAY;
-  return Array.from({ length }, (_, i) => {
-    let value: number;
-    switch (period) {
-      case "today":
-        value = midnight + i * 3600000;
-        break;
-      case "yesterday":
-        value = midnight - DAY + i * 3600000;
-        break;
-      case "week":
-        value = monday + i * DAY;
-        break;
-      case "month":
-      case "quarter":
-        value = monday - (length - 1 - i) * 7 * DAY;
-        break;
-      case "year":
-        value = Date.UTC(year, i, 1);
-        break;
-      case "all_time":
-        value = Date.UTC(year - length + 1 + i, 0, 1);
-        break;
-    }
-    return new Date(value).toISOString();
-  });
+  return periodBucketTimes(period, ts, length).map(value => new Date(value).toISOString());
 }
 
 export function formatSnapshotTick(period: string, value: string): string {

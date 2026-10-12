@@ -2,7 +2,7 @@
 # --------------------------------------------
 # Stage 1: Build React frontend
 # --------------------------------------------
-FROM node:20-alpine AS react-build
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS react-build
 
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
@@ -16,7 +16,7 @@ RUN npm run build
 # --------------------------------------------
 # Stage 2: Python backend with frontend build
 # --------------------------------------------
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:e88e9763f943ec1834f992a4b51e0f24500486803e8bc534e5767af9ea65f6ce
 
 # Environment setup
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -44,4 +44,4 @@ COPY --from=react-build /app/frontend/build ./backend/frontend_build
 EXPOSE 8080
 
 # Start the backend server
-CMD ["sh", "-c", "uvicorn backend.fastapi_app:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["sh", "-c", "exec uvicorn backend.fastapi_app:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --limit-concurrency 64 --timeout-graceful-shutdown 9"]

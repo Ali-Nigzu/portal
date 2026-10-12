@@ -61,6 +61,7 @@ const CreateAccountPage: React.FC = () => {
                   id="create-username"
                   className="vrm-input"
                   autoComplete="nickname"
+                  maxLength={30}
                   value={form.username}
                   onChange={(e) => form.setUsername(e.target.value)}
                   onBlur={() => form.markTouched('username')}

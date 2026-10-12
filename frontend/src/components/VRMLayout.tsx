@@ -1,3 +1,4 @@
+import { optionalLocalStorage } from "../common/optionalStorage";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { dashboardSearch } from "../features/organisation-dashboard/selection";
 
@@ -103,7 +104,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (typeof window === "undefined") {
       return true;
     }
-    const stored = window.localStorage.getItem("vrm_keep_menu_expanded");
+    const stored = optionalLocalStorage.getItem("vrm_keep_menu_expanded");
     if (stored === null) {
       return false;
     }
@@ -356,7 +357,7 @@ const VRMLayout: React.FC<VRMLayoutProps> = ({
     if (typeof window === "undefined") {
       return;
     }
-    window.localStorage.setItem(
+    optionalLocalStorage.setItem(
       "vrm_keep_menu_expanded",
       String(keepMenuExpanded),
     );

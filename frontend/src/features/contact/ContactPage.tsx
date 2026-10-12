@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { contactAttachmentBytes, CONTACT_ATTACHMENT_ENVELOPE_BYTES, CONTACT_ENVELOPE_MESSAGE } from "./contactLimits";
 
 import {
   classifyOptionalPhoneInput,
@@ -92,6 +93,8 @@ const ContactPage: React.FC = () => {
       nextErrors.attachments = `Upload up to ${MAX_ATTACHMENTS} files only.`;
     } else if (attachments.some((file) => file.size > MAX_FILE_BYTES)) {
       nextErrors.attachments = "Each file must be 10MB or smaller.";
+    } else if (contactAttachmentBytes(attachments) > CONTACT_ATTACHMENT_ENVELOPE_BYTES) {
+      nextErrors.attachments = CONTACT_ENVELOPE_MESSAGE;
     }
 
     return nextErrors;
@@ -118,7 +121,7 @@ const ContactPage: React.FC = () => {
       return;
     }
 
-    setErrors((prev) => ({ ...prev, attachments: undefined }));
+    setErrors((prev) => ({ ...prev, attachments: contactAttachmentBytes(selected) > CONTACT_ATTACHMENT_ENVELOPE_BYTES ? CONTACT_ENVELOPE_MESSAGE : undefined }));
   };
 
   const closeConfirmation = () => {

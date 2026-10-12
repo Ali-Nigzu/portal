@@ -7,6 +7,7 @@ type EditableFieldRowProps = {
   displayValue: string;
   value: string;
   type?: "text" | "email" | "tel" | "password";
+  maxLength?: number;
   isEditing: boolean;
   isSaving: boolean;
   error?: string | null;
@@ -21,6 +22,7 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
   displayValue,
   value,
   type = "text",
+  maxLength = 120,
   isEditing,
   isSaving,
   error,
@@ -62,7 +64,7 @@ const EditableFieldRow: React.FC<EditableFieldRowProps> = ({
         ) : (
           <input
             id={inputId}
-            maxLength={120}
+            maxLength={maxLength}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? `${inputId}-error` : undefined}
             className="settings-input"

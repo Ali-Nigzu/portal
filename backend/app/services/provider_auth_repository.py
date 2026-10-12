@@ -3,8 +3,7 @@
 import json
 from contextlib import closing
 
-from .canonical_auth import CanonicalAuthRepository
-from .user_lifecycle_repository import USER_COLUMNS
+from .canonical_auth import CanonicalAuthRepository, ReservedCustomerId, USER_COLUMNS
 from .provider_oidc import ProviderError, PROVIDERS
 
 
@@ -18,6 +17,8 @@ class ProviderAuthRepository:
                 return operation(cursor)
         except ProviderError:
             raise
+        except ReservedCustomerId:
+            raise ProviderError('provider-conflict', 409) from None
         except Exception as error:
             detail = error.args[0] if error.args else None
             if isinstance(detail, dict) and detail.get('C') == '23505':
@@ -60,9 +61,7 @@ class ProviderAuthRepository:
 
     @staticmethod
     def create(cursor, email, username, identity):
-        cursor.execute('INSERT INTO public.users(email,username,phone_number,password_hash,status,created_at) '
-            f'VALUES(%s,%s,NULL,NULL,1,CURRENT_TIMESTAMP) RETURNING {USER_COLUMNS}', (email, username))
-        user = CanonicalAuthRepository._user(cursor.fetchone())
+        user = CanonicalAuthRepository.create_customer(cursor, email, username)
         ProviderAuthRepository.insert(cursor, user.id, identity)
         return user
 

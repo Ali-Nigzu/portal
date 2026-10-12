@@ -22,6 +22,14 @@ export default function OrganisationDashboardPage({
 }: {
   hideHeader?: boolean;
 }) {
+  return <ErrorBoundary name="organisation-dashboard"><DashboardContent hideHeader={hideHeader} /></ErrorBoundary>;
+}
+
+function DashboardContent({
+  hideHeader = false,
+}: {
+  hideHeader?: boolean;
+}) {
   const { context, selection, snapshot, error, retry } =
     useDashboardSnapshot();
   const [period, setPeriod] = useState<Period>("today");

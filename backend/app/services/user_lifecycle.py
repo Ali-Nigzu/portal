@@ -12,6 +12,7 @@ from . import passwords, postmark_email
 from .user_lifecycle_repository import LifecycleError, USER_COLUMNS
 from .canonical_auth import CanonicalAuthRepository
 from .provider_auth_repository import ProviderAuthRepository
+from .user_policy import InvalidUsername, username_value as validate_username, seed_username
 
 CODE_TTL = 900
 CHALLENGE_TTL = 3600
@@ -42,10 +43,10 @@ def normalized_email(value):
 
 
 def username_value(value):
-    value = value.strip()
-    if not value or len(value) > 120 or any(ord(character) < 32 for character in value):
-        raise LifecycleError(422, 'Username must contain between 1 and 120 characters')
-    return value
+    try:
+        return validate_username(value)
+    except InvalidUsername as error:
+        raise LifecycleError(422, str(error)) from None
 
 
 def phone_value(value):
@@ -88,11 +89,22 @@ class UserLifecycle:
         if purpose == SIGNUP:
             payload = dict(email=identity, username=username_value(username),
                            phone=None if provider_identity else phone_value(phone),
-                           password_hash=None if provider_identity else passwords.hash_password(password_value(password)))
+                           password_hash=None)
             if provider_identity:
                 if provider_identity['provider'] != 1:
                     raise ValueError('Only Microsoft signup requires camOS verification')
                 payload['provider_identity'] = provider_identity
+            else:
+                password = password_value(password)
+            # Reserve the shared budget before expensive work, then release its
+            # short transaction before Argon2. Never hold a SQL connection while
+            # waiting for hash capacity during signup.
+            allowed = self.repository.transact(lambda cursor: self.repository.consume_start_budget(
+                cursor, purpose, identity, self.clock()))
+            if not allowed:
+                raise LifecycleError(429, 'Too many requests. Please try again later.')
+            if not provider_identity:
+                payload['password_hash'] = passwords.hash_password(password)
         handle = secrets.token_urlsafe(32)
         challenge_id = digest(handle)
         code = f'{secrets.randbelow(1_000_000):06d}'
@@ -122,6 +134,10 @@ class UserLifecycle:
                         or target.session_version != user.session_version or target.password_hash != user.password_hash):
                     return LifecycleError(401, 'Unauthenticated')
             now = self.clock()
+            if purpose != SIGNUP and not self.repository.consume_start_budget(cursor, purpose, identity, now):
+                # Recovery eligibility remains generic even when its delivery
+                # budget is exhausted; no fresh credential is issued.
+                return None if purpose == RESET else LifecycleError(429, 'Too many requests. Please try again later.')
             self.repository.insert_challenge(cursor, dict(
                 id=challenge_id, purpose=purpose, user_id=target.id if target else None,
                 payload=payload, code_hash=code_hash,
@@ -242,15 +258,11 @@ class UserLifecycle:
                 conflict = self.repository.reserve_email(cursor, details['email'])
                 if conflict:
                     return conflict
-                cursor.execute(
-                    'INSERT INTO public.users(email,username,phone_number,password_hash,status,created_at) '
-                    f'VALUES(%s,%s,%s,%s,1,CURRENT_TIMESTAMP) RETURNING {USER_COLUMNS}',
-                    (details['email'], details['username'], details['phone'], details['password_hash']),
-                )
-                account = CanonicalAuthRepository._user(cursor.fetchone())
+                username = (seed_username(details['username'], details['email'])
+                            if details.get('provider_identity') else username_value(details['username']))
+                account = CanonicalAuthRepository.create_customer(
+                    cursor, details['email'], username, details['phone'], details['password_hash'])
                 if details.get('provider_identity'):
-                    if account.id == 999999:
-                        raise LifecycleError(409, 'Please restart provider sign-in.')
                     # A conflict raises inside the same transaction, rolling back
                     # the user insert and preserving no orphan account.
                     ProviderAuthRepository.insert(cursor, account.id, details['provider_identity'])
@@ -272,12 +284,19 @@ class UserLifecycle:
     def reset_password(self, handle, password, confirmation):
         password = password_value(password, confirmation)
 
+        def preflight(cursor):
+            record, target = self.locked_challenge(cursor, handle, RESET)
+            if not self.verified(record, RESET):
+                return LifecycleError(401, 'This password reset is unavailable or has expired.')
+            return target
+        expected = self.repository.transact(preflight)
+        password_hash = passwords.hash_password(password)
+
         def operation(cursor):
             record, target = self.locked_challenge(cursor, handle, RESET)
             if not self.verified(record, RESET):
                 return LifecycleError(401, 'This password reset is unavailable or has expired.')
-            password_hash = passwords.hash_password(password)
-            if not self.verified(record, RESET):
+            if target.session_version != expected.session_version or target.password_hash != expected.password_hash:
                 return LifecycleError(401, 'This password reset is unavailable or has expired.')
             cursor.execute('UPDATE public.users SET password_hash=%s, session_version=session_version+1 '
                            'WHERE id=%s', (password_hash, target.id))
@@ -291,7 +310,7 @@ class UserLifecycle:
         if 'name' in fields:
             if fields['name'] is None:
                 raise LifecycleError(422, 'Username is required')
-            changes['username'] = username_value(fields['name'])
+            changes['username'] = fields['name']
         if 'phone' in fields:
             changes['phone_number'] = phone_value(fields['phone'])
         new_password = None
@@ -303,6 +322,16 @@ class UserLifecycle:
             raise LifecycleError(422, 'Password and confirm password are required')
         if not changes and new_password is None:
             raise LifecycleError(422, 'No account changes supplied')
+        new_hash = None
+        expected = None
+        if new_password is not None:
+            def preflight(cursor):
+                record, target = self.locked_challenge(cursor, handle, UNLOCK, user)
+                if not self.verified(record, UNLOCK):
+                    return LifecycleError(401, 'Unlock expired. Please unlock again.')
+                return target
+            expected = self.repository.transact(preflight)
+            new_hash = passwords.hash_password(new_password)
 
         def operation(cursor):
             # Profile names have no uniqueness or authentication authority.
@@ -310,8 +339,12 @@ class UserLifecycle:
             if not self.verified(record, UNLOCK):
                 return LifecycleError(401, 'Unlock expired. Please unlock again.')
             updates = dict(changes)
+            if 'username' in updates and updates['username'] != target.username:
+                updates['username'] = username_value(updates['username'])
             if new_password is not None:
-                updates['password_hash'] = passwords.hash_password(new_password)
+                if target.password_hash != expected.password_hash or target.session_version != expected.session_version:
+                    return LifecycleError(401, 'Unlock expired. Please unlock again.')
+                updates['password_hash'] = new_hash
             if not self.verified(record, UNLOCK):
                 return LifecycleError(401, 'Unlock expired. Please unlock again.')
             assignments = ','.join(column + '=%s' for column in updates)

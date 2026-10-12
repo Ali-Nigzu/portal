@@ -7,3 +7,8 @@ frontend/build
 backend/frontend_build
 
 .venv
+.env
+.env.*
+**/.env
+**/.env.*
+backend/data

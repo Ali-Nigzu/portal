@@ -98,6 +98,8 @@ async def login(request: Request, response: Response):
     from starlette.concurrency import run_in_threadpool
 
     def authenticate():
+        if not request.app.state.auth_repository.password_attempt_allowed(value['username'], namespace='admin'):
+            raise HTTPException(429, 'Too many sign-in attempts. Please try again later.')
         user = request.app.state.auth_repository.find_username(
             value["username"].strip()
         )

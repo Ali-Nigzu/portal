@@ -6,6 +6,8 @@ from datetime import timezone
 from decimal import Decimal
 import json
 from .admin_registry import TABLES, AdminError, table, values
+from .canonical_auth import ADMIN_ID, require_customer_id, ReservedCustomerId
+from .user_policy import username_value, InvalidUsername
 
 
 def select_columns(t):
@@ -156,6 +158,17 @@ class AdminRepository:
         k = values(t, key, key=True) if key is not None else None
         try:
             with self.database.transaction() as con, closing(con.cursor()) as cur:
+                if name == 'users' and 'username' in checked and (k is None or int(k['id']) != ADMIN_ID):
+                    previous = None
+                    if k is not None:
+                        cur.execute('SELECT username FROM public.users WHERE id=%s FOR UPDATE', (k['id'],))
+                        existing = cur.fetchone()
+                        previous = existing[0] if existing else None
+                    if checked['username'] != previous:
+                        try:
+                            checked['username'] = username_value(checked['username'])
+                        except InvalidUsername as error:
+                            raise AdminError(422, str(error)) from None
                 if name in ("memberships", "organisations"):
                     oid = (
                         checked.get("organisation_id")
@@ -179,10 +192,11 @@ class AdminRepository:
                     params = list(checked.values()) + list(k.values())
                 cur.execute(sql + " RETURNING " + select_columns(t), tuple(params))
                 result = row(t, cur.fetchone())
-                if name == "users" and k is None and result["id"] == "999999":
-                    raise AdminError(
-                        409, "Reserved Admin ID cannot be allocated by Create User"
-                    )
+                if name == 'users' and k is None:
+                    try:
+                        require_customer_id(result['id'])
+                    except ReservedCustomerId as error:
+                        raise AdminError(409, str(error)) from None
                 return result
         except Exception as error:
             mapped = translate(error)

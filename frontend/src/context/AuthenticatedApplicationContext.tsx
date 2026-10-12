@@ -6,7 +6,8 @@ type AuthenticatedApplicationInput = {
   user: AuthUser;
   organisations: AuthenticatedOrganisation[];
   refreshOrganisations: () => Promise<void>;
-  refreshAccount?: () => Promise<void>;
+  refreshAccount?: (account?: AuthUser) => Promise<void>;
+  accountSignal?: AbortSignal;
   favouritesCatalogueReady?: boolean;
 };
 
@@ -24,6 +25,7 @@ export function AuthenticatedApplicationProvider({
   refreshOrganisations,
   favouritesCatalogueReady = true,
   refreshAccount,
+  accountSignal,
   children,
 }: AuthenticatedApplicationInput & { children: ReactNode }) {
   const [favourites, setFavourites] = useState(() => ({
@@ -140,6 +142,7 @@ export function AuthenticatedApplicationProvider({
       user,
       organisations,
       refreshAccount,
+      accountSignal,
       refreshOrganisations,
       favouritesCatalogueReady,
       isScopeFavourite,
@@ -151,6 +154,7 @@ export function AuthenticatedApplicationProvider({
       user,
       organisations,
       refreshAccount,
+      accountSignal,
       refreshOrganisations,
       favouritesCatalogueReady,
       isScopeFavourite,

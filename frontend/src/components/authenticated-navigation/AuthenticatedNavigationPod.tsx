@@ -1,4 +1,4 @@
-import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useState, useRef } from "react";
 import type { AuthenticatedOrganisation } from "../../features/organisation-dashboard/api";
 import { type ReturnTypeOfAuthenticatedNavigation, type AuthenticatedRouteContext } from "./useAuthenticatedNavigation";
 
@@ -88,6 +88,8 @@ export default function AuthenticatedNavigationPod({
   const stageOrganisation = navigation.stageOrganisation;
   const activePrimary = routeContext.area;
   const [primaryHoverEnabled, setPrimaryHoverEnabled] = useState(false);
+  const [logoutFailed, setLogoutFailed] = useState(false);
+  const loggingOut = useRef(false);
 
   useEffect(() => {
     if (!open || !hoverCapable) {
@@ -101,8 +103,13 @@ export default function AuthenticatedNavigationPod({
   }, [hoverCapable, open]);
 
   const handleLogout = async () => {
+    if (loggingOut.current) return;
+    loggingOut.current = true;
+    setLogoutFailed(false);
     navigation.close();
-    await onLogout();
+    try { await onLogout(); }
+    catch { setLogoutFailed(true); navigation.showPrimary(); }
+    finally { loggingOut.current = false; }
   };
 
   const handleTriggerClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -137,6 +144,7 @@ export default function AuthenticatedNavigationPod({
         onShowSettings={navigation.showSettings}
         onDestination={navigation.selectDestination}
         onLogout={handleLogout}
+        logoutFailed={logoutFailed}
       />
     </nav>
   );
