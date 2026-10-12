@@ -1,0 +1,58 @@
+name: Production quality
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: camos_test
+          POSTGRES_PASSWORD: camos_test
+          POSTGRES_DB: camos_auth_test
+        ports: ['55439:5432']
+        options: >-
+          --health-cmd "pg_isready -U camos_test -d camos_auth_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CAMOS_TEST_POSTGRES_PORT: '55439'
+      GOOGLE_APPLICATION_CREDENTIALS: /nonexistent/test-credentials.json
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/tests/requirements.txt
+      - run: pip check
+      - run: python -m unittest discover -s backend/tests -v
+      - run: docker build -t camos-quality .
+      - name: Verify production image configuration
+        run: |
+          docker run --rm -e GOOGLE_APPLICATION_CREDENTIALS camos-quality python -m unittest backend.tests.test_runtime_configuration -v
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser

@@ -128,6 +128,20 @@ Dashboard read-time validation does not introduce freshness limits, capacity
 caps or a fixed all-time array length. Reports retains its separate validation
 and missing/invalid snapshot behavior.
 
+Snapshot ordering is defined once in `snapshotTime.ts`: rolling 96 quarter-hours
+ending at the floored UTC snapshot time; Today/Yesterday start at UTC midnight;
+Week starts Monday; Month/Quarter contain trailing Monday week starts; Year
+starts January; All Time ends in the snapshot year. Reports uses those same
+anchors, with Today limited to elapsed/available hourly buckets. Browser timezone
+and DST do not change selected values. Snapshot production is external: confirm
+these existing Dashboard calendar anchors with its owner before release.
+
+**External data-contract release item:** no snapshot producer or historical dwell
+rollup exists in this repository. `dwell_time_96` cannot supply month/year dwell.
+Historical Reports therefore display unavailable dwell, preserving their existing
+controls/layout. Supply and agree an authoritative producer contract before
+claiming historical dwell coverage; do not derive it from the latest 24 hours.
+
 ## BigQuery Events
 
 Canonical Event readers use `camosbase.camos_prod.events`. Required projection
@@ -217,3 +231,25 @@ Scalar projections use the canonical 96 buckets and snapshot time. The fixed 68%
 Capacity decoration is independent of snapshot capacity. No scalar fixture value
 is retained or manufactured. All six cards use the same canonical Org 1 response;
 Landing reads Site names and traffic shares from that response.
+
+## Prospective customer names and resource budgets
+
+New/changed customer usernames are 3–15 Unicode code points, contain no Unicode
+White_Space, retain case/numbers/punctuation/Unicode, and remain non-unique.
+Manual values are validated as entered, without trimming. Existing stored names
+remain readable and usable for login/invitations/unrelated edits; only a changed
+name invokes the new rule. Admin customer create/edit uses the same policy.
+Provider creation removes whitespace/disallowed controls, truncates to 15 code
+points, then falls back to the processed email local-part or `user`. Existing
+linked accounts retain their names. Microsoft pending challenges are reseeded;
+invalid old first-party proposed names fail through the existing validation path.
+Ambiguous invitations still return only "Please use the user's email address."
+Canonical customer insertion checks reserved ID 999999 before commit, rolling
+back both user and any provider mapping; the legitimate existing Admin is separate.
+
+The existing lifecycle table also stores non-credential `budget:` rows. These
+hold only an account/purpose digest and attempt count/expiry, cannot match the
+SHA-256 lookup of browser credential handles, and are removed by bounded
+opportunistic cleanup (including login-only traffic). No new schema/index is
+required. Public password budgets include unknown identifiers; exhausted reset
+starts retain the generic response and issue no new mail/challenge.
