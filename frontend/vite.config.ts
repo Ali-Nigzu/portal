@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "/",
+  esbuild: { tsconfigRaw: { compilerOptions: { useDefineForClassFields: true } } },
   build: {
     outDir: "build",
     assetsDir: "static",

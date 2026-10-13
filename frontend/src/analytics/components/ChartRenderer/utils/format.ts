@@ -98,5 +98,3 @@ export const formatDemoTimestamp = (value: Date): string =>
 
 export const startOfDemoDay = (value: Date): Date =>
   new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0);
-
-export const getDemoHour = (value: Date): number => value.getHours();
