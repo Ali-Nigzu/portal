@@ -35,6 +35,16 @@ class OrganisationMembershipRepository:
             )
             return cursor.fetchone() is not None
 
+    def verified_account(self, connection, expected):
+        with cursor_for(connection) as cursor:
+            # Block credential/status/version writers until disablement commits.
+            cursor.execute(
+                "SELECT status, session_version, password_hash FROM public.users WHERE id=%s FOR SHARE",
+                (expected.id,),
+            )
+            row = cursor.fetchone()
+            return row is not None and row[0] == 1 and row[1] == expected.session_version and row[2] == expected.password_hash
+
     def organisation(self, connection, organisation_id):
         with cursor_for(connection) as cursor:
             cursor.execute(

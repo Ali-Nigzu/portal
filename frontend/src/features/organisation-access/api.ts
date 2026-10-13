@@ -137,4 +137,4 @@ export const errorMessage = (error: unknown) =>
     ? error.message
     : "Unable to complete this request. Please try again.";
 
-export const disableOrganisation = (id: string) => request<{ organisation_id: string; enabled: false }>(`${org(id)}/disable`, {});
+export const disableOrganisation = (id: string, current_password: string, signal?: AbortSignal) => request<{ organisation_id: string; enabled: false }>(`${org(id)}/disable`, { current_password }, signal);

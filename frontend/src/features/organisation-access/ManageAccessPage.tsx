@@ -1,6 +1,6 @@
 import { type ManagedRelationship, getManageAccess, disableOrganisation, inviteMember, manageMembership, errorMessage, type ManageAccess } from "./api";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
 import { useOrganisationAccess } from "./OrganisationAccessContext";
@@ -18,7 +18,7 @@ import SettingsFrame, { SettingsPageHeader } from "../../components/SettingsFram
 import "../settings/SettingsPages.css";
 
 export default function ManageAccessPage() {
-  const { organisations, user, favouritesCatalogueReady } =
+  const { organisations, user, accountSignal, favouritesCatalogueReady } =
     useAuthenticatedApplication();
   const { refreshAccess, openCreate, openRequest } = useOrganisationAccess();
   const personal = usePersonalAccess();
@@ -45,6 +45,18 @@ export default function ManageAccessPage() {
     action: "disable" | "withdraw";
   } | null>(null);
   const [deleteOrganisation, setDeleteOrganisation] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const deleteController = useRef<AbortController | null>(null);
+  const closeDelete = () => {
+    if (deleteController.current) { deleteController.current.abort(); deleteController.current = null; setBusy(false); }
+    setDeletePassword(""); setDeleteOrganisation(false); setDeleteError(null);
+  };
+  useEffect(() => {
+    const cancel = () => closeDelete();
+    accountSignal?.addEventListener("abort", cancel, { once: true });
+    return () => { accountSignal?.removeEventListener("abort", cancel); deleteController.current?.abort(); };
+  }, [accountSignal]);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null),
     [copied, setCopied] = useState(false);
@@ -58,8 +70,7 @@ export default function ManageAccessPage() {
     setCopied(false);
     setInvite(false);
     setConfirmation(null);
-    setDeleteOrganisation(false);
-    setDeleteError(null);
+    closeDelete();
     if (!id || !eligible) {
       setLoading(false);
       return;
@@ -246,6 +257,7 @@ export default function ManageAccessPage() {
           </button>
         </div>
       )}
+      {deleteMessage && <p role="status" className="settings-form-message">{deleteMessage}</p>}
       {message && (
         <p role="status" className="settings-form-message">
           {message}
@@ -386,28 +398,42 @@ export default function ManageAccessPage() {
       </div>
       {data?.can_manage && (
         <section className="access-organisation-danger" aria-label="Delete Organisation">
-          <p>Disable customer access to this organisation while keeping its data.</p>
-          <button className="vrm-btn access-danger-button" disabled={busy} onClick={() => { setDeleteError(null); setDeleteOrganisation(true); }}>Delete Organisation</button>
+          <p>Delete access to this organisation.</p>
+          <button className="vrm-btn access-danger-button" disabled={busy} onClick={() => { setDeleteError(null); setDeletePassword(""); setDeleteMessage(null); setDeleteOrganisation(true); }}>Delete Organisation</button>
         </section>
       )}
       {deleteOrganisation && data?.can_manage && id && (
-        <AccessDialog title="Delete Organisation" description={`Delete ${data.organisation.name}? Customer access will stop. Sites, devices and all other data remain. Internal camOS Admin can re-enable it.`} busy={busy} onClose={() => setDeleteOrganisation(false)}>
+        <AccessDialog title="Delete organisation" description={<>Deleting your organisation will immediately disable access. This action will become irreversible after 7 days. If you change your mind, please <Link to="/contact">contact us</Link> within this period.</>} busy={busy} onClose={closeDelete}>
+          {!user.has_password ? <p>Set a camOS account password in <Link to="/settings/account">Settings → My Account</Link> before deleting an organisation.</p> :
+            <label className="settings-field-label">Current account password
+              <input className="settings-input" required data-autofocus type="password" autoComplete="current-password" maxLength={1024}
+                value={deletePassword} disabled={busy} onChange={event => setDeletePassword(event.target.value)} />
+            </label>}
           {deleteError && <p role="alert" className="settings-form-error">{deleteError}</p>}
           <div className="settings-form-actions">
-            <button data-autofocus className="vrm-btn vrm-btn-secondary" disabled={busy} onClick={() => setDeleteOrganisation(false)}>Cancel</button>
-            <button className="vrm-btn access-danger-button" disabled={busy} onClick={async () => {
-              if (busy) return;
+            <button className="vrm-btn vrm-btn-secondary" onClick={() => {
+              if (deleteController.current) setDeleteMessage("Request cancelled. Refresh access to confirm its outcome.");
+              closeDelete();
+            }}>Cancel</button>
+            <button className="vrm-btn access-danger-button" disabled={busy || !user.has_password || !deletePassword || accountSignal?.aborted} onClick={async () => {
+              if (busy || deleteController.current || !user.has_password || !deletePassword || accountSignal?.aborted) return;
               const deletingId = id;
+              const controller = new AbortController();
+              deleteController.current = controller;
               setBusy(true); setDeleteError(null);
               try {
-                await disableOrganisation(deletingId);
-                setDeleteOrganisation(false); setData(null);
+                await disableOrganisation(deletingId, deletePassword, controller.signal);
+                if (controller.signal.aborted || currentId.current !== deletingId) return;
+                setDeletePassword(""); setDeleteOrganisation(false); setData(null);
                 const next = new URLSearchParams(search); next.delete("organisation_id"); setSearch(next, { replace: true });
-                setMessage("Organisation deleted. Its data has been kept.");
-                try { await refreshAccess(); } catch { setError("Organisation deleted, but access refresh failed. Refresh access to update navigation."); }
-              } catch (failure) { if (currentId.current === deletingId) setDeleteError(errorMessage(failure)); }
-              finally { setBusy(false); }
-            }}>{busy ? "Deleting…" : "Delete Organisation"}</button>
+                setDeleteMessage("Organisation access disabled. Contact us within 7 days if you change your mind.");
+                try { await refreshAccess(); } catch { if (!controller.signal.aborted) setError("Organisation access disabled, but access refresh failed. Refresh access to update navigation."); }
+              } catch (failure) {
+                if (!controller.signal.aborted && currentId.current === deletingId) setDeleteError(errorMessage(failure));
+              } finally {
+                if (deleteController.current === controller) { deleteController.current = null; setBusy(false); }
+              }
+            }}>{busy ? "Disabling…" : "Delete Organisation"}</button>
           </div>
         </AccessDialog>
       )}

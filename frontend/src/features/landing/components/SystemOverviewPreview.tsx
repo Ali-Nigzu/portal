@@ -168,6 +168,15 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
   const trafficUnavailable = !trafficWidget || trafficWidget.status === "error";
 
   useLayoutEffect(() => {
+    const updateWire = (measure: (previous: WireLayout) => WireLayout) => {
+      setWire(previous => {
+        const next = measure(previous);
+        // Chart mutations can trigger identical measurements every frame.
+        // Avoid scheduling redundant urgent renders that starve navigation.
+        return JSON.stringify(previous) === JSON.stringify(next) ? previous : next;
+      });
+    };
+
     const getSurfaceRect = (dockHost: HTMLElement | null): DOMRect | null => {
       if (!dockHost) {
         return null;
@@ -297,7 +306,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
         const hasRouteDocks = !connectedTopDocks.some((dock) => !dock) && Boolean(dwellDockRef.current);
 
         if (!hasRouteDocks) {
-          setWire((prev) => ({
+          updateWire((prev) => ({
             ...prev,
             ...baseWire,
           }));
@@ -328,7 +337,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
           return toCanvasPoint(rect.left + (rect.width / 2), rect.bottom);
         });
         if (topPoints.some((point) => !point)) {
-          setWire((prev) => ({
+          updateWire((prev) => ({
             ...prev,
             ...baseWire,
           }));
@@ -337,7 +346,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
 
         const dwellRect = getSurfaceRect(dwellDockRef.current);
         if (!dwellRect) {
-          setWire((prev) => ({
+          updateWire((prev) => ({
             ...prev,
             ...baseWire,
           }));
@@ -354,7 +363,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
           ? (getDonutNorthInCanvas(leftSlotRef.current, toCanvasPoint) ?? trafficFallbackPoint)
           : trafficFallbackPoint;
         if (!trafficPoint) {
-          setWire((prev) => ({
+          updateWire((prev) => ({
             ...prev,
             ...baseWire,
           }));
@@ -369,7 +378,7 @@ const SystemOverviewLiveKpis: React.FC<{ onAccessDemo: () => void }> = ({ onAcce
           dwell: dwellPoint.x,
         };
 
-        setWire((prev) => ({
+        updateWire((prev) => ({
           ...prev,
           ...baseWire,
           busX1: Math.min(...Object.values(taps)),

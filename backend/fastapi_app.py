@@ -140,7 +140,7 @@ def configure_spa(app: FastAPI) -> None:
         index_path = os.path.join("backend/frontend_build", "index.html")
         if not os.path.exists(index_path):
             raise HTTPException(status_code=500, detail="index.html not found")
-        return FileResponse(index_path)
+        return FileResponse(index_path, headers={"Cache-Control": "no-cache"})
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
@@ -149,7 +149,7 @@ def configure_spa(app: FastAPI) -> None:
         index_path = os.path.join("backend/frontend_build", "index.html")
         if not os.path.exists(index_path):
             raise HTTPException(status_code=500, detail="index.html not found")
-        return FileResponse(index_path)
+        return FileResponse(index_path, headers={"Cache-Control": "no-cache"})
 
 
 app = create_app()

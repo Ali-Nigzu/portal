@@ -6,6 +6,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 from uuid import uuid4
 
+from fastapi.responses import JSONResponse
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
@@ -30,7 +31,12 @@ class NoStoreRoute(APIRoute):
                 error.headers = {**(error.headers or {}), "Cache-Control": "no-store"}
                 raise
             except RequestValidationError as error:
-                response = await request_validation_exception_handler(request, error)
+                if request.scope["route"].path == "/api/portal/organisations/{organisation_id}/disable":
+                    response = JSONResponse(status_code=422, content={"detail": [
+                        {key: item[key] for key in ("loc", "msg", "type")} for item in error.errors()
+                    ]})
+                else:
+                    response = await request_validation_exception_handler(request, error)
             response.headers["Cache-Control"] = "no-store"
             return response
 
@@ -42,6 +48,10 @@ router = APIRouter(prefix="/api/portal", route_class=NoStoreRoute)
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class DisableOrganisation(StrictModel):
+    current_password: StrictStr = Field(min_length=1, max_length=1024)
 
 
 class EmptyRequest(StrictModel):
@@ -408,5 +418,5 @@ def disable(
 
 
 @router.post("/organisations/{organisation_id}/disable", dependencies=mutations)
-def disable_organisation(organisation_id: str, payload: EmptyRequest, request: Request, user=Depends(get_canonical_user)):
-    return operation(request, lambda service: service.disable(user.id, organisation_id))
+def disable_organisation(organisation_id: str, payload: DisableOrganisation, request: Request, user=Depends(get_canonical_user)):
+    return operation(request, lambda service: service.disable(user, organisation_id, payload.current_password, request.app.state.auth_repository))
