@@ -1,5 +1,6 @@
 """Organisation membership rules; identity is always supplied by the session."""
 
+from . import passwords
 from datetime import datetime
 
 from .organisation_dashboard import entity_id
@@ -75,11 +76,27 @@ class OrganisationMemberships:
             )
         return membership
 
-    def disable(self, actor, value):
+    def disable(self, expected, value, password, auth_repository):
         oid = organisation_id(value)
+        actor = expected.id
+        # Check scope before spending a password attempt. No organisation/user
+        # locks are held during the expensive Argon2 operation.
+        with self.database.connection() as connection:
+            self._actor(connection, actor)
+            self._organisation(connection, oid)
+            self._member(connection, actor, oid, owner=True)
+        if expected.password_hash is None:
+            raise MembershipError(409, "password_required", "Set a camOS password in Settings → My Account before deleting an organisation.")
+        if not isinstance(password, str) or not 1 <= len(password) <= 1024:
+            raise MembershipError(422, "invalid_password", "Enter your current account password.")
+        if not auth_repository.password_attempt_allowed(str(actor), namespace="organisation-disable"):
+            raise MembershipError(429, "too_many_attempts", "Too many attempts. Please try again later.")
+        if not passwords.verify_password(password, expected.password_hash):
+            raise MembershipError(401, "incorrect_password", "Incorrect password. Please try again.")
         with self.database.transaction() as connection:
             self.repository.lock(connection, oid)
-            self._actor(connection, actor)
+            if not self.repository.verified_account(connection, expected):
+                raise MembershipError(401, "unauthenticated", "Your account changed. Please sign in again.")
             self._organisation(connection, oid)
             self._member(connection, actor, oid, owner=True)
             self.repository.disable_organisation(connection, oid)

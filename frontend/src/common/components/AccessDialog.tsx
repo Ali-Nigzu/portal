@@ -6,7 +6,7 @@ import "../../features/settings/SettingsPages.css";
 
 type Props = {
   title: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
