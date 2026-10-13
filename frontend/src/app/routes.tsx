@@ -4,6 +4,7 @@ import React, {
   useState,
   useCallback,
   useRef,
+  useMemo,
 } from "react";
 import {
   Navigate,
@@ -11,6 +12,7 @@ import {
   Routes,
   useLocation,
   useParams,
+  useNavigate,
 } from "react-router-dom";
 import {
   clearDemoSessionLocal,
@@ -28,47 +30,65 @@ import {
   isPortalModule,
   sitePortalPath,
 } from "../features/organisation-dashboard/authenticatedPortalRoutes";
-const AdminApp = React.lazy(
-  () => import("../features/internal-admin/AdminApp"),
-);
-const HomePage = React.lazy(() => import("../features/home/HomePage"));
-const DocumentsPage = React.lazy(
-  () => import("../features/documents/DocumentsPage"),
-);
-const MyAccountPage = React.lazy(
-  () => import("../features/settings/pages/MyAccountPage"),
-);
-const ManageAccessPage = React.lazy(
-  () => import("../features/organisation-access/ManageAccessPage"),
-);
-const LandingPage = React.lazy(() => import("../features/landing/LandingPage"));
-const LoginPage = React.lazy(() => import("../features/auth/LoginPage"));
-const CreateAccountPage = React.lazy(
-  () => import("../features/auth/CreateAccountPage"),
-);
-const VerifyEmailPage = React.lazy(
-  () => import("../features/auth/VerifyEmailPage"),
-);
-const ResetPasswordPage = React.lazy(
-  () => import("../features/auth/ResetPasswordPage"),
-);
-const ContactPage = React.lazy(() => import("../features/contact/ContactPage"));
-const DemoDashboardRoute = React.lazy(
-  () => import("../features/organisation-dashboard/DemoDashboardRoute"),
-);
-const AuthenticatedOrganisationPortalRoute = React.lazy(
-  () =>
-    import("../features/organisation-dashboard/AuthenticatedOrganisationPortalRoute"),
-);
-const TermsAndConditionsPage = React.lazy(
-  () => import("../features/legal/TermsAndConditionsPage"),
-);
-const PrivacyPolicyPage = React.lazy(
-  () => import("../features/legal/PrivacyPolicyPage"),
-);
-const SubProcessorRegisterPage = React.lazy(
-  () => import("../features/legal/SubProcessorRegisterPage"),
-);
+import ErrorBoundary, { isAssetLoadError } from "../common/components/ErrorBoundary";
+
+function routeComponents() {
+  const AdminApp = React.lazy(
+    () => import("../features/internal-admin/AdminApp"),
+  );
+  const HomePage = React.lazy(() => import("../features/home/HomePage"));
+  const DocumentsPage = React.lazy(
+    () => import("../features/documents/DocumentsPage"),
+  );
+  const MyAccountPage = React.lazy(
+    () => import("../features/settings/pages/MyAccountPage"),
+  );
+  const ManageAccessPage = React.lazy(
+    () => import("../features/organisation-access/ManageAccessPage"),
+  );
+  const LandingPage = React.lazy(() => import("../features/landing/LandingPage"));
+  const LoginPage = React.lazy(() => import("../features/auth/LoginPage"));
+  const CreateAccountPage = React.lazy(
+    () => import("../features/auth/CreateAccountPage"),
+  );
+  const VerifyEmailPage = React.lazy(
+    () => import("../features/auth/VerifyEmailPage"),
+  );
+  const ResetPasswordPage = React.lazy(
+    () => import("../features/auth/ResetPasswordPage"),
+  );
+  const ContactPage = React.lazy(() => import("../features/contact/ContactPage"));
+  const DemoDashboardRoute = React.lazy(
+    () => import("../features/organisation-dashboard/DemoDashboardRoute"),
+  );
+  const AuthenticatedOrganisationPortalRoute = React.lazy(
+    () =>
+      import("../features/organisation-dashboard/AuthenticatedOrganisationPortalRoute"),
+  );
+  const TermsAndConditionsPage = React.lazy(
+    () => import("../features/legal/TermsAndConditionsPage"),
+  );
+  const PrivacyPolicyPage = React.lazy(
+    () => import("../features/legal/PrivacyPolicyPage"),
+  );
+  const SubProcessorRegisterPage = React.lazy(
+    () => import("../features/legal/SubProcessorRegisterPage"),
+  );
+
+  return { AdminApp, HomePage, DocumentsPage, MyAccountPage, ManageAccessPage, LandingPage, LoginPage, CreateAccountPage, VerifyEmailPage, ResetPasswordPage, ContactPage, DemoDashboardRoute, AuthenticatedOrganisationPortalRoute, TermsAndConditionsPage, PrivacyPolicyPage, SubProcessorRegisterPage };
+}
+
+const initialRoutes = routeComponents();
+
+async function withDeadline<T>(load: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) abort();
+  const timer = window.setTimeout(abort, 12_000);
+  try { return await load(controller.signal); }
+  finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
+}
 
 // An unscoped URL is navigation only. The authenticated catalogue must establish
 // one real organisation/site pair before the canonical Portal can render.
@@ -117,6 +137,18 @@ function DemoIndexRedirect() {
   );
 }
 const AppRoutes: React.FC = () => {
+  const navigate = useNavigate();
+  const [routeAttempt, setRouteAttempt] = useState(0);
+  const { AdminApp, HomePage, DocumentsPage, MyAccountPage, ManageAccessPage, LandingPage, LoginPage, CreateAccountPage, VerifyEmailPage, ResetPasswordPage, ContactPage, DemoDashboardRoute, AuthenticatedOrganisationPortalRoute, TermsAndConditionsPage, PrivacyPolicyPage, SubProcessorRegisterPage } = useMemo(() => routeAttempt === 0 ? initialRoutes : routeComponents(), [routeAttempt]);
+  const retryRoute = (message?: string) => {
+    setRouteAttempt(value => value + 1);
+    // Browsers may cache a failed module fetch too. An explicit retry reloads
+    // asset failures; ordinary rendering failures retry fresh lazy instances.
+    if (isAssetLoadError(message ?? "")) window.location.reload();
+  };
+  const [sessionAttempt, setSessionAttempt] = useState(0);
+  const [sessionError, setSessionError] = useState(false);
+  const [catalogueError, setCatalogueError] = useState(false);
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(
     null,
   );
@@ -137,10 +169,16 @@ const AppRoutes: React.FC = () => {
   };
   const refreshOrganisations = useCallback(async () => {
     const revision = ++catalogueRevision.current;
-    const catalogue = await fetchOrganisations();
-    if (revision === catalogueRevision.current) {
-      setOrganisations(catalogue);
-      setFavouritesCatalogueReady(true);
+    try {
+      const catalogue = await withDeadline(fetchOrganisations);
+      if (revision === catalogueRevision.current) {
+        setOrganisations(catalogue);
+        setFavouritesCatalogueReady(true);
+        setCatalogueError(false);
+      }
+    } catch (error) {
+      if (revision === catalogueRevision.current) setCatalogueError(true);
+      throw error;
     }
   }, []);
   const location = useLocation();
@@ -152,42 +190,47 @@ const AppRoutes: React.FC = () => {
 
   useEffect(() => {
     if (hasViewToken) {
+      setSessionError(false);
       setIsSessionChecked(true);
       return;
     }
 
+    setSessionError(false);
     const abort = new AbortController();
     const revision = ++accountRevision.current;
     const catalogueVersion = ++catalogueRevision.current;
     const current = () => !abort.signal.aborted && revision === accountRevision.current;
     const checkSession = async () => {
       try {
-        const me = await fetchMe(abort.signal);
+        const me = await withDeadline(fetchMe, abort.signal);
         if (!current()) return;
         if (me.ok) {
           clearDemoSessionLocal();
-          const catalogue = await fetchOrganisations(abort.signal).catch(() => null);
+          const catalogue = await withDeadline(fetchOrganisations, abort.signal);
           if (!current()) return;
           setAuthenticatedUser(me.data.user);
+          setIsSessionChecked(true);
           if (catalogueVersion === catalogueRevision.current) {
             setOrganisations(catalogue ?? []);
-            setFavouritesCatalogueReady(catalogue !== null);
+            setFavouritesCatalogueReady(true);
+            setCatalogueError(false);
           }
         } else if (me.status === 401) {
           setAuthenticatedUser(null);
           setOrganisations([]);
           setFavouritesCatalogueReady(false);
+          setIsSessionChecked(true);
+        } else {
+          throw new Error("Session unavailable");
         }
       } catch {
-        // Availability failures do not invalidate an already confirmed session.
-      } finally {
-        if (current()) setIsSessionChecked(true);
+        if (current()) setSessionError(true);
       }
     };
     void checkSession();
     return () => abort.abort();
 
-  }, [hasViewToken]);
+  }, [hasViewToken, sessionAttempt]);
 
   const handleLogin = async () => {
     actorEpoch.current += 1;
@@ -217,6 +260,8 @@ const AppRoutes: React.FC = () => {
     setAuthenticatedUser(null);
     setOrganisations([]);
     setFavouritesCatalogueReady(false);
+    setCatalogueError(false);
+    setSessionError(false);
   };
   const handleLogout = async () => {
     // Cancel cookie-bearing account writes before acknowledging logout.
@@ -270,11 +315,20 @@ const AppRoutes: React.FC = () => {
   ) {
     return (
       <Suspense fallback={<p>Loading Admin…</p>}>
-        <AdminApp />
+        <ErrorBoundary name="admin-route" resetKey={location.key + routeAttempt}
+          onRetry={retryRoute} onReload={() => window.location.reload()}>
+          <AdminApp />
+        </ErrorBoundary>
       </Suspense>
     );
   }
-  if (!isSessionChecked) return null;
+  if (sessionError && !isDemoRoute) return (
+    <div role="alert">
+      <p>Unable to confirm your session. Please try again.</p>
+      <button className="vrm-btn" onClick={() => setSessionAttempt(value => value + 1)}>Retry</button>
+    </div>
+  );
+  if (!isSessionChecked && !(isDemoRoute && sessionError)) return null;
   // Tokens are rejected; they never establish application identity or scope.
   if (
     hasViewToken &&
@@ -292,6 +346,13 @@ const AppRoutes: React.FC = () => {
   }
   const accountRedirect = <Navigate to={demo ? "/demo" : "/login"} replace />;
   return (
+    <>
+    {catalogueError && authenticated && <div role="alert">
+      Unable to load organisations. <button className="vrm-btn" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button>
+    </div>}
+    <ErrorBoundary name="route" resetKey={location.key + routeAttempt}
+      onRetry={retryRoute}
+      onReload={() => window.location.reload()} onHome={() => navigate("/home")}>
     <Routes>
       <Route path="/" element={<Navigate to="/home" replace />} />
       <Route element={authenticated ? authenticatedShell : undefined}>
@@ -480,6 +541,8 @@ const AppRoutes: React.FC = () => {
         element={<Navigate to={authenticated ? "/home" : "/"} replace />}
       />
     </Routes>
+    </ErrorBoundary>
+    </>
   );
 };
 export default AppRoutes;
