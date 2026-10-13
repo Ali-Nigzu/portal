@@ -1,14 +1,17 @@
 """Public contact, login and canonical session reads. Lifecycle routes are separate."""
 from __future__ import annotations
 import base64
+import fcntl
+import json
+import tempfile
+from threading import Lock
+import ijson
 import logging
 import os
 import re
 from datetime import datetime, timezone
 from starlette.concurrency import run_in_threadpool
-from backend.app.diagnostics import request_id as current_request_id
-from backend.app.services import contact_journal
-from backend.app.services.contact_limits import ATTACHMENT_ENVELOPE_BYTES, CONTACT_ENVELOPE_MESSAGE, encoded_attachment_bytes
+from backend.app.middleware import request_id as current_request_id
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from backend.app.auth import clear_auth_cookie, get_canonical_user, get_session_user, set_auth_cookie
 from backend.app.services import passwords
@@ -27,6 +30,77 @@ from .organisation_memberships import mutation_origin
 router = APIRouter(route_class=LifecycleRoute)
 router.include_router(lifecycle_router)
 logger = logging.getLogger(__name__)
+
+ATTACHMENT_ENVELOPE_BYTES = 8_000_000  # Leaves 2 MB for bodies, MIME and metadata.
+ATTACHMENT_OVERHEAD_BYTES = 1024
+CONTACT_ENVELOPE_MESSAGE = 'Attachments are too large to send together. Please use smaller files.'
+
+
+def encoded_attachment_bytes(size, filename, content_type):
+    return 4 * ((size + 2) // 3) + len(filename.encode()) + len(content_type.encode()) + ATTACHMENT_OVERHEAD_BYTES
+
+_contact_journal_lock = Lock()
+_CONTACT_JOURNAL_CHUNK = 64 * 1024
+
+
+def _last_content(source, before):
+    while before:
+        start = max(0, before - _CONTACT_JOURNAL_CHUNK)
+        source.seek(start)
+        block = source.read(before - start).rstrip(b' \t\r\n')
+        if block:
+            return start + len(block)
+        before = start
+    return 0
+
+
+def _append_contact_journal(path, record):
+    directory = os.path.dirname(path) or '.'
+    os.makedirs(directory, exist_ok=True)
+    with _contact_journal_lock, open(path + '.lock', 'a') as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        temporary = None
+        try:
+            has_items = False
+            prefix_end = None
+            if os.path.exists(path):
+                with open(path, 'rb') as source:
+                    events = ijson.parse(source)
+                    if next(events, None) != ('', 'start_array', None):
+                        raise ValueError('Contact journal must be a JSON array')
+                    last = None
+                    for prefix, event, value in events:
+                        has_items |= prefix == 'item'
+                        last = (prefix, event)
+                    if last != ('', 'end_array'):
+                        raise ValueError('Incomplete Contact journal')
+                    end = _last_content(source, os.fstat(source.fileno()).st_size)
+                    prefix_end = _last_content(source, end - 1)
+            descriptor, temporary = tempfile.mkstemp(prefix='.contact-', dir=directory)
+            with os.fdopen(descriptor, 'wb') as target:
+                if prefix_end is None:
+                    target.write(b'[')
+                else:
+                    with open(path, 'rb') as source:
+                        remaining = prefix_end
+                        while remaining:
+                            block = source.read(min(_CONTACT_JOURNAL_CHUNK, remaining))
+                            if not block:
+                                raise OSError('Contact journal changed during append')
+                            target.write(block)
+                            remaining -= len(block)
+                target.write(b',\n' if has_items else b'\n')
+                encoded = ('  ' + json.dumps(record, indent=2, allow_nan=False).replace('\n', '\n  ')).encode()
+                target.write(encoded + b'\n]')
+                target.flush()
+                os.fsync(target.fileno())
+            os.replace(temporary, path)
+            temporary = None
+        finally:
+            if temporary is not None:
+                os.unlink(temporary)
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
 PHONE_RE = re.compile(r"^\+[1-9]\d{6,14}$")
 CONTACT_MAX_FILES = 3
 CONTACT_MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -97,7 +171,7 @@ def _validate_contact_fields(name: str, email: str, phone: str | None, message: 
 
 
 def _append_contact_submission_record(record: dict) -> None:
-    contact_journal.append(CONTACT_SUBMISSIONS_FILE, record)
+    _append_contact_journal(CONTACT_SUBMISSIONS_FILE, record)
 
 
 def _validate_contact_upload(content_type: str | None, filename: str, payload: bytes) -> None:

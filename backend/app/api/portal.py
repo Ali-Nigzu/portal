@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 import logging
 import os
-from backend.app.diagnostics import request_id as current_request_id
+from backend.app.middleware import request_id as current_request_id
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse

@@ -12,20 +12,10 @@
     "recharts": "3.2.1"
   },
   "scripts": {
-    "build": "vite build",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/unit/*.test.ts",
-    "test:browser": "npm run build && playwright test",
-    "preview": "vite preview"
+    "build": "vite build"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.0",
-    "@types/node": "24.10.1",
-    "@types/react": "18.3.31",
-    "@types/react-dom": "18.3.7",
     "@vitejs/plugin-react": "5.2.0",
-    "tsx": "4.23.15",
-    "typescript": "5.9.3",
     "vite": "7.3.7"
   }
 }

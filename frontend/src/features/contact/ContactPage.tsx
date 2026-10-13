@@ -1,5 +1,4 @@
 import React, { useMemo, useRef, useState } from "react";
-import { contactAttachmentBytes, CONTACT_ATTACHMENT_ENVELOPE_BYTES, CONTACT_ENVELOPE_MESSAGE } from "./contactLimits";
 
 import {
   classifyOptionalPhoneInput,
@@ -25,6 +24,15 @@ type FieldErrors = {
   message?: string;
   attachments?: string;
 };
+
+const CONTACT_ENVELOPE_MESSAGE = "Attachments are too large to send together. Please use smaller files.";
+function contactAttachmentBytes(files: Pick<File, 'size' | 'name' | 'type'>[]): number {
+  const utf8 = new TextEncoder();
+  return files.reduce((total, file) => total + 4 * Math.ceil(file.size / 3)
+    + utf8.encode(file.name.trim() || 'attachment').length
+    + utf8.encode(file.type || 'application/octet-stream').length + 1024, 0);
+}
+const CONTACT_ATTACHMENT_ENVELOPE_BYTES = 8_000_000;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+[1-9]\d{6,14}$/;
