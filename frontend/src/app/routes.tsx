@@ -160,8 +160,6 @@ const AppRoutes: React.FC = () => {
   const userRef = useRef<AuthUser | null>(null);
   const probe = useRef<Promise<void> | null>(null);
   const location = useLocation();
-  const pathRef = useRef(location.pathname);
-  pathRef.current = location.pathname;
   const viewToken = new URLSearchParams(location.search).get("view_token");
   const hasViewToken = Boolean(viewToken);
   const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
@@ -255,7 +253,7 @@ const AppRoutes: React.FC = () => {
   useEffect(() => {
     const rejected = (event: Event) => {
       const detail = (event as CustomEvent<{signal: AbortSignal; reason: string}>).detail;
-      if (detail.signal !== accountController.current.signal || detail.signal.aborted) return;
+      if (!detail || detail.signal !== accountController.current.signal || detail.signal.aborted) return;
       if (detail.reason === "session_invalid") clearAccount();
       else void revalidateAccount(detail.signal).catch(() => {});
     };
@@ -307,6 +305,7 @@ const AppRoutes: React.FC = () => {
     try { await pending; }
     catch (error) {
       applyAccount(userRef.current);
+      void revalidateAccount(accountController.current.signal).catch(() => {});
       throw error;
     }
     clearDemoSessionLocal();

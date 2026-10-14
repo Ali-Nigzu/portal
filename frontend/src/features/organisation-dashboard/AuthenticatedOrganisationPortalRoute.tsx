@@ -19,10 +19,10 @@ export default function AuthenticatedOrganisationPortalRoute() {
     [organisationId],
   );
   useEffect(() => {
-    if (organisationId && isPortalModule(module)) {
+    if (favouritesCatalogueReady && organisations.some(item => item.id === organisationId && (!siteId || item.sites.some(site => site.id === siteId))) && organisationId && isPortalModule(module)) {
       recordRecentPortalLocation(user.id, { organisationId, siteId, module });
     }
-  }, [user.id, organisationId, siteId, module]);
+  }, [user.id, favouritesCatalogueReady, organisations, organisationId, siteId, module]);
   if (!organisationId) return <div role="alert">Organisation unavailable.</div>;
   if (!favouritesCatalogueReady) return <div className="vrm-content-loading" role={catalogueError ? "alert" : "status"}>
     {catalogueError ? <>Can't load organisations. <button className="vrm-btn" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}

@@ -34,7 +34,7 @@ export const uploadDocuments = async (files: File[], accountId: string, signal: 
       const response = await accountFetch("/api/documents/upload", {
         method: "POST", signal, headers: { "X-Requested-With": "camOS" },
         body: formData, credentials: "include",
-      }, 90_000);
+      }, 300_000); // A 25 MiB file can take several minutes on a slow link.
       if (!response.ok) {
         if (response.status >= 500) throw new RequestFailure(true);
         errors.push({ index, filename: file.name, code: "too_large", outcome: "failed", message: response.status === 413 ? "File is too large." : "Couldn't upload file. Try again." });

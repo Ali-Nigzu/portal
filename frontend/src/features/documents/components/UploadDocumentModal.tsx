@@ -26,9 +26,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   const [pendingFiles, setPendingFiles] = useState<PendingUploadItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const uploadingRef = useRef(isUploading);
   const closeRef = useRef(onClose);
-  uploadingRef.current = isUploading;
   closeRef.current = close;
 
   const mode = useMemo(() => {

@@ -49,13 +49,13 @@ export default function ReenterPasswordModal(props: Props) {
       if (step === "password") {
         const result = await props.onStartUnlock(password, controller.signal);
         if (controller.signal.aborted) return;
-      if (!result.ok) { setError(result.message); return; }
+        if (!result.ok) { setError(result.message); return; }
         setPassword(""); setStep("code"); setCooldown(result.resendCooldownSeconds);
         setMessage("We sent a verification code to your account email.");
       } else {
         const result = await props.onVerifyCode(code, controller.signal);
         if (controller.signal.aborted) return;
-      if (!result.ok) { setError(result.message); return; }
+        if (!result.ok) { setError(result.message); return; }
         props.onVerified(result);
       }
     } catch (error) { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Please try again."); }

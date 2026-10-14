@@ -60,6 +60,14 @@ export default function ManageAccessPage() {
     }
     setDeletePassword(""); setDeleteOrganisation(false); setDeleteError(null);
   };
+  const closeConfirmation = () => {
+    if (decisionController.current) {
+      decisionController.current.abort(); decisionController.current = null;
+      setBusy(false); setMessage("Please check before trying again.");
+      void reload().catch(() => {});
+    }
+    setConfirmation(null);
+  };
   useEffect(() => {
     const cancel = () => closeDelete();
     accountSignal?.addEventListener("abort", cancel, { once: true });
@@ -423,12 +431,12 @@ export default function ManageAccessPage() {
       )}
       {deleteOrganisation && data?.can_manage && id && (
         <AccessDialog title="Delete organisation" description={<>Deleting your organisation is irreversible after 7 days. If you change your mind, please <Link to="/contact">contact us</Link> within this period.</>} busy={busy} cancelBusy onClose={closeDelete}>
-          {!user.has_password ? <p>Set a camOS account password in <Link to="/settings/account">Settings → My Account</Link> before deleting an organisation.</p> :
+          {!user.has_password ? <p>Set a password in <Link to="/settings/account">My Account</Link> first.</p> :
             <label className="settings-field-label">Current account password
               <input className="settings-input" required data-autofocus type="password" autoComplete="current-password" maxLength={1024}
                 value={deletePassword} disabled={busy} onChange={event => setDeletePassword(event.target.value)} />
             </label>}
-          {deleteError && <p role="alert" className="settings-form-error">{deleteError}</p>}
+          {(deleteError || uncertainDeletes.current.has(id)) && <p role="alert" className="settings-form-error">{deleteError ?? "Please check before trying again."}</p>}
           <div className="settings-form-actions">
             <button className="vrm-btn vrm-btn-secondary" onClick={() => {
               closeDelete();
@@ -453,7 +461,7 @@ export default function ManageAccessPage() {
               } finally {
                 if (deleteController.current === controller) { deleteController.current = null; setBusy(false); }
               }
-            }}>{busy ? "Disabling…" : "Delete Organisation"}</button>
+            }}>{busy ? "Deleting…" : "Delete Organisation"}</button>
           </div>
         </AccessDialog>
       )}
@@ -492,7 +500,7 @@ export default function ManageAccessPage() {
               ? `${confirmation.member.username} will no longer have access to ${data?.organisation.name}. You can invite them again later.`
               : `Withdraw ${confirmation.member.username}'s invitation to ${data?.organisation.name}?`
           }
-          onClose={() => { if (decisionController.current) { decisionController.current.abort(); decisionController.current = null; setBusy(false); setMessage("Please check before trying again."); void reload().catch(() => {}); } setConfirmation(null); }}
+          onClose={closeConfirmation}
           busy={busy}
           cancelBusy
         >
@@ -505,7 +513,7 @@ export default function ManageAccessPage() {
             <button
               data-autofocus
               className="vrm-btn vrm-btn-secondary"
-              onClick={() => { decisionController.current?.abort(); decisionController.current = null; setBusy(false); setConfirmation(null); void reload().catch(() => {}); }}
+              onClick={closeConfirmation}
             >
               Cancel
             </button>

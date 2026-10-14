@@ -105,7 +105,7 @@ export default function MyAccountPage() {
   };
 
   const save = async (row: Row) => {
-    if (!user || !unlock || !unlocked || saving) return;
+    if (!user || !unlock || !unlocked || saving || mutation.current) return;
     const next: Errors = {};
     const payload: UpdateMePayload = { unlock_token: unlock.token };
     if (row === "name") {
@@ -149,6 +149,7 @@ export default function MyAccountPage() {
       setErrors({ form: detail });
     } finally {
       accountSignal?.removeEventListener('abort', cancel);
+      if (mutation.current === abort) mutation.current = undefined;
       if (mounted.current) setSaving(false);
     }
   };

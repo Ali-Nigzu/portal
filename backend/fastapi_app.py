@@ -57,7 +57,8 @@ def create_app() -> FastAPI:
         allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-camos-account-id", "Accept"],
+        expose_headers=["X-camos-auth-error", "X-camos-action-outcome"],
     )
     app.add_middleware(RequestLimitsMiddleware)
     app.add_middleware(RequestDiagnosticsMiddleware)

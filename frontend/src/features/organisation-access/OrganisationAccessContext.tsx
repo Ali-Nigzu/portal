@@ -313,10 +313,10 @@ function RequestAccessDialog({
         : "Your request is already pending approval.";
   return (
     <AccessDialog
-      title={sent ? "Request sent" : "Request access"}
+      title={sent ? "Request sent." : "Request access"}
       description={
         sent
-          ? `Your request to ${resolved?.organisation.name} is pending approval.`
+          ? undefined
           : !resolved
             ? "Enter the Organisation ID shared with you by someone in the organisation."
             : undefined
@@ -327,10 +327,6 @@ function RequestAccessDialog({
     >
       {sent ? (
         <>
-          <p className="access-success" role="status">
-            You'll see the organisation here once its Owner approves your
-            request.
-          </p>
           {error && (
             <p role="alert" className="settings-form-error">
               {error}
