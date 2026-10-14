@@ -1,9 +1,12 @@
 import { optionalLocalStorage, optionalSessionStorage } from "../../common/optionalStorage";
 import type { PortalDeviceControl } from "../../context/PortalContext";
+import { requestFetch } from "../auth/transport/me";
 
 const DEMO_SESSION_KEY = "camOS_demo_session";
 const DEMO_DEFAULTS_APPLIED_KEY = "camOS_demo_defaults_applied";
 const KEEP_MENU_EXPANDED_KEY = "vrm_keep_menu_expanded";
+let activeInMemory = false;
+let startRequest: { controller: AbortController; promise: Promise<void> } | null = null;
 
 const notifyDemoSessionChanged = () => {
   if (typeof window === "undefined") {
@@ -16,44 +19,49 @@ export const isDemoSessionActive = (): boolean => {
   if (typeof window === "undefined") {
     return false;
   }
-  return optionalSessionStorage.getItem(DEMO_SESSION_KEY) === "true";
+  return activeInMemory || optionalSessionStorage.getItem(DEMO_SESSION_KEY) === "true";
 };
 
-export const enableDemoSession = async (): Promise<void> => {
+export const enableDemoSession = (): Promise<void> => {
   if (isDemoSessionActive()) {
-    return;
+    return Promise.resolve();
   }
-  const response = await fetch(`/api/demo/session`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(
-      `Failed to start demo session (${response.status}). ${text}`.trim(),
-    );
-  }
-  if (typeof window !== "undefined") {
+  if (startRequest) return startRequest.promise;
+  const controller = new AbortController();
+  const promise = (async () => {
+    const response = await requestFetch(`/api/demo/session`, {
+      method: "POST", signal: controller.signal,
+      headers: { "Content-Type": "application/json" }, credentials: "include",
+    });
+    if (!response.ok) throw new Error("Unable to start Demo.");
+    if (controller.signal.aborted) return;
     clearDemoDeviceOverrides();
+    activeInMemory = true;
     optionalSessionStorage.setItem(DEMO_SESSION_KEY, "true");
-  }
-  notifyDemoSessionChanged();
+    notifyDemoSessionChanged();
+  })();
+  startRequest = { controller, promise };
+  void promise.finally(() => { if (startRequest?.promise === promise) startRequest = null; }).catch(() => {});
+  return promise;
 };
 
 export const clearDemoSessionLocal = (): void => {
+  const wasActive = isDemoSessionActive();
+  activeInMemory = false;
+  startRequest?.controller.abort();
+  startRequest = null;
   if (typeof window !== "undefined") {
     clearDemoDeviceOverrides();
     optionalSessionStorage.removeItem(DEMO_SESSION_KEY);
     optionalSessionStorage.removeItem(DEMO_DEFAULTS_APPLIED_KEY);
     optionalLocalStorage.removeItem(KEEP_MENU_EXPANDED_KEY);
   }
-  notifyDemoSessionChanged();
+  if (wasActive) notifyDemoSessionChanged();
 };
 
 export const clearDemoSessionServer = async (): Promise<void> => {
   try {
-    await fetch(`/api/demo/session/clear`, {
+    await requestFetch(`/api/demo/session/clear`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

@@ -2,6 +2,12 @@
   overflow: hidden;
 }
 
+.demo-overlay--inactive,
+.demo-overlay--inactive > .demo-overlay__shell,
+.demo-overlay--inactive > .demo-overlay__shell > .demo-overlay__content {
+  display: contents;
+}
+
 .demo-overlay {
   position: fixed;
   inset: 0;

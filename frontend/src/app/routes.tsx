@@ -165,7 +165,12 @@ const AppRoutes: React.FC = () => {
   const viewToken = new URLSearchParams(location.search).get("view_token");
   const hasViewToken = Boolean(viewToken);
   const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
+  const previousDemoRoute = useRef(isDemoRoute);
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
+  useEffect(() => {
+    if (previousDemoRoute.current && !isDemoRoute) clearDemoSessionLocal();
+    previousDemoRoute.current = isDemoRoute;
+  }, [isDemoRoute]);
 
   const applyAccount = useCallback((user: AuthUser | null) => {
     if (userRef.current?.id !== user?.id || (user && accountController.current.signal.aborted)) {
