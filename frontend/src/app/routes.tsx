@@ -163,12 +163,19 @@ const AppRoutes: React.FC = () => {
   const viewToken = new URLSearchParams(location.search).get("view_token");
   const hasViewToken = Boolean(viewToken);
   const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
+  const demoAlias = location.pathname === "/dashboard" || location.pathname === "/sites" || /^\/sites\/(?!organisations(?:\/|$))/.test(location.pathname);
+  const [demoSessionActive, setDemoSessionActive] = useState(isDemoSessionActive);
   const previousDemoRoute = useRef(isDemoRoute);
   const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
   useEffect(() => {
-    if (previousDemoRoute.current && !isDemoRoute) clearDemoSessionLocal();
+    const changed = () => setDemoSessionActive(isDemoSessionActive());
+    window.addEventListener("demo-session-changed", changed);
+    return () => window.removeEventListener("demo-session-changed", changed);
+  }, []);
+  useEffect(() => {
+    if (!isDemoRoute && !demoAlias && (previousDemoRoute.current || isDemoSessionActive())) clearDemoSessionLocal();
     previousDemoRoute.current = isDemoRoute;
-  }, [isDemoRoute]);
+  }, [isDemoRoute, demoAlias]);
 
   const applyAccount = useCallback((user: AuthUser | null) => {
     if (userRef.current?.id !== user?.id || (user && accountController.current.signal.aborted)) {
@@ -312,7 +319,7 @@ const AppRoutes: React.FC = () => {
     clearAccount();
   };
 
-  const demo = isDemoSessionActive() || isDemoRoute;
+  const demo = demoSessionActive || isDemoRoute;
   const authenticated = Boolean(authenticatedUser) && !demo && !hasViewToken;
   const lazyRoute = (element: React.ReactNode) => (
     <Suspense fallback={<div className="vrm-content-loading" role="status">Loading…</div>}>{element}</Suspense>

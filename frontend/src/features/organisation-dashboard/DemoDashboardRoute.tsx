@@ -138,7 +138,7 @@ const request: PortalSource["request"] = (path, params, signal) =>
     signal,
     cache: "no-store",
     credentials: "include",
-  }, 12_000);
+  }, path.endsWith("/export") ? 300_000 : 60_000);
 const demoPortalSource: PortalSource = {
   context: async (signal) =>
     responseJson(await request("/context", new URLSearchParams(), signal)),

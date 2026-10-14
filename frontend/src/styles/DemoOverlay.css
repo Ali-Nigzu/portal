@@ -57,7 +57,7 @@
   display: flex;
 }
 
-.demo-overlay__content > * {
+.demo-overlay .demo-overlay__content > * {
   flex: 1;
   min-height: 0;
   min-width: 0;

@@ -54,7 +54,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     const handleChange = () => {
       const nextActive = isDemoSessionActive();
       setIsActive(nextActive);
-      if (!nextActive) {
+      if (!nextActive && !closingRef.current) {
         setIsClosing(false);
         closingRef.current = false;
       }

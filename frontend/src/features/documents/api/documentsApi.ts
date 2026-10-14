@@ -7,7 +7,7 @@ const responseError = async (response: Response, fallback: string) => {
 };
 
 export const listDocuments = async (signal: AbortSignal, accountId: string): Promise<DocumentItem[]> => {
-  const response = await accountFetch("/api/documents", { signal, credentials: "include", cache: "no-store" });
+  const response = await accountFetch("/api/documents", { signal, credentials: "include", cache: "no-store" }, 60_000);
   if (!response.ok) {
     throw await responseError(response, "Unable to load documents. Please try again.");
   }

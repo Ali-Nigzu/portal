@@ -54,6 +54,7 @@ function authenticatedPortalSource(organisationId: string): PortalSource {
         cache: "no-store",
         credentials: "include",
       },
+      path.endsWith("/export") ? 300_000 : 60_000,
     );
     if (response.status === 404 || response.status === 401)
       window.dispatchEvent(new Event("camos:refresh-access"));

@@ -86,7 +86,7 @@ export function PortalProvider({
         if (!abort.signal.aborted)
           setResult({
             source,
-            error: "Organisation context is unavailable. Please retry.",
+            error: "Can't load this page. Try again.",
           });
       }
     });
@@ -149,15 +149,18 @@ export function verifyScope(
     value.scope?.organisation_id !== view.context?.organisation.id ||
     value.scope?.site_id !==
       (view.selection?.scope === "site" ? view.selection.id : null)
-  )
-    throw new Error("Response scope mismatch");
+  ) {
+    console.error("portal.response_scope_mismatch");
+    throw new Error("Please try again.");
+  }
 }
 export async function responseJson(response: Response) {
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error(
-      body?.detail?.message ?? "Data source unavailable. Please retry.",
-    );
+    const message = body?.detail?.message;
+    throw new Error(response.status === 422
+      ? ["Export exceeds 100,000 rows. Narrow the filters.", "More than 1,000 active alarms. Narrow the filters."].includes(message) ? message : "Check your filters."
+      : response.status === 403 ? "You don't have access." : response.status === 404 ? "Not available." : "Please try again.");
   }
   return response.json();
 }
