@@ -27,7 +27,7 @@ export function usePersonalAccess() {
           ? `You joined ${item.organisation_name}.`
           : `Invitation to ${item.organisation_name} declined.`,
       );
-      await refreshAccess();
+      void refreshAccess().catch(() => {});
     } catch (failure) {
       if (controller.signal.aborted) return;
       setError(errorMessage(failure));

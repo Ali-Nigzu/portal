@@ -136,20 +136,20 @@ def _safe_auth_user(user_data: dict) -> AuthUser:
 def _raise_contact_mail_delivery_error(exc: Exception, *, request_id: str) -> None:
     if isinstance(exc, PostmarkConfigurationError):
         logger.error(
-            "contact.email.config_error request_id=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s detail=%s",
+            "contact.email.config_error request_id=%s has_server_token=%s has_from_email=%s has_admin_notify_email=%s",
             request_id,
             bool(os.getenv("POSTMARK_SERVER_TOKEN", "").strip()),
             bool(os.getenv("POSTMARK_FROM_EMAIL", "").strip()),
             bool(os.getenv("ADMIN_NOTIFY_EMAIL", "").strip()),
-            str(exc),
         )
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(503, "Couldn't send message. Try again.", headers={'X-camos-action-outcome': 'not_sent'}) from None
     if isinstance(exc, PostmarkDeliveryError):
         logger.error("contact.email.delivery_error request_id=%s provider=postmark status=%s category=%s",
                      request_id, exc.status_code, exc.error_code)
-        raise HTTPException(status_code=502, detail="Failed to send contact message.") from None
-    logger.error("contact.email.unknown_error request_id=%s category=%s", request_id, type(exc).__name__)
-    raise HTTPException(status_code=502, detail="Failed to send contact message.") from None
+        if not exc.uncertain:
+            raise HTTPException(502, "Couldn't send message. Try again.", headers={'X-camos-action-outcome': 'not_sent'}) from None
+    logger.error("contact.email.unknown_outcome request_id=%s category=%s", request_id, type(exc).__name__)
+    raise HTTPException(502, 'Please check before trying again.', headers={'X-camos-action-outcome': 'unknown'}) from None
 
 
 def _validate_contact_fields(name: str, email: str, phone: str | None, message: str) -> tuple[str, str, str | None, str]:
@@ -253,7 +253,7 @@ async def submit_contact(
             _append_contact_submission_record(submission_record)
         except Exception as exc:
             logger.error("contact.submission.persist_failed request_id=%s category=%s", request_id, type(exc).__name__)
-            raise HTTPException(status_code=500, detail="Failed to save contact message.") from None
+            raise HTTPException(500, "Couldn't send message. Try again.", headers={'X-camos-action-outcome': 'not_sent'}) from None
         logger.info("contact.email.trigger_start request_id=%s attachment_count=%s", request_id, len(attachment_names))
         try:
             admin_result = send_admin_contact_notification(
@@ -261,14 +261,17 @@ async def submit_contact(
                 message=safe_message, submitted_at=submitted_at, page_url=safe_page_url,
                 attachment_names=attachment_names, attachments=postmark_attachments,
             )
-            confirmation_result = send_contact_confirmation_email(to_email=safe_email, name=safe_name, message=safe_message)
         except Exception as exc:
             _raise_contact_mail_delivery_error(exc, request_id=request_id)
-        logger.info("contact.email.sent request_id=%s admin_message_id=%s confirmation_message_id=%s",
-                    request_id, admin_result.message_id, confirmation_result.message_id)
+        try:
+            confirmation_result = send_contact_confirmation_email(to_email=safe_email, name=safe_name, message=safe_message)
+            logger.info('contact.receipt.sent request_id=%s message_id=%s', request_id, confirmation_result.message_id)
+        except Exception as exc:
+            logger.warning('contact.receipt.unavailable request_id=%s category=%s', request_id, type(exc).__name__)
+        logger.info("contact.email.sent request_id=%s admin_message_id=%s", request_id, admin_result.message_id)
     await run_in_threadpool(persist_and_deliver)
 
-    return ContactResponse(message="Thanks for contacting us. We'll be in touch soon.")
+    return ContactResponse(message="Message sent.")
 
 
 @router.post("/api/login", dependencies=[Depends(mutation_origin)])

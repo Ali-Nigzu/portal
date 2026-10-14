@@ -19,7 +19,7 @@ import "../settings/SettingsPages.css";
 import { RequestFailure } from "../auth/transport/me";
 
 export default function ManageAccessPage() {
-  const { organisations, user, accountSignal, favouritesCatalogueReady, catalogueError, refreshOrganisations } =
+  const { organisations, user, accountSignal, favouritesCatalogueReady, catalogueError, refreshOrganisations, removeOrganisation } =
     useAuthenticatedApplication();
   const { refreshAccess, openCreate, openRequest, actionNotice } = useOrganisationAccess();
   const personal = usePersonalAccess();
@@ -74,7 +74,7 @@ export default function ManageAccessPage() {
     const abort = new AbortController();
     setData(null);
     setError(null);
-    setMessage(null);
+    if (favouritesCatalogueReady) setMessage(null);
     setCopied(false);
     setInvite(false);
     setConfirmation(null);
@@ -117,13 +117,19 @@ export default function ManageAccessPage() {
     setMessage(null);
     setConfirmError(null);
     try {
-      await manageMembership(member, action, controller.signal);
+      const result = await manageMembership(member, action, controller.signal);
       if (controller.signal.aborted) return;
       if (currentId.current !== member.organisation_id) {
         await refreshAccess();
         return;
       }
       setConfirmation(null);
+      setData(previous => previous ? {
+        ...previous,
+        members: [...previous.members.filter(item => item.user_id !== member.user_id), ...(result.membership.status === 1 ? [{ ...member, ...result.membership }] : [])],
+        invitations: previous.invitations.filter(item => item.user_id !== member.user_id),
+        requests: previous.requests.filter(item => item.user_id !== member.user_id),
+      } : previous);
       setMessage(
         action === "approve"
           ? `${member.username} now has access.`
@@ -133,7 +139,7 @@ export default function ManageAccessPage() {
               ? "Invitation withdrawn."
               : `${member.username}'s access is disabled.`,
       );
-      await reload();
+      void reload().catch(() => {});
     } catch (failure) {
       if (controller.signal.aborted) return;
       if (currentId.current !== member.organisation_id) return;
@@ -437,9 +443,10 @@ export default function ManageAccessPage() {
                 await disableOrganisation(deletingId, deletePassword, controller.signal);
                 if (controller.signal.aborted || currentId.current !== deletingId) return;
                 setDeletePassword(""); setDeleteOrganisation(false); setData(null);
+                removeOrganisation?.(deletingId);
                 const next = new URLSearchParams(search); next.delete("organisation_id"); setSearch(next, { replace: true });
-                setDeleteMessage("Organisation access disabled. Contact us within 7 days if you change your mind.");
-                try { await refreshAccess(); } catch { if (!controller.signal.aborted) setError("Organisation access disabled, but access refresh failed. Refresh access to update navigation."); }
+                setDeleteMessage("Organisation deleted.");
+                void refreshAccess().catch(() => {});
               } catch (failure) {
                 if (failure instanceof RequestFailure && failure.uncertain) { uncertainDeletes.current.add(deletingId); void refreshAccess().catch(() => {}); }
                 if (!controller.signal.aborted && currentId.current === deletingId) setDeleteError(errorMessage(failure));
@@ -465,13 +472,11 @@ export default function ManageAccessPage() {
             );
             if (signal.aborted) return;
             if (currentId.current !== id) {
-              await refreshAccess();
+              void refreshAccess().catch(() => {});
               return;
             }
-            setMessage(
-              `Invitation sent for ${organisations.find((organisation) => organisation.id === payload.organisation_id)?.name ?? "the organisation"}. The member will have access after accepting.`,
-            );
-            await reload();
+            setMessage("Invitation sent.");
+            void reload().catch(() => {});
           }}
         />
       )}

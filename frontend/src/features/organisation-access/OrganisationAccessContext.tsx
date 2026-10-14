@@ -14,6 +14,7 @@ import {
 } from "./api";
 import AccessDialog from "../../common/components/AccessDialog";
 import { RequestFailure } from "../auth/transport/me";
+import type { AuthenticatedOrganisation } from "../organisation-dashboard/api";
 
 type Value = {
   pending: PendingAccess;
@@ -31,7 +32,7 @@ export function OrganisationAccessProvider({
 }: {
   children: ReactNode;
 }) {
-  const { refreshOrganisations } = useAuthenticatedApplication();
+  const { refreshOrganisations, recordOrganisation, accountSignal } = useAuthenticatedApplication();
   const navigate = useNavigate();
   const [pending, setPending] = useState<PendingAccess>({
     invitations: [],
@@ -106,10 +107,13 @@ export function OrganisationAccessProvider({
           uncertain={createUncertain}
           onUncertain={() => { setCreateUncertain(true); setActionNotice("Please check before trying again."); void refreshAccess().catch(() => {}); }}
           onClose={() => setDialog(null)}
-          onCreated={async (id) => {
-            await refreshAccess();
+          onCreated={async (organisation) => {
+            if (accountSignal?.aborted) return;
+            recordOrganisation?.(organisation);
+            setActionNotice("Organisation created.");
             setDialog(null);
-            navigate(organisationPortalPath(id, "dashboard"));
+            navigate(organisationPortalPath(organisation.id, "dashboard"));
+            void refreshAccess().catch(() => {});
           }}
         />
       )}
@@ -137,7 +141,7 @@ function CreateOrganisationDialog({
   onUncertain,
 }: {
   onClose: () => void;
-  onCreated: (id: string) => Promise<void>;
+  onCreated: (organisation: AuthenticatedOrganisation) => Promise<void>;
   uncertain: boolean;
   onUncertain: () => void;
 }) {
@@ -145,6 +149,7 @@ function CreateOrganisationDialog({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const created = useRef<AuthenticatedOrganisation | null>(null);
   const operation = useRef<AbortController | null>(null);
   useEffect(() => () => operation.current?.abort(), []);
   const close = () => {
@@ -164,19 +169,20 @@ function CreateOrganisationDialog({
     const controller = new AbortController();
     operation.current = controller;
     setError(null);
-    let id = createdId;
+    let organisation = created.current;
     try {
-      if (!id) {
-        id = (await createOrganisation(name.trim(), controller.signal)).organisation.id;
+      if (!organisation) {
+        organisation = (await createOrganisation(name.trim(), controller.signal)).organisation;
         if (controller.signal.aborted) return;
-        setCreatedId(id);
+        created.current = organisation;
+        setCreatedId(organisation.id);
       }
-      await onCreated(id);
+      await onCreated(organisation);
     } catch (failure) {
       if (controller.signal.aborted) return;
-      if (!id && failure instanceof RequestFailure && failure.uncertain) onUncertain();
+      if (!organisation && failure instanceof RequestFailure && failure.uncertain) onUncertain();
       setError(
-        id
+        organisation
           ? "Organisation created."
           : errorMessage(failure),
       );
@@ -288,11 +294,7 @@ function RequestAccessDialog({
         await requestOrganisationAccess(resolved.organisation.id, controller.signal);
         if (controller.signal.aborted) return;
         setSent(true);
-        await onRequested().catch(() =>
-          setError(
-            "Your request was sent. Pending access couldn't refresh; it will update when you return.",
-          ),
-        );
+        void onRequested().catch(() => {});
       }
     } catch (failure) {
       if (controller.signal.aborted) return;

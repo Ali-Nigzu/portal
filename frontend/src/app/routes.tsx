@@ -320,6 +320,12 @@ const AppRoutes: React.FC = () => {
   );
   const renderedEpoch = actorEpoch.current;
   const refreshBoundOrganisations = useCallback(() => refreshOrganisations(accountSignal), [accountSignal, refreshOrganisations]);
+  const recordOrganisation = useCallback((organisation: AuthenticatedOrganisation) => {
+    if (!accountSignal.aborted) setOrganisations(previous => [...previous.filter(item => item.id !== organisation.id), organisation]);
+  }, [accountSignal]);
+  const removeOrganisation = useCallback((id: string) => {
+    if (!accountSignal.aborted) setOrganisations(previous => previous.filter(item => item.id !== id));
+  }, [accountSignal]);
   const refreshAccount = async (confirmed?: AuthUser) => {
     if (renderedEpoch !== actorEpoch.current || accountSignal.aborted) return;
     if (confirmed && confirmed.id === userRef.current?.id) applyAccount(confirmed);
@@ -335,6 +341,8 @@ const AppRoutes: React.FC = () => {
       refreshOrganisations={refreshBoundOrganisations}
       favouritesCatalogueReady={favouritesCatalogueReady}
       catalogueError={catalogueError}
+      recordOrganisation={recordOrganisation}
+      removeOrganisation={removeOrganisation}
     >
       <AuthenticatedVRMLayout onLogout={handleLogout} />
     </AuthenticatedApplicationProvider>

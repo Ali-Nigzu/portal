@@ -1,5 +1,5 @@
 import { requestFetch, RequestFailure } from "../auth/transport/me";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   classifyOptionalPhoneInput,
@@ -61,6 +61,9 @@ const ContactPage: React.FC = () => {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const submission = useRef<AbortController | null>(null);
+  const [uncertainSubmission, setUncertainSubmission] = useState(false);
+  useEffect(() => () => submission.current?.abort(), []);
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -140,7 +143,7 @@ const ContactPage: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (inFlight.current) return;
+    if (inFlight.current || uncertainSubmission) return;
     setSubmitError(null);
 
     const validationErrors = validate();
@@ -150,6 +153,8 @@ const ContactPage: React.FC = () => {
     }
 
     inFlight.current = true;
+    const controller = new AbortController();
+    submission.current = controller;
     setSubmitting(true);
     try {
       const phoneState = classifyOptionalPhoneInput(
@@ -164,7 +169,8 @@ const ContactPage: React.FC = () => {
         message: message.trim(),
         pageUrl: window.location.href,
         attachments,
-      });
+      }, controller.signal);
+      if (controller.signal.aborted) return;
 
       if (!result.ok) {
         setSubmitError(result.message);
@@ -183,11 +189,14 @@ const ContactPage: React.FC = () => {
         fileInputRef.current.value = "";
       }
       setShowSuccessModal(true);
-    } catch {
-      setSubmitError("Unable to send your message. Please try again.");
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const uncertain = error instanceof RequestFailure && error.uncertain;
+      setUncertainSubmission(uncertain);
+      setSubmitError(uncertain ? "Please check before trying again." : "Couldn't send message. Try again.");
     } finally {
       inFlight.current = false;
-      setSubmitting(false);
+      if (!controller.signal.aborted) setSubmitting(false);
     }
   };
 
@@ -419,7 +428,7 @@ const ContactPage: React.FC = () => {
                   type="submit"
                   ref={submitButtonRef}
                   className="vrm-btn vrm-btn-primary contact-submit"
-                  disabled={submitting}
+                  disabled={submitting || uncertainSubmission}
                 >
                   {submitting ? "Sending…" : "Send"}
                 </button>
@@ -438,8 +447,7 @@ const ContactPage: React.FC = () => {
       </div>
       {showSuccessModal ? (
         <AccessDialog
-          title="Message sent"
-          description="Thanks for getting in touch. We've received your message and a member of the camOS team will get back to you within 24 hours."
+          title="Message sent."
           className="contact-success-dialog"
           onClose={closeConfirmation}
         >
@@ -490,6 +498,7 @@ type ContactResult = { ok: true } | { ok: false; message: string };
 
 const submitContact = async (
   payload: ContactPayload,
+  signal: AbortSignal,
 ): Promise<ContactResult> => {
   const formData = new FormData();
   formData.append("name", payload.name);
@@ -509,22 +518,18 @@ const submitContact = async (
   const response = await requestFetch("/api/contact", {
     method: "POST",
     body: formData,
+    signal,
   });
 
   const data = await response.json().catch(() => ({}));
-  const message =
-    typeof data?.message === "string"
-      ? data.message
-      : typeof data?.detail === "string"
-        ? data.detail
-        : "Unable to send your message. Please try again.";
-
   if (!response.ok) {
+    if (response.headers.get('X-camos-action-outcome') === 'unknown' || (response.status >= 500 && response.headers.get('X-camos-action-outcome') !== 'not_sent')) throw new RequestFailure(true);
     return {
       ok: false,
-      message,
+      message: "Couldn't send message. Try again.",
     };
   }
+  if (typeof data?.message !== 'string') throw new RequestFailure(true);
 
   return { ok: true };
 };
