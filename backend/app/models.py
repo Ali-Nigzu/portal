@@ -4,7 +4,7 @@ Pydantic Data Models for camOS Analytics API
 
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 class AuthUser(BaseModel):
     id: str
@@ -24,6 +24,7 @@ class CreateAccountRequest(BaseModel):
 class EmailLoginRequest(BaseModel):
     email: str = Field(max_length=320)
     password: str = Field(max_length=1024)
+    stay_signed_in: StrictBool = True
     model_config = ConfigDict(extra="forbid")
 
 class AuthUserResponse(BaseModel):

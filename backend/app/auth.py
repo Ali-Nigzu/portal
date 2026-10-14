@@ -57,7 +57,8 @@ def get_canonical_user(
     if not session_token:
         raise rejected()
     try:
-        user_id, version = verify_session_claims(session_token)
+        user_id, version, persistent = verify_session_claims(session_token, with_persistence=True)
+        request.state.cookie_persistent = persistent
         user = request.app.state.auth_repository.get_enabled_user(user_id)
         if user is not None and user.session_version != version:
             user = None

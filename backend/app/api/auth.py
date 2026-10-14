@@ -287,8 +287,8 @@ def login(login_request: EmailLoginRequest, response: Response, request: Request
         valid = user is not None and user.status == 1 and user.id != 999999 and passwords.verify_password(login_request.password, user.password_hash)
         if not valid:
             raise HTTPException(status_code=401, detail="Invalid email or password")
-        session_token, expires_at = create_session(user.id, session_version=user.session_version)
-        set_auth_cookie(response, session_token, expires_at)
+        session_token, expires_at = create_session(user.id, session_version=user.session_version, persistent=login_request.stay_signed_in)
+        set_auth_cookie(response, session_token, expires_at if login_request.stay_signed_in else None)
         return AuthUserResponse(user=AuthUser(
             id=str(user.id), name=user.username, email=user.email,
             phone=user.phone_number, has_password=user.password_hash is not None,

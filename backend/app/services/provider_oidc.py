@@ -106,7 +106,7 @@ class ProviderOIDC:
             raise ProviderError('provider-unavailable', 503)
         return client_id, secret, callback_uri(provider)
 
-    def start(self, provider, intent):
+    def start(self, provider, intent, stay_signed_in=True):
         client_id, secret, callback = self.config(provider)
         state, nonce, verifier = (secrets.token_urlsafe(32) for _ in range(3))
         with OAuth2Session(client_id, secret, scope='openid email profile',
@@ -114,7 +114,7 @@ class ProviderOIDC:
             url, _ = client.create_authorization_url(ENDPOINTS[provider][0], state=state,
                 code_verifier=verifier, nonce=nonce, response_mode='query')
         ticket = self.tickets.seal('transaction', dict(provider=provider, intent=intent,
-            state=state, nonce=nonce, verifier=verifier, callback=callback), TRANSACTION_TTL)
+            state=state, nonce=nonce, verifier=verifier, callback=callback, stay_signed_in=stay_signed_in), TRANSACTION_TTL)
         return url, ticket
 
     def transaction(self, provider, cookie, state):
@@ -122,6 +122,8 @@ class ProviderOIDC:
         if (value.get('provider') != provider or value.get('intent') not in ('login', 'signup')
                 or not state or not hmac.compare_digest(value.get('state', ''), state)
                 or value.get('callback') != callback_uri(provider)):
+            raise ProviderError('provider-expired', 400)
+        if type(value.get('stay_signed_in', True)) is not bool:
             raise ProviderError('provider-expired', 400)
         return value
 

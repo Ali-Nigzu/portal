@@ -6,7 +6,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from backend.app.auth import set_auth_cookie
 from backend.app.services.provider_oidc import ProviderError, LINK_TTL, TRANSACTION_TTL
@@ -42,6 +42,7 @@ class CallbackPrivacyMiddleware:
 
 class StartRequest(BaseModel):
     intent: Literal['login', 'signup']
+    stay_signed_in: StrictBool = True
     model_config = ConfigDict(extra='forbid')
 
 
@@ -92,14 +93,14 @@ def run(request, callback):
         raise HTTPException(503, 'Sign-in is unavailable right now. Please try again.') from None
 
 
-def session(response, user):
-    token, expires = create_session(user.id, session_version=user.session_version)
-    set_auth_cookie(response, token, expires)
+def session(response, user, persistent=True):
+    token, expires = create_session(user.id, session_version=user.session_version, persistent=persistent)
+    set_auth_cookie(response, token, expires if persistent else None)
 
 
 @router.post('/api/auth/{provider}/start', dependencies=mutations)
 def start(provider: Provider, payload: StartRequest, request: Request):
-    url, ticket = run(request, lambda auth: auth.oidc.start(provider, payload.intent))
+    url, ticket = run(request, lambda auth: auth.oidc.start(provider, payload.intent, payload.stay_signed_in if payload.intent == 'login' else True))
     response = JSONResponse({'authorization_url': url, 'expiresInSeconds': TRANSACTION_TTL})
     clear_provider_cookies(response)
     cookie(response, TRANSACTION_COOKIE, ticket, TRANSACTION_TTL)
@@ -127,11 +128,12 @@ def callback(provider: Provider, request: Request):
             result = decision.kind
             if result == 'session':
                 response = RedirectResponse('/home', status_code=303)
-                session(response, decision.user)
+                session(response, decision.user, transaction.get('stay_signed_in', True) if intent == 'login' else True)
             elif result == 'link':
                 ticket = auth.oidc.tickets.seal('link', dict(identity=identity.mapping(),
                     user_id=str(decision.user.id), email=decision.user.email,
-                    version=decision.user.session_version, provider=provider, intent=intent), LINK_TTL)
+                    version=decision.user.session_version, provider=provider, intent=intent,
+                    stay_signed_in=transaction.get('stay_signed_in', True) if intent == 'login' else True), LINK_TTL)
                 response = RedirectResponse(('/create-account' if intent == 'signup' else '/login')
                                             + '?auth=confirm-provider', status_code=303)
                 cookie(response, LINK_COOKIE, ticket, LINK_TTL)
@@ -179,11 +181,14 @@ def link_state(request: Request):
 
 @router.post('/api/auth/link', dependencies=mutations)
 def confirm_link(payload: PasswordRequest, request: Request, response: Response):
+    value = run(request, lambda auth: auth.oidc.tickets.open('link', request.cookies.get(LINK_COOKIE, ''), LINK_TTL))
+    persistent = value.get('stay_signed_in', True)
+    if type(persistent) is not bool:
+        raise HTTPException(400, 'Please restart sign-in.')
     def confirm(auth):
-        value = auth.oidc.tickets.open('link', request.cookies.get(LINK_COOKIE, ''), LINK_TTL)
         return auth.confirm(value, payload.password)
     user = run(request, confirm)
-    session(response, user)
+    session(response, user, persistent)
     clear_provider_cookies(response)
     return safe_user(user)
 

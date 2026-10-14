@@ -25,11 +25,13 @@ type Props = {
   intent: "login" | "signup";
   requiredProviders?: Provider[];
   disabled?: boolean;
+  staySignedIn?: boolean;
 };
 export default function ProviderAuth({
   intent,
   requiredProviders = [],
   disabled = false,
+  staySignedIn = true,
 }: Props) {
   const location = useLocation(),
     navigate = useNavigate();
@@ -133,7 +135,7 @@ export default function ProviderAuth({
         const value = await providerRequest<{ authorization_url: string }>(
           `${provider}/start`,
           "POST",
-          { intent },
+          { intent, stay_signed_in: intent === "login" ? staySignedIn : true },
         );
         const url = new URL(value.authorization_url);
         const host =
