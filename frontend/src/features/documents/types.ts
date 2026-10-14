@@ -15,14 +15,15 @@ export type DocumentItem = {
 export type UploadError = {
   index: number;
   filename: string;
-  code: "unsupported_type" | "too_large" | "unsafe_filename" | "duplicate_filename" | "storage_unavailable";
+  code: "unsupported_type" | "too_large" | "unsafe_filename" | "duplicate_filename" | "storage_unavailable" | "request_unknown" | "not_sent";
   message: string;
+  outcome?: "failed" | "unknown" | "not_sent";
 };
 
 export type PendingUploadItem = {
   localId: string;
   file: File;
-  status: "ready" | "uploading" | "failed";
+  status: "ready" | "uploading" | "failed" | "unknown";
   error?: string;
 };
 

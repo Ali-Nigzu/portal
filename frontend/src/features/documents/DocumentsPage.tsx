@@ -1,3 +1,4 @@
+import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 import UploadDocumentModal from "./components/UploadDocumentModal";
@@ -163,6 +164,8 @@ const DocumentsGrid: React.FC<DocumentsGridProps> = ({
 };
 
 const useDocuments = () => {
+  const { user, accountSignal } = useAuthenticatedApplication();
+  const uploadController = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const controller = useRef<AbortController>();
   const mounted = useRef(true);
@@ -183,7 +186,7 @@ const useDocuments = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const documents = await listDocuments(abort.signal);
+      const documents = await listDocuments(abort.signal, user.id);
       if (mounted.current && current === generation.current) setDocuments(documents);
     } catch (failure) {
       if (!mounted.current || abort.signal.aborted || current !== generation.current) return;
@@ -195,36 +198,38 @@ const useDocuments = () => {
     } finally {
       if (mounted.current && current === generation.current) setIsLoading(false);
     }
-  }, [invalidate]);
+  }, [invalidate, user.id]);
   useEffect(() => {
     mounted.current = true;
     void refresh();
-    return () => { mounted.current = false; invalidate(); };
+    return () => { mounted.current = false; invalidate(); uploadController.current?.abort(); };
   }, [refresh, invalidate]);
-  const uploadBatch = useCallback(
-    async (files: File[]) => {
-      setMessage(null);
-      const result = await uploadDocuments(files);
-      if (!mounted.current) return result;
-      if (result.documents.length) {
+  const uploadBatch = useCallback(async (files: File[], signal: AbortSignal) => {
+    if (uploadController.current) throw new Error("Please try again.");
+    const abort = new AbortController();
+    uploadController.current = abort;
+    const cancel = () => abort.abort();
+    for (const source of [signal, accountSignal]) {
+      source?.addEventListener("abort", cancel, { once: true });
+      if (source?.aborted) cancel();
+    }
+    setMessage(null);
+    try {
+      const result = await uploadDocuments(files, user.id, abort.signal, uploaded => {
+        if (!mounted.current || accountSignal?.aborted) return;
         invalidate();
-        // Confirmed writes remain visible if the catalogue refresh fails.
-        setDocuments((prev) =>
-          Array.from(
-            new Map(
-              [...prev, ...result.documents].map((item) => [item.id, item]),
-            ).values(),
-          ).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-        );
-        setMessage(
-          `${result.documents.length} document${result.documents.length === 1 ? "" : "s"} uploaded.`,
-        );
-        await refresh();
+        setDocuments(previous => Array.from(new Map([...previous, ...uploaded].map(item => [item.id, item])).values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      });
+      if (mounted.current && !accountSignal?.aborted) {
+        setMessage(result.errors.some(error => error.outcome === "unknown") ? "Please check before trying again." : result.documents.length ? `${result.documents.length} document${result.documents.length === 1 ? "" : "s"} uploaded.` : null);
+        void refresh();
       }
       return result;
-    },
-    [refresh, invalidate],
-  );
+    } finally {
+      for (const source of [signal, accountSignal]) source?.removeEventListener("abort", cancel);
+      if (uploadController.current === abort) uploadController.current = null;
+    }
+  }, [user.id, accountSignal, refresh, invalidate]);
   const removeDocument = useCallback(
     async (id: string) => {
       if (deletingId) return;
