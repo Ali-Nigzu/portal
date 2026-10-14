@@ -18,7 +18,7 @@ import SettingsFrame, { SettingsPageHeader } from "../../components/SettingsFram
 import "../settings/SettingsPages.css";
 
 export default function ManageAccessPage() {
-  const { organisations, user, accountSignal, favouritesCatalogueReady } =
+  const { organisations, user, accountSignal, favouritesCatalogueReady, catalogueError, refreshOrganisations } =
     useAuthenticatedApplication();
   const { refreshAccess, openCreate, openRequest } = useOrganisationAccess();
   const personal = usePersonalAccess();
@@ -224,8 +224,7 @@ export default function ManageAccessPage() {
           )}
           {!favouritesCatalogueReady ? (
             <p className="access-description">
-              The organisation catalogue is unavailable. Try refreshing access
-              below.
+              {catalogueError ? <>Can't load organisations. <button className="vrm-btn vrm-btn-sm" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}
             </p>
           ) : !organisations.length ? (
             <p className="access-description">

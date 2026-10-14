@@ -177,7 +177,10 @@ const AppRoutes: React.FC = () => {
         setCatalogueError(false);
       }
     } catch (error) {
-      if (revision === catalogueRevision.current) setCatalogueError(true);
+      if (revision === catalogueRevision.current) {
+        setCatalogueError(true);
+        setFavouritesCatalogueReady(false);
+      }
       throw error;
     }
   }, []);
@@ -206,14 +209,20 @@ const AppRoutes: React.FC = () => {
         if (!current()) return;
         if (me.ok) {
           clearDemoSessionLocal();
-          const catalogue = await withDeadline(fetchOrganisations, abort.signal);
-          if (!current()) return;
           setAuthenticatedUser(me.data.user);
           setIsSessionChecked(true);
-          if (catalogueVersion === catalogueRevision.current) {
-            setOrganisations(catalogue ?? []);
-            setFavouritesCatalogueReady(true);
-            setCatalogueError(false);
+          try {
+            const catalogue = await withDeadline(fetchOrganisations, abort.signal);
+            if (current() && catalogueVersion === catalogueRevision.current) {
+              setOrganisations(catalogue);
+              setFavouritesCatalogueReady(true);
+              setCatalogueError(false);
+            }
+          } catch {
+            if (current() && catalogueVersion === catalogueRevision.current) {
+              setFavouritesCatalogueReady(false);
+              setCatalogueError(true);
+            }
           }
         } else if (me.status === 401) {
           setAuthenticatedUser(null);
@@ -238,15 +247,20 @@ const AppRoutes: React.FC = () => {
     const revision = ++accountRevision.current;
     const catalogueVersion = ++catalogueRevision.current;
     clearDemoSessionLocal();
-    const me = await fetchMe();
+    const me = await withDeadline(fetchMe);
     if (!me.ok) throw new Error("Unable to confirm sign-in. Please try again.");
-    const nextOrganisations = await fetchOrganisations().catch(() => null);
     if (revision !== accountRevision.current) return;
     setAuthenticatedUser(me.data.user);
     setIsSessionChecked(true);
+    setSessionError(false);
+    setOrganisations([]);
+    setFavouritesCatalogueReady(false);
+    const nextOrganisations = await withDeadline(fetchOrganisations).catch(() => null);
+    if (revision !== accountRevision.current) return;
     if (catalogueVersion === catalogueRevision.current) {
       setOrganisations(nextOrganisations ?? []);
       setFavouritesCatalogueReady(nextOrganisations !== null);
+      setCatalogueError(nextOrganisations === null);
     }
   };
 
@@ -278,7 +292,7 @@ const AppRoutes: React.FC = () => {
   const demo = isDemoSessionActive() || isDemoRoute;
   const authenticated = Boolean(authenticatedUser) && !demo && !hasViewToken;
   const lazyRoute = (element: React.ReactNode) => (
-    <Suspense fallback={null}>{element}</Suspense>
+    <Suspense fallback={<div className="vrm-content-loading" role="status">Loading…</div>}>{element}</Suspense>
   );
   const renderedEpoch = actorEpoch.current;
   const refreshAccount = async (confirmed?: AuthUser) => {
@@ -300,9 +314,10 @@ const AppRoutes: React.FC = () => {
       user={authenticatedUser}
       accountSignal={accountSignal}
       refreshAccount={refreshAccount}
-      organisations={organisations}
+      organisations={favouritesCatalogueReady ? organisations : []}
       refreshOrganisations={refreshOrganisations}
       favouritesCatalogueReady={favouritesCatalogueReady}
+      catalogueError={catalogueError}
     >
       <AuthenticatedVRMLayout onLogout={handleLogout} />
     </AuthenticatedApplicationProvider>
@@ -322,13 +337,14 @@ const AppRoutes: React.FC = () => {
       </Suspense>
     );
   }
-  if (sessionError && !isDemoRoute) return (
+  const publicRoute = isDemoRoute || /^\/(contact|login|create-account|verify-email|reset-password(?:\/.*)?|terms-and-conditions|privacy-policy|sub-processor-register)$/.test(location.pathname);
+  if (sessionError && !publicRoute) return (
     <div role="alert">
-      <p>Unable to confirm your session. Please try again.</p>
+      <p>Can't load your account. Try again.</p>
       <button className="vrm-btn" onClick={() => setSessionAttempt(value => value + 1)}>Retry</button>
     </div>
   );
-  if (!isSessionChecked && !(isDemoRoute && sessionError)) return null;
+  if (!isSessionChecked && !publicRoute) return <div className="vrm-content-loading" role="status">Loading…</div>;
   // Tokens are rejected; they never establish application identity or scope.
   if (
     hasViewToken &&
@@ -347,9 +363,6 @@ const AppRoutes: React.FC = () => {
   const accountRedirect = <Navigate to={demo ? "/demo" : "/login"} replace />;
   return (
     <>
-    {catalogueError && authenticated && <div role="alert">
-      Unable to load organisations. <button className="vrm-btn" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button>
-    </div>}
     <ErrorBoundary name="route" resetKey={location.key + routeAttempt}
       onRetry={retryRoute}
       onReload={() => window.location.reload()} onHome={() => navigate("/home")}>

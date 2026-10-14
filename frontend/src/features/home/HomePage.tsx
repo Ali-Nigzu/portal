@@ -10,7 +10,7 @@ import "../../styles/Dashboard.css";
 import "./HomePage.css";
 
 const HomePage: React.FC = () => {
-  const { user, organisations, isScopeFavourite, favouriteStorageError } = useAuthenticatedApplication();
+  const { user, organisations, isScopeFavourite, favouriteStorageError, favouritesCatalogueReady, catalogueError, refreshOrganisations } = useAuthenticatedApplication();
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
@@ -87,6 +87,9 @@ const HomePage: React.FC = () => {
           </div>
         </header>
 
+        {!favouritesCatalogueReady && <p className="home-page__empty-copy" role={catalogueError ? "alert" : "status"}>
+          {catalogueError ? <>Can't load organisations. <button className="vrm-btn vrm-btn-sm" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}
+        </p>}
         <section className="home-page__layout" aria-label="Home modules">
           {organisations.length === 1 ? <button
             type="button"
@@ -138,7 +141,7 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--favorites">
             <Card title="Favourite Sites" className="home-page__card home-page__card--favorites">
               <div className="home-page__card-body home-page__card-body--links" data-testid="home-favourites">
-                {favourites.length ? favourites.map(favourite => <button
+                {!favouritesCatalogueReady ? null : favourites.length ? favourites.map(favourite => <button
                   type="button" key={favourite.key}
                   className="home-page__list-row home-page__favourite-row"
                   onClick={() => navigate(favourite.path)}
@@ -157,7 +160,7 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--recent">
             <Card title="Recently Viewed" className="home-page__card home-page__card--recent">
               <div className="home-page__card-body home-page__card-body--recent">
-                {recent.length ? recent.map((destination) => <button
+                {!favouritesCatalogueReady ? null : recent.length ? recent.map((destination) => <button
                   key={`${destination.organisationId}:${destination.siteId ?? "all"}:${destination.module}`}
                   type="button"
                   className="home-page__list-row"

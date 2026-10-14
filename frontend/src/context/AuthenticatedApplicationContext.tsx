@@ -9,6 +9,7 @@ type AuthenticatedApplicationInput = {
   refreshAccount?: (account?: AuthUser) => Promise<void>;
   accountSignal?: AbortSignal;
   favouritesCatalogueReady?: boolean;
+  catalogueError?: boolean;
 };
 
 type AuthenticatedApplicationValue = AuthenticatedApplicationInput & {
@@ -24,6 +25,7 @@ export function AuthenticatedApplicationProvider({
   organisations,
   refreshOrganisations,
   favouritesCatalogueReady = true,
+  catalogueError = false,
   refreshAccount,
   accountSignal,
   children,
@@ -133,6 +135,7 @@ export function AuthenticatedApplicationProvider({
       user.id,
       validKeys,
       favouritesCatalogueReady,
+      catalogueError,
       favourites.hydrated,
       favourites.userId,
     ],
@@ -145,6 +148,7 @@ export function AuthenticatedApplicationProvider({
       accountSignal,
       refreshOrganisations,
       favouritesCatalogueReady,
+      catalogueError,
       isScopeFavourite,
       toggleScopeFavourite,
       favouriteStorageError:

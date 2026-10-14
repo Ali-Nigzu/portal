@@ -8,8 +8,10 @@ import { isPortalModule } from "./authenticatedPortalRoutes";
 import { recordRecentPortalLocation } from "./recentPortalDestinations";
 import AuthenticatedPortalScopeHeader from "../../components/AuthenticatedPortalScopeHeader";
 import { parseSnapshot } from "./api";
+import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
 
 export default function AuthenticatedOrganisationPortalRoute() {
+  const { favouritesCatalogueReady, catalogueError, refreshOrganisations, organisations } = useAuthenticatedApplication();
   const { organisationId, siteId, module = "dashboard" } = useParams();
   const source = useMemo(
     () => authenticatedPortalSource(organisationId ?? ""),
@@ -21,6 +23,10 @@ export default function AuthenticatedOrganisationPortalRoute() {
     }
   }, [organisationId, siteId, module]);
   if (!organisationId) return <div role="alert">Organisation unavailable.</div>;
+  if (!favouritesCatalogueReady) return <div className="vrm-content-loading" role={catalogueError ? "alert" : "status"}>
+    {catalogueError ? <>Can't load organisations. <button className="vrm-btn" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}
+  </div>;
+  if (!organisations.some(item => item.id === organisationId)) return <div role="alert">Organisation unavailable.</div>;
   return (
     <PortalProvider
       source={source}
