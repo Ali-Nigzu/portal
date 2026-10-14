@@ -8,9 +8,11 @@ import { organisationPortalPath, sitePortalPath } from "../organisation-dashboar
 import { readRecentPortalDestinations } from "../organisation-dashboard/recentPortalDestinations";
 import "../../styles/Dashboard.css";
 import "./HomePage.css";
+import { useOrganisationAccess } from "../organisation-access/OrganisationAccessContext";
 
 const HomePage: React.FC = () => {
   const { user, organisations, isScopeFavourite, favouriteStorageError, favouritesCatalogueReady, catalogueError, refreshOrganisations } = useAuthenticatedApplication();
+  const { actionNotice } = useOrganisationAccess();
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
@@ -87,6 +89,7 @@ const HomePage: React.FC = () => {
           </div>
         </header>
 
+        {actionNotice && <p className="home-page__empty-copy" role="status">{actionNotice}</p>}
         {!favouritesCatalogueReady && <p className="home-page__empty-copy" role={catalogueError ? "alert" : "status"}>
           {catalogueError ? <>Can't load organisations. <button className="vrm-btn vrm-btn-sm" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}
         </p>}

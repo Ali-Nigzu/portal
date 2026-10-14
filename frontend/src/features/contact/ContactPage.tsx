@@ -1,3 +1,4 @@
+import { requestFetch, RequestFailure } from "../auth/transport/me";
 import React, { useMemo, useRef, useState } from "react";
 
 import {
@@ -505,7 +506,7 @@ const submitContact = async (
   }
   payload.attachments.forEach((file) => formData.append("attachments", file));
 
-  const response = await fetch("/api/contact", {
+  const response = await requestFetch("/api/contact", {
     method: "POST",
     body: formData,
   });

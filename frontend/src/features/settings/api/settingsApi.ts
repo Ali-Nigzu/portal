@@ -1,23 +1,25 @@
-import { accountFetch } from "../../auth/transport/me";
+import { accountFetch, RequestFailure } from "../../auth/transport/me";
 import { type AuthUser } from "../../auth/transport/me";
 
-export const getMe = async (): Promise<AuthUser> => {
-  const response = await accountFetch('/api/me', { credentials: 'include', cache: 'no-store' });
+export const getMe = async (signal?: AbortSignal): Promise<AuthUser> => {
+  const response = await accountFetch('/api/me', { signal, credentials: 'include', cache: 'no-store' });
   if (!response.ok) {
     throw new Error("Please try again.");
   }
   return (await response.json() as {user: AuthUser}).user;
 };
 
-export const startSettingsUnlock = async (currentPassword?: string): Promise<SettingsUnlockStartResult> => {
+export const startSettingsUnlock = async (currentPassword?: string, signal?: AbortSignal): Promise<SettingsUnlockStartResult> => {
   const response = await accountFetch("/api/settings/unlock/start", {
     method: "POST",
+    signal,
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify(currentPassword === undefined ? {} : { current_password: currentPassword }),
   });
 
   if (!response.ok) {
+    if (response.status >= 500) throw new RequestFailure(true);
     let message: string | undefined;
     try {
       const data = (await response.json()) as { detail?: string };
@@ -37,14 +39,16 @@ export const startSettingsUnlock = async (currentPassword?: string): Promise<Set
   return { ok: true, data };
 };
 
-export const resendSettingsUnlockCode = async (): Promise<SettingsUnlockResendResult> => {
+export const resendSettingsUnlockCode = async (signal?: AbortSignal): Promise<SettingsUnlockResendResult> => {
   const response = await accountFetch("/api/settings/unlock/resend", {
     method: "POST",
+    signal,
     headers: { "X-Requested-With": "camOS" },
     credentials: "include",
   });
 
   if (!response.ok) {
+    if (response.status >= 500) throw new RequestFailure(true);
     let message: string | undefined;
     try {
       const data = (await response.json()) as { detail?: string };
@@ -64,15 +68,17 @@ export const resendSettingsUnlockCode = async (): Promise<SettingsUnlockResendRe
   return { ok: true, data };
 };
 
-export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUnlockVerifyResult> => {
+export const verifySettingsUnlockCode = async (code: string, signal?: AbortSignal): Promise<SettingsUnlockVerifyResult> => {
   const response = await accountFetch("/api/settings/unlock/verify", {
     method: "POST",
+    signal,
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
     body: JSON.stringify({ code: code.trim() }),
   });
 
   if (!response.ok) {
+    if (response.status >= 500) throw new RequestFailure(true);
     let message: string | undefined;
     try {
       const data = (await response.json()) as { detail?: string };
@@ -102,6 +108,7 @@ export const updateMe = async (payload: UpdateMePayload, signal?: AbortSignal): 
   });
 
   if (!response.ok) {
+    if (response.status >= 500) throw new RequestFailure(true);
     let message = "Unable to save";
     try {
       const data = (await response.json()) as { detail?: string };
@@ -118,9 +125,10 @@ export const updateMe = async (payload: UpdateMePayload, signal?: AbortSignal): 
   return data.user;
 };
 
-export const endSettingsUnlock = async (): Promise<void> => {
+export const endSettingsUnlock = async (signal?: AbortSignal): Promise<void> => {
   const response = await accountFetch("/api/settings/unlock/end", {
     method: "POST",
+    signal,
     headers: { "X-Requested-With": "camOS" },
     credentials: "include",
   });

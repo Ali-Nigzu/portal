@@ -9,9 +9,9 @@ type Props = {
   fallbackFocus?: () => HTMLElement | null;
   onClose: () => void;
   onVerified: (result: { unlockToken: string; unlockExpiresInSeconds: number }) => void;
-  onStartUnlock: (password: string) => Promise<{ ok: true; resendCooldownSeconds: number } | { ok: false; message: string }>;
-  onVerifyCode: (code: string) => Promise<{ ok: true; unlockToken: string; unlockExpiresInSeconds: number } | { ok: false; message: string }>;
-  onResendCode: () => Promise<{ ok: true; resendCooldownSeconds: number } | { ok: false; message: string }>;
+  onStartUnlock: (password: string, signal: AbortSignal) => Promise<{ ok: true; resendCooldownSeconds: number } | { ok: false; message: string }>;
+  onVerifyCode: (code: string, signal: AbortSignal) => Promise<{ ok: true; unlockToken: string; unlockExpiresInSeconds: number } | { ok: false; message: string }>;
+  onResendCode: (signal: AbortSignal) => Promise<{ ok: true; resendCooldownSeconds: number } | { ok: false; message: string }>;
 };
 
 export default function ReenterPasswordModal(props: Props) {
@@ -24,6 +24,9 @@ export default function ReenterPasswordModal(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const operation = useRef<AbortController | null>(null);
+  useEffect(() => () => operation.current?.abort(), []);
+  const close = () => { operation.current?.abort(); setPassword(""); setCode(""); props.onClose(); };
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!props.isOpen) { setStep("password"); setPassword(""); setCode(""); setVisible(false); setBusy(false); setError(null); setMessage(null); setCooldown(0); }
@@ -37,38 +40,43 @@ export default function ReenterPasswordModal(props: Props) {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (operation.current) return;
     if (step === "password" && needsPassword && !password) { setError("Enter your current password."); return; }
     if (step === "code" && !/^\d{6}$/.test(code)) { setError("Enter your 6-digit verification code."); return; }
+    const controller = new AbortController(); operation.current = controller;
     setBusy(true); setError(null);
     try {
       if (step === "password") {
-        const result = await props.onStartUnlock(password);
-        if (!result.ok) { setError(result.message); return; }
+        const result = await props.onStartUnlock(password, controller.signal);
+        if (controller.signal.aborted) return;
+      if (!result.ok) { setError(result.message); return; }
         setPassword(""); setStep("code"); setCooldown(result.resendCooldownSeconds);
         setMessage("We sent a verification code to your account email.");
       } else {
-        const result = await props.onVerifyCode(code);
-        if (!result.ok) { setError(result.message); return; }
+        const result = await props.onVerifyCode(code, controller.signal);
+        if (controller.signal.aborted) return;
+      if (!result.ok) { setError(result.message); return; }
         props.onVerified(result);
       }
-    } catch { setError("Unable to complete the request. Please try again."); }
-    finally { setBusy(false); }
+    } catch (error) { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Please try again."); }
+    finally { if (operation.current === controller) operation.current = null; if (!controller.signal.aborted) setBusy(false); }
   };
   const resend = async () => {
-    if (busy || cooldown) return;
+    if (operation.current || cooldown) return;
+    const controller = new AbortController(); operation.current = controller;
     setBusy(true); setError(null);
     try {
-      const result = await props.onResendCode();
+      const result = await props.onResendCode(controller.signal);
+      if (controller.signal.aborted) return;
       if (!result.ok) { setError(result.message); return; }
       setCooldown(result.resendCooldownSeconds); setMessage("A new verification code was sent.");
-    } catch { setError("Unable to resend. Please try again."); }
-    finally { setBusy(false); }
+    } catch (error) { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Please try again."); }
+    finally { if (operation.current === controller) operation.current = null; if (!controller.signal.aborted) setBusy(false); }
   };
   if (!props.isOpen) return null;
   return <AccessDialog title={step === "password" ? "Unlock to edit" : "Verify your account"}
     description={step === "password" ? (needsPassword ? "Confirm your password, then verify the code sent to your email." : "Send a verification code to your account email to unlock editing.") : "Enter the 6-digit code. Editing stays unlocked for five minutes."}
-    busy={busy} onClose={props.onClose} fallbackFocus={props.fallbackFocus}>
+    busy={busy} cancelBusy onClose={close} fallbackFocus={props.fallbackFocus}>
     <form className="settings-form-grid" onSubmit={submit}>
       {(step === "code" || needsPassword) && <div className="settings-form-field">
         <label className="settings-form-label" htmlFor="account-unlock-input">{step === "password" ? "Current password" : "Verification code"}</label>
@@ -85,7 +93,7 @@ export default function ReenterPasswordModal(props: Props) {
       {error && <p id="account-unlock-error" className="settings-form-error" role="alert">{error}</p>}
       {message && <p className="settings-form-message" role="status">{message}</p>}
       <div className="settings-form-actions">
-        <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy} onClick={props.onClose}>Cancel</button>
+        <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" onClick={close}>Cancel</button>
         {step === "code" && <button type="button" className="vrm-btn vrm-btn-secondary vrm-btn-sm" disabled={busy || cooldown > 0} onClick={resend}>{cooldown ? `Resend in ${cooldown}s` : "Resend code"}</button>}
         <button className="vrm-btn vrm-btn-primary vrm-btn-sm" disabled={busy}>{busy ? "Verifying…" : step === "password" ? (needsPassword ? "Continue" : "Send verification code") : "Unlock"}</button>
       </div>

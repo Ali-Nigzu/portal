@@ -1,8 +1,8 @@
-import { accountFetch } from "../auth/transport/me";
+import { accountFetch, requestFetch } from "../auth/transport/me";
 import { type DashboardSource, type SelectedSnapshot } from "./types";
 
 async function get(path: string, signal: AbortSignal) {
-  const response = await fetch(`/api/demo/dashboard${path}`, { signal, cache: "no-store" });
+  const response = await requestFetch(`/api/demo/dashboard${path}`, { signal, cache: "no-store" }, 12_000);
   if (!response.ok) {
     throw new Error(response.status === 404 ? "Dashboard data not found." : "Dashboard is temporarily unavailable. Please retry.");
   }

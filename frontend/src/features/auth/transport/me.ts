@@ -41,7 +41,7 @@ export async function requestFetch(input: RequestInfo | URL, init: RequestInit =
   }
 }
 
-export async function accountFetch(input: RequestInfo | URL, init: RequestInit = {}, timeout = 12_000): Promise<Response> {
+export async function accountFetch(input: RequestInfo | URL, init: RequestInit = {}, timeout = ["GET", "HEAD"].includes((init.method ?? "GET").toUpperCase()) ? 12_000 : 30_000): Promise<Response> {
   const actor = accountBinding;
   if (!actor || actor.signal.aborted) throw new DOMException("Aborted", "AbortError");
   const controller = new AbortController();

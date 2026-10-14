@@ -1,3 +1,4 @@
+import { requestFetch, RequestFailure } from "./transport/me";
 import React, { type FormEvent, useState, useCallback } from "react";
 
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -271,7 +272,7 @@ const login = async (
   email: string,
   password: string,
 ): Promise<LoginResult> => {
-  const response = await fetch("/api/login", {
+  const response = await requestFetch("/api/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

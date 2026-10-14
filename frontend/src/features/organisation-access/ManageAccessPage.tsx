@@ -16,11 +16,12 @@ import UsersTable from "./UsersTable";
 import SettingsFrame, { SettingsPageHeader } from "../../components/SettingsFrame";
 
 import "../settings/SettingsPages.css";
+import { RequestFailure } from "../auth/transport/me";
 
 export default function ManageAccessPage() {
   const { organisations, user, accountSignal, favouritesCatalogueReady, catalogueError, refreshOrganisations } =
     useAuthenticatedApplication();
-  const { refreshAccess, openCreate, openRequest } = useOrganisationAccess();
+  const { refreshAccess, openCreate, openRequest, actionNotice } = useOrganisationAccess();
   const personal = usePersonalAccess();
   const [search, setSearch] = useSearchParams();
   const selected = search.get("organisation_id");
@@ -48,14 +49,21 @@ export default function ManageAccessPage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const deleteController = useRef<AbortController | null>(null);
+  const uncertainDeletes = useRef(new Set<string>());
+  const decisionController = useRef<AbortController | null>(null);
   const closeDelete = () => {
-    if (deleteController.current) { deleteController.current.abort(); deleteController.current = null; setBusy(false); }
+    if (deleteController.current) {
+      if (id) uncertainDeletes.current.add(id);
+      setDeleteMessage("Please check before trying again.");
+      deleteController.current.abort(); deleteController.current = null; setBusy(false);
+      void refreshAccess().catch(() => {});
+    }
     setDeletePassword(""); setDeleteOrganisation(false); setDeleteError(null);
   };
   useEffect(() => {
     const cancel = () => closeDelete();
     accountSignal?.addEventListener("abort", cancel, { once: true });
-    return () => { accountSignal?.removeEventListener("abort", cancel); deleteController.current?.abort(); };
+    return () => { accountSignal?.removeEventListener("abort", cancel); deleteController.current?.abort(); decisionController.current?.abort(); };
   }, [accountSignal]);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null),
@@ -101,13 +109,16 @@ export default function ManageAccessPage() {
     member: ManagedRelationship,
     action: "approve" | "decline" | "withdraw" | "disable",
   ) => {
-    if (busy) return;
+    if (busy || decisionController.current) return;
+    const controller = new AbortController();
+    decisionController.current = controller;
     setBusy(true);
     setError(null);
     setMessage(null);
     setConfirmError(null);
     try {
-      await manageMembership(member, action);
+      await manageMembership(member, action, controller.signal);
+      if (controller.signal.aborted) return;
       if (currentId.current !== member.organisation_id) {
         await refreshAccess();
         return;
@@ -124,6 +135,7 @@ export default function ManageAccessPage() {
       );
       await reload();
     } catch (failure) {
+      if (controller.signal.aborted) return;
       if (currentId.current !== member.organisation_id) return;
       if (confirmation) setConfirmError(errorMessage(failure));
       else setError(errorMessage(failure));
@@ -134,7 +146,8 @@ export default function ManageAccessPage() {
           })
           .catch(() => {});
     } finally {
-      setBusy(false);
+      if (decisionController.current === controller) decisionController.current = null;
+      if (!controller.signal.aborted) setBusy(false);
     }
   };
   const copy = async () => {
@@ -381,6 +394,7 @@ export default function ManageAccessPage() {
           {personal.message}
         </p>
       )}
+      {actionNotice && <p className="settings-form-message" role="status">{actionNotice}</p>}
       <div className="access-row-actions access-page-actions">
         <button
           className="vrm-btn vrm-btn-secondary vrm-btn-sm"
@@ -402,7 +416,7 @@ export default function ManageAccessPage() {
         </section>
       )}
       {deleteOrganisation && data?.can_manage && id && (
-        <AccessDialog title="Delete organisation" description={<>Deleting your organisation will immediately disable access. This action will become irreversible after 7 days. If you change your mind, please <Link to="/contact">contact us</Link> within this period.</>} busy={busy} onClose={closeDelete}>
+        <AccessDialog title="Delete organisation" description={<>Deleting your organisation is irreversible after 7 days. If you change your mind, please <Link to="/contact">contact us</Link> within this period.</>} busy={busy} cancelBusy onClose={closeDelete}>
           {!user.has_password ? <p>Set a camOS account password in <Link to="/settings/account">Settings → My Account</Link> before deleting an organisation.</p> :
             <label className="settings-field-label">Current account password
               <input className="settings-input" required data-autofocus type="password" autoComplete="current-password" maxLength={1024}
@@ -411,11 +425,10 @@ export default function ManageAccessPage() {
           {deleteError && <p role="alert" className="settings-form-error">{deleteError}</p>}
           <div className="settings-form-actions">
             <button className="vrm-btn vrm-btn-secondary" onClick={() => {
-              if (deleteController.current) setDeleteMessage("Request cancelled. Refresh access to confirm its outcome.");
               closeDelete();
             }}>Cancel</button>
-            <button className="vrm-btn access-danger-button" disabled={busy || !user.has_password || !deletePassword || accountSignal?.aborted} onClick={async () => {
-              if (busy || deleteController.current || !user.has_password || !deletePassword || accountSignal?.aborted) return;
+            <button className="vrm-btn access-danger-button" disabled={busy || !user.has_password || !deletePassword || accountSignal?.aborted || uncertainDeletes.current.has(id)} onClick={async () => {
+              if (busy || deleteController.current || !user.has_password || !deletePassword || accountSignal?.aborted || uncertainDeletes.current.has(id)) return;
               const deletingId = id;
               const controller = new AbortController();
               deleteController.current = controller;
@@ -428,6 +441,7 @@ export default function ManageAccessPage() {
                 setDeleteMessage("Organisation access disabled. Contact us within 7 days if you change your mind.");
                 try { await refreshAccess(); } catch { if (!controller.signal.aborted) setError("Organisation access disabled, but access refresh failed. Refresh access to update navigation."); }
               } catch (failure) {
+                if (failure instanceof RequestFailure && failure.uncertain) { uncertainDeletes.current.add(deletingId); void refreshAccess().catch(() => {}); }
                 if (!controller.signal.aborted && currentId.current === deletingId) setDeleteError(errorMessage(failure));
               } finally {
                 if (deleteController.current === controller) { deleteController.current = null; setBusy(false); }
@@ -438,15 +452,18 @@ export default function ManageAccessPage() {
       )}
       {invite && data?.can_manage && id && (
         <InviteUserModal
+          onUncertain={() => { setMessage("Please check before trying again."); void reload().catch(() => {}); }}
           organisations={organisations}
           initialOrganisationId={id}
           onClose={() => setInvite(false)}
-          onSubmitted={async (payload) => {
+          onSubmitted={async (payload, signal) => {
             await inviteMember(
               payload.organisation_id,
               payload.identifier_type,
               payload.identifier,
+              signal,
             );
+            if (signal.aborted) return;
             if (currentId.current !== id) {
               await refreshAccess();
               return;
@@ -470,8 +487,9 @@ export default function ManageAccessPage() {
               ? `${confirmation.member.username} will no longer have access to ${data?.organisation.name}. You can invite them again later.`
               : `Withdraw ${confirmation.member.username}'s invitation to ${data?.organisation.name}?`
           }
-          onClose={() => setConfirmation(null)}
+          onClose={() => { if (decisionController.current) { decisionController.current.abort(); decisionController.current = null; setBusy(false); setMessage("Please check before trying again."); void reload().catch(() => {}); } setConfirmation(null); }}
           busy={busy}
+          cancelBusy
         >
           {confirmError && (
             <p role="alert" className="settings-form-error">
@@ -482,8 +500,7 @@ export default function ManageAccessPage() {
             <button
               data-autofocus
               className="vrm-btn vrm-btn-secondary"
-              disabled={busy}
-              onClick={() => setConfirmation(null)}
+              onClick={() => { decisionController.current?.abort(); decisionController.current = null; setBusy(false); setConfirmation(null); void reload().catch(() => {}); }}
             >
               Cancel
             </button>

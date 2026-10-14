@@ -10,6 +10,7 @@ type Props = {
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
+  cancelBusy?: boolean;
   className?: string;
   fallbackFocus?: () => HTMLElement | null;
 };
@@ -20,6 +21,7 @@ export default function AccessDialog({
   children,
   onClose,
   busy = false,
+  cancelBusy = false,
   className = "",
   fallbackFocus,
 }: Props) {
@@ -32,6 +34,8 @@ export default function AccessDialog({
     submitting = useRef(busy);
   close.current = onClose;
   submitting.current = busy;
+  const cancellable = useRef(cancelBusy);
+  cancellable.current = cancelBusy;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
@@ -61,7 +65,7 @@ export default function AccessDialog({
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        if (!submitting.current) close.current();
+        if (!submitting.current || cancellable.current) close.current();
       }
       if (event.key === "Tab") {
         const items = focusables(),

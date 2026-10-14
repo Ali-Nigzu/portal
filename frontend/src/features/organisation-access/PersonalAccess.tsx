@@ -1,5 +1,5 @@
 import { type PendingRelationship, decideInvitation, errorMessage } from "./api";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useOrganisationAccess } from "./OrganisationAccessContext";
 
 export function usePersonalAccess() {
@@ -8,16 +8,20 @@ export function usePersonalAccess() {
   const [busy, setBusy] = useState<string | null>(null),
     [error, setError] = useState<string | null>(null),
     [message, setMessage] = useState<string | null>(null);
+  const operation = useRef<AbortController | null>(null);
+  useEffect(() => () => operation.current?.abort(), []);
   const decide = async (
     item: PendingRelationship,
     action: "accept" | "decline",
   ) => {
-    if (busy) return;
+    if (operation.current) return;
+    const controller = new AbortController(); operation.current = controller;
     setBusy(item.organisation_id);
     setError(null);
     setMessage(null);
     try {
-      await decideInvitation(item, action);
+      await decideInvitation(item, action, controller.signal);
+      if (controller.signal.aborted) return;
       setMessage(
         action === "accept"
           ? `You joined ${item.organisation_name}.`
@@ -25,10 +29,12 @@ export function usePersonalAccess() {
       );
       await refreshAccess();
     } catch (failure) {
+      if (controller.signal.aborted) return;
       setError(errorMessage(failure));
       void refreshAccess().catch(() => {});
     } finally {
-      setBusy(null);
+      if (operation.current === controller) operation.current = null;
+      if (!controller.signal.aborted) setBusy(null);
     }
   };
   const retry = () => {
