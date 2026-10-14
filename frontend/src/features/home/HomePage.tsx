@@ -32,7 +32,7 @@ const HomePage: React.FC = () => {
       })),
     ]).filter((result) => !normalizedInput || result.label.toLowerCase().includes(normalizedInput)).slice(0, 8);
   }, [isSearchFocused, organisations, searchValue]);
-  const recent = useMemo(() => readRecentPortalDestinations(organisations), [organisations]);
+  const recent = useMemo(() => readRecentPortalDestinations(user.id, organisations), [user.id, organisations]);
   const favourites = organisations.flatMap(organisation => [
     ...(isScopeFavourite(organisation.id) ? [{
       key: `${organisation.id}:all`, organisationName: organisation.name, scopeName: "All Sites",

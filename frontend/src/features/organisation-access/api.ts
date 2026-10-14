@@ -1,3 +1,4 @@
+import { accountFetch } from "../auth/transport/me";
 type Relationship = {
   user_id: string;
   organisation_id: string;
@@ -47,7 +48,7 @@ async function request<T>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`/api/portal${path}`, {
+    response = await accountFetch(`/api/portal${path}`, {
       method: body === undefined ? "GET" : "POST",
       credentials: "include",
       cache: "no-store",

@@ -1,3 +1,4 @@
+import { accountFetch } from "../auth/transport/me";
 import { type PortalSource, type PortalDeviceControl, PortalProvider, responseJson } from "../../context/PortalContext";
 
 import { useEffect, useMemo } from "react";
@@ -11,7 +12,7 @@ import { parseSnapshot } from "./api";
 import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
 
 export default function AuthenticatedOrganisationPortalRoute() {
-  const { favouritesCatalogueReady, catalogueError, refreshOrganisations, organisations } = useAuthenticatedApplication();
+  const { user, favouritesCatalogueReady, catalogueError, refreshOrganisations, organisations } = useAuthenticatedApplication();
   const { organisationId, siteId, module = "dashboard" } = useParams();
   const source = useMemo(
     () => authenticatedPortalSource(organisationId ?? ""),
@@ -19,9 +20,9 @@ export default function AuthenticatedOrganisationPortalRoute() {
   );
   useEffect(() => {
     if (organisationId && isPortalModule(module)) {
-      recordRecentPortalLocation({ organisationId, siteId, module });
+      recordRecentPortalLocation(user.id, { organisationId, siteId, module });
     }
-  }, [organisationId, siteId, module]);
+  }, [user.id, organisationId, siteId, module]);
   if (!organisationId) return <div role="alert">Organisation unavailable.</div>;
   if (!favouritesCatalogueReady) return <div className="vrm-content-loading" role={catalogueError ? "alert" : "status"}>
     {catalogueError ? <>Can't load organisations. <button className="vrm-btn" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}
@@ -46,7 +47,7 @@ function authenticatedPortalSource(organisationId: string): PortalSource {
   const request: PortalSource["request"] = async (path, input, signal) => {
     const params = new URLSearchParams(input);
     params.delete("effective_now");
-    const response = await fetch(
+    const response = await accountFetch(
       `${base}${path}${params.size ? `?${params}` : ""}`,
       {
         signal,
@@ -68,7 +69,7 @@ function authenticatedPortalSource(organisationId: string): PortalSource {
         match[1] === "device"
           ? `/devices/${encodeURIComponent(match[2])}/enabled`
           : `/gateways/by-site/${encodeURIComponent(match[2])}/enabled`;
-      const response = await fetch(`${base}${path}`, {
+      const response = await accountFetch(`${base}${path}`, {
         method: "PUT",
         signal,
         credentials: "include",

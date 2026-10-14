@@ -51,15 +51,22 @@ def get_canonical_user(
     request: Request,
     session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
 ):
+    def rejected():
+        return HTTPException(status_code=401, detail="Unauthenticated",
+                             headers={"X-camos-auth-error": "session_invalid"})
     if not session_token:
-        raise HTTPException(status_code=401, detail="Unauthenticated")
+        raise rejected()
     try:
         user_id, version = verify_session_claims(session_token)
         user = request.app.state.auth_repository.get_enabled_user(user_id)
         if user is not None and user.session_version != version:
             user = None
-    except (InvalidSession, RuntimeError):
+    except InvalidSession:
         user = None
     if user is None or user.id == 999999:
-        raise HTTPException(status_code=401, detail="Unauthenticated")
+        raise rejected()
+    # Consistency only: the signed cookie and enabled user remain the authority.
+    expected = request.headers.get('X-camos-account-id')
+    if expected is not None and expected != str(user.id):
+        raise HTTPException(409, 'Please try again.', headers={"X-camos-auth-error": "account_changed"})
     return user

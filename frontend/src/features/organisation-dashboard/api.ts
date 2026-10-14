@@ -1,3 +1,4 @@
+import { accountFetch } from "../auth/transport/me";
 import { type DashboardSource, type SelectedSnapshot } from "./types";
 
 async function get(path: string, signal: AbortSignal) {
@@ -37,7 +38,7 @@ export type AuthenticatedOrganisation = {
 };
 
 export async function fetchOrganisations(signal?: AbortSignal): Promise<AuthenticatedOrganisation[]> {
-  const response = await fetch("/api/portal/organisations", { signal, credentials: "include", cache: "no-store" });
+  const response = await accountFetch("/api/portal/organisations", { signal, credentials: "include", cache: "no-store" });
   if (!response.ok) throw new Error("Unable to load organisations");
   const body = await response.json() as { organisations: AuthenticatedOrganisation[] };
   return body.organisations;

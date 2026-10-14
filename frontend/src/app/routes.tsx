@@ -19,7 +19,7 @@ import {
   isDemoSessionActive,
 } from "../features/organisation-dashboard/demoSession";
 import { dashboardSearch } from "../features/organisation-dashboard/selection";
-import { fetchMe, logout, type AuthUser } from "../features/auth/transport/me";
+import { bindAccountRequests, fetchMe, logout, type AuthUser } from "../features/auth/transport/me";
 import {
   fetchOrganisations,
   type AuthenticatedOrganisation,
@@ -79,16 +79,6 @@ function routeComponents() {
 }
 
 const initialRoutes = routeComponents();
-
-async function withDeadline<T>(load: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  signal?.addEventListener("abort", abort, { once: true });
-  if (signal?.aborted) abort();
-  const timer = window.setTimeout(abort, 12_000);
-  try { return await load(controller.signal); }
-  finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
-}
 
 // An unscoped URL is navigation only. The authenticated catalogue must establish
 // one real organisation/site pair before the canonical Portal can render.
@@ -167,125 +157,154 @@ const AppRoutes: React.FC = () => {
     accountController.current = new AbortController();
     setAccountSignal(accountController.current.signal);
   };
-  const refreshOrganisations = useCallback(async () => {
+  const userRef = useRef<AuthUser | null>(null);
+  const probe = useRef<Promise<void> | null>(null);
+  const location = useLocation();
+  const pathRef = useRef(location.pathname);
+  pathRef.current = location.pathname;
+  const viewToken = new URLSearchParams(location.search).get("view_token");
+  const hasViewToken = Boolean(viewToken);
+  const isDemoRoute = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
+  const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
+
+  const applyAccount = useCallback((user: AuthUser | null) => {
+    if (userRef.current?.id !== user?.id || (user && accountController.current.signal.aborted)) {
+      actorEpoch.current += 1;
+      catalogueRevision.current += 1;
+      renewAccountSignal();
+      setOrganisations([]);
+      setFavouritesCatalogueReady(false);
+      setCatalogueError(false);
+    }
+    userRef.current = user;
+    bindAccountRequests(user?.id ?? null, accountController.current.signal);
+    setAuthenticatedUser(user);
+  }, []);
+  const clearAccount = useCallback(() => {
+    accountRevision.current += 1;
+    applyAccount(null);
+    accountController.current.abort();
+    bindAccountRequests(null, accountController.current.signal);
+    setSessionError(false);
+    setIsSessionChecked(true);
+  }, [applyAccount]);
+
+  const revalidateAccount = useCallback(async (signal?: AbortSignal) => {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    if (!probe.current) {
+      const revision = ++accountRevision.current;
+      const pending = (async () => {
+        try {
+          const me = await fetchMe();
+          if (revision !== accountRevision.current) throw new DOMException("Aborted", "AbortError");
+          if (me.ok) applyAccount(me.data.user);
+          else if (me.status === 401) clearAccount();
+          else throw new Error("Please try again.");
+          setSessionError(false);
+          setIsSessionChecked(true);
+        } catch (error) {
+          if (revision === accountRevision.current) setSessionError(true);
+          throw error;
+        }
+      })();
+      probe.current = pending;
+      void pending.finally(() => { if (probe.current === pending) probe.current = null; }).catch(() => {});
+    }
+    await probe.current;
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  }, [applyAccount, clearAccount]);
+
+  const refreshOrganisations = useCallback(async (signal = accountController.current.signal) => {
+    await revalidateAccount(signal);
+    if (!userRef.current || signal.aborted) throw new DOMException("Aborted", "AbortError");
     const revision = ++catalogueRevision.current;
     try {
-      const catalogue = await withDeadline(fetchOrganisations);
-      if (revision === catalogueRevision.current) {
+      const catalogue = await fetchOrganisations(signal);
+      if (!signal.aborted && revision === catalogueRevision.current) {
         setOrganisations(catalogue);
         setFavouritesCatalogueReady(true);
         setCatalogueError(false);
       }
     } catch (error) {
-      if (revision === catalogueRevision.current) {
+      if (!signal.aborted && revision === catalogueRevision.current) {
         setCatalogueError(true);
         setFavouritesCatalogueReady(false);
       }
       throw error;
     }
-  }, []);
-  const location = useLocation();
-  const viewToken = new URLSearchParams(location.search).get("view_token");
-  const hasViewToken = Boolean(viewToken);
-  const isDemoRoute =
-    location.pathname === "/demo" || location.pathname.startsWith("/demo/");
-  const [isSessionChecked, setIsSessionChecked] = useState(hasViewToken);
+  }, [revalidateAccount]);
 
   useEffect(() => {
-    if (hasViewToken) {
-      setSessionError(false);
-      setIsSessionChecked(true);
-      return;
+    if (accountController.current.signal.aborted) {
+      renewAccountSignal();
+      bindAccountRequests(userRef.current?.id ?? null, accountController.current.signal);
     }
-
-    setSessionError(false);
-    const abort = new AbortController();
-    const revision = ++accountRevision.current;
-    const catalogueVersion = ++catalogueRevision.current;
-    const current = () => !abort.signal.aborted && revision === accountRevision.current;
-    const checkSession = async () => {
-      try {
-        const me = await withDeadline(fetchMe, abort.signal);
-        if (!current()) return;
-        if (me.ok) {
-          clearDemoSessionLocal();
-          setAuthenticatedUser(me.data.user);
-          setIsSessionChecked(true);
-          try {
-            const catalogue = await withDeadline(fetchOrganisations, abort.signal);
-            if (current() && catalogueVersion === catalogueRevision.current) {
-              setOrganisations(catalogue);
-              setFavouritesCatalogueReady(true);
-              setCatalogueError(false);
-            }
-          } catch {
-            if (current() && catalogueVersion === catalogueRevision.current) {
-              setFavouritesCatalogueReady(false);
-              setCatalogueError(true);
-            }
-          }
-        } else if (me.status === 401) {
-          setAuthenticatedUser(null);
-          setOrganisations([]);
-          setFavouritesCatalogueReady(false);
-          setIsSessionChecked(true);
-        } else {
-          throw new Error("Session unavailable");
-        }
-      } catch {
-        if (current()) setSessionError(true);
-      }
+    return () => {
+      accountRevision.current += 1;
+      probe.current = null;
+      accountController.current.abort();
+      bindAccountRequests(null, accountController.current.signal);
     };
-    void checkSession();
-    return () => abort.abort();
+  }, []);
 
-  }, [hasViewToken, sessionAttempt]);
+  useEffect(() => {
+    const rejected = (event: Event) => {
+      const detail = (event as CustomEvent<{signal: AbortSignal; reason: string}>).detail;
+      if (detail.signal !== accountController.current.signal || detail.signal.aborted) return;
+      if (detail.reason === "session_invalid") clearAccount();
+      else void revalidateAccount(detail.signal).catch(() => {});
+    };
+    window.addEventListener("camos:account-rejected", rejected);
+    return () => window.removeEventListener("camos:account-rejected", rejected);
+  }, [clearAccount, revalidateAccount]);
+
+  useEffect(() => {
+    if (hasViewToken) { setIsSessionChecked(true); return; }
+    void revalidateAccount().catch(() => {});
+  }, [hasViewToken, sessionAttempt, revalidateAccount]);
+
+  useEffect(() => {
+    if (!authenticatedUser) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    // Only reads are retried. A failed refresh never becomes an empty list.
+    const load = (attempt: number) => void refreshOrganisations().catch(() => {
+      if (active && attempt < 2 && !accountSignal.aborted)
+        timer = setTimeout(() => load(attempt + 1), 1000 * (attempt + 1));
+    });
+    load(0);
+    return () => { active = false; clearTimeout(timer); };
+  }, [authenticatedUser?.id, accountSignal, refreshOrganisations]);
+
+  useEffect(() => {
+    if (!authenticatedUser || isDemoRoute) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") void revalidateAccount(accountController.current.signal).catch(() => {});
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [authenticatedUser?.id, isDemoRoute, revalidateAccount]);
 
   const handleLogin = async () => {
-    actorEpoch.current += 1;
-    renewAccountSignal();
-    const revision = ++accountRevision.current;
-    const catalogueVersion = ++catalogueRevision.current;
-    clearDemoSessionLocal();
-    const me = await withDeadline(fetchMe);
-    if (!me.ok) throw new Error("Unable to confirm sign-in. Please try again.");
-    if (revision !== accountRevision.current) return;
-    setAuthenticatedUser(me.data.user);
-    setIsSessionChecked(true);
-    setSessionError(false);
-    setOrganisations([]);
-    setFavouritesCatalogueReady(false);
-    const nextOrganisations = await withDeadline(fetchOrganisations).catch(() => null);
-    if (revision !== accountRevision.current) return;
-    if (catalogueVersion === catalogueRevision.current) {
-      setOrganisations(nextOrganisations ?? []);
-      setFavouritesCatalogueReady(nextOrganisations !== null);
-      setCatalogueError(nextOrganisations === null);
-    }
-  };
-
-  const clearAccount = () => {
-    actorEpoch.current += 1;
-    accountController.current.abort();
     accountRevision.current += 1;
-    catalogueRevision.current += 1;
+    probe.current = null;
     clearDemoSessionLocal();
-
-    setAuthenticatedUser(null);
-    setOrganisations([]);
-    setFavouritesCatalogueReady(false);
-    setCatalogueError(false);
-    setSessionError(false);
+    await revalidateAccount();
+    if (!userRef.current) throw new Error("Please try again.");
   };
   const handleLogout = async () => {
-    // Cancel cookie-bearing account writes before acknowledging logout.
+    const pending = logout();
     accountController.current.abort();
-    try {
-      await logout();
-    } catch (error) {
-      renewAccountSignal();
+    try { await pending; }
+    catch (error) {
+      applyAccount(userRef.current);
       throw error;
     }
+    clearDemoSessionLocal();
     clearAccount();
   };
 
@@ -295,18 +314,11 @@ const AppRoutes: React.FC = () => {
     <Suspense fallback={<div className="vrm-content-loading" role="status">Loading…</div>}>{element}</Suspense>
   );
   const renderedEpoch = actorEpoch.current;
+  const refreshBoundOrganisations = useCallback(() => refreshOrganisations(accountSignal), [accountSignal, refreshOrganisations]);
   const refreshAccount = async (confirmed?: AuthUser) => {
-    if (renderedEpoch !== actorEpoch.current || accountController.current.signal.aborted) return;
-    const revision = ++accountRevision.current;
-    if (confirmed) { setAuthenticatedUser(confirmed); return; }
-    const me = await fetchMe();
-    if (revision !== accountRevision.current || renderedEpoch !== actorEpoch.current) return;
-    if (!me.ok) {
-      if (me.status === 401) clearAccount();
-      else throw new Error("Unable to refresh account. Please try again.");
-      return;
-    }
-    setAuthenticatedUser(me.data.user);
+    if (renderedEpoch !== actorEpoch.current || accountSignal.aborted) return;
+    if (confirmed && confirmed.id === userRef.current?.id) applyAccount(confirmed);
+    else await revalidateAccount(accountSignal);
   };
   const authenticatedShell = authenticatedUser ? (
     <AuthenticatedApplicationProvider
@@ -315,7 +327,7 @@ const AppRoutes: React.FC = () => {
       accountSignal={accountSignal}
       refreshAccount={refreshAccount}
       organisations={favouritesCatalogueReady ? organisations : []}
-      refreshOrganisations={refreshOrganisations}
+      refreshOrganisations={refreshBoundOrganisations}
       favouritesCatalogueReady={favouritesCatalogueReady}
       catalogueError={catalogueError}
     >

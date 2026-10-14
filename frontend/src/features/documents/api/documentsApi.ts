@@ -1,3 +1,4 @@
+import { accountFetch } from "../../auth/transport/me";
 import { DocumentItem, UploadError } from "../types";
 
 const responseError = async (response: Response, fallback: string) => {
@@ -6,7 +7,7 @@ const responseError = async (response: Response, fallback: string) => {
 };
 
 export const listDocuments = async (signal?: AbortSignal): Promise<DocumentItem[]> => {
-  const response = await fetch("/api/documents", { signal, credentials: "include", cache: "no-store" });
+  const response = await accountFetch("/api/documents", { signal, credentials: "include", cache: "no-store" });
   if (!response.ok) {
     throw await responseError(response, "Unable to load documents. Please try again.");
   }
@@ -18,7 +19,7 @@ export const uploadDocuments = async (files: File[]) => {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
 
-  const response = await fetch("/api/documents/upload", {
+  const response = await accountFetch("/api/documents/upload", {
     method: "POST",
     headers: { "X-Requested-With": "camOS" },
     body: formData,
@@ -40,7 +41,7 @@ export const uploadDocuments = async (files: File[]) => {
 };
 
 export const deleteDocument = async (documentId: string): Promise<void> => {
-  const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}`, {
+  const response = await accountFetch(`/api/documents/${encodeURIComponent(documentId)}`, {
     method: "DELETE",
     headers: { "X-Requested-With": "camOS" },
     credentials: "include",
@@ -50,5 +51,5 @@ export const deleteDocument = async (documentId: string): Promise<void> => {
   }
 };
 
-export const getDownloadUrl = (documentId: string) =>
-  `/api/documents/${encodeURIComponent(documentId)}/download`;
+export const getDownloadUrl = (documentId: string, accountId: string) =>
+  `/api/documents/${encodeURIComponent(documentId)}/download?expected_account_id=${encodeURIComponent(accountId)}`;

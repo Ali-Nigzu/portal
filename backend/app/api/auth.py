@@ -308,6 +308,12 @@ async def me(session_user: tuple[str, dict] = Depends(get_session_user)):
 
 @router.post("/api/logout", status_code=204, dependencies=[Depends(mutation_origin)])
 def logout(request: Request, response: Response):
+    if request.headers.get('X-camos-account-id') is not None:
+        try:
+            get_canonical_user(request, request.cookies.get('camos_session'))
+        except HTTPException as error:
+            if (error.headers or {}).get('X-camos-auth-error') != 'session_invalid':
+                raise
     lifecycle = getattr(request.app.state, 'user_lifecycle', None)
     if lifecycle is not None:
         try:

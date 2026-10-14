@@ -59,6 +59,9 @@ async def upload_documents(request: Request, files: list[UploadFile] = File(defa
 
 @router.get('/api/documents/{document_id}/download')
 def download_document(document_id: str, request: Request, user=Depends(get_canonical_user)):
+    expected = request.query_params.getlist('expected_account_id')
+    if expected and (len(expected) != 1 or expected[0] != str(user.id)):
+        raise HTTPException(409, 'Please try again.', headers={"X-camos-auth-error": "account_changed"})
     document, reader, first = operation(lambda: service(request).download(user.id, document_id))
     # ASCII fallback avoids header injection and Latin-1 encoding failures;
     # filename* retains the exact Unicode name for modern browsers.

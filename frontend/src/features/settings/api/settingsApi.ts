@@ -1,15 +1,16 @@
-import { type AuthUser, fetchMe } from "../../auth/transport/me";
+import { accountFetch } from "../../auth/transport/me";
+import { type AuthUser } from "../../auth/transport/me";
 
 export const getMe = async (): Promise<AuthUser> => {
-  const response = await fetchMe();
+  const response = await accountFetch('/api/me', { credentials: 'include', cache: 'no-store' });
   if (!response.ok) {
-    throw new Error("Unable to load account details");
+    throw new Error("Please try again.");
   }
-  return response.data.user;
+  return (await response.json() as {user: AuthUser}).user;
 };
 
 export const startSettingsUnlock = async (currentPassword?: string): Promise<SettingsUnlockStartResult> => {
-  const response = await fetch("/api/settings/unlock/start", {
+  const response = await accountFetch("/api/settings/unlock/start", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
@@ -37,7 +38,7 @@ export const startSettingsUnlock = async (currentPassword?: string): Promise<Set
 };
 
 export const resendSettingsUnlockCode = async (): Promise<SettingsUnlockResendResult> => {
-  const response = await fetch("/api/settings/unlock/resend", {
+  const response = await accountFetch("/api/settings/unlock/resend", {
     method: "POST",
     headers: { "X-Requested-With": "camOS" },
     credentials: "include",
@@ -64,7 +65,7 @@ export const resendSettingsUnlockCode = async (): Promise<SettingsUnlockResendRe
 };
 
 export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUnlockVerifyResult> => {
-  const response = await fetch("/api/settings/unlock/verify", {
+  const response = await accountFetch("/api/settings/unlock/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
@@ -92,7 +93,7 @@ export const verifySettingsUnlockCode = async (code: string): Promise<SettingsUn
 };
 
 export const updateMe = async (payload: UpdateMePayload, signal?: AbortSignal): Promise<AuthUser> => {
-  const response = await fetch("/api/me", {
+  const response = await accountFetch("/api/me", {
     method: "PUT",
     signal,
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
@@ -118,7 +119,7 @@ export const updateMe = async (payload: UpdateMePayload, signal?: AbortSignal): 
 };
 
 export const endSettingsUnlock = async (): Promise<void> => {
-  const response = await fetch("/api/settings/unlock/end", {
+  const response = await accountFetch("/api/settings/unlock/end", {
     method: "POST",
     headers: { "X-Requested-With": "camOS" },
     credentials: "include",

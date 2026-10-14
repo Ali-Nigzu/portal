@@ -244,7 +244,7 @@ const useDocuments = () => {
     [deletingId, refresh, invalidate],
   );
   const downloadDocument = useCallback((item: DocumentItem) => {
-    window.open(getDownloadUrl(item.id), "_blank", "noopener,noreferrer");
+    window.open(getDownloadUrl(item.id, item.accountId), "_blank", "noopener,noreferrer");
   }, []);
   return useMemo(
     () => ({
