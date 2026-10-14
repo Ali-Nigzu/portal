@@ -8,9 +8,11 @@ import { organisationPortalPath, sitePortalPath } from "../organisation-dashboar
 import { readRecentPortalDestinations } from "../organisation-dashboard/recentPortalDestinations";
 import "../../styles/Dashboard.css";
 import "./HomePage.css";
+import { useOrganisationAccess } from "../organisation-access/OrganisationAccessContext";
 
 const HomePage: React.FC = () => {
-  const { user, organisations, isScopeFavourite, favouriteStorageError } = useAuthenticatedApplication();
+  const { user, organisations, isScopeFavourite, favouriteStorageError, favouritesCatalogueReady, catalogueError, refreshOrganisations } = useAuthenticatedApplication();
+  const { actionNotice } = useOrganisationAccess();
   const [searchValue, setSearchValue] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
@@ -32,7 +34,7 @@ const HomePage: React.FC = () => {
       })),
     ]).filter((result) => !normalizedInput || result.label.toLowerCase().includes(normalizedInput)).slice(0, 8);
   }, [isSearchFocused, organisations, searchValue]);
-  const recent = useMemo(() => readRecentPortalDestinations(organisations), [organisations]);
+  const recent = useMemo(() => readRecentPortalDestinations(user.id, organisations), [user.id, organisations]);
   const favourites = organisations.flatMap(organisation => [
     ...(isScopeFavourite(organisation.id) ? [{
       key: `${organisation.id}:all`, organisationName: organisation.name, scopeName: "All Sites",
@@ -87,6 +89,10 @@ const HomePage: React.FC = () => {
           </div>
         </header>
 
+        {actionNotice && <p className="home-page__empty-copy" role="status">{actionNotice}</p>}
+        {!favouritesCatalogueReady && <p className="home-page__empty-copy" role={catalogueError ? "alert" : "status"}>
+          {catalogueError ? <>Can't load organisations. <button className="vrm-btn vrm-btn-sm" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}
+        </p>}
         <section className="home-page__layout" aria-label="Home modules">
           {organisations.length === 1 ? <button
             type="button"
@@ -138,7 +144,7 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--favorites">
             <Card title="Favourite Sites" className="home-page__card home-page__card--favorites">
               <div className="home-page__card-body home-page__card-body--links" data-testid="home-favourites">
-                {favourites.length ? favourites.map(favourite => <button
+                {!favouritesCatalogueReady ? null : favourites.length ? favourites.map(favourite => <button
                   type="button" key={favourite.key}
                   className="home-page__list-row home-page__favourite-row"
                   onClick={() => navigate(favourite.path)}
@@ -157,7 +163,7 @@ const HomePage: React.FC = () => {
           <div className="home-page__panel home-page__panel--recent">
             <Card title="Recently Viewed" className="home-page__card home-page__card--recent">
               <div className="home-page__card-body home-page__card-body--recent">
-                {recent.length ? recent.map((destination) => <button
+                {!favouritesCatalogueReady ? null : recent.length ? recent.map((destination) => <button
                   key={`${destination.organisationId}:${destination.siteId ?? "all"}:${destination.module}`}
                   type="button"
                   className="home-page__list-row"

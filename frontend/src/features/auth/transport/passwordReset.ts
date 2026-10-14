@@ -1,3 +1,4 @@
+import { requestFetch } from "./me";
 import { AuthRequestError } from "./providerAuth";
 type ResetCodeResponse = {
   ok: boolean;
@@ -6,7 +7,7 @@ type ResetCodeResponse = {
 };
 
 async function postReset<T>(action: string, payload?: object): Promise<T> {
-  const response = await fetch(`/api/password-reset/${action}`, {
+  const response = await requestFetch(`/api/password-reset/${action}`, {
     method: "POST",
     headers: {
       "X-Requested-With": "camOS",

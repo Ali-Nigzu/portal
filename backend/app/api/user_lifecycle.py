@@ -244,8 +244,9 @@ def update_me(payload: UpdateMeRequest, request: Request, response: Response, us
         raise HTTPException(401, 'Unlock required')
     updated = operation(request, lambda lifecycle: lifecycle.update_account(user, handle, fields))
     if updated.session_version != user.session_version:
-        token, expires = create_session(updated.id, session_version=updated.session_version)
-        set_auth_cookie(response, token, expires)
+        persistent = request.state.cookie_persistent
+        token, expires = create_session(updated.id, session_version=updated.session_version, persistent=persistent)
+        set_auth_cookie(response, token, expires if persistent else None)
         clear_lifecycle_cookie(response, UNLOCK)
     return safe_user(updated)
 

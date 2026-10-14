@@ -30,19 +30,22 @@ def _decode(value: str) -> bytes:
     return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
 
 
-def create_session(user_id: int, now: int | None = None, session_version: int = 0) -> tuple[str, int]:
+def create_session(user_id: int, now: int | None = None, session_version: int = 0, *, persistent: bool = True) -> tuple[str, int]:
+    if type(persistent) is not bool:
+        raise ValueError('Cookie persistence must be boolean')
     issued = int(time.time() if now is None else now)
     expires = issued + SESSION_SECONDS
     payload = json.dumps(
         {"user_id": str(user_id), "issued_at": issued, "expires_at": expires,
-         "nonce": secrets.token_urlsafe(12), "session_version": session_version},
+         "nonce": secrets.token_urlsafe(12), "session_version": session_version,
+         **({"persistent": False} if not persistent else {})},
         separators=(",", ":"), sort_keys=True,
     ).encode()
     signature = hmac.new(_secret(), payload, hashlib.sha256).digest()
     return f"{_encode(payload)}.{_encode(signature)}", expires
 
 
-def verify_session_claims(token: str, now: int | None = None) -> tuple[int, int]:
+def verify_session_claims(token: str, now: int | None = None, *, with_persistence: bool = False):
     try:
         encoded_payload, encoded_signature = token.split(".", 1)
         payload = _decode(encoded_payload)
@@ -51,7 +54,11 @@ def verify_session_claims(token: str, now: int | None = None) -> tuple[int, int]
         if not hmac.compare_digest(signature, expected):
             raise InvalidSession()
         value = json.loads(payload)
-        if set(value) != {"user_id", "issued_at", "expires_at", "nonce", "session_version"}:
+        fields = {"user_id", "issued_at", "expires_at", "nonce", "session_version"}
+        if set(value) not in (fields, fields | {"persistent"}):
+            raise InvalidSession()
+        persistent = value.get('persistent', True)
+        if type(persistent) is not bool:
             raise InvalidSession()
         current = int(time.time() if now is None else now)
         issued, expires = int(value["issued_at"]), int(value["expires_at"])
@@ -63,7 +70,7 @@ def verify_session_claims(token: str, now: int | None = None) -> tuple[int, int]
         version = value["session_version"]
         if type(version) is not int or version < 0:
             raise InvalidSession()
-        return user_id, version
+        return (user_id, version, persistent) if with_persistence else (user_id, version)
     except (ValueError, TypeError, KeyError, json.JSONDecodeError, UnicodeDecodeError):
         raise InvalidSession() from None
 

@@ -1,4 +1,5 @@
-import React, { type FormEvent, useState, useCallback } from "react";
+import { requestFetch, RequestFailure } from "./transport/me";
+import React, { type FormEvent, useState, useCallback, useRef } from "react";
 
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
@@ -25,6 +26,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const location = useLocation();
   const successMessage = (location.state as { message?: string } | null)
     ?.message;
+  const [staySignedIn, setStaySignedIn] = useState(true);
   const {
     email,
     password,
@@ -34,11 +36,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setEmail,
     setPassword,
     handleSubmit,
-  } = useLoginForm(onLogin, (location.state as { email?: string } | null)?.email || "");
+  } = useLoginForm(onLogin, (location.state as { email?: string } | null)?.email || "", staySignedIn);
 
   const [step, setStep] = useState<LoginStep>("email");
   const [emailStepError, setEmailStepError] = useState<string | null>(null);
-  const [staySignedIn, setStaySignedIn] = useState(true);
 
   const onPrimaryAction = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -75,7 +76,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </p>
             )}
 
-            <ProviderAuth intent="login" disabled={loading} requiredProviders={providers.length ? providers : (location.state as { providers?: Provider[] } | null)?.providers} />
+            <ProviderAuth intent="login" staySignedIn={staySignedIn} disabled={loading} requiredProviders={providers.length ? providers : (location.state as { providers?: Provider[] } | null)?.providers} />
 
             <form className="login-form" onSubmit={onPrimaryAction}>
               <div className="vrm-field login-field">
@@ -214,21 +215,25 @@ type UseLoginFormResult = {
 const useLoginForm = (
   onLogin: () => void | Promise<void>,
   initialEmail: string,
+  staySignedIn: boolean,
 ): UseLoginFormResult => {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
+  const inFlight = useRef(false);
 
   const handleSubmit = useCallback(
     async (event: FormEvent) => {
       event.preventDefault();
+      if (inFlight.current) return;
+      inFlight.current = true;
       setLoading(true);
       setError(null);
 
       try {
-        const result = await login(email, password);
+        const result = await login(email, password, staySignedIn);
         if (result.ok) {
           await onLogin();
         } else if (isProviderRequired(result.data)) {
@@ -239,13 +244,14 @@ const useLoginForm = (
         } else {
           setError("Unable to complete request. Please try again.");
         }
-      } catch {
-        setError("Unable to complete request. Please try again.");
+      } catch (error) {
+        setError(error instanceof RequestFailure ? error.message : "Please try again.");
       } finally {
+        inFlight.current = false;
         setLoading(false);
       }
     },
-    [email, onLogin, password],
+    [email, onLogin, password, staySignedIn],
   );
 
   return {
@@ -270,15 +276,16 @@ type LoginResult =
 const login = async (
   email: string,
   password: string,
+  staySignedIn: boolean,
 ): Promise<LoginResult> => {
-  const response = await fetch("/api/login", {
+  const response = await requestFetch("/api/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Requested-With": "camOS",
     },
     credentials: "include",
-    body: JSON.stringify({ email: email.trim(), password }),
+    body: JSON.stringify({ email: email.trim(), password, stay_signed_in: staySignedIn }),
   });
 
   if (!response.ok) {

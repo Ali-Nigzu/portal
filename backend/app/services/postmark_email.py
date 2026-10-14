@@ -36,6 +36,7 @@ class PostmarkDeliveryError(RuntimeError):
         error_message: str | None,
         from_email: str,
         to_email_masked: str,
+        uncertain: bool | None = None,
     ):
         self.status_code = status_code
         self.response_body = response_body
@@ -43,6 +44,7 @@ class PostmarkDeliveryError(RuntimeError):
         self.error_message = error_message
         self.from_email = from_email
         self.to_email_masked = to_email_masked
+        self.uncertain = uncertain if uncertain is not None else status_code is None or status_code >= 500 or status_code == 200
         super().__init__(
             f"Postmark send failed status={status_code} error_code={error_code} message={error_message}"
         )
@@ -155,15 +157,15 @@ def _postmark_send(
     encoded = json.dumps(payload).encode('utf-8')
     if len(encoded) + 65536 > 10_000_000:
         raise PostmarkDeliveryError(status_code=None, response_body='', error_code=None,
-            error_message='Message exceeds provider envelope', from_email=from_email, to_email_masked=_mask_email(to_email))
+            error_message='Message exceeds provider envelope', from_email=from_email, to_email_masked=_mask_email(to_email), uncertain=False)
     req = request.Request(endpoint, data=encoded, headers={
         'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Postmark-Server-Token': token,
     }, method='POST')
     masked = _mask_email(to_email)
-    def failed(status, code=None):
+    def failed(status, code=None, *, uncertain=None):
         logger.error('postmark.send.failed provider=postmark status=%s category=%s', status, code)
         return PostmarkDeliveryError(status_code=status, response_body='', error_code=code,
-            error_message='Email delivery failed', from_email=from_email, to_email_masked=masked)
+            error_message='Email delivery failed', from_email=from_email, to_email_masked=masked, uncertain=uncertain)
     try:
         with request.urlopen(req, timeout=10) as response:
             body = response.read(65537)
@@ -171,6 +173,8 @@ def _postmark_send(
                 raise failed(response.status)
             try:
                 data = json.loads(body)
+                if isinstance(data, dict) and type(data.get('ErrorCode')) is int and data['ErrorCode'] > 0:
+                    raise failed(response.status, data['ErrorCode'], uncertain=False)
                 if (not isinstance(data, dict) or type(data.get('ErrorCode')) is not int or data['ErrorCode'] != 0
                         or any(not isinstance(data.get(k), str) or not data[k] for k in ('MessageID', 'SubmittedAt', 'Message', 'To'))):
                     raise ValueError()

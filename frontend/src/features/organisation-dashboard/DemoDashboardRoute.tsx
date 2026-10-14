@@ -1,3 +1,4 @@
+import { requestFetch } from "../auth/transport/me";
 import { type PortalSource, PortalProvider, usePortal, responseJson } from "../../context/PortalContext";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
@@ -133,11 +134,11 @@ export default function DemoDashboardRoute() {
 }
 
 const request: PortalSource["request"] = (path, params, signal) =>
-  fetch(`/api/demo/portal${path}${params.size ? `?${params}` : ""}`, {
+  requestFetch(`/api/demo/portal${path}${params.size ? `?${params}` : ""}`, {
     signal,
     cache: "no-store",
     credentials: "include",
-  });
+  }, path.endsWith("/export") ? 300_000 : 60_000);
 const demoPortalSource: PortalSource = {
   context: async (signal) =>
     responseJson(await request("/context", new URLSearchParams(), signal)),

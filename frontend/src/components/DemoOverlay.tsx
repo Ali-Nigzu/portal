@@ -54,7 +54,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     const handleChange = () => {
       const nextActive = isDemoSessionActive();
       setIsActive(nextActive);
-      if (!nextActive) {
+      if (!nextActive && !closingRef.current) {
         setIsClosing(false);
         closingRef.current = false;
       }
@@ -148,13 +148,9 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
     closeTimeoutRef.current = window.setTimeout(finishClose, 240);
   };
 
-  if (!shouldRender) {
-    return <>{children}</>;
-  }
-
   return (
-    <div className={overlayClassName} role="dialog" aria-modal="true">
-      <div className="demo-overlay__backdrop" />
+    <div className={shouldRender ? overlayClassName : "demo-overlay--inactive"} role={shouldRender ? "dialog" : undefined} aria-modal={shouldRender ? true : undefined}>
+      {shouldRender && <div className="demo-overlay__backdrop" />}
       <div
         className="demo-overlay__shell"
         ref={shellRef}
@@ -167,7 +163,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
           }
         }}
       >
-        <button
+        {shouldRender && <button
           type="button"
           className="demo-overlay__close"
           onClick={startClose}
@@ -175,7 +171,7 @@ const DemoOverlay: React.FC<DemoOverlayProps> = ({ children }) => {
           disabled={isClosing}
         >
           ×
-        </button>
+        </button>}
         <div className="demo-overlay__content">{children}</div>
       </div>
     </div>

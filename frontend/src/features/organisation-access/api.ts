@@ -1,3 +1,4 @@
+import { accountFetch, RequestFailure } from "../auth/transport/me";
 type Relationship = {
   user_id: string;
   organisation_id: string;
@@ -47,7 +48,7 @@ async function request<T>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`/api/portal${path}`, {
+    response = await accountFetch(`/api/portal${path}`, {
       method: body === undefined ? "GET" : "POST",
       credentials: "include",
       cache: "no-store",
@@ -59,15 +60,16 @@ async function request<T>(
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch (error) {
-    if (signal?.aborted) throw error;
+    if (signal?.aborted || error instanceof RequestFailure || (error instanceof DOMException && error.name === "AbortError")) throw error;
     throw new AccessError(
       "connection_unavailable",
-      "Couldn't connect. Check your connection and try again.",
+      "Please try again.",
       0,
     );
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) {
+    if (body !== undefined && response.status >= 500) throw new RequestFailure(true);
     throw new AccessError(
       data?.detail?.error ?? "request_failed",
       data?.detail?.message ??
@@ -83,19 +85,23 @@ async function request<T>(
 const org = (id: string) => `/organisations/${encodeURIComponent(id)}`;
 export const pendingAccess = (signal?: AbortSignal) =>
   request<PendingAccess>("/me/memberships/pending", undefined, signal);
-export const createOrganisation = (name: string) =>
+export const createOrganisation = (name: string, signal?: AbortSignal) =>
   request<{ organisation: { id: string; name: string; role: 0; sites: [] } }>(
     "/organisations",
     { name },
+    signal,
   );
-export const resolveOrganisation = (id: string) =>
+export const resolveOrganisation = (id: string, signal?: AbortSignal) =>
   request<ResolvedOrganisation>(
     `/organisation-access/${encodeURIComponent(id)}`,
+    undefined,
+    signal,
   );
-export const requestOrganisationAccess = (id: string) =>
+export const requestOrganisationAccess = (id: string, signal?: AbortSignal) =>
   request<{ membership: Relationship }>(
     `/organisation-access/${encodeURIComponent(id)}/requests`,
     {},
+    signal,
   );
 export const getManageAccess = (id: string, signal?: AbortSignal) =>
   request<ManageAccess>(`${org(id)}/access`, undefined, signal);
@@ -103,22 +109,26 @@ export const inviteMember = (
   id: string,
   identifier_type: "email" | "username",
   identifier: string,
+  signal?: AbortSignal,
 ) =>
   request<{ membership: Relationship }>(`${org(id)}/invitations`, {
     identifier_type,
     identifier,
-  });
+  }, signal);
 export const decideInvitation = (
   relationship: Relationship,
   action: "accept" | "decline",
+  signal?: AbortSignal,
 ) =>
   request<{ membership: Relationship }>(
     `/me/invitations/${encodeURIComponent(relationship.organisation_id)}/${action}`,
     { expected_status_changed_at: relationship.status_changed_at },
+    signal,
   );
 export const manageMembership = (
   relationship: Relationship,
   action: "withdraw" | "approve" | "decline" | "disable",
+  signal?: AbortSignal,
 ) => {
   const section =
     action === "withdraw"
@@ -129,6 +139,7 @@ export const manageMembership = (
   return request<{ membership: Relationship }>(
     `${org(relationship.organisation_id)}/${section}/${encodeURIComponent(relationship.user_id)}/${action}`,
     { expected_status_changed_at: relationship.status_changed_at },
+    signal,
   );
 };
 

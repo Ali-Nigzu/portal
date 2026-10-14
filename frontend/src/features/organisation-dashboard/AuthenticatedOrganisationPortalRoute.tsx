@@ -1,3 +1,4 @@
+import { accountFetch } from "../auth/transport/me";
 import { type PortalSource, type PortalDeviceControl, PortalProvider, responseJson } from "../../context/PortalContext";
 
 import { useEffect, useMemo } from "react";
@@ -8,19 +9,25 @@ import { isPortalModule } from "./authenticatedPortalRoutes";
 import { recordRecentPortalLocation } from "./recentPortalDestinations";
 import AuthenticatedPortalScopeHeader from "../../components/AuthenticatedPortalScopeHeader";
 import { parseSnapshot } from "./api";
+import { useAuthenticatedApplication } from "../../context/AuthenticatedApplicationContext";
 
 export default function AuthenticatedOrganisationPortalRoute() {
+  const { user, favouritesCatalogueReady, catalogueError, refreshOrganisations, organisations } = useAuthenticatedApplication();
   const { organisationId, siteId, module = "dashboard" } = useParams();
   const source = useMemo(
     () => authenticatedPortalSource(organisationId ?? ""),
     [organisationId],
   );
   useEffect(() => {
-    if (organisationId && isPortalModule(module)) {
-      recordRecentPortalLocation({ organisationId, siteId, module });
+    if (favouritesCatalogueReady && organisations.some(item => item.id === organisationId && (!siteId || item.sites.some(site => site.id === siteId))) && organisationId && isPortalModule(module)) {
+      recordRecentPortalLocation(user.id, { organisationId, siteId, module });
     }
-  }, [organisationId, siteId, module]);
+  }, [user.id, favouritesCatalogueReady, organisations, organisationId, siteId, module]);
   if (!organisationId) return <div role="alert">Organisation unavailable.</div>;
+  if (!favouritesCatalogueReady) return <div className="vrm-content-loading" role={catalogueError ? "alert" : "status"}>
+    {catalogueError ? <>Can't load organisations. <button className="vrm-btn" onClick={() => void refreshOrganisations().catch(() => {})}>Retry</button></> : "Loading…"}
+  </div>;
+  if (!organisations.some(item => item.id === organisationId)) return <div role="alert">Organisation unavailable.</div>;
   return (
     <PortalProvider
       source={source}
@@ -40,13 +47,14 @@ function authenticatedPortalSource(organisationId: string): PortalSource {
   const request: PortalSource["request"] = async (path, input, signal) => {
     const params = new URLSearchParams(input);
     params.delete("effective_now");
-    const response = await fetch(
+    const response = await accountFetch(
       `${base}${path}${params.size ? `?${params}` : ""}`,
       {
         signal,
         cache: "no-store",
         credentials: "include",
       },
+      path.endsWith("/export") ? 300_000 : 60_000,
     );
     if (response.status === 404 || response.status === 401)
       window.dispatchEvent(new Event("camos:refresh-access"));
@@ -62,7 +70,7 @@ function authenticatedPortalSource(organisationId: string): PortalSource {
         match[1] === "device"
           ? `/devices/${encodeURIComponent(match[2])}/enabled`
           : `/gateways/by-site/${encodeURIComponent(match[2])}/enabled`;
-      const response = await fetch(`${base}${path}`, {
+      const response = await accountFetch(`${base}${path}`, {
         method: "PUT",
         signal,
         credentials: "include",

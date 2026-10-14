@@ -1,3 +1,4 @@
+import { requestFetch } from "./me";
 import { type AuthUser } from "./me";
 
 
@@ -22,7 +23,7 @@ type SignupStartResult =
 export const signupStart = async (
   payload: SignupStartPayload,
 ): Promise<SignupStartResult> => {
-  const response = await fetch("/api/signup/start", {
+  const response = await requestFetch("/api/signup/start", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Requested-With": "camOS" },
     credentials: "include",
@@ -60,7 +61,7 @@ export const signupVerify = async (
   email: string,
   code: string,
 ): Promise<SignupVerifyResult> => {
-  const response = await fetch("/api/signup/verify", {
+  const response = await requestFetch("/api/signup/verify", {
     method: "POST",
     headers: {
       "Content-Type": "application/json", "X-Requested-With": "camOS",
@@ -96,7 +97,7 @@ type SignupResendResult =
   | { ok: false; status: number; message?: string };
 
 export const signupResend = async (email: string): Promise<SignupResendResult> => {
-  const response = await fetch("/api/signup/resend", {
+  const response = await requestFetch("/api/signup/resend", {
     method: "POST",
     headers: {
       "Content-Type": "application/json", "X-Requested-With": "camOS",

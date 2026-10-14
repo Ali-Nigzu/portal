@@ -1,3 +1,4 @@
+import { requestFetch } from "./me";
 export type Provider = "google" | "microsoft";
 export type ProviderRequired = {
   error: "provider_required";
@@ -39,7 +40,7 @@ export async function providerRequest<T>(
   method = "GET",
   payload?: object,
 ): Promise<T> {
-  const response = await fetch(`/api/auth/${path}`, {
+  const response = await requestFetch(`/api/auth/${path}`, {
     method,
     credentials: "include",
     headers:

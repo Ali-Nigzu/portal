@@ -13,6 +13,8 @@ import {
   type ResolvedOrganisation,
 } from "./api";
 import AccessDialog from "../../common/components/AccessDialog";
+import { RequestFailure } from "../auth/transport/me";
+import type { AuthenticatedOrganisation } from "../organisation-dashboard/api";
 
 type Value = {
   pending: PendingAccess;
@@ -21,6 +23,7 @@ type Value = {
   refreshAccess: () => Promise<void>;
   openCreate: () => void;
   openRequest: () => void;
+  actionNotice: string | null;
 };
 const Context = createContext<Value | null>(null);
 
@@ -29,7 +32,7 @@ export function OrganisationAccessProvider({
 }: {
   children: ReactNode;
 }) {
-  const { refreshOrganisations } = useAuthenticatedApplication();
+  const { refreshOrganisations, recordOrganisation, accountSignal } = useAuthenticatedApplication();
   const navigate = useNavigate();
   const [pending, setPending] = useState<PendingAccess>({
     invitations: [],
@@ -39,6 +42,8 @@ export function OrganisationAccessProvider({
   const [pendingError, setPendingError] = useState<string | null>(null);
   const revision = useRef(0);
   const [dialog, setDialog] = useState<"create" | "request" | null>(null);
+  const [createUncertain, setCreateUncertain] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const loadPending = useCallback(async (signal?: AbortSignal) => {
     const version = ++revision.current;
     try {
@@ -93,16 +98,22 @@ export function OrganisationAccessProvider({
         refreshAccess,
         openCreate: () => setDialog("create"),
         openRequest: () => setDialog("request"),
+        actionNotice,
       }}
     >
       {children}
       {dialog === "create" && (
         <CreateOrganisationDialog
+          uncertain={createUncertain}
+          onUncertain={() => { setCreateUncertain(true); setActionNotice("Please check before trying again."); void refreshAccess().catch(() => {}); }}
           onClose={() => setDialog(null)}
-          onCreated={async (id) => {
-            await refreshAccess();
+          onCreated={async (organisation) => {
+            if (accountSignal?.aborted) return;
+            recordOrganisation?.(organisation);
+            setActionNotice("Organisation created.");
             setDialog(null);
-            navigate(organisationPortalPath(id, "dashboard"));
+            navigate(organisationPortalPath(organisation.id, "dashboard"));
+            void refreshAccess().catch(() => {});
           }}
         />
       )}
@@ -110,6 +121,7 @@ export function OrganisationAccessProvider({
         <RequestAccessDialog
           onClose={() => setDialog(null)}
           onRequested={refreshAccess}
+          onUncertain={() => { setActionNotice("Please check before trying again."); void refreshAccess().catch(() => {}); }}
         />
       )}
     </Context.Provider>
@@ -125,47 +137,67 @@ export function useOrganisationAccess() {
 function CreateOrganisationDialog({
   onClose,
   onCreated,
+  uncertain,
+  onUncertain,
 }: {
   onClose: () => void;
-  onCreated: (id: string) => Promise<void>;
+  onCreated: (organisation: AuthenticatedOrganisation) => Promise<void>;
+  uncertain: boolean;
+  onUncertain: () => void;
 }) {
   const [name, setName] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const created = useRef<AuthenticatedOrganisation | null>(null);
+  const operation = useRef<AbortController | null>(null);
+  useEffect(() => () => operation.current?.abort(), []);
+  const close = () => {
+    if (operation.current && !createdId) onUncertain();
+    operation.current?.abort();
+    onClose();
+  };
   const valid = name.trim().length > 0 && name.trim().length <= 200;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (operation.current || uncertain) return;
     if (!valid) {
       setError("Enter an organisation name of 1–200 characters.");
       return;
     }
     setBusy(true);
+    const controller = new AbortController();
+    operation.current = controller;
     setError(null);
-    let id = createdId;
+    let organisation = created.current;
     try {
-      if (!id) {
-        id = (await createOrganisation(name.trim())).organisation.id;
-        setCreatedId(id);
+      if (!organisation) {
+        organisation = (await createOrganisation(name.trim(), controller.signal)).organisation;
+        if (controller.signal.aborted) return;
+        created.current = organisation;
+        setCreatedId(organisation.id);
       }
-      await onCreated(id);
+      await onCreated(organisation);
     } catch (failure) {
+      if (controller.signal.aborted) return;
+      if (!organisation && failure instanceof RequestFailure && failure.uncertain) onUncertain();
       setError(
-        id
-          ? "Your organisation was created, but we couldn't refresh access. Try opening it again."
-          : `${errorMessage(failure)} If the request reached camOS, the organisation may have been created. Check Manage Access before submitting again.`,
+        organisation
+          ? "Organisation created."
+          : errorMessage(failure),
       );
     } finally {
-      setBusy(false);
+      if (operation.current === controller) operation.current = null;
+      if (!controller.signal.aborted) setBusy(false);
     }
   };
   return (
     <AccessDialog
       title="Create organisation"
       description="This will create a new camOS organisation. You will become its Owner."
-      onClose={onClose}
+      onClose={close}
       busy={busy}
+      cancelBusy
     >
       <form onSubmit={submit} className="settings-form-grid">
         <div className="settings-form-field">
@@ -187,25 +219,24 @@ function CreateOrganisationDialog({
             }}
           />
         </div>
-        {error && (
+        {(error || uncertain) && (
           <p
             id="create-organisation-error"
             className="settings-form-error"
             role="alert"
           >
-            {error}
+            {error ?? "Please check before trying again."}
           </p>
         )}
         <div className="settings-form-actions">
           <button
             type="button"
             className="vrm-btn vrm-btn-secondary"
-            disabled={busy}
-            onClick={onClose}
+            onClick={close}
           >
             Cancel
           </button>
-          <button className="vrm-btn vrm-btn-primary" disabled={busy || !valid}>
+          <button className="vrm-btn vrm-btn-primary" disabled={busy || !valid || uncertain}>
             {busy
               ? "Creating…"
               : createdId
@@ -221,12 +252,18 @@ function CreateOrganisationDialog({
 function RequestAccessDialog({
   onClose,
   onRequested,
+  onUncertain,
 }: {
   onClose: () => void;
   onRequested: () => Promise<void>;
+  onUncertain: () => void;
 }) {
   const [id, setId] = useState(""),
     [resolved, setResolved] = useState<ResolvedOrganisation | null>(null);
+  const operation = useRef<AbortController | null>(null);
+  const [uncertain, setUncertain] = useState(false);
+  useEffect(() => () => operation.current?.abort(), []);
+  const close = () => { if (operation.current && resolved) onUncertain(); operation.current?.abort(); onClose(); };
   const [sent, setSent] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
@@ -242,28 +279,30 @@ function RequestAccessDialog({
       (id.trim().length === 19 && id.trim() <= "9223372036854775807"));
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (operation.current || uncertain) return;
     if (!resolved && !valid) {
       setError("Enter a valid numeric Organisation ID.");
       return;
     }
     setBusy(true);
     setError(null);
+    const controller = new AbortController();
+    operation.current = controller;
     try {
-      if (!resolved) setResolved(await resolveOrganisation(id.trim()));
+      if (!resolved) { const next = await resolveOrganisation(id.trim(), controller.signal); if (!controller.signal.aborted) setResolved(next); }
       else {
-        await requestOrganisationAccess(resolved.organisation.id);
+        await requestOrganisationAccess(resolved.organisation.id, controller.signal);
+        if (controller.signal.aborted) return;
         setSent(true);
-        await onRequested().catch(() =>
-          setError(
-            "Your request was sent. Pending access couldn't refresh; it will update when you return.",
-          ),
-        );
+        void onRequested().catch(() => {});
       }
     } catch (failure) {
+      if (controller.signal.aborted) return;
+      if (failure instanceof RequestFailure && failure.uncertain) { setUncertain(true); void onRequested().catch(() => {}); }
       setError(errorMessage(failure));
     } finally {
-      setBusy(false);
+      if (operation.current === controller) operation.current = null;
+      if (!controller.signal.aborted) setBusy(false);
     }
   };
   const statusMessage =
@@ -274,23 +313,20 @@ function RequestAccessDialog({
         : "Your request is already pending approval.";
   return (
     <AccessDialog
-      title={sent ? "Request sent" : "Request access"}
+      title={sent ? "Request sent." : "Request access"}
       description={
         sent
-          ? `Your request to ${resolved?.organisation.name} is pending approval.`
+          ? undefined
           : !resolved
             ? "Enter the Organisation ID shared with you by someone in the organisation."
             : undefined
       }
-      onClose={onClose}
+      onClose={close}
       busy={busy}
+      cancelBusy
     >
       {sent ? (
         <>
-          <p className="access-success" role="status">
-            You'll see the organisation here once its Owner approves your
-            request.
-          </p>
           {error && (
             <p role="alert" className="settings-form-error">
               {error}
@@ -384,15 +420,14 @@ function RequestAccessDialog({
             <button
               type="button"
               className="vrm-btn vrm-btn-secondary"
-              disabled={busy}
-              onClick={onClose}
+              onClick={close}
             >
               Cancel
             </button>
             <button
               className="vrm-btn vrm-btn-primary"
               disabled={
-                busy ||
+                busy || uncertain ||
                 (!resolved && !valid) ||
                 (!!resolved && !resolved.can_request)
               }

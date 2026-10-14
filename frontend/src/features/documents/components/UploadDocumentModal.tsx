@@ -7,7 +7,7 @@ import { Loader2, Trash2, Upload, X } from "lucide-react";
 type UploadDocumentModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (files: File[]) => Promise<{ errors: UploadError[] }>;
+  onUpload: (files: File[], signal: AbortSignal) => Promise<{ errors: UploadError[] }>;
 };
 
 const ACCEPTED_FILES = ACCEPTED_EXTENSIONS.join(",");
@@ -17,16 +17,17 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   onClose,
   onUpload,
 }) => {
+  const operation = useRef<AbortController | null>(null);
+  const close = () => { operation.current?.abort(); onClose(); };
+  useEffect(() => () => operation.current?.abort(), []);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingFiles, setPendingFiles] = useState<PendingUploadItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const uploadingRef = useRef(isUploading);
   const closeRef = useRef(onClose);
-  uploadingRef.current = isUploading;
-  closeRef.current = onClose;
+  closeRef.current = close;
 
   const mode = useMemo(() => {
     if (isUploading) {
@@ -46,9 +47,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        if (!uploadingRef.current) {
-          closeRef.current();
-        }
+        closeRef.current();
         return;
       }
 
@@ -125,43 +124,34 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   };
 
   const submitUpload = async () => {
-    if (pendingFiles.length === 0) {
-      setErrorMessage("Select at least one file to upload.");
-      return;
-    }
-
+    if (operation.current) return;
+    const selected = pendingFiles.filter(item => item.status !== "unknown");
+    if (!selected.length) return;
+    const controller = new AbortController();
+    operation.current = controller;
+    const selectedIds = new Set(selected.map(item => item.localId));
     setIsUploading(true);
-    setPendingFiles((prev) => prev.map((item) => ({ ...item, status: "uploading", error: undefined })));
+    setPendingFiles(previous => previous.map(item => selectedIds.has(item.localId) ? { ...item, status: "uploading", error: undefined } : item));
     setErrorMessage(null);
-
     try {
-      const uploadResult = await onUpload(pendingFiles.map((item) => item.file));
-
-      if (uploadResult.errors.length === 0) {
-        onClose();
-        return;
+      const result = await onUpload(selected.map(item => item.file), controller.signal);
+      if (controller.signal.aborted) return;
+      if (!result.errors.length && selected.length === pendingFiles.length) { onClose(); return; }
+      const errors = new Map(result.errors.map(error => [selected[error.index]?.localId, error]));
+      setPendingFiles(previous => previous.flatMap(item => {
+        if (!selectedIds.has(item.localId)) return [item];
+        const error = errors.get(item.localId);
+        return error ? [{ ...item, status: error.outcome === "unknown" ? "unknown" as const : error.outcome === "not_sent" ? "ready" as const : "failed" as const, error: error.message }] : [];
+      }));
+      setErrorMessage("Some files need attention.");
+    } catch {
+      if (!controller.signal.aborted) {
+        setPendingFiles(previous => previous.map(item => selectedIds.has(item.localId) ? { ...item, status: "unknown", error: "Please check before trying again." } : item));
+        setErrorMessage("Please check before trying again.");
       }
-
-      // Batch indices preserve identity even when transport quoting changes names.
-      const errorMap = new Map(uploadResult.errors.map(entry => [entry.index, entry.message]));
-      setPendingFiles((prev) => {
-        const failed: PendingUploadItem[] = [];
-        for (const [index, item] of prev.entries()) {
-          const message = errorMap.get(index);
-          if (message) failed.push({ ...item, status: "failed", error: message });
-        }
-        return failed;
-      });
-      setErrorMessage("Some files failed. Remove or retry failed files.");
-    } catch (uploadError) {
-      setPendingFiles((prev) => prev.map((item) => ({
-        ...item,
-        status: "failed",
-        error: "Upload failed.",
-      })));
-      setErrorMessage(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
-      setIsUploading(false);
+      if (operation.current === controller) operation.current = null;
+      if (!controller.signal.aborted) setIsUploading(false);
     }
   };
 
@@ -173,8 +163,8 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
       aria-modal="true"
       aria-labelledby="documents-upload-title"
       onMouseDown={(event) => {
-        if (event.target === overlayRef.current && !isUploading) {
-          onClose();
+        if (event.target === overlayRef.current) {
+          close();
         }
       }}
     >
@@ -184,9 +174,8 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           <button
             type="button"
             className="documents-page__icon-button"
-            onClick={onClose}
+            onClick={close}
             aria-label="Close upload modal"
-            disabled={isUploading}
           >
             <X size={18} />
           </button>
@@ -226,7 +215,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
                   <small>
                     {item.status === "uploading"
                       ? "Uploading..."
-                      : item.status === "failed"
+                      : item.status === "failed" || item.status === "unknown"
                         ? item.error ?? "Failed"
                         : "Ready"}
                   </small>
@@ -256,8 +245,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           <button
             type="button"
             className="documents-page__button documents-page__button--ghost"
-            onClick={onClose}
-            disabled={isUploading}
+            onClick={close}
           >
             Cancel
           </button>
@@ -265,7 +253,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
             type="button"
             className="vrm-btn vrm-btn-primary"
             onClick={submitUpload}
-            disabled={pendingFiles.length === 0 || isUploading}
+            disabled={!pendingFiles.some(item => item.status !== "unknown") || isUploading}
           >
             {isUploading ? "Uploading..." : "Upload"}
           </button>

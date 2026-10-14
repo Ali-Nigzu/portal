@@ -1,5 +1,6 @@
+import { RequestFailure } from "../auth/transport/me";
 import type { AuthenticatedOrganisation } from "../organisation-dashboard/api";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import AccessDialog from "../../common/components/AccessDialog";
 import { AccessError, errorMessage } from "./api";
@@ -8,17 +9,19 @@ type Props = {
   organisations: AuthenticatedOrganisation[];
   initialOrganisationId: string;
   onClose: () => void;
+  onUncertain: () => void;
   onSubmitted: (payload: {
     organisation_id: string;
     identifier_type: "email" | "username";
     identifier: string;
-  }) => Promise<void>;
+  }, signal: AbortSignal) => Promise<void>;
 };
 
 export default function InviteUserModal({
   organisations,
   initialOrganisationId,
   onClose,
+  onUncertain,
   onSubmitted,
 }: Props) {
   const ownerOrganisations = organisations.filter(
@@ -38,9 +41,13 @@ export default function InviteUserModal({
     identifier.trim().length > 0 &&
     identifier.trim().length <= 320 &&
     (type !== "email" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim()));
+  const operation = useRef<AbortController | null>(null);
+  const [uncertain, setUncertain] = useState(false);
+  useEffect(() => () => operation.current?.abort(), []);
+  const close = () => { if (operation.current) onUncertain(); operation.current?.abort(); onClose(); };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    if (operation.current || uncertain) return;
     if (!valid) {
       setError(
         validOrganisation
@@ -49,6 +56,8 @@ export default function InviteUserModal({
       );
       return;
     }
+    const controller = new AbortController();
+    operation.current = controller;
     setBusy(true);
     setError(null);
     setSupport(false);
@@ -57,9 +66,11 @@ export default function InviteUserModal({
         organisation_id: organisationId,
         identifier_type: type,
         identifier: identifier.trim(),
-      });
-      onClose();
+      }, controller.signal);
+      if (!controller.signal.aborted) onClose();
     } catch (failure) {
+      if (controller.signal.aborted) return;
+      if (failure instanceof RequestFailure && failure.uncertain) { setUncertain(true); onUncertain(); }
       const hasSupport =
         failure instanceof AccessError &&
         ["invite_target_unavailable", "invite_target_disabled"].includes(
@@ -72,15 +83,17 @@ export default function InviteUserModal({
           : errorMessage(failure),
       );
     } finally {
-      setBusy(false);
+      if (operation.current === controller) operation.current = null;
+      if (!controller.signal.aborted) setBusy(false);
     }
   };
   return (
     <AccessDialog
       title="Invite member"
       description="The user must already have a camOS account. They'll receive access after accepting your invitation."
-      onClose={onClose}
+      onClose={close}
       busy={busy}
+      cancelBusy
     >
       <form onSubmit={submit} className="settings-form-grid" noValidate>
         <div className="settings-form-field">
@@ -181,12 +194,11 @@ export default function InviteUserModal({
           <button
             type="button"
             className="vrm-btn vrm-btn-secondary"
-            disabled={busy}
-            onClick={onClose}
+            onClick={close}
           >
             Cancel
           </button>
-          <button className="vrm-btn vrm-btn-primary" disabled={busy || !valid}>
+          <button className="vrm-btn vrm-btn-primary" disabled={busy || !valid || uncertain}>
             {busy ? "Sending…" : "Send invitation"}
           </button>
         </div>

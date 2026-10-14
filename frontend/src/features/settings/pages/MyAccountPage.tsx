@@ -105,7 +105,7 @@ export default function MyAccountPage() {
   };
 
   const save = async (row: Row) => {
-    if (!user || !unlock || !unlocked || saving) return;
+    if (!user || !unlock || !unlocked || saving || mutation.current) return;
     const next: Errors = {};
     const payload: UpdateMePayload = { unlock_token: unlock.token };
     if (row === "name") {
@@ -149,6 +149,7 @@ export default function MyAccountPage() {
       setErrors({ form: detail });
     } finally {
       accountSignal?.removeEventListener('abort', cancel);
+      if (mutation.current === abort) mutation.current = undefined;
       if (mounted.current) setSaving(false);
     }
   };
@@ -217,8 +218,8 @@ export default function MyAccountPage() {
     </div>
     <ReenterPasswordModal fallbackFocus={() => passwordInput.current} hasPassword={user.has_password} isOpen={unlockOpen} onClose={() => { setUnlockOpen(false); setRequestedRow(null); }}
       onVerified={result => { setUnlock({ token: result.unlockToken, expires: Date.now() + result.unlockExpiresInSeconds * 1000 }); setUnlockOpen(false); setErrors({}); setEditing(requestedRow); setRequestedRow(null); }}
-      onStartUnlock={async value => { const result = await startSettingsUnlock(user.has_password ? value : undefined); return result.ok ? { ok: true, resendCooldownSeconds: result.data.resendCooldownSeconds } : { ok: false, message: result.message || "Unable to verify password" }; }}
-      onVerifyCode={async value => { const result = await verifySettingsUnlockCode(value); return result.ok ? { ok: true, unlockToken: result.data.unlockToken, unlockExpiresInSeconds: result.data.unlockExpiresInSeconds } : { ok: false, message: result.message || "Unable to verify code" }; }}
-      onResendCode={async () => { const result = await resendSettingsUnlockCode(); return result.ok ? { ok: true, resendCooldownSeconds: result.data.resendCooldownSeconds } : { ok: false, message: result.message || "Unable to resend code" }; }} />
+      onStartUnlock={async (value, signal) => { const result = await startSettingsUnlock(user.has_password ? value : undefined, signal); return result.ok ? { ok: true, resendCooldownSeconds: result.data.resendCooldownSeconds } : { ok: false, message: result.message || "Unable to verify password" }; }}
+      onVerifyCode={async (value, signal) => { const result = await verifySettingsUnlockCode(value, signal); return result.ok ? { ok: true, unlockToken: result.data.unlockToken, unlockExpiresInSeconds: result.data.unlockExpiresInSeconds } : { ok: false, message: result.message || "Unable to verify code" }; }}
+      onResendCode={async signal => { const result = await resendSettingsUnlockCode(signal); return result.ok ? { ok: true, resendCooldownSeconds: result.data.resendCooldownSeconds } : { ok: false, message: result.message || "Unable to resend code" }; }} />
   </SettingsFrame>;
 }

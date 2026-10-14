@@ -8,31 +8,32 @@ const LIMIT = 5;
 
 type RecentPortalDestination = AuthenticatedPortalLocation & { viewedAt: number };
 
-function parseStored(): unknown[] {
+function parseStored(userId: string): unknown[] {
   try {
-    const value = JSON.parse(optionalLocalStorage.getItem(STORAGE_KEY) ?? "[]");
+    const value = JSON.parse(optionalLocalStorage.getItem(`${STORAGE_KEY}:${encodeURIComponent(userId)}`) ?? "[]");
     return Array.isArray(value) ? value.slice(0, 50) : [];
   } catch {
     return [];
   }
 }
 
-export function recordRecentPortalLocation(location: AuthenticatedPortalLocation) {
+export function recordRecentPortalLocation(userId: string, location: AuthenticatedPortalLocation) {
   const record: RecentPortalDestination = { ...location, viewedAt: Date.now() };
-  const remaining = parseStored().filter((item) => {
+  const remaining = parseStored(userId).filter((item) => {
     if (!item || typeof item !== "object") return false;
     const candidate = item as Partial<RecentPortalDestination>;
     return !(candidate.organisationId === location.organisationId &&
       candidate.siteId === location.siteId && candidate.module === location.module);
   });
-  optionalLocalStorage.setItem(STORAGE_KEY, JSON.stringify([record, ...remaining].slice(0, LIMIT)));
+  optionalLocalStorage.setItem(`${STORAGE_KEY}:${encodeURIComponent(userId)}`, JSON.stringify([record, ...remaining].slice(0, LIMIT)));
 }
 
 export function readRecentPortalDestinations(
+  userId: string,
   organisations: AuthenticatedOrganisation[],
 ): Array<RecentPortalDestination & { label: string; path: string }> {
   const result: Array<RecentPortalDestination & { label: string; path: string }> = [];
-  for (const item of parseStored()) {
+  for (const item of parseStored(userId)) {
     if (!item || typeof item !== "object") continue;
     const candidate = item as Partial<RecentPortalDestination>;
     if (typeof candidate.organisationId !== "string" ||
