@@ -136,7 +136,7 @@ class PortalDevices:
                     site_name=site_names[sid], name=name,
                     canonical_enabled=bool(enabled), last_activity=iso(analyzed_until),
                     runtime_state=runtime_state(analyzed_until, effective_now),
-                    records=counts.get((sid, did)) if records_status == "available" else None,
+                    records=counts.get((sid, did), 0) if records_status == "available" else None,
                     records_status=records_status,
                 )
             )
