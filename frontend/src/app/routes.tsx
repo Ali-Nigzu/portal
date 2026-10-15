@@ -71,11 +71,12 @@ function routeComponents() {
   const PrivacyPolicyPage = React.lazy(
     () => import("../features/legal/PrivacyPolicyPage"),
   );
+  const CookiePolicyPage = React.lazy(() => import("../features/legal/CookiePolicyPage"));
   const SubProcessorRegisterPage = React.lazy(
     () => import("../features/legal/SubProcessorRegisterPage"),
   );
 
-  return { AdminApp, HomePage, DocumentsPage, MyAccountPage, ManageAccessPage, LandingPage, LoginPage, CreateAccountPage, VerifyEmailPage, ResetPasswordPage, ContactPage, DemoDashboardRoute, AuthenticatedOrganisationPortalRoute, TermsAndConditionsPage, PrivacyPolicyPage, SubProcessorRegisterPage };
+  return { AdminApp, HomePage, DocumentsPage, MyAccountPage, ManageAccessPage, LandingPage, LoginPage, CreateAccountPage, VerifyEmailPage, ResetPasswordPage, ContactPage, DemoDashboardRoute, AuthenticatedOrganisationPortalRoute, TermsAndConditionsPage, PrivacyPolicyPage, CookiePolicyPage, SubProcessorRegisterPage };
 }
 
 const initialRoutes = routeComponents();
@@ -129,7 +130,7 @@ function DemoIndexRedirect() {
 const AppRoutes: React.FC = () => {
   const navigate = useNavigate();
   const [routeAttempt, setRouteAttempt] = useState(0);
-  const { AdminApp, HomePage, DocumentsPage, MyAccountPage, ManageAccessPage, LandingPage, LoginPage, CreateAccountPage, VerifyEmailPage, ResetPasswordPage, ContactPage, DemoDashboardRoute, AuthenticatedOrganisationPortalRoute, TermsAndConditionsPage, PrivacyPolicyPage, SubProcessorRegisterPage } = useMemo(() => routeAttempt === 0 ? initialRoutes : routeComponents(), [routeAttempt]);
+  const { AdminApp, HomePage, DocumentsPage, MyAccountPage, ManageAccessPage, LandingPage, LoginPage, CreateAccountPage, VerifyEmailPage, ResetPasswordPage, ContactPage, DemoDashboardRoute, AuthenticatedOrganisationPortalRoute, TermsAndConditionsPage, PrivacyPolicyPage, CookiePolicyPage, SubProcessorRegisterPage } = useMemo(() => routeAttempt === 0 ? initialRoutes : routeComponents(), [routeAttempt]);
   const retryRoute = (message?: string) => {
     setRouteAttempt(value => value + 1);
     // Browsers may cache a failed module fetch too. An explicit retry reloads
@@ -368,7 +369,7 @@ const AppRoutes: React.FC = () => {
       </Suspense>
     );
   }
-  const publicRoute = isDemoRoute || /^\/(contact|login|create-account|verify-email|reset-password(?:\/.*)?|terms-and-conditions|privacy-policy|sub-processor-register)$/.test(location.pathname);
+  const publicRoute = isDemoRoute || /^\/(contact|login|create-account|verify-email|reset-password(?:\/.*)?|terms-and-conditions|privacy-policy|cookie-policy|sub-processor-register)$/.test(location.pathname);
   if (sessionError && !publicRoute) return (
     <div role="alert">
       <p>Can't load your account. Try again.</p>
@@ -532,6 +533,7 @@ const AppRoutes: React.FC = () => {
           )
         }
       />
+      <Route path="/cookie-policy" element={lazyRoute(<CookiePolicyPage />)} />
       <Route
         path="/privacy-policy"
         element={

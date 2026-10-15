@@ -3,8 +3,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { landingCopy } from "../content";
 
-type CookieConsentWindow = Window & {
-  CookieConsent?: {
+type CookiebotWindow = Window & {
+  Cookiebot?: {
     renew?: () => void;
   };
 };
@@ -14,15 +14,37 @@ const LandingFooter: React.FC = () => {
   const [termsAndConditions, privacyPolicy] = landingCopy.footer.primaryLinks;
   const [cookiePolicy, cookiePreferences, contactUs] = landingCopy.footer.secondaryLinks;
 
+  const [preferencesError, setPreferencesError] = React.useState(false);
+  const pendingPreferences = React.useRef<(() => void) | null>(null);
+  React.useEffect(() => () => pendingPreferences.current?.(), []);
+
   const handleCookiePreferencesClick: React.MouseEventHandler<HTMLButtonElement> = () => {
-    const cookieConsent = (window as CookieConsentWindow).CookieConsent;
-    if (cookieConsent && typeof cookieConsent.renew === "function") {
-      cookieConsent.renew();
-    }
+    if (pendingPreferences.current) return;
+    setPreferencesError(false);
+    let timer: ReturnType<typeof setTimeout>;
+    const cleanup = () => {
+      clearTimeout(timer);
+      window.removeEventListener("CookiebotOnConsentReady", open);
+      window.removeEventListener("CookiebotOnLoad", open);
+      pendingPreferences.current = null;
+    };
+    const open = () => {
+      const cookiebot = (window as CookiebotWindow).Cookiebot;
+      if (typeof cookiebot?.renew !== "function") return;
+      cleanup();
+      try { cookiebot.renew(); }
+      catch { setPreferencesError(true); }
+    };
+    pendingPreferences.current = cleanup;
+    window.addEventListener("CookiebotOnConsentReady", open);
+    window.addEventListener("CookiebotOnLoad", open);
+    timer = setTimeout(() => { cleanup(); setPreferencesError(true); }, 10_000);
+    open();
   };
 
   return (
     <footer className="landing-footer">
+      {preferencesError ? <p role="alert">Cookie preferences are unavailable. Please try again.</p> : null}
       <div className="landing-container landing-container--footer landing-footer-row">
         <div className="landing-footer-main" aria-label="Company and legal information">
           <div className="landing-footer-brand-column">
@@ -56,7 +78,7 @@ const LandingFooter: React.FC = () => {
             >
               {cookiePreferences}
             </button>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button">
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button" onClick={() => navigate("/cookie-policy")}>
               {cookiePolicy}
             </button>
             <button
@@ -85,7 +107,7 @@ const LandingFooter: React.FC = () => {
             >
               {cookiePreferences}
             </button>
-            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-policy">
+            <button type="button" className="landing-footer-link-item landing-footer-link-item-button landing-footer-mobile-top-link landing-footer-mobile-top-link-cookie-policy" onClick={() => navigate("/cookie-policy")}>
               {cookiePolicy}
             </button>
             <button
