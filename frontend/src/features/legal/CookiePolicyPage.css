@@ -1,0 +1,20 @@
+.cookie-policy-page__declaration {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+}
+
+.cookie-policy-page__declaration .CookieDeclaration {
+  max-width: 100%;
+}
+
+.cookie-policy-page__declaration .CookieDeclarationTable {
+  display: block;
+  overflow-x: auto;
+  table-layout: auto;
+}
+
+.cookie-policy-page__declaration .CookieDeclarationTable th,
+.cookie-policy-page__declaration .CookieDeclarationTable td {
+  min-width: 8rem;
+}
