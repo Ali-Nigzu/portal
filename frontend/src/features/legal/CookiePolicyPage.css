@@ -1,3 +1,66 @@
+.cookie-policy-page__content {
+  min-height: 180px;
+}
+
+.cookie-policy-page__state {
+  box-sizing: border-box;
+  min-height: 180px;
+  padding: 28px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.cookie-policy-page__state p + p {
+  margin-top: 4px;
+}
+
+.cookie-policy-page__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--line-default);
+  border-top-color: var(--signal-gold, #b79a55);
+  border-radius: 50%;
+  animation: cookie-policy-spin 800ms linear infinite;
+}
+
+.cookie-policy-page__error-title {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.cookie-policy-page__retry {
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 1px solid var(--line-default);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+.cookie-policy-page__retry:hover {
+  background: var(--surface-panel);
+}
+
+.cookie-policy-page__retry:focus-visible {
+  outline: 2px solid var(--signal-gold, #b79a55);
+  outline-offset: 3px;
+}
+
+@keyframes cookie-policy-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cookie-policy-page__spinner { animation: none; }
+}
+
 .cookie-policy-page__declaration {
   min-width: 0;
   overflow-x: auto;
