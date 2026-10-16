@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthBottomNav from "../../components/auth/AuthBottomNav";
@@ -35,7 +35,8 @@ const CookiePolicyPage: React.FC = () => {
   const slot = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
 
-  useEffect(() => {
+  // Attach retained content and update its state before paint on return visits.
+  useLayoutEffect(() => {
     const host = getDeclarationHost();
     const update = () => {
       if (host.querySelector(".CookieDeclaration")) setStatus("ready");
@@ -71,14 +72,24 @@ const CookiePolicyPage: React.FC = () => {
             <ArrowLeft size={18} aria-hidden="true" /><span>Go back</span>
           </button>
           <h1 className="privacy-page__title">Cookie Policy</h1>
-          {status === "loading" ? <p role="status">Loading Cookie Policy…</p> : null}
-          {status === "failed" ? (
-            <div role="alert">
-              <p>Cookie Policy is unavailable. Please try again.</p>
-              <button type="button" className="privacy-page__back-link" onClick={() => window.location.reload()}>Reload page</button>
-            </div>
-          ) : null}
-          <div className="privacy-page__body cookie-policy-page__declaration" ref={slot} hidden={status !== "ready"} />
+          <div className="privacy-page__body cookie-policy-page__content">
+            {status === "loading" ? (
+              <div className="cookie-policy-page__state" role="status" aria-live="polite">
+                <span className="cookie-policy-page__spinner" aria-hidden="true" />
+                <p>Loading your cookie information…</p>
+              </div>
+            ) : null}
+            {status === "failed" ? (
+              <div className="cookie-policy-page__state" role="alert">
+                <div>
+                  <p className="cookie-policy-page__error-title">Unable to load cookie information.</p>
+                  <p>Please try again.</p>
+                </div>
+                <button type="button" className="cookie-policy-page__retry" onClick={() => window.location.reload()}>Retry</button>
+              </div>
+            ) : null}
+            <div className="cookie-policy-page__declaration" ref={slot} hidden={status !== "ready"} />
+          </div>
         </section>
       </main>
       {isPhoneLayout ? <AuthBottomNav /> : null}
